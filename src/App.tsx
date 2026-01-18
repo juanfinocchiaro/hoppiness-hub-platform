@@ -12,6 +12,7 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import AdminHome from "./pages/admin/AdminHome";
 import Products from "./pages/admin/Products";
 import Branches from "./pages/admin/Branches";
+import BranchProducts from "./pages/admin/BranchProducts";
 import Suppliers from "./pages/admin/Suppliers";
 import Users from "./pages/admin/Users";
 import NotFound from "./pages/NotFound";
@@ -36,6 +37,7 @@ const App = () => (
               <Route index element={<AdminHome />} />
               <Route path="productos" element={<Products />} />
               <Route path="sucursales" element={<Branches />} />
+              <Route path="sucursales/:branchId/productos" element={<BranchProducts />} />
               <Route path="proveedores" element={<Suppliers />} />
               <Route path="usuarios" element={<Users />} />
             </Route>
