@@ -4,36 +4,42 @@
 
 /* =============================================
    HOPPINESS CLUB - Design System
-   Marca de hamburguesas con azul corporativo
+   Brand Manual Colors: #00139b (azul), #ff521d (naranja), #ffd41f (amarillo)
    ============================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
 
 @layer base {
   :root {
-    /* Core brand colors - Hoppiness Blue */
+    /* Core brand colors - Hoppiness Official */
     --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    --foreground: 0 0% 0%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 0 0% 0%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 0 0% 0%;
 
-    /* Primary - Hoppiness Blue (#0038B5) */
-    --primary: 222 100% 35%;
+    /* Primary - Hoppiness Blue (#00139b) */
+    --primary: 234 100% 30%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary - Light blue/gray */
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
+    /* Secondary - Light gray */
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 0 0% 0%;
 
     /* Muted */
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 0 0% 40%;
 
-    /* Accent - Cyan accent for CTAs */
-    --accent: 188 78% 41%;
+    /* Accent - Hoppiness Orange (#ff521d) */
+    --accent: 17 100% 56%;
     --accent-foreground: 0 0% 100%;
+
+    /* Warning/Highlight - Hoppiness Yellow (#ffd41f) */
+    --warning: 48 100% 56%;
+    --warning-foreground: 0 0% 0%;
 
     /* Success */
     --success: 142 70% 45%;
@@ -43,58 +49,57 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Warning - Orange for badges/highlights */
-    --warning: 25 95% 53%;
-    --warning-foreground: 0 0% 100%;
-
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 222 100% 35%;
+    --ring: 234 100% 30%;
 
     --radius: 0.75rem;
 
     /* Sidebar - Dark blue */
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 222 100% 50%;
+    --sidebar-background: 234 100% 10%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 234 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 47% 18%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 222 47% 20%;
-    --sidebar-ring: 222 100% 50%;
+    --sidebar-accent: 234 50% 18%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 234 50% 20%;
+    --sidebar-ring: 234 100% 50%;
 
     /* Custom gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(222 100% 35%) 0%, hsl(222 100% 50%) 100%);
-    --gradient-hero: linear-gradient(180deg, hsl(222 100% 35%) 0%, hsl(222 47% 11%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(188 78% 41%) 0%, hsl(222 100% 50%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(234 100% 30%) 0%, hsl(234 100% 40%) 100%);
+    --gradient-hero: linear-gradient(180deg, hsl(234 100% 30%) 0%, hsl(234 100% 15%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(17 100% 56%) 0%, hsl(48 100% 56%) 100%);
     
     /* Shadows */
-    --shadow-soft: 0 4px 20px -4px hsl(222 47% 11% / 0.1);
-    --shadow-card: 0 8px 30px -8px hsl(222 47% 11% / 0.12);
-    --shadow-elevated: 0 20px 60px -15px hsl(222 47% 11% / 0.2);
+    --shadow-soft: 0 4px 20px -4px hsl(0 0% 0% / 0.1);
+    --shadow-card: 0 8px 30px -8px hsl(0 0% 0% / 0.12);
+    --shadow-elevated: 0 20px 60px -15px hsl(0 0% 0% / 0.2);
   }
 
   .dark {
-    --background: 222 47% 8%;
-    --foreground: 210 40% 98%;
+    --background: 234 50% 5%;
+    --foreground: 0 0% 98%;
 
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
+    --card: 234 50% 8%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 222 47% 10%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 234 50% 8%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 222 100% 50%;
+    --primary: 234 100% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 222 47% 18%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 234 30% 15%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 222 47% 15%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 234 30% 12%;
+    --muted-foreground: 0 0% 60%;
 
-    --accent: 188 78% 45%;
+    --accent: 17 100% 60%;
     --accent-foreground: 0 0% 100%;
+
+    --warning: 48 100% 56%;
+    --warning-foreground: 0 0% 0%;
 
     --success: 142 70% 40%;
     --success-foreground: 0 0% 100%;
@@ -102,21 +107,18 @@
     --destructive: 0 70% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --warning: 25 95% 55%;
-    --warning-foreground: 0 0% 100%;
+    --border: 234 30% 20%;
+    --input: 234 30% 20%;
+    --ring: 234 100% 50%;
 
-    --border: 222 47% 20%;
-    --input: 222 47% 20%;
-    --ring: 222 100% 50%;
-
-    --sidebar-background: 222 47% 6%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 222 100% 55%;
+    --sidebar-background: 234 50% 4%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 234 100% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 47% 12%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 222 47% 15%;
-    --sidebar-ring: 222 100% 55%;
+    --sidebar-accent: 234 30% 12%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 234 30% 15%;
+    --sidebar-ring: 234 100% 55%;
   }
 }
 
@@ -128,6 +130,11 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Typography - Space Mono for titles like brand manual suggests */
+  .font-brand {
+    font-family: 'Space Mono', monospace;
   }
 }
 
@@ -158,5 +165,26 @@
 
   .shadow-elevated {
     box-shadow: var(--shadow-elevated);
+  }
+
+  /* Brand specific utilities */
+  .bg-hoppiness-blue {
+    background-color: #00139b;
+  }
+
+  .bg-hoppiness-orange {
+    background-color: #ff521d;
+  }
+
+  .bg-hoppiness-yellow {
+    background-color: #ffd41f;
+  }
+
+  .text-hoppiness-blue {
+    color: #00139b;
+  }
+
+  .text-hoppiness-orange {
+    color: #ff521d;
   }
 }

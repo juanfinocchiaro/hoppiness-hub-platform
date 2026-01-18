@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Menu from "./pages/Menu";
+import Franquicias from "./pages/Franquicias";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminHome from "./pages/admin/AdminHome";
 import Products from "./pages/admin/Products";
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/menu" element={<Menu />} />
+            <Route path="/franquicias" element={<Franquicias />} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboard />}>
