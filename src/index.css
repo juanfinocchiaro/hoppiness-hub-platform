@@ -4,38 +4,38 @@
 
 /* =============================================
    HOPPINESS CLUB - Design System
-   Gastronomic platform with warm, inviting aesthetic
+   Marca de hamburguesas con azul corporativo
    ============================================= */
 
 @layer base {
   :root {
-    /* Core brand colors - warm amber/orange tones */
-    --background: 40 33% 98%;
-    --foreground: 24 10% 10%;
+    /* Core brand colors - Hoppiness Blue */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 24 10% 10%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 24 10% 10%;
+    --popover-foreground: 222 47% 11%;
 
-    /* Primary - Rich amber/orange */
-    --primary: 32 95% 44%;
+    /* Primary - Hoppiness Blue (#0038B5) */
+    --primary: 222 100% 35%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary - Warm cream */
-    --secondary: 40 40% 94%;
-    --secondary-foreground: 24 10% 20%;
+    /* Secondary - Light blue/gray */
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    /* Muted - Soft beige */
-    --muted: 40 20% 92%;
-    --muted-foreground: 24 10% 40%;
+    /* Muted */
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
 
-    /* Accent - Deep terracotta */
-    --accent: 16 70% 50%;
+    /* Accent - Cyan accent for CTAs */
+    --accent: 188 78% 41%;
     --accent-foreground: 0 0% 100%;
 
-    /* Success - Fresh green */
+    /* Success */
     --success: 142 70% 45%;
     --success-foreground: 0 0% 100%;
 
@@ -43,56 +43,57 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Warning */
-    --warning: 45 93% 47%;
-    --warning-foreground: 24 10% 10%;
+    /* Warning - Orange for badges/highlights */
+    --warning: 25 95% 53%;
+    --warning-foreground: 0 0% 100%;
 
-    --border: 40 20% 88%;
-    --input: 40 20% 88%;
-    --ring: 32 95% 44%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 222 100% 35%;
 
     --radius: 0.75rem;
 
-    /* Sidebar - Dark warm tones */
-    --sidebar-background: 24 20% 12%;
-    --sidebar-foreground: 40 20% 90%;
-    --sidebar-primary: 32 95% 50%;
+    /* Sidebar - Dark blue */
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 222 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 24 15% 18%;
-    --sidebar-accent-foreground: 40 20% 90%;
-    --sidebar-border: 24 15% 20%;
-    --sidebar-ring: 32 95% 50%;
+    --sidebar-accent: 222 47% 18%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 222 47% 20%;
+    --sidebar-ring: 222 100% 50%;
 
     /* Custom gradients */
-    --gradient-warm: linear-gradient(135deg, hsl(32 95% 44%) 0%, hsl(16 70% 50%) 100%);
-    --gradient-hero: linear-gradient(180deg, hsl(40 33% 98%) 0%, hsl(40 40% 94%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(222 100% 35%) 0%, hsl(222 100% 50%) 100%);
+    --gradient-hero: linear-gradient(180deg, hsl(222 100% 35%) 0%, hsl(222 47% 11%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(188 78% 41%) 0%, hsl(222 100% 50%) 100%);
     
     /* Shadows */
-    --shadow-soft: 0 4px 20px -4px hsl(24 10% 10% / 0.1);
-    --shadow-card: 0 8px 30px -8px hsl(24 10% 10% / 0.12);
-    --shadow-elevated: 0 20px 60px -15px hsl(24 10% 10% / 0.2);
+    --shadow-soft: 0 4px 20px -4px hsl(222 47% 11% / 0.1);
+    --shadow-card: 0 8px 30px -8px hsl(222 47% 11% / 0.12);
+    --shadow-elevated: 0 20px 60px -15px hsl(222 47% 11% / 0.2);
   }
 
   .dark {
-    --background: 24 15% 8%;
-    --foreground: 40 20% 95%;
+    --background: 222 47% 8%;
+    --foreground: 210 40% 98%;
 
-    --card: 24 15% 12%;
-    --card-foreground: 40 20% 95%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 24 15% 10%;
-    --popover-foreground: 40 20% 95%;
+    --popover: 222 47% 10%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 32 95% 50%;
-    --primary-foreground: 24 10% 10%;
+    --primary: 222 100% 50%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 24 15% 18%;
-    --secondary-foreground: 40 20% 90%;
+    --secondary: 222 47% 18%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 24 15% 15%;
-    --muted-foreground: 40 10% 60%;
+    --muted: 222 47% 15%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 16 70% 55%;
+    --accent: 188 78% 45%;
     --accent-foreground: 0 0% 100%;
 
     --success: 142 70% 40%;
@@ -101,21 +102,21 @@
     --destructive: 0 70% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --warning: 45 93% 50%;
-    --warning-foreground: 24 10% 10%;
+    --warning: 25 95% 55%;
+    --warning-foreground: 0 0% 100%;
 
-    --border: 24 15% 20%;
-    --input: 24 15% 20%;
-    --ring: 32 95% 50%;
+    --border: 222 47% 20%;
+    --input: 222 47% 20%;
+    --ring: 222 100% 50%;
 
-    --sidebar-background: 24 20% 6%;
-    --sidebar-foreground: 40 20% 90%;
-    --sidebar-primary: 32 95% 50%;
-    --sidebar-primary-foreground: 24 10% 10%;
-    --sidebar-accent: 24 15% 12%;
-    --sidebar-accent-foreground: 40 20% 90%;
-    --sidebar-border: 24 15% 15%;
-    --sidebar-ring: 32 95% 50%;
+    --sidebar-background: 222 47% 6%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 222 100% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 47% 12%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 222 47% 15%;
+    --sidebar-ring: 222 100% 55%;
   }
 }
 
@@ -135,8 +136,16 @@
     text-wrap: balance;
   }
 
-  .gradient-warm {
-    background: var(--gradient-warm);
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+
+  .gradient-accent {
+    background: var(--gradient-accent);
   }
 
   .shadow-soft {
