@@ -131,8 +131,8 @@ export default function Auth() {
         </Button>
         <Card className="shadow-elevated">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 rounded-2xl gradient-warm flex items-center justify-center">
-            <UtensilsCrossed className="w-8 h-8 text-white" />
+          <div className="mx-auto w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center">
+            <UtensilsCrossed className="w-8 h-8 text-primary-foreground" />
           </div>
           <div>
             <CardTitle className="text-2xl font-bold">Hoppiness Club</CardTitle>
