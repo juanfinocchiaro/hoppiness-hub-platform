@@ -3,32 +3,18 @@ import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ArrowLeft, Search, ChevronDown, ChevronRight, Store } from 'lucide-react';
+import { ArrowLeft, Search, ChevronDown, ChevronRight, Store, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -45,6 +31,7 @@ interface CategoryWithProducts {
   category: Category;
   products: ProductWithBranchStatus[];
   availableCount: number;
+  allActive: boolean;
 }
 
 export default function BranchProducts() {
@@ -88,10 +75,13 @@ export default function BranchProducts() {
               branchProduct: branchProductsMap.get(p.id) || null,
             }));
 
+          const availableCount = categoryProducts.filter(p => p.branchProduct?.is_available !== false).length;
+
           return {
             category,
             products: categoryProducts,
-            availableCount: categoryProducts.filter(p => p.branchProduct?.is_available !== false).length,
+            availableCount,
+            allActive: availableCount === categoryProducts.length,
           };
         });
 
@@ -104,17 +94,21 @@ export default function BranchProducts() {
           }));
 
         if (uncategorizedProducts.length > 0) {
+          const availableCount = uncategorizedProducts.filter(p => p.branchProduct?.is_available !== false).length;
           grouped.push({
             category: { id: 'uncategorized', name: 'Sin Categoría', is_active: true, created_at: '', display_order: 999, description: null, image_url: null },
             products: uncategorizedProducts,
-            availableCount: uncategorizedProducts.filter(p => p.branchProduct?.is_available !== false).length,
+            availableCount,
+            allActive: availableCount === uncategorizedProducts.length,
           });
         }
 
         setCategoriesWithProducts(grouped.filter(g => g.products.length > 0));
         
-        // Expand all categories by default
-        setExpandedCategories(new Set(grouped.map(g => g.category.id)));
+        // Expand first category by default
+        if (grouped.length > 0) {
+          setExpandedCategories(new Set([grouped[0].category.id]));
+        }
       }
 
       setLoading(false);
@@ -135,6 +129,61 @@ export default function BranchProducts() {
     });
   };
 
+  const toggleCategoryProducts = async (categoryId: string, activate: boolean) => {
+    if (!branchId || !canManageProducts) return;
+    
+    const categoryData = categoriesWithProducts.find(c => c.category.id === categoryId);
+    if (!categoryData) return;
+
+    setUpdating(categoryId);
+
+    try {
+      // Update all products in this category
+      for (const product of categoryData.products) {
+        if (product.branchProduct) {
+          await supabase
+            .from('branch_products')
+            .update({ is_available: activate })
+            .eq('id', product.branchProduct.id);
+        } else {
+          await supabase
+            .from('branch_products')
+            .insert({
+              branch_id: branchId,
+              product_id: product.id,
+              is_available: activate,
+            });
+        }
+      }
+
+      // Update local state
+      setCategoriesWithProducts(prev =>
+        prev.map(cat => {
+          if (cat.category.id !== categoryId) return cat;
+          return {
+            ...cat,
+            products: cat.products.map(p => ({
+              ...p,
+              branchProduct: {
+                ...(p.branchProduct || { id: '', branch_id: branchId, product_id: p.id, custom_price: null, stock_quantity: null }),
+                is_available: activate,
+              } as BranchProduct
+            })),
+            availableCount: activate ? cat.products.length : 0,
+            allActive: activate,
+          };
+        })
+      );
+
+      toast.success(activate ? 'Categoría activada' : 'Categoría desactivada');
+    } catch (error) {
+      console.error('Error toggling category:', error);
+      toast.error('Error al actualizar la categoría');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
   const toggleProductAvailability = async (product: ProductWithBranchStatus) => {
     if (!branchId || !canManageProducts) return;
     
@@ -145,7 +194,6 @@ export default function BranchProducts() {
       const newAvailability = !currentlyAvailable;
 
       if (product.branchProduct) {
-        // Update existing record
         const { error } = await supabase
           .from('branch_products')
           .update({ is_available: newAvailability })
@@ -153,7 +201,6 @@ export default function BranchProducts() {
 
         if (error) throw error;
       } else {
-        // Create new record
         const { error } = await supabase
           .from('branch_products')
           .insert({
@@ -167,9 +214,8 @@ export default function BranchProducts() {
 
       // Update local state
       setCategoriesWithProducts(prev => 
-        prev.map(cat => ({
-          ...cat,
-          products: cat.products.map(p => 
+        prev.map(cat => {
+          const updatedProducts = cat.products.map(p => 
             p.id === product.id 
               ? {
                   ...p,
@@ -179,13 +225,15 @@ export default function BranchProducts() {
                   } as BranchProduct
                 }
               : p
-          ),
-          availableCount: cat.products.filter(p => 
-            p.id === product.id 
-              ? newAvailability 
-              : p.branchProduct?.is_available !== false
-          ).length,
-        }))
+          );
+          const newAvailableCount = updatedProducts.filter(p => p.branchProduct?.is_available !== false).length;
+          return {
+            ...cat,
+            products: updatedProducts,
+            availableCount: newAvailableCount,
+            allActive: newAvailableCount === updatedProducts.length,
+          };
+        })
       );
 
       toast.success(newAvailability ? 'Producto activado' : 'Producto desactivado');
@@ -194,55 +242,6 @@ export default function BranchProducts() {
       toast.error('Error al actualizar el producto');
     } finally {
       setUpdating(null);
-    }
-  };
-
-  const updateCustomPrice = async (product: ProductWithBranchStatus, customPrice: number | null) => {
-    if (!branchId || !canManageProducts) return;
-
-    try {
-      if (product.branchProduct) {
-        const { error } = await supabase
-          .from('branch_products')
-          .update({ custom_price: customPrice })
-          .eq('id', product.branchProduct.id);
-
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('branch_products')
-          .insert({
-            branch_id: branchId,
-            product_id: product.id,
-            is_available: true,
-            custom_price: customPrice,
-          });
-
-        if (error) throw error;
-      }
-
-      // Update local state
-      setCategoriesWithProducts(prev =>
-        prev.map(cat => ({
-          ...cat,
-          products: cat.products.map(p =>
-            p.id === product.id
-              ? {
-                  ...p,
-                  branchProduct: {
-                    ...(p.branchProduct || { id: '', branch_id: branchId, product_id: product.id, is_available: true, stock_quantity: null }),
-                    custom_price: customPrice,
-                  } as BranchProduct
-                }
-              : p
-          ),
-        }))
-      );
-
-      toast.success('Precio actualizado');
-    } catch (error) {
-      console.error('Error updating price:', error);
-      toast.error('Error al actualizar precio');
     }
   };
 
@@ -288,140 +287,141 @@ export default function BranchProducts() {
           </Button>
         </Link>
         <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <Store className="w-5 h-5 text-primary" />
+          <div className="flex items-center gap-3">
+            <Store className="w-6 h-6 text-primary" />
             <h1 className="text-2xl font-bold">{branch.name}</h1>
             {!branch.is_active && <Badge variant="secondary">Inactiva</Badge>}
           </div>
-          <p className="text-muted-foreground">Gestión de productos disponibles</p>
+          <p className="text-muted-foreground mt-1">Gestión de productos disponibles en esta sucursal</p>
         </div>
       </div>
 
       {/* Search */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar productos..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar productos..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-10"
+        />
+      </div>
 
-      {/* Products by Category */}
-      <div className="space-y-4">
-        {filteredCategories.map(({ category, products, availableCount }) => (
-          <Card key={category.id}>
+      {/* Products by Category - másDelivery style */}
+      <div className="space-y-3">
+        {filteredCategories.map(({ category, products, availableCount, allActive }) => (
+          <Card key={category.id} className="overflow-hidden">
             <Collapsible 
               open={expandedCategories.has(category.id)}
               onOpenChange={() => toggleCategory(category.id)}
             >
-              <CollapsibleTrigger asChild>
-                <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {expandedCategories.has(category.id) ? (
-                        <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                      )}
-                      <div>
-                        <CardTitle className="text-lg">{category.name}</CardTitle>
-                        <CardDescription>
-                          {availableCount}/{products.length} productos activos
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="text-lg px-3">
-                      {availableCount}/{products.length}
-                    </Badge>
-                  </div>
-                </CardHeader>
-              </CollapsibleTrigger>
+              {/* Category Header */}
+              <div className="flex items-center justify-between p-4 bg-muted/30">
+                <CollapsibleTrigger asChild>
+                  <button className="flex items-center gap-3 flex-1 text-left hover:opacity-80 transition-opacity">
+                    {expandedCategories.has(category.id) ? (
+                      <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                    )}
+                    <span className="font-semibold text-lg">{category.name}</span>
+                  </button>
+                </CollapsibleTrigger>
+                
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-muted-foreground">
+                    {allActive ? 'Activa' : availableCount > 0 ? 'Parcial' : 'Inactiva'}
+                  </span>
+                  <Switch
+                    checked={allActive}
+                    onCheckedChange={(checked) => toggleCategoryProducts(category.id, checked)}
+                    disabled={!canManageProducts || updating === category.id}
+                    className="data-[state=checked]:bg-primary"
+                  />
+                </div>
+              </div>
               
               <CollapsibleContent>
-                <CardContent className="pt-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-16">Activo</TableHead>
-                        <TableHead>Producto</TableHead>
-                        <TableHead>Precio Base</TableHead>
-                        <TableHead>Precio Sucursal</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {products.map((product) => {
-                        const isAvailable = product.branchProduct?.is_available !== false;
-                        const customPrice = product.branchProduct?.custom_price;
-                        
-                        return (
-                          <TableRow 
-                            key={product.id}
-                            className={!isAvailable ? 'opacity-50' : ''}
-                          >
-                            <TableCell>
-                              <Switch
-                                checked={isAvailable}
-                                onCheckedChange={() => toggleProductAvailability(product)}
-                                disabled={!canManageProducts || updating === product.id}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <div>
-                                <p className="font-medium">{product.name}</p>
-                                {product.description && (
-                                  <p className="text-sm text-muted-foreground line-clamp-1">
-                                    {product.description}
-                                  </p>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="font-medium">
+                <div className="divide-y">
+                  {products.map((product) => {
+                    const isAvailable = product.branchProduct?.is_available !== false;
+                    const customPrice = product.branchProduct?.custom_price;
+                    const displayPrice = customPrice || product.price;
+                    
+                    return (
+                      <div 
+                        key={product.id}
+                        className={`flex items-center gap-4 p-4 transition-opacity ${!isAvailable ? 'opacity-50 bg-muted/20' : ''}`}
+                      >
+                        {/* Product Image Placeholder */}
+                        <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                          {product.image_url ? (
+                            <img 
+                              src={product.image_url} 
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-2xl">🍔</span>
+                          )}
+                        </div>
+
+                        {/* Product Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-base">{product.name}</p>
+                          {product.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
+                              {product.description}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Price */}
+                        <div className="text-right shrink-0">
+                          <p className="text-xs text-muted-foreground">Precio:</p>
+                          <p className="font-semibold text-lg">{formatPrice(displayPrice)}</p>
+                          {customPrice && customPrice !== product.price && (
+                            <p className="text-xs text-muted-foreground line-through">
                               {formatPrice(product.price)}
-                            </TableCell>
-                            <TableCell>
-                              {canManageProducts ? (
-                                <div className="flex items-center gap-2">
-                                  <Input
-                                    type="number"
-                                    placeholder="Precio base"
-                                    defaultValue={customPrice || ''}
-                                    className="w-28"
-                                    onBlur={(e) => {
-                                      const value = e.target.value ? parseFloat(e.target.value) : null;
-                                      if (value !== customPrice) {
-                                        updateCustomPrice(product, value);
-                                      }
-                                    }}
-                                  />
-                                  {customPrice && (
-                                    <Badge variant="outline" className="shrink-0">
-                                      Personalizado
-                                    </Badge>
-                                  )}
-                                </div>
-                              ) : (
-                                <span className="font-medium">
-                                  {customPrice ? formatPrice(customPrice) : '-'}
-                                </span>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </CardContent>
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Toggle */}
+                        <Switch
+                          checked={isAvailable}
+                          onCheckedChange={() => toggleProductAvailability(product)}
+                          disabled={!canManageProducts || updating === product.id}
+                          className="data-[state=checked]:bg-primary shrink-0"
+                        />
+
+                        {/* Edit button (only for admin - goes to master catalog) */}
+                        {isAdmin && (
+                          <Link to={`/admin/productos/${product.id}`}>
+                            <Button variant="ghost" size="icon" className="shrink-0">
+                              <Pencil className="w-4 h-4 text-muted-foreground" />
+                            </Button>
+                          </Link>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </CollapsibleContent>
             </Collapsible>
           </Card>
         ))}
       </div>
+
+      {filteredCategories.length === 0 && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">
+              {search ? 'No se encontraron productos' : 'No hay productos disponibles'}
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
