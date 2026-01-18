@@ -13,25 +13,25 @@
   :root {
     /* Core brand colors - Hoppiness Official */
     --background: 0 0% 100%;
-    --foreground: 0 0% 0%;
+    --foreground: 234 100% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 0%;
+    --card-foreground: 234 100% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 0%;
+    --popover-foreground: 234 100% 15%;
 
     /* Primary - Hoppiness Blue (#00139b) */
     --primary: 234 100% 30%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary - Light gray */
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 0 0% 0%;
+    --secondary: 234 20% 96%;
+    --secondary-foreground: 234 100% 15%;
 
     /* Muted */
-    --muted: 210 20% 96%;
-    --muted-foreground: 0 0% 40%;
+    --muted: 234 15% 94%;
+    --muted-foreground: 234 10% 40%;
 
     /* Accent - Hoppiness Orange (#ff521d) */
     --accent: 17 100% 56%;
@@ -39,7 +39,7 @@
 
     /* Warning/Highlight - Hoppiness Yellow (#ffd41f) */
     --warning: 48 100% 56%;
-    --warning-foreground: 0 0% 0%;
+    --warning-foreground: 234 100% 15%;
 
     /* Success */
     --success: 142 70% 45%;
@@ -49,8 +49,8 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
+    --border: 234 20% 90%;
+    --input: 234 20% 90%;
     --ring: 234 100% 30%;
 
     --radius: 0.75rem;
@@ -66,14 +66,14 @@
     --sidebar-ring: 234 100% 50%;
 
     /* Custom gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(234 100% 30%) 0%, hsl(234 100% 40%) 100%);
-    --gradient-hero: linear-gradient(180deg, hsl(234 100% 30%) 0%, hsl(234 100% 15%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(17 100% 56%) 0%, hsl(48 100% 56%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(234, 100%, 30%) 0%, hsl(234, 100%, 40%) 100%);
+    --gradient-hero: linear-gradient(180deg, hsl(234, 100%, 30%) 0%, hsl(234, 100%, 15%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(17, 100%, 56%) 0%, hsl(48, 100%, 56%) 100%);
     
     /* Shadows */
-    --shadow-soft: 0 4px 20px -4px hsl(0 0% 0% / 0.1);
-    --shadow-card: 0 8px 30px -8px hsl(0 0% 0% / 0.12);
-    --shadow-elevated: 0 20px 60px -15px hsl(0 0% 0% / 0.2);
+    --shadow-soft: 0 4px 20px -4px rgba(0, 0, 0, 0.1);
+    --shadow-card: 0 8px 30px -8px rgba(0, 0, 0, 0.12);
+    --shadow-elevated: 0 20px 60px -15px rgba(0, 0, 0, 0.2);
   }
 
   .dark {
