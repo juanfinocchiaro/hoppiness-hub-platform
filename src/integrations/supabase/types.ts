@@ -326,6 +326,7 @@ export type Database = {
       orders: {
         Row: {
           branch_id: string
+          caller_number: number | null
           created_at: string
           customer_email: string | null
           customer_name: string
@@ -335,15 +336,20 @@ export type Database = {
           estimated_time: string | null
           id: string
           notes: string | null
+          order_area: Database["public"]["Enums"]["order_area"] | null
           order_type: Database["public"]["Enums"]["order_type"]
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          sales_channel: Database["public"]["Enums"]["sales_channel"] | null
           status: Database["public"]["Enums"]["order_status"]
           subtotal: number
+          table_number: string | null
           tax: number | null
           total: number
           updated_at: string
         }
         Insert: {
           branch_id: string
+          caller_number?: number | null
           created_at?: string
           customer_email?: string | null
           customer_name: string
@@ -353,15 +359,20 @@ export type Database = {
           estimated_time?: string | null
           id?: string
           notes?: string | null
+          order_area?: Database["public"]["Enums"]["order_area"] | null
           order_type: Database["public"]["Enums"]["order_type"]
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          sales_channel?: Database["public"]["Enums"]["sales_channel"] | null
           status?: Database["public"]["Enums"]["order_status"]
           subtotal: number
+          table_number?: string | null
           tax?: number | null
           total: number
           updated_at?: string
         }
         Update: {
           branch_id?: string
+          caller_number?: number | null
           created_at?: string
           customer_email?: string | null
           customer_name?: string
@@ -371,9 +382,13 @@ export type Database = {
           estimated_time?: string | null
           id?: string
           notes?: string | null
+          order_area?: Database["public"]["Enums"]["order_area"] | null
           order_type?: Database["public"]["Enums"]["order_type"]
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          sales_channel?: Database["public"]["Enums"]["sales_channel"] | null
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number
+          table_number?: string | null
           tax?: number | null
           total?: number
           updated_at?: string
@@ -546,6 +561,51 @@ export type Database = {
         }
         Relationships: []
       }
+      tables: {
+        Row: {
+          area: Database["public"]["Enums"]["order_area"]
+          branch_id: string
+          created_at: string
+          current_order_id: string | null
+          id: string
+          is_occupied: boolean
+          table_number: string
+        }
+        Insert: {
+          area?: Database["public"]["Enums"]["order_area"]
+          branch_id: string
+          created_at?: string
+          current_order_id?: string | null
+          id?: string
+          is_occupied?: boolean
+          table_number: string
+        }
+        Update: {
+          area?: Database["public"]["Enums"]["order_area"]
+          branch_id?: string
+          created_at?: string
+          current_order_id?: string | null
+          id?: string
+          is_occupied?: boolean
+          table_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tables_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tables_current_order_id_fkey"
+            columns: ["current_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -591,6 +651,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "gerente" | "empleado" | "franquiciado"
+      order_area: "salon" | "mostrador" | "delivery"
       order_status:
         | "pending"
         | "confirmed"
@@ -599,6 +660,21 @@ export type Database = {
         | "delivered"
         | "cancelled"
       order_type: "takeaway" | "delivery" | "dine_in"
+      payment_method:
+        | "efectivo"
+        | "tarjeta_debito"
+        | "tarjeta_credito"
+        | "mercadopago_qr"
+        | "mercadopago_link"
+        | "transferencia"
+        | "vales"
+      sales_channel:
+        | "atencion_presencial"
+        | "whatsapp"
+        | "mas_delivery"
+        | "pedidos_ya"
+        | "rappi"
+        | "mercadopago_delivery"
       transaction_type: "income" | "expense"
     }
     CompositeTypes: {
@@ -728,6 +804,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "gerente", "empleado", "franquiciado"],
+      order_area: ["salon", "mostrador", "delivery"],
       order_status: [
         "pending",
         "confirmed",
@@ -737,6 +814,23 @@ export const Constants = {
         "cancelled",
       ],
       order_type: ["takeaway", "delivery", "dine_in"],
+      payment_method: [
+        "efectivo",
+        "tarjeta_debito",
+        "tarjeta_credito",
+        "mercadopago_qr",
+        "mercadopago_link",
+        "transferencia",
+        "vales",
+      ],
+      sales_channel: [
+        "atencion_presencial",
+        "whatsapp",
+        "mas_delivery",
+        "pedidos_ya",
+        "rappi",
+        "mercadopago_delivery",
+      ],
       transaction_type: ["income", "expense"],
     },
   },
