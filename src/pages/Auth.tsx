@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UtensilsCrossed } from 'lucide-react';
+import { Loader2, UtensilsCrossed, ArrowLeft } from 'lucide-react';
 import { z } from 'zod';
 
 const loginSchema = z.object({
@@ -120,7 +120,16 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-secondary/30 p-4">
-      <Card className="w-full max-w-md shadow-elevated">
+      <div className="w-full max-w-md">
+        <Button
+          variant="ghost"
+          className="mb-4"
+          onClick={() => navigate('/')}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Volver al inicio
+        </Button>
+        <Card className="shadow-elevated">
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto w-16 h-16 rounded-2xl gradient-warm flex items-center justify-center">
             <UtensilsCrossed className="w-8 h-8 text-white" />
@@ -254,7 +263,8 @@ export default function Auth() {
             </TabsContent>
           </Tabs>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }
