@@ -42,10 +42,10 @@ export default function Index() {
           <nav className="flex items-center gap-4">
             {user ? (
               <>
-                <Link to="/dashboard">
+                <Link to="/admin">
                   <Button variant="ghost" size="sm">
                     <LayoutDashboard className="w-4 h-4 mr-2" />
-                    Dashboard
+                    Admin
                   </Button>
                 </Link>
                 <Button variant="outline" size="sm" onClick={signOut}>
