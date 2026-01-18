@@ -17,6 +17,7 @@ import Branches from "./pages/admin/Branches";
 import BranchProducts from "./pages/admin/BranchProducts";
 import Suppliers from "./pages/admin/Suppliers";
 import Users from "./pages/admin/Users";
+import SalesReports from "./pages/admin/SalesReports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="sucursales/:branchId/productos" element={<BranchProducts />} />
               <Route path="proveedores" element={<Suppliers />} />
               <Route path="usuarios" element={<Users />} />
+              <Route path="reportes" element={<SalesReports />} />
             </Route>
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
