@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, ChefHat, Minus, RefreshCw } from 'lucide-react';
+import { Plus, ChefHat, Minus, RefreshCw, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ModifierOption } from '@/components/admin/ModifierOptionCard';
 import { SortableModifierList } from '@/components/admin/SortableModifierList';
@@ -28,7 +28,7 @@ interface ModifierGroup {
   max_selections: number | null;
   is_active: boolean;
   display_order: number;
-  modifier_type: 'adicional' | 'personalizacion';
+  modifier_type: 'adicional' | 'personalizacion' | 'combo';
   options: ModifierOption[];
 }
 
@@ -334,8 +334,9 @@ export default function Modifiers() {
     setAssignDialog(true);
   };
 
-  const adicionales = groups.find(g => g.name === 'Adicionales');
-  const personalizaciones = groups.find(g => g.name === 'Personalizaciones');
+  const adicionales = groups.find(g => g.modifier_type === 'adicional');
+  const personalizaciones = groups.find(g => g.modifier_type === 'personalizacion');
+  const combo = groups.find(g => g.modifier_type === 'combo');
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -364,7 +365,7 @@ export default function Modifiers() {
 
       {/* Tabs */}
       <Tabs defaultValue="adicionales" className="space-y-6">
-        <TabsList className="grid grid-cols-2 w-full max-w-md h-12">
+        <TabsList className="grid grid-cols-3 w-full max-w-xl h-12">
           <TabsTrigger value="adicionales" className="flex items-center gap-2 text-base">
             <Plus className="h-4 w-4" />
             Adicionales
@@ -380,6 +381,15 @@ export default function Modifiers() {
             {personalizaciones && (
               <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-full">
                 {personalizaciones.options.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="combo" className="flex items-center gap-2 text-base">
+            <Package className="h-4 w-4" />
+            Combo
+            {combo && (
+              <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-full">
+                {combo.options.length}
               </span>
             )}
           </TabsTrigger>
@@ -445,6 +455,38 @@ export default function Modifiers() {
                 onAssignAllBurgers={handleAssignToAllBurgers}
                 onReorder={handleReorderOptions}
                 onAddNew={() => personalizaciones && openAddOption(personalizaciones.id)}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Combo Tab */}
+        <TabsContent value="combo" className="space-y-4">
+          <Card className="border-0 shadow-card">
+            <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
+              <div>
+                <CardTitle className="text-xl">Opciones de Combo</CardTitle>
+                <CardDescription className="mt-1">
+                  Bebidas y acompañamientos incluidos en combos: Pepsi, 7up, Papas, etc.
+                </CardDescription>
+              </div>
+              {combo && (
+                <Button onClick={() => openAddOption(combo.id)} size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nueva
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              <SortableModifierList
+                options={combo?.options || []}
+                type="combo"
+                loading={loading}
+                onEdit={openEditOption}
+                onDelete={handleDeleteOption}
+                onAssign={openAssignDialog}
+                onReorder={handleReorderOptions}
+                onAddNew={() => combo && openAddOption(combo.id)}
               />
             </CardContent>
           </Card>

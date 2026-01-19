@@ -21,7 +21,7 @@ import { ModifierOptionCard, ModifierOption, ModifierOptionSkeleton, ModifierEmp
 
 interface SortableModifierListProps {
   options: ModifierOption[];
-  type: 'adicional' | 'personalizacion';
+  type: 'adicional' | 'personalizacion' | 'combo';
   loading?: boolean;
   onEdit: (option: ModifierOption) => void;
   onDelete: (optionId: string) => void;
