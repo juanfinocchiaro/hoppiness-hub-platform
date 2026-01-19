@@ -116,16 +116,21 @@ export default function POSView({ branch }: POSViewProps) {
     async function fetchProducts() {
       setLoading(true);
       const [productsRes, categoriesRes, branchProductsRes] = await Promise.all([
-        supabase.from('products').select('*').eq('is_available', true).order('name'),
+        supabase.from('products').select('*').eq('is_available', true),
         supabase.from('product_categories').select('*').eq('is_active', true).order('display_order'),
         supabase.from('branch_products').select('*').eq('branch_id', branch.id),
       ]);
 
       if (categoriesRes.data) setCategories(categoriesRes.data);
 
-      if (productsRes.data) {
+      if (productsRes.data && categoriesRes.data) {
         const branchProductsMap = new Map(
           (branchProductsRes.data || []).map(bp => [bp.product_id, bp])
+        );
+
+        // Create a map of category display_order for sorting
+        const categoryOrderMap = new Map(
+          categoriesRes.data.map(c => [c.id, c.display_order ?? 999])
         );
 
         const availableProducts = productsRes.data
@@ -133,7 +138,14 @@ export default function POSView({ branch }: POSViewProps) {
             ...p,
             branchProduct: branchProductsMap.get(p.id) || null,
           }))
-          .filter(p => p.branchProduct?.is_available !== false);
+          .filter(p => p.branchProduct?.is_available !== false)
+          // Sort by category display_order first, then by product name
+          .sort((a, b) => {
+            const catOrderA = categoryOrderMap.get(a.category_id || '') ?? 999;
+            const catOrderB = categoryOrderMap.get(b.category_id || '') ?? 999;
+            if (catOrderA !== catOrderB) return catOrderA - catOrderB;
+            return a.name.localeCompare(b.name);
+          });
 
         setProducts(availableProducts);
       }

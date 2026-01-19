@@ -177,7 +177,7 @@ export default function LocalLayout() {
       icon: Package,
       show: canManageProducts,
       items: [
-        { to: 'disponibilidad', label: 'Disponibilidad (86)', icon: ToggleLeft, show: true },
+        { to: 'disponibilidad', label: 'Disponibilidad', icon: ToggleLeft, show: true },
         { to: 'productos', label: 'Productos', icon: Package, show: true },
       ]
     },
