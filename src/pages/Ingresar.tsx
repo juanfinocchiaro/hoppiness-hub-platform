@@ -29,20 +29,16 @@ export default function Ingresar() {
   // Redirigir usuarios autenticados
   useEffect(() => {
     if (!loading && !roleLoading && user) {
-      // Redirigir según rol
-      if (isAdmin) {
-        navigate('/admin');
-      } else if (isGerente || roles.includes('empleado') || roles.includes('franquiciado')) {
-        if (accessibleBranches.length > 0) {
-          navigate(`/local/${accessibleBranches[0].id}`);
-        } else {
-          navigate('/local');
-        }
+      // Todos van a Mi Local, excepto si solo son admin (sin acceso a locales)
+      const hasLocalAccess = isAdmin || isGerente || roles.includes('empleado') || roles.includes('franquiciado');
+      
+      if (hasLocalAccess) {
+        navigate('/local');
       } else {
         navigate('/');
       }
     }
-  }, [user, loading, roleLoading, isAdmin, isGerente, roles, accessibleBranches, navigate]);
+  }, [user, loading, roleLoading, isAdmin, isGerente, roles, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
