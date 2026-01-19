@@ -147,8 +147,30 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.Elemen
   { value: 'mercadopago_qr', label: 'MP QR', icon: QrCode },
   { value: 'mercadopago_link', label: 'MP Link', icon: CreditCard },
   { value: 'transferencia', label: 'Transferencia', icon: CreditCard },
-  { value: 'vales', label: 'Vales', icon: CreditCard },
 ];
+
+// Métodos de pago específicos para apps de delivery
+type AppPaymentMethod = 'rappi' | 'pedidos_ya' | 'mercadopago_delivery' | 'efectivo';
+
+const getAppPaymentInfo = (channel: AppsChannel): { fixed: boolean; method?: AppPaymentMethod; options?: AppPaymentMethod[] } => {
+  switch (channel) {
+    case 'rappi':
+      return { fixed: true, method: 'rappi' };
+    case 'mercadopago_delivery':
+      return { fixed: true, method: 'mercadopago_delivery' };
+    case 'pedidos_ya':
+      return { fixed: false, options: ['pedidos_ya', 'efectivo'] };
+    default:
+      return { fixed: false, options: ['efectivo'] };
+  }
+};
+
+const APP_PAYMENT_LABELS: Record<AppPaymentMethod, string> = {
+  rappi: 'Rappi',
+  pedidos_ya: 'Pedidos Ya',
+  mercadopago_delivery: 'MP Delivery',
+  efectivo: 'Efectivo',
+};
 
 export default function POSView({ branch }: POSViewProps) {
   const { user } = useAuth();
@@ -186,6 +208,7 @@ export default function POSView({ branch }: POSViewProps) {
   
   // Apps delivery state
   const [appsChannel, setAppsChannel] = useState<AppsChannel>('pedidos_ya');
+  const [appPaymentMethod, setAppPaymentMethod] = useState<AppPaymentMethod>('pedidos_ya');
   const [externalOrderId, setExternalOrderId] = useState('');
   const [customDeliveryFee, setCustomDeliveryFee] = useState('');
   
@@ -686,6 +709,11 @@ export default function POSView({ branch }: POSViewProps) {
         return note;
       }).filter(Boolean).join(' | ');
 
+      // Determine actual payment method for apps
+      const actualPaymentMethod = orderArea === 'apps' 
+        ? (appPaymentMethod === 'efectivo' ? 'efectivo' : paymentMethod) 
+        : paymentMethod;
+
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -698,7 +726,7 @@ export default function POSView({ branch }: POSViewProps) {
           caller_number: callerNumber ? parseInt(callerNumber) : null,
           order_type: mapOrderType(),
           order_area: orderArea === 'apps' ? 'delivery' : orderArea,
-          payment_method: paymentMethod,
+          payment_method: orderArea === 'apps' && appPaymentMethod !== 'efectivo' ? null : actualPaymentMethod,
           sales_channel: getSalesChannel(),
           external_order_id: orderArea === 'apps' ? externalOrderId : null,
           subtotal,
@@ -738,15 +766,24 @@ export default function POSView({ branch }: POSViewProps) {
         }
       }
 
-      // Register cash movement if there's an active shift
-      if (activeShift) {
+      // Register cash movement only if:
+      // - There's an active shift AND
+      // - Payment affects the cash register (efectivo always, or non-app orders with cash payment)
+      const shouldRegisterCashMovement = activeShift && (
+        // Mostrador o Delivery propio con cualquier método afecta caja
+        (orderArea !== 'apps') ||
+        // Apps solo afecta caja si es PedidosYa con efectivo
+        (orderArea === 'apps' && appsChannel === 'pedidos_ya' && appPaymentMethod === 'efectivo')
+      );
+
+      if (shouldRegisterCashMovement) {
         await supabase
           .from('cash_register_movements')
           .insert({
             shift_id: activeShift.id,
             branch_id: branch.id,
             type: 'income',
-            payment_method: paymentMethod,
+            payment_method: orderArea === 'apps' ? 'efectivo' : paymentMethod,
             amount: total,
             concept: `Pedido #${order.id.slice(0, 8)} - ${customerName}`,
             order_id: order.id,
@@ -1389,7 +1426,16 @@ export default function POSView({ branch }: POSViewProps) {
                   <Button
                     key={channel.value}
                     variant={appsChannel === channel.value ? 'default' : 'outline'}
-                    onClick={() => setAppsChannel(channel.value)}
+                    onClick={() => {
+                      setAppsChannel(channel.value);
+                      // Auto-set payment method based on channel
+                      const paymentInfo = getAppPaymentInfo(channel.value);
+                      if (paymentInfo.fixed && paymentInfo.method) {
+                        setAppPaymentMethod(paymentInfo.method);
+                      } else if (paymentInfo.options && paymentInfo.options.length > 0) {
+                        setAppPaymentMethod(paymentInfo.options[0]);
+                      }
+                    }}
                     className="justify-start h-12 text-base"
                   >
                     <Bike className="w-5 h-5 mr-3" />
@@ -1509,7 +1555,16 @@ export default function POSView({ branch }: POSViewProps) {
                       key={channel.value}
                       variant={appsChannel === channel.value ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setAppsChannel(channel.value)}
+                      onClick={() => {
+                        setAppsChannel(channel.value);
+                        // Auto-set payment method based on channel
+                        const paymentInfo = getAppPaymentInfo(channel.value);
+                        if (paymentInfo.fixed && paymentInfo.method) {
+                          setAppPaymentMethod(paymentInfo.method);
+                        } else if (paymentInfo.options && paymentInfo.options.length > 0) {
+                          setAppPaymentMethod(paymentInfo.options[0]);
+                        }
+                      }}
                       className="text-xs"
                     >
                       {channel.label}
@@ -1656,22 +1711,68 @@ export default function POSView({ branch }: POSViewProps) {
               </>
             )}
 
+            {/* Método de pago - condicional según área */}
             <div className="space-y-2">
               <Label>Método de pago</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {PAYMENT_METHODS.slice(0, 6).map(method => (
-                  <Button
-                    key={method.value}
-                    variant={paymentMethod === method.value ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setPaymentMethod(method.value)}
-                    className="flex-col h-auto py-2"
-                  >
-                    <method.icon className="w-4 h-4 mb-1" />
-                    <span className="text-xs">{method.label}</span>
-                  </Button>
-                ))}
-              </div>
+              
+              {/* Para Apps: mostrar según la plataforma */}
+              {orderArea === 'apps' && (() => {
+                const paymentInfo = getAppPaymentInfo(appsChannel);
+                
+                if (paymentInfo.fixed && paymentInfo.method) {
+                  // Rappi o MP Delivery: método fijo
+                  return (
+                    <div className="bg-muted rounded-lg p-3 text-center">
+                      <Badge variant="default" className="text-sm px-4 py-2">
+                        {APP_PAYMENT_LABELS[paymentInfo.method]}
+                      </Badge>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Método de pago fijo para {appsChannel === 'rappi' ? 'Rappi' : 'MercadoPago Delivery'}
+                      </p>
+                    </div>
+                  );
+                } else {
+                  // PedidosYa: puede ser efectivo o pedidos_ya
+                  return (
+                    <div className="grid grid-cols-2 gap-2">
+                      {paymentInfo.options?.map(method => (
+                        <Button
+                          key={method}
+                          variant={appPaymentMethod === method ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setAppPaymentMethod(method)}
+                          className="flex-col h-auto py-2"
+                        >
+                          {method === 'efectivo' ? (
+                            <Banknote className="w-4 h-4 mb-1" />
+                          ) : (
+                            <Bike className="w-4 h-4 mb-1" />
+                          )}
+                          <span className="text-xs">{APP_PAYMENT_LABELS[method]}</span>
+                        </Button>
+                      ))}
+                    </div>
+                  );
+                }
+              })()}
+              
+              {/* Para Mostrador y Delivery propio: métodos normales */}
+              {orderArea !== 'apps' && (
+                <div className="grid grid-cols-3 gap-2">
+                  {PAYMENT_METHODS.map(method => (
+                    <Button
+                      key={method.value}
+                      variant={paymentMethod === method.value ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setPaymentMethod(method.value)}
+                      className="flex-col h-auto py-2"
+                    >
+                      <method.icon className="w-4 h-4 mb-1" />
+                      <span className="text-xs">{method.label}</span>
+                    </Button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="bg-muted rounded-lg p-3">
