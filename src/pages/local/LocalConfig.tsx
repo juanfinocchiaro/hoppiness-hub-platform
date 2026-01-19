@@ -296,10 +296,13 @@ export default function LocalConfig() {
             <div className="flex items-start gap-3">
               <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
               <div className="flex-1 space-y-4">
-                <div className="space-y-0.5">
+                <div className="space-y-1">
                   <Label className="text-base font-medium">Tiempo de Preparación</Label>
                   <p className="text-sm text-muted-foreground">
-                    Tiempo estimado que se muestra a los clientes
+                    Desde que entra el pedido hasta que está listo para entregar.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    No incluye el tiempo de delivery.
                   </p>
                 </div>
 
