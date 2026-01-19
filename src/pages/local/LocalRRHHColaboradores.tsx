@@ -62,12 +62,14 @@ interface StaffMember {
 
 const ROLE_LABELS: Record<AppRole, string> = {
   admin: 'Admin de Marca',
+  coordinador: 'Coordinador',
+  socio: 'Socio',
   franquiciado: 'Dueño Franquicia',
   gerente: 'Encargado',
   empleado: 'Empleado',
 };
 
-const ROLE_HIERARCHY: AppRole[] = ['admin', 'franquiciado', 'gerente', 'empleado'];
+const ROLE_HIERARCHY: AppRole[] = ['admin', 'coordinador', 'socio', 'franquiciado', 'gerente', 'empleado'];
 
 export default function LocalRRHHColaboradores() {
   const { branchId } = useParams<{ branchId: string }>();
