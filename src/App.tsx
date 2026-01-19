@@ -36,6 +36,7 @@ import ProductForm from "./pages/admin/ProductForm";
 import Branches from "./pages/admin/Branches";
 import BranchProducts from "./pages/admin/BranchProducts";
 import Suppliers from "./pages/admin/Suppliers";
+import ProfitLossReport from "./pages/admin/ProfitLossReport";
 import Users from "./pages/admin/Users";
 import SalesReports from "./pages/admin/SalesReports";
 
@@ -89,6 +90,7 @@ const App = () => (
               <Route path="sucursales" element={<Branches />} />
               <Route path="sucursales/:branchId/productos" element={<BranchProducts />} />
               <Route path="proveedores" element={<Suppliers />} />
+              <Route path="estado-resultados" element={<ProfitLossReport />} />
               <Route path="usuarios" element={<Users />} />
               <Route path="reportes" element={<SalesReports />} />
             </Route>
