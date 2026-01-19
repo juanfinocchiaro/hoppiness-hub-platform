@@ -817,17 +817,70 @@ export default function LocalCaja() {
 
                           <Button variant="outline" onClick={() => setHistoryDialog(true)}>
                             <History className="h-4 w-4 mr-2" />
-                            Ver Movimientos
+                            Ver Todos
                           </Button>
                         </div>
 
+                        {/* Quick View: Recent Movements */}
+                        {registerMovements.length > 0 && (
+                          <div className="mt-6 border-t pt-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="font-medium flex items-center gap-2">
+                                <History className="h-4 w-4" />
+                                Últimos Movimientos
+                              </h4>
+                              <Badge variant="secondary">{registerMovements.length} total</Badge>
+                            </div>
+                            <div className="space-y-2">
+                              {registerMovements.slice(0, 5).map((mov) => (
+                                <div 
+                                  key={mov.id} 
+                                  className="flex items-center justify-between p-2 bg-muted/30 rounded-lg text-sm"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    {mov.type === 'income' || mov.type === 'deposit' ? (
+                                      <ArrowUpRight className="h-4 w-4 text-green-500" />
+                                    ) : (
+                                      <ArrowDownRight className="h-4 w-4 text-red-500" />
+                                    )}
+                                    <span className="truncate max-w-[150px] sm:max-w-[250px]">{mov.concept}</span>
+                                    <span className="text-xs text-muted-foreground hidden sm:inline">
+                                      {format(new Date(mov.created_at), 'HH:mm')}
+                                    </span>
+                                  </div>
+                                  <span className={`font-semibold ${
+                                    mov.type === 'income' || mov.type === 'deposit' 
+                                      ? 'text-green-600' 
+                                      : 'text-red-600'
+                                  }`}>
+                                    {mov.type === 'income' || mov.type === 'deposit' ? '+' : '-'}
+                                    {formatCurrency(mov.amount)}
+                                  </span>
+                                </div>
+                              ))}
+                              {registerMovements.length > 5 && (
+                                <Button 
+                                  variant="ghost" 
+                                  className="w-full text-sm text-muted-foreground"
+                                  onClick={() => setHistoryDialog(true)}
+                                >
+                                  Ver {registerMovements.length - 5} movimientos más...
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
                         {/* Movements History Dialog */}
                         <Dialog open={historyDialog} onOpenChange={setHistoryDialog}>
-                          <DialogContent className="max-w-2xl">
+                          <DialogContent className="max-w-2xl max-h-[80vh]">
                             <DialogHeader>
                               <DialogTitle>Movimientos del Turno</DialogTitle>
+                              <DialogDescription>
+                                {registerMovements.length} movimientos desde {currentShift && format(new Date(currentShift.opened_at), "dd/MM HH:mm", { locale: es })}
+                              </DialogDescription>
                             </DialogHeader>
-                            <ScrollArea className="h-[400px]">
+                            <ScrollArea className="h-[400px] pr-4">
                               {registerMovements.length === 0 ? (
                                 <p className="text-center text-muted-foreground py-8">
                                   No hay movimientos registrados
@@ -841,9 +894,13 @@ export default function LocalCaja() {
                                     >
                                       <div className="flex items-center gap-3">
                                         {mov.type === 'income' || mov.type === 'deposit' ? (
-                                          <ArrowUpRight className="h-5 w-5 text-green-500" />
+                                          <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
+                                            <ArrowUpRight className="h-4 w-4 text-green-600" />
+                                          </div>
                                         ) : (
-                                          <ArrowDownRight className="h-5 w-5 text-red-500" />
+                                          <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
+                                            <ArrowDownRight className="h-4 w-4 text-red-600" />
+                                          </div>
                                         )}
                                         <div>
                                           <p className="font-medium">{mov.concept}</p>
