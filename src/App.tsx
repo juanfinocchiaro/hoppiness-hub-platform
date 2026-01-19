@@ -26,6 +26,7 @@ import LocalConfig from "./pages/local/LocalConfig";
 // Admin
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminHome from "./pages/admin/AdminHome";
+import BranchStatus from "./pages/admin/BranchStatus";
 import Products from "./pages/admin/Products";
 import ProductForm from "./pages/admin/ProductForm";
 import Branches from "./pages/admin/Branches";
@@ -74,6 +75,7 @@ const App = () => (
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>}>
               <Route index element={<AdminHome />} />
+              <Route path="estado-sucursales" element={<BranchStatus />} />
               <Route path="productos" element={<Products />} />
               <Route path="productos/nuevo" element={<ProductForm />} />
               <Route path="productos/:productId" element={<ProductForm />} />
