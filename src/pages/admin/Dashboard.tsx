@@ -23,8 +23,6 @@ import {
 
 const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-  { to: '/pos', icon: ShoppingCart, label: 'Punto de Venta', external: true },
-  { to: '/pos/pedidos', icon: ClipboardList, label: 'Pedidos', external: true },
   { to: '/admin/reportes', icon: BarChart3, label: 'Reportes' },
   { to: '/admin/sucursales', icon: Store, label: 'Sucursales' },
   { to: '/admin/productos', icon: Package, label: 'Productos' },

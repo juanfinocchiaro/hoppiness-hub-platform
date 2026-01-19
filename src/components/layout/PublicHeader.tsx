@@ -24,7 +24,7 @@ export function PublicHeader() {
 
   const navLinks = [
     { href: '/pedir', label: 'Pedir', icon: ShoppingBag },
-    { href: '/menu', label: 'Nuestro Menú', icon: MenuIcon },
+    { href: '/menu', label: 'Menú', icon: MenuIcon },
   ];
 
   return (
