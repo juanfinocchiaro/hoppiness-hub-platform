@@ -23,7 +23,8 @@ import {
 
 const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-  { to: '/admin/reportes', icon: BarChart3, label: 'Reportes' },
+  { to: '/admin/reportes', icon: BarChart3, label: 'Ventas' },
+  { to: '/admin/estado-resultados', icon: ClipboardList, label: 'Estado de Resultados' },
   { to: '/admin/sucursales', icon: Store, label: 'Sucursales' },
   { to: '/admin/productos', icon: Package, label: 'Productos' },
   { to: '/admin/proveedores', icon: Truck, label: 'Proveedores' },
