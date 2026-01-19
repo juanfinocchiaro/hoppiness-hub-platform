@@ -4,19 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  Plus, Trash2, Edit2, ChefHat, Package, 
-  RefreshCw, Link2, Minus, Check
-} from 'lucide-react';
+import { Plus, ChefHat, Minus, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  ModifierOptionCard, 
+  ModifierOptionSkeleton, 
+  ModifierEmptyState 
+} from '@/components/admin/ModifierOptionCard';
+import { ModifierAssignDialog } from '@/components/admin/ModifierAssignDialog';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Product = Tables<'products'>;
@@ -196,7 +195,6 @@ export default function Modifiers() {
       
       if (existing) {
         if (currentlyEnabled) {
-          // Delete assignment
           const { error } = await supabase
             .from('product_modifier_options')
             .delete()
@@ -204,7 +202,6 @@ export default function Modifiers() {
             .eq('modifier_option_id', optionId);
           if (error) throw error;
         } else {
-          // Re-enable
           const { error } = await supabase
             .from('product_modifier_options')
             .update({ is_enabled: true })
@@ -213,7 +210,6 @@ export default function Modifiers() {
           if (error) throw error;
         }
       } else {
-        // Create new
         const { error } = await supabase
           .from('product_modifier_options')
           .insert({ product_id: productId, modifier_option_id: optionId, is_enabled: true });
@@ -229,6 +225,13 @@ export default function Modifiers() {
             ? { ...o, assignedProductIds: o.assignedProductIds.filter(id => id !== productId) }
             : o)
         })));
+        // Also update selectedOptionForAssign if open
+        if (selectedOptionForAssign?.id === optionId) {
+          setSelectedOptionForAssign(prev => prev ? {
+            ...prev,
+            assignedProductIds: prev.assignedProductIds.filter(id => id !== productId)
+          } : null);
+        }
       } else {
         setOptionAssignments(prev => [...prev.filter(a => !(a.product_id === productId && a.modifier_option_id === optionId)), 
           { product_id: productId, modifier_option_id: optionId, is_enabled: true }]);
@@ -238,6 +241,13 @@ export default function Modifiers() {
             ? { ...o, assignedProductIds: [...o.assignedProductIds, productId] }
             : o)
         })));
+        // Also update selectedOptionForAssign if open
+        if (selectedOptionForAssign?.id === optionId) {
+          setSelectedOptionForAssign(prev => prev ? {
+            ...prev,
+            assignedProductIds: [...prev.assignedProductIds, productId]
+          } : null);
+        }
       }
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -289,144 +299,101 @@ export default function Modifiers() {
     setOptionDialog(true);
   };
 
-  const formatPrice = (amount: number) => {
-    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount);
-  };
-
-  const getBurgerProducts = () => {
-    const burgerCategoryIds = categories.filter(c => BURGER_CATEGORIES.includes(c.name)).map(c => c.id);
-    return products.filter(p => p.category_id && burgerCategoryIds.includes(p.category_id));
-  };
-
-  const getProductsByCategory = () => {
-    const grouped: Record<string, Product[]> = {};
-    products.forEach(p => {
-      const cat = categories.find(c => c.id === p.category_id);
-      const catName = cat?.name || 'Sin categoría';
-      if (!grouped[catName]) grouped[catName] = [];
-      grouped[catName].push(p);
-    });
-    return grouped;
+  const openAssignDialog = (option: ModifierOption) => {
+    setSelectedOptionForAssign(option);
+    setAssignDialog(true);
   };
 
   const adicionales = groups.find(g => g.name === 'Adicionales');
   const personalizaciones = groups.find(g => g.name === 'Personalizaciones');
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+    <div className="space-y-8 animate-fade-in">
+      {/* Header */}
+      <header className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <ChefHat className="h-6 w-6" />
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-primary/10">
+              <ChefHat className="h-7 w-7 text-primary" />
+            </div>
             Modificadores
           </h1>
-          <p className="text-muted-foreground">
-            Adicionales (+$) y personalizaciones (sin X) que se asignan individualmente a productos
+          <p className="text-muted-foreground mt-2 max-w-xl">
+            Adicionales (+$) y personalizaciones (sin X) que se asignan individualmente a cada producto.
           </p>
         </div>
-      </div>
+        <Button 
+          variant="outline" 
+          size="icon"
+          onClick={fetchData}
+          disabled={loading}
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        </Button>
+      </header>
 
+      {/* Tabs */}
       <Tabs defaultValue="adicionales" className="space-y-6">
-        <TabsList className="grid grid-cols-2 w-full max-w-md">
-          <TabsTrigger value="adicionales" className="flex items-center gap-2">
+        <TabsList className="grid grid-cols-2 w-full max-w-md h-12">
+          <TabsTrigger value="adicionales" className="flex items-center gap-2 text-base">
             <Plus className="h-4 w-4" />
             Adicionales
+            {adicionales && (
+              <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-full">
+                {adicionales.options.length}
+              </span>
+            )}
           </TabsTrigger>
-          <TabsTrigger value="personalizaciones" className="flex items-center gap-2">
+          <TabsTrigger value="personalizaciones" className="flex items-center gap-2 text-base">
             <Minus className="h-4 w-4" />
             Personalizaciones
+            {personalizaciones && (
+              <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-full">
+                {personalizaciones.options.length}
+              </span>
+            )}
           </TabsTrigger>
         </TabsList>
 
         {/* Adicionales Tab */}
         <TabsContent value="adicionales" className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+          <Card className="border-0 shadow-card">
+            <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
               <div>
-                <CardTitle>Adicionales</CardTitle>
-                <CardDescription>
-                  Cosas que se pueden agregar: extra bacon, cheddar, etc. Cada adicional se asigna individualmente a productos.
+                <CardTitle className="text-xl">Adicionales</CardTitle>
+                <CardDescription className="mt-1">
+                  Cosas que se pueden agregar: extra bacon, cheddar, etc.
                 </CardDescription>
               </div>
               {adicionales && (
-                <Button onClick={() => openAddOption(adicionales.id)}>
+                <Button onClick={() => openAddOption(adicionales.id)} size="sm">
                   <Plus className="h-4 w-4 mr-2" />
-                  Nuevo Adicional
+                  Nuevo
                 </Button>
               )}
             </CardHeader>
             <CardContent>
-              {adicionales?.options.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
-                  No hay adicionales. Creá opciones como "Extra Bacon", "Doble Cheddar", etc.
-                </p>
+              {loading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => <ModifierOptionSkeleton key={i} />)}
+                </div>
+              ) : adicionales?.options.length === 0 ? (
+                <ModifierEmptyState 
+                  type="adicional" 
+                  onAdd={() => adicionales && openAddOption(adicionales.id)} 
+                />
               ) : (
-                <div className="grid gap-3">
+                <div className="space-y-2">
                   {adicionales?.options.map(option => (
-                    <div 
-                      key={option.id} 
-                      className={`flex items-center justify-between p-4 border rounded-lg ${!option.is_active ? 'opacity-50 bg-muted/50' : ''}`}
-                    >
-                      <div className="flex items-center gap-4">
-                        <Switch
-                          checked={option.is_active}
-                          onCheckedChange={(checked) => handleToggleOption(option.id, checked)}
-                        />
-                        {option.linkedProduct?.image_url && (
-                          <img 
-                            src={option.linkedProduct.image_url} 
-                            alt={option.name} 
-                            className="w-10 h-10 rounded object-cover"
-                          />
-                        )}
-                        <div>
-                          <span className="font-medium">{option.linkedProduct?.name || option.name}</span>
-                          {option.linkedProduct && (
-                            <span className="ml-2 text-xs text-muted-foreground">
-                              <Link2 className="inline w-3 h-3 mr-1" />
-                              Vinculado
-                            </span>
-                          )}
-                          <div className="text-sm text-muted-foreground">
-                            {option.assignedProductIds.length} productos asignados
-                          </div>
-                        </div>
-                        {Number(option.price_adjustment) !== 0 && (
-                          <Badge variant="default">
-                            +{formatPrice(Number(option.price_adjustment))}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => { setSelectedOptionForAssign(option); setAssignDialog(true); }}
-                        >
-                          <Package className="h-4 w-4 mr-2" />
-                          Asignar
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => openEditOption(option)}>
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => handleDeleteOption(option.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
+                    <ModifierOptionCard
+                      key={option.id}
+                      option={option}
+                      type="adicional"
+                      onToggle={handleToggleOption}
+                      onEdit={openEditOption}
+                      onDelete={handleDeleteOption}
+                      onAssign={openAssignDialog}
+                    />
                   ))}
                 </div>
               )}
@@ -436,74 +403,44 @@ export default function Modifiers() {
 
         {/* Personalizaciones Tab */}
         <TabsContent value="personalizaciones" className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+          <Card className="border-0 shadow-card">
+            <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
               <div>
-                <CardTitle>Personalizaciones</CardTitle>
-                <CardDescription>
-                  Cosas que se pueden sacar: sin cebolla, sin tomate, etc. Se asignan individualmente a cada hamburguesa.
+                <CardTitle className="text-xl">Personalizaciones</CardTitle>
+                <CardDescription className="mt-1">
+                  Cosas que se pueden sacar: sin cebolla, sin tomate, etc.
                 </CardDescription>
               </div>
               {personalizaciones && (
-                <Button onClick={() => openAddOption(personalizaciones.id)}>
+                <Button onClick={() => openAddOption(personalizaciones.id)} size="sm">
                   <Plus className="h-4 w-4 mr-2" />
-                  Nueva Personalización
+                  Nueva
                 </Button>
               )}
             </CardHeader>
             <CardContent>
-              {personalizaciones?.options.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
-                  No hay personalizaciones. Creá opciones como "Sin cebolla", "Sin tomate", etc.
-                </p>
+              {loading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => <ModifierOptionSkeleton key={i} />)}
+                </div>
+              ) : personalizaciones?.options.length === 0 ? (
+                <ModifierEmptyState 
+                  type="personalizacion" 
+                  onAdd={() => personalizaciones && openAddOption(personalizaciones.id)} 
+                />
               ) : (
-                <div className="grid gap-3">
+                <div className="space-y-2">
                   {personalizaciones?.options.map(option => (
-                    <div 
-                      key={option.id} 
-                      className={`flex items-center justify-between p-4 border rounded-lg ${!option.is_active ? 'opacity-50 bg-muted/50' : ''}`}
-                    >
-                      <div className="flex items-center gap-4">
-                        <Switch
-                          checked={option.is_active}
-                          onCheckedChange={(checked) => handleToggleOption(option.id, checked)}
-                        />
-                        <div>
-                          <span className="font-medium">{option.name}</span>
-                          <div className="text-sm text-muted-foreground">
-                            {option.assignedProductIds.length} productos asignados
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleAssignToAllBurgers(option.id)}
-                        >
-                          Todas las burgers
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => { setSelectedOptionForAssign(option); setAssignDialog(true); }}
-                        >
-                          <Package className="h-4 w-4 mr-2" />
-                          Asignar
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => openEditOption(option)}>
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => handleDeleteOption(option.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
+                    <ModifierOptionCard
+                      key={option.id}
+                      option={option}
+                      type="personalizacion"
+                      onToggle={handleToggleOption}
+                      onEdit={openEditOption}
+                      onDelete={handleDeleteOption}
+                      onAssign={openAssignDialog}
+                      onAssignAllBurgers={handleAssignToAllBurgers}
+                    />
                   ))}
                 </div>
               )}
@@ -516,11 +453,11 @@ export default function Modifiers() {
       <Dialog open={optionDialog} onOpenChange={resetOptionForm}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingOption ? 'Editar' : 'Nueva opción'}</DialogTitle>
+            <DialogTitle>{editingOption ? 'Editar opción' : 'Nueva opción'}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Vincular a producto (opcional)</Label>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label className="text-muted-foreground">Vincular a producto (opcional)</Label>
               <Select 
                 value={optionLinkedProductId} 
                 onValueChange={(v) => {
@@ -554,7 +491,7 @@ export default function Modifiers() {
 
             <Separator />
 
-            <div>
+            <div className="space-y-2">
               <Label>Nombre</Label>
               <Input 
                 placeholder="Ej: Extra Bacon, Sin cebolla" 
@@ -562,7 +499,7 @@ export default function Modifiers() {
                 onChange={(e) => setOptionName(e.target.value)}
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label>Ajuste de precio</Label>
               <Input 
                 type="number"
@@ -573,8 +510,10 @@ export default function Modifiers() {
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={resetOptionForm}>Cancelar</Button>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={resetOptionForm}>
+              Cancelar
+            </Button>
             <Button onClick={handleSaveOption} disabled={!optionName}>
               {editingOption ? 'Guardar' : 'Crear'}
             </Button>
@@ -583,58 +522,17 @@ export default function Modifiers() {
       </Dialog>
 
       {/* Assign to Products Dialog */}
-      <Dialog open={assignDialog} onOpenChange={() => { setAssignDialog(false); setSelectedOptionForAssign(null); }}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Asignar "{selectedOptionForAssign?.name}"</DialogTitle>
-          </DialogHeader>
-          <ScrollArea className="h-[60vh] pr-4">
-            <div className="space-y-6">
-              {Object.entries(getProductsByCategory()).map(([categoryName, categoryProducts]) => (
-                <div key={categoryName}>
-                  <div className="sticky top-0 bg-background py-2 z-10 border-b mb-2">
-                    <h4 className="font-semibold text-sm">{categoryName}</h4>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {categoryProducts.map(product => {
-                      const isAssigned = selectedOptionForAssign?.assignedProductIds.includes(product.id) || false;
-                      return (
-                        <button
-                          type="button"
-                          key={product.id} 
-                          onClick={() => {
-                            if (selectedOptionForAssign) {
-                              handleToggleProductOptionAssignment(product.id, selectedOptionForAssign.id, isAssigned);
-                            }
-                          }}
-                          className={`flex items-center gap-3 p-3 rounded-lg border-2 text-left transition-all ${
-                            isAssigned 
-                              ? 'border-primary bg-primary/10' 
-                              : 'border-muted hover:border-primary/50'
-                          }`}
-                        >
-                          {product.image_url && (
-                            <img src={product.image_url} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0" />
-                          )}
-                          <span className="text-sm font-medium truncate">{product.name}</span>
-                          {isAssigned && (
-                            <Check className="h-4 w-4 text-primary ml-auto flex-shrink-0" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-          <DialogFooter>
-            <Button onClick={() => { setAssignDialog(false); setSelectedOptionForAssign(null); }}>
-              Listo
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ModifierAssignDialog
+        open={assignDialog}
+        onOpenChange={(open) => {
+          setAssignDialog(open);
+          if (!open) setSelectedOptionForAssign(null);
+        }}
+        option={selectedOptionForAssign}
+        products={products}
+        categories={categories}
+        onToggleAssignment={handleToggleProductOptionAssignment}
+      />
     </div>
   );
 }
