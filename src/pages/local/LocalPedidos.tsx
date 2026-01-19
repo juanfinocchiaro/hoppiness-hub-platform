@@ -557,11 +557,13 @@ function OrderCard({ order, onStatusChange, onCancelClick, getNextStatus, format
                 <span className="ml-2">{STATUS_CONFIG[nextStatus].label}</span>
               </Button>
             )}
-            {order.status !== 'cancelled' && order.status !== 'delivered' && (
+            {/* Only allow cancel before preparing */}
+            {['draft', 'pending', 'confirmed'].includes(order.status) && (
               <Button 
                 variant="destructive" 
                 size="icon"
                 onClick={onCancelClick}
+                title="Cancelar pedido"
               >
                 <XCircle className="h-4 w-4" />
               </Button>
