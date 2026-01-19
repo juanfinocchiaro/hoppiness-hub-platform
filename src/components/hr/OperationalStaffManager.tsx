@@ -49,6 +49,13 @@ interface Employee {
   is_active: boolean;
 }
 
+interface ScheduleEntry {
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  is_day_off: boolean;
+}
+
 interface AttendanceLog {
   id: string;
   employee_id: string;
@@ -64,6 +71,7 @@ interface OperationalStaffManagerProps {
 
 export default function OperationalStaffManager({ branchId, canManage }: OperationalStaffManagerProps) {
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [schedules, setSchedules] = useState<Record<string, ScheduleEntry[]>>({});
   const [todayLogs, setTodayLogs] = useState<AttendanceLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [showEmployeeDialog, setShowEmployeeDialog] = useState(false);
@@ -83,12 +91,30 @@ export default function OperationalStaffManager({ branchId, canManage }: Operati
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [empRes, logsRes] = await Promise.all([
-        supabase
-          .from('employees')
-          .select('*')
-          .eq('branch_id', branchId)
-          .order('full_name'),
+      // First fetch employees
+      const empRes = await supabase
+        .from('employees')
+        .select('*')
+        .eq('branch_id', branchId)
+        .order('full_name');
+
+      if (empRes.error) throw empRes.error;
+      const employeeList = (empRes.data || []).map(e => ({
+        ...e,
+        current_status: e.current_status as 'WORKING' | 'OFF_DUTY',
+      }));
+      setEmployees(employeeList);
+
+      // Fetch schedules and logs in parallel
+      const employeeIds = employeeList.map(e => e.id);
+      
+      const [schedRes, logsRes] = await Promise.all([
+        employeeIds.length > 0
+          ? supabase
+              .from('employee_schedules')
+              .select('*')
+              .in('employee_id', employeeIds)
+          : Promise.resolve({ data: [], error: null }),
         supabase
           .from('attendance_logs')
           .select('*, employees(full_name)')
@@ -98,11 +124,22 @@ export default function OperationalStaffManager({ branchId, canManage }: Operati
           .limit(50),
       ]);
 
-      if (empRes.error) throw empRes.error;
-      setEmployees((empRes.data || []).map(e => ({
-        ...e,
-        current_status: e.current_status as 'WORKING' | 'OFF_DUTY',
-      })));
+      // Group schedules by employee
+      const grouped: Record<string, ScheduleEntry[]> = {};
+      if (schedRes.data) {
+        schedRes.data.forEach((s: any) => {
+          if (!grouped[s.employee_id]) {
+            grouped[s.employee_id] = [];
+          }
+          grouped[s.employee_id].push({
+            day_of_week: s.day_of_week,
+            start_time: s.start_time,
+            end_time: s.end_time,
+            is_day_off: s.is_day_off,
+          });
+        });
+      }
+      setSchedules(grouped);
 
       if (logsRes.data) {
         const logs: AttendanceLog[] = logsRes.data.map((l: any) => ({
@@ -120,6 +157,15 @@ export default function OperationalStaffManager({ branchId, canManage }: Operati
     } finally {
       setLoading(false);
     }
+  };
+
+  const getTodaySchedule = (employeeId: string): { start: string; end: string } | null => {
+    const today = new Date().getDay();
+    const empSchedule = schedules[employeeId]?.find(s => s.day_of_week === today && !s.is_day_off);
+    if (empSchedule) {
+      return { start: empSchedule.start_time.slice(0, 5), end: empSchedule.end_time.slice(0, 5) };
+    }
+    return null;
   };
 
   useEffect(() => {
@@ -320,61 +366,63 @@ export default function OperationalStaffManager({ branchId, canManage }: Operati
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nombre</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Activo</TableHead>
+                    <TableHead>Puesto</TableHead>
+                    <TableHead>Horario Ingreso</TableHead>
+                    <TableHead>Horario Egreso</TableHead>
                     {canManage && <TableHead className="text-right">Acciones</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {employees.map((emp) => (
-                    <TableRow key={emp.id} className={!emp.is_active ? 'opacity-50' : ''}>
-                      <TableCell>
-                        <div>
+                  {employees.map((emp) => {
+                    const todaySchedule = getTodaySchedule(emp.id);
+                    return (
+                      <TableRow key={emp.id} className={!emp.is_active ? 'opacity-50' : ''}>
+                        <TableCell>
                           <p className="font-medium">{emp.full_name}</p>
-                          {emp.position && (
-                            <p className="text-xs text-muted-foreground">{emp.position}</p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={emp.current_status === 'WORKING' ? 'default' : 'secondary'}>
-                          {emp.current_status === 'WORKING' ? (
-                            <><LogIn className="h-3 w-3 mr-1" /> En turno</>
-                          ) : (
-                            <><LogOut className="h-3 w-3 mr-1" /> Fuera</>
-                          )}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={emp.is_active}
-                          onCheckedChange={() => handleToggleActive(emp)}
-                          disabled={!canManage}
-                        />
-                      </TableCell>
-                      {canManage && (
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openEditDialog(emp)}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive"
-                              onClick={() => { setDeletingEmployee(emp); setShowDeleteDialog(true); }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
                         </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
+                        <TableCell>
+                          <span className="text-muted-foreground">
+                            {emp.position || '—'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {todaySchedule ? (
+                            <span className="font-mono text-sm">{todaySchedule.start}</span>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {todaySchedule ? (
+                            <span className="font-mono text-sm">{todaySchedule.end}</span>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
+                          )}
+                        </TableCell>
+                        {canManage && (
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openEditDialog(emp)}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive"
+                                onClick={() => { setDeletingEmployee(emp); setShowDeleteDialog(true); }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
