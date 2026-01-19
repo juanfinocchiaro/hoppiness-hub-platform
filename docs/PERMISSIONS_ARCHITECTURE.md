@@ -12,6 +12,15 @@ El sistema de permisos utiliza un modelo híbrido que combina roles globales con
 
 ---
 
+## Estructura de Paneles
+
+| Panel | Acceso | Descripción |
+|-------|--------|-------------|
+| **Panel Marca** | admin, coordinador, socio | Gestión centralizada de la cadena |
+| **Panel Mi Local** | admin, franquiciado, gerente, empleado | Operación de sucursal específica |
+
+---
+
 ## Tablas de Base de Datos
 
 ### `user_roles`
@@ -21,7 +30,7 @@ Almacena el rol global de cada usuario.
 |---------|------|-------------|
 | id | uuid | PK |
 | user_id | uuid | FK a auth.users |
-| role | app_role | admin, gerente, empleado, franquiciado |
+| role | app_role | admin, coordinador, socio, franquiciado, gerente, empleado |
 | created_at | timestamptz | Fecha de creación |
 
 ### `profiles`
@@ -39,7 +48,7 @@ Información pública del usuario.
 | is_active | boolean | Estado activo |
 
 ### `permission_definitions`
-Catálogo de 52 permission keys disponibles.
+Catálogo de 55+ permission keys disponibles.
 
 | Columna | Tipo | Descripción |
 |---------|------|-------------|
@@ -61,6 +70,20 @@ Asignación granular de permisos por usuario y sucursal.
 | permission_key | text | Key del permiso asignado |
 | granted_by | uuid | Usuario que otorgó el permiso |
 | granted_at | timestamptz | Fecha de otorgamiento |
+
+### `permission_audit_logs`
+Registro de auditoría de cambios de permisos.
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| id | uuid | PK |
+| user_id | uuid | Usuario que realizó el cambio |
+| branch_id | uuid | Sucursal afectada |
+| target_user_id | uuid | Usuario cuyos permisos cambiaron |
+| action | text | grant, revoke, bulk_grant, bulk_revoke |
+| permission_keys | text[] | Permisos afectados |
+| reason | text | Motivo opcional |
+| created_at | timestamptz | Fecha del cambio |
 
 ### `branch_permissions` (Legacy)
 Permisos booleanos heredados - mantener para compatibilidad.
@@ -113,9 +136,10 @@ SELECT public.has_branch_permission(
 
 **Lógica de evaluación:**
 1. Admins → siempre `true`
-2. Busca en `user_branch_permissions` el key exacto
-3. Fallback a columnas booleanas en `branch_permissions`
-4. Default → `false`
+2. Socios → solo permisos de lectura predefinidos
+3. Busca en `user_branch_permissions` el key exacto
+4. Fallback a columnas booleanas en `branch_permissions`
+5. Default → `false`
 
 ### `grant_role_defaults(_branch_id, _role, _user_id)`
 Asigna permisos predeterminados según el rol.
@@ -133,13 +157,90 @@ SELECT public.grant_role_defaults(
 ## Jerarquía de Roles
 
 ```
-admin (nivel 4)
-  └── gerente (nivel 3)
-       └── franquiciado (nivel 2)
-            └── empleado (nivel 1)
+admin (nivel 6) ─────────────────────── Acceso total, bypass de permisos
+  │
+  ├── coordinador (nivel 5) ─────────── Panel Marca sin finanzas/RRHH
+  │
+  ├── socio (nivel 4) ───────────────── Solo lectura de reportes financieros
+  │
+  └── franquiciado (nivel 3) ────────── Dueño de sucursal, puede crear usuarios
+       │
+       └── gerente (nivel 2) ────────── Encargado operativo
+            │
+            └── empleado (nivel 1) ──── Operación básica (POS/KDS)
 ```
 
-**Regla de herencia:** Un rol superior puede hacer todo lo que hace uno inferior.
+**Regla de herencia:** Un rol superior puede hacer todo lo que hace uno inferior (excepto socio que es solo lectura).
+
+---
+
+## Descripción Detallada de Roles
+
+### 🔴 Admin (Admin de Marca)
+- **Acceso:** Total a Panel Marca y todos los Panel Mi Local
+- **Capacidades:** Gestión completa de la cadena, productos globales, usuarios, sucursales
+- **Bypass:** La función `has_branch_permission` siempre retorna `true`
+- **Quién lo usa:** Dueño de la marca
+
+### 🟠 Coordinador
+- **Acceso:** Panel Marca
+- **Capacidades:** Marketing, productos, operaciones, reportes de ventas
+- **Restricciones:** Sin acceso a finanzas ni RRHH
+- **Quién lo usa:** Coordinador digital, marketing, operaciones centrales
+
+### ⚪ Socio
+- **Acceso:** Panel Marca (solo lectura)
+- **Capacidades:** Ver reportes financieros, P&L, ventas globales
+- **Restricciones:** No puede modificar nada
+- **Quién lo usa:** Socios inversores, contadores externos
+
+### 🟣 Franquiciado
+- **Acceso:** Panel Mi Local de su(s) sucursal(es)
+- **Capacidades:** 
+  - Gestión completa de su local
+  - Ver datos privados de empleados (DNI, CBU, sueldos)
+  - Crear usuarios para su sucursal (gerentes, empleados)
+  - Reportes financieros y P&L de su local
+- **Quién lo usa:** Dueño de franquicia
+
+### 🔵 Gerente (Encargado)
+- **Acceso:** Panel Mi Local de su sucursal asignada
+- **Capacidades:** 
+  - Operación diaria completa
+  - Gestión de horarios y asistencia
+  - Reportes de ventas y productos
+  - Ajustes de caja e inventario
+- **Restricciones:** Sin datos privados de empleados, sin P&L
+- **Quién lo usa:** Encargado de turno
+
+### 🟢 Empleado
+- **Acceso:** Panel Mi Local (limitado)
+- **Capacidades:** 
+  - POS y KDS
+  - Ver pedidos y procesarlos
+  - Ver su propio horario
+- **Restricciones:** Sin acceso a reportes, finanzas, RRHH
+- **Quién lo usa:** Cajero, cocinero, delivery
+
+---
+
+## Flujo de Creación de Usuarios
+
+```
+Admin de Marca
+    │
+    ├── Crea usuarios de Panel Marca
+    │   ├── Coordinadores (Alejandro)
+    │   └── Socios (Ismael)
+    │
+    └── Crea Franquiciados y los asigna a sucursales
+            │
+            └── Franquiciado
+                    │
+                    └── Crea usuarios de SU sucursal
+                        ├── Gerentes (Encargados)
+                        └── Empleados (Cajeros, Cocineros)
+```
 
 ---
 
@@ -237,9 +338,12 @@ admin (nivel 4)
 | Key | Nombre | Min Role |
 |-----|--------|----------|
 | admin.users | Gestionar usuarios | admin |
+| admin.users_view | Ver usuarios | coordinador |
 | admin.roles | Asignar roles | admin |
 | admin.permissions | Gestionar permisos | admin |
 | admin.branches | Gestionar sucursales | admin |
+| admin.branches_view | Ver sucursales | coordinador |
+| admin.create_branch_users | Crear usuarios de sucursal | franquiciado |
 | admin.global_products | Productos globales | admin |
 | admin.global_modifiers | Modificadores globales | admin |
 | admin.global_categories | Categorías globales | admin |
@@ -279,6 +383,27 @@ admin (nivel 4)
 ]
 ```
 
+### Coordinador
+```typescript
+[
+  // Todos los de gerente, más acceso a Panel Marca:
+  'admin.users_view', 'admin.branches_view',
+  // EXCEPTO: finance.*, hr.employees_private, hr.payroll_*, reports.financial
+]
+```
+
+### Socio (Solo Lectura)
+```typescript
+[
+  // Solo permisos de visualización:
+  'reports.sales', 'reports.products', 'reports.financial',
+  'finance.view', 'finance.pl_report',
+  'orders.view', 'orders.history',
+  'products.view', 'inventory.view',
+  'hr.employees_view', 'hr.schedules_view', 'hr.attendance_view'
+]
+```
+
 ### Franquiciado
 ```typescript
 [
@@ -286,7 +411,8 @@ admin (nivel 4)
   'hr.employees_private', 'hr.payroll_view', 'hr.payroll_manage', 'hr.documents',
   'reports.financial',
   'finance.view', 'finance.payments', 'finance.pl_report',
-  'settings.integrations'
+  'settings.integrations',
+  'admin.create_branch_users'  // Puede crear usuarios para su sucursal
 ]
 ```
 
@@ -303,7 +429,7 @@ Acceso total a todos los permisos (bypass en función `has_branch_permission`).
 | Autenticación | Supabase Auth (email/pass) | PIN de 4 dígitos |
 | Alcance | Multi-sucursal posible | Una sucursal fija |
 | Permisos | Granulares por sucursal | No aplica sistema de permisos |
-| Acceso | Panel admin/local | Solo kiosko de fichaje |
+| Acceso | Panel Marca/Mi Local | Solo kiosko de fichaje |
 
 ---
 
@@ -336,6 +462,9 @@ Usuario intenta acción
        ↓
 ¿Es admin? → SÍ → Permitir
        ↓ NO
+¿Es socio? → SÍ → ¿Es permiso de lectura? → SÍ → Permitir
+       ↓ NO                                  ↓ NO
+       ↓                                   Denegar
 ¿Tiene permission_key en user_branch_permissions? → SÍ → Permitir
        ↓ NO
 ¿Tiene permiso legacy en branch_permissions? → SÍ → Permitir
@@ -345,7 +474,21 @@ Denegar
 
 ---
 
-## Panel de Administración
+## Hook usePermission
+
+```typescript
+import { usePermission } from '@/hooks/usePermission';
+
+// Verificar un permiso
+const { hasPermission, isLoading } = usePermission('orders.manage', branchId);
+
+// Verificar múltiples permisos
+const { permissions } = usePermissions(['orders.view', 'orders.manage'], branchId);
+```
+
+---
+
+## Panel de Administración de Permisos
 
 **Ruta:** `/admin/permisos`
 
@@ -358,16 +501,18 @@ Denegar
 - Botón "Aplicar defaults del rol"
 - Contador de permisos activos
 - Guardado con confirmación
+- Auditoría automática de cambios
 
 ---
 
 ## Consideraciones de Seguridad
 
 1. **Anti-escalación:** Solo admins pueden modificar permisos
-2. **Auditoría:** Campo `granted_by` registra quién otorgó cada permiso
+2. **Auditoría:** Tabla `permission_audit_logs` registra todos los cambios
 3. **RLS activo:** Todas las tablas tienen políticas de seguridad
 4. **Scope por sucursal:** Los permisos solo aplican en la sucursal asignada
 5. **Fallback seguro:** Default a `false` cuando no hay permiso explícito
+6. **Socio read-only:** El rol socio tiene bypass solo para permisos de lectura
 
 ---
 
@@ -383,21 +528,29 @@ El sistema mantiene compatibilidad con la tabla legacy `branch_permissions`:
 ## Ejemplo de Uso en Código
 
 ```typescript
-// Verificar permiso antes de mostrar botón
-const { data: canManageOrders } = useQuery({
-  queryKey: ['permission', 'orders.manage', branchId],
-  queryFn: async () => {
-    const { data } = await supabase.rpc('has_branch_permission', {
-      _branch_id: branchId,
-      _permission: 'orders.manage',
-      _user_id: userId
-    });
-    return data;
-  }
-});
+// Usando el hook usePermission
+import { usePermission } from '@/hooks/usePermission';
 
-// En el componente
-{canManageOrders && <Button>Gestionar Pedido</Button>}
+function OrderActions({ branchId }) {
+  const { hasPermission: canCancel } = usePermission('orders.cancel', branchId);
+  const { hasPermission: canRefund } = usePermission('orders.refund', branchId);
+
+  return (
+    <div>
+      {canCancel && <Button>Cancelar Pedido</Button>}
+      {canRefund && <Button>Reembolsar</Button>}
+    </div>
+  );
+}
+```
+
+```typescript
+// Verificación directa con Supabase
+const { data: canManageOrders } = await supabase.rpc('has_branch_permission', {
+  _branch_id: branchId,
+  _permission: 'orders.manage',
+  _user_id: userId
+});
 ```
 
 ---
