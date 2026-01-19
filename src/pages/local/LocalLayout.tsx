@@ -31,7 +31,8 @@ import {
   RefreshCw,
   ShoppingCart,
   ChefHat,
-  Monitor
+  Monitor,
+  Receipt
 } from 'lucide-react';
 import {
   Sheet,
@@ -112,6 +113,7 @@ export default function LocalLayout() {
   const navItems = [
     { to: '', icon: LayoutDashboard, label: 'Dashboard', show: true, exact: true },
     { to: 'pedidos', icon: ClipboardList, label: 'Pedidos', show: true, exact: false },
+    { to: 'transacciones', icon: Receipt, label: 'Transacciones', show: canManageConfig, exact: false },
     { to: 'productos', icon: Package, label: 'Productos', show: canManageProducts, exact: false },
     { to: 'config', icon: Settings, label: 'Configuración', show: canManageConfig, exact: false },
   ].filter(item => item.show);
