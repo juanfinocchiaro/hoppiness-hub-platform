@@ -821,6 +821,75 @@ export type Database = {
           },
         ]
       }
+      printers: {
+        Row: {
+          auto_cut: boolean | null
+          branch_id: string
+          created_at: string
+          display_order: number | null
+          id: string
+          ip_address: string | null
+          is_active: boolean
+          is_default: boolean
+          name: string
+          paper_width: number | null
+          port: number | null
+          print_copies: number | null
+          purpose: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          auto_cut?: boolean | null
+          branch_id: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          paper_width?: number | null
+          port?: number | null
+          print_copies?: number | null
+          purpose?: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          auto_cut?: boolean | null
+          branch_id?: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          paper_width?: number | null
+          port?: number | null
+          print_copies?: number | null
+          purpose?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "printers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "printers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       product_categories: {
         Row: {
           created_at: string
