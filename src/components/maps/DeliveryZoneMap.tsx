@@ -64,46 +64,21 @@ const circleOptions: google.maps.CircleOptions = {
   draggable: true,
 };
 
-export default function DeliveryZoneMap({
+// Inner component that only renders once we have the API key
+function DeliveryZoneMapInner({
+  apiKey,
   branchLocation,
   branchName,
   initialShape,
   onShapeChange,
   readOnly = false,
-}: DeliveryZoneMapProps) {
-  const [apiKey, setApiKey] = useState<string | null>(null);
-  const [loadingKey, setLoadingKey] = useState(true);
+}: DeliveryZoneMapProps & { apiKey: string }) {
   const [currentShape, setCurrentShape] = useState<google.maps.Polygon | google.maps.Circle | null>(null);
   const [drawingMode, setDrawingMode] = useState<'polygon' | 'circle' | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
 
-  // Fetch API key from edge function
-  useEffect(() => {
-    const fetchApiKey = async () => {
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-maps-key`,
-          {
-            headers: {
-              'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            },
-          }
-        );
-        const data = await response.json();
-        if (data.apiKey) {
-          setApiKey(data.apiKey);
-        }
-      } catch (error) {
-        console.error('Error fetching Google Maps API key:', error);
-      } finally {
-        setLoadingKey(false);
-      }
-    };
-    fetchApiKey();
-  }, []);
-
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: apiKey || '',
+    googleMapsApiKey: apiKey,
     libraries,
   });
 
@@ -191,22 +166,6 @@ export default function DeliveryZoneMap({
       });
     });
   }, [onShapeChange]);
-
-  if (loadingKey) {
-    return (
-      <div className="w-full h-[400px] bg-muted rounded-lg flex items-center justify-center">
-        <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (!apiKey) {
-    return (
-      <div className="w-full h-[400px] bg-muted rounded-lg flex items-center justify-center">
-        <p className="text-muted-foreground">API key de Google Maps no configurada</p>
-      </div>
-    );
-  }
 
   if (loadError) {
     return (
@@ -349,4 +308,53 @@ export default function DeliveryZoneMap({
       )}
     </div>
   );
+}
+
+// Wrapper component that fetches API key first
+export default function DeliveryZoneMap(props: DeliveryZoneMapProps) {
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [loadingKey, setLoadingKey] = useState(true);
+
+  // Fetch API key from edge function
+  useEffect(() => {
+    const fetchApiKey = async () => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-maps-key`,
+          {
+            headers: {
+              'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+          }
+        );
+        const data = await response.json();
+        if (data.apiKey) {
+          setApiKey(data.apiKey);
+        }
+      } catch (error) {
+        console.error('Error fetching Google Maps API key:', error);
+      } finally {
+        setLoadingKey(false);
+      }
+    };
+    fetchApiKey();
+  }, []);
+
+  if (loadingKey) {
+    return (
+      <div className="w-full h-[400px] bg-muted rounded-lg flex items-center justify-center">
+        <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!apiKey) {
+    return (
+      <div className="w-full h-[400px] bg-muted rounded-lg flex items-center justify-center">
+        <p className="text-muted-foreground">API key de Google Maps no configurada</p>
+      </div>
+    );
+  }
+
+  return <DeliveryZoneMapInner {...props} apiKey={apiKey} />;
 }
