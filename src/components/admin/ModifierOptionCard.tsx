@@ -31,7 +31,7 @@ export interface ModifierOption {
 
 interface ModifierOptionCardProps {
   option: ModifierOption;
-  type: 'adicional' | 'personalizacion';
+  type: 'adicional' | 'personalizacion' | 'combo';
   isReorderMode?: boolean;
   onEdit: (option: ModifierOption) => void;
   onDelete: (optionId: string) => void;
@@ -250,26 +250,41 @@ export function ModifierEmptyState({
   type, 
   onAdd 
 }: { 
-  type: 'adicional' | 'personalizacion';
+  type: 'adicional' | 'personalizacion' | 'combo';
   onAdd: () => void;
 }) {
+  const getTitle = () => {
+    switch (type) {
+      case 'adicional': return 'Sin adicionales';
+      case 'personalizacion': return 'Sin personalizaciones';
+      case 'combo': return 'Sin opciones de combo';
+    }
+  };
+
+  const getDescription = () => {
+    switch (type) {
+      case 'adicional': return 'Creá opciones como "Extra Bacon", "Doble Cheddar", etc.';
+      case 'personalizacion': return 'Creá opciones como "Sin cebolla", "Sin tomate", etc.';
+      case 'combo': return 'Creá opciones de bebida y acompañamientos para combos.';
+    }
+  };
+
+  const getButtonText = () => {
+    switch (type) {
+      case 'adicional': return 'Crear adicional';
+      case 'personalizacion': return 'Crear personalización';
+      case 'combo': return 'Crear opción';
+    }
+  };
+
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 text-center border-2 border-dashed border-border rounded-xl bg-muted/30">
       <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
         <Package className="h-8 w-8 text-muted-foreground" />
       </div>
-      <h3 className="font-semibold text-foreground mb-1">
-        {type === 'adicional' ? 'Sin adicionales' : 'Sin personalizaciones'}
-      </h3>
-      <p className="text-sm text-muted-foreground mb-4 max-w-xs">
-        {type === 'adicional' 
-          ? 'Creá opciones como "Extra Bacon", "Doble Cheddar", etc.'
-          : 'Creá opciones como "Sin cebolla", "Sin tomate", etc.'
-        }
-      </p>
-      <Button onClick={onAdd} size="sm">
-        Crear {type === 'adicional' ? 'adicional' : 'personalización'}
-      </Button>
+      <h3 className="font-semibold text-foreground mb-1">{getTitle()}</h3>
+      <p className="text-sm text-muted-foreground mb-4 max-w-xs">{getDescription()}</p>
+      <Button onClick={onAdd} size="sm">{getButtonText()}</Button>
     </div>
   );
 }
