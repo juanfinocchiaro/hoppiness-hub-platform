@@ -18,7 +18,9 @@ import {
   Building2,
   ChefHat,
   Shield,
-  UtensilsCrossed
+  UtensilsCrossed,
+  TrendingUp,
+  Landmark
 } from 'lucide-react';
 import {
   Sheet,
@@ -47,8 +49,6 @@ interface NavSection {
 
 const navItems: NavItem[] = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-  { to: '/admin/reportes', icon: BarChart3, label: 'Ventas' },
-  { to: '/admin/estado-resultados', icon: ClipboardList, label: 'Estado de Resultados' },
   { to: '/admin/sucursales', icon: Store, label: 'Sucursales' },
   { to: '/admin/proveedores', icon: Truck, label: 'Proveedores' },
   { to: '/admin/usuarios', icon: Users, label: 'Equipo' },
@@ -65,12 +65,25 @@ const menuSection: NavSection = {
   ]
 };
 
+const reportsSection: NavSection = {
+  id: 'reportes',
+  label: 'Reportes',
+  icon: BarChart3,
+  items: [
+    { to: '/admin/performance', icon: TrendingUp, label: 'Performance Locales' },
+    { to: '/admin/reportes', icon: BarChart3, label: 'Ventas' },
+    { to: '/admin/estado-resultados', icon: ClipboardList, label: 'P&L Locales' },
+    { to: '/admin/finanzas-marca', icon: Landmark, label: 'Finanzas Marca' },
+  ]
+};
+
 export default function AdminDashboard() {
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [hasAssignedBranch, setHasAssignedBranch] = useState(false);
   const [menuExpanded, setMenuExpanded] = useState(true);
+  const [reportsExpanded, setReportsExpanded] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -130,6 +143,7 @@ export default function AdminDashboard() {
   }
 
   const isMenuSectionActive = menuSection.items.some(item => location.pathname.startsWith(item.to));
+  const isReportsSectionActive = reportsSection.items.some(item => location.pathname.startsWith(item.to));
 
   const NavContent = () => (
     <nav className="space-y-1">
@@ -187,7 +201,40 @@ export default function AdminDashboard() {
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Remaining nav items */}
+      {/* Reportes collapsible section */}
+      <Collapsible open={reportsExpanded || isReportsSectionActive} onOpenChange={setReportsExpanded}>
+        <CollapsibleTrigger asChild>
+          <Button
+            variant="ghost"
+            className={`w-full justify-start ${isReportsSectionActive ? 'bg-primary/5 text-primary' : ''}`}
+          >
+            <reportsSection.icon className="w-4 h-4 mr-3" />
+            {reportsSection.label}
+            {reportsExpanded || isReportsSectionActive ? (
+              <ChevronDown className="w-4 h-4 ml-auto" />
+            ) : (
+              <ChevronRight className="w-4 h-4 ml-auto" />
+            )}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pl-4 space-y-0.5 mt-1">
+          {reportsSection.items.map((item) => {
+            const isActive = location.pathname.startsWith(item.to);
+            return (
+              <Link key={item.to} to={item.to}>
+                <Button
+                  variant={isActive ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className={`w-full justify-start ${isActive ? 'bg-primary/10 text-primary' : ''}`}
+                >
+                  <item.icon className="w-4 h-4 mr-3" />
+                  {item.label}
+                </Button>
+              </Link>
+            );
+          })}
+        </CollapsibleContent>
+      </Collapsible>
       {navItems.slice(4).map((item) => {
         const isActive = item.exact 
           ? location.pathname === item.to

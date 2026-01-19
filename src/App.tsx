@@ -56,6 +56,8 @@ import BranchProducts from "./pages/admin/BranchProducts";
 import Suppliers from "./pages/admin/Suppliers";
 import Modifiers from "./pages/admin/Modifiers";
 import ProfitLossReport from "./pages/admin/ProfitLossReport";
+import BranchPerformance from "./pages/admin/BranchPerformance";
+import BrandFinances from "./pages/admin/BrandFinances";
 import Users from "./pages/admin/Users";
 import Permissions from "./pages/admin/Permissions";
 import SalesReports from "./pages/admin/SalesReports";
@@ -136,6 +138,8 @@ const App = () => (
               <Route path="sucursales/:branchId/productos" element={<BranchProducts />} />
               <Route path="proveedores" element={<Suppliers />} />
               <Route path="estado-resultados" element={<ProfitLossReport />} />
+              <Route path="performance" element={<BranchPerformance />} />
+              <Route path="finanzas-marca" element={<BrandFinances />} />
               <Route path="usuarios" element={<Users />} />
               <Route path="permisos" element={<Permissions />} />
               <Route path="reportes" element={<SalesReports />} />
