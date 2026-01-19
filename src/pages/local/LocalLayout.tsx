@@ -229,15 +229,12 @@ export default function LocalLayout() {
       icon: Wallet,
       show: canManageConfig,
       items: [
-        { to: 'transacciones', label: 'Movimientos', icon: Receipt, show: true },
+        { to: 'transacciones', label: 'Ledger', icon: Receipt, show: true },
         { to: 'caja', label: 'Caja', icon: Calculator, show: true },
-        { to: 'pagos', label: 'Pagos', icon: DollarSign, show: true },
         { to: 'proveedores', label: 'Proveedores', icon: Truck, show: true },
         { to: 'facturas', label: 'Facturas', icon: FileText, show: true },
-        { to: 'impuestos', label: 'Impuestos', icon: Receipt, show: canViewReports },
-        { to: 'planes-pago', label: 'Planes de Pago', icon: FileText, show: canViewReports },
-        { to: 'prestamos', label: 'Préstamos', icon: DollarSign, show: canViewReports },
-        { to: 'reportes', label: 'Reportes P&L/Cashflow', icon: FileText, show: canViewReports },
+        { to: 'obligaciones', label: 'Obligaciones', icon: DollarSign, show: canViewReports },
+        { to: 'reportes', label: 'Reportes', icon: FileText, show: canViewReports },
       ]
     },
     {
