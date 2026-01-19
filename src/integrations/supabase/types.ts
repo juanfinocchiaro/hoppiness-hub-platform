@@ -296,6 +296,69 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_zones: {
+        Row: {
+          branch_id: string
+          created_at: string
+          delivery_fee: number | null
+          description: string | null
+          display_order: number | null
+          estimated_time_min: number | null
+          id: string
+          is_active: boolean
+          min_order_amount: number | null
+          name: string
+          neighborhoods: string[] | null
+          polygon_coords: Json | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          delivery_fee?: number | null
+          description?: string | null
+          display_order?: number | null
+          estimated_time_min?: number | null
+          id?: string
+          is_active?: boolean
+          min_order_amount?: number | null
+          name: string
+          neighborhoods?: string[] | null
+          polygon_coords?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          delivery_fee?: number | null
+          description?: string | null
+          display_order?: number | null
+          estimated_time_min?: number | null
+          id?: string
+          is_active?: boolean
+          min_order_amount?: number | null
+          name?: string
+          neighborhoods?: string[] | null
+          polygon_coords?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_zones_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_zones_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       financial_transactions: {
         Row: {
           amount: number

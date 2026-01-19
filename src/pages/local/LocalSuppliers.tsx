@@ -243,7 +243,7 @@ export default function LocalSuppliers() {
       </div>
 
       {/* Summary Card */}
-      <Card className="bg-sidebar border-sidebar-border">
+      <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
             <div className="p-3 rounded-full bg-destructive/10">
@@ -264,14 +264,14 @@ export default function LocalSuppliers() {
           placeholder="Buscar proveedor..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 bg-sidebar border-sidebar-border"
+          className="pl-10"
         />
       </div>
 
       {/* Suppliers List */}
       <div className="grid gap-4">
         {filteredSuppliers.length === 0 ? (
-          <Card className="bg-sidebar border-sidebar-border">
+          <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">No hay proveedores registrados</p>
             </CardContent>
@@ -284,7 +284,7 @@ export default function LocalSuppliers() {
             return (
               <Card
                 key={supplier.id}
-                className="bg-sidebar border-sidebar-border hover:border-accent/50 transition-colors cursor-pointer"
+                className="hover:border-primary/50 transition-colors cursor-pointer"
                 onClick={() => handleSupplierClick(supplier)}
               >
                 <CardContent className="py-4">
@@ -334,9 +334,9 @@ export default function LocalSuppliers() {
 
       {/* Supplier Detail Drawer */}
       <Sheet open={!!selectedSupplier} onOpenChange={() => setSelectedSupplier(null)}>
-        <SheetContent className="bg-sidebar border-sidebar-border sm:max-w-lg">
+        <SheetContent className="sm:max-w-lg">
           <SheetHeader>
-            <SheetTitle className="text-foreground">{selectedSupplier?.name}</SheetTitle>
+            <SheetTitle>{selectedSupplier?.name}</SheetTitle>
           </SheetHeader>
 
           {selectedSupplier && (
@@ -369,7 +369,7 @@ export default function LocalSuppliers() {
               </div>
 
               {/* Balance Summary */}
-              <Card className="bg-background/50 border-sidebar-border">
+              <Card>
                 <CardContent className="py-4">
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground">Saldo Actual</p>
@@ -380,11 +380,11 @@ export default function LocalSuppliers() {
                 </CardContent>
               </Card>
 
-              <Separator className="bg-sidebar-border" />
+              <Separator />
 
               {/* Movements History */}
               <div>
-                <h4 className="font-semibold text-foreground mb-4">Historial de Movimientos</h4>
+                <h4 className="font-semibold mb-4">Historial de Movimientos</h4>
                 
                 {loadingMovements ? (
                   <div className="flex items-center justify-center py-8">
@@ -400,7 +400,7 @@ export default function LocalSuppliers() {
                       {movements.map((movement) => (
                         <div
                           key={movement.id}
-                          className="flex items-start justify-between p-3 rounded-lg bg-background/30 border border-sidebar-border"
+                          className="flex items-start justify-between p-3 rounded-lg bg-muted/50 border"
                         >
                           <div className="flex items-start gap-3">
                             <div className={`p-2 rounded-full ${

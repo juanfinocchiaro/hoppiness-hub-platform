@@ -76,7 +76,7 @@ interface NavItem {
 
 export default function LocalLayout() {
   const { user, signOut, loading: authLoading } = useAuth();
-  const { isAdmin, isGerente, accessibleBranches, branchPermissions, loading: roleLoading } = useUserRole();
+  const { isAdmin, isGerente, accessibleBranches, branchPermissions, roles, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
   const location = useLocation();
   const { branchId } = useParams();
@@ -145,6 +145,8 @@ export default function LocalLayout() {
   const canManageProducts = isAdmin || isGerente || currentPermissions?.can_manage_products;
   const canManageConfig = isAdmin || isGerente || currentPermissions?.can_manage_staff;
   const canViewReports = isAdmin || isGerente || currentPermissions?.can_view_reports;
+  const isFranquiciado = roles.includes('franquiciado');
+  const canViewPL = isAdmin || isFranquiciado; // Solo admin o franquiciado pueden ver P&L
 
   // Navigation structure
   const navSections: NavSection[] = [
@@ -189,7 +191,7 @@ export default function LocalLayout() {
         { to: 'caja', label: 'Caja', icon: Calculator, show: true },
         { to: 'proveedores', label: 'Proveedores', icon: Truck, show: true },
         { to: 'rrhh', label: 'RRHH', icon: Users, show: true },
-        { to: 'estado-resultados', label: 'Reporte P&L', icon: FileText, show: canViewReports },
+        { to: 'estado-resultados', label: 'Reporte P&L', icon: FileText, show: canViewPL },
       ]
     },
     {
@@ -199,6 +201,7 @@ export default function LocalLayout() {
       show: canManageConfig,
       items: [
         { to: 'config', label: 'Mi Sucursal', icon: Store, show: true },
+        { to: 'zonas-delivery', label: 'Zonas Delivery', icon: MapPin, show: true },
         { to: 'usuarios', label: 'Usuarios', icon: Users, show: isAdmin || isGerente },
         { to: 'impresoras', label: 'Impresoras', icon: Printer, show: true },
       ]

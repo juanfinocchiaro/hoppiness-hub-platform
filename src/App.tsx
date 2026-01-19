@@ -31,6 +31,7 @@ import LocalSuppliers from "./pages/local/LocalSuppliers";
 import LocalRRHH from "./pages/local/LocalRRHH";
 import LocalPL from "./pages/local/LocalPL";
 import LocalConfig from "./pages/local/LocalConfig";
+import LocalDeliveryZones from "./pages/local/LocalDeliveryZones";
 import LocalUsuarios from "./pages/local/LocalUsuarios";
 import LocalImpresoras from "./pages/local/LocalImpresoras";
 
@@ -94,6 +95,7 @@ const App = () => (
               <Route path="estado-resultados" element={<LocalPL />} />
               {/* Configuración */}
               <Route path="config" element={<LocalConfig />} />
+              <Route path="zonas-delivery" element={<LocalDeliveryZones />} />
               <Route path="usuarios" element={<LocalUsuarios />} />
               <Route path="impresoras" element={<LocalImpresoras />} />
             </Route>
