@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Checkbox } from '@/components/ui/checkbox';
+
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -79,6 +79,7 @@ interface SelectedModifier {
   optionName: string;
   groupName: string;
   priceAdjustment: number;
+  quantity: number; // Support for multiple of same modifier
 }
 
 interface CashRegister {
@@ -192,9 +193,11 @@ export default function POSView({ branch }: POSViewProps) {
   // Product modifier dialog
   const [selectedProduct, setSelectedProduct] = useState<ProductWithAvailability | null>(null);
   const [productModifiers, setProductModifiers] = useState<ModifierGroup[]>([]);
-  const [tempSelectedModifiers, setTempSelectedModifiers] = useState<Record<string, string[]>>({});
+  const [tempSelectedModifiers, setTempSelectedModifiers] = useState<Record<string, Record<string, number>>>({});
   const [tempNotes, setTempNotes] = useState('');
   const [loadingModifiers, setLoadingModifiers] = useState(false);
+  const [editingCartItemId, setEditingCartItemId] = useState<string | null>(null);
+  const [branchModifierAvailability, setBranchModifierAvailability] = useState<Set<string>>(new Set());
 
   // Fetch cash registers
   useEffect(() => {
@@ -354,12 +357,12 @@ export default function POSView({ branch }: POSViewProps) {
         setProductModifiers(groupsWithOptions);
 
         // Set default selections (first option for required groups)
-        const defaults: Record<string, string[]> = {};
+        const defaults: Record<string, Record<string, number>> = {};
         groupsWithOptions.forEach(group => {
           if (group.min_selections && group.min_selections > 0 && group.options.length > 0) {
-            defaults[group.id] = [group.options[0].id];
+            defaults[group.id] = { [group.options[0].id]: 1 };
           } else {
-            defaults[group.id] = [];
+            defaults[group.id] = {};
           }
         });
         setTempSelectedModifiers(defaults);
@@ -392,21 +395,31 @@ export default function POSView({ branch }: POSViewProps) {
     toast.success(`${product.name} agregado`);
   };
 
-  const handleModifierToggle = (groupId: string, optionId: string, selectionType: string) => {
+  const handleModifierToggle = (groupId: string, optionId: string, selectionType: string, delta: number = 1) => {
     setTempSelectedModifiers(prev => {
-      const current = prev[groupId] || [];
+      const current = prev[groupId] || {};
       
       if (selectionType === 'single') {
-        return { ...prev, [groupId]: [optionId] };
+        // Single selection - only one option, quantity = 1
+        return { ...prev, [groupId]: { [optionId]: 1 } };
       } else {
-        // Multiple selection
-        if (current.includes(optionId)) {
-          return { ...prev, [groupId]: current.filter(id => id !== optionId) };
+        // Multiple selection - support quantity
+        const currentQty = current[optionId] || 0;
+        const newQty = currentQty + delta;
+        
+        if (newQty <= 0) {
+          // Remove the option
+          const { [optionId]: _, ...rest } = current;
+          return { ...prev, [groupId]: rest };
         } else {
-          return { ...prev, [groupId]: [...current, optionId] };
+          return { ...prev, [groupId]: { ...current, [optionId]: newQty } };
         }
       }
     });
+  };
+  
+  const getModifierQuantity = (groupId: string, optionId: string): number => {
+    return tempSelectedModifiers[groupId]?.[optionId] || 0;
   };
 
   const addToCartWithModifiers = () => {
@@ -416,35 +429,55 @@ export default function POSView({ branch }: POSViewProps) {
     let modifiersTotal = 0;
 
     productModifiers.forEach(group => {
-      const selectedOptionIds = tempSelectedModifiers[group.id] || [];
-      selectedOptionIds.forEach(optionId => {
+      const selectedOptions = tempSelectedModifiers[group.id] || {};
+      Object.entries(selectedOptions).forEach(([optionId, quantity]) => {
         const option = group.options.find(o => o.id === optionId);
-        if (option) {
+        if (option && quantity > 0) {
           selectedModifiers.push({
             optionId: option.id,
             optionName: option.name,
             groupName: group.name,
             priceAdjustment: Number(option.price_adjustment),
+            quantity,
           });
-          modifiersTotal += Number(option.price_adjustment);
+          modifiersTotal += Number(option.price_adjustment) * quantity;
         }
       });
     });
 
     const price = selectedProduct.branchProduct?.custom_price || selectedProduct.price;
-    const newItem: CartItem = {
-      id: crypto.randomUUID(),
-      product: selectedProduct,
-      quantity: 1,
-      notes: tempNotes || undefined,
-      customPrice: price !== selectedProduct.price ? price : undefined,
-      modifiers: selectedModifiers,
-      modifiersTotal,
-    };
-
-    setCart([...cart, newItem]);
-    toast.success(`${selectedProduct.name} agregado`);
+    
+    if (editingCartItemId) {
+      // Update existing cart item
+      setCart(cart.map(item => 
+        item.id === editingCartItemId 
+          ? {
+              ...item,
+              modifiers: selectedModifiers,
+              modifiersTotal,
+              notes: tempNotes || undefined,
+            }
+          : item
+      ));
+      toast.success(`${selectedProduct.name} actualizado`);
+      setEditingCartItemId(null);
+    } else {
+      // Add new item
+      const newItem: CartItem = {
+        id: crypto.randomUUID(),
+        product: selectedProduct,
+        quantity: 1,
+        notes: tempNotes || undefined,
+        customPrice: price !== selectedProduct.price ? price : undefined,
+        modifiers: selectedModifiers,
+        modifiersTotal,
+      };
+      setCart([...cart, newItem]);
+      toast.success(`${selectedProduct.name} agregado`);
+    }
+    
     setSelectedProduct(null);
+    setEditingCartItemId(null);
   };
 
   const updateQuantity = (cartItemId: string, delta: number) => {
@@ -459,6 +492,80 @@ export default function POSView({ branch }: POSViewProps) {
 
   const removeFromCart = (cartItemId: string) => {
     setCart(cart.filter(item => item.id !== cartItemId));
+  };
+
+  // Edit cart item - open modifier dialog with existing selections
+  const handleEditCartItem = async (cartItem: CartItem) => {
+    const product = products.find(p => p.id === cartItem.product.id);
+    if (!product) return;
+    
+    setEditingCartItemId(cartItem.id);
+    setSelectedProduct(product);
+    setTempNotes(cartItem.notes || '');
+    setLoadingModifiers(true);
+
+    // Fetch modifier groups for this product
+    const { data: assignments } = await supabase
+      .from('product_modifier_assignments')
+      .select(`
+        modifier_group_id,
+        display_order,
+        modifier_groups (
+          id,
+          name,
+          description,
+          selection_type,
+          min_selections,
+          max_selections,
+          is_active
+        )
+      `)
+      .eq('product_id', product.id)
+      .eq('is_enabled', true);
+
+    if (assignments && assignments.length > 0) {
+      const activeGroups = assignments
+        .filter(a => a.modifier_groups && (a.modifier_groups as any).is_active)
+        .map(a => ({
+          ...(a.modifier_groups as any),
+          display_order: a.display_order
+        }));
+
+      if (activeGroups.length > 0) {
+        const groupIds = activeGroups.map(g => g.id);
+        const { data: options } = await supabase
+          .from('modifier_options')
+          .select('*')
+          .in('group_id', groupIds)
+          .eq('is_active', true)
+          .order('display_order');
+
+        const groupsWithOptions: ModifierGroup[] = activeGroups.map(g => ({
+          ...g,
+          selection_type: g.selection_type as 'single' | 'multiple',
+          options: (options || []).filter(o => o.group_id === g.id),
+        }));
+
+        setProductModifiers(groupsWithOptions);
+
+        // Populate with existing cart item selections
+        const existingSelections: Record<string, Record<string, number>> = {};
+        groupsWithOptions.forEach(group => {
+          existingSelections[group.id] = {};
+        });
+        
+        cartItem.modifiers.forEach(mod => {
+          const group = groupsWithOptions.find(g => g.options.some(o => o.id === mod.optionId));
+          if (group) {
+            existingSelections[group.id][mod.optionId] = mod.quantity;
+          }
+        });
+        
+        setTempSelectedModifiers(existingSelections);
+      }
+    }
+
+    setLoadingModifiers(false);
   };
 
   const getItemPrice = (item: CartItem) => {
@@ -793,13 +900,19 @@ export default function POSView({ branch }: POSViewProps) {
           ) : (
             <div className="space-y-3">
               {cart.map(item => (
-                <div key={item.id} className="bg-muted/50 rounded-lg p-3">
+                <div 
+                  key={item.id} 
+                  className="bg-muted/50 rounded-lg p-3 cursor-pointer hover:bg-muted/70 transition-colors"
+                  onClick={() => handleEditCartItem(item)}
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm">{item.product.name}</p>
                       {item.modifiers.length > 0 && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          {item.modifiers.map(m => m.optionName).join(', ')}
+                          {item.modifiers.map(m => 
+                            m.quantity > 1 ? `${m.quantity}x ${m.optionName}` : m.optionName
+                          ).join(', ')}
                         </p>
                       )}
                       {item.notes && (
@@ -814,7 +927,7 @@ export default function POSView({ branch }: POSViewProps) {
                         )}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant="outline"
                         size="icon"
@@ -889,7 +1002,7 @@ export default function POSView({ branch }: POSViewProps) {
               {selectedProduct?.name}
             </DialogTitle>
             <DialogDescription>
-              Personalizá tu pedido
+              {editingCartItemId ? 'Modificá los extras de tu pedido' : 'Personalizá tu pedido'}
             </DialogDescription>
           </DialogHeader>
 
@@ -919,7 +1032,7 @@ export default function POSView({ branch }: POSViewProps) {
 
                       {isSingle ? (
                         <RadioGroup
-                          value={tempSelectedModifiers[group.id]?.[0] || ''}
+                          value={Object.keys(tempSelectedModifiers[group.id] || {})[0] || ''}
                           onValueChange={(value) => handleModifierToggle(group.id, value, group.selection_type)}
                         >
                           {group.options.map(option => (
@@ -940,25 +1053,48 @@ export default function POSView({ branch }: POSViewProps) {
                         </RadioGroup>
                       ) : (
                         <div className="space-y-2">
-                          {group.options.map(option => (
-                            <div key={option.id} className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-lg">
-                              <div className="flex items-center gap-3">
-                                <Checkbox
-                                  id={option.id}
-                                  checked={(tempSelectedModifiers[group.id] || []).includes(option.id)}
-                                  onCheckedChange={() => handleModifierToggle(group.id, option.id, group.selection_type)}
-                                />
-                                <Label htmlFor={option.id} className="cursor-pointer font-normal">
-                                  {option.name}
-                                </Label>
+                          {group.options.map(option => {
+                            const qty = getModifierQuantity(group.id, option.id);
+                            const maxAllowed = group.max_selections || 10;
+                            const totalSelected = Object.values(tempSelectedModifiers[group.id] || {}).reduce((a, b) => a + b, 0);
+                            const canAddMore = totalSelected < maxAllowed;
+                            
+                            return (
+                              <div key={option.id} className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-6 w-6"
+                                      onClick={() => handleModifierToggle(group.id, option.id, group.selection_type, -1)}
+                                      disabled={qty === 0}
+                                    >
+                                      <Minus className="w-3 h-3" />
+                                    </Button>
+                                    <span className="w-6 text-center text-sm font-medium">{qty}</span>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-6 w-6"
+                                      onClick={() => handleModifierToggle(group.id, option.id, group.selection_type, 1)}
+                                      disabled={!canAddMore}
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                  <Label className="cursor-pointer font-normal">
+                                    {option.name}
+                                  </Label>
+                                </div>
+                                {Number(option.price_adjustment) !== 0 && (
+                                  <span className={Number(option.price_adjustment) > 0 ? 'text-primary font-medium' : 'text-green-600'}>
+                                    {Number(option.price_adjustment) > 0 ? '+' : ''}{formatPrice(Number(option.price_adjustment))}
+                                  </span>
+                                )}
                               </div>
-                              {Number(option.price_adjustment) !== 0 && (
-                                <span className={Number(option.price_adjustment) > 0 ? 'text-primary font-medium' : 'text-green-600'}>
-                                  {Number(option.price_adjustment) > 0 ? '+' : ''}{formatPrice(Number(option.price_adjustment))}
-                                </span>
-                              )}
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -980,12 +1116,21 @@ export default function POSView({ branch }: POSViewProps) {
           </ScrollArea>
 
           <DialogFooter className="border-t pt-4">
-            <Button variant="outline" onClick={() => setSelectedProduct(null)}>
+            <Button variant="outline" onClick={() => {
+              setSelectedProduct(null);
+              setEditingCartItemId(null);
+            }}>
               Cancelar
             </Button>
             <Button onClick={addToCartWithModifiers}>
-              <Plus className="w-4 h-4 mr-2" />
-              Agregar al Pedido
+              {editingCartItemId ? (
+                <>Guardar Cambios</>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Agregar al Pedido
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
