@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, ChefHat, Minus, RefreshCw, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { handleError } from '@/lib/errorHandler';
 import { ModifierOption } from '@/components/admin/ModifierOptionCard';
 import { SortableModifierList } from '@/components/admin/SortableModifierList';
 import { ModifierAssignDialog } from '@/components/admin/ModifierAssignDialog';
@@ -120,7 +121,7 @@ export default function Modifiers() {
       setCategories(categoriesRes.data || []);
       setOptionAssignments(assignmentsList);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      handleError(error, { showToast: false, context: 'Modifiers.fetchData' });
     } finally {
       setLoading(false);
     }

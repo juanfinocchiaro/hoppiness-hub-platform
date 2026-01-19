@@ -31,6 +31,7 @@ import {
   Receipt,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { handleError } from '@/lib/errorHandler';
 import SplitPayment, { PaymentMethod as SplitPaymentMethod } from './SplitPayment';
 import TipInput from './TipInput';
 import type { Tables, Enums } from '@/integrations/supabase/types';
@@ -319,8 +320,7 @@ export default function CheckoutDialog({
        onOpenChange(false);
 
     } catch (error) {
-      console.error('Error processing payment:', error);
-      toast.error('Error al procesar el pago');
+      handleError(error, { userMessage: 'Error al procesar el pago', context: 'CheckoutDialog.handleSinglePayment' });
     } finally {
       setIsProcessing(false);
       processingRef.current = false;
@@ -393,8 +393,7 @@ export default function CheckoutDialog({
       onOpenChange(false);
 
     } catch (error) {
-      console.error('Error processing split payment:', error);
-      toast.error('Error al procesar los pagos');
+      handleError(error, { userMessage: 'Error al procesar los pagos', context: 'CheckoutDialog.handleSplitPaymentConfirm' });
     } finally {
       setIsProcessing(false);
       processingRef.current = false;
@@ -432,8 +431,7 @@ export default function CheckoutDialog({
       onOpenChange(false);
 
     } catch (error) {
-      console.error('Error finalizing order:', error);
-      toast.error('Error al finalizar el pedido');
+      handleError(error, { userMessage: 'Error al finalizar el pedido', context: 'CheckoutDialog.handleFinalizeOrder' });
     } finally {
       setIsProcessing(false);
       processingRef.current = false;

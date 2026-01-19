@@ -27,6 +27,7 @@ import {
   Send,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { handleError } from '@/lib/errorHandler';
 
 interface CartItem {
   id: string;
@@ -143,8 +144,7 @@ export default function OrderConfirmationDialog({
       onOrderConfirmed();
       onOpenChange(false);
     } catch (error) {
-      console.error('Error confirming order:', error);
-      toast.error('Error al confirmar el pedido');
+      handleError(error, { userMessage: 'Error al confirmar el pedido', context: 'OrderConfirmationDialog.handleConfirm' });
     } finally {
       setIsProcessing(false);
     }

@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { handleError } from '@/lib/errorHandler';
 import {
   Users,
   Search,
@@ -93,8 +94,7 @@ export default function Customers() {
       .order('full_name');
 
     if (error) {
-      toast.error('Error al cargar clientes');
-      console.error(error);
+      handleError(error, { userMessage: 'Error al cargar clientes', context: 'Customers.fetchCustomers' });
     } else {
       setCustomers(data || []);
 
@@ -195,8 +195,7 @@ export default function Customers() {
       resetForm();
       fetchCustomers();
     } catch (error) {
-      console.error(error);
-      toast.error('Error al guardar');
+      handleError(error, { userMessage: 'Error al guardar', context: 'Customers.handleSave' });
     } finally {
       setSaving(false);
     }

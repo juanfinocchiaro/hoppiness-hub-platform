@@ -15,6 +15,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
+import { handleError } from '@/lib/errorHandler';
 import {
   Collapsible,
   CollapsibleContent,
@@ -148,8 +149,7 @@ export default function LocalProductos() {
       allCategoryIds.add('uncategorized');
       setExpandedCategories(allCategoryIds);
     } catch (error) {
-      console.error('Error:', error);
-      toast.error('Error al cargar datos');
+      handleError(error, { userMessage: 'Error al cargar datos', context: 'LocalProductos.fetchData' });
     } finally {
       setLoading(false);
     }
@@ -200,8 +200,7 @@ export default function LocalProductos() {
 
       toast.success(!currentValue ? 'Producto activado' : 'Producto desactivado');
     } catch (error) {
-      console.error('Error:', error);
-      toast.error('Error al actualizar');
+      handleError(error, { userMessage: 'Error al actualizar', context: 'LocalProductos.updateAvailability' });
     } finally {
       setUpdating(null);
     }

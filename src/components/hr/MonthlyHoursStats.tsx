@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Clock, TrendingUp, AlertTriangle, Loader2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, differenceInMinutes, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { handleError } from '@/lib/errorHandler';
 
 interface AttendanceLogRaw {
   id: string;
@@ -83,7 +84,7 @@ export default function MonthlyHoursStats({ branchId }: MonthlyHoursStatsProps) 
         setEmployeesData(employeeHours);
 
       } catch (error) {
-        console.error('Error fetching monthly hours:', error);
+        handleError(error, { showToast: false, context: 'MonthlyHoursStats.fetchMonthlyData' });
       } finally {
         setLoading(false);
       }

@@ -11,6 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { FileText, Download, Loader2, Printer } from 'lucide-react';
 import { toast } from 'sonner';
+import { handleError } from '@/lib/errorHandler';
 
 interface Order {
   id: string;
@@ -72,8 +73,7 @@ export default function InvoiceButton({ order, branch, variant = 'outline', size
         throw new Error('No se recibió la URL del comprobante');
       }
     } catch (error: any) {
-      console.error('Error generating invoice:', error);
-      toast.error('Error al generar comprobante: ' + (error.message || 'Error desconocido'));
+      handleError(error, { userMessage: 'Error al generar comprobante: ' + (error.message || 'Error desconocido'), context: 'InvoiceButton.handleGenerate' });
     } finally {
       setIsGenerating(false);
     }
