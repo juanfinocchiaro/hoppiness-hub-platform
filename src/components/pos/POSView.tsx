@@ -195,6 +195,16 @@ export default function POSView({ branch }: POSViewProps) {
   // Cart state
   const [cart, setCart] = useState<CartItem[]>([]);
   
+  // Persist draft checkout state across dialog closes to avoid double-charging
+  interface PaymentRecord {
+    id: string;
+    payment_method: string;
+    amount: number;
+    created_at: string;
+  }
+  const [draftOrderId, setDraftOrderId] = useState<string | null>(null);
+  const [draftPayments, setDraftPayments] = useState<PaymentRecord[]>([]);
+  
   // Order configuration
   const [orderArea, setOrderArea] = useState<OrderArea>('mostrador');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('efectivo');
@@ -383,6 +393,8 @@ export default function POSView({ branch }: POSViewProps) {
     setCounterSubType('takeaway');
     setAppsChannel('pedidos_ya');
     setAppPaymentMethod('pedidos_ya');
+    setDraftOrderId(null);
+    setDraftPayments([]);
   };
 
   // Proceed to add product after order flow dialog is complete
@@ -1675,6 +1687,12 @@ export default function POSView({ branch }: POSViewProps) {
         }}
         activeShiftId={activeShift?.id || null}
         userId={user?.id || null}
+        existingOrderId={draftOrderId}
+        existingPayments={draftPayments}
+        onDraftUpdated={({ orderId, payments }) => {
+          setDraftOrderId(orderId);
+          setDraftPayments(payments);
+        }}
         onOrderComplete={handleCancelOrder}
         onEditOrder={() => {
           setIsCheckoutOpen(false);
