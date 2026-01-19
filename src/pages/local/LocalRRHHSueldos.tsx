@@ -71,6 +71,7 @@ export default function LocalRRHHSueldos() {
     amount: '',
     type: 'adelanto' as 'adelanto' | 'jornal' | 'comida',
     notes: '',
+    receipt_type: 'INTERNAL' as 'OFFICIAL' | 'INTERNAL',
   });
 
   useEffect(() => {
@@ -169,7 +170,7 @@ export default function LocalRRHHSueldos() {
           concept: `RRHH - ${typeLabel} - ${employee.full_name}`,
           notes: paymentForm.notes || null,
           payment_origin: 'cash',
-          receipt_type: 'INTERNAL',
+          receipt_type: paymentForm.receipt_type,
           recorded_by: user?.id,
         });
 
@@ -177,7 +178,7 @@ export default function LocalRRHHSueldos() {
 
       toast.success('Pago registrado');
       setShowPaymentDialog(false);
-      setPaymentForm({ employee_id: '', amount: '', type: 'adelanto', notes: '' });
+      setPaymentForm({ employee_id: '', amount: '', type: 'adelanto', notes: '', receipt_type: 'INTERNAL' });
       
       const newPayment: HRPayment = {
         id: crypto.randomUUID(),
@@ -354,6 +355,24 @@ export default function LocalRRHHSueldos() {
                   <SelectItem value="comida">Comida Personal</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Comprobante</Label>
+              <Select 
+                value={paymentForm.receipt_type} 
+                onValueChange={(v) => setPaymentForm(prev => ({ ...prev, receipt_type: v as 'OFFICIAL' | 'INTERNAL' }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="INTERNAL">Sin comprobante (Interno)</SelectItem>
+                  <SelectItem value="OFFICIAL">Con factura/recibo (Fiscal)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Si el pago tiene comprobante fiscal, seleccione "Con factura/recibo"
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Monto</Label>

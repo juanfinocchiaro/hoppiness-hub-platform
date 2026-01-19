@@ -125,7 +125,7 @@ interface GroupTotal {
 }
 
 export default function ProfitLossReport() {
-  const { isAdmin, accessibleBranches, loading: roleLoading } = useUserRole();
+  const { isAdmin, isFranquiciado, accessibleBranches, loading: roleLoading } = useUserRole();
   
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
   const [period, setPeriod] = useState<PeriodType>('current');
@@ -134,8 +134,8 @@ export default function ProfitLossReport() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['INGRESOS', 'CMV']));
   const [plData, setPlData] = useState<GroupTotal[]>([]);
 
-  // Only admins can toggle between modes
-  const canToggleMode = isAdmin;
+  // Admins and Franchisees can toggle between modes
+  const canToggleMode = isAdmin || isFranquiciado;
 
   const getPeriodDates = (p: PeriodType): { start: Date; end: Date } => {
     const now = new Date();
