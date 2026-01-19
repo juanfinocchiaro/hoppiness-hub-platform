@@ -8,18 +8,19 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
-  Plus, Settings, Trash2, Edit2, ChefHat, Package, 
-  RefreshCw, GripVertical, ToggleLeft, ToggleRight, Link2, Image 
+  Plus, Trash2, Edit2, ChefHat, Package, 
+  RefreshCw, Link2, Minus
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Product = Tables<'products'>;
+type ProductCategory = Tables<'product_categories'>;
 
 interface ModifierGroup {
   id: string;
@@ -30,6 +31,7 @@ interface ModifierGroup {
   max_selections: number | null;
   is_active: boolean;
   display_order: number;
+  modifier_type: 'adicional' | 'personalizacion';
   options: ModifierOption[];
 }
 
@@ -42,37 +44,33 @@ interface ModifierOption {
   display_order: number;
   linked_product_id?: string | null;
   linkedProduct?: Product | null;
+  assignedProductIds: string[];
 }
 
-interface ProductAssignment {
+interface ProductOptionAssignment {
   product_id: string;
-  modifier_group_id: string;
+  modifier_option_id: string;
   is_enabled: boolean;
 }
+
+const BURGER_CATEGORIES = ['Clásicas', 'Originales', 'Ultrasmash', 'Veggies', 'Más Sabor'];
 
 export default function Modifiers() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [groups, setGroups] = useState<ModifierGroup[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [assignments, setAssignments] = useState<ProductAssignment[]>([]);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [optionAssignments, setOptionAssignments] = useState<ProductOptionAssignment[]>([]);
   
   // Dialog states
-  const [groupDialog, setGroupDialog] = useState(false);
   const [optionDialog, setOptionDialog] = useState(false);
   const [assignDialog, setAssignDialog] = useState(false);
-  const [editingGroup, setEditingGroup] = useState<ModifierGroup | null>(null);
   const [editingOption, setEditingOption] = useState<ModifierOption | null>(null);
   const [selectedGroupForOption, setSelectedGroupForOption] = useState<string>('');
-  const [selectedGroupForAssign, setSelectedGroupForAssign] = useState<string>('');
+  const [selectedOptionForAssign, setSelectedOptionForAssign] = useState<ModifierOption | null>(null);
   
   // Form states
-  const [groupName, setGroupName] = useState('');
-  const [groupDescription, setGroupDescription] = useState('');
-  const [groupSelectionType, setGroupSelectionType] = useState<'single' | 'multiple'>('multiple');
-  const [groupMinSelections, setGroupMinSelections] = useState('0');
-  const [groupMaxSelections, setGroupMaxSelections] = useState('');
-  
   const [optionName, setOptionName] = useState('');
   const [optionPrice, setOptionPrice] = useState('0');
   const [optionLinkedProductId, setOptionLinkedProductId] = useState<string>('');
@@ -84,107 +82,42 @@ export default function Modifiers() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch modifier groups with options
-      const { data: groupsData } = await supabase
-        .from('modifier_groups')
-        .select('*')
-        .order('display_order');
+      const [groupsRes, optionsRes, productsRes, categoriesRes, assignmentsRes] = await Promise.all([
+        supabase.from('modifier_groups').select('*').order('display_order'),
+        supabase.from('modifier_options').select('*, linked_product:products(id, name, image_url)').order('display_order'),
+        supabase.from('products').select('*').order('name'),
+        supabase.from('product_categories').select('*').order('name'),
+        supabase.from('product_modifier_options').select('product_id, modifier_option_id, is_enabled'),
+      ]);
 
-      const { data: optionsData } = await supabase
-        .from('modifier_options')
-        .select('*, linked_product:products(id, name, image_url)')
-        .order('display_order');
+      const assignmentsList: ProductOptionAssignment[] = (assignmentsRes.data || []).map(a => ({
+        product_id: a.product_id,
+        modifier_option_id: a.modifier_option_id,
+        is_enabled: a.is_enabled,
+      }));
 
-      const { data: productsData } = await supabase
-        .from('products')
-        .select('*')
-        .order('name');
-
-      const { data: assignmentsData } = await supabase
-        .from('product_modifier_assignments')
-        .select('product_id, modifier_group_id, is_enabled');
-
-      const groupsWithOptions: ModifierGroup[] = (groupsData || []).map(g => ({
+      const groupsWithOptions: ModifierGroup[] = (groupsRes.data || []).map(g => ({
         ...g,
         selection_type: g.selection_type as 'single' | 'multiple',
-        options: (optionsData || []).filter(o => o.group_id === g.id).map(o => ({
+        modifier_type: (g as any).modifier_type as 'adicional' | 'personalizacion',
+        options: (optionsRes.data || []).filter(o => o.group_id === g.id).map(o => ({
           ...o,
           linked_product_id: (o as any).linked_product_id,
           linkedProduct: (o as any).linked_product as Product | null,
+          assignedProductIds: assignmentsList
+            .filter(a => a.modifier_option_id === o.id && a.is_enabled)
+            .map(a => a.product_id),
         })),
       }));
 
       setGroups(groupsWithOptions);
-      setProducts(productsData || []);
-      setAssignments(assignmentsData || []);
+      setProducts(productsRes.data || []);
+      setCategories(categoriesRes.data || []);
+      setOptionAssignments(assignmentsList);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleSaveGroup = async () => {
-    try {
-      if (editingGroup) {
-        const { error } = await supabase
-          .from('modifier_groups')
-          .update({
-            name: groupName,
-            description: groupDescription || null,
-            selection_type: groupSelectionType,
-            min_selections: parseInt(groupMinSelections) || 0,
-            max_selections: groupMaxSelections ? parseInt(groupMaxSelections) : null,
-          })
-          .eq('id', editingGroup.id);
-        if (error) throw error;
-        toast({ title: 'Grupo actualizado' });
-      } else {
-        const { error } = await supabase
-          .from('modifier_groups')
-          .insert({
-            name: groupName,
-            description: groupDescription || null,
-            selection_type: groupSelectionType,
-            min_selections: parseInt(groupMinSelections) || 0,
-            max_selections: groupMaxSelections ? parseInt(groupMaxSelections) : null,
-            display_order: groups.length,
-          });
-        if (error) throw error;
-        toast({ title: 'Grupo creado' });
-      }
-      resetGroupForm();
-      fetchData();
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-  };
-
-  const handleDeleteGroup = async (groupId: string) => {
-    try {
-      const { error } = await supabase
-        .from('modifier_groups')
-        .delete()
-        .eq('id', groupId);
-      if (error) throw error;
-      toast({ title: 'Grupo eliminado' });
-      fetchData();
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-  };
-
-  const handleToggleGroup = async (groupId: string, isActive: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('modifier_groups')
-        .update({ is_active: isActive })
-        .eq('id', groupId);
-      if (error) throw error;
-      setGroups(prev => prev.map(g => g.id === groupId ? { ...g, is_active: isActive } : g));
-      toast({ title: isActive ? 'Grupo activado' : 'Grupo desactivado' });
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
 
@@ -257,45 +190,81 @@ export default function Modifiers() {
     }
   };
 
-  const handleToggleProductAssignment = async (productId: string, groupId: string, currentlyEnabled: boolean) => {
+  const handleToggleProductOptionAssignment = async (productId: string, optionId: string, currentlyEnabled: boolean) => {
     try {
-      const existing = assignments.find(a => a.product_id === productId && a.modifier_group_id === groupId);
+      const existing = optionAssignments.find(a => a.product_id === productId && a.modifier_option_id === optionId);
       
       if (existing) {
-        const { error } = await supabase
-          .from('product_modifier_assignments')
-          .update({ is_enabled: !currentlyEnabled })
-          .eq('product_id', productId)
-          .eq('modifier_group_id', groupId);
-        if (error) throw error;
+        if (currentlyEnabled) {
+          // Delete assignment
+          const { error } = await supabase
+            .from('product_modifier_options')
+            .delete()
+            .eq('product_id', productId)
+            .eq('modifier_option_id', optionId);
+          if (error) throw error;
+        } else {
+          // Re-enable
+          const { error } = await supabase
+            .from('product_modifier_options')
+            .update({ is_enabled: true })
+            .eq('product_id', productId)
+            .eq('modifier_option_id', optionId);
+          if (error) throw error;
+        }
       } else {
+        // Create new
         const { error } = await supabase
-          .from('product_modifier_assignments')
-          .insert({
-            product_id: productId,
-            modifier_group_id: groupId,
-            is_enabled: true,
-          });
+          .from('product_modifier_options')
+          .insert({ product_id: productId, modifier_option_id: optionId, is_enabled: true });
         if (error) throw error;
       }
 
-      setAssignments(prev => {
-        const filtered = prev.filter(a => !(a.product_id === productId && a.modifier_group_id === groupId));
-        return [...filtered, { product_id: productId, modifier_group_id: groupId, is_enabled: !currentlyEnabled }];
-      });
+      // Update local state
+      if (currentlyEnabled) {
+        setOptionAssignments(prev => prev.filter(a => !(a.product_id === productId && a.modifier_option_id === optionId)));
+        setGroups(prev => prev.map(g => ({
+          ...g,
+          options: g.options.map(o => o.id === optionId 
+            ? { ...o, assignedProductIds: o.assignedProductIds.filter(id => id !== productId) }
+            : o)
+        })));
+      } else {
+        setOptionAssignments(prev => [...prev.filter(a => !(a.product_id === productId && a.modifier_option_id === optionId)), 
+          { product_id: productId, modifier_option_id: optionId, is_enabled: true }]);
+        setGroups(prev => prev.map(g => ({
+          ...g,
+          options: g.options.map(o => o.id === optionId 
+            ? { ...o, assignedProductIds: [...o.assignedProductIds, productId] }
+            : o)
+        })));
+      }
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
 
-  const resetGroupForm = () => {
-    setGroupDialog(false);
-    setEditingGroup(null);
-    setGroupName('');
-    setGroupDescription('');
-    setGroupSelectionType('multiple');
-    setGroupMinSelections('0');
-    setGroupMaxSelections('');
+  const handleAssignToAllBurgers = async (optionId: string) => {
+    try {
+      const burgerCategoryIds = categories.filter(c => BURGER_CATEGORIES.includes(c.name)).map(c => c.id);
+      const burgerProducts = products.filter(p => p.category_id && burgerCategoryIds.includes(p.category_id));
+      
+      const assignments = burgerProducts.map(p => ({
+        product_id: p.id,
+        modifier_option_id: optionId,
+        is_enabled: true,
+      }));
+
+      const { error } = await supabase
+        .from('product_modifier_options')
+        .upsert(assignments, { onConflict: 'product_id,modifier_option_id' });
+      
+      if (error) throw error;
+      toast({ title: `Asignado a ${burgerProducts.length} hamburguesas` });
+      fetchData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
   };
 
   const resetOptionForm = () => {
@@ -305,16 +274,6 @@ export default function Modifiers() {
     setOptionName('');
     setOptionPrice('0');
     setOptionLinkedProductId('');
-  };
-
-  const openEditGroup = (group: ModifierGroup) => {
-    setEditingGroup(group);
-    setGroupName(group.name);
-    setGroupDescription(group.description || '');
-    setGroupSelectionType(group.selection_type);
-    setGroupMinSelections(String(group.min_selections));
-    setGroupMaxSelections(group.max_selections ? String(group.max_selections) : '');
-    setGroupDialog(true);
   };
 
   const openEditOption = (option: ModifierOption) => {
@@ -334,14 +293,24 @@ export default function Modifiers() {
     return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount);
   };
 
-  const getAssignedProductsCount = (groupId: string) => {
-    return assignments.filter(a => a.modifier_group_id === groupId && a.is_enabled).length;
+  const getBurgerProducts = () => {
+    const burgerCategoryIds = categories.filter(c => BURGER_CATEGORIES.includes(c.name)).map(c => c.id);
+    return products.filter(p => p.category_id && burgerCategoryIds.includes(p.category_id));
   };
 
-  const isProductAssigned = (productId: string, groupId: string) => {
-    const assignment = assignments.find(a => a.product_id === productId && a.modifier_group_id === groupId);
-    return assignment?.is_enabled || false;
+  const getProductsByCategory = () => {
+    const grouped: Record<string, Product[]> = {};
+    products.forEach(p => {
+      const cat = categories.find(c => c.id === p.category_id);
+      const catName = cat?.name || 'Sin categoría';
+      if (!grouped[catName]) grouped[catName] = [];
+      grouped[catName].push(p);
+    });
+    return grouped;
   };
+
+  const adicionales = groups.find(g => g.name === 'Adicionales');
+  const personalizaciones = groups.find(g => g.name === 'Personalizaciones');
 
   if (loading) {
     return (
@@ -360,234 +329,196 @@ export default function Modifiers() {
             Modificadores
           </h1>
           <p className="text-muted-foreground">
-            Creá extras y opciones globales que se asignan a múltiples productos
+            Adicionales (+$) y personalizaciones (sin X) que se asignan individualmente a productos
           </p>
         </div>
-        <Button onClick={() => setGroupDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nuevo Grupo
-        </Button>
       </div>
 
-      {groups.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <ChefHat className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-lg font-medium mb-2">No hay grupos de modificadores</p>
-            <p className="text-muted-foreground mb-4">
-              Creá grupos como "Extras", "Punto de Cocción" y asignalos a tus productos
-            </p>
-            <Button onClick={() => setGroupDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Crear Primer Grupo
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <Accordion type="multiple" className="space-y-4">
-          {groups.map(group => (
-            <AccordionItem key={group.id} value={group.id} className="border rounded-lg px-4">
-              <AccordionTrigger className="hover:no-underline">
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={group.is_active}
-                      onCheckedChange={(checked) => handleToggleGroup(group.id, checked)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <span className={`font-semibold ${!group.is_active ? 'text-muted-foreground' : ''}`}>
-                      {group.name}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">
-                      {group.selection_type === 'single' ? 'Elegir 1' : 'Múltiple'}
-                    </Badge>
-                    <Badge variant="secondary">
-                      {group.options.length} opciones
-                    </Badge>
-                    <Badge variant="outline" className="text-primary">
-                      {getAssignedProductsCount(group.id)} productos
-                    </Badge>
-                  </div>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="pt-4 pb-6 space-y-4">
-                {/* Group actions */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Button variant="outline" size="sm" onClick={() => openEditGroup(group)}>
-                    <Edit2 className="h-4 w-4 mr-2" />
-                    Editar Grupo
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => openAddOption(group.id)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Agregar Opción
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => { setSelectedGroupForAssign(group.id); setAssignDialog(true); }}
-                  >
-                    <Package className="h-4 w-4 mr-2" />
-                    Asignar a Productos
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => handleDeleteGroup(group.id)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Eliminar
-                  </Button>
-                </div>
+      <Tabs defaultValue="adicionales" className="space-y-6">
+        <TabsList className="grid grid-cols-2 w-full max-w-md">
+          <TabsTrigger value="adicionales" className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Adicionales
+          </TabsTrigger>
+          <TabsTrigger value="personalizaciones" className="flex items-center gap-2">
+            <Minus className="h-4 w-4" />
+            Personalizaciones
+          </TabsTrigger>
+        </TabsList>
 
-                {/* Options list */}
-                {group.options.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4 text-center">
-                    No hay opciones en este grupo. Agregá opciones como "Extra Cheddar", "Bacon", etc.
-                  </p>
-                ) : (
-                  <div className="grid gap-2">
-                    {group.options.map(option => {
-                      const linkedProduct = option.linkedProduct;
-                      const displayName = linkedProduct?.name || option.name;
-                      const imageUrl = linkedProduct?.image_url;
-                      
-                      return (
-                        <div 
-                          key={option.id} 
-                          className={`flex items-center justify-between p-3 border rounded-lg ${!option.is_active ? 'opacity-50 bg-muted/50' : ''}`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <Switch
-                              checked={option.is_active}
-                              onCheckedChange={(checked) => handleToggleOption(option.id, checked)}
-                            />
-                            {imageUrl && (
-                              <img 
-                                src={imageUrl} 
-                                alt={displayName} 
-                                className="w-8 h-8 rounded object-cover"
-                              />
-                            )}
-                            <div>
-                              <span className="font-medium">{displayName}</span>
-                              {linkedProduct && (
-                                <span className="ml-2 text-xs text-muted-foreground">
-                                  <Link2 className="inline w-3 h-3 mr-1" />
-                                  Vinculado
-                                </span>
-                              )}
-                            </div>
-                            {Number(option.price_adjustment) !== 0 && (
-                              <Badge variant={Number(option.price_adjustment) > 0 ? 'default' : 'secondary'}>
-                                {Number(option.price_adjustment) > 0 ? '+' : ''}{formatPrice(Number(option.price_adjustment))}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => openEditOption(option)}>
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => handleDeleteOption(option.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+        {/* Adicionales Tab */}
+        <TabsContent value="adicionales" className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Adicionales</CardTitle>
+                <CardDescription>
+                  Cosas que se pueden agregar: extra bacon, cheddar, etc. Cada adicional se asigna individualmente a productos.
+                </CardDescription>
+              </div>
+              {adicionales && (
+                <Button onClick={() => openAddOption(adicionales.id)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Adicional
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              {adicionales?.options.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">
+                  No hay adicionales. Creá opciones como "Extra Bacon", "Doble Cheddar", etc.
+                </p>
+              ) : (
+                <div className="grid gap-3">
+                  {adicionales?.options.map(option => (
+                    <div 
+                      key={option.id} 
+                      className={`flex items-center justify-between p-4 border rounded-lg ${!option.is_active ? 'opacity-50 bg-muted/50' : ''}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <Switch
+                          checked={option.is_active}
+                          onCheckedChange={(checked) => handleToggleOption(option.id, checked)}
+                        />
+                        {option.linkedProduct?.image_url && (
+                          <img 
+                            src={option.linkedProduct.image_url} 
+                            alt={option.name} 
+                            className="w-10 h-10 rounded object-cover"
+                          />
+                        )}
+                        <div>
+                          <span className="font-medium">{option.linkedProduct?.name || option.name}</span>
+                          {option.linkedProduct && (
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              <Link2 className="inline w-3 h-3 mr-1" />
+                              Vinculado
+                            </span>
+                          )}
+                          <div className="text-sm text-muted-foreground">
+                            {option.assignedProductIds.length} productos asignados
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      )}
+                        {Number(option.price_adjustment) !== 0 && (
+                          <Badge variant="default">
+                            +{formatPrice(Number(option.price_adjustment))}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => { setSelectedOptionForAssign(option); setAssignDialog(true); }}
+                        >
+                          <Package className="h-4 w-4 mr-2" />
+                          Asignar
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => openEditOption(option)}>
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteOption(option.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Group Dialog */}
-      <Dialog open={groupDialog} onOpenChange={resetGroupForm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingGroup ? 'Editar Grupo' : 'Nuevo Grupo de Modificadores'}</DialogTitle>
-            <DialogDescription>
-              Los grupos agrupan opciones relacionadas (ej: "Extras" contiene "Cheddar", "Bacon", etc.)
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Nombre del grupo</Label>
-              <Input 
-                placeholder="Ej: Extras, Punto de Cocción, Bebida" 
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>Descripción (opcional)</Label>
-              <Input 
-                placeholder="Ej: Agregá ingredientes extra a tu hamburguesa" 
-                value={groupDescription}
-                onChange={(e) => setGroupDescription(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>Tipo de selección</Label>
-              <Select value={groupSelectionType} onValueChange={(v) => setGroupSelectionType(v as any)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="multiple">Múltiple (varias opciones)</SelectItem>
-                  <SelectItem value="single">Simple (elegir una)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+        {/* Personalizaciones Tab */}
+        <TabsContent value="personalizaciones" className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <Label>Mínimo selecciones</Label>
-                <Input 
-                  type="number" 
-                  min="0"
-                  value={groupMinSelections}
-                  onChange={(e) => setGroupMinSelections(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground mt-1">0 = opcional</p>
+                <CardTitle>Personalizaciones</CardTitle>
+                <CardDescription>
+                  Cosas que se pueden sacar: sin cebolla, sin tomate, etc. Se asignan individualmente a cada hamburguesa.
+                </CardDescription>
               </div>
-              <div>
-                <Label>Máximo selecciones</Label>
-                <Input 
-                  type="number" 
-                  min="1"
-                  placeholder="Sin límite"
-                  value={groupMaxSelections}
-                  onChange={(e) => setGroupMaxSelections(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={resetGroupForm}>Cancelar</Button>
-            <Button onClick={handleSaveGroup} disabled={!groupName}>
-              {editingGroup ? 'Guardar' : 'Crear Grupo'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              {personalizaciones && (
+                <Button onClick={() => openAddOption(personalizaciones.id)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nueva Personalización
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              {personalizaciones?.options.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">
+                  No hay personalizaciones. Creá opciones como "Sin cebolla", "Sin tomate", etc.
+                </p>
+              ) : (
+                <div className="grid gap-3">
+                  {personalizaciones?.options.map(option => (
+                    <div 
+                      key={option.id} 
+                      className={`flex items-center justify-between p-4 border rounded-lg ${!option.is_active ? 'opacity-50 bg-muted/50' : ''}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <Switch
+                          checked={option.is_active}
+                          onCheckedChange={(checked) => handleToggleOption(option.id, checked)}
+                        />
+                        <div>
+                          <span className="font-medium">{option.name}</span>
+                          <div className="text-sm text-muted-foreground">
+                            {option.assignedProductIds.length} productos asignados
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleAssignToAllBurgers(option.id)}
+                        >
+                          Todas las burgers
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => { setSelectedOptionForAssign(option); setAssignDialog(true); }}
+                        >
+                          <Package className="h-4 w-4 mr-2" />
+                          Asignar
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => openEditOption(option)}>
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteOption(option.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Option Dialog */}
       <Dialog open={optionDialog} onOpenChange={resetOptionForm}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingOption ? 'Editar Opción' : 'Nueva Opción'}</DialogTitle>
+            <DialogTitle>{editingOption ? 'Editar' : 'Nueva opción'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Vincular a producto existente */}
             <div>
               <Label>Vincular a producto (opcional)</Label>
               <Select 
@@ -603,11 +534,11 @@ export default function Modifiers() {
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Sin vincular (opción independiente)" />
+                  <SelectValue placeholder="Sin vincular" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Sin vincular</SelectItem>
-                  {products.filter(p => p.product_type === 'bebida' || p.category_id).map(product => (
+                  {products.map(product => (
                     <SelectItem key={product.id} value={product.id}>
                       <div className="flex items-center gap-2">
                         {product.image_url && (
@@ -619,25 +550,17 @@ export default function Modifiers() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground mt-1">
-                Al vincular, hereda imagen y nombre del producto. Las ventas se unifican en estadísticas.
-              </p>
             </div>
 
             <Separator />
 
             <div>
-              <Label>Nombre {optionLinkedProductId && '(override)'}</Label>
+              <Label>Nombre</Label>
               <Input 
-                placeholder="Ej: Extra Cheddar, Bacon, Jugoso" 
+                placeholder="Ej: Extra Bacon, Sin cebolla" 
                 value={optionName}
                 onChange={(e) => setOptionName(e.target.value)}
               />
-              {optionLinkedProductId && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Dejalo igual al producto o cambialo para mostrar diferente
-                </p>
-              )}
             </div>
             <div>
               <Label>Ajuste de precio</Label>
@@ -648,55 +571,63 @@ export default function Modifiers() {
                 value={optionPrice}
                 onChange={(e) => setOptionPrice(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Usá valores negativos para descuentos. En combos suele ser $0.
-              </p>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={resetOptionForm}>Cancelar</Button>
             <Button onClick={handleSaveOption} disabled={!optionName}>
-              {editingOption ? 'Guardar' : 'Crear Opción'}
+              {editingOption ? 'Guardar' : 'Crear'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Assign to Products Dialog */}
-      <Dialog open={assignDialog} onOpenChange={() => setAssignDialog(false)}>
+      <Dialog open={assignDialog} onOpenChange={() => { setAssignDialog(false); setSelectedOptionForAssign(null); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Asignar a Productos</DialogTitle>
+            <DialogTitle>Asignar "{selectedOptionForAssign?.name}" a productos</DialogTitle>
             <DialogDescription>
-              Seleccioná los productos que tendrán disponible este grupo de modificadores
+              Seleccioná los productos que tendrán disponible esta opción
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-2">
-              {products.map(product => {
-                const isAssigned = isProductAssigned(product.id, selectedGroupForAssign);
-                return (
-                  <div 
-                    key={product.id} 
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Checkbox
-                        checked={isAssigned}
-                        onCheckedChange={() => handleToggleProductAssignment(product.id, selectedGroupForAssign, isAssigned)}
-                      />
-                      <span className="font-medium">{product.name}</span>
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      {formatPrice(Number(product.price))}
-                    </span>
+            <div className="space-y-4">
+              {Object.entries(getProductsByCategory()).map(([categoryName, categoryProducts]) => (
+                <div key={categoryName}>
+                  <h4 className="font-semibold text-sm text-muted-foreground mb-2">{categoryName}</h4>
+                  <div className="space-y-1">
+                    {categoryProducts.map(product => {
+                      const isAssigned = selectedOptionForAssign?.assignedProductIds.includes(product.id) || false;
+                      return (
+                        <div 
+                          key={product.id} 
+                          className="flex items-center justify-between p-2 border rounded hover:bg-muted/50"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Checkbox
+                              checked={isAssigned}
+                              onCheckedChange={() => {
+                                if (selectedOptionForAssign) {
+                                  handleToggleProductOptionAssignment(product.id, selectedOptionForAssign.id, isAssigned);
+                                }
+                              }}
+                            />
+                            {product.image_url && (
+                              <img src={product.image_url} alt="" className="w-8 h-8 rounded object-cover" />
+                            )}
+                            <span className="text-sm">{product.name}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </ScrollArea>
           <DialogFooter>
-            <Button onClick={() => setAssignDialog(false)}>Listo</Button>
+            <Button onClick={() => { setAssignDialog(false); setSelectedOptionForAssign(null); }}>Listo</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
