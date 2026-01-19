@@ -2182,6 +2182,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_enabled_by_brand: boolean
+          linked_product_id: string | null
           name: string
           price_adjustment: number
         }
@@ -2192,6 +2193,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_enabled_by_brand?: boolean
+          linked_product_id?: string | null
           name: string
           price_adjustment?: number
         }
@@ -2202,6 +2204,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_enabled_by_brand?: boolean
+          linked_product_id?: string | null
           name?: string
           price_adjustment?: number
         }
@@ -2211,6 +2214,13 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "modifier_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modifier_options_linked_product_id_fkey"
+            columns: ["linked_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -2315,6 +2325,7 @@ export type Database = {
           option_name: string
           order_item_id: string
           price_adjustment: number
+          source_type: string | null
         }
         Insert: {
           created_at?: string
@@ -2323,6 +2334,7 @@ export type Database = {
           option_name: string
           order_item_id: string
           price_adjustment?: number
+          source_type?: string | null
         }
         Update: {
           created_at?: string
@@ -2331,6 +2343,7 @@ export type Database = {
           option_name?: string
           order_item_id?: string
           price_adjustment?: number
+          source_type?: string | null
         }
         Relationships: [
           {
