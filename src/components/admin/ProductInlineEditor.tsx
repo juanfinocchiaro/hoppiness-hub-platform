@@ -420,7 +420,10 @@ export function ProductInlineEditor({
         {/* Right Column - Recipe & Cost */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="font-medium text-sm">Receta / Ingredientes</h4>
+            <div>
+              <h4 className="font-medium text-sm">Receta / Ingredientes</h4>
+              <p className="text-xs text-muted-foreground">Cantidades en unidad de uso</p>
+            </div>
             <div className="flex items-center gap-3 text-sm">
               <span className="text-muted-foreground">Costo:</span>
               <Badge variant="secondary" className="font-mono">
