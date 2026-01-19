@@ -194,16 +194,21 @@ export type Database = {
           closing_time: string | null
           created_at: string
           delivery_enabled: boolean | null
+          dine_in_enabled: boolean | null
           email: string | null
           estimated_prep_time_min: number | null
           id: string
           is_active: boolean
           is_open: boolean | null
+          mercadopago_delivery_enabled: boolean | null
           name: string
           opening_time: string | null
+          pedidosya_enabled: boolean | null
           phone: string | null
+          rappi_enabled: boolean | null
           slug: string | null
           status_message: string | null
+          takeaway_enabled: boolean | null
           updated_at: string
         }
         Insert: {
@@ -213,16 +218,21 @@ export type Database = {
           closing_time?: string | null
           created_at?: string
           delivery_enabled?: boolean | null
+          dine_in_enabled?: boolean | null
           email?: string | null
           estimated_prep_time_min?: number | null
           id?: string
           is_active?: boolean
           is_open?: boolean | null
+          mercadopago_delivery_enabled?: boolean | null
           name: string
           opening_time?: string | null
+          pedidosya_enabled?: boolean | null
           phone?: string | null
+          rappi_enabled?: boolean | null
           slug?: string | null
           status_message?: string | null
+          takeaway_enabled?: boolean | null
           updated_at?: string
         }
         Update: {
@@ -232,16 +242,21 @@ export type Database = {
           closing_time?: string | null
           created_at?: string
           delivery_enabled?: boolean | null
+          dine_in_enabled?: boolean | null
           email?: string | null
           estimated_prep_time_min?: number | null
           id?: string
           is_active?: boolean
           is_open?: boolean | null
+          mercadopago_delivery_enabled?: boolean | null
           name?: string
           opening_time?: string | null
+          pedidosya_enabled?: boolean | null
           phone?: string | null
+          rappi_enabled?: boolean | null
           slug?: string | null
           status_message?: string | null
+          takeaway_enabled?: boolean | null
           updated_at?: string
         }
         Relationships: []
