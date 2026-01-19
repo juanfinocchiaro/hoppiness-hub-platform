@@ -577,14 +577,6 @@ export default function LocalRRHH() {
         </div>
       </div>
 
-      {/* Weekly Schedule */}
-      {branchId && (
-        <WeeklyStaffSchedule 
-          branchId={branchId} 
-          staffMembers={staffMembers.map(s => ({ user_id: s.user_id, full_name: s.full_name }))} 
-        />
-      )}
-
       <Tabs defaultValue="fichajes" className="space-y-4">
         <TabsList className="flex-wrap">
           <TabsTrigger value="fichajes" className="gap-2">
