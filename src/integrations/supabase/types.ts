@@ -792,6 +792,50 @@ export type Database = {
           },
         ]
       }
+      coa_accounts: {
+        Row: {
+          account_type: string
+          code: string
+          created_at: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean
+          level: number
+          name: string
+          parent_id: string | null
+        }
+        Insert: {
+          account_type: string
+          code: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          level: number
+          name: string
+          parent_id?: string | null
+        }
+        Update: {
+          account_type?: string
+          code?: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          level?: number
+          name?: string
+          parent_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coa_accounts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "coa_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_zones: {
         Row: {
           base_fee: number | null
@@ -1179,6 +1223,54 @@ export type Database = {
           },
         ]
       }
+      finance_accounts: {
+        Row: {
+          account_type: string
+          branch_id: string
+          code: string
+          created_at: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          account_type: string
+          branch_id: string
+          code: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          account_type?: string
+          branch_id?: string
+          code?: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_accounts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_accounts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       kds_stations: {
         Row: {
           branch_id: string
@@ -1224,6 +1316,149 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "supplier_balances"
             referencedColumns: ["branch_id"]
+          },
+        ]
+      }
+      loan_installments: {
+        Row: {
+          amount_capital: number
+          amount_interest: number | null
+          amount_paid: number | null
+          created_at: string | null
+          due_date: string
+          id: string
+          installment_number: number
+          loan_id: string
+          notes: string | null
+          paid_at: string | null
+          status: string
+          transaction_id: string | null
+        }
+        Insert: {
+          amount_capital: number
+          amount_interest?: number | null
+          amount_paid?: number | null
+          created_at?: string | null
+          due_date: string
+          id?: string
+          installment_number: number
+          loan_id: string
+          notes?: string | null
+          paid_at?: string | null
+          status?: string
+          transaction_id?: string | null
+        }
+        Update: {
+          amount_capital?: number
+          amount_interest?: number | null
+          amount_paid?: number | null
+          created_at?: string | null
+          due_date?: string
+          id?: string
+          installment_number?: number
+          loan_id?: string
+          notes?: string | null
+          paid_at?: string | null
+          status?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_installments_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loan_installments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loans: {
+        Row: {
+          branch_id: string
+          coa_account_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          income_transaction_id: string | null
+          interest_rate: number | null
+          lender_name: string
+          notes: string | null
+          num_installments: number
+          principal_amount: number
+          start_date: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id: string
+          coa_account_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          income_transaction_id?: string | null
+          interest_rate?: number | null
+          lender_name: string
+          notes?: string | null
+          num_installments: number
+          principal_amount: number
+          start_date: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: string
+          coa_account_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          income_transaction_id?: string | null
+          interest_rate?: number | null
+          lender_name?: string
+          notes?: string | null
+          num_installments?: number
+          principal_amount?: number
+          start_date?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loans_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "loans_coa_account_id_fkey"
+            columns: ["coa_account_id"]
+            isOneToOne: false
+            referencedRelation: "coa_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_income_transaction_id_fkey"
+            columns: ["income_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1658,6 +1893,139 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "supplier_balances"
             referencedColumns: ["branch_id"]
+          },
+        ]
+      }
+      payment_plan_installments: {
+        Row: {
+          amount_capital: number
+          amount_interest: number | null
+          amount_paid: number | null
+          created_at: string | null
+          due_date: string
+          id: string
+          installment_number: number
+          notes: string | null
+          paid_at: string | null
+          plan_id: string
+          status: string
+          transaction_id: string | null
+        }
+        Insert: {
+          amount_capital: number
+          amount_interest?: number | null
+          amount_paid?: number | null
+          created_at?: string | null
+          due_date: string
+          id?: string
+          installment_number: number
+          notes?: string | null
+          paid_at?: string | null
+          plan_id: string
+          status?: string
+          transaction_id?: string | null
+        }
+        Update: {
+          amount_capital?: number
+          amount_interest?: number | null
+          amount_paid?: number | null
+          created_at?: string | null
+          due_date?: string
+          id?: string
+          installment_number?: number
+          notes?: string | null
+          paid_at?: string | null
+          plan_id?: string
+          status?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_plan_installments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "payment_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_plan_installments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_plans: {
+        Row: {
+          branch_id: string
+          created_at: string | null
+          created_by: string | null
+          description: string
+          down_payment: number | null
+          id: string
+          interest_rate: number | null
+          notes: string | null
+          num_installments: number
+          start_date: string
+          status: string
+          tax_obligation_id: string | null
+          total_amount: number
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          down_payment?: number | null
+          id?: string
+          interest_rate?: number | null
+          notes?: string | null
+          num_installments: number
+          start_date: string
+          status?: string
+          tax_obligation_id?: string | null
+          total_amount: number
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          down_payment?: number | null
+          id?: string
+          interest_rate?: number | null
+          notes?: string | null
+          num_installments?: number
+          start_date?: string
+          status?: string
+          tax_obligation_id?: string | null
+          total_amount?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_plans_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_plans_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "payment_plans_tax_obligation_id_fkey"
+            columns: ["tax_obligation_id"]
+            isOneToOne: false
+            referencedRelation: "tax_obligations"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2426,37 +2794,52 @@ export type Database = {
       suppliers: {
         Row: {
           address: string | null
+          bank_account: string | null
           contact_name: string | null
           created_at: string
+          cuit: string | null
+          default_doc_status: string | null
+          default_payment_origin: string | null
           email: string | null
           id: string
           is_active: boolean
           name: string
           notes: string | null
+          payment_terms_days: number | null
           phone: string | null
           updated_at: string
         }
         Insert: {
           address?: string | null
+          bank_account?: string | null
           contact_name?: string | null
           created_at?: string
+          cuit?: string | null
+          default_doc_status?: string | null
+          default_payment_origin?: string | null
           email?: string | null
           id?: string
           is_active?: boolean
           name: string
           notes?: string | null
+          payment_terms_days?: number | null
           phone?: string | null
           updated_at?: string
         }
         Update: {
           address?: string | null
+          bank_account?: string | null
           contact_name?: string | null
           created_at?: string
+          cuit?: string | null
+          default_doc_status?: string | null
+          default_payment_origin?: string | null
           email?: string | null
           id?: string
           is_active?: boolean
           name?: string
           notes?: string | null
+          payment_terms_days?: number | null
           phone?: string | null
           updated_at?: string
         }
@@ -2514,6 +2897,82 @@ export type Database = {
           },
         ]
       }
+      tax_obligations: {
+        Row: {
+          accrual_date: string
+          amount: number
+          amount_paid: number | null
+          branch_id: string
+          coa_account_id: string | null
+          created_at: string | null
+          created_by: string | null
+          due_date: string
+          id: string
+          name: string
+          notes: string | null
+          period: string
+          status: string
+          tax_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          accrual_date: string
+          amount: number
+          amount_paid?: number | null
+          branch_id: string
+          coa_account_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          due_date: string
+          id?: string
+          name: string
+          notes?: string | null
+          period: string
+          status?: string
+          tax_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          accrual_date?: string
+          amount?: number
+          amount_paid?: number | null
+          branch_id?: string
+          coa_account_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          due_date?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          period?: string
+          status?: string
+          tax_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_obligations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_obligations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "tax_obligations_coa_account_id_fkey"
+            columns: ["coa_account_id"]
+            isOneToOne: false
+            referencedRelation: "coa_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transaction_categories: {
         Row: {
           category_group: string
@@ -2555,25 +3014,33 @@ export type Database = {
       transactions: {
         Row: {
           account_id: string | null
+          accrual_date: string | null
           amount: number
+          attachment_required: boolean | null
+          attachments: Json | null
           branch_id: string
           caja_id: string | null
           category_group: string | null
           category_id: string | null
+          coa_account_id: string | null
           concept: string
           created_at: string | null
           created_by: string | null
           direction: string | null
+          doc_status: string | null
+          due_date: string | null
           id: string
           is_locked: boolean | null
           is_payment_to_supplier: boolean | null
           metadata: Json | null
           notes: string | null
           order_id: string | null
+          payment_date: string | null
           payment_origin: Database["public"]["Enums"]["payment_origin"]
           receipt_number: string | null
           receipt_type: Database["public"]["Enums"]["receipt_type"]
           recorded_by: string | null
+          status: string | null
           supplier_id: string | null
           tax_percentage: number | null
           transaction_date: string
@@ -2584,25 +3051,33 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          accrual_date?: string | null
           amount: number
+          attachment_required?: boolean | null
+          attachments?: Json | null
           branch_id: string
           caja_id?: string | null
           category_group?: string | null
           category_id?: string | null
+          coa_account_id?: string | null
           concept: string
           created_at?: string | null
           created_by?: string | null
           direction?: string | null
+          doc_status?: string | null
+          due_date?: string | null
           id?: string
           is_locked?: boolean | null
           is_payment_to_supplier?: boolean | null
           metadata?: Json | null
           notes?: string | null
           order_id?: string | null
+          payment_date?: string | null
           payment_origin?: Database["public"]["Enums"]["payment_origin"]
           receipt_number?: string | null
           receipt_type?: Database["public"]["Enums"]["receipt_type"]
           recorded_by?: string | null
+          status?: string | null
           supplier_id?: string | null
           tax_percentage?: number | null
           transaction_date?: string
@@ -2613,25 +3088,33 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          accrual_date?: string | null
           amount?: number
+          attachment_required?: boolean | null
+          attachments?: Json | null
           branch_id?: string
           caja_id?: string | null
           category_group?: string | null
           category_id?: string | null
+          coa_account_id?: string | null
           concept?: string
           created_at?: string | null
           created_by?: string | null
           direction?: string | null
+          doc_status?: string | null
+          due_date?: string | null
           id?: string
           is_locked?: boolean | null
           is_payment_to_supplier?: boolean | null
           metadata?: Json | null
           notes?: string | null
           order_id?: string | null
+          payment_date?: string | null
           payment_origin?: Database["public"]["Enums"]["payment_origin"]
           receipt_number?: string | null
           receipt_type?: Database["public"]["Enums"]["receipt_type"]
           recorded_by?: string | null
+          status?: string | null
           supplier_id?: string | null
           tax_percentage?: number | null
           transaction_date?: string
@@ -2667,6 +3150,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "transaction_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_coa_account_id_fkey"
+            columns: ["coa_account_id"]
+            isOneToOne: false
+            referencedRelation: "coa_accounts"
             referencedColumns: ["id"]
           },
           {
