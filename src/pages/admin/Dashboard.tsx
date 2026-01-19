@@ -44,19 +44,40 @@ export default function AdminDashboard() {
     }
   }, [user, loading, navigate]);
 
-  // Check if admin has any branch assigned
+  // Check if admin has any branch to access (either explicitly assigned or any branch exists for admin)
   useEffect(() => {
     async function checkBranchAccess() {
       if (!user) return;
       
-      const { data, error } = await supabase
+      // First check if user has explicit branch permissions
+      const { data: permissions, error: permError } = await supabase
         .from('branch_permissions')
         .select('id')
         .eq('user_id', user.id)
         .limit(1);
       
-      if (!error && data && data.length > 0) {
+      if (!permError && permissions && permissions.length > 0) {
         setHasAssignedBranch(true);
+        return;
+      }
+      
+      // If admin, check if any branches exist (admins have access to all)
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .limit(1);
+      
+      if (roleData && roleData.length > 0) {
+        const { data: branches } = await supabase
+          .from('branches')
+          .select('id')
+          .limit(1);
+        
+        if (branches && branches.length > 0) {
+          setHasAssignedBranch(true);
+        }
       }
     }
     
