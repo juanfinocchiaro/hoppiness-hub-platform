@@ -74,7 +74,6 @@ const App = () => (
           {/* Public Routes */}
             <Route path="/" element={<Index />} />
             <Route path="/ingresar" element={<Ingresar />} />
-            <Route path="/auth" element={<Ingresar />} />
             <Route path="/pedir" element={<Pedir />} />
             <Route path="/pedir/:branchSlug" element={<PedirBranch />} />
             <Route path="/pedido/:trackingToken" element={<PedidoTracking />} />

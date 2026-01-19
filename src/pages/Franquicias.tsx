@@ -358,7 +358,7 @@ export default function Franquicias() {
           <div className="flex justify-center gap-4">
             <Link to="/" className="text-background/70 hover:text-background">Inicio</Link>
             <Link to="/menu" className="text-background/70 hover:text-background">Menú</Link>
-            <Link to="/auth" className="text-background/70 hover:text-background">Ingresar</Link>
+            <Link to="/ingresar" className="text-background/70 hover:text-background">Ingresar</Link>
           </div>
         </div>
       </footer>

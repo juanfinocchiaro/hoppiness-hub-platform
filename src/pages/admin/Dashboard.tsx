@@ -44,7 +44,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate('/auth');
+      navigate('/ingresar');
     }
   }, [user, loading, navigate]);
 

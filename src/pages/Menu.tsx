@@ -189,7 +189,7 @@ function BranchCard({ branch, orderType, estimatedTime, onSelect }: BranchCardPr
   const slug = branch.slug || branch.id;
   
   return (
-    <Link to={`/menu/${slug}`}>
+    <Link to={`/pedir/${slug}`}>
       <Card 
         className="cursor-pointer hover:shadow-elevated transition-shadow border-2 hover:border-primary/20"
       >

@@ -61,7 +61,7 @@ export default function OrdersDashboard() {
   // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/auth');
+      navigate('/ingresar');
     }
   }, [user, authLoading, navigate]);
 

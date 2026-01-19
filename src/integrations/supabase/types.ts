@@ -1170,60 +1170,6 @@ export type Database = {
           },
         ]
       }
-      financial_transactions: {
-        Row: {
-          amount: number
-          branch_id: string
-          category: string
-          created_at: string
-          description: string | null
-          id: string
-          recorded_by: string | null
-          reference_id: string | null
-          transaction_date: string
-          type: Database["public"]["Enums"]["transaction_type"]
-        }
-        Insert: {
-          amount: number
-          branch_id: string
-          category: string
-          created_at?: string
-          description?: string | null
-          id?: string
-          recorded_by?: string | null
-          reference_id?: string | null
-          transaction_date?: string
-          type: Database["public"]["Enums"]["transaction_type"]
-        }
-        Update: {
-          amount?: number
-          branch_id?: string
-          category?: string
-          created_at?: string
-          description?: string | null
-          id?: string
-          recorded_by?: string | null
-          reference_id?: string | null
-          transaction_date?: string
-          type?: Database["public"]["Enums"]["transaction_type"]
-        }
-        Relationships: [
-          {
-            foreignKeyName: "financial_transactions_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "financial_transactions_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "supplier_balances"
-            referencedColumns: ["branch_id"]
-          },
-        ]
-      }
       kds_stations: {
         Row: {
           branch_id: string
