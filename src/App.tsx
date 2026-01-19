@@ -36,6 +36,7 @@ import LocalRRHHHoras from "./pages/local/LocalRRHHHoras";
 import LocalRRHHSueldos from "./pages/local/LocalRRHHSueldos";
 import LocalPagos from "./pages/local/LocalPagos";
 import LocalPL from "./pages/local/LocalPL";
+import LocalFacturas from "./pages/local/LocalFacturas";
 import LocalConfig from "./pages/local/LocalConfig";
 import LocalDeliveryZones from "./pages/local/LocalDeliveryZones";
 
@@ -108,6 +109,7 @@ const App = () => (
               <Route path="caja" element={<LocalCaja />} />
               <Route path="pagos" element={<LocalPagos />} />
               <Route path="proveedores" element={<LocalSuppliers />} />
+              <Route path="facturas" element={<LocalFacturas />} />
               <Route path="estado-resultados" element={<LocalPL />} />
               {/* RRHH */}
               <Route path="rrhh/fichajes" element={<LocalRRHHFichajes />} />
