@@ -18,6 +18,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import {
+  LayoutDashboard,
   ClipboardList,
   Package,
   Settings,
@@ -40,6 +41,7 @@ import {
 import type { Tables } from '@/integrations/supabase/types';
 import POSView from '@/components/pos/POSView';
 import KDSView from '@/components/pos/KDSView';
+import LocalDashboard from '@/pages/local/LocalDashboard';
 
 type Branch = Tables<'branches'>;
 
@@ -82,8 +84,8 @@ export default function LocalLayout() {
         navigate('/local');
       }
     } else if (!branchId && accessibleBranches.length > 0) {
-      // No branch in URL, redirect to first accessible
-      navigate(`/local/${accessibleBranches[0].id}/pedidos`);
+      // No branch in URL, redirect to first accessible with dashboard
+      navigate(`/local/${accessibleBranches[0].id}`);
     }
   }, [branchId, accessibleBranches, isAdmin, navigate]);
 
@@ -108,9 +110,10 @@ export default function LocalLayout() {
   const canManageConfig = isAdmin || isGerente || currentPermissions?.can_manage_staff;
 
   const navItems = [
-    { to: 'pedidos', icon: ClipboardList, label: 'Pedidos', show: true },
-    { to: 'productos', icon: Package, label: 'Productos', show: canManageProducts },
-    { to: 'config', icon: Settings, label: 'Configuración', show: canManageConfig },
+    { to: '', icon: LayoutDashboard, label: 'Dashboard', show: true, exact: true },
+    { to: 'pedidos', icon: ClipboardList, label: 'Pedidos', show: true, exact: false },
+    { to: 'productos', icon: Package, label: 'Productos', show: canManageProducts, exact: false },
+    { to: 'config', icon: Settings, label: 'Configuración', show: canManageConfig, exact: false },
   ].filter(item => item.show);
 
   const posItems = [
@@ -141,7 +144,7 @@ export default function LocalLayout() {
               <div
                 key={branch.id}
                 className="bg-card border rounded-lg p-6 cursor-pointer hover:shadow-lg transition-shadow hover:border-primary"
-                onClick={() => navigate(`/local/${branch.id}/pedidos`)}
+                onClick={() => navigate(`/local/${branch.id}`)}
               >
                 <div className="flex items-center gap-3 mb-2">
                   <Store className="w-5 h-5 text-primary" />
@@ -163,10 +166,12 @@ export default function LocalLayout() {
   const NavContent = () => (
     <nav className="space-y-1">
       {navItems.map((item) => {
-        const fullPath = `/local/${branchId}/${item.to}`;
-        const isActive = location.pathname.includes(item.to) && activePOSView === 'none';
+        const fullPath = item.to ? `/local/${branchId}/${item.to}` : `/local/${branchId}`;
+        const isActive = item.exact 
+          ? location.pathname === `/local/${branchId}` && activePOSView === 'none'
+          : location.pathname.includes(item.to) && activePOSView === 'none';
         return (
-          <Link key={item.to} to={fullPath} onClick={handleNavItemClick}>
+          <Link key={item.to || 'dashboard'} to={fullPath} onClick={handleNavItemClick}>
             <Button
               variant={isActive ? 'secondary' : 'ghost'}
               className={`w-full justify-start ${isActive ? 'bg-primary/10 text-primary' : ''}`}
@@ -228,6 +233,12 @@ export default function LocalLayout() {
       return <KDSView branch={selectedBranch} />;
     }
 
+    // Show dashboard on index route
+    const isDashboard = location.pathname === `/local/${branchId}`;
+    if (isDashboard) {
+      return <LocalDashboard branch={selectedBranch} />;
+    }
+
     return <Outlet context={{ branch: selectedBranch, permissions: currentPermissions }} />;
   };
 
@@ -244,7 +255,7 @@ export default function LocalLayout() {
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-4">
               <div className="mb-6">
-                <h2 className="text-lg font-bold">Panel Local</h2>
+                <h2 className="text-lg font-bold">Panel Mi Local</h2>
                 <p className="text-sm text-muted-foreground">{selectedBranch?.name}</p>
               </div>
               <NavContent />
@@ -262,7 +273,7 @@ export default function LocalLayout() {
               </div>
             </SheetContent>
           </Sheet>
-          <h1 className="font-bold">{selectedBranch?.name || 'Panel Local'}</h1>
+          <h1 className="font-bold">{selectedBranch?.name || 'Mi Local'}</h1>
           <div className="w-10" />
         </div>
       </header>
@@ -275,7 +286,7 @@ export default function LocalLayout() {
               <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
                 <Store className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="text-lg font-bold">Panel Local</span>
+              <span className="text-lg font-bold">Panel Mi Local</span>
             </Link>
           </div>
           
