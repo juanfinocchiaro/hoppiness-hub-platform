@@ -313,6 +313,10 @@ export default function CheckoutDialog({
        setPayments(nextPayments);
        onDraftUpdated?.({ orderId, payments: nextPayments });
        toast.success('Pago registrado');
+       
+       // Close dialog and return to products panel after payment
+       onEditOrder();
+       onOpenChange(false);
 
     } catch (error) {
       console.error('Error processing payment:', error);
@@ -383,6 +387,10 @@ export default function CheckoutDialog({
       onDraftUpdated?.({ orderId, payments: nextPayments });
       setShowSplitPayment(false);
       toast.success('Pagos registrados');
+      
+      // Close dialog and return to products panel after payment
+      onEditOrder();
+      onOpenChange(false);
 
     } catch (error) {
       console.error('Error processing split payment:', error);
@@ -437,7 +445,19 @@ export default function CheckoutDialog({
 
   return (
     <>
-      <Dialog open={open && !showSplitPayment} onOpenChange={onOpenChange}>
+      <Dialog 
+        open={open && !showSplitPayment} 
+        onOpenChange={(newOpen) => {
+          // If trying to close and there are payments, show warning
+          if (!newOpen && payments.length > 0) {
+            toast.error('Terminá el pedido pendiente', {
+              description: 'Hay pagos registrados. Confirmá o cancelá el pedido antes de salir.',
+            });
+            return;
+          }
+          onOpenChange(newOpen);
+        }}
+      >
         <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
