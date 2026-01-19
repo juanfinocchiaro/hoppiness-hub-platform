@@ -204,7 +204,7 @@ export default function CheckoutDialog({
       .insert({
         branch_id: branch.id,
         customer_name: orderConfig.customerName || `Llamador #${orderConfig.callerNumber}`,
-        customer_phone: orderConfig.customerPhone || '',
+        customer_phone: orderConfig.customerPhone || '-', // Placeholder for counter orders without phone
         customer_email: orderConfig.customerEmail || null,
         delivery_address: (orderConfig.orderArea === 'delivery' || orderConfig.orderArea === 'apps') ? orderConfig.deliveryAddress : null,
         table_number: null,
