@@ -609,7 +609,7 @@ export default function Ingredients() {
                 <TableHead className="w-48">Equivalencia</TableHead>
                 <TableHead className="text-right w-36">Costo Compra</TableHead>
                 <TableHead className="text-right w-32">Costo Uso</TableHead>
-                <TableHead className="text-right w-36">Stock Mín.</TableHead>
+                <TableHead className="text-right w-36">Mín. Dinámico</TableHead>
                 <TableHead className="w-20"></TableHead>
               </TableRow>
             </TableHeader>
@@ -769,17 +769,33 @@ export default function Ingredients() {
                       
                       {/* Cost Usage */}
                       <TableCell className="text-right">
-                        {hasConversion ? (
-                          <div className="font-mono text-sm text-emerald-600">
-                            {formatCurrency(costUsage)}/{usageUnit}
-                          </div>
-                        ) : ingredient.cost_per_unit > 0 ? (
-                          <div className="font-mono text-sm text-muted-foreground">
-                            {formatCurrency(costUsage)}/{usageUnit}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground/40 text-xs">Sin costo</span>
-                        )}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div>
+                                {hasConversion ? (
+                                  <div className="font-mono text-sm text-emerald-600 cursor-help">
+                                    {formatCurrency(costUsage)}/{usageUnit}
+                                  </div>
+                                ) : ingredient.cost_per_unit > 0 ? (
+                                  <button
+                                    onClick={() => startEditingEquiv(ingredient)}
+                                    className="text-xs text-amber-600 hover:underline"
+                                  >
+                                    Definir equiv.
+                                  </button>
+                                ) : (
+                                  <span className="text-muted-foreground/40 text-xs">Sin costo</span>
+                                )}
+                              </div>
+                            </TooltipTrigger>
+                            {hasConversion && (
+                              <TooltipContent>
+                                <p className="text-xs">Calculado: {formatCurrency(costPurchase)} ÷ {conv?.conversion_factor}</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
                       </TableCell>
                       
                       {/* Dynamic Min Stock */}
