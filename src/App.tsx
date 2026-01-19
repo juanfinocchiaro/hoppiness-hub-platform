@@ -9,6 +9,7 @@ import { AdminRoute, LocalRoute } from "@/components/guards";
 // Public pages
 import Index from "./pages/Index";
 import Ingresar from "./pages/Ingresar";
+import RegistroStaff from "./pages/RegistroStaff";
 import Pedir from "./pages/Pedir";
 import PedirBranch from "./pages/PedirBranch";
 import PedidoTracking from "./pages/PedidoTracking";
@@ -79,6 +80,7 @@ const App = () => (
             <Route path="/menu" element={<NuestroMenu />} />
             <Route path="/franquicias" element={<Franquicias />} />
             <Route path="/clock-in" element={<ClockIn />} />
+            <Route path="/registro-staff" element={<RegistroStaff />} />
             
             {/* Attendance Kiosk (requires auth) */}
             <Route path="/attendance-kiosk/:branchId" element={<LocalRoute><AttendanceKiosk /></LocalRoute>} />
