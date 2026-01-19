@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,6 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -41,6 +43,8 @@ import {
   Bike,
   Search,
   Wallet,
+  X,
+  ChefHat,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -50,6 +54,34 @@ type Product = Tables<'products'>;
 type Category = Tables<'product_categories'>;
 type Branch = Tables<'branches'>;
 type BranchProduct = Tables<'branch_products'>;
+
+interface ModifierGroup {
+  id: string;
+  product_id: string;
+  name: string;
+  description: string | null;
+  type: 'single' | 'multiple' | 'required';
+  min_selections: number;
+  max_selections: number | null;
+  display_order: number;
+  options: ModifierOption[];
+}
+
+interface ModifierOption {
+  id: string;
+  group_id: string;
+  name: string;
+  price_adjustment: number;
+  is_default: boolean;
+  display_order: number;
+}
+
+interface SelectedModifier {
+  optionId: string;
+  optionName: string;
+  groupName: string;
+  priceAdjustment: number;
+}
 
 interface CashRegister {
   id: string;
@@ -68,10 +100,13 @@ type PaymentMethod = 'efectivo' | 'tarjeta_debito' | 'tarjeta_credito' | 'mercad
 type OrderType = Enums<'order_type'>;
 
 interface CartItem {
+  id: string; // Unique cart item ID
   product: Product;
   quantity: number;
   notes?: string;
   customPrice?: number;
+  modifiers: SelectedModifier[];
+  modifiersTotal: number;
 }
 
 interface ProductWithAvailability extends Product {
@@ -99,11 +134,11 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.Elemen
 ];
 
 export default function POSView({ branch }: POSViewProps) {
-  const navigate = useNavigate();
   const { user } = useAuth();
   
   const [products, setProducts] = useState<ProductWithAvailability[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [modifierGroups, setModifierGroups] = useState<Record<string, ModifierGroup[]>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -119,7 +154,6 @@ export default function POSView({ branch }: POSViewProps) {
   // Order configuration
   const [orderArea, setOrderArea] = useState<OrderArea>('mostrador');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('efectivo');
-  const [callerNumber, setCallerNumber] = useState<string>('');
   
   // Customer info
   const [customerName, setCustomerName] = useState('');
@@ -131,7 +165,14 @@ export default function POSView({ branch }: POSViewProps) {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Fetch cash registers and products when branch changes
+  // Product modifier dialog
+  const [selectedProduct, setSelectedProduct] = useState<ProductWithAvailability | null>(null);
+  const [productModifiers, setProductModifiers] = useState<ModifierGroup[]>([]);
+  const [tempSelectedModifiers, setTempSelectedModifiers] = useState<Record<string, string[]>>({});
+  const [tempNotes, setTempNotes] = useState('');
+  const [loadingModifiers, setLoadingModifiers] = useState(false);
+
+  // Fetch cash registers
   useEffect(() => {
     async function fetchCashRegisters() {
       const { data } = await supabase
@@ -143,7 +184,6 @@ export default function POSView({ branch }: POSViewProps) {
       
       if (data && data.length > 0) {
         setCashRegisters(data);
-        // Set default to first register (Caja de Venta / Caja 1)
         setSelectedCashRegister(data[0].id);
       }
     }
@@ -151,7 +191,7 @@ export default function POSView({ branch }: POSViewProps) {
     fetchCashRegisters();
   }, [branch.id]);
 
-  // Check for active shift when cash register changes
+  // Check for active shift
   useEffect(() => {
     async function checkActiveShift() {
       if (!selectedCashRegister) return;
@@ -170,7 +210,7 @@ export default function POSView({ branch }: POSViewProps) {
     checkActiveShift();
   }, [selectedCashRegister]);
 
-  // Fetch products when branch changes
+  // Fetch products and categories
   useEffect(() => {
     async function fetchProducts() {
       setLoading(true);
@@ -187,7 +227,6 @@ export default function POSView({ branch }: POSViewProps) {
           (branchProductsRes.data || []).map(bp => [bp.product_id, bp])
         );
 
-        // Create a map of category display_order for sorting
         const categoryOrderMap = new Map(
           categoriesRes.data.map(c => [c.id, c.display_order ?? 999])
         );
@@ -198,7 +237,6 @@ export default function POSView({ branch }: POSViewProps) {
             branchProduct: branchProductsMap.get(p.id) || null,
           }))
           .filter(p => p.branchProduct?.is_available !== false)
-          // Sort by category display_order first, then by product name
           .sort((a, b) => {
             const catOrderA = categoryOrderMap.get(a.category_id || '') ?? 999;
             const catOrderB = categoryOrderMap.get(b.category_id || '') ?? 999;
@@ -221,25 +259,134 @@ export default function POSView({ branch }: POSViewProps) {
     return matchesSearch && matchesCategory;
   });
 
-  const addToCart = (product: Product, branchProduct: BranchProduct | null) => {
-    const existingItem = cart.find(item => item.product.id === product.id);
-    const price = branchProduct?.custom_price || product.price;
-    
-    if (existingItem) {
-      setCart(cart.map(item =>
-        item.product.id === product.id
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
-      ));
+  // Handle product click - fetch modifiers and show dialog
+  const handleProductClick = async (product: ProductWithAvailability) => {
+    setSelectedProduct(product);
+    setTempNotes('');
+    setTempSelectedModifiers({});
+    setLoadingModifiers(true);
+
+    // Fetch modifier groups for this product
+    const { data: groups } = await supabase
+      .from('product_modifier_groups')
+      .select('*')
+      .eq('product_id', product.id)
+      .eq('is_active', true)
+      .order('display_order');
+
+    if (groups && groups.length > 0) {
+      // Fetch options for all groups
+      const groupIds = groups.map(g => g.id);
+      const { data: options } = await supabase
+        .from('modifier_options')
+        .select('*')
+        .in('group_id', groupIds)
+        .eq('is_available', true)
+        .order('display_order');
+
+      const groupsWithOptions: ModifierGroup[] = groups.map(g => ({
+        ...g,
+        type: g.type as 'single' | 'multiple' | 'required',
+        options: (options || []).filter(o => o.group_id === g.id),
+      }));
+
+      setProductModifiers(groupsWithOptions);
+
+      // Set default selections
+      const defaults: Record<string, string[]> = {};
+      groupsWithOptions.forEach(group => {
+        const defaultOptions = group.options.filter(o => o.is_default).map(o => o.id);
+        if (defaultOptions.length > 0) {
+          defaults[group.id] = defaultOptions;
+        } else if (group.type === 'required' && group.options.length > 0) {
+          defaults[group.id] = [group.options[0].id];
+        } else {
+          defaults[group.id] = [];
+        }
+      });
+      setTempSelectedModifiers(defaults);
     } else {
-      setCart([...cart, { product, quantity: 1, customPrice: price !== product.price ? price : undefined }]);
+      setProductModifiers([]);
+      // No modifiers - add directly to cart
+      addToCartDirect(product);
+      setSelectedProduct(null);
     }
+
+    setLoadingModifiers(false);
+  };
+
+  const addToCartDirect = (product: ProductWithAvailability) => {
+    const price = product.branchProduct?.custom_price || product.price;
+    const newItem: CartItem = {
+      id: crypto.randomUUID(),
+      product,
+      quantity: 1,
+      customPrice: price !== product.price ? price : undefined,
+      modifiers: [],
+      modifiersTotal: 0,
+    };
+    setCart([...cart, newItem]);
     toast.success(`${product.name} agregado`);
   };
 
-  const updateQuantity = (productId: string, delta: number) => {
+  const handleModifierToggle = (groupId: string, optionId: string, groupType: string) => {
+    setTempSelectedModifiers(prev => {
+      const current = prev[groupId] || [];
+      
+      if (groupType === 'single' || groupType === 'required') {
+        return { ...prev, [groupId]: [optionId] };
+      } else {
+        // Multiple selection
+        if (current.includes(optionId)) {
+          return { ...prev, [groupId]: current.filter(id => id !== optionId) };
+        } else {
+          return { ...prev, [groupId]: [...current, optionId] };
+        }
+      }
+    });
+  };
+
+  const addToCartWithModifiers = () => {
+    if (!selectedProduct) return;
+
+    const selectedModifiers: SelectedModifier[] = [];
+    let modifiersTotal = 0;
+
+    productModifiers.forEach(group => {
+      const selectedOptionIds = tempSelectedModifiers[group.id] || [];
+      selectedOptionIds.forEach(optionId => {
+        const option = group.options.find(o => o.id === optionId);
+        if (option) {
+          selectedModifiers.push({
+            optionId: option.id,
+            optionName: option.name,
+            groupName: group.name,
+            priceAdjustment: Number(option.price_adjustment),
+          });
+          modifiersTotal += Number(option.price_adjustment);
+        }
+      });
+    });
+
+    const price = selectedProduct.branchProduct?.custom_price || selectedProduct.price;
+    const newItem: CartItem = {
+      id: crypto.randomUUID(),
+      product: selectedProduct,
+      quantity: 1,
+      notes: tempNotes || undefined,
+      customPrice: price !== selectedProduct.price ? price : undefined,
+      modifiers: selectedModifiers,
+      modifiersTotal,
+    };
+
+    setCart([...cart, newItem]);
+    toast.success(`${selectedProduct.name} agregado`);
+    setSelectedProduct(null);
+  };
+
+  const updateQuantity = (cartItemId: string, delta: number) => {
     setCart(cart.map(item => {
-      if (item.product.id === productId) {
+      if (item.id === cartItemId) {
         const newQuantity = item.quantity + delta;
         return newQuantity > 0 ? { ...item, quantity: newQuantity } : item;
       }
@@ -247,12 +394,13 @@ export default function POSView({ branch }: POSViewProps) {
     }).filter(item => item.quantity > 0));
   };
 
-  const removeFromCart = (productId: string) => {
-    setCart(cart.filter(item => item.product.id !== productId));
+  const removeFromCart = (cartItemId: string) => {
+    setCart(cart.filter(item => item.id !== cartItemId));
   };
 
   const getItemPrice = (item: CartItem) => {
-    return item.customPrice || item.product.price;
+    const basePrice = item.customPrice || item.product.price;
+    return basePrice + item.modifiersTotal;
   };
 
   const subtotal = cart.reduce((sum, item) => sum + getItemPrice(item) * item.quantity, 0);
@@ -285,6 +433,19 @@ export default function POSView({ branch }: POSViewProps) {
     setIsProcessing(true);
 
     try {
+      // Build notes with modifiers info
+      const orderNotes = cart.map(item => {
+        if (item.modifiers.length === 0 && !item.notes) return null;
+        let note = `${item.product.name}:`;
+        if (item.modifiers.length > 0) {
+          note += ` ${item.modifiers.map(m => m.optionName).join(', ')}`;
+        }
+        if (item.notes) {
+          note += ` [${item.notes}]`;
+        }
+        return note;
+      }).filter(Boolean).join(' | ');
+
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -294,23 +455,29 @@ export default function POSView({ branch }: POSViewProps) {
           customer_email: customerEmail || null,
           delivery_address: orderArea === 'delivery' ? deliveryAddress : null,
           order_type: mapOrderType(),
+          order_area: orderArea,
+          payment_method: paymentMethod,
+          sales_channel: 'pos_local',
           subtotal,
           delivery_fee: deliveryFee,
           total,
           status: 'pending',
-          notes: callerNumber ? `Llamador: ${callerNumber}` : null,
+          notes: orderNotes || null,
         })
         .select()
         .single();
 
       if (orderError) throw orderError;
 
+      // Create order items
       const orderItems = cart.map(item => ({
         order_id: order.id,
         product_id: item.product.id,
         quantity: item.quantity,
         unit_price: getItemPrice(item),
-        notes: item.notes || null,
+        notes: item.modifiers.length > 0 
+          ? item.modifiers.map(m => m.optionName).join(', ') + (item.notes ? ` | ${item.notes}` : '')
+          : item.notes || null,
       }));
 
       const { error: itemsError } = await supabase
@@ -318,6 +485,15 @@ export default function POSView({ branch }: POSViewProps) {
         .insert(orderItems);
 
       if (itemsError) throw itemsError;
+
+      // Insert order item modifiers
+      for (const item of cart) {
+        if (item.modifiers.length > 0) {
+          const orderItem = orderItems.find(oi => oi.product_id === item.product.id);
+          // Note: We'd need to get the actual order_item id here
+          // For now, modifiers are stored in notes
+        }
+      }
 
       // Register cash movement if there's an active shift
       if (activeShift) {
@@ -342,7 +518,6 @@ export default function POSView({ branch }: POSViewProps) {
       setCustomerPhone('');
       setCustomerEmail('');
       setDeliveryAddress('');
-      setCallerNumber('');
       setIsCheckoutOpen(false);
 
     } catch (error) {
@@ -365,7 +540,6 @@ export default function POSView({ branch }: POSViewProps) {
           </div>
           
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Cash Register Selector */}
             {cashRegisters.length > 0 && (
               <Select value={selectedCashRegister} onValueChange={setSelectedCashRegister}>
                 <SelectTrigger className="w-36">
@@ -382,7 +556,6 @@ export default function POSView({ branch }: POSViewProps) {
               </Select>
             )}
             
-            {/* Order Area Selector */}
             <div className="flex bg-card rounded-lg p-1 border">
               {ORDER_AREAS.map(area => (
                 <Button
@@ -400,14 +573,13 @@ export default function POSView({ branch }: POSViewProps) {
           </div>
         </div>
         
-        {/* Show warning if no active shift */}
         {selectedCashRegister && !activeShift && (
           <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-sm text-yellow-700 dark:text-yellow-400">
-            <strong>Sin turno abierto:</strong> Los pedidos no se registrarán en caja. Abrí un turno en la sección Caja.
+            <strong>Sin turno abierto:</strong> Los pedidos no se registrarán en caja.
           </div>
         )}
 
-        {/* Search and Filter */}
+        {/* Search and Category Filter */}
         <div className="flex gap-2 mb-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -418,17 +590,29 @@ export default function POSView({ branch }: POSViewProps) {
               className="pl-10"
             />
           </div>
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              {categories.map(cat => (
-                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        </div>
+
+        {/* Category Tabs */}
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+          <Button
+            variant={selectedCategory === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setSelectedCategory('all')}
+            className="shrink-0"
+          >
+            Todos
+          </Button>
+          {categories.map(cat => (
+            <Button
+              key={cat.id}
+              variant={selectedCategory === cat.id ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedCategory(cat.id)}
+              className="shrink-0"
+            >
+              {cat.name}
+            </Button>
+          ))}
         </div>
 
         {/* Products Grid */}
@@ -443,17 +627,18 @@ export default function POSView({ branch }: POSViewProps) {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pb-4">
               {filteredProducts.map(product => {
                 const price = product.branchProduct?.custom_price || product.price;
-                const cartItem = cart.find(item => item.product.id === product.id);
+                const cartCount = cart.filter(item => item.product.id === product.id)
+                  .reduce((sum, item) => sum + item.quantity, 0);
                 
                 return (
                   <Card 
                     key={product.id}
-                    className={`cursor-pointer hover:shadow-md transition-all relative ${cartItem ? 'ring-2 ring-primary' : ''}`}
-                    onClick={() => addToCart(product, product.branchProduct)}
+                    className={`cursor-pointer hover:shadow-md transition-all relative ${cartCount > 0 ? 'ring-2 ring-primary' : ''}`}
+                    onClick={() => handleProductClick(product)}
                   >
-                    {cartItem && (
+                    {cartCount > 0 && (
                       <Badge className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0 flex items-center justify-center">
-                        {cartItem.quantity}
+                        {cartCount}
                       </Badge>
                     )}
                     <CardContent className="p-3">
@@ -499,37 +684,54 @@ export default function POSView({ branch }: POSViewProps) {
           ) : (
             <div className="space-y-3">
               {cart.map(item => (
-                <div key={item.product.id} className="flex items-center gap-2 bg-muted/50 rounded-lg p-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{item.product.name}</p>
-                    <p className="text-primary font-semibold text-sm">{formatPrice(getItemPrice(item))}</p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => updateQuantity(item.product.id, -1)}
-                    >
-                      <Minus className="w-3 h-3" />
-                    </Button>
-                    <span className="w-6 text-center font-medium text-sm">{item.quantity}</span>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => updateQuantity(item.product.id, 1)}
-                    >
-                      <Plus className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-destructive"
-                      onClick={() => removeFromCart(item.product.id)}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
+                <div key={item.id} className="bg-muted/50 rounded-lg p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">{item.product.name}</p>
+                      {item.modifiers.length > 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {item.modifiers.map(m => m.optionName).join(', ')}
+                        </p>
+                      )}
+                      {item.notes && (
+                        <p className="text-xs text-primary mt-1">Nota: {item.notes}</p>
+                      )}
+                      <p className="text-primary font-semibold text-sm mt-1">
+                        {formatPrice(getItemPrice(item))}
+                        {item.modifiersTotal > 0 && (
+                          <span className="text-xs text-muted-foreground ml-1">
+                            (+{formatPrice(item.modifiersTotal)})
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => updateQuantity(item.id, -1)}
+                      >
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                      <span className="w-6 text-center font-medium text-sm">{item.quantity}</span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => updateQuantity(item.id, 1)}
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive"
+                        onClick={() => removeFromCart(item.id)}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -568,6 +770,112 @@ export default function POSView({ branch }: POSViewProps) {
           </Button>
         </div>
       </div>
+
+      {/* Product Modifier Dialog */}
+      <Dialog open={!!selectedProduct && productModifiers.length > 0} onOpenChange={() => setSelectedProduct(null)}>
+        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ChefHat className="w-5 h-5" />
+              {selectedProduct?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Personalizá tu pedido
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="flex-1 pr-4">
+            {loadingModifiers ? (
+              <div className="space-y-4">
+                <Skeleton className="h-20" />
+                <Skeleton className="h-20" />
+              </div>
+            ) : (
+              <div className="space-y-6 py-2">
+                {productModifiers.map(group => (
+                  <div key={group.id} className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-semibold">{group.name}</Label>
+                      <Badge variant={group.type === 'required' ? 'destructive' : 'secondary'}>
+                        {group.type === 'required' ? 'Requerido' : group.type === 'single' ? 'Elegir uno' : 'Múltiple'}
+                      </Badge>
+                    </div>
+                    {group.description && (
+                      <p className="text-xs text-muted-foreground">{group.description}</p>
+                    )}
+
+                    {group.type === 'single' || group.type === 'required' ? (
+                      <RadioGroup
+                        value={tempSelectedModifiers[group.id]?.[0] || ''}
+                        onValueChange={(value) => handleModifierToggle(group.id, value, group.type)}
+                      >
+                        {group.options.map(option => (
+                          <div key={option.id} className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <RadioGroupItem value={option.id} id={option.id} />
+                              <Label htmlFor={option.id} className="cursor-pointer font-normal">
+                                {option.name}
+                              </Label>
+                            </div>
+                            {Number(option.price_adjustment) !== 0 && (
+                              <span className={Number(option.price_adjustment) > 0 ? 'text-primary font-medium' : 'text-green-600'}>
+                                {Number(option.price_adjustment) > 0 ? '+' : ''}{formatPrice(Number(option.price_adjustment))}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    ) : (
+                      <div className="space-y-2">
+                        {group.options.map(option => (
+                          <div key={option.id} className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <Checkbox
+                                id={option.id}
+                                checked={(tempSelectedModifiers[group.id] || []).includes(option.id)}
+                                onCheckedChange={() => handleModifierToggle(group.id, option.id, group.type)}
+                              />
+                              <Label htmlFor={option.id} className="cursor-pointer font-normal">
+                                {option.name}
+                              </Label>
+                            </div>
+                            {Number(option.price_adjustment) !== 0 && (
+                              <span className={Number(option.price_adjustment) > 0 ? 'text-primary font-medium' : 'text-green-600'}>
+                                {Number(option.price_adjustment) > 0 ? '+' : ''}{formatPrice(Number(option.price_adjustment))}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {/* Notes */}
+                <div className="space-y-2">
+                  <Label>Notas adicionales</Label>
+                  <Textarea
+                    placeholder="Ej: Sin cebolla, bien cocido..."
+                    value={tempNotes}
+                    onChange={(e) => setTempNotes(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+              </div>
+            )}
+          </ScrollArea>
+
+          <DialogFooter className="border-t pt-4">
+            <Button variant="outline" onClick={() => setSelectedProduct(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={addToCartWithModifiers}>
+              <Plus className="w-4 h-4 mr-2" />
+              Agregar al Pedido
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Checkout Dialog */}
       <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
