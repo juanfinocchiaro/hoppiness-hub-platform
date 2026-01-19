@@ -41,7 +41,8 @@ import {
   Store,
   Utensils,
   Bike,
-  Search
+  Search,
+  ChefHat
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables, Enums } from '@/integrations/supabase/types';
@@ -388,6 +389,17 @@ export default function POS() {
           </div>
           
           <div className="flex items-center gap-2">
+            {/* KDS Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/pos/${selectedBranch.id}/kds`)}
+              className="gap-1 bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+            >
+              <ChefHat className="w-4 h-4" />
+              <span className="hidden sm:inline">Cocina</span>
+            </Button>
+            
             {/* Order Area Selector */}
             <div className="flex bg-card rounded-lg p-1 border">
               {ORDER_AREAS.map(area => (

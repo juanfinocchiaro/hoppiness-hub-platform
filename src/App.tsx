@@ -17,6 +17,7 @@ import Franquicias from "./pages/Franquicias";
 
 // POS / Local
 import POS from "./pages/pos/POS";
+import KDS from "./pages/pos/KDS";
 import OrdersDashboard from "./pages/pos/OrdersDashboard";
 import LocalLayout from "./pages/local/LocalLayout";
 import LocalPedidos from "./pages/local/LocalPedidos";
@@ -59,6 +60,7 @@ const App = () => (
             
             {/* POS Routes */}
             <Route path="/pos" element={<LocalRoute><POS /></LocalRoute>} />
+            <Route path="/pos/:branchId/kds" element={<LocalRoute><KDS /></LocalRoute>} />
             <Route path="/pos/pedidos" element={<LocalRoute><OrdersDashboard /></LocalRoute>} />
             
             {/* Local Routes (Encargado/Operativo) */}
