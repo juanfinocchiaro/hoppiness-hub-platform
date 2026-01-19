@@ -176,11 +176,8 @@ export default function OrdersHeatmap({
     return 'text-red-800 dark:text-red-200';
   };
 
-  // Filter time slots to show only relevant hours (06:00 - 00:00)
-  const relevantTimeSlots = TIME_SLOTS.filter(slot => {
-    const hour = parseInt(slot.split(':')[0]);
-    return hour >= 6 || hour === 0;
-  }).reverse(); // Reverse to show latest hours at top
+  // Show all time slots in descending order (23:30 at top, 00:00 at bottom)
+  const relevantTimeSlots = [...TIME_SLOTS].reverse();
 
   if (loading) {
     return (
