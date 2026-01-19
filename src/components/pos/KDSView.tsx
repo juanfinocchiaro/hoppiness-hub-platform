@@ -5,15 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ChefHat,
   Timer,
   Volume2,
   VolumeX,
-  RefreshCw
+  RefreshCw,
+  LayoutGrid,
+  Columns3
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables, Enums } from '@/integrations/supabase/types';
+import KDSStationsView from './KDSStationsView';
 
 type Order = Tables<'orders'>;
 type OrderItem = Tables<'order_items'>;
@@ -28,6 +32,8 @@ interface KDSViewProps {
   branch: Branch;
 }
 
+type ViewMode = 'classic' | 'stations';
+
 const STATUS_CONFIG: Record<Enums<'order_status'>, { label: string; colorClass: string }> = {
   pending: { label: 'Pendiente', colorClass: 'bg-warning/20 border-warning text-warning-foreground' },
   confirmed: { label: 'Confirmado', colorClass: 'bg-primary/20 border-primary text-primary' },
@@ -40,10 +46,38 @@ const STATUS_CONFIG: Record<Enums<'order_status'>, { label: string; colorClass: 
 const KITCHEN_STATUSES: Enums<'order_status'>[] = ['pending', 'confirmed', 'preparing', 'ready'];
 
 export default function KDSView({ branch }: KDSViewProps) {
+  const [viewMode, setViewMode] = useState<ViewMode>('classic');
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // If stations mode, render the stations view
+  if (viewMode === 'stations') {
+    return (
+      <div className="h-[calc(100vh-120px)] -m-6 bg-sidebar text-sidebar-foreground flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
+          <div className="flex items-center gap-3">
+            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+              <TabsList className="bg-sidebar-accent">
+                <TabsTrigger value="classic" className="gap-2">
+                  <LayoutGrid className="w-4 h-4" />
+                  Clásico
+                </TabsTrigger>
+                <TabsTrigger value="stations" className="gap-2">
+                  <Columns3 className="w-4 h-4" />
+                  Estaciones
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        </div>
+        <div className="flex-1 m-6 -mb-0">
+          <KDSStationsView branch={branch} />
+        </div>
+      </div>
+    );
+  }
 
   const fetchOrders = async () => {
     const today = new Date();
@@ -179,14 +213,29 @@ export default function KDSView({ branch }: KDSViewProps) {
 
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center">
-            <ChefHat className="w-5 h-5 text-accent-foreground" />
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center">
+              <ChefHat className="w-5 h-5 text-accent-foreground" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold">Cocina - {branch.name}</h1>
+              <p className="text-sidebar-foreground/60 text-sm">Kitchen Display System</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold">Cocina - {branch.name}</h1>
-            <p className="text-sidebar-foreground/60 text-sm">Kitchen Display System</p>
-          </div>
+          
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+            <TabsList className="bg-sidebar-accent">
+              <TabsTrigger value="classic" className="gap-2">
+                <LayoutGrid className="w-4 h-4" />
+                Clásico
+              </TabsTrigger>
+              <TabsTrigger value="stations" className="gap-2">
+                <Columns3 className="w-4 h-4" />
+                Estaciones
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         <div className="flex items-center gap-3">
