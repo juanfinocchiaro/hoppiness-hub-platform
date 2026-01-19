@@ -93,7 +93,8 @@ interface CashRegisterShift {
   status: string;
 }
 
-type OrderArea = 'salon' | 'mostrador' | 'delivery';
+type OrderArea = 'mostrador' | 'delivery' | 'apps';
+type AppsChannel = 'rappi' | 'pedidos_ya' | 'mercadopago_delivery';
 type PaymentMethod = 'efectivo' | 'tarjeta_debito' | 'tarjeta_credito' | 'mercadopago_qr' | 'mercadopago_link' | 'transferencia' | 'vales';
 type OrderType = Enums<'order_type'>;
 type CounterSubType = 'takeaway' | 'dine_here';
@@ -124,9 +125,15 @@ interface POSViewProps {
 }
 
 const ORDER_AREAS: { value: OrderArea; label: string; icon: React.ElementType }[] = [
-  { value: 'salon', label: 'Salón', icon: Utensils },
   { value: 'mostrador', label: 'Mostrador', icon: Store },
-  { value: 'delivery', label: 'Delivery', icon: Bike },
+  { value: 'delivery', label: 'Delivery Propio', icon: Bike },
+  { value: 'apps', label: 'Apps de Delivery', icon: Bike },
+];
+
+const APPS_CHANNELS: { value: AppsChannel; label: string }[] = [
+  { value: 'rappi', label: 'Rappi' },
+  { value: 'pedidos_ya', label: 'Pedidos Ya' },
+  { value: 'mercadopago_delivery', label: 'MercadoPago Delivery' },
 ];
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ElementType }[] = [
@@ -172,6 +179,11 @@ export default function POSView({ branch }: POSViewProps) {
   const [callerNumber, setCallerNumber] = useState('');
   const [selectedTableId, setSelectedTableId] = useState('');
   const [tables, setTables] = useState<BranchTable[]>([]);
+  
+  // Apps delivery state
+  const [appsChannel, setAppsChannel] = useState<AppsChannel>('pedidos_ya');
+  const [externalOrderId, setExternalOrderId] = useState('');
+  const [customDeliveryFee, setCustomDeliveryFee] = useState('');
   
   // Checkout dialog
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -455,7 +467,9 @@ export default function POSView({ branch }: POSViewProps) {
   };
 
   const subtotal = cart.reduce((sum, item) => sum + getItemPrice(item) * item.quantity, 0);
-  const deliveryFee = orderArea === 'delivery' ? 500 : 0;
+  const deliveryFee = (orderArea === 'delivery' || orderArea === 'apps') && customDeliveryFee 
+    ? parseFloat(customDeliveryFee) 
+    : 0;
   const total = subtotal + deliveryFee;
 
   const formatPrice = (price: number) => {
@@ -468,42 +482,30 @@ export default function POSView({ branch }: POSViewProps) {
 
   const mapOrderType = (): OrderType => {
     switch (orderArea) {
-      case 'salon': return 'dine_in';
       case 'delivery': return 'delivery';
+      case 'apps': return 'delivery';
       case 'mostrador': 
         return counterSubType === 'dine_here' ? 'dine_in' : 'takeaway';
       default: return 'takeaway';
     }
   };
 
+  const getSalesChannel = (): Enums<'sales_channel'> => {
+    if (orderArea === 'apps') return appsChannel;
+    return 'pos_local';
+  };
+
   // Filter order areas based on branch settings
   const availableOrderAreas = ORDER_AREAS.filter(area => {
-    if (area.value === 'salon' && !branch.dine_in_enabled) return false;
     if (area.value === 'delivery' && !branch.delivery_enabled) return false;
     return true;
   });
-  
-  // Reset to mostrador if salon is selected but not available
-  useEffect(() => {
-    if (orderArea === 'salon' && !branch.dine_in_enabled) {
-      setOrderArea('mostrador');
-    }
-  }, [branch.dine_in_enabled, orderArea]);
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
     
     // Validation based on order area
-    if (orderArea === 'salon') {
-      if (!selectedTableId) {
-        toast.error('Seleccioná una mesa');
-        return;
-      }
-      if (!customerName.trim()) {
-        toast.error('Ingresá el nombre del cliente');
-        return;
-      }
-    } else if (orderArea === 'mostrador') {
+    if (orderArea === 'mostrador') {
       if (counterSubType === 'dine_here' && !callerNumber.trim()) {
         toast.error('Ingresá el número de llamador');
         return;
@@ -512,7 +514,7 @@ export default function POSView({ branch }: POSViewProps) {
         toast.error('Ingresá el nombre o número de llamador');
         return;
       }
-    } else if (orderArea === 'delivery') {
+    } else if (orderArea === 'delivery' || orderArea === 'apps') {
       if (!customerName.trim() || !customerPhone.trim()) {
         toast.error('Nombre y teléfono son requeridos');
         return;
@@ -539,11 +541,6 @@ export default function POSView({ branch }: POSViewProps) {
         return note;
       }).filter(Boolean).join(' | ');
 
-      // Get table number if salon
-      const tableNumber = orderArea === 'salon' 
-        ? tables.find(t => t.id === selectedTableId)?.table_number 
-        : null;
-
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -551,13 +548,14 @@ export default function POSView({ branch }: POSViewProps) {
           customer_name: customerName || `Llamador #${callerNumber}`,
           customer_phone: customerPhone || '',
           customer_email: customerEmail || null,
-          delivery_address: orderArea === 'delivery' ? deliveryAddress : null,
-          table_number: tableNumber,
+          delivery_address: (orderArea === 'delivery' || orderArea === 'apps') ? deliveryAddress : null,
+          table_number: null,
           caller_number: callerNumber ? parseInt(callerNumber) : null,
           order_type: mapOrderType(),
-          order_area: orderArea,
+          order_area: orderArea === 'apps' ? 'delivery' : orderArea,
           payment_method: paymentMethod,
-          sales_channel: 'pos_local',
+          sales_channel: getSalesChannel(),
+          external_order_id: orderArea === 'apps' ? externalOrderId : null,
           subtotal,
           delivery_fee: deliveryFee,
           total,
@@ -620,6 +618,8 @@ export default function POSView({ branch }: POSViewProps) {
       setDeliveryAddress('');
       setCallerNumber('');
       setSelectedTableId('');
+      setExternalOrderId('');
+      setCustomDeliveryFee('');
       setIsCheckoutOpen(false);
 
     } catch (error) {
@@ -1002,26 +1002,31 @@ export default function POSView({ branch }: POSViewProps) {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Salon: Mesa selector */}
-            {orderArea === 'salon' && tables.length > 0 && (
-              <div className="space-y-2">
-                <Label>Mesa *</Label>
-                <Select value={selectedTableId} onValueChange={setSelectedTableId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccioná una mesa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tables.map(table => (
-                      <SelectItem 
-                        key={table.id} 
-                        value={table.id}
-                        disabled={table.is_occupied}
-                      >
-                        Mesa {table.table_number} {table.is_occupied ? '(Ocupada)' : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* Apps: Channel selector */}
+            {orderArea === 'apps' && (
+              <div className="space-y-3">
+                <Label>Plataforma *</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {APPS_CHANNELS.map(channel => (
+                    <Button
+                      key={channel.value}
+                      variant={appsChannel === channel.value ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setAppsChannel(channel.value)}
+                      className="text-xs"
+                    >
+                      {channel.label}
+                    </Button>
+                  ))}
+                </div>
+                <div className="space-y-2">
+                  <Label>ID de pedido externo</Label>
+                  <Input
+                    placeholder="Ej: #12345"
+                    value={externalOrderId}
+                    onChange={(e) => setExternalOrderId(e.target.value)}
+                  />
+                </div>
               </div>
             )}
 
@@ -1090,8 +1095,8 @@ export default function POSView({ branch }: POSViewProps) {
               </div>
             )}
 
-            {/* Salon y Delivery: Nombre y teléfono */}
-            {(orderArea === 'salon' || orderArea === 'delivery') && (
+            {/* Delivery y Apps: Nombre, teléfono, dirección y envío */}
+            {(orderArea === 'delivery' || orderArea === 'apps') && (
               <>
                 <div className="space-y-2">
                   <Label>Nombre del cliente *</Label>
@@ -1107,7 +1112,7 @@ export default function POSView({ branch }: POSViewProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Teléfono {orderArea === 'delivery' ? '*' : ''}</Label>
+                  <Label>Teléfono *</Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -1118,22 +1123,40 @@ export default function POSView({ branch }: POSViewProps) {
                     />
                   </div>
                 </div>
-              </>
-            )}
 
-            {orderArea === 'delivery' && (
-              <div className="space-y-2">
-                <Label>Dirección de entrega *</Label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Dirección"
-                    value={deliveryAddress}
-                    onChange={(e) => setDeliveryAddress(e.target.value)}
-                    className="pl-10"
-                  />
+                <div className="space-y-2">
+                  <Label>Dirección de entrega *</Label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Dirección"
+                      value={deliveryAddress}
+                      onChange={(e) => setDeliveryAddress(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
                 </div>
-              </div>
+
+                <div className="space-y-2">
+                  <Label>Costo de envío</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {orderArea === 'apps' && appsChannel === 'pedidos_ya' 
+                      ? 'En Pedidos Ya este dinero nos entra a nosotros'
+                      : 'Lo que se le cobra al cliente por el envío'
+                    }
+                  </p>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={customDeliveryFee}
+                      onChange={(e) => setCustomDeliveryFee(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                </div>
+              </>
             )}
 
             <div className="space-y-2">
