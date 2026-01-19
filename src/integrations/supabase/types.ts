@@ -193,12 +193,17 @@ export type Database = {
           city: string
           closing_time: string | null
           created_at: string
+          delivery_enabled: boolean | null
           email: string | null
+          estimated_prep_time_min: number | null
           id: string
           is_active: boolean
+          is_open: boolean | null
           name: string
           opening_time: string | null
           phone: string | null
+          slug: string | null
+          status_message: string | null
           updated_at: string
         }
         Insert: {
@@ -207,12 +212,17 @@ export type Database = {
           city: string
           closing_time?: string | null
           created_at?: string
+          delivery_enabled?: boolean | null
           email?: string | null
+          estimated_prep_time_min?: number | null
           id?: string
           is_active?: boolean
+          is_open?: boolean | null
           name: string
           opening_time?: string | null
           phone?: string | null
+          slug?: string | null
+          status_message?: string | null
           updated_at?: string
         }
         Update: {
@@ -221,12 +231,17 @@ export type Database = {
           city?: string
           closing_time?: string | null
           created_at?: string
+          delivery_enabled?: boolean | null
           email?: string | null
+          estimated_prep_time_min?: number | null
           id?: string
           is_active?: boolean
+          is_open?: boolean | null
           name?: string
           opening_time?: string | null
           phone?: string | null
+          slug?: string | null
+          status_message?: string | null
           updated_at?: string
         }
         Relationships: []

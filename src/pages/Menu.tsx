@@ -183,44 +183,48 @@ interface BranchCardProps {
 }
 
 function BranchCard({ branch, orderType, estimatedTime, onSelect }: BranchCardProps) {
-  const hasDelivery = !branch.name.toLowerCase().includes('carlos paz');
+  // @ts-ignore - new columns
+  const hasDelivery = branch.delivery_enabled !== false;
+  // @ts-ignore
+  const slug = branch.slug || branch.id;
   
   return (
-    <Card 
-      className="cursor-pointer hover:shadow-elevated transition-shadow border-2 hover:border-primary/20"
-      onClick={onSelect}
-    >
-      <CardContent className="p-5">
-        <h3 className="text-lg font-bold text-primary mb-1">
-          Hoppiness - {branch.name}
-        </h3>
-        <p className="text-sm text-muted-foreground mb-3">
-          <MapPin className="w-3 h-3 inline mr-1" />
-          {branch.address}, {branch.city}
-        </p>
-        
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-          <Clock className="w-4 h-4" />
-          <span>Entre {estimatedTime}</span>
-        </div>
-        
-        <div className="flex items-center gap-3 flex-wrap">
-          {hasDelivery && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Truck className="w-3 h-3" />
-              <span>Delivery</span>
-            </div>
-          )}
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <ShoppingBag className="w-3 h-3" />
-            <span>Retiro en el local</span>
+    <Link to={`/menu/${slug}`}>
+      <Card 
+        className="cursor-pointer hover:shadow-elevated transition-shadow border-2 hover:border-primary/20"
+      >
+        <CardContent className="p-5">
+          <h3 className="text-lg font-bold text-primary mb-1">
+            Hoppiness - {branch.name}
+          </h3>
+          <p className="text-sm text-muted-foreground mb-3">
+            <MapPin className="w-3 h-3 inline mr-1" />
+            {branch.address}, {branch.city}
+          </p>
+          
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+            <Clock className="w-4 h-4" />
+            <span>Entre {estimatedTime}</span>
           </div>
-          <Badge className="bg-accent text-accent-foreground text-xs ml-auto">
-            <CreditCard className="w-3 h-3 mr-1" />
-            Pago Online
-          </Badge>
-        </div>
-      </CardContent>
-    </Card>
+          
+          <div className="flex items-center gap-3 flex-wrap">
+            {hasDelivery && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Truck className="w-3 h-3" />
+                <span>Delivery</span>
+              </div>
+            )}
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <ShoppingBag className="w-3 h-3" />
+              <span>Retiro en el local</span>
+            </div>
+            <Badge className="bg-accent text-accent-foreground text-xs ml-auto">
+              <CreditCard className="w-3 h-3 mr-1" />
+              Pago Online
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
