@@ -2,12 +2,34 @@ import { useState, useEffect } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useAuth } from '@/hooks/useAuth';
+import { useExportToExcel } from '@/hooks/useExportToExcel';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Clock, ChefHat, CheckCircle, Truck, XCircle, RefreshCw, Phone, MapPin, User } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Clock, ChefHat, CheckCircle, Truck, XCircle, RefreshCw, Phone, MapPin, User, Search, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import type { Tables, Enums } from '@/integrations/supabase/types';
 
 type Order = Tables<'orders'> & {
@@ -37,14 +59,32 @@ const ORDER_AREA_LABELS: Record<string, string> = {
   delivery: 'Delivery',
 };
 
+const CANCEL_REASONS = [
+  { value: 'cliente_no_responde', label: 'Cliente no responde' },
+  { value: 'cliente_cancela', label: 'Cliente cancela' },
+  { value: 'sin_stock', label: 'Sin stock' },
+  { value: 'error_pedido', label: 'Error en pedido' },
+  { value: 'demora_excesiva', label: 'Demora excesiva' },
+  { value: 'problema_pago', label: 'Problema de pago' },
+  { value: 'otro', label: 'Otro' },
+];
+
 export default function LocalPedidos() {
   const { branchId } = useParams();
   const { branch } = useOutletContext<{ branch: Tables<'branches'> | null }>();
   const { isAdmin, isGerente, branchPermissions } = useUserRole();
+  const { user } = useAuth();
+  const { exportToExcel } = useExportToExcel();
   
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('active');
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Cancel dialog state
+  const [cancelDialog, setCancelDialog] = useState<{ open: boolean; orderId: string | null }>({ open: false, orderId: null });
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelNotes, setCancelNotes] = useState('');
 
   const currentPermissions = branchPermissions.find(p => p.branch_id === branchId);
   const canManageOrders = isAdmin || isGerente || currentPermissions?.can_manage_orders;
@@ -129,6 +169,42 @@ export default function LocalPedidos() {
     }
   };
 
+  const handleCancelOrder = async () => {
+    if (!cancelDialog.orderId || !cancelReason) {
+      toast.error('Seleccioná un motivo de cancelación');
+      return;
+    }
+
+    try {
+      // 1. Update order status
+      const { error: orderError } = await supabase
+        .from('orders')
+        .update({ status: 'cancelled' })
+        .eq('id', cancelDialog.orderId);
+
+      if (orderError) throw orderError;
+
+      // 2. Log cancellation for audit
+      const { error: auditError } = await supabase
+        .from('order_cancellations')
+        .insert({
+          order_id: cancelDialog.orderId,
+          cancelled_by: user?.id,
+          cancel_reason: cancelReason,
+          cancel_notes: cancelNotes || null,
+        });
+
+      if (auditError) console.error('Error logging cancellation:', auditError);
+
+      toast.success('Pedido cancelado');
+      setCancelDialog({ open: false, orderId: null });
+      setCancelReason('');
+      setCancelNotes('');
+    } catch (error: any) {
+      toast.error('Error al cancelar: ' + error.message);
+    }
+  };
+
   const getNextStatus = (currentStatus: OrderStatus): OrderStatus | null => {
     const flow: Record<OrderStatus, OrderStatus | null> = {
       pending: 'confirmed',
@@ -143,6 +219,13 @@ export default function LocalPedidos() {
 
   const activeOrders = orders.filter(o => !['delivered', 'cancelled'].includes(o.status));
   const completedOrders = orders.filter(o => ['delivered', 'cancelled'].includes(o.status));
+  
+  // Search/History filtering
+  const filteredHistoryOrders = orders.filter(o =>
+    o.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    o.customer_phone.includes(searchTerm) ||
+    o.id.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString('es-AR', { 
@@ -156,6 +239,22 @@ export default function LocalPedidos() {
     const minutes = Math.floor(diff / 60000);
     if (minutes < 60) return `${minutes}m`;
     return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+  };
+
+  const handleExport = () => {
+    exportToExcel(
+      filteredHistoryOrders,
+      [
+        { key: 'created_at', label: 'Fecha', format: (v: string) => format(new Date(v), 'dd/MM/yyyy HH:mm', { locale: es }) },
+        { key: 'customer_name', label: 'Cliente' },
+        { key: 'customer_phone', label: 'Teléfono' },
+        { key: 'order_type', label: 'Tipo' },
+        { key: 'sales_channel', label: 'Canal' },
+        { key: 'status', label: 'Estado', format: (v: string) => STATUS_CONFIG[v as OrderStatus]?.label || v },
+        { key: 'total', label: 'Total', format: (v: number) => Number(v) },
+      ],
+      { filename: 'historial_pedidos', sheetName: 'Pedidos' }
+    );
   };
 
   return (
@@ -182,6 +281,10 @@ export default function LocalPedidos() {
             )}
           </TabsTrigger>
           <TabsTrigger value="completed">Completados</TabsTrigger>
+          <TabsTrigger value="history">
+            <Search className="h-4 w-4 mr-1" />
+            Buscar / Historial
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="active" className="mt-6">
@@ -202,6 +305,7 @@ export default function LocalPedidos() {
                   key={order.id}
                   order={order}
                   onStatusChange={updateOrderStatus}
+                  onCancelClick={() => setCancelDialog({ open: true, orderId: order.id })}
                   getNextStatus={getNextStatus}
                   formatTime={formatTime}
                   getTimeSince={getTimeSince}
@@ -226,6 +330,7 @@ export default function LocalPedidos() {
                   key={order.id}
                   order={order}
                   onStatusChange={updateOrderStatus}
+                  onCancelClick={() => {}}
                   getNextStatus={getNextStatus}
                   formatTime={formatTime}
                   getTimeSince={getTimeSince}
@@ -235,7 +340,129 @@ export default function LocalPedidos() {
             </div>
           )}
         </TabsContent>
+
+        {/* New History/Search Tab */}
+        <TabsContent value="history" className="mt-6 space-y-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nombre, teléfono o ID..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button
+              variant="outline"
+              onClick={handleExport}
+              disabled={filteredHistoryOrders.length === 0}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exportar Excel
+            </Button>
+          </div>
+
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left p-3 text-sm font-medium">Fecha</th>
+                      <th className="text-left p-3 text-sm font-medium">Cliente</th>
+                      <th className="text-left p-3 text-sm font-medium">Tipo</th>
+                      <th className="text-left p-3 text-sm font-medium">Estado</th>
+                      <th className="text-right p-3 text-sm font-medium">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredHistoryOrders.slice(0, 100).map((order) => (
+                      <tr key={order.id} className="border-t">
+                        <td className="p-3 text-sm">
+                          <div>{format(new Date(order.created_at), 'dd/MM/yy')}</div>
+                          <div className="text-muted-foreground text-xs">
+                            {format(new Date(order.created_at), 'HH:mm')}
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <div className="font-medium text-sm">{order.customer_name}</div>
+                          <div className="text-muted-foreground text-xs">{order.customer_phone}</div>
+                        </td>
+                        <td className="p-3">
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {order.order_type.replace('_', ' ')}
+                          </Badge>
+                        </td>
+                        <td className="p-3">
+                          <Badge className={`text-xs ${STATUS_CONFIG[order.status]?.color || ''} text-white`}>
+                            {STATUS_CONFIG[order.status]?.label || order.status}
+                          </Badge>
+                        </td>
+                        <td className="p-3 text-right font-medium">
+                          ${order.total.toLocaleString('es-AR', { minimumFractionDigits: 0 })}
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredHistoryOrders.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="text-center py-8 text-muted-foreground">
+                          No se encontraron pedidos
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* Cancel Order Dialog */}
+      <Dialog open={cancelDialog.open} onOpenChange={(open) => setCancelDialog({ open, orderId: open ? cancelDialog.orderId : null })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancelar Pedido</DialogTitle>
+            <DialogDescription>
+              Seleccioná el motivo de la cancelación. Esta acción quedará registrada.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Motivo *</Label>
+              <Select value={cancelReason} onValueChange={setCancelReason}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar motivo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CANCEL_REASONS.map((reason) => (
+                    <SelectItem key={reason.value} value={reason.value}>
+                      {reason.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Notas adicionales</Label>
+              <Textarea
+                placeholder="Detalle opcional..."
+                value={cancelNotes}
+                onChange={(e) => setCancelNotes(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelDialog({ open: false, orderId: null })}>
+              Volver
+            </Button>
+            <Button variant="destructive" onClick={handleCancelOrder}>
+              Confirmar Cancelación
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -243,13 +470,14 @@ export default function LocalPedidos() {
 interface OrderCardProps {
   order: Order;
   onStatusChange: (orderId: string, status: OrderStatus) => void;
+  onCancelClick: () => void;
   getNextStatus: (status: OrderStatus) => OrderStatus | null;
   formatTime: (date: string) => string;
   getTimeSince: (date: string) => string;
   canEdit: boolean;
 }
 
-function OrderCard({ order, onStatusChange, getNextStatus, formatTime, getTimeSince, canEdit }: OrderCardProps) {
+function OrderCard({ order, onStatusChange, onCancelClick, getNextStatus, formatTime, getTimeSince, canEdit }: OrderCardProps) {
   const statusConfig = STATUS_CONFIG[order.status];
   const nextStatus = getNextStatus(order.status);
 
@@ -327,7 +555,7 @@ function OrderCard({ order, onStatusChange, getNextStatus, formatTime, getTimeSi
               <Button 
                 variant="destructive" 
                 size="icon"
-                onClick={() => onStatusChange(order.id, 'cancelled')}
+                onClick={onCancelClick}
               >
                 <XCircle className="h-4 w-4" />
               </Button>

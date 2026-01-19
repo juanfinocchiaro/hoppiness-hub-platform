@@ -262,7 +262,39 @@ export default function LocalCaja() {
     const currentShift = shifts[selectedTab];
     if (!user || !currentShift) return;
     
+    const amount = parseFloat(movementAmount) || 0;
+    
+    // Determine direction and category_group for ledger
+    const isDeposit = movementType === 'deposit';
+    const isWithdrawal = movementType === 'withdrawal';
+    const isIncome = movementType === 'income' || isDeposit;
+    const direction = (isWithdrawal || isDeposit) ? 'transfer' : (isIncome ? 'income' : 'expense');
+    const categoryGroup = isIncome ? 'Ingresos' : ((isWithdrawal || isDeposit) ? 'Transferencias' : 'Gastos Operativos');
+    
     try {
+      // 1. Create unified transaction in ledger
+      const { data: transactionData, error: txError } = await supabase
+        .from('transactions')
+        .insert([{
+          branch_id: branch.id,
+          type: isIncome ? 'income' : 'expense',
+          amount: amount,
+          concept: movementConcept,
+          direction: direction,
+          category_group: categoryGroup,
+          account_id: movementPaymentMethod,
+          receipt_type: 'INTERNAL',
+          caja_id: selectedTab,
+          turno_id: currentShift.id,
+          created_by: user.id,
+          metadata: { movement_type: movementType }
+        }])
+        .select('id')
+        .single();
+
+      if (txError) throw txError;
+
+      // 2. Create cash register movement linked to transaction
       const { data, error } = await supabase
         .from('cash_register_movements')
         .insert({
@@ -270,9 +302,10 @@ export default function LocalCaja() {
           branch_id: branch.id,
           type: movementType,
           payment_method: movementPaymentMethod,
-          amount: parseFloat(movementAmount) || 0,
+          amount: amount,
           concept: movementConcept,
-          recorded_by: user.id
+          recorded_by: user.id,
+          transaction_id: transactionData?.id
         })
         .select()
         .single();
