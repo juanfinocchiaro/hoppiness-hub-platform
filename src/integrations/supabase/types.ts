@@ -3703,6 +3703,7 @@ export type Database = {
           document_type: string | null
           error_message: string | null
           file_name: string
+          file_path: string | null
           file_url: string
           id: string
           processed_at: string | null
@@ -3715,6 +3716,7 @@ export type Database = {
           document_type?: string | null
           error_message?: string | null
           file_name: string
+          file_path?: string | null
           file_url: string
           id?: string
           processed_at?: string | null
@@ -3727,6 +3729,7 @@ export type Database = {
           document_type?: string | null
           error_message?: string | null
           file_name?: string
+          file_path?: string | null
           file_url?: string
           id?: string
           processed_at?: string | null

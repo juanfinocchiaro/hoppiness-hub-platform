@@ -65,11 +65,11 @@ serve(async (req) => {
   }
 
   try {
-    const { document_id, image_url } = await req.json();
+    const { document_id, file_path } = await req.json();
 
-    if (!document_id || !image_url) {
+    if (!document_id || !file_path) {
       return new Response(
-        JSON.stringify({ success: false, error: 'document_id and image_url are required' }),
+        JSON.stringify({ success: false, error: 'document_id and file_path are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -83,13 +83,26 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Generate a signed URL that the AI can access
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+      .from('scanned-documents')
+      .createSignedUrl(file_path, 600); // 10 minutes expiry
+
+    if (signedUrlError || !signedUrlData?.signedUrl) {
+      console.error('Error generating signed URL:', signedUrlError);
+      throw new Error('Failed to generate signed URL for image');
+    }
+
+    const imageUrl = signedUrlData.signedUrl;
+    console.log('Generated signed URL for file:', file_path);
+
     // Update status to processing
     await supabase
       .from('scanned_documents')
       .update({ status: 'processing' })
       .eq('id', document_id);
 
-    console.log('Processing document:', document_id, 'Image URL:', image_url);
+    console.log('Processing document:', document_id);
 
     // Call Lovable AI with vision capabilities
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -105,7 +118,7 @@ serve(async (req) => {
             role: 'user',
             content: [
               { type: 'text', text: EXTRACTION_PROMPT },
-              { type: 'image_url', image_url: { url: image_url } }
+              { type: 'image_url', image_url: { url: imageUrl } }
             ]
           }
         ],
