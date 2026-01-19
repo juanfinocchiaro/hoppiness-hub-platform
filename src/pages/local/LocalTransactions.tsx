@@ -93,17 +93,16 @@ interface Transaction {
   payment_date: string | null;
   due_date: string | null;
   receipt_type: 'OFFICIAL' | 'INTERNAL';
-  doc_status: 'documented' | 'undocumented' | 'internal';
-  status: 'pending' | 'paid' | 'partial';
+  doc_status: string | null;
+  status: string | null;
   payment_origin: string;
   concept: string;
   notes: string | null;
   receipt_number: string | null;
-  attachments: any[];
+  attachments: any;
   created_at: string;
-  coa_accounts?: COAAccount;
-  finance_accounts?: FinanceAccount;
-  suppliers?: Supplier;
+  coa_accounts?: COAAccount | null;
+  suppliers?: Supplier | null;
 }
 
 interface LocalContext {
@@ -177,7 +176,6 @@ export default function LocalTransactions() {
         .select(`
           *,
           coa_accounts(*),
-          finance_accounts(*),
           suppliers(*)
         `)
         .eq('branch_id', branch.id)
@@ -221,7 +219,7 @@ export default function LocalTransactions() {
       concept: '',
       amount: '',
       coa_account_id: '',
-      finance_account_id: '',
+      account_id: '',
       supplier_id: '',
       payment_origin: 'cash',
       doc_status: 'undocumented',
@@ -290,15 +288,15 @@ export default function LocalTransactions() {
         }
       }
 
-      const { error } = await supabase.from('transactions').insert({
+      const { error } = await supabase.from('transactions').insert([{
         branch_id: branch.id,
         type: formData.type,
         concept: formData.concept.trim(),
         amount: parseFloat(formData.amount),
         coa_account_id: formData.coa_account_id || null,
-        finance_account_id: formData.finance_account_id || null,
+        account_id: formData.account_id || null,
         supplier_id: formData.supplier_id || null,
-        payment_origin: formData.payment_origin,
+        payment_origin: formData.payment_origin as 'cash' | 'mercadopago' | 'bank_transfer' | 'credit_card',
         doc_status: formData.doc_status,
         status: formData.status,
         receipt_type: formData.doc_status === 'documented' ? 'OFFICIAL' : 'INTERNAL',
@@ -312,7 +310,7 @@ export default function LocalTransactions() {
         notes: formData.notes || null,
         recorded_by: user?.id,
         created_by: user?.id,
-      });
+      }]);
 
       if (error) throw error;
 
@@ -531,8 +529,8 @@ export default function LocalTransactions() {
               <div className="space-y-2">
                 <Label>Cuenta Financiera</Label>
                 <Select
-                  value={formData.finance_account_id}
-                  onValueChange={v => setFormData(f => ({ ...f, finance_account_id: v }))}
+                  value={formData.account_id}
+                  onValueChange={v => setFormData(f => ({ ...f, account_id: v }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Caja / Banco / MP..." />
@@ -831,7 +829,7 @@ export default function LocalTransactions() {
                       </div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {t.coa_accounts?.name || t.finance_accounts?.name || '-'}
+                      {t.coa_accounts?.name || '-'}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs">
