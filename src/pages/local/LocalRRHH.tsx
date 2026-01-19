@@ -53,6 +53,7 @@ import { es } from 'date-fns/locale';
 import type { Tables, Enums } from '@/integrations/supabase/types';
 import WeeklyStaffSchedule from '@/components/schedules/WeeklyStaffSchedule';
 import OperationalStaffManager from '@/components/hr/OperationalStaffManager';
+import EmployeeScheduleEditor from '@/components/hr/EmployeeScheduleEditor';
 
 type AppRole = Enums<'app_role'>;
 
@@ -589,6 +590,10 @@ export default function LocalRRHH() {
             <Clock className="h-4 w-4" />
             Fichajes
           </TabsTrigger>
+          <TabsTrigger value="horarios" className="gap-2">
+            <Clock className="h-4 w-4" />
+            Horarios
+          </TabsTrigger>
           <TabsTrigger value="personal" className="gap-2">
             <Users className="h-4 w-4" />
             Usuarios Sistema
@@ -603,6 +608,13 @@ export default function LocalRRHH() {
         <TabsContent value="operativo">
           {branchId && (
             <OperationalStaffManager branchId={branchId} canManage={canManageStaff} />
+          )}
+        </TabsContent>
+
+        {/* TAB: Planilla de Horarios */}
+        <TabsContent value="horarios">
+          {branchId && (
+            <EmployeeScheduleEditor branchId={branchId} canManage={canManageStaff} />
           )}
         </TabsContent>
 
