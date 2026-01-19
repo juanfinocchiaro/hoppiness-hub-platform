@@ -345,43 +345,44 @@ export function ProductInlineEditor({
           </div>
         </div>
 
-        {/* Row 2: Description - inline with row 1 */}
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Descripción</Label>
-          <Input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="h-8 text-sm"
-            placeholder="Descripción breve del producto..."
-          />
-        </div>
+        {/* Row 2: Description + Image */}
+        <div className="flex gap-4">
+          {/* Description */}
+          <div className="flex-1 space-y-1">
+            <Label className="text-xs text-muted-foreground">Descripción</Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="h-20 text-sm resize-none"
+              placeholder="Descripción del producto..."
+            />
+          </div>
 
-        {/* Row 3: Image thumbnail + Toggles */}
-        <div className="flex items-center gap-4">
-          {/* Thumbnail */}
+          {/* Image - larger */}
           <div className="relative shrink-0">
+            <Label className="text-xs text-muted-foreground mb-1 block">Imagen</Label>
             {imageUrl ? (
-              <div className="relative w-10 h-10 rounded overflow-hidden border">
+              <div className="relative w-24 h-24 rounded-lg overflow-hidden border">
                 <img src={imageUrl} alt={name} className="w-full h-full object-cover" />
                 <Button
                   type="button"
                   variant="destructive"
                   size="icon"
-                  className="absolute -top-1 -right-1 h-4 w-4"
+                  className="absolute top-1 right-1 h-5 w-5"
                   onClick={() => setImageUrl('')}
                 >
-                  <X className="h-2.5 w-2.5" />
+                  <X className="h-3 w-3" />
                 </Button>
               </div>
             ) : (
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="w-10 h-10 border-2 border-dashed rounded flex items-center justify-center cursor-pointer hover:border-primary/50"
+                className="w-24 h-24 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:border-primary/50 transition-colors"
               >
                 {uploading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
-                  <Upload className="h-4 w-4 text-muted-foreground" />
+                  <Upload className="h-5 w-5 text-muted-foreground" />
                 )}
               </div>
             )}
@@ -393,17 +394,17 @@ export function ProductInlineEditor({
               className="hidden"
             />
           </div>
+        </div>
 
-          {/* Toggles */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Switch checked={isEnabledByBrand} onCheckedChange={setIsEnabledByBrand} className="scale-90" />
-              <span className="text-xs">Habilitado</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={isFeatured} onCheckedChange={setIsFeatured} className="scale-90" />
-              <span className="text-xs">Destacado</span>
-            </div>
+        {/* Row 3: Toggles - bottom left */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Switch checked={isEnabledByBrand} onCheckedChange={setIsEnabledByBrand} className="scale-90" />
+            <span className="text-xs">Habilitado</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch checked={isFeatured} onCheckedChange={setIsFeatured} className="scale-90" />
+            <span className="text-xs">Destacado</span>
           </div>
         </div>
       </div>
