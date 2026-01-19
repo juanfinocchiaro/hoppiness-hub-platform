@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -9,7 +11,7 @@ import type { Tables } from '@/integrations/supabase/types';
 
 type Product = Tables<'products'>;
 
-interface ModifierOption {
+export interface ModifierOption {
   id: string;
   group_id: string;
   name: string;
@@ -24,28 +26,40 @@ interface ModifierOption {
 interface ModifierOptionCardProps {
   option: ModifierOption;
   type: 'adicional' | 'personalizacion';
-  isDragging?: boolean;
+  isReorderMode?: boolean;
   onToggle: (optionId: string, isActive: boolean) => Promise<void>;
   onEdit: (option: ModifierOption) => void;
   onDelete: (optionId: string) => void;
   onAssign: (option: ModifierOption) => void;
   onAssignAllBurgers?: (optionId: string) => void;
-  dragHandleProps?: Record<string, any>;
 }
 
 export function ModifierOptionCard({
   option,
   type,
-  isDragging = false,
+  isReorderMode = false,
   onToggle,
   onEdit,
   onDelete,
   onAssign,
   onAssignAllBurgers,
-  dragHandleProps
 }: ModifierOptionCardProps) {
   const [isToggling, setIsToggling] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: option.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
 
   const formatPrice = (amount: number) => {
     return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount);
@@ -71,39 +85,42 @@ export function ModifierOptionCard({
 
   return (
     <div 
+      ref={setNodeRef}
+      style={style}
       className={`
         group relative flex items-center gap-3 p-4 
         bg-card border border-border rounded-xl
         transition-all duration-200 ease-out
         ${!option.is_active ? 'opacity-60' : ''}
         ${isDragging 
-          ? 'shadow-elevated ring-2 ring-primary/20 scale-[1.02] z-10' 
+          ? 'shadow-elevated ring-2 ring-primary/20 scale-[1.02] z-50 bg-card' 
           : 'hover:shadow-card hover:border-primary/20'
         }
+        ${isReorderMode ? 'cursor-grab active:cursor-grabbing' : ''}
       `}
+      {...(isReorderMode ? { ...attributes, ...listeners } : {})}
     >
-      {/* Drag Handle */}
-      {dragHandleProps && (
-        <div 
-          {...dragHandleProps}
-          className="cursor-grab active:cursor-grabbing p-1 -ml-1 rounded hover:bg-muted transition-colors"
-        >
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
+      {/* Drag Handle - Only visible in reorder mode */}
+      {isReorderMode && (
+        <div className="p-1 -ml-1 rounded text-muted-foreground">
+          <GripVertical className="h-5 w-5" />
         </div>
       )}
 
-      {/* Toggle Switch */}
-      <div className="flex-shrink-0">
-        {isToggling ? (
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-        ) : (
-          <Switch
-            checked={option.is_active}
-            onCheckedChange={handleToggle}
-            className="data-[state=checked]:bg-success"
-          />
-        )}
-      </div>
+      {/* Toggle Switch - Hidden in reorder mode */}
+      {!isReorderMode && (
+        <div className="flex-shrink-0">
+          {isToggling ? (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          ) : (
+            <Switch
+              checked={option.is_active}
+              onCheckedChange={handleToggle}
+              className="data-[state=checked]:bg-success"
+            />
+          )}
+        </div>
+      )}
 
       {/* Image */}
       {type === 'adicional' && (
@@ -150,49 +167,58 @@ export function ModifierOptionCard({
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {type === 'personalizacion' && onAssignAllBurgers && (
+      {/* Actions - Hidden in reorder mode */}
+      {!isReorderMode && (
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {type === 'personalizacion' && onAssignAllBurgers && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => onAssignAllBurgers(option.id)}
+              className="text-xs h-8"
+            >
+              🍔 Todas
+            </Button>
+          )}
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => onAssignAllBurgers(option.id)}
-            className="text-xs h-8"
+            onClick={() => onAssign(option)}
+            className="h-8"
           >
-            🍔 Todas
+            <Package className="h-3.5 w-3.5 mr-1.5" />
+            Asignar
           </Button>
-        )}
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={() => onAssign(option)}
-          className="h-8"
-        >
-          <Package className="h-3.5 w-3.5 mr-1.5" />
-          Asignar
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => onEdit(option)}
-          className="h-8 w-8"
-        >
-          <Edit2 className="h-3.5 w-3.5" />
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={handleDelete}
-          disabled={isDeleting}
-          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-        >
-          {isDeleting ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Trash2 className="h-3.5 w-3.5" />
-          )}
-        </Button>
-      </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => onEdit(option)}
+            className="h-8 w-8"
+          >
+            <Edit2 className="h-3.5 w-3.5" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+          >
+            {isDeleting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5" />
+            )}
+          </Button>
+        </div>
+      )}
+
+      {/* Order indicator in reorder mode */}
+      {isReorderMode && (
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground">
+          {option.display_order + 1}
+        </div>
+      )}
     </div>
   );
 }

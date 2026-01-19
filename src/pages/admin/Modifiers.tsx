@@ -10,11 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, ChefHat, Minus, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  ModifierOptionCard, 
-  ModifierOptionSkeleton, 
-  ModifierEmptyState 
-} from '@/components/admin/ModifierOptionCard';
+import { ModifierOption } from '@/components/admin/ModifierOptionCard';
+import { SortableModifierList } from '@/components/admin/SortableModifierList';
 import { ModifierAssignDialog } from '@/components/admin/ModifierAssignDialog';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -34,17 +31,8 @@ interface ModifierGroup {
   options: ModifierOption[];
 }
 
-interface ModifierOption {
-  id: string;
-  group_id: string;
-  name: string;
-  price_adjustment: number;
-  is_active: boolean;
-  display_order: number;
-  linked_product_id?: string | null;
-  linkedProduct?: Product | null;
-  assignedProductIds: string[];
-}
+// Re-export interface from component
+export type { ModifierOption } from '@/components/admin/ModifierOptionCard';
 
 interface ProductOptionAssignment {
   product_id: string;
@@ -277,6 +265,34 @@ export default function Modifiers() {
     }
   };
 
+  const handleReorderOptions = async (reorderedOptions: ModifierOption[]) => {
+    try {
+      // Update all options with new display_order
+      const updates = reorderedOptions.map((opt, index) => 
+        supabase
+          .from('modifier_options')
+          .update({ display_order: index })
+          .eq('id', opt.id)
+      );
+      
+      await Promise.all(updates);
+      
+      // Update local state
+      setGroups(prev => prev.map(g => {
+        const updatedOptions = reorderedOptions.filter(o => o.group_id === g.id);
+        if (updatedOptions.length > 0) {
+          return { ...g, options: updatedOptions };
+        }
+        return g;
+      }));
+      
+      toast({ title: 'Orden guardado' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      fetchData(); // Refresh to get correct order
+    }
+  };
+
   const resetOptionForm = () => {
     setOptionDialog(false);
     setEditingOption(null);
@@ -373,30 +389,17 @@ export default function Modifiers() {
               )}
             </CardHeader>
             <CardContent>
-              {loading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map(i => <ModifierOptionSkeleton key={i} />)}
-                </div>
-              ) : adicionales?.options.length === 0 ? (
-                <ModifierEmptyState 
-                  type="adicional" 
-                  onAdd={() => adicionales && openAddOption(adicionales.id)} 
-                />
-              ) : (
-                <div className="space-y-2">
-                  {adicionales?.options.map(option => (
-                    <ModifierOptionCard
-                      key={option.id}
-                      option={option}
-                      type="adicional"
-                      onToggle={handleToggleOption}
-                      onEdit={openEditOption}
-                      onDelete={handleDeleteOption}
-                      onAssign={openAssignDialog}
-                    />
-                  ))}
-                </div>
-              )}
+              <SortableModifierList
+                options={adicionales?.options || []}
+                type="adicional"
+                loading={loading}
+                onToggle={handleToggleOption}
+                onEdit={openEditOption}
+                onDelete={handleDeleteOption}
+                onAssign={openAssignDialog}
+                onReorder={handleReorderOptions}
+                onAddNew={() => adicionales && openAddOption(adicionales.id)}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -419,31 +422,18 @@ export default function Modifiers() {
               )}
             </CardHeader>
             <CardContent>
-              {loading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map(i => <ModifierOptionSkeleton key={i} />)}
-                </div>
-              ) : personalizaciones?.options.length === 0 ? (
-                <ModifierEmptyState 
-                  type="personalizacion" 
-                  onAdd={() => personalizaciones && openAddOption(personalizaciones.id)} 
-                />
-              ) : (
-                <div className="space-y-2">
-                  {personalizaciones?.options.map(option => (
-                    <ModifierOptionCard
-                      key={option.id}
-                      option={option}
-                      type="personalizacion"
-                      onToggle={handleToggleOption}
-                      onEdit={openEditOption}
-                      onDelete={handleDeleteOption}
-                      onAssign={openAssignDialog}
-                      onAssignAllBurgers={handleAssignToAllBurgers}
-                    />
-                  ))}
-                </div>
-              )}
+              <SortableModifierList
+                options={personalizaciones?.options || []}
+                type="personalizacion"
+                loading={loading}
+                onToggle={handleToggleOption}
+                onEdit={openEditOption}
+                onDelete={handleDeleteOption}
+                onAssign={openAssignDialog}
+                onAssignAllBurgers={handleAssignToAllBurgers}
+                onReorder={handleReorderOptions}
+                onAddNew={() => personalizaciones && openAddOption(personalizaciones.id)}
+              />
             </CardContent>
           </Card>
         </TabsContent>
