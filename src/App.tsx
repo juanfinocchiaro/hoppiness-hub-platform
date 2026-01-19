@@ -70,6 +70,7 @@ import Discounts from "./pages/admin/Discounts";
 import LocalStock from "./pages/local/LocalStock";
 import LocalInventory from "./pages/local/LocalInventory";
 import LocalCustomers from "./pages/local/LocalCustomers";
+import LocalKDSSettings from "./pages/local/LocalKDSSettings";
 
 // Public Menu
 import MenuPublic from "./pages/MenuPublic";
@@ -93,6 +94,7 @@ const App = () => (
             <Route path="/pedir/:branchSlug" element={<PedirBranch />} />
             <Route path="/pedido/:trackingToken" element={<PedidoTracking />} />
             <Route path="/menu" element={<NuestroMenu />} />
+            <Route path="/menu/:branchSlug" element={<MenuPublic />} />
             <Route path="/franquicias" element={<Franquicias />} />
             <Route path="/clock-in" element={<ClockIn />} />
             <Route path="/registro-staff" element={<RegistroStaff />} />
@@ -117,7 +119,12 @@ const App = () => (
               {/* Menú Local */}
               <Route path="productos" element={<LocalProductos />} />
               <Route path="extras" element={<LocalExtras />} />
-              <Route path="disponibilidad" element={<LocalDisponibilidad />} /> {/* Legacy redirect */}
+              <Route path="disponibilidad" element={<LocalDisponibilidad />} />
+              {/* Stock & Inventario */}
+              <Route path="stock" element={<LocalStock />} />
+              <Route path="inventario" element={<LocalInventory />} />
+              {/* Clientes */}
+              <Route path="clientes" element={<LocalCustomers />} />
               {/* Finanzas */}
               <Route path="transacciones" element={<LocalTransactions />} />
               <Route path="caja" element={<LocalCaja />} />
@@ -137,6 +144,7 @@ const App = () => (
               <Route path="integraciones" element={<LocalIntegraciones />} />
               <Route path="zonas-delivery" element={<LocalDeliveryZones />} />
               <Route path="impresoras" element={<LocalImpresoras />} />
+              <Route path="kds-config" element={<LocalKDSSettings />} />
             </Route>
             
             {/* Admin Routes */}
@@ -147,9 +155,12 @@ const App = () => (
               <Route path="productos/nuevo" element={<ProductForm />} />
               <Route path="productos/:productId" element={<ProductForm />} />
               <Route path="modificadores" element={<Modifiers />} />
+              <Route path="ingredientes" element={<Ingredients />} />
               <Route path="sucursales" element={<Branches />} />
               <Route path="sucursales/:branchId/productos" element={<BranchProducts />} />
               <Route path="proveedores" element={<Suppliers />} />
+              <Route path="clientes" element={<Customers />} />
+              <Route path="descuentos" element={<Discounts />} />
               <Route path="estado-resultados" element={<ProfitLossReport />} />
               <Route path="performance" element={<BranchPerformance />} />
               <Route path="finanzas-marca" element={<BrandFinances />} />
