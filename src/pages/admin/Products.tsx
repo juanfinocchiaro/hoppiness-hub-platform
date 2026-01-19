@@ -25,7 +25,7 @@ import { Plus, Search, Edit, Star, ChevronDown, ChevronRight, Power, Check, X, C
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { ScheduleDialog } from '@/components/admin/ScheduleDialog';
-import { ProductEditDrawer } from '@/components/admin/ProductEditDrawer';
+import { ProductInlineEditor } from '@/components/admin/ProductInlineEditor';
 import { CategoryManager } from '@/components/admin/CategoryManager';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -78,10 +78,7 @@ export default function Products() {
   } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const [editDrawer, setEditDrawer] = useState<{
-    open: boolean;
-    productId: string | null;
-  }>({ open: false, productId: null });
+  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
 
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const [showDisabledInCategory, setShowDisabledInCategory] = useState<Set<string>>(new Set());
@@ -515,17 +512,18 @@ export default function Products() {
                   const availableCount = getAvailableBranchesCount(product.id);
                   
                     return (
-                      <div 
-                        key={product.id} 
-                        onClick={() => setEditDrawer({ open: true, productId: product.id })}
-                        className={`
-                          group flex items-center gap-4 p-4 rounded-xl transition-all cursor-pointer
-                          ${isDisabledByBrand 
-                            ? 'bg-muted/40 border border-dashed border-border' 
-                            : 'bg-card hover:bg-accent/30 border border-border shadow-sm hover:shadow-md'
-                          }
-                        `}
-                      >
+                      <div key={product.id} className="space-y-0">
+                        <div 
+                          onClick={() => setExpandedProductId(expandedProductId === product.id ? null : product.id)}
+                          className={`
+                            group flex items-center gap-4 p-4 rounded-xl transition-all cursor-pointer
+                            ${expandedProductId === product.id ? 'rounded-b-none border-b-0' : ''}
+                            ${isDisabledByBrand 
+                              ? 'bg-muted/40 border border-dashed border-border' 
+                              : 'bg-card hover:bg-accent/30 border border-border shadow-sm hover:shadow-md'
+                            }
+                          `}
+                        >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0">
                           {product.image_url ? (
@@ -659,7 +657,7 @@ export default function Products() {
                           className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setEditDrawer({ open: true, productId: product.id });
+                            setExpandedProductId(expandedProductId === product.id ? null : product.id);
                           }}
                         >
                           <Edit className="w-3.5 h-3.5" />
@@ -689,8 +687,19 @@ export default function Products() {
                           </Tooltip>
                         </TooltipProvider>
                       </div>
-                    </div>
-                  );
+                        </div>
+                        
+                        {/* Inline Editor */}
+                        {expandedProductId === product.id && (
+                          <ProductInlineEditor
+                            productId={product.id}
+                            categories={categories}
+                            onClose={() => setExpandedProductId(null)}
+                            onProductUpdated={fetchData}
+                          />
+                        )}
+                      </div>
+                    );
                 })}
                 
                 {/* Show/Hide Inactive Products Button */}
@@ -803,15 +812,6 @@ export default function Products() {
           itemName={scheduleDialog.name}
         />
       )}
-
-      {/* Product Edit Drawer */}
-      <ProductEditDrawer
-        open={editDrawer.open}
-        onOpenChange={(open) => setEditDrawer({ open, productId: open ? editDrawer.productId : null })}
-        productId={editDrawer.productId}
-        categories={categories}
-        onProductUpdated={fetchData}
-      />
 
       {/* Category Manager */}
       <CategoryManager
