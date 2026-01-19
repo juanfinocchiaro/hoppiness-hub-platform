@@ -1411,6 +1411,36 @@ export type Database = {
           },
         ]
       }
+      permission_definitions: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          key: string
+          min_role: Database["public"]["Enums"]["app_role"]
+          module: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          key: string
+          min_role?: Database["public"]["Enums"]["app_role"]
+          module: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          key?: string
+          min_role?: Database["public"]["Enums"]["app_role"]
+          module?: string
+          name?: string
+        }
+        Relationships: []
+      }
       printers: {
         Row: {
           auto_cut: boolean | null
@@ -1947,6 +1977,48 @@ export type Database = {
           },
         ]
       }
+      user_branch_permissions: {
+        Row: {
+          branch_id: string
+          granted_at: string | null
+          granted_by: string | null
+          id: string
+          permission_key: string
+          user_id: string
+        }
+        Insert: {
+          branch_id: string
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          permission_key: string
+          user_id: string
+        }
+        Update: {
+          branch_id?: string
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          permission_key?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_branch_permissions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_branch_permissions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -2058,6 +2130,14 @@ export type Database = {
         Returns: boolean
       }
       cleanup_expired_tokens: { Args: never; Returns: undefined }
+      grant_role_defaults: {
+        Args: {
+          _branch_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: undefined
+      }
       has_branch_access: {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
