@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -134,6 +134,9 @@ export default function CheckoutDialog({
   const [tipAmount, setTipAmount] = useState(0);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(existingOrderId || null);
   const [payments, setPayments] = useState<PaymentRecord[]>(existingPayments);
+  
+  // Ref to prevent double-click race conditions
+  const processingRef = useRef(false);
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -253,6 +256,9 @@ export default function CheckoutDialog({
 
   // Handle single payment (full amount)
   const handleSinglePayment = async () => {
+    // Prevent double-click
+    if (processingRef.current || isProcessing) return;
+    processingRef.current = true;
     setIsProcessing(true);
     try {
       const orderId = await ensureOrderExists();
@@ -307,11 +313,14 @@ export default function CheckoutDialog({
       toast.error('Error al procesar el pago');
     } finally {
       setIsProcessing(false);
+      processingRef.current = false;
     }
   };
 
   // Handle split payment confirmation
   const handleSplitPaymentConfirm = async (splitPayments: Array<{ id: string; method: SplitPaymentMethod; amount: number }>) => {
+    if (processingRef.current || isProcessing) return;
+    processingRef.current = true;
     setIsProcessing(true);
     try {
       const orderId = await ensureOrderExists();
@@ -372,6 +381,7 @@ export default function CheckoutDialog({
       toast.error('Error al procesar los pagos');
     } finally {
       setIsProcessing(false);
+      processingRef.current = false;
     }
   };
 
@@ -382,6 +392,8 @@ export default function CheckoutDialog({
       return;
     }
 
+    if (processingRef.current || isProcessing) return;
+    processingRef.current = true;
     setIsProcessing(true);
     try {
       const orderId = currentOrderId || await ensureOrderExists();
@@ -408,6 +420,7 @@ export default function CheckoutDialog({
       toast.error('Error al finalizar el pedido');
     } finally {
       setIsProcessing(false);
+      processingRef.current = false;
     }
   };
 
