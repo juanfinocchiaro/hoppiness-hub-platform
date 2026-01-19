@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,21 +7,28 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { Calendar, Clock, Save, Loader2, Edit2, Plus, Trash2, AlertTriangle } from 'lucide-react';
+import { Calendar, Clock, Save, Loader2, Edit2, Plus, Trash2, AlertTriangle, Info, ChevronLeft, ChevronRight, Scale } from 'lucide-react';
 
-interface ShiftConflict {
-  dayOfWeek: number;
-  shift1: number;
-  shift2: number;
+interface RuleViolation {
+  type: 'daily_max' | 'weekly_max' | 'rest_period' | 'days_off' | 'overlap';
+  dayOfWeek?: number;
   message: string;
+  severity: 'error' | 'warning';
 }
 
 interface Employee {
@@ -57,6 +64,31 @@ const DAYS_OF_WEEK = [
   { value: 0, label: 'Domingo', short: 'Dom' },
 ];
 
+const MONTHS = [
+  { value: 1, label: 'Enero' },
+  { value: 2, label: 'Febrero' },
+  { value: 3, label: 'Marzo' },
+  { value: 4, label: 'Abril' },
+  { value: 5, label: 'Mayo' },
+  { value: 6, label: 'Junio' },
+  { value: 7, label: 'Julio' },
+  { value: 8, label: 'Agosto' },
+  { value: 9, label: 'Septiembre' },
+  { value: 10, label: 'Octubre' },
+  { value: 11, label: 'Noviembre' },
+  { value: 12, label: 'Diciembre' },
+];
+
+// CCT 329/2000 Rules
+const CCT_RULES = {
+  maxDailyHours: 9, // Art. 45 - Más de 9hs diarias = hora extra
+  maxWeeklyHours: 48, // Art. 44 - Jornada semanal máxima
+  normalWeeklyHours: 44, // Jornada normal semanal
+  maxMonthlyHours: 190, // Art. 45 - Más de 190hs mensuales = hora extra
+  minRestBetweenShifts: 12, // Descanso mínimo entre jornadas (horas)
+  minDaysOff: 1, // Mínimo 1 día libre por semana
+};
+
 export default function EmployeeScheduleEditor({ branchId, canManage }: EmployeeScheduleEditorProps) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [schedules, setSchedules] = useState<Record<string, DaySchedule[]>>({});
@@ -65,61 +97,128 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
   const [showDialog, setShowDialog] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingSchedules, setEditingSchedules] = useState<DaySchedule[]>([]);
-  const [conflicts, setConflicts] = useState<ShiftConflict[]>([]);
+  const [violations, setViolations] = useState<RuleViolation[]>([]);
+  
+  // Month/Year selection
+  const currentDate = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
 
-  // Check for overlapping shifts within a day
-  const detectConflicts = (schedules: DaySchedule[]): ShiftConflict[] => {
-    const foundConflicts: ShiftConflict[] = [];
+  // Calculate hours for a day's shifts
+  const calculateDayHours = (shifts: ScheduleShift[]): number => {
+    return shifts.reduce((total, shift) => {
+      const [startH, startM] = shift.start_time.split(':').map(Number);
+      const [endH, endM] = shift.end_time.split(':').map(Number);
+      const startMinutes = startH * 60 + startM;
+      const endMinutes = endH * 60 + endM;
+      const duration = endMinutes > startMinutes ? endMinutes - startMinutes : 0;
+      return total + duration / 60;
+    }, 0);
+  };
+
+  // Validate schedules against CCT 329/2000 rules
+  const validateSchedules = (schedules: DaySchedule[]): RuleViolation[] => {
+    const foundViolations: RuleViolation[] = [];
+    
+    let totalWeeklyHours = 0;
+    let daysOff = 0;
     
     schedules.forEach(day => {
-      if (day.is_day_off || day.shifts.length < 2) return;
+      if (day.is_day_off) {
+        daysOff++;
+        return;
+      }
       
-      const sortedShifts = [...day.shifts].sort((a, b) => a.start_time.localeCompare(b.start_time));
-      
-      for (let i = 0; i < sortedShifts.length - 1; i++) {
-        const current = sortedShifts[i];
-        const next = sortedShifts[i + 1];
-        
-        // Check if current shift ends after next shift starts
-        if (current.end_time > next.start_time) {
-          const dayName = DAYS_OF_WEEK.find(d => d.value === day.day_of_week)?.label || '';
-          foundConflicts.push({
-            dayOfWeek: day.day_of_week,
-            shift1: current.shift_number,
-            shift2: next.shift_number,
-            message: `${dayName}: Turno ${current.shift_number} (${current.start_time}-${current.end_time}) se solapa con Turno ${next.shift_number} (${next.start_time}-${next.end_time})`,
-          });
+      // Check for overlapping shifts
+      if (day.shifts.length >= 2) {
+        const sortedShifts = [...day.shifts].sort((a, b) => a.start_time.localeCompare(b.start_time));
+        for (let i = 0; i < sortedShifts.length - 1; i++) {
+          const current = sortedShifts[i];
+          const next = sortedShifts[i + 1];
+          if (current.end_time > next.start_time) {
+            const dayName = DAYS_OF_WEEK.find(d => d.value === day.day_of_week)?.label || '';
+            foundViolations.push({
+              type: 'overlap',
+              dayOfWeek: day.day_of_week,
+              message: `${dayName}: Los turnos se solapan`,
+              severity: 'error',
+            });
+          }
         }
       }
       
-      // Also check if any shift has end_time <= start_time
+      // Check end_time > start_time
       day.shifts.forEach(shift => {
         if (shift.end_time <= shift.start_time) {
           const dayName = DAYS_OF_WEEK.find(d => d.value === day.day_of_week)?.label || '';
-          foundConflicts.push({
+          foundViolations.push({
+            type: 'overlap',
             dayOfWeek: day.day_of_week,
-            shift1: shift.shift_number,
-            shift2: shift.shift_number,
-            message: `${dayName}: Turno ${shift.shift_number} tiene hora de salida anterior o igual a la entrada`,
+            message: `${dayName}: Hora de salida debe ser posterior a la entrada`,
+            severity: 'error',
           });
         }
       });
+      
+      // Check daily hours
+      const dayHours = calculateDayHours(day.shifts);
+      totalWeeklyHours += dayHours;
+      
+      if (dayHours > CCT_RULES.maxDailyHours) {
+        const dayName = DAYS_OF_WEEK.find(d => d.value === day.day_of_week)?.label || '';
+        foundViolations.push({
+          type: 'daily_max',
+          dayOfWeek: day.day_of_week,
+          message: `${dayName}: ${dayHours.toFixed(1)}hs excede el máximo de ${CCT_RULES.maxDailyHours}hs diarias (CCT Art. 45)`,
+          severity: 'error',
+        });
+      }
     });
     
-    return foundConflicts;
+    // Check weekly hours
+    if (totalWeeklyHours > CCT_RULES.maxWeeklyHours) {
+      foundViolations.push({
+        type: 'weekly_max',
+        message: `Total semanal ${totalWeeklyHours.toFixed(1)}hs excede el máximo de ${CCT_RULES.maxWeeklyHours}hs (CCT Art. 44)`,
+        severity: 'error',
+      });
+    } else if (totalWeeklyHours > CCT_RULES.normalWeeklyHours) {
+      foundViolations.push({
+        type: 'weekly_max',
+        message: `Total semanal ${totalWeeklyHours.toFixed(1)}hs excede las ${CCT_RULES.normalWeeklyHours}hs normales (genera horas extra)`,
+        severity: 'warning',
+      });
+    }
+    
+    // Check minimum days off
+    if (daysOff < CCT_RULES.minDaysOff) {
+      foundViolations.push({
+        type: 'days_off',
+        message: `Debe tener al menos ${CCT_RULES.minDaysOff} día libre por semana`,
+        severity: 'error',
+      });
+    }
+    
+    return foundViolations;
   };
 
-  // Update conflicts whenever editingSchedules changes
+  // Update violations whenever editingSchedules changes
   useEffect(() => {
     if (showDialog) {
-      setConflicts(detectConflicts(editingSchedules));
+      setViolations(validateSchedules(editingSchedules));
     }
   }, [editingSchedules, showDialog]);
+
+  // Calculate total hours for current editing schedule
+  const editingTotalHours = useMemo(() => {
+    return editingSchedules
+      .filter(d => !d.is_day_off)
+      .reduce((total, day) => total + calculateDayHours(day.shifts), 0);
+  }, [editingSchedules]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      // First fetch employees
       const empRes = await supabase
         .from('employees')
         .select('id, full_name, position')
@@ -137,13 +236,14 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
         return;
       }
 
-      // Fetch schedules
+      // Fetch schedules for selected month
       const schedRes = await supabase
         .from('employee_schedules')
         .select('*')
-        .in('employee_id', employeeList.map(e => e.id));
+        .in('employee_id', employeeList.map(e => e.id))
+        .eq('schedule_month', selectedMonth)
+        .eq('schedule_year', selectedYear);
 
-      // Group schedules by employee and day
       const grouped: Record<string, DaySchedule[]> = {};
       if (schedRes.data) {
         schedRes.data.forEach((s: any) => {
@@ -170,7 +270,6 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
           }
         });
         
-        // Sort shifts within each day
         Object.values(grouped).forEach(empSchedules => {
           empSchedules.forEach(day => {
             day.shifts.sort((a, b) => a.shift_number - b.shift_number);
@@ -190,13 +289,12 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
     if (branchId) {
       fetchData();
     }
-  }, [branchId]);
+  }, [branchId, selectedMonth, selectedYear]);
 
   const openEditDialog = (emp: Employee) => {
     setSelectedEmployee(emp);
     const empSchedules = schedules[emp.id] || [];
     
-    // Create a complete week schedule
     const weekSchedule: DaySchedule[] = DAYS_OF_WEEK.map(day => {
       const existing = empSchedules.find(s => s.day_of_week === day.value);
       if (existing) {
@@ -216,27 +314,28 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
   const handleSave = async () => {
     if (!selectedEmployee) return;
     
-    // Validate before saving
-    const currentConflicts = detectConflicts(editingSchedules);
-    if (currentConflicts.length > 0) {
-      toast.error('Corrige los conflictos de horarios antes de guardar');
+    const currentViolations = validateSchedules(editingSchedules);
+    const hasErrors = currentViolations.some(v => v.severity === 'error');
+    
+    if (hasErrors) {
+      toast.error('Corrige las violaciones al convenio antes de guardar');
       return;
     }
     
     setSaving(true);
     try {
-      // Delete existing schedules for this employee
+      // Delete existing schedules for this employee/month/year
       await supabase
         .from('employee_schedules')
         .delete()
-        .eq('employee_id', selectedEmployee.id);
+        .eq('employee_id', selectedEmployee.id)
+        .eq('schedule_month', selectedMonth)
+        .eq('schedule_year', selectedYear);
 
-      // Insert new schedules
       const toInsert: any[] = [];
       
       editingSchedules.forEach(day => {
         if (day.is_day_off) {
-          // Insert a single record for day off
           toInsert.push({
             employee_id: selectedEmployee.id,
             day_of_week: day.day_of_week,
@@ -244,9 +343,10 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
             start_time: '00:00',
             end_time: '00:00',
             shift_number: 1,
+            schedule_month: selectedMonth,
+            schedule_year: selectedYear,
           });
         } else {
-          // Insert each shift
           day.shifts.forEach((shift, idx) => {
             toInsert.push({
               employee_id: selectedEmployee.id,
@@ -255,6 +355,8 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
               start_time: shift.start_time,
               end_time: shift.end_time,
               shift_number: idx + 1,
+              schedule_month: selectedMonth,
+              schedule_year: selectedYear,
             });
           });
         }
@@ -323,10 +425,12 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
   const getEmployeeWeekSummary = (employeeId: string): string => {
     const empSchedule = schedules[employeeId] || [];
     const workingDays = empSchedule.filter(d => !d.is_day_off && d.shifts.length > 0).length;
-    const hasSplitShift = empSchedule.some(d => d.shifts.length > 1);
+    const totalHours = empSchedule
+      .filter(d => !d.is_day_off)
+      .reduce((total, day) => total + calculateDayHours(day.shifts), 0);
     
     if (workingDays === 0) return 'Sin horario';
-    return `${workingDays} días${hasSplitShift ? ' (turno cortado)' : ''}`;
+    return `${workingDays} días · ${totalHours.toFixed(0)}hs`;
   };
 
   const formatDaySchedule = (employeeId: string, dayOfWeek: number): string => {
@@ -338,6 +442,27 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
       .join(' / ');
   };
 
+  const goToPreviousMonth = () => {
+    if (selectedMonth === 1) {
+      setSelectedMonth(12);
+      setSelectedYear(selectedYear - 1);
+    } else {
+      setSelectedMonth(selectedMonth - 1);
+    }
+  };
+
+  const goToNextMonth = () => {
+    if (selectedMonth === 12) {
+      setSelectedMonth(1);
+      setSelectedYear(selectedYear + 1);
+    } else {
+      setSelectedMonth(selectedMonth + 1);
+    }
+  };
+
+  const hasErrors = violations.some(v => v.severity === 'error');
+  const hasWarnings = violations.some(v => v.severity === 'warning');
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-32">
@@ -348,15 +473,80 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
 
   return (
     <div className="space-y-6">
-      {/* Weekly Overview Grid */}
+      {/* CCT Rules Card */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Scale className="h-5 w-5 text-primary" />
+            Reglas del Convenio CCT 329/2000
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="space-y-1">
+              <p className="text-muted-foreground">Máximo diario</p>
+              <p className="font-semibold">{CCT_RULES.maxDailyHours}hs (Art. 45)</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-muted-foreground">Jornada semanal normal</p>
+              <p className="font-semibold">{CCT_RULES.normalWeeklyHours}hs</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-muted-foreground">Máximo semanal</p>
+              <p className="font-semibold">{CCT_RULES.maxWeeklyHours}hs (Art. 44)</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-muted-foreground">Máximo mensual</p>
+              <p className="font-semibold">{CCT_RULES.maxMonthlyHours}hs (Art. 45)</p>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            Las horas que excedan estos límites se consideran horas extra según el convenio colectivo de trabajo.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Month Selector */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Horarios de la Semana
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Horarios Mensuales
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="flex items-center gap-2">
+                <Select value={String(selectedMonth)} onValueChange={(v) => setSelectedMonth(Number(v))}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MONTHS.map(m => (
+                      <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
+                  <SelectTrigger className="w-24">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[selectedYear - 1, selectedYear, selectedYear + 1].map(y => (
+                      <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button variant="outline" size="icon" onClick={goToNextMonth}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
           <CardDescription>
-            Vista general de horarios por empleado. Soporta turnos cortados.
+            Planilla de horarios para {MONTHS.find(m => m.value === selectedMonth)?.label} {selectedYear}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -420,30 +610,63 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
-              Horarios de {selectedEmployee?.full_name}
+              Horarios de {selectedEmployee?.full_name} - {MONTHS.find(m => m.value === selectedMonth)?.label} {selectedYear}
             </DialogTitle>
           </DialogHeader>
-          {conflicts.length > 0 && (
-            <Alert variant="destructive" className="mb-4">
+
+          {/* Hours Summary */}
+          <div className="flex items-center gap-4 p-3 bg-muted rounded-lg">
+            <div className="flex-1">
+              <p className="text-sm text-muted-foreground">Total semanal</p>
+              <p className={`text-xl font-bold ${editingTotalHours > CCT_RULES.maxWeeklyHours ? 'text-destructive' : editingTotalHours > CCT_RULES.normalWeeklyHours ? 'text-yellow-600' : 'text-primary'}`}>
+                {editingTotalHours.toFixed(1)}hs
+              </p>
+            </div>
+            <div className="text-right text-sm">
+              <p className="text-muted-foreground">Límites:</p>
+              <p>Normal: {CCT_RULES.normalWeeklyHours}hs · Máx: {CCT_RULES.maxWeeklyHours}hs</p>
+            </div>
+          </div>
+
+          {/* Violations Alert */}
+          {hasErrors && (
+            <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Violaciones al Convenio</AlertTitle>
               <AlertDescription>
-                <span className="font-medium">Conflictos detectados:</span>
                 <ul className="list-disc list-inside mt-1 text-sm">
-                  {conflicts.map((c, idx) => (
-                    <li key={idx}>{c.message}</li>
+                  {violations.filter(v => v.severity === 'error').map((v, idx) => (
+                    <li key={idx}>{v.message}</li>
                   ))}
                 </ul>
               </AlertDescription>
             </Alert>
           )}
+
+          {hasWarnings && !hasErrors && (
+            <Alert className="border-yellow-500 bg-yellow-50 text-yellow-800">
+              <Info className="h-4 w-4" />
+              <AlertTitle>Advertencias</AlertTitle>
+              <AlertDescription>
+                <ul className="list-disc list-inside mt-1 text-sm">
+                  {violations.filter(v => v.severity === 'warning').map((v, idx) => (
+                    <li key={idx}>{v.message}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-3 overflow-y-auto flex-1 pr-2">
             {editingSchedules.map((schedule) => {
-              const hasConflict = conflicts.some(c => c.dayOfWeek === schedule.day_of_week);
+              const dayViolation = violations.find(v => v.dayOfWeek === schedule.day_of_week && v.severity === 'error');
+              const dayHours = calculateDayHours(schedule.shifts);
               const day = DAYS_OF_WEEK.find(d => d.value === schedule.day_of_week);
+              
               return (
                 <div
                   key={schedule.day_of_week}
-                  className={`p-4 border rounded-lg ${schedule.is_day_off ? 'bg-muted/50' : ''} ${hasConflict ? 'border-destructive bg-destructive/5' : ''}`}
+                  className={`p-4 border rounded-lg ${schedule.is_day_off ? 'bg-muted/50' : ''} ${dayViolation ? 'border-destructive bg-destructive/5' : ''}`}
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
@@ -454,9 +677,14 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
                           onCheckedChange={() => toggleDayOff(schedule.day_of_week)}
                         />
                         <span className="text-sm text-muted-foreground">
-                          {schedule.is_day_off ? 'Libre' : 'Trabaja'}
+                          {schedule.is_day_off ? 'Libre' : `${dayHours.toFixed(1)}hs`}
                         </span>
                       </div>
+                      {!schedule.is_day_off && dayHours > CCT_RULES.maxDailyHours && (
+                        <Badge variant="destructive" className="text-xs">
+                          Excede {CCT_RULES.maxDailyHours}hs
+                        </Badge>
+                      )}
                     </div>
                     {!schedule.is_day_off && schedule.shifts.length < 3 && (
                       <Button
@@ -513,11 +741,12 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
               );
             })}
           </div>
+
           <DialogFooter className="pt-4 border-t">
             <Button variant="outline" onClick={() => setShowDialog(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSave} disabled={saving || conflicts.length > 0}>
+            <Button onClick={handleSave} disabled={saving || hasErrors}>
               {saving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
