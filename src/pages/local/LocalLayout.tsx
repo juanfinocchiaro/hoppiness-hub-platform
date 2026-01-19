@@ -38,8 +38,12 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import type { Tables } from '@/integrations/supabase/types';
+import POSView from '@/components/pos/POSView';
+import KDSView from '@/components/pos/KDSView';
 
 type Branch = Tables<'branches'>;
+
+type ActivePOSView = 'none' | 'pos' | 'kds';
 
 export default function LocalLayout() {
   const { user, signOut, loading: authLoading } = useAuth();
@@ -49,6 +53,8 @@ export default function LocalLayout() {
   const { branchId } = useParams();
   
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
+  const [posOpen, setPosOpen] = useState(false);
+  const [activePOSView, setActivePOSView] = useState<ActivePOSView>('none');
 
   // Redirect if not authenticated or no access
   useEffect(() => {
@@ -81,9 +87,19 @@ export default function LocalLayout() {
     }
   }, [branchId, accessibleBranches, isAdmin, navigate]);
 
+  // Reset POS view when changing branch
+  useEffect(() => {
+    setActivePOSView('none');
+  }, [branchId]);
+
   const handleBranchChange = (newBranchId: string) => {
     const currentPath = location.pathname.split('/').slice(-1)[0];
+    setActivePOSView('none');
     navigate(`/local/${newBranchId}/${currentPath}`);
+  };
+
+  const handlePOSItemClick = (view: 'pos' | 'kds') => {
+    setActivePOSView(view);
   };
 
   // Get permissions for current branch
@@ -98,11 +114,9 @@ export default function LocalLayout() {
   ].filter(item => item.show);
 
   const posItems = [
-    { to: `/pos`, icon: Monitor, label: 'Tomar Pedidos' },
-    { to: `/pos/${branchId}/kds`, icon: ChefHat, label: 'Cocina (KDS)' },
+    { id: 'pos' as const, icon: Monitor, label: 'Tomar Pedidos' },
+    { id: 'kds' as const, icon: ChefHat, label: 'Cocina (KDS)' },
   ];
-
-  const [posOpen, setPosOpen] = useState(false);
 
   if (authLoading || roleLoading) {
     return (
@@ -142,13 +156,17 @@ export default function LocalLayout() {
     );
   }
 
+  const handleNavItemClick = () => {
+    setActivePOSView('none');
+  };
+
   const NavContent = () => (
     <nav className="space-y-1">
       {navItems.map((item) => {
         const fullPath = `/local/${branchId}/${item.to}`;
-        const isActive = location.pathname.includes(item.to);
+        const isActive = location.pathname.includes(item.to) && activePOSView === 'none';
         return (
-          <Link key={item.to} to={fullPath}>
+          <Link key={item.to} to={fullPath} onClick={handleNavItemClick}>
             <Button
               variant={isActive ? 'secondary' : 'ghost'}
               className={`w-full justify-start ${isActive ? 'bg-primary/10 text-primary' : ''}`}
@@ -166,7 +184,7 @@ export default function LocalLayout() {
         <CollapsibleTrigger asChild>
           <Button
             variant="ghost"
-            className={`w-full justify-start ${location.pathname.includes('/pos') ? 'bg-primary/10 text-primary' : ''}`}
+            className={`w-full justify-start ${activePOSView !== 'none' ? 'bg-primary/10 text-primary' : ''}`}
           >
             <ShoppingCart className="w-4 h-4 mr-3" />
             Punto de Venta
@@ -179,24 +197,39 @@ export default function LocalLayout() {
         </CollapsibleTrigger>
         <CollapsibleContent className="pl-4 space-y-1 mt-1">
           {posItems.map((item) => {
-            const isActive = location.pathname === item.to;
+            const isActive = activePOSView === item.id;
             return (
-              <Link key={item.to} to={item.to}>
-                <Button
-                  variant={isActive ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className={`w-full justify-start ${isActive ? 'bg-primary/10 text-primary' : ''}`}
-                >
-                  <item.icon className="w-4 h-4 mr-3" />
-                  {item.label}
-                </Button>
-              </Link>
+              <Button
+                key={item.id}
+                variant={isActive ? 'secondary' : 'ghost'}
+                size="sm"
+                className={`w-full justify-start ${isActive ? 'bg-primary/10 text-primary' : ''}`}
+                onClick={() => handlePOSItemClick(item.id)}
+              >
+                <item.icon className="w-4 h-4 mr-3" />
+                {item.label}
+              </Button>
             );
           })}
         </CollapsibleContent>
       </Collapsible>
     </nav>
   );
+
+  // Render content based on active view
+  const renderContent = () => {
+    if (!selectedBranch) return null;
+
+    if (activePOSView === 'pos') {
+      return <POSView branch={selectedBranch} />;
+    }
+    
+    if (activePOSView === 'kds') {
+      return <KDSView branch={selectedBranch} />;
+    }
+
+    return <Outlet context={{ branch: selectedBranch, permissions: currentPermissions }} />;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -293,7 +326,7 @@ export default function LocalLayout() {
         {/* Main Content */}
         <main className="flex-1 lg:ml-64">
           <div className="p-6">
-            <Outlet context={{ branch: selectedBranch, permissions: currentPermissions }} />
+            {renderContent()}
           </div>
         </main>
       </div>
