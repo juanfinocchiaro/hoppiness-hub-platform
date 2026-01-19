@@ -210,6 +210,57 @@ export type Database = {
           },
         ]
       }
+      branch_schedules: {
+        Row: {
+          branch_id: string
+          closes_at: string
+          created_at: string
+          day_of_week: number
+          id: string
+          is_enabled: boolean
+          opens_at: string
+          service_type: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          closes_at?: string
+          created_at?: string
+          day_of_week: number
+          id?: string
+          is_enabled?: boolean
+          opens_at?: string
+          service_type: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          closes_at?: string
+          created_at?: string
+          day_of_week?: number
+          id?: string
+          is_enabled?: boolean
+          opens_at?: string
+          service_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_schedules_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_schedules_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       branch_suppliers: {
         Row: {
           branch_id: string
