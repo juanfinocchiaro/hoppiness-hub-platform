@@ -21,11 +21,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Search, Edit, Star, ChevronDown, ChevronRight, Power, Check, X, CalendarDays } from 'lucide-react';
+import { Plus, Search, Edit, Star, ChevronDown, ChevronRight, Power, Check, X, CalendarDays, Settings2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { ScheduleDialog } from '@/components/admin/ScheduleDialog';
 import { ProductEditDrawer } from '@/components/admin/ProductEditDrawer';
+import { CategoryManager } from '@/components/admin/CategoryManager';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Product = Tables<'products'>;
@@ -74,6 +75,8 @@ export default function Products() {
     open: boolean;
     productId: string | null;
   }>({ open: false, productId: null });
+
+  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
 
   const fetchData = async () => {
     const [productsRes, categoriesRes, branchesRes, branchProductsRes] = await Promise.all([
@@ -335,6 +338,10 @@ export default function Products() {
               {totalDisabled} deshabilitados
             </Badge>
           )}
+          <Button variant="outline" size="sm" onClick={() => setCategoryManagerOpen(true)}>
+            <Settings2 className="w-4 h-4 mr-1.5" />
+            Categorías
+          </Button>
           <Link to="/admin/productos/nuevo">
             <Button size="sm">
               <Plus className="w-4 h-4 mr-1.5" />
@@ -622,6 +629,14 @@ export default function Products() {
         productId={editDrawer.productId}
         categories={categories}
         onProductUpdated={fetchData}
+      />
+
+      {/* Category Manager */}
+      <CategoryManager
+        open={categoryManagerOpen}
+        onOpenChange={setCategoryManagerOpen}
+        categories={categories}
+        onCategoriesUpdated={fetchData}
       />
     </div>
   );
