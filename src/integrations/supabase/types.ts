@@ -1932,6 +1932,33 @@ export type Database = {
           },
         ]
       }
+      ingredient_categories: {
+        Row: {
+          cost_category: string | null
+          created_at: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          cost_category?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          cost_category?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
       ingredients: {
         Row: {
           category: string | null
