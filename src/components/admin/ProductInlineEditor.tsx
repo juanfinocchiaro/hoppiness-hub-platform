@@ -345,14 +345,14 @@ export function ProductInlineEditor({
           </div>
         </div>
 
-        {/* Row 2: Description */}
+        {/* Row 2: Description - inline with row 1 */}
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">Descripción</Label>
-          <Textarea
+          <Input
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="resize-none h-12 text-sm"
-            placeholder="Descripción del producto..."
+            className="h-8 text-sm"
+            placeholder="Descripción breve del producto..."
           />
         </div>
 
