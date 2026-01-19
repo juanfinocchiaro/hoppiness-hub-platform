@@ -293,14 +293,6 @@ export function ProductInlineEditor({
 
   return (
     <div className="bg-card border-t-2 border-primary/20 animate-in slide-in-from-top-2 duration-200">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
-        <h3 className="font-semibold text-sm">Editando: {name}</h3>
-        <Button variant="ghost" size="sm" onClick={onClose}>
-          <ChevronUp className="w-4 h-4 mr-1" />
-          Cerrar
-        </Button>
-      </div>
 
       {/* SECTION 1: Compact Basic Data */}
       <div className="p-4 space-y-3 border-b">
