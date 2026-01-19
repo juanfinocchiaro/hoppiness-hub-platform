@@ -95,7 +95,7 @@ export default function LocalLayout() {
   useEffect(() => {
     if (!authLoading && !roleLoading) {
       if (!user) {
-        navigate('/auth');
+        navigate('/ingresar');
         return;
       }
       if (!isAdmin && !isGerente && accessibleBranches.length === 0) {
