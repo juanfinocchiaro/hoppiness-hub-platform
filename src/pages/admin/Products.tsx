@@ -326,7 +326,7 @@ export default function Products() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Control de Productos</h1>
+          <h1 className="text-2xl font-bold">Control Centralizado de Productos</h1>
           <p className="text-muted-foreground text-sm">
             {products.length} productos • {branches.length} sucursales
           </p>
@@ -340,12 +340,12 @@ export default function Products() {
           )}
           <Button variant="outline" size="sm" onClick={() => setCategoryManagerOpen(true)}>
             <Settings2 className="w-4 h-4 mr-1.5" />
-            Categorías
+            Categorías de Productos
           </Button>
           <Link to="/admin/productos/nuevo">
             <Button size="sm">
               <Plus className="w-4 h-4 mr-1.5" />
-              Nuevo
+              Nuevo Producto
             </Button>
           </Link>
         </div>
