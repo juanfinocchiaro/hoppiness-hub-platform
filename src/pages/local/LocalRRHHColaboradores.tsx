@@ -268,7 +268,11 @@ export default function LocalRRHHColaboradores() {
 
         toast.info(`Usuario encontrado: ${existingProfile.full_name}. Asignando a sucursal...`);
       } else {
-        toast.error('El usuario debe registrarse primero en la aplicación.');
+        // No existe - mostrar mensaje más claro
+        toast.error(
+          'Este email no está registrado. El usuario debe crear una cuenta primero desde /auth, o podés crear un empleado operativo desde "Fichajes" (no requiere cuenta).',
+          { duration: 6000 }
+        );
         setInviteLoading(false);
         return;
       }
