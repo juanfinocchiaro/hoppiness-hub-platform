@@ -54,6 +54,7 @@ import Suppliers from "./pages/admin/Suppliers";
 import Modifiers from "./pages/admin/Modifiers";
 import ProfitLossReport from "./pages/admin/ProfitLossReport";
 import Users from "./pages/admin/Users";
+import Permissions from "./pages/admin/Permissions";
 import SalesReports from "./pages/admin/SalesReports";
 
 import NotFound from "./pages/NotFound";
@@ -131,6 +132,7 @@ const App = () => (
               <Route path="proveedores" element={<Suppliers />} />
               <Route path="estado-resultados" element={<ProfitLossReport />} />
               <Route path="usuarios" element={<Users />} />
+              <Route path="permisos" element={<Permissions />} />
               <Route path="reportes" element={<SalesReports />} />
             </Route>
             
