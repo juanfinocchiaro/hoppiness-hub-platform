@@ -18,9 +18,9 @@ import {
 import { Clock, Truck, Store, Save, RefreshCw, Zap, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
+import BranchScheduleEditor from '@/components/schedules/BranchScheduleEditor';
 
 type Branch = Tables<'branches'>;
-
 type PrepTimeMode = 'dynamic' | 'custom';
 
 export default function LocalConfig() {
@@ -62,11 +62,10 @@ export default function LocalConfig() {
       setIsOpen(data.is_open ?? true);
       setDeliveryEnabled(data.delivery_enabled ?? true);
       
-      // Check if using dynamic mode (estimated_prep_time_min = null or 0)
       const storedPrepTime = data.estimated_prep_time_min;
       if (storedPrepTime === null || storedPrepTime === 0) {
         setPrepTimeMode('dynamic');
-        setCustomPrepTime(20); // default fallback
+        setCustomPrepTime(20);
       } else {
         setPrepTimeMode('custom');
         setCustomPrepTime(storedPrepTime);
@@ -78,13 +77,11 @@ export default function LocalConfig() {
     }
   };
 
-  // Calculate dynamic prep time from recent orders
   const calculateDynamicPrepTime = async () => {
     if (!branchId) return;
     
     setLoadingDynamic(true);
     try {
-      // Get orders from last 7 days that went through full cycle
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -104,22 +101,20 @@ export default function LocalConfig() {
         return;
       }
 
-      // Calculate average time from created_at to updated_at (when it became ready/delivered)
       const prepTimes = orders.map(order => {
         const created = new Date(order.created_at).getTime();
         const updated = new Date(order.updated_at).getTime();
-        return (updated - created) / 1000 / 60; // minutes
-      }).filter(time => time > 0 && time < 180); // Filter outliers (0-3 hours)
+        return (updated - created) / 1000 / 60;
+      }).filter(time => time > 0 && time < 180);
 
       if (prepTimes.length === 0) {
         setDynamicPrepTime(null);
         return;
       }
 
-      // Calculate average and round to nearest 5 minutes
       const avgTime = prepTimes.reduce((a, b) => a + b, 0) / prepTimes.length;
       const roundedTime = Math.round(avgTime / 5) * 5;
-      setDynamicPrepTime(Math.max(5, Math.min(120, roundedTime))); // Clamp between 5-120
+      setDynamicPrepTime(Math.max(5, Math.min(120, roundedTime)));
     } catch (error) {
       console.error('Error calculating dynamic prep time:', error);
       setDynamicPrepTime(null);
@@ -146,8 +141,6 @@ export default function LocalConfig() {
 
     setSaving(true);
     try {
-      // If dynamic mode, store 0 to indicate dynamic
-      // If custom mode, store the custom value
       const prepTimeToSave = prepTimeMode === 'dynamic' ? 0 : customPrepTime;
 
       const { error } = await supabase
@@ -170,10 +163,9 @@ export default function LocalConfig() {
     }
   };
 
-  // Get the displayed prep time
   const getDisplayedPrepTime = (): number => {
     if (prepTimeMode === 'dynamic') {
-      return dynamicPrepTime ?? 20; // Fallback to 20 if no data
+      return dynamicPrepTime ?? 20;
     }
     return customPrepTime;
   };
@@ -203,6 +195,7 @@ export default function LocalConfig() {
         </Card>
       )}
 
+      {/* Estado y opciones rápidas */}
       <Card>
         <CardContent className="divide-y">
           {/* Estado del Local */}
@@ -212,7 +205,7 @@ export default function LocalConfig() {
               <div className="space-y-0.5">
                 <Label htmlFor="is-open" className="text-base font-medium">Local Abierto</Label>
                 <p className="text-sm text-muted-foreground">
-                  Los clientes pueden hacer pedidos
+                  Override manual del estado
                 </p>
               </div>
             </div>
@@ -341,6 +334,30 @@ export default function LocalConfig() {
         </CardContent>
       </Card>
 
+      {/* Save button for quick settings */}
+      {canEdit && (
+        <div className="flex justify-end">
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Guardar Estado
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+
+      {/* Horarios de Atención */}
+      {branchId && (
+        <BranchScheduleEditor branchId={branchId} canEdit={canEdit} />
+      )}
+
       {/* Preview Card */}
       <Card className="bg-primary/5 border-primary/20">
         <CardContent className="py-4">
@@ -357,24 +374,6 @@ export default function LocalConfig() {
           </div>
         </CardContent>
       </Card>
-
-      {canEdit && (
-        <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={saving} size="lg">
-            {saving ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Guardando...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Guardar Cambios
-              </>
-            )}
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
