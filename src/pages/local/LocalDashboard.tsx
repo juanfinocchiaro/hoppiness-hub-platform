@@ -278,18 +278,34 @@ function DashboardContent({ branch }: { branch: Branch }) {
             <h1 className="text-3xl font-bold">{branch.name}</h1>
             <p className="text-muted-foreground">{branch.address}, {branch.city}</p>
           </div>
-          <Badge 
-            variant={branch.is_active ? 'default' : 'secondary'}
-            className={branch.is_active ? 'bg-success text-success-foreground' : ''}
-          >
-            {branch.is_active ? 'Abierto' : 'Cerrado'}
-          </Badge>
+          {(() => {
+            // Calcular estado efectivo: admin puede forzar, sino local_open_state
+            const isForced = branch.admin_force_state && branch.admin_force_state !== 'none';
+            const effectiveOpen = isForced 
+              ? branch.admin_force_state === 'open'
+              : branch.local_open_state ?? false;
+            
+            return (
+              <Badge 
+                variant={effectiveOpen ? 'default' : 'secondary'}
+                className={effectiveOpen ? 'bg-success text-success-foreground' : 'bg-destructive/20 text-destructive'}
+              >
+                {effectiveOpen ? 'Abierto' : 'Cerrado'}
+              </Badge>
+            );
+          })()}
         </div>
 
         {/* Active Channels */}
         <div className="flex flex-wrap gap-2">
           {branchChannels.map(channel => {
-            const isEnabled = branch[channel.key] as boolean ?? false;
+            // Solo mostrar como activo si el local está efectivamente abierto
+            const isForced = branch.admin_force_state && branch.admin_force_state !== 'none';
+            const effectiveOpen = isForced 
+              ? branch.admin_force_state === 'open'
+              : branch.local_open_state ?? false;
+            
+            const isEnabled = effectiveOpen && (branch[channel.key] as boolean ?? false);
             return (
               <Badge 
                 key={channel.key}
