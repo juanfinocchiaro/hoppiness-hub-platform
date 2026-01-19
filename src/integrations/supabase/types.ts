@@ -692,6 +692,89 @@ export type Database = {
           },
         ]
       }
+      modifier_options: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          group_id: string
+          id: string
+          is_available: boolean
+          is_default: boolean
+          name: string
+          price_adjustment: number
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          group_id: string
+          id?: string
+          is_available?: boolean
+          is_default?: boolean
+          name: string
+          price_adjustment?: number
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          group_id?: string
+          id?: string
+          is_available?: boolean
+          is_default?: boolean
+          name?: string
+          price_adjustment?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modifier_options_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "product_modifier_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_item_modifiers: {
+        Row: {
+          created_at: string
+          id: string
+          modifier_option_id: string
+          option_name: string
+          order_item_id: string
+          price_adjustment: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          modifier_option_id: string
+          option_name: string
+          order_item_id: string
+          price_adjustment?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          modifier_option_id?: string
+          option_name?: string
+          order_item_id?: string
+          price_adjustment?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_item_modifiers_modifier_option_id_fkey"
+            columns: ["modifier_option_id"]
+            isOneToOne: false
+            referencedRelation: "modifier_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_item_modifiers_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
@@ -973,6 +1056,53 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      product_modifier_groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean
+          max_selections: number | null
+          min_selections: number | null
+          name: string
+          product_id: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          max_selections?: number | null
+          min_selections?: number | null
+          name: string
+          product_id: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          max_selections?: number | null
+          min_selections?: number | null
+          name?: string
+          product_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_modifier_groups_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       products: {
         Row: {
