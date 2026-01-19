@@ -246,7 +246,6 @@ export default function LocalLayout() {
       items: [
         { to: 'config', label: 'Mi Sucursal', icon: Store, show: true },
         { to: 'zonas-delivery', label: 'Zonas Delivery', icon: MapPin, show: true },
-        { to: 'usuarios', label: 'Usuarios', icon: Users, show: isAdmin || isGerente },
         { to: 'impresoras', label: 'Impresoras', icon: Printer, show: true },
       ]
     }

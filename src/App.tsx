@@ -37,7 +37,7 @@ import LocalPagos from "./pages/local/LocalPagos";
 import LocalPL from "./pages/local/LocalPL";
 import LocalConfig from "./pages/local/LocalConfig";
 import LocalDeliveryZones from "./pages/local/LocalDeliveryZones";
-import LocalUsuarios from "./pages/local/LocalUsuarios";
+
 import LocalImpresoras from "./pages/local/LocalImpresoras";
 import AttendanceKiosk from "./pages/local/AttendanceKiosk";
 
@@ -114,7 +114,7 @@ const App = () => (
               {/* Configuración */}
               <Route path="config" element={<LocalConfig />} />
               <Route path="zonas-delivery" element={<LocalDeliveryZones />} />
-              <Route path="usuarios" element={<LocalUsuarios />} />
+              
               <Route path="impresoras" element={<LocalImpresoras />} />
             </Route>
             
