@@ -33,7 +33,6 @@ interface ModifierOptionCardProps {
   option: ModifierOption;
   type: 'adicional' | 'personalizacion';
   isReorderMode?: boolean;
-  onToggle: (optionId: string, isActive: boolean) => Promise<void>;
   onEdit: (option: ModifierOption) => void;
   onDelete: (optionId: string) => void;
   onAssign: (option: ModifierOption) => void;
@@ -44,13 +43,11 @@ export function ModifierOptionCard({
   option,
   type,
   isReorderMode = false,
-  onToggle,
   onEdit,
   onDelete,
   onAssign,
   onAssignAllBurgers,
 }: ModifierOptionCardProps) {
-  const [isToggling, setIsToggling] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const {
@@ -69,15 +66,6 @@ export function ModifierOptionCard({
 
   const formatPrice = (amount: number) => {
     return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount);
-  };
-
-  const handleToggle = async (checked: boolean) => {
-    setIsToggling(true);
-    try {
-      await onToggle(option.id, checked);
-    } finally {
-      setIsToggling(false);
-    }
   };
 
   const handleDelete = async () => {
@@ -113,20 +101,7 @@ export function ModifierOptionCard({
         </div>
       )}
 
-      {/* Toggle Switch - Hidden in reorder mode */}
-      {!isReorderMode && (
-        <div className="flex-shrink-0">
-          {isToggling ? (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          ) : (
-            <Switch
-              checked={option.is_active}
-              onCheckedChange={handleToggle}
-              className={option.is_active ? 'bg-success' : 'bg-muted-foreground/30'}
-            />
-          )}
-        </div>
-      )}
+      {/* No toggle in brand view - availability is managed by branches */}
 
       {/* Image - Visible for both types */}
       <div className="flex-shrink-0">
@@ -156,7 +131,7 @@ export function ModifierOptionCard({
             </Badge>
           )}
           {option.linkedIngredient && (
-            <Badge variant="outline" className="text-xs gap-1 flex-shrink-0 border-amber-500/50 text-amber-600">
+            <Badge variant="outline" className="text-xs gap-1 flex-shrink-0 border-warning/50 text-warning">
               <Beaker className="h-3 w-3" />
               {option.linkedIngredient.name}
             </Badge>

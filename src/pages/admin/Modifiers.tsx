@@ -187,22 +187,6 @@ export default function Modifiers() {
     }
   };
 
-  const handleToggleOption = async (optionId: string, isActive: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('modifier_options')
-        .update({ is_active: isActive })
-        .eq('id', optionId);
-      if (error) throw error;
-      setGroups(prev => prev.map(g => ({
-        ...g,
-        options: g.options.map(o => o.id === optionId ? { ...o, is_active: isActive } : o)
-      })));
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-  };
-
   const handleToggleProductOptionAssignment = async (productId: string, optionId: string, currentlyEnabled: boolean) => {
     try {
       const existing = optionAssignments.find(a => a.product_id === productId && a.modifier_option_id === optionId);
@@ -423,7 +407,6 @@ export default function Modifiers() {
                 options={adicionales?.options || []}
                 type="adicional"
                 loading={loading}
-                onToggle={handleToggleOption}
                 onEdit={openEditOption}
                 onDelete={handleDeleteOption}
                 onAssign={openAssignDialog}
@@ -456,7 +439,6 @@ export default function Modifiers() {
                 options={personalizaciones?.options || []}
                 type="personalizacion"
                 loading={loading}
-                onToggle={handleToggleOption}
                 onEdit={openEditOption}
                 onDelete={handleDeleteOption}
                 onAssign={openAssignDialog}

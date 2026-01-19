@@ -23,7 +23,6 @@ interface SortableModifierListProps {
   options: ModifierOption[];
   type: 'adicional' | 'personalizacion';
   loading?: boolean;
-  onToggle: (optionId: string, isActive: boolean) => Promise<void>;
   onEdit: (option: ModifierOption) => void;
   onDelete: (optionId: string) => void;
   onAssign: (option: ModifierOption) => void;
@@ -36,7 +35,6 @@ export function SortableModifierList({
   options,
   type,
   loading = false,
-  onToggle,
   onEdit,
   onDelete,
   onAssign,
@@ -183,7 +181,6 @@ export function SortableModifierList({
                   option={option}
                   type={type}
                   isReorderMode={true}
-                  onToggle={onToggle}
                   onEdit={onEdit}
                   onDelete={onDelete}
                   onAssign={onAssign}
@@ -201,7 +198,6 @@ export function SortableModifierList({
               option={option}
               type={type}
               isReorderMode={false}
-              onToggle={onToggle}
               onEdit={onEdit}
               onDelete={onDelete}
               onAssign={onAssign}
