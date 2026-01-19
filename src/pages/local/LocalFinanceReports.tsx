@@ -35,11 +35,16 @@ import {
   Calendar,
   DollarSign,
   ArrowRightLeft,
-  Wallet
+  Wallet,
+  Package,
+  BarChart3
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, parseISO, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Tables } from '@/integrations/supabase/types';
+import ProductRankingChart from '@/components/reports/ProductRankingChart';
+import MarginAnalysis from '@/components/reports/MarginAnalysis';
+import IngredientConsumption from '@/components/reports/IngredientConsumption';
 
 type Branch = Tables<'branches'>;
 
@@ -480,6 +485,27 @@ export default function LocalFinanceReports() {
           )}
         </CardContent>
       </Card>
+
+      {/* Product Reports Section */}
+      <div className="pt-6 border-t">
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+          <BarChart3 className="w-5 h-5" />
+          Reportes de Productos
+        </h2>
+        
+        <div className="grid gap-6 lg:grid-cols-2">
+          <ProductRankingChart 
+            branchId={branch.id} 
+            startDate={new Date(dateFrom)}
+            endDate={new Date(dateTo)}
+          />
+          <MarginAnalysis branchId={branch.id} />
+        </div>
+        
+        <div className="mt-6">
+          <IngredientConsumption branchId={branch.id} days={30} />
+        </div>
+      </div>
     </div>
   );
 }
