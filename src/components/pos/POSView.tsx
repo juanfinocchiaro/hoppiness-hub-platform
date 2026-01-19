@@ -216,7 +216,11 @@ export default function POSView({ branch }: POSViewProps) {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Order flow dialog (shown before adding first product)
+  // NEW: Order flow state - order must be configured before adding products
+  const [orderStarted, setOrderStarted] = useState(false);
+  const [showNewOrderDialog, setShowNewOrderDialog] = useState(false);
+
+  // Order flow dialog (shown before adding first product) - DEPRECATED, keeping for compatibility
   const [orderFlowDialog, setOrderFlowDialog] = useState<OrderFlowDialogType>(null);
   const [pendingProduct, setPendingProduct] = useState<ProductWithAvailability | null>(null);
 
@@ -333,25 +337,38 @@ export default function POSView({ branch }: POSViewProps) {
     return matchesSearch && matchesCategory;
   });
 
-  // Handle product click - check if order flow dialog is needed
+  // Handle product click - now order must be started first
   const handleProductClick = async (product: ProductWithAvailability) => {
-    // If cart is empty, show the order type configuration dialog first
-    if (cart.length === 0) {
-      setPendingProduct(product);
-      
-      if (orderArea === 'delivery') {
-        setOrderFlowDialog('delivery_info');
-        return;
-      } else if (orderArea === 'apps') {
-        setOrderFlowDialog('apps_channel');
-        return;
-      } else if (orderArea === 'mostrador') {
-        setOrderFlowDialog('counter_type');
-        return;
-      }
+    if (!orderStarted) {
+      // Order not started - should not happen with new UI, but just in case
+      setShowNewOrderDialog(true);
+      return;
     }
     
     await proceedToAddProduct(product);
+  };
+
+  // Start new order - called after configuring order type and info
+  const handleStartOrder = () => {
+    setOrderStarted(true);
+    setShowNewOrderDialog(false);
+  };
+
+  // Cancel/Reset order
+  const handleCancelOrder = () => {
+    setCart([]);
+    setOrderStarted(false);
+    setCustomerName('');
+    setCustomerPhone('');
+    setCustomerEmail('');
+    setDeliveryAddress('');
+    setCallerNumber('');
+    setExternalOrderId('');
+    setCustomDeliveryFee('');
+    setOrderArea('mostrador');
+    setCounterSubType('takeaway');
+    setAppsChannel('pedidos_ya');
+    setAppPaymentMethod('pedidos_ya');
   };
 
   // Proceed to add product after order flow dialog is complete
@@ -793,7 +810,9 @@ export default function POSView({ branch }: POSViewProps) {
 
       toast.success('Pedido creado exitosamente');
       
+      // Reset all order state
       setCart([]);
+      setOrderStarted(false);
       setCustomerName('');
       setCustomerPhone('');
       setCustomerEmail('');
@@ -840,20 +859,21 @@ export default function POSView({ branch }: POSViewProps) {
               </Select>
             )}
             
-            <div className="flex bg-card rounded-lg p-1 border">
-              {availableOrderAreas.map(area => (
-                <Button
-                  key={area.value}
-                  variant={orderArea === area.value ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setOrderArea(area.value)}
-                  className="gap-1"
-                >
-                  <area.icon className="w-4 h-4" />
-                  <span className="hidden sm:inline">{area.label}</span>
-                </Button>
-              ))}
-            </div>
+            {/* Show order info badge when order started */}
+            {orderStarted && (
+              <Badge variant="outline" className="gap-1 py-1.5 px-3">
+                {orderArea === 'mostrador' && <Store className="w-4 h-4" />}
+                {orderArea === 'delivery' && <Bike className="w-4 h-4" />}
+                {orderArea === 'apps' && <Bike className="w-4 h-4" />}
+                <span className="ml-1">
+                  {orderArea === 'apps' 
+                    ? APPS_CHANNELS.find(c => c.value === appsChannel)?.label 
+                    : ORDER_AREAS.find(a => a.value === orderArea)?.label
+                  }
+                  {orderArea === 'mostrador' && ` - ${counterSubType === 'takeaway' ? 'Para llevar' : 'Comer acá'}`}
+                </span>
+              </Badge>
+            )}
           </div>
         </div>
         
@@ -866,6 +886,34 @@ export default function POSView({ branch }: POSViewProps) {
           </div>
         )}
 
+        {/* NEW ORDER SCREEN - shown when no order started */}
+        {!orderStarted && activeShift && (
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <div className="text-center space-y-6 max-w-md">
+              <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                <ShoppingCart className="w-12 h-12 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-3xl font-bold mb-2">NUEVO PEDIDO</h2>
+                <p className="text-muted-foreground">
+                  Presioná el botón para iniciar un nuevo pedido y seleccionar el canal de venta
+                </p>
+              </div>
+              <Button 
+                size="lg" 
+                className="w-full h-14 text-lg gap-2"
+                onClick={() => setShowNewOrderDialog(true)}
+              >
+                <Plus className="w-6 h-6" />
+                Iniciar Pedido
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* PRODUCTS SECTION - shown only when order started */}
+        {orderStarted && (
+          <>
         {/* Search and Category Filter */}
         <div className="flex gap-2 mb-4">
           <div className="relative flex-1">
@@ -877,6 +925,9 @@ export default function POSView({ branch }: POSViewProps) {
               className="pl-10"
             />
           </div>
+          <Button variant="outline" size="icon" onClick={handleCancelOrder} title="Cancelar pedido">
+            <X className="w-4 h-4" />
+          </Button>
         </div>
 
         {/* Category Tabs */}
@@ -949,6 +1000,8 @@ export default function POSView({ branch }: POSViewProps) {
             </div>
           )}
         </ScrollArea>
+        </>
+        )}
       </div>
 
       {/* Cart Section */}
@@ -1789,6 +1842,304 @@ export default function POSView({ branch }: POSViewProps) {
             </Button>
             <Button onClick={handleCheckout} disabled={isProcessing}>
               {isProcessing ? 'Procesando...' : 'Confirmar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* NEW ORDER DIALOG - Configure order before adding products */}
+      <Dialog open={showNewOrderDialog} onOpenChange={setShowNewOrderDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Nuevo Pedido</DialogTitle>
+            <DialogDescription>
+              Seleccioná el canal de venta e ingresá los datos del cliente
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Order Area Selection */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Canal de Venta</Label>
+              <div className="grid grid-cols-3 gap-3">
+                {availableOrderAreas.map(area => (
+                  <Button
+                    key={area.value}
+                    variant={orderArea === area.value ? 'default' : 'outline'}
+                    onClick={() => {
+                      setOrderArea(area.value);
+                      // Auto-set payment for apps
+                      if (area.value === 'apps') {
+                        const paymentInfo = getAppPaymentInfo(appsChannel);
+                        if (paymentInfo.fixed && paymentInfo.method) {
+                          setAppPaymentMethod(paymentInfo.method);
+                        }
+                      }
+                    }}
+                    className="flex-col h-auto py-4"
+                  >
+                    <area.icon className="w-6 h-6 mb-2" />
+                    <span className="text-sm font-medium">{area.label}</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Mostrador Options */}
+            {orderArea === 'mostrador' && (
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  <Label>Tipo de pedido</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant={counterSubType === 'takeaway' ? 'default' : 'outline'}
+                      onClick={() => setCounterSubType('takeaway')}
+                      className="flex-col h-auto py-4"
+                    >
+                      <Store className="w-6 h-6 mb-2" />
+                      <span className="font-medium">Para llevar</span>
+                    </Button>
+                    <Button
+                      variant={counterSubType === 'dine_here' ? 'default' : 'outline'}
+                      onClick={() => setCounterSubType('dine_here')}
+                      className="flex-col h-auto py-4"
+                    >
+                      <Utensils className="w-6 h-6 mb-2" />
+                      <span className="font-medium">Comer acá</span>
+                    </Button>
+                  </div>
+                </div>
+
+                {counterSubType === 'takeaway' && (
+                  <div className="space-y-2">
+                    <Label>Nombre o Número de llamador</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Nombre o #123"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {counterSubType === 'dine_here' && (
+                  <div className="space-y-2">
+                    <Label>Número de llamador *</Label>
+                    <Input
+                      type="number"
+                      placeholder="Ej: 42"
+                      value={callerNumber}
+                      onChange={(e) => {
+                        setCallerNumber(e.target.value);
+                        setCustomerName(`Llamador #${e.target.value}`);
+                      }}
+                      className="text-center text-2xl font-bold h-14"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Delivery Options */}
+            {orderArea === 'delivery' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Nombre del cliente *</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Nombre"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Teléfono *</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Teléfono"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Dirección de entrega *</Label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Dirección"
+                      value={deliveryAddress}
+                      onChange={(e) => setDeliveryAddress(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Costo de envío</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={customDeliveryFee}
+                      onChange={(e) => setCustomDeliveryFee(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Apps Options */}
+            {orderArea === 'apps' && (
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  <Label>Plataforma *</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {APPS_CHANNELS.map(channel => (
+                      <Button
+                        key={channel.value}
+                        variant={appsChannel === channel.value ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                          setAppsChannel(channel.value);
+                          const paymentInfo = getAppPaymentInfo(channel.value);
+                          if (paymentInfo.fixed && paymentInfo.method) {
+                            setAppPaymentMethod(paymentInfo.method);
+                          } else if (paymentInfo.options && paymentInfo.options.length > 0) {
+                            setAppPaymentMethod(paymentInfo.options[0]);
+                          }
+                        }}
+                      >
+                        {channel.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>ID de pedido externo</Label>
+                  <Input
+                    placeholder="Ej: #12345"
+                    value={externalOrderId}
+                    onChange={(e) => setExternalOrderId(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Nombre del cliente *</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Nombre"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Teléfono</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Teléfono"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Dirección de entrega *</Label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Dirección"
+                      value={deliveryAddress}
+                      onChange={(e) => setDeliveryAddress(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Costo de envío</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {appsChannel === 'pedidos_ya' 
+                      ? 'En Pedidos Ya este dinero nos entra a nosotros'
+                      : 'Lo que se le cobra al cliente por el envío'
+                    }
+                  </p>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={customDeliveryFee}
+                      onChange={(e) => setCustomDeliveryFee(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                </div>
+
+                {/* Payment method for PedidosYa */}
+                {appsChannel === 'pedidos_ya' && (
+                  <div className="space-y-3">
+                    <Label>Método de pago</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant={appPaymentMethod === 'pedidos_ya' ? 'default' : 'outline'}
+                        onClick={() => setAppPaymentMethod('pedidos_ya')}
+                        className="flex-col h-auto py-3"
+                      >
+                        <Bike className="w-5 h-5 mb-1" />
+                        <span className="text-sm">Pedidos Ya</span>
+                      </Button>
+                      <Button
+                        variant={appPaymentMethod === 'efectivo' ? 'default' : 'outline'}
+                        onClick={() => setAppPaymentMethod('efectivo')}
+                        className="flex-col h-auto py-3"
+                      >
+                        <Banknote className="w-5 h-5 mb-1" />
+                        <span className="text-sm">Efectivo</span>
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNewOrderDialog(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleStartOrder}
+              disabled={
+                (orderArea === 'mostrador' && counterSubType === 'dine_here' && !callerNumber) ||
+                (orderArea === 'delivery' && (!customerName.trim() || !customerPhone.trim() || !deliveryAddress.trim())) ||
+                (orderArea === 'apps' && (!customerName.trim() || !deliveryAddress.trim()))
+              }
+            >
+              Continuar a Productos
+              <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </DialogFooter>
         </DialogContent>
