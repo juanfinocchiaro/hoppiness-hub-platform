@@ -2,13 +2,18 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarDays } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { CalendarDays, Filter } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface OrdersHeatmapProps {
   branchId?: string; // If not provided, shows all branches
   title?: string;
   description?: string;
   daysToShow?: number;
+  showBranchSelector?: boolean; // Show multi-select for branches
+  availableBranches?: { id: string; name: string }[]; // Available branches for selector
 }
 
 interface HeatmapCell {
@@ -30,15 +35,50 @@ export default function OrdersHeatmap({
   branchId, 
   title = 'Pedidos por horario (canal propio)',
   description = 'Distribución de pedidos en intervalos de 30 minutos',
-  daysToShow = 7 
+  daysToShow = 7,
+  showBranchSelector = false,
+  availableBranches = []
 }: OrdersHeatmapProps) {
   const [data, setData] = useState<Map<string, number>>(new Map());
   const [days, setDays] = useState<{ date: string; label: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [maxCount, setMaxCount] = useState(0);
+  const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  // Initialize selected branches
+  useEffect(() => {
+    if (showBranchSelector && availableBranches.length > 0 && selectedBranches.length === 0) {
+      setSelectedBranches(availableBranches.map(b => b.id));
+    }
+  }, [availableBranches, showBranchSelector]);
+
+  const toggleBranch = (id: string) => {
+    setSelectedBranches(prev => 
+      prev.includes(id) 
+        ? prev.filter(b => b !== id) 
+        : [...prev, id]
+    );
+  };
+
+  const toggleAll = () => {
+    if (selectedBranches.length === availableBranches.length) {
+      setSelectedBranches([]);
+    } else {
+      setSelectedBranches(availableBranches.map(b => b.id));
+    }
+  };
 
   useEffect(() => {
     async function fetchOrders() {
+      // Don't fetch if branch selector is on but no branches selected
+      if (showBranchSelector && selectedBranches.length === 0) {
+        setData(new Map());
+        setMaxCount(0);
+        setLoading(false);
+        return;
+      }
+
       // Calculate date range
       const endDate = new Date();
       const startDate = new Date();
@@ -62,13 +102,16 @@ export default function OrdersHeatmap({
       // Fetch orders
       let query = supabase
         .from('orders')
-        .select('created_at, sales_channel')
+        .select('created_at, sales_channel, branch_id')
         .gte('created_at', startDate.toISOString())
         .lte('created_at', endDate.toISOString())
         .in('status', ['delivered', 'ready', 'preparing', 'confirmed', 'pending']);
 
+      // Apply branch filter
       if (branchId) {
         query = query.eq('branch_id', branchId);
+      } else if (showBranchSelector && selectedBranches.length > 0) {
+        query = query.in('branch_id', selectedBranches);
       }
 
       // Filter by "canal propio" (own channels, not aggregators)
@@ -105,7 +148,7 @@ export default function OrdersHeatmap({
     }
 
     fetchOrders();
-  }, [branchId, daysToShow]);
+  }, [branchId, daysToShow, showBranchSelector, selectedBranches]);
 
   const getColor = (count: number): string => {
     if (count === 0) return 'bg-muted/30';
@@ -151,14 +194,64 @@ export default function OrdersHeatmap({
     );
   }
 
+  const getSelectedBranchesLabel = () => {
+    if (selectedBranches.length === 0) return 'Ninguna sucursal';
+    if (selectedBranches.length === availableBranches.length) return 'Todas las sucursales';
+    if (selectedBranches.length === 1) {
+      return availableBranches.find(b => b.id === selectedBranches[0])?.name || '1 sucursal';
+    }
+    return `${selectedBranches.length} sucursales`;
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CalendarDays className="w-5 h-5" />
-          {title}
-        </CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarDays className="w-5 h-5" />
+              {title}
+            </CardTitle>
+            <CardDescription>{description}</CardDescription>
+          </div>
+          
+          {showBranchSelector && availableBranches.length > 0 && (
+            <Collapsible open={filterOpen} onOpenChange={setFilterOpen}>
+              <CollapsibleTrigger asChild>
+                <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-md border bg-background hover:bg-muted">
+                  <Filter className="w-4 h-4" />
+                  <span>{getSelectedBranchesLabel()}</span>
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="absolute right-0 mt-2 z-10 bg-card border rounded-lg shadow-lg p-4 min-w-[200px]">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 pb-2 border-b">
+                    <Checkbox 
+                      id="all-branches"
+                      checked={selectedBranches.length === availableBranches.length}
+                      onCheckedChange={toggleAll}
+                    />
+                    <Label htmlFor="all-branches" className="font-medium cursor-pointer">
+                      Todas las sucursales
+                    </Label>
+                  </div>
+                  {availableBranches.map(branch => (
+                    <div key={branch.id} className="flex items-center gap-2">
+                      <Checkbox 
+                        id={`branch-${branch.id}`}
+                        checked={selectedBranches.includes(branch.id)}
+                        onCheckedChange={() => toggleBranch(branch.id)}
+                      />
+                      <Label htmlFor={`branch-${branch.id}`} className="cursor-pointer">
+                        {branch.name}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
