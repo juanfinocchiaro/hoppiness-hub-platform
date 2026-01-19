@@ -17,6 +17,7 @@ import type { Tables } from '@/integrations/supabase/types';
 
 type Product = Tables<'products'>;
 type ProductCategory = Tables<'product_categories'>;
+type Ingredient = Tables<'ingredients'>;
 
 interface ModifierGroup {
   id: string;
@@ -47,6 +48,7 @@ export default function Modifiers() {
   const [loading, setLoading] = useState(true);
   const [groups, setGroups] = useState<ModifierGroup[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [optionAssignments, setOptionAssignments] = useState<ProductOptionAssignment[]>([]);
   
@@ -62,6 +64,7 @@ export default function Modifiers() {
   const [optionPrice, setOptionPrice] = useState('0');
   const [optionImageUrl, setOptionImageUrl] = useState('');
   const [optionLinkedProductId, setOptionLinkedProductId] = useState<string>('');
+  const [optionLinkedIngredientId, setOptionLinkedIngredientId] = useState<string>('');
 
   useEffect(() => {
     fetchData();
@@ -70,10 +73,11 @@ export default function Modifiers() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [groupsRes, optionsRes, productsRes, categoriesRes, assignmentsRes] = await Promise.all([
+      const [groupsRes, optionsRes, productsRes, ingredientsRes, categoriesRes, assignmentsRes] = await Promise.all([
         supabase.from('modifier_groups').select('*').order('display_order'),
-        supabase.from('modifier_options').select('*, linked_product:products(id, name, image_url)').order('display_order'),
+        supabase.from('modifier_options').select('*, linked_product:products(id, name, image_url), linked_ingredient:ingredients(id, name, unit)').order('display_order'),
         supabase.from('products').select('*').order('name'),
+        supabase.from('ingredients').select('*').eq('is_active', true).order('name'),
         supabase.from('product_categories').select('*').order('name'),
         supabase.from('product_modifier_options').select('product_id, modifier_option_id, is_enabled'),
       ]);
@@ -101,7 +105,9 @@ export default function Modifiers() {
             ...o,
             image_url: (o as any).image_url,
             linked_product_id: (o as any).linked_product_id,
+            linked_ingredient_id: (o as any).linked_ingredient_id,
             linkedProduct: (o as any).linked_product as Product | null,
+            linkedIngredient: (o as any).linked_ingredient as Ingredient | null,
             assignedProductIds: assignedIds,
             assignedProductNames: assignedNames,
           };
@@ -110,6 +116,7 @@ export default function Modifiers() {
 
       setGroups(groupsWithOptions);
       setProducts(productsRes.data || []);
+      setIngredients(ingredientsRes.data || []);
       setCategories(categoriesRes.data || []);
       setOptionAssignments(assignmentsList);
     } catch (error) {
@@ -125,14 +132,16 @@ export default function Modifiers() {
       if (!groupId) return;
 
       if (editingOption) {
-        const linkedId = optionLinkedProductId || null;
+        const linkedProductId = optionLinkedProductId || null;
+        const linkedIngredientId = optionLinkedIngredientId || null;
         const imageUrlValue = optionImageUrl || null;
         const { error } = await supabase
           .from('modifier_options')
           .update({
             name: optionName,
             price_adjustment: parseFloat(optionPrice) || 0,
-            linked_product_id: linkedId,
+            linked_product_id: linkedProductId,
+            linked_ingredient_id: linkedIngredientId,
             image_url: imageUrlValue,
           } as any)
           .eq('id', editingOption.id);
@@ -140,7 +149,8 @@ export default function Modifiers() {
         toast({ title: 'Opción actualizada' });
       } else {
         const group = groups.find(g => g.id === groupId);
-        const linkedId = optionLinkedProductId || null;
+        const linkedProductId = optionLinkedProductId || null;
+        const linkedIngredientId = optionLinkedIngredientId || null;
         const imageUrlValue = optionImageUrl || null;
         const { error } = await supabase
           .from('modifier_options')
@@ -149,7 +159,8 @@ export default function Modifiers() {
             name: optionName,
             price_adjustment: parseFloat(optionPrice) || 0,
             display_order: group?.options.length || 0,
-            linked_product_id: linkedId,
+            linked_product_id: linkedProductId,
+            linked_ingredient_id: linkedIngredientId,
             image_url: imageUrlValue,
           } as any);
         if (error) throw error;
@@ -316,6 +327,7 @@ export default function Modifiers() {
     setOptionPrice('0');
     setOptionImageUrl('');
     setOptionLinkedProductId('');
+    setOptionLinkedIngredientId('');
   };
 
   const openEditOption = (option: ModifierOption) => {
@@ -324,6 +336,7 @@ export default function Modifiers() {
     setOptionPrice(String(option.price_adjustment));
     setOptionImageUrl(option.image_url || '');
     setOptionLinkedProductId(option.linked_product_id || '');
+    setOptionLinkedIngredientId(option.linked_ingredient_id || '');
     setOptionDialog(true);
   };
 
@@ -494,6 +507,32 @@ export default function Modifiers() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-muted-foreground">Vincular a ingrediente (para stock)</Label>
+              <Select 
+                value={optionLinkedIngredientId} 
+                onValueChange={(v) => setOptionLinkedIngredientId(v === 'none' ? '' : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin vincular" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin vincular</SelectItem>
+                  {ingredients.map(ingredient => (
+                    <SelectItem key={ingredient.id} value={ingredient.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{ingredient.name}</span>
+                        <span className="text-xs text-muted-foreground">({ingredient.unit})</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Si se vincula, se descontará stock al vender este adicional.
+              </p>
             </div>
 
             <Separator />

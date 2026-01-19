@@ -6,11 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
-  Edit2, Trash2, Package, Link2, GripVertical, Loader2
+  Edit2, Trash2, Package, Link2, GripVertical, Loader2, Beaker
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Product = Tables<'products'>;
+type Ingredient = Tables<'ingredients'>;
 
 export interface ModifierOption {
   id: string;
@@ -21,7 +22,9 @@ export interface ModifierOption {
   display_order: number;
   image_url?: string | null;
   linked_product_id?: string | null;
+  linked_ingredient_id?: string | null;
   linkedProduct?: Product | null;
+  linkedIngredient?: Ingredient | null;
   assignedProductIds: string[];
   assignedProductNames?: string[];
 }
@@ -142,14 +145,20 @@ export function ModifierOptionCard({
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="font-semibold text-foreground truncate">
             {displayName}
           </span>
           {option.linkedProduct && (
             <Badge variant="secondary" className="text-xs gap-1 flex-shrink-0">
               <Link2 className="h-3 w-3" />
-              Vinculado
+              Producto
+            </Badge>
+          )}
+          {option.linkedIngredient && (
+            <Badge variant="outline" className="text-xs gap-1 flex-shrink-0 border-amber-500/50 text-amber-600">
+              <Beaker className="h-3 w-3" />
+              {option.linkedIngredient.name}
             </Badge>
           )}
         </div>
