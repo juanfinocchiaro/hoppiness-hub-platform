@@ -13,8 +13,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { Calendar, Clock, Save, Loader2, Edit2, Plus, Trash2 } from 'lucide-react';
+import { Calendar, Clock, Save, Loader2, Edit2, Plus, Trash2, AlertTriangle } from 'lucide-react';
+
+interface ShiftConflict {
+  dayOfWeek: number;
+  shift1: number;
+  shift2: number;
+  message: string;
+}
 
 interface Employee {
   id: string;
@@ -57,6 +65,56 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
   const [showDialog, setShowDialog] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingSchedules, setEditingSchedules] = useState<DaySchedule[]>([]);
+  const [conflicts, setConflicts] = useState<ShiftConflict[]>([]);
+
+  // Check for overlapping shifts within a day
+  const detectConflicts = (schedules: DaySchedule[]): ShiftConflict[] => {
+    const foundConflicts: ShiftConflict[] = [];
+    
+    schedules.forEach(day => {
+      if (day.is_day_off || day.shifts.length < 2) return;
+      
+      const sortedShifts = [...day.shifts].sort((a, b) => a.start_time.localeCompare(b.start_time));
+      
+      for (let i = 0; i < sortedShifts.length - 1; i++) {
+        const current = sortedShifts[i];
+        const next = sortedShifts[i + 1];
+        
+        // Check if current shift ends after next shift starts
+        if (current.end_time > next.start_time) {
+          const dayName = DAYS_OF_WEEK.find(d => d.value === day.day_of_week)?.label || '';
+          foundConflicts.push({
+            dayOfWeek: day.day_of_week,
+            shift1: current.shift_number,
+            shift2: next.shift_number,
+            message: `${dayName}: Turno ${current.shift_number} (${current.start_time}-${current.end_time}) se solapa con Turno ${next.shift_number} (${next.start_time}-${next.end_time})`,
+          });
+        }
+      }
+      
+      // Also check if any shift has end_time <= start_time
+      day.shifts.forEach(shift => {
+        if (shift.end_time <= shift.start_time) {
+          const dayName = DAYS_OF_WEEK.find(d => d.value === day.day_of_week)?.label || '';
+          foundConflicts.push({
+            dayOfWeek: day.day_of_week,
+            shift1: shift.shift_number,
+            shift2: shift.shift_number,
+            message: `${dayName}: Turno ${shift.shift_number} tiene hora de salida anterior o igual a la entrada`,
+          });
+        }
+      });
+    });
+    
+    return foundConflicts;
+  };
+
+  // Update conflicts whenever editingSchedules changes
+  useEffect(() => {
+    if (showDialog) {
+      setConflicts(detectConflicts(editingSchedules));
+    }
+  }, [editingSchedules, showDialog]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -157,6 +215,13 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
 
   const handleSave = async () => {
     if (!selectedEmployee) return;
+    
+    // Validate before saving
+    const currentConflicts = detectConflicts(editingSchedules);
+    if (currentConflicts.length > 0) {
+      toast.error('Corrige los conflictos de horarios antes de guardar');
+      return;
+    }
     
     setSaving(true);
     try {
@@ -358,13 +423,27 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
               Horarios de {selectedEmployee?.full_name}
             </DialogTitle>
           </DialogHeader>
+          {conflicts.length > 0 && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <span className="font-medium">Conflictos detectados:</span>
+                <ul className="list-disc list-inside mt-1 text-sm">
+                  {conflicts.map((c, idx) => (
+                    <li key={idx}>{c.message}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
           <div className="space-y-3 overflow-y-auto flex-1 pr-2">
             {editingSchedules.map((schedule) => {
+              const hasConflict = conflicts.some(c => c.dayOfWeek === schedule.day_of_week);
               const day = DAYS_OF_WEEK.find(d => d.value === schedule.day_of_week);
               return (
                 <div
                   key={schedule.day_of_week}
-                  className={`p-4 border rounded-lg ${schedule.is_day_off ? 'bg-muted/50' : ''}`}
+                  className={`p-4 border rounded-lg ${schedule.is_day_off ? 'bg-muted/50' : ''} ${hasConflict ? 'border-destructive bg-destructive/5' : ''}`}
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
@@ -438,7 +517,7 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
             <Button variant="outline" onClick={() => setShowDialog(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSave} disabled={saving}>
+            <Button onClick={handleSave} disabled={saving || conflicts.length > 0}>
               {saving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
