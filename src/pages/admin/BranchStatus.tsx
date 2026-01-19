@@ -1,12 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Store, MapPin, Clock, ArrowLeft, Truck, ShoppingBag, Users, Bike, Settings } from 'lucide-react';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { Store, MapPin, Clock, ArrowLeft, Truck, ShoppingBag, Users, Bike, AlertTriangle, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -26,6 +33,26 @@ const salesChannels: SalesChannel[] = [
   { key: 'pedidosya_enabled', label: 'PedidosYa', icon: <Bike className="w-4 h-4" /> },
   { key: 'mercadopago_delivery_enabled', label: 'MP Delivery', icon: <Truck className="w-4 h-4" /> },
 ];
+
+const FORCE_STATE_OPTIONS = [
+  { value: 'none', label: 'Sin forzar (Local decide)', color: 'text-muted-foreground' },
+  { value: 'force_open', label: 'Forzar ABIERTO', color: 'text-green-600' },
+  { value: 'force_closed', label: 'Forzar CERRADO', color: 'text-red-600' },
+  { value: 'disabled', label: 'DESHABILITADO', color: 'text-destructive' },
+];
+
+const getEffectiveState = (branch: Branch): { state: 'open' | 'closed' | 'disabled'; source: string } => {
+  const forceState = branch.admin_force_state || 'none';
+  
+  if (forceState === 'disabled') return { state: 'disabled', source: 'Admin (Deshabilitado)' };
+  if (forceState === 'force_closed') return { state: 'closed', source: 'Admin (Forzado)' };
+  if (forceState === 'force_open') return { state: 'open', source: 'Admin (Forzado)' };
+  
+  return { 
+    state: branch.local_open_state ? 'open' : 'closed', 
+    source: 'Local' 
+  };
+};
 
 export default function BranchStatus() {
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -63,6 +90,27 @@ export default function BranchStatus() {
     }
   };
 
+  const updateForceState = async (branch: Branch, newState: string) => {
+    setUpdatingBranch(branch.id);
+    try {
+      const { error } = await supabase
+        .from('branches')
+        .update({ admin_force_state: newState })
+        .eq('id', branch.id);
+
+      if (error) throw error;
+
+      setBranches(branches.map(b => 
+        b.id === branch.id ? { ...b, admin_force_state: newState } : b
+      ));
+      toast.success(`Estado de ${branch.name} actualizado`);
+    } catch (error) {
+      toast.error('Error al actualizar estado');
+    } finally {
+      setUpdatingBranch(null);
+    }
+  };
+
   const toggleSalesChannel = async (branch: Branch, channelKey: keyof Branch) => {
     const updateKey = `${branch.id}-${channelKey}`;
     setUpdatingChannel(updateKey);
@@ -95,8 +143,8 @@ export default function BranchStatus() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold">Modificar Estado</h1>
-          <p className="text-muted-foreground">Controla el estado y canales de venta de cada sucursal</p>
+          <h1 className="text-3xl font-bold">Control de Estado</h1>
+          <p className="text-muted-foreground">Override de estado y canales de venta por sucursal</p>
         </div>
       </div>
 
@@ -108,24 +156,35 @@ export default function BranchStatus() {
         <div className="space-y-4">
           {branches.map(branch => {
             const hasAnyChannelEnabled = salesChannels.some(ch => branch[ch.key] as boolean);
+            const effective = getEffectiveState(branch);
+            const forceState = branch.admin_force_state || 'none';
+            const isForced = forceState !== 'none';
             
             return (
               <Card key={branch.id} className={!branch.is_active ? 'opacity-60' : ''}>
                 <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between flex-wrap gap-4">
                     <div className="flex items-center gap-4">
                       <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                        branch.is_active && hasAnyChannelEnabled 
-                          ? 'bg-green-100 text-green-600 dark:bg-green-950 dark:text-green-400' 
+                        effective.state === 'open' 
+                          ? 'bg-green-100 text-green-600 dark:bg-green-950 dark:text-green-400'
+                          : effective.state === 'closed'
+                          ? 'bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400'
                           : 'bg-muted text-muted-foreground'
                       }`}>
-                        <Store className="w-6 h-6" />
+                        {isForced ? <Lock className="w-6 h-6" /> : <Store className="w-6 h-6" />}
                       </div>
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <CardTitle className="text-xl">{branch.name}</CardTitle>
                           {!branch.is_active && (
                             <Badge variant="destructive">Desactivada</Badge>
+                          )}
+                          {isForced && (
+                            <Badge variant="outline" className="border-orange-500 text-orange-600">
+                              <AlertTriangle className="w-3 h-3 mr-1" />
+                              {effective.source}
+                            </Badge>
                           )}
                         </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
@@ -137,17 +196,43 @@ export default function BranchStatus() {
                             <Clock className="w-3 h-3" />
                             {branch.opening_time?.slice(0, 5)} - {branch.closing_time?.slice(0, 5)}
                           </span>
+                          <Badge variant={effective.state === 'open' ? 'default' : 'secondary'}>
+                            {effective.state === 'open' ? 'Abierto' : effective.state === 'closed' ? 'Cerrado' : 'Deshabilitado'}
+                          </Badge>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Sucursal Activa</span>
-                      <Switch
-                        checked={branch.is_active}
-                        onCheckedChange={() => toggleBranchActive(branch)}
-                        disabled={updatingBranch === branch.id}
-                      />
+                    <div className="flex items-center gap-4 flex-wrap">
+                      {/* Force State Selector */}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-muted-foreground">Override Admin</span>
+                        <Select
+                          value={forceState}
+                          onValueChange={(v) => updateForceState(branch, v)}
+                          disabled={updatingBranch === branch.id}
+                        >
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {FORCE_STATE_OPTIONS.map(opt => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                <span className={opt.color}>{opt.label}</span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="text-xs text-muted-foreground">Sucursal Activa</span>
+                        <Switch
+                          checked={branch.is_active}
+                          onCheckedChange={() => toggleBranchActive(branch)}
+                          disabled={updatingBranch === branch.id}
+                        />
+                      </div>
                     </div>
                   </div>
                 </CardHeader>
