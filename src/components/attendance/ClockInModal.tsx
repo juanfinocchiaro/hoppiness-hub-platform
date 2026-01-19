@@ -35,6 +35,7 @@ export default function ClockInModal({ open, onOpenChange, branchId }: ClockInMo
     if (open) {
       setPin('');
       setSuccess(null);
+      setIsSubmitting(false);
     }
   }, [open]);
 
@@ -63,12 +64,14 @@ export default function ClockInModal({ open, onOpenChange, branchId }: ClockInMo
     setPin('');
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleSubmit = useCallback(async () => {
-    if (pin.length !== 4) {
-      toast.error('Ingresá un PIN de 4 dígitos');
+    if (pin.length !== 4 || isSubmitting) {
       return;
     }
 
+    setIsSubmitting(true);
     setLoading(true);
     try {
       // Find employee by PIN in this branch
@@ -86,6 +89,7 @@ export default function ClockInModal({ open, onOpenChange, branchId }: ClockInMo
         toast.error('PIN incorrecto');
         setPin('');
         setLoading(false);
+        setIsSubmitting(false);
         return;
       }
 
@@ -121,17 +125,18 @@ export default function ClockInModal({ open, onOpenChange, branchId }: ClockInMo
       console.error('Error clocking in/out:', error);
       toast.error('Error al registrar fichaje');
       setPin('');
+      setIsSubmitting(false);
     } finally {
       setLoading(false);
     }
-  }, [pin, branchId]);
+  }, [pin, branchId, isSubmitting]);
 
-  // Auto-submit when 4 digits entered
+  // Auto-submit when 4 digits entered - use ref to prevent double submit
   useEffect(() => {
-    if (pin.length === 4 && !loading && !success) {
+    if (pin.length === 4 && !loading && !success && !isSubmitting) {
       handleSubmit();
     }
-  }, [pin, loading, success, handleSubmit]);
+  }, [pin]);
 
   const NumpadButton = ({ digit, onClick, className = '' }: { digit: string; onClick: () => void; className?: string }) => (
     <Button
