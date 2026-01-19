@@ -1912,36 +1912,42 @@ export default function POSView({ branch }: POSViewProps) {
                   </div>
                 </div>
 
-                {counterSubType === 'takeaway' && (
-                  <div className="space-y-2">
-                    <Label>Nombre o Número de llamador</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Nombre o #123"
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
+                {/* Caller Number Grid - for both takeaway and dine_here */}
+                <div className="space-y-3">
+                  <Label className="text-base">Número de llamador</Label>
+                  <div className="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto p-1">
+                    {Array.from({ length: 30 }, (_, i) => i + 1).map(num => (
+                      <Button
+                        key={num}
+                        variant={callerNumber === String(num) ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                          setCallerNumber(String(num));
+                          if (!customerName || customerName.startsWith('Llamador #')) {
+                            setCustomerName(`Llamador #${num}`);
+                          }
+                        }}
+                        className="h-10 text-lg font-bold"
+                      >
+                        {num}
+                      </Button>
+                    ))}
                   </div>
-                )}
+                </div>
 
-                {counterSubType === 'dine_here' && (
-                  <div className="space-y-2">
-                    <Label>Número de llamador *</Label>
+                {/* Optional Name */}
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground">Nombre (opcional)</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
-                      type="number"
-                      placeholder="Ej: 42"
-                      value={callerNumber}
-                      onChange={(e) => {
-                        setCallerNumber(e.target.value);
-                        setCustomerName(`Llamador #${e.target.value}`);
-                      }}
-                      className="text-center text-2xl font-bold h-14"
+                      placeholder="Nombre del cliente"
+                      value={customerName.startsWith('Llamador #') ? '' : customerName}
+                      onChange={(e) => setCustomerName(e.target.value || (callerNumber ? `Llamador #${callerNumber}` : ''))}
+                      className="pl-10"
                     />
                   </div>
-                )}
+                </div>
               </div>
             )}
 
