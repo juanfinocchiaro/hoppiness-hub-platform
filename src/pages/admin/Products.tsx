@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Table,
   TableBody,
@@ -28,9 +30,23 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
-import { Plus, Search, Edit, Star, Settings2, Check, X, Store } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Plus, Search, Edit, Star, Settings2, Check, X, Store, CalendarIcon, Clock } from 'lucide-react';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Product = Tables<'products'>;
@@ -44,7 +60,14 @@ interface ProductSalesData {
   quantity: number;
 }
 
-type TimeFilter = 'today' | 'week' | 'month' | 'year';
+type TimeFilter = 'today' | 'week' | 'month' | 'year' | 'custom';
+
+// Pending changes type for batch save
+interface PendingChange {
+  productId: string;
+  branchId: string;
+  newValue: boolean;
+}
 
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -56,12 +79,23 @@ export default function Products() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('month');
+  
+  // Custom date range
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [timeFrom, setTimeFrom] = useState<string>('00:00');
+  const [timeTo, setTimeTo] = useState<string>('23:59');
+  
+  // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [savingAvailability, setSavingAvailability] = useState<string | null>(null);
+  const [pendingChanges, setPendingChanges] = useState<Map<string, boolean>>(new Map());
+  const [savingAvailability, setSavingAvailability] = useState(false);
+  const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
 
-  const fetchData = async () => {
+  const getDateRange = useMemo(() => {
     const now = new Date();
     let startDate: Date;
+    let endDate: Date = now;
     
     switch (timeFilter) {
       case 'today':
@@ -76,7 +110,27 @@ export default function Products() {
       case 'year':
         startDate = new Date(now.getFullYear(), 0, 1);
         break;
+      case 'custom':
+        if (dateFrom && dateTo) {
+          const [fromHours, fromMins] = timeFrom.split(':').map(Number);
+          const [toHours, toMins] = timeTo.split(':').map(Number);
+          startDate = new Date(dateFrom);
+          startDate.setHours(fromHours, fromMins, 0, 0);
+          endDate = new Date(dateTo);
+          endDate.setHours(toHours, toMins, 59, 999);
+        } else {
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        }
+        break;
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
     }
+    
+    return { startDate, endDate };
+  }, [timeFilter, dateFrom, dateTo, timeFrom, timeTo]);
+
+  const fetchData = async () => {
+    const { startDate, endDate } = getDateRange;
 
     const [productsRes, categoriesRes, branchesRes, branchProductsRes, ordersRes] = await Promise.all([
       supabase.from('products').select('*').order('name'),
@@ -87,6 +141,7 @@ export default function Products() {
         .from('orders')
         .select('id, branch_id')
         .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
         .in('status', ['delivered', 'ready', 'preparing', 'confirmed']),
     ]);
 
@@ -96,7 +151,6 @@ export default function Products() {
     let salesByProductBranch: ProductSalesData[] = [];
     
     if (orderIds.length > 0) {
-      // Fetch in batches to avoid query limits
       const batchSize = 100;
       const allItems: { product_id: string; quantity: number; order_id: string }[] = [];
       
@@ -112,11 +166,9 @@ export default function Products() {
         }
       }
       
-      // Create order to branch mapping
       const orderToBranch = new Map(orders.map(o => [o.id, o.branch_id]));
-      
-      // Aggregate sales by product and branch
       const salesMap = new Map<string, number>();
+      
       allItems.forEach(item => {
         const branchId = orderToBranch.get(item.order_id);
         if (branchId) {
@@ -141,7 +193,7 @@ export default function Products() {
 
   useEffect(() => {
     fetchData();
-  }, [timeFilter]);
+  }, [timeFilter, dateFrom, dateTo, timeFrom, timeTo]);
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase());
@@ -167,6 +219,15 @@ export default function Products() {
     return bp?.is_available ?? true;
   };
 
+  // Get availability considering pending changes
+  const getEditingAvailability = (productId: string, branchId: string): boolean => {
+    const key = `${productId}-${branchId}`;
+    if (pendingChanges.has(key)) {
+      return pendingChanges.get(key)!;
+    }
+    return getBranchAvailability(productId, branchId);
+  };
+
   const getProductSales = (productId: string, branchId: string): number => {
     const sale = salesData.find(s => s.productId === productId && s.branchId === branchId);
     return sale?.quantity || 0;
@@ -182,41 +243,76 @@ export default function Products() {
     return branches.filter(b => getBranchAvailability(productId, b.id)).length;
   };
 
-  const toggleBranchAvailability = async (productId: string, branchId: string, currentValue: boolean) => {
+  // Toggle in pending changes (not saved yet)
+  const togglePendingChange = (productId: string, branchId: string) => {
     const key = `${productId}-${branchId}`;
-    setSavingAvailability(key);
-    
-    const existingBp = branchProducts.find(bp => bp.product_id === productId && bp.branch_id === branchId);
+    const currentValue = getEditingAvailability(productId, branchId);
+    setPendingChanges(prev => {
+      const newMap = new Map(prev);
+      newMap.set(key, !currentValue);
+      return newMap;
+    });
+  };
+
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = pendingChanges.size > 0;
+
+  // Handle dialog close
+  const handleDialogClose = () => {
+    if (hasUnsavedChanges) {
+      setConfirmCloseOpen(true);
+    } else {
+      setEditDialogOpen(false);
+    }
+  };
+
+  // Confirm discard changes
+  const handleConfirmDiscard = () => {
+    setPendingChanges(new Map());
+    setConfirmCloseOpen(false);
+    setEditDialogOpen(false);
+  };
+
+  // Save all pending changes
+  const saveAllChanges = async () => {
+    if (pendingChanges.size === 0) {
+      toast.info('No hay cambios para guardar');
+      return;
+    }
+
+    setSavingAvailability(true);
     
     try {
-      if (existingBp) {
-        const { error } = await supabase
-          .from('branch_products')
-          .update({ is_available: !currentValue })
-          .eq('id', existingBp.id);
+      for (const [key, newValue] of pendingChanges.entries()) {
+        const [productId, branchId] = key.split('-');
+        const existingBp = branchProducts.find(bp => bp.product_id === productId && bp.branch_id === branchId);
         
-        if (error) throw error;
-        
-        setBranchProducts(prev => 
-          prev.map(bp => bp.id === existingBp.id ? { ...bp, is_available: !currentValue } : bp)
-        );
-      } else {
-        const { data, error } = await supabase
-          .from('branch_products')
-          .insert({ product_id: productId, branch_id: branchId, is_available: !currentValue })
-          .select()
-          .single();
-        
-        if (error) throw error;
-        if (data) setBranchProducts(prev => [...prev, data]);
+        if (existingBp) {
+          const { error } = await supabase
+            .from('branch_products')
+            .update({ is_available: newValue })
+            .eq('id', existingBp.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('branch_products')
+            .insert({ product_id: productId, branch_id: branchId, is_available: newValue });
+          if (error) throw error;
+        }
       }
       
-      toast.success('Disponibilidad actualizada');
+      // Refresh data
+      const { data: newBranchProducts } = await supabase.from('branch_products').select('*');
+      if (newBranchProducts) setBranchProducts(newBranchProducts);
+      
+      setPendingChanges(new Map());
+      toast.success(`${pendingChanges.size} cambios guardados correctamente`);
+      setEditDialogOpen(false);
     } catch (error) {
-      toast.error('Error al actualizar disponibilidad');
+      toast.error('Error al guardar cambios');
       console.error(error);
     } finally {
-      setSavingAvailability(null);
+      setSavingAvailability(false);
     }
   };
 
@@ -226,10 +322,14 @@ export default function Products() {
       case 'week': return 'Última semana';
       case 'month': return 'Este mes';
       case 'year': return 'Este año';
+      case 'custom': 
+        if (dateFrom && dateTo) {
+          return `${format(dateFrom, 'dd/MM', { locale: es })} - ${format(dateTo, 'dd/MM', { locale: es })}`;
+        }
+        return 'Personalizado';
     }
   };
 
-  // Get branch abbreviation for compact display
   const getBranchAbbr = (name: string): string => {
     const words = name.split(' ');
     if (words.length === 1) return name.slice(0, 3).toUpperCase();
@@ -260,40 +360,101 @@ export default function Products() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar productos..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
-              />
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar productos..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="Categoría" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las categorías</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={timeFilter} onValueChange={(v) => setTimeFilter(v as TimeFilter)}>
+                <SelectTrigger className="w-full sm:w-40">
+                  <SelectValue placeholder="Período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Hoy</SelectItem>
+                  <SelectItem value="week">Última semana</SelectItem>
+                  <SelectItem value="month">Este mes</SelectItem>
+                  <SelectItem value="year">Este año</SelectItem>
+                  <SelectItem value="custom">Personalizado</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Categoría" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas las categorías</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={timeFilter} onValueChange={(v) => setTimeFilter(v as TimeFilter)}>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Período" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">Hoy</SelectItem>
-                <SelectItem value="week">Última semana</SelectItem>
-                <SelectItem value="month">Este mes</SelectItem>
-                <SelectItem value="year">Este año</SelectItem>
-              </SelectContent>
-            </Select>
+            
+            {/* Custom date/time range */}
+            {timeFilter === 'custom' && (
+              <div className="flex flex-wrap items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className={cn(!dateFrom && "text-muted-foreground")}>
+                        {dateFrom ? format(dateFrom, 'dd/MM/yyyy', { locale: es }) : 'Desde'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={dateFrom}
+                        onSelect={setDateFrom}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <span className="text-muted-foreground">-</span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className={cn(!dateTo && "text-muted-foreground")}>
+                        {dateTo ? format(dateTo, 'dd/MM/yyyy', { locale: es }) : 'Hasta'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={dateTo}
+                        onSelect={setDateTo}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <Input
+                    type="time"
+                    value={timeFrom}
+                    onChange={(e) => setTimeFrom(e.target.value)}
+                    className="w-28"
+                  />
+                  <span className="text-muted-foreground">-</span>
+                  <Input
+                    type="time"
+                    value={timeTo}
+                    onChange={(e) => setTimeTo(e.target.value)}
+                    className="w-28"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -403,7 +564,10 @@ export default function Products() {
       </Card>
 
       {/* Edit Availability Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+      <Dialog open={editDialogOpen} onOpenChange={(open) => {
+        if (!open) handleDialogClose();
+        else setEditDialogOpen(true);
+      }}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -411,7 +575,12 @@ export default function Products() {
               Editar Disponibilidad por Sucursal
             </DialogTitle>
             <DialogDescription>
-              Activa o desactiva productos en cada sucursal
+              Activa o desactiva productos en cada sucursal. Los cambios no se guardan hasta presionar "Aplicar".
+              {hasUnsavedChanges && (
+                <span className="ml-2 text-orange-600 font-medium">
+                  ({pendingChanges.size} cambio{pendingChanges.size !== 1 ? 's' : ''} pendiente{pendingChanges.size !== 1 ? 's' : ''})
+                </span>
+              )}
             </DialogDescription>
           </DialogHeader>
           
@@ -439,17 +608,21 @@ export default function Products() {
                       </div>
                     </TableCell>
                     {branches.map(branch => {
-                      const isAvailable = getBranchAvailability(product.id, branch.id);
+                      const isAvailable = getEditingAvailability(product.id, branch.id);
                       const key = `${product.id}-${branch.id}`;
-                      const isSaving = savingAvailability === key;
+                      const hasChange = pendingChanges.has(key);
                       
                       return (
                         <TableCell key={branch.id} className="text-center">
-                          <Switch
-                            checked={isAvailable}
-                            onCheckedChange={() => toggleBranchAvailability(product.id, branch.id, isAvailable)}
-                            disabled={isSaving}
-                          />
+                          <div className={cn(
+                            "inline-flex rounded-md p-1",
+                            hasChange && "bg-orange-100 dark:bg-orange-950"
+                          )}>
+                            <Switch
+                              checked={isAvailable}
+                              onCheckedChange={() => togglePendingChange(product.id, branch.id)}
+                            />
+                          </div>
                         </TableCell>
                       );
                     })}
@@ -458,8 +631,39 @@ export default function Products() {
               </TableBody>
             </Table>
           </div>
+
+          <DialogFooter className="border-t pt-4">
+            <Button variant="outline" onClick={handleDialogClose}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={saveAllChanges} 
+              disabled={savingAvailability || !hasUnsavedChanges}
+            >
+              {savingAvailability ? 'Guardando...' : `Aplicar${hasUnsavedChanges ? ` (${pendingChanges.size})` : ''}`}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Confirm Discard Changes Dialog */}
+      <AlertDialog open={confirmCloseOpen} onOpenChange={setConfirmCloseOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Salir sin guardar?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tienes {pendingChanges.size} cambio{pendingChanges.size !== 1 ? 's' : ''} sin guardar. 
+              Si sales ahora, los cambios se perderán.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Seguir editando</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDiscard} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Salir sin guardar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
