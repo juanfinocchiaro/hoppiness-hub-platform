@@ -4290,6 +4290,8 @@ export type Database = {
         | "confirmed"
         | "preparing"
         | "ready"
+        | "waiting_pickup"
+        | "in_transit"
         | "delivered"
         | "cancelled"
       order_type: "takeaway" | "delivery" | "dine_in"
@@ -4467,6 +4469,8 @@ export const Constants = {
         "confirmed",
         "preparing",
         "ready",
+        "waiting_pickup",
+        "in_transit",
         "delivered",
         "cancelled",
       ],

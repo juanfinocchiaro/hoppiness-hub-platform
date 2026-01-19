@@ -41,6 +41,8 @@ const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string }> = {
   confirmed: { label: 'Confirmado', color: 'bg-blue-500' },
   preparing: { label: 'Preparando', color: 'bg-orange-500' },
   ready: { label: 'Listo', color: 'bg-green-500' },
+  waiting_pickup: { label: 'Esperando cadete', color: 'bg-purple-500' },
+  in_transit: { label: 'En viaje', color: 'bg-cyan-500' },
   delivered: { label: 'Entregado', color: 'bg-gray-500' },
   cancelled: { label: 'Cancelado', color: 'bg-red-500' },
 };

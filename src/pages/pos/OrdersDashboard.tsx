@@ -30,6 +30,8 @@ const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; icon: R
   confirmed: { label: 'Confirmado', color: 'bg-blue-500', icon: <CheckCircle className="h-4 w-4" /> },
   preparing: { label: 'Preparando', color: 'bg-orange-500', icon: <ChefHat className="h-4 w-4" /> },
   ready: { label: 'Listo', color: 'bg-green-500', icon: <CheckCircle className="h-4 w-4" /> },
+  waiting_pickup: { label: 'Esperando cadete', color: 'bg-purple-500', icon: <Clock className="h-4 w-4" /> },
+  in_transit: { label: 'En viaje', color: 'bg-cyan-500', icon: <Truck className="h-4 w-4" /> },
   delivered: { label: 'Entregado', color: 'bg-gray-500', icon: <Truck className="h-4 w-4" /> },
   cancelled: { label: 'Cancelado', color: 'bg-red-500', icon: <XCircle className="h-4 w-4" /> },
 };
@@ -153,13 +155,19 @@ export default function OrdersDashboard() {
     }
   };
 
-  const getNextStatus = (currentStatus: OrderStatus): OrderStatus | null => {
+  const getNextStatus = (order: Order): OrderStatus | null => {
+    const currentStatus = order.status;
+    const isDeliveryPropio = order.order_type === 'delivery' && 
+      !['rappi', 'pedidos_ya', 'mercadopago_delivery'].includes(order.sales_channel || '');
+    
     const flow: Record<OrderStatus, OrderStatus | null> = {
       draft: 'pending',
       pending: 'confirmed',
       confirmed: 'preparing',
       preparing: 'ready',
-      ready: 'delivered',
+      ready: isDeliveryPropio ? 'waiting_pickup' : 'delivered',
+      waiting_pickup: 'in_transit',
+      in_transit: 'delivered',
       delivered: null,
       cancelled: null,
     };
@@ -298,14 +306,14 @@ export default function OrdersDashboard() {
 interface OrderCardProps {
   order: Order;
   onStatusChange: (orderId: string, status: OrderStatus) => void;
-  getNextStatus: (status: OrderStatus) => OrderStatus | null;
+  getNextStatus: (order: Order) => OrderStatus | null;
   formatTime: (date: string) => string;
   getTimeSince: (date: string) => string;
 }
 
 function OrderCard({ order, onStatusChange, getNextStatus, formatTime, getTimeSince }: OrderCardProps) {
   const statusConfig = STATUS_CONFIG[order.status];
-  const nextStatus = getNextStatus(order.status);
+  const nextStatus = getNextStatus(order);
 
   return (
     <Card className="overflow-hidden">
