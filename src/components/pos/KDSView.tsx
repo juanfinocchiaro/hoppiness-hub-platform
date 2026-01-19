@@ -35,6 +35,7 @@ interface KDSViewProps {
 type ViewMode = 'classic' | 'stations';
 
 const STATUS_CONFIG: Record<Enums<'order_status'>, { label: string; colorClass: string }> = {
+  draft: { label: 'Borrador', colorClass: 'bg-muted/50 border-muted text-muted-foreground' },
   pending: { label: 'Pendiente', colorClass: 'bg-warning/20 border-warning text-warning-foreground' },
   confirmed: { label: 'Confirmado', colorClass: 'bg-primary/20 border-primary text-primary' },
   preparing: { label: 'Preparando', colorClass: 'bg-accent/20 border-accent text-accent' },

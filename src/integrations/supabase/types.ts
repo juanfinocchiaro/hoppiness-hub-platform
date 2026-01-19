@@ -2409,6 +2409,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          amount_paid: number | null
           branch_id: string
           caller_number: number | null
           created_at: string
@@ -2425,6 +2426,7 @@ export type Database = {
           external_order_id: string | null
           id: string
           invoice_type: string
+          is_finalized: boolean | null
           notes: string | null
           order_area: Database["public"]["Enums"]["order_area"] | null
           order_group_id: string | null
@@ -2441,6 +2443,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          amount_paid?: number | null
           branch_id: string
           caller_number?: number | null
           created_at?: string
@@ -2457,6 +2460,7 @@ export type Database = {
           external_order_id?: string | null
           id?: string
           invoice_type?: string
+          is_finalized?: boolean | null
           notes?: string | null
           order_area?: Database["public"]["Enums"]["order_area"] | null
           order_group_id?: string | null
@@ -2473,6 +2477,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          amount_paid?: number | null
           branch_id?: string
           caller_number?: number | null
           created_at?: string
@@ -2489,6 +2494,7 @@ export type Database = {
           external_order_id?: string | null
           id?: string
           invoice_type?: string
+          is_finalized?: boolean | null
           notes?: string | null
           order_area?: Database["public"]["Enums"]["order_area"] | null
           order_group_id?: string | null
@@ -4279,6 +4285,7 @@ export type Database = {
         | "kds"
       order_area: "salon" | "mostrador" | "delivery"
       order_status:
+        | "draft"
         | "pending"
         | "confirmed"
         | "preparing"
@@ -4455,6 +4462,7 @@ export const Constants = {
       ],
       order_area: ["salon", "mostrador", "delivery"],
       order_status: [
+        "draft",
         "pending",
         "confirmed",
         "preparing",

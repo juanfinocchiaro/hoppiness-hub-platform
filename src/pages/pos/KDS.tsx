@@ -34,6 +34,7 @@ interface OrderWithItems extends Order {
 type OrderStatus = Enums<'order_status'>;
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
+  draft: 'bg-slate-400',
   pending: 'bg-yellow-500',
   confirmed: 'bg-blue-500',
   preparing: 'bg-orange-500',
@@ -43,6 +44,7 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
 };
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
+  draft: 'Borrador',
   pending: 'Pendiente',
   confirmed: 'Confirmado',
   preparing: 'Preparando',
