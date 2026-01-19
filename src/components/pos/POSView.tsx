@@ -594,8 +594,11 @@ export default function POSView({ branch }: POSViewProps) {
         </div>
         
         {selectedCashRegister && !activeShift && (
-          <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-sm text-yellow-700 dark:text-yellow-400">
-            <strong>Sin turno abierto:</strong> Los pedidos no se registrarán en caja.
+          <div className="mb-4 p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
+            <p className="font-semibold text-destructive">⚠️ Sin turno abierto</p>
+            <p className="text-sm text-destructive/80">
+              Debés abrir un turno en Caja antes de poder tomar pedidos.
+            </p>
           </div>
         )}
 
@@ -653,8 +656,12 @@ export default function POSView({ branch }: POSViewProps) {
                 return (
                   <Card 
                     key={product.id}
-                    className={`cursor-pointer hover:shadow-md transition-all relative ${cartCount > 0 ? 'ring-2 ring-primary' : ''}`}
-                    onClick={() => handleProductClick(product)}
+                    className={`relative transition-all ${
+                      !activeShift 
+                        ? 'opacity-50 cursor-not-allowed' 
+                        : `cursor-pointer hover:shadow-md ${cartCount > 0 ? 'ring-2 ring-primary' : ''}`
+                    }`}
+                    onClick={() => activeShift && handleProductClick(product)}
                   >
                     {cartCount > 0 && (
                       <Badge className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0 flex items-center justify-center">
@@ -782,10 +789,10 @@ export default function POSView({ branch }: POSViewProps) {
           <Button
             className="w-full"
             size="lg"
-            disabled={cart.length === 0}
+            disabled={cart.length === 0 || !activeShift}
             onClick={() => setIsCheckoutOpen(true)}
           >
-            Confirmar Pedido
+            {!activeShift ? 'Abrí un turno para tomar pedidos' : 'Confirmar Pedido'}
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </div>
