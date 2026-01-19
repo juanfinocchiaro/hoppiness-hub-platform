@@ -83,18 +83,27 @@ export default function Modifiers() {
         is_enabled: a.is_enabled,
       }));
 
+      const productsList = productsRes.data || [];
+      
       const groupsWithOptions: ModifierGroup[] = (groupsRes.data || []).map(g => ({
         ...g,
         selection_type: g.selection_type as 'single' | 'multiple',
         modifier_type: (g as any).modifier_type as 'adicional' | 'personalizacion',
-        options: (optionsRes.data || []).filter(o => o.group_id === g.id).map(o => ({
-          ...o,
-          linked_product_id: (o as any).linked_product_id,
-          linkedProduct: (o as any).linked_product as Product | null,
-          assignedProductIds: assignmentsList
+        options: (optionsRes.data || []).filter(o => o.group_id === g.id).map(o => {
+          const assignedIds = assignmentsList
             .filter(a => a.modifier_option_id === o.id && a.is_enabled)
-            .map(a => a.product_id),
-        })),
+            .map(a => a.product_id);
+          const assignedNames = assignedIds
+            .map(id => productsList.find(p => p.id === id)?.name)
+            .filter(Boolean) as string[];
+          return {
+            ...o,
+            linked_product_id: (o as any).linked_product_id,
+            linkedProduct: (o as any).linked_product as Product | null,
+            assignedProductIds: assignedIds,
+            assignedProductNames: assignedNames,
+          };
+        }),
       }));
 
       setGroups(groupsWithOptions);
