@@ -220,6 +220,69 @@ export type Database = {
           },
         ]
       }
+      availability_schedules: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          days_of_week: number[] | null
+          end_date: string | null
+          end_time: string | null
+          id: string
+          is_active: boolean
+          name: string | null
+          product_id: string | null
+          schedule_type: string
+          start_date: string | null
+          start_time: string | null
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          days_of_week?: number[] | null
+          end_date?: string | null
+          end_time?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string | null
+          product_id?: string | null
+          schedule_type: string
+          start_date?: string | null
+          start_time?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          days_of_week?: number[] | null
+          end_date?: string | null
+          end_time?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string | null
+          product_id?: string | null
+          schedule_type?: string
+          start_date?: string | null
+          start_time?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_schedules_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_schedules_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branch_customer_accounts: {
         Row: {
           balance: number
@@ -4271,6 +4334,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_item_available_now: {
+        Args: { p_category_id?: string; p_product_id?: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:

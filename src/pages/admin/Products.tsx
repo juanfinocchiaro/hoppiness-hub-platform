@@ -21,9 +21,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Search, Edit, Star, ChevronDown, ChevronRight, Power, Check, X } from 'lucide-react';
+import { Plus, Search, Edit, Star, ChevronDown, ChevronRight, Power, Check, X, CalendarDays } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
+import { ScheduleDialog } from '@/components/admin/ScheduleDialog';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Product = Tables<'products'>;
@@ -52,6 +53,12 @@ export default function Products() {
   const [search, setSearch] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [updating, setUpdating] = useState<string | null>(null);
+  const [scheduleDialog, setScheduleDialog] = useState<{
+    open: boolean;
+    categoryId?: string;
+    productId?: string;
+    name: string;
+  } | null>(null);
 
   const [disableDialog, setDisableDialog] = useState<{
     open: boolean;
@@ -332,7 +339,29 @@ export default function Products() {
               </button>
               
               {category.id !== 'uncategorized' && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setScheduleDialog({
+                              open: true,
+                              categoryId: category.id,
+                              name: category.name,
+                            });
+                          }}
+                        >
+                          <CalendarDays className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Programar disponibilidad</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <span className={`text-xs ${category.is_active ? 'text-emerald-600' : 'text-muted-foreground'}`}>
                     {category.is_active ? 'Activa' : 'Inactiva'}
                   </span>
@@ -509,6 +538,17 @@ export default function Products() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Schedule Dialog */}
+      {scheduleDialog && (
+        <ScheduleDialog
+          open={scheduleDialog.open}
+          onOpenChange={(open) => !open && setScheduleDialog(null)}
+          categoryId={scheduleDialog.categoryId}
+          productId={scheduleDialog.productId}
+          itemName={scheduleDialog.name}
+        />
+      )}
     </div>
   );
 }
