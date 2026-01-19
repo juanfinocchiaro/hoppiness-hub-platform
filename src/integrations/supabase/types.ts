@@ -425,6 +425,7 @@ export type Database = {
           delivery_enabled: boolean | null
           dine_in_enabled: boolean | null
           email: string | null
+          enforce_labor_law: boolean
           estimated_prep_time_min: number | null
           id: string
           is_active: boolean
@@ -449,6 +450,7 @@ export type Database = {
           delivery_enabled?: boolean | null
           dine_in_enabled?: boolean | null
           email?: string | null
+          enforce_labor_law?: boolean
           estimated_prep_time_min?: number | null
           id?: string
           is_active?: boolean
@@ -473,6 +475,7 @@ export type Database = {
           delivery_enabled?: boolean | null
           dine_in_enabled?: boolean | null
           email?: string | null
+          enforce_labor_law?: boolean
           estimated_prep_time_min?: number | null
           id?: string
           is_active?: boolean
