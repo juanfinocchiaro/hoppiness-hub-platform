@@ -1199,6 +1199,7 @@ export type Database = {
           table_number: string | null
           tax: number | null
           total: number
+          tracking_token: string | null
           updated_at: string
         }
         Insert: {
@@ -1226,6 +1227,7 @@ export type Database = {
           table_number?: string | null
           tax?: number | null
           total: number
+          tracking_token?: string | null
           updated_at?: string
         }
         Update: {
@@ -1253,6 +1255,7 @@ export type Database = {
           table_number?: string | null
           tax?: number | null
           total?: number
+          tracking_token?: string | null
           updated_at?: string
         }
         Relationships: [

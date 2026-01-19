@@ -315,15 +315,26 @@ export default function DeliveryZoneMap(props: DeliveryZoneMapProps) {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [loadingKey, setLoadingKey] = useState(true);
 
-  // Fetch API key from edge function
+  // Fetch API key from edge function with auth
   useEffect(() => {
     const fetchApiKey = async () => {
       try {
+        // Import supabase to get session
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          console.error('No authenticated session for Google Maps API');
+          setLoadingKey(false);
+          return;
+        }
+
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-maps-key`,
           {
             headers: {
               'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              'Authorization': `Bearer ${session.access_token}`,
             },
           }
         );
