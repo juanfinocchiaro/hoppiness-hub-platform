@@ -226,6 +226,7 @@ export type Database = {
           created_at: string
           id: string
           is_available: boolean
+          is_enabled_by_brand: boolean
           modifier_option_id: string
         }
         Insert: {
@@ -233,6 +234,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_available?: boolean
+          is_enabled_by_brand?: boolean
           modifier_option_id: string
         }
         Update: {
@@ -240,6 +242,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_available?: boolean
+          is_enabled_by_brand?: boolean
           modifier_option_id?: string
         }
         Relationships: [
@@ -323,6 +326,7 @@ export type Database = {
           custom_price: number | null
           id: string
           is_available: boolean
+          is_enabled_by_brand: boolean
           product_id: string
           stock_quantity: number | null
         }
@@ -331,6 +335,7 @@ export type Database = {
           custom_price?: number | null
           id?: string
           is_available?: boolean
+          is_enabled_by_brand?: boolean
           product_id: string
           stock_quantity?: number | null
         }
@@ -339,6 +344,7 @@ export type Database = {
           custom_price?: number | null
           id?: string
           is_available?: boolean
+          is_enabled_by_brand?: boolean
           product_id?: string
           stock_quantity?: number | null
         }
@@ -480,6 +486,7 @@ export type Database = {
         Row: {
           address: string
           admin_force_channels: Json | null
+          admin_force_message: string | null
           admin_force_state: string | null
           allowed_ips: string[] | null
           auto_invoice_integrations: boolean
@@ -518,6 +525,7 @@ export type Database = {
         Insert: {
           address: string
           admin_force_channels?: Json | null
+          admin_force_message?: string | null
           admin_force_state?: string | null
           allowed_ips?: string[] | null
           auto_invoice_integrations?: boolean
@@ -556,6 +564,7 @@ export type Database = {
         Update: {
           address?: string
           admin_force_channels?: Json | null
+          admin_force_message?: string | null
           admin_force_state?: string | null
           allowed_ips?: string[] | null
           auto_invoice_integrations?: boolean
@@ -1261,6 +1270,7 @@ export type Database = {
           group_id: string
           id: string
           is_active: boolean
+          is_enabled_by_brand: boolean
           name: string
           price_adjustment: number
         }
@@ -1270,6 +1280,7 @@ export type Database = {
           group_id: string
           id?: string
           is_active?: boolean
+          is_enabled_by_brand?: boolean
           name: string
           price_adjustment?: number
         }
@@ -1279,6 +1290,7 @@ export type Database = {
           group_id?: string
           id?: string
           is_active?: boolean
+          is_enabled_by_brand?: boolean
           name?: string
           price_adjustment?: number
         }
@@ -1457,6 +1469,44 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          order_id: string
+          payment_method: string
+          recorded_by: string | null
+          reference: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          order_id: string
+          payment_method: string
+          recorded_by?: string | null
+          reference?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          order_id?: string
+          payment_method?: string
+          recorded_by?: string | null
+          reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
@@ -1871,6 +1921,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_available: boolean
+          is_enabled_by_brand: boolean
           is_featured: boolean | null
           name: string
           preparation_time: number | null
@@ -1886,6 +1937,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_available?: boolean
+          is_enabled_by_brand?: boolean
           is_featured?: boolean | null
           name: string
           preparation_time?: number | null
@@ -1901,6 +1953,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_available?: boolean
+          is_enabled_by_brand?: boolean
           is_featured?: boolean | null
           name?: string
           preparation_time?: number | null
