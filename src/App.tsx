@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { AdminRoute, LocalRoute } from "@/components/guards";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Menu from "./pages/Menu";
@@ -14,6 +15,7 @@ import OrdersDashboard from "./pages/pos/OrdersDashboard";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminHome from "./pages/admin/AdminHome";
 import Products from "./pages/admin/Products";
+import ProductForm from "./pages/admin/ProductForm";
 import Branches from "./pages/admin/Branches";
 import BranchProducts from "./pages/admin/BranchProducts";
 import Suppliers from "./pages/admin/Suppliers";
@@ -43,14 +45,14 @@ const App = () => (
             <Route path="/franquicias" element={<Franquicias />} />
             
             {/* POS Routes (legacy, redirect to local) */}
-            <Route path="/pos" element={<POS />} />
-            <Route path="/pos/pedidos" element={<OrdersDashboard />} />
+            <Route path="/pos" element={<LocalRoute><POS /></LocalRoute>} />
+            <Route path="/pos/pedidos" element={<LocalRoute><OrdersDashboard /></LocalRoute>} />
             
             {/* Local Routes (Encargado/Operativo) */}
-            <Route path="/local" element={<LocalLayout />}>
+            <Route path="/local" element={<LocalRoute><LocalLayout /></LocalRoute>}>
               <Route index element={<div />} />
             </Route>
-            <Route path="/local/:branchId" element={<LocalLayout />}>
+            <Route path="/local/:branchId" element={<LocalRoute><LocalLayout /></LocalRoute>}>
               <Route index element={<LocalPedidos />} />
               <Route path="pedidos" element={<LocalPedidos />} />
               <Route path="productos" element={<LocalProductos />} />
@@ -58,9 +60,11 @@ const App = () => (
             </Route>
             
             {/* Admin Routes (super_admin / admin_marca) */}
-            <Route path="/admin" element={<AdminDashboard />}>
+            <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>}>
               <Route index element={<AdminHome />} />
               <Route path="productos" element={<Products />} />
+              <Route path="productos/nuevo" element={<ProductForm />} />
+              <Route path="productos/:productId" element={<ProductForm />} />
               <Route path="sucursales" element={<Branches />} />
               <Route path="sucursales/:branchId/productos" element={<BranchProducts />} />
               <Route path="proveedores" element={<Suppliers />} />
