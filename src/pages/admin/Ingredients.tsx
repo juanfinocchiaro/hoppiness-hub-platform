@@ -60,33 +60,27 @@ interface Ingredient {
   notes: string | null;
 }
 
+interface IngredientCategory {
+  id: string;
+  name: string;
+  cost_category: string;
+  display_order: number;
+}
+
 const UNITS = [
-  { value: 'unidad', label: 'Unidad' },
+  { value: 'u', label: 'Unidad' },
   { value: 'kg', label: 'Kilogramo' },
   { value: 'g', label: 'Gramo' },
   { value: 'l', label: 'Litro' },
   { value: 'ml', label: 'Mililitro' },
   { value: 'docena', label: 'Docena' },
-  { value: 'paquete', label: 'Paquete' },
+  { value: 'pack', label: 'Pack' },
   { value: 'caja', label: 'Caja' },
-];
-
-const CATEGORIES = [
-  'Carnes',
-  'Lácteos',
-  'Verduras',
-  'Frutas',
-  'Panadería',
-  'Bebidas',
-  'Condimentos',
-  'Envasados',
-  'Limpieza',
-  'Descartables',
-  'Otros',
 ];
 
 export default function Ingredients() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [categories, setCategories] = useState<IngredientCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -96,7 +90,7 @@ export default function Ingredients() {
   // Form state
   const [formName, setFormName] = useState('');
   const [formSku, setFormSku] = useState('');
-  const [formUnit, setFormUnit] = useState('unidad');
+  const [formUnit, setFormUnit] = useState('u');
   const [formCost, setFormCost] = useState('');
   const [formMinStock, setFormMinStock] = useState('');
   const [formCategory, setFormCategory] = useState('');
@@ -104,8 +98,20 @@ export default function Ingredients() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchIngredients();
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    const [ingredientsRes, categoriesRes] = await Promise.all([
+      supabase.from('ingredients').select('*').order('name'),
+      supabase.from('ingredient_categories').select('*').eq('is_active', true).order('display_order')
+    ]);
+
+    if (ingredientsRes.data) setIngredients(ingredientsRes.data);
+    if (categoriesRes.data) setCategories(categoriesRes.data);
+    setLoading(false);
+  };
 
   const fetchIngredients = async () => {
     setLoading(true);
@@ -221,7 +227,7 @@ export default function Ingredients() {
     }).format(price);
   };
 
-  const categories = [...new Set(ingredients.map(i => i.category).filter(Boolean))];
+  const uniqueCategories = [...new Set(ingredients.map(i => i.category).filter(Boolean))];
 
   return (
     <div className="space-y-6">
@@ -309,7 +315,7 @@ export default function Ingredients() {
           <SelectContent>
             <SelectItem value="all">Todas las categorías</SelectItem>
             {categories.map(cat => (
-              <SelectItem key={cat} value={cat!}>{cat}</SelectItem>
+              <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -471,8 +477,8 @@ export default function Ingredients() {
                     <SelectValue placeholder="Seleccionar..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {CATEGORIES.map(c => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    {categories.map(c => (
+                      <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
