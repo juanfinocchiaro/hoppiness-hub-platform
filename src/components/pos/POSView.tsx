@@ -40,14 +40,28 @@ import {
   Utensils,
   Bike,
   Search,
+  Wallet,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 import type { Tables, Enums } from '@/integrations/supabase/types';
 
 type Product = Tables<'products'>;
 type Category = Tables<'product_categories'>;
 type Branch = Tables<'branches'>;
 type BranchProduct = Tables<'branch_products'>;
+
+interface CashRegister {
+  id: string;
+  name: string;
+  display_order: number;
+}
+
+interface CashRegisterShift {
+  id: string;
+  cash_register_id: string;
+  status: string;
+}
 
 type OrderArea = 'salon' | 'mostrador' | 'delivery';
 type PaymentMethod = 'efectivo' | 'tarjeta_debito' | 'tarjeta_credito' | 'mercadopago_qr' | 'mercadopago_link' | 'transferencia' | 'vales';
@@ -86,12 +100,18 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.Elemen
 
 export default function POSView({ branch }: POSViewProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   const [products, setProducts] = useState<ProductWithAvailability[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  
+  // Cash register state
+  const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([]);
+  const [selectedCashRegister, setSelectedCashRegister] = useState<string>('');
+  const [activeShift, setActiveShift] = useState<CashRegisterShift | null>(null);
   
   // Cart state
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -110,6 +130,45 @@ export default function POSView({ branch }: POSViewProps) {
   // Checkout dialog
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Fetch cash registers and products when branch changes
+  useEffect(() => {
+    async function fetchCashRegisters() {
+      const { data } = await supabase
+        .from('cash_registers')
+        .select('id, name, display_order')
+        .eq('branch_id', branch.id)
+        .eq('is_active', true)
+        .order('display_order');
+      
+      if (data && data.length > 0) {
+        setCashRegisters(data);
+        // Set default to first register (Caja de Venta / Caja 1)
+        setSelectedCashRegister(data[0].id);
+      }
+    }
+    
+    fetchCashRegisters();
+  }, [branch.id]);
+
+  // Check for active shift when cash register changes
+  useEffect(() => {
+    async function checkActiveShift() {
+      if (!selectedCashRegister) return;
+      
+      const { data } = await supabase
+        .from('cash_register_shifts')
+        .select('id, cash_register_id, status')
+        .eq('cash_register_id', selectedCashRegister)
+        .eq('status', 'open')
+        .limit(1)
+        .single();
+      
+      setActiveShift(data as CashRegisterShift | null);
+    }
+    
+    checkActiveShift();
+  }, [selectedCashRegister]);
 
   // Fetch products when branch changes
   useEffect(() => {
@@ -260,6 +319,22 @@ export default function POSView({ branch }: POSViewProps) {
 
       if (itemsError) throw itemsError;
 
+      // Register cash movement if there's an active shift
+      if (activeShift) {
+        await supabase
+          .from('cash_register_movements')
+          .insert({
+            shift_id: activeShift.id,
+            branch_id: branch.id,
+            type: 'income',
+            payment_method: paymentMethod,
+            amount: total,
+            concept: `Pedido #${order.id.slice(0, 8)} - ${customerName}`,
+            order_id: order.id,
+            recorded_by: user?.id || null,
+          });
+      }
+
       toast.success('Pedido creado exitosamente');
       
       setCart([]);
@@ -289,22 +364,48 @@ export default function POSView({ branch }: POSViewProps) {
             <p className="text-sm text-muted-foreground">Punto de Venta</p>
           </div>
           
-          {/* Order Area Selector */}
-          <div className="flex bg-card rounded-lg p-1 border">
-            {ORDER_AREAS.map(area => (
-              <Button
-                key={area.value}
-                variant={orderArea === area.value ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setOrderArea(area.value)}
-                className="gap-1"
-              >
-                <area.icon className="w-4 h-4" />
-                <span className="hidden sm:inline">{area.label}</span>
-              </Button>
-            ))}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Cash Register Selector */}
+            {cashRegisters.length > 0 && (
+              <Select value={selectedCashRegister} onValueChange={setSelectedCashRegister}>
+                <SelectTrigger className="w-36">
+                  <Wallet className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Caja" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cashRegisters.map(register => (
+                    <SelectItem key={register.id} value={register.id}>
+                      {register.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            
+            {/* Order Area Selector */}
+            <div className="flex bg-card rounded-lg p-1 border">
+              {ORDER_AREAS.map(area => (
+                <Button
+                  key={area.value}
+                  variant={orderArea === area.value ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setOrderArea(area.value)}
+                  className="gap-1"
+                >
+                  <area.icon className="w-4 h-4" />
+                  <span className="hidden sm:inline">{area.label}</span>
+                </Button>
+              ))}
+            </div>
           </div>
         </div>
+        
+        {/* Show warning if no active shift */}
+        {selectedCashRegister && !activeShift && (
+          <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-sm text-yellow-700 dark:text-yellow-400">
+            <strong>Sin turno abierto:</strong> Los pedidos no se registrarán en caja. Abrí un turno en la sección Caja.
+          </div>
+        )}
 
         {/* Search and Filter */}
         <div className="flex gap-2 mb-4">
