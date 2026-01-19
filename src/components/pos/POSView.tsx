@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import TipInput from './TipInput';
 import CheckoutDialog from './CheckoutDialog';
 import CancelOrderDialog from './CancelOrderDialog';
+import OrderConfirmationDialog from './OrderConfirmationDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -245,6 +246,8 @@ export default function POSView({ branch }: POSViewProps) {
   const [orderStarted, setOrderStarted] = useState(false);
   const [showNewOrderDialog, setShowNewOrderDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showOrderConfirmation, setShowOrderConfirmation] = useState(false);
+  const [confirmingOrder, setConfirmingOrder] = useState(false);
 
   // Order flow dialog (shown before adding first product) - DEPRECATED, keeping for compatibility
   const [orderFlowDialog, setOrderFlowDialog] = useState<OrderFlowDialogType>(null);
@@ -1247,23 +1250,33 @@ export default function POSView({ branch }: POSViewProps) {
             const isFullyPaid = remaining <= 0.01 && draftPayments.length > 0;
             
             return (
-              <Button
-                className="w-full"
-                size="lg"
-                disabled={cart.length === 0 || !activeShift}
-                onClick={() => setIsCheckoutOpen(true)}
-                variant={isFullyPaid ? 'default' : 'default'}
-              >
-                {!activeShift 
-                  ? 'Abrí un turno para tomar pedidos' 
-                  : isFullyPaid 
-                    ? 'Confirmar Pedido' 
-                    : draftPayments.length > 0 
-                      ? 'Cargar pago'
-                      : 'Confirmar Pedido'
-                }
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
+              <div className="space-y-2">
+                {/* Always show "Cargar pago" button */}
+                <Button
+                  className="w-full"
+                  size="lg"
+                  variant="outline"
+                  disabled={cart.length === 0 || !activeShift}
+                  onClick={() => setIsCheckoutOpen(true)}
+                >
+                  {!activeShift 
+                    ? 'Abrí un turno para tomar pedidos' 
+                    : 'Cargar pago'
+                  }
+                  <CreditCard className="w-4 h-4 ml-2" />
+                </Button>
+
+                {/* "Confirmar Pedido" - only enabled when fully paid */}
+                <Button
+                  className="w-full"
+                  size="lg"
+                  disabled={cart.length === 0 || !activeShift || !isFullyPaid}
+                  onClick={() => setShowOrderConfirmation(true)}
+                >
+                  Confirmar Pedido
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
             );
           })()}
         </div>
@@ -2179,6 +2192,26 @@ export default function POSView({ branch }: POSViewProps) {
         activeShiftId={activeShift?.id || null}
         onCancelComplete={handleResetOrder}
         total={total}
+      />
+
+      {/* Order Confirmation Dialog - summary before sending to kitchen */}
+      <OrderConfirmationDialog
+        open={showOrderConfirmation}
+        onOpenChange={setShowOrderConfirmation}
+        cart={cart}
+        draftOrderId={draftOrderId}
+        draftPayments={draftPayments}
+        customerName={customerName}
+        customerPhone={customerPhone}
+        callerNumber={callerNumber}
+        orderArea={orderArea}
+        deliveryAddress={deliveryAddress}
+        total={total}
+        subtotal={subtotal}
+        deliveryFee={deliveryFee}
+        onOrderConfirmed={handleResetOrder}
+        branchId={branch.id}
+        activeShiftId={activeShift?.id || null}
       />
     </div>
   );
