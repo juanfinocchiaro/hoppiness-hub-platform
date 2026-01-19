@@ -692,14 +692,49 @@ export type Database = {
           },
         ]
       }
+      modifier_groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean
+          max_selections: number | null
+          min_selections: number | null
+          name: string
+          selection_type: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          max_selections?: number | null
+          min_selections?: number | null
+          name: string
+          selection_type?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          max_selections?: number | null
+          min_selections?: number | null
+          name?: string
+          selection_type?: string
+        }
+        Relationships: []
+      }
       modifier_options: {
         Row: {
           created_at: string
           display_order: number | null
           group_id: string
           id: string
-          is_available: boolean
-          is_default: boolean
+          is_active: boolean
           name: string
           price_adjustment: number
         }
@@ -708,8 +743,7 @@ export type Database = {
           display_order?: number | null
           group_id: string
           id?: string
-          is_available?: boolean
-          is_default?: boolean
+          is_active?: boolean
           name: string
           price_adjustment?: number
         }
@@ -718,8 +752,7 @@ export type Database = {
           display_order?: number | null
           group_id?: string
           id?: string
-          is_available?: boolean
-          is_default?: boolean
+          is_active?: boolean
           name?: string
           price_adjustment?: number
         }
@@ -728,7 +761,7 @@ export type Database = {
             foreignKeyName: "modifier_options_group_id_fkey"
             columns: ["group_id"]
             isOneToOne: false
-            referencedRelation: "product_modifier_groups"
+            referencedRelation: "modifier_groups"
             referencedColumns: ["id"]
           },
         ]
@@ -1057,46 +1090,41 @@ export type Database = {
         }
         Relationships: []
       }
-      product_modifier_groups: {
+      product_modifier_assignments: {
         Row: {
           created_at: string
-          description: string | null
           display_order: number | null
           id: string
-          is_active: boolean
-          max_selections: number | null
-          min_selections: number | null
-          name: string
+          is_enabled: boolean
+          modifier_group_id: string
           product_id: string
-          type: string
         }
         Insert: {
           created_at?: string
-          description?: string | null
           display_order?: number | null
           id?: string
-          is_active?: boolean
-          max_selections?: number | null
-          min_selections?: number | null
-          name: string
+          is_enabled?: boolean
+          modifier_group_id: string
           product_id: string
-          type?: string
         }
         Update: {
           created_at?: string
-          description?: string | null
           display_order?: number | null
           id?: string
-          is_active?: boolean
-          max_selections?: number | null
-          min_selections?: number | null
-          name?: string
+          is_enabled?: boolean
+          modifier_group_id?: string
           product_id?: string
-          type?: string
         }
         Relationships: [
           {
-            foreignKeyName: "product_modifier_groups_product_id_fkey"
+            foreignKeyName: "product_modifier_assignments_modifier_group_id_fkey"
+            columns: ["modifier_group_id"]
+            isOneToOne: false
+            referencedRelation: "modifier_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_modifier_assignments_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
