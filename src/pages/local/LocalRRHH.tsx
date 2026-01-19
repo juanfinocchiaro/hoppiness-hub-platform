@@ -414,6 +414,131 @@ export default function LocalRRHH() {
     }
   };
 
+  const [inviteLoading, setInviteLoading] = useState(false);
+
+  const handleInviteEmployee = async () => {
+    if (!branchId || !inviteForm.email || !inviteForm.full_name) {
+      toast.error('Completá todos los campos requeridos');
+      return;
+    }
+
+    setInviteLoading(true);
+
+    try {
+      // First, check if a profile with this email already exists
+      const { data: existingProfile, error: searchError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .eq('email', inviteForm.email.toLowerCase().trim())
+        .maybeSingle();
+
+      if (searchError) throw searchError;
+
+      let targetUserId: string;
+
+      if (existingProfile) {
+        // User already exists - just assign them to this branch
+        targetUserId = existingProfile.user_id;
+        
+        // Check if they already have permissions for this branch
+        const { data: existingPerm } = await supabase
+          .from('branch_permissions')
+          .select('id')
+          .eq('user_id', targetUserId)
+          .eq('branch_id', branchId)
+          .maybeSingle();
+
+        if (existingPerm) {
+          toast.error(`${existingProfile.full_name} ya está asignado a esta sucursal`);
+          setInviteLoading(false);
+          return;
+        }
+
+        toast.info(`Usuario encontrado: ${existingProfile.full_name}. Asignando a sucursal...`);
+      } else {
+        // User doesn't exist - we need them to sign up first
+        // For now, we'll create a placeholder that they can claim later
+        toast.error('El usuario debe registrarse primero en la aplicación. Pedile que se registre con ese email y luego podrás agregarlo.');
+        setInviteLoading(false);
+        return;
+      }
+
+      // Add branch permissions
+      const defaultPerms = {
+        can_manage_orders: true,
+        can_manage_products: inviteForm.role !== 'empleado',
+        can_manage_inventory: inviteForm.role !== 'empleado',
+        can_view_reports: inviteForm.role !== 'empleado',
+        can_manage_staff: inviteForm.role === 'franquiciado' || inviteForm.role === 'gerente',
+      };
+
+      const { error: permError } = await supabase
+        .from('branch_permissions')
+        .insert({
+          user_id: targetUserId,
+          branch_id: branchId,
+          ...defaultPerms,
+        });
+
+      if (permError) throw permError;
+
+      // Update user role if needed
+      if (inviteForm.role !== 'empleado') {
+        // Check if they already have this role
+        const { data: existingRole } = await supabase
+          .from('user_roles')
+          .select('id')
+          .eq('user_id', targetUserId)
+          .eq('role', inviteForm.role)
+          .maybeSingle();
+
+        if (!existingRole) {
+          await supabase
+            .from('user_roles')
+            .insert({
+              user_id: targetUserId,
+              role: inviteForm.role,
+            });
+        }
+      }
+
+      toast.success(`${inviteForm.full_name} agregado al equipo`);
+      setShowInviteDialog(false);
+      setInviteForm({ email: '', full_name: '', role: 'empleado' });
+
+      // Refresh staff list
+      const { data: newProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', targetUserId)
+        .single();
+
+      const { data: newRoles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', targetUserId);
+
+      if (newProfile) {
+        setStaffMembers(prev => [...prev, {
+          id: newProfile.id,
+          user_id: newProfile.user_id,
+          full_name: newProfile.full_name,
+          email: newProfile.email,
+          phone: newProfile.phone,
+          has_pin: !!newProfile.pin_hash,
+          roles: newRoles?.map(r => r.role) || ['empleado'],
+          permissions: defaultPerms,
+        }]);
+      }
+
+    } catch (error) {
+      console.error('Error inviting employee:', error);
+      toast.error('Error al agregar empleado');
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
   const canManageStaff = isAdmin || isFranquiciado || isGerente;
 
   const getHighestRole = (roles: AppRole[]): AppRole => {
@@ -974,8 +1099,11 @@ export default function LocalRRHH() {
             <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
               Cancelar
             </Button>
-            <Button disabled>
-              Próximamente
+            <Button 
+              onClick={handleInviteEmployee} 
+              disabled={inviteLoading || !inviteForm.email || !inviteForm.full_name}
+            >
+              {inviteLoading ? 'Agregando...' : 'Agregar Empleado'}
             </Button>
           </DialogFooter>
         </DialogContent>
