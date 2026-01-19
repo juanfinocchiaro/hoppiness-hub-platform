@@ -2392,6 +2392,7 @@ export type Database = {
           notes: string | null
           order_id: string
           product_id: string
+          product_name_snapshot: string | null
           quantity: number
           unit_price: number
         }
@@ -2402,6 +2403,7 @@ export type Database = {
           notes?: string | null
           order_id: string
           product_id: string
+          product_name_snapshot?: string | null
           quantity?: number
           unit_price: number
         }
@@ -2412,6 +2414,7 @@ export type Database = {
           notes?: string | null
           order_id?: string
           product_id?: string
+          product_name_snapshot?: string | null
           quantity?: number
           unit_price?: number
         }
