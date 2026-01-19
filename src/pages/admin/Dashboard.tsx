@@ -20,7 +20,8 @@ import {
   Shield,
   UtensilsCrossed,
   TrendingUp,
-  Landmark
+  Landmark,
+  ShieldCheck
 } from 'lucide-react';
 import {
   Sheet,
@@ -51,6 +52,7 @@ const navItems: NavItem[] = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
   { to: '/admin/sucursales', icon: Store, label: 'Sucursales' },
   { to: '/admin/proveedores', icon: Truck, label: 'Proveedores' },
+  { to: '/admin/control-proveedores', icon: ShieldCheck, label: 'Control Proveedores' },
   { to: '/admin/usuarios', icon: Users, label: 'Equipo' },
   { to: '/admin/permisos', icon: Shield, label: 'Accesos' },
 ];

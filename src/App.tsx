@@ -66,6 +66,7 @@ import Customers from "./pages/admin/Customers";
 import Ingredients from "./pages/admin/Ingredients";
 import Discounts from "./pages/admin/Discounts";
 import InvoiceScanner from "./pages/admin/InvoiceScanner";
+import IngredientSuppliers from "./pages/admin/IngredientSuppliers";
 
 // Local Stock & Inventory
 import LocalStock from "./pages/local/LocalStock";
@@ -162,6 +163,7 @@ const App = () => (
               <Route path="sucursales" element={<Branches />} />
               <Route path="sucursales/:branchId/productos" element={<BranchProducts />} />
               <Route path="proveedores" element={<Suppliers />} />
+              <Route path="control-proveedores" element={<IngredientSuppliers />} />
               <Route path="clientes" element={<Customers />} />
               <Route path="descuentos" element={<Discounts />} />
               <Route path="estado-resultados" element={<ProfitLossReport />} />
