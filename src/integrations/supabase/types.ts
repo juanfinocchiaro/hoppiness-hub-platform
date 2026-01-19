@@ -736,6 +736,47 @@ export type Database = {
           },
         ]
       }
+      employee_documents: {
+        Row: {
+          created_at: string
+          document_type: string
+          employee_id: string
+          file_name: string
+          file_url: string
+          id: string
+          notes: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_type: string
+          employee_id: string
+          file_name: string
+          file_url: string
+          id?: string
+          notes?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_type?: string
+          employee_id?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          notes?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_documents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_schedules: {
         Row: {
           created_at: string
@@ -786,42 +827,116 @@ export type Database = {
           },
         ]
       }
+      employee_warnings: {
+        Row: {
+          acknowledged_at: string | null
+          created_at: string
+          description: string | null
+          document_url: string | null
+          employee_id: string
+          id: string
+          incident_date: string
+          issued_by: string | null
+          reason: string
+          warning_type: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          created_at?: string
+          description?: string | null
+          document_url?: string | null
+          employee_id: string
+          id?: string
+          incident_date?: string
+          issued_by?: string | null
+          reason: string
+          warning_type: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          created_at?: string
+          description?: string | null
+          document_url?: string | null
+          employee_id?: string
+          id?: string
+          incident_date?: string
+          issued_by?: string | null
+          reason?: string
+          warning_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_warnings_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
+          address: string | null
+          birth_date: string | null
           branch_id: string
+          cbu: string | null
           created_at: string
+          cuit: string | null
           current_status: string
+          dni: string | null
+          emergency_contact: string | null
+          emergency_phone: string | null
           full_name: string
+          hire_date: string | null
           hourly_rate: number | null
           id: string
           is_active: boolean
           phone: string | null
+          photo_url: string | null
           pin_code: string
           position: string | null
           updated_at: string
         }
         Insert: {
+          address?: string | null
+          birth_date?: string | null
           branch_id: string
+          cbu?: string | null
           created_at?: string
+          cuit?: string | null
           current_status?: string
+          dni?: string | null
+          emergency_contact?: string | null
+          emergency_phone?: string | null
           full_name: string
+          hire_date?: string | null
           hourly_rate?: number | null
           id?: string
           is_active?: boolean
           phone?: string | null
+          photo_url?: string | null
           pin_code: string
           position?: string | null
           updated_at?: string
         }
         Update: {
+          address?: string | null
+          birth_date?: string | null
           branch_id?: string
+          cbu?: string | null
           created_at?: string
+          cuit?: string | null
           current_status?: string
+          dni?: string | null
+          emergency_contact?: string | null
+          emergency_phone?: string | null
           full_name?: string
+          hire_date?: string | null
           hourly_rate?: number | null
           id?: string
           is_active?: boolean
           phone?: string | null
+          photo_url?: string | null
           pin_code?: string
           position?: string | null
           updated_at?: string
