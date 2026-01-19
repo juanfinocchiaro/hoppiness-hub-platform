@@ -178,7 +178,6 @@ export default function LocalLayout() {
       show: canManageProducts,
       items: [
         { to: 'disponibilidad', label: 'Disponibilidad', icon: ToggleLeft, show: true },
-        { to: 'productos', label: 'Productos', icon: Package, show: true },
       ]
     },
     {
