@@ -74,7 +74,7 @@ const App = () => (
             <Route path="/auth" element={<Ingresar />} />
             <Route path="/pedir" element={<Pedir />} />
             <Route path="/pedir/:branchSlug" element={<PedirBranch />} />
-            <Route path="/pedido/:orderId" element={<PedidoTracking />} />
+            <Route path="/pedido/:trackingToken" element={<PedidoTracking />} />
             <Route path="/menu" element={<NuestroMenu />} />
             <Route path="/franquicias" element={<Franquicias />} />
             <Route path="/clock-in" element={<ClockIn />} />

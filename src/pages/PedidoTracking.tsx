@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,18 +18,42 @@ import {
 } from 'lucide-react';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
-import type { Tables, Enums } from '@/integrations/supabase/types';
+import type { Enums } from '@/integrations/supabase/types';
 
 type OrderStatus = Enums<'order_status'>;
 
-interface OrderWithItems extends Tables<'orders'> {
-  items?: Array<{
-    id: string;
-    quantity: number;
-    unit_price: number;
-    product: { name: string } | null;
-  }>;
-  branch?: { name: string; address: string; city: string; phone: string | null } | null;
+interface OrderData {
+  id: string;
+  status: OrderStatus;
+  order_type: string;
+  subtotal: number;
+  delivery_fee: number | null;
+  total: number;
+  created_at: string;
+  updated_at: string;
+  estimated_time: string | null;
+  delivery_address: string | null;
+  caller_number: number | null;
+}
+
+interface OrderItem {
+  id: string;
+  quantity: number;
+  unit_price: number;
+  product: { name: string } | null;
+}
+
+interface BranchData {
+  name: string;
+  address: string;
+  city: string;
+  phone: string | null;
+}
+
+interface TrackingResponse {
+  order: OrderData;
+  items: OrderItem[];
+  branch: BranchData | null;
 }
 
 const STATUS_STEPS: { status: OrderStatus; label: string; icon: React.ReactNode }[] = [
@@ -42,32 +65,31 @@ const STATUS_STEPS: { status: OrderStatus; label: string; icon: React.ReactNode 
 ];
 
 export default function PedidoTracking() {
-  const { orderId } = useParams();
-  const [order, setOrder] = useState<OrderWithItems | null>(null);
+  // Now uses tracking token instead of order ID
+  const { trackingToken } = useParams();
+  const [orderData, setOrderData] = useState<TrackingResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchOrder = async () => {
-    if (!orderId) return;
+    if (!trackingToken) return;
     
     try {
-      const { data, error: fetchError } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          items:order_items(
-            id,
-            quantity,
-            unit_price,
-            product:products(name)
-          ),
-          branch:branches(name, address, city, phone)
-        `)
-        .eq('id', orderId)
-        .single();
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/order-tracking?token=${trackingToken}`,
+        {
+          headers: {
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+        }
+      );
 
-      if (fetchError) throw fetchError;
-      setOrder(data as OrderWithItems);
+      if (!response.ok) {
+        throw new Error('Order not found');
+      }
+
+      const data: TrackingResponse = await response.json();
+      setOrderData(data);
     } catch (err: any) {
       setError('Pedido no encontrado');
     } finally {
@@ -77,37 +99,20 @@ export default function PedidoTracking() {
 
   useEffect(() => {
     fetchOrder();
-  }, [orderId]);
+  }, [trackingToken]);
 
-  // Realtime subscription
+  // Poll for updates every 30 seconds (since realtime requires auth)
   useEffect(() => {
-    if (!orderId) return;
+    if (!trackingToken || error) return;
 
-    const channel = supabase
-      .channel(`order-${orderId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders',
-          filter: `id=eq.${orderId}`,
-        },
-        () => {
-          fetchOrder();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [orderId]);
+    const interval = setInterval(fetchOrder, 30000);
+    return () => clearInterval(interval);
+  }, [trackingToken, error]);
 
   const getCurrentStepIndex = () => {
-    if (!order) return 0;
-    if (order.status === 'cancelled') return -1;
-    return STATUS_STEPS.findIndex(s => s.status === order.status);
+    if (!orderData?.order) return 0;
+    if (orderData.order.status === 'cancelled') return -1;
+    return STATUS_STEPS.findIndex(s => s.status === orderData.order.status);
   };
 
   const formatPrice = (price: number) => 
@@ -127,7 +132,7 @@ export default function PedidoTracking() {
     );
   }
 
-  if (error || !order) {
+  if (error || !orderData) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <PublicHeader />
@@ -146,6 +151,7 @@ export default function PedidoTracking() {
     );
   }
 
+  const { order, items, branch } = orderData;
   const currentStep = getCurrentStepIndex();
   const progress = order.status === 'cancelled' ? 0 : ((currentStep + 1) / STATUS_STEPS.length) * 100;
 
@@ -229,7 +235,7 @@ export default function PedidoTracking() {
             <CardContent className="space-y-4">
               {/* Items */}
               <div className="space-y-2">
-                {order.items?.map(item => (
+                {items?.map(item => (
                   <div key={item.id} className="flex justify-between text-sm">
                     <span>{item.quantity}x {item.product?.name || 'Producto'}</span>
                     <span className="text-muted-foreground">{formatPrice(item.quantity * item.unit_price)}</span>
@@ -275,21 +281,21 @@ export default function PedidoTracking() {
           </Card>
 
           {/* Branch Info */}
-          {order.branch && (
+          {branch && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Sucursal</CardTitle>
               </CardHeader>
               <CardContent className="text-sm space-y-2">
-                <p className="font-medium">Hoppiness {order.branch.name}</p>
+                <p className="font-medium">Hoppiness {branch.name}</p>
                 <p className="text-muted-foreground flex items-center gap-1">
                   <MapPin className="w-3 h-3" />
-                  {order.branch.address}, {order.branch.city}
+                  {branch.address}, {branch.city}
                 </p>
-                {order.branch.phone && (
+                {branch.phone && (
                   <p className="text-muted-foreground flex items-center gap-1">
                     <Phone className="w-3 h-3" />
-                    {order.branch.phone}
+                    {branch.phone}
                   </p>
                 )}
               </CardContent>
