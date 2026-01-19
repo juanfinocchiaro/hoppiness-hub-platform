@@ -234,7 +234,9 @@ export default function LocalLayout() {
         { to: 'pagos', label: 'Pagos', icon: DollarSign, show: true },
         { to: 'proveedores', label: 'Proveedores', icon: Truck, show: true },
         { to: 'facturas', label: 'Facturas', icon: FileText, show: true },
-        { to: 'estado-resultados', label: 'Reporte P&L', icon: FileText, show: canViewPL },
+        { to: 'impuestos', label: 'Impuestos', icon: Receipt, show: canViewReports },
+        { to: 'prestamos', label: 'Préstamos', icon: DollarSign, show: canViewReports },
+        { to: 'reportes', label: 'Reportes P&L/Cashflow', icon: FileText, show: canViewReports },
       ]
     },
     {
