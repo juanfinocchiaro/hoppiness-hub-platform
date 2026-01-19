@@ -28,7 +28,11 @@ import LocalProductos from "./pages/local/LocalProductos";
 import LocalTransactions from "./pages/local/LocalTransactions";
 import LocalCaja from "./pages/local/LocalCaja";
 import LocalSuppliers from "./pages/local/LocalSuppliers";
-import LocalRRHH from "./pages/local/LocalRRHH";
+import LocalRRHHFichajes from "./pages/local/LocalRRHHFichajes";
+import LocalRRHHHorarios from "./pages/local/LocalRRHHHorarios";
+import LocalRRHHColaboradores from "./pages/local/LocalRRHHColaboradores";
+import LocalRRHHHoras from "./pages/local/LocalRRHHHoras";
+import LocalRRHHSueldos from "./pages/local/LocalRRHHSueldos";
 import LocalPagos from "./pages/local/LocalPagos";
 import LocalPL from "./pages/local/LocalPL";
 import LocalConfig from "./pages/local/LocalConfig";
@@ -102,7 +106,11 @@ const App = () => (
               <Route path="proveedores" element={<LocalSuppliers />} />
               <Route path="estado-resultados" element={<LocalPL />} />
               {/* RRHH */}
-              <Route path="rrhh" element={<LocalRRHH />} />
+              <Route path="rrhh/fichajes" element={<LocalRRHHFichajes />} />
+              <Route path="rrhh/horarios" element={<LocalRRHHHorarios />} />
+              <Route path="rrhh/colaboradores" element={<LocalRRHHColaboradores />} />
+              <Route path="rrhh/horas" element={<LocalRRHHHoras />} />
+              <Route path="rrhh/sueldos" element={<LocalRRHHSueldos />} />
               {/* Configuración */}
               <Route path="config" element={<LocalConfig />} />
               <Route path="zonas-delivery" element={<LocalDeliveryZones />} />

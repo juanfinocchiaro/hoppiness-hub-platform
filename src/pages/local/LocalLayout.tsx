@@ -231,7 +231,11 @@ export default function LocalLayout() {
       icon: Users,
       show: canManageConfig,
       items: [
-        { to: 'rrhh', label: 'Personal', icon: Users, show: true },
+        { to: 'rrhh/fichajes', label: 'Fichajes', icon: Timer, show: true },
+        { to: 'rrhh/horarios', label: 'Horarios', icon: Clock, show: true },
+        { to: 'rrhh/colaboradores', label: 'Colaboradores', icon: Users, show: true },
+        { to: 'rrhh/horas', label: 'Horas del Mes', icon: Calculator, show: canViewReports },
+        { to: 'rrhh/sueldos', label: 'Sueldos', icon: DollarSign, show: canViewReports },
       ]
     },
     {
