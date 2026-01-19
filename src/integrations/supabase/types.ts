@@ -2147,6 +2147,7 @@ export type Database = {
           is_active: boolean
           max_selections: number | null
           min_selections: number | null
+          modifier_type: string
           name: string
           selection_type: string
         }
@@ -2158,6 +2159,7 @@ export type Database = {
           is_active?: boolean
           max_selections?: number | null
           min_selections?: number | null
+          modifier_type?: string
           name: string
           selection_type?: string
         }
@@ -2169,6 +2171,7 @@ export type Database = {
           is_active?: boolean
           max_selections?: number | null
           min_selections?: number | null
+          modifier_type?: string
           name?: string
           selection_type?: string
         }
@@ -3260,6 +3263,45 @@ export type Database = {
           },
           {
             foreignKeyName: "product_modifier_assignments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_modifier_options: {
+        Row: {
+          created_at: string
+          id: string
+          is_enabled: boolean
+          modifier_option_id: string
+          product_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          modifier_option_id: string
+          product_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          modifier_option_id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_modifier_options_modifier_option_id_fkey"
+            columns: ["modifier_option_id"]
+            isOneToOne: false
+            referencedRelation: "modifier_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_modifier_options_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
