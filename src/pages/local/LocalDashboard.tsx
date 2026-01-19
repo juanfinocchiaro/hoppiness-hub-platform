@@ -23,6 +23,14 @@ interface LocalDashboardProps {
   branch: Branch;
 }
 
+interface ChannelStats {
+  channel: string;
+  revenue: number;
+  orders: number;
+  label: string;
+  icon: React.ReactNode;
+}
+
 interface DashboardStats {
   todayRevenue: number;
   todayOrders: number;
@@ -32,16 +40,17 @@ interface DashboardStats {
   monthlyOrders: number;
   pendingOrders: number;
   preparingOrders: number;
+  channelStats: ChannelStats[];
 }
 
-type SalesChannel = {
+type BranchChannel = {
   key: keyof Branch;
   label: string;
   shortLabel: string;
   icon: React.ReactNode;
 };
 
-const salesChannels: SalesChannel[] = [
+const branchChannels: BranchChannel[] = [
   { key: 'delivery_enabled', label: 'Delivery', shortLabel: 'DEL', icon: <Truck className="w-3 h-3" /> },
   { key: 'takeaway_enabled', label: 'TakeAway', shortLabel: 'TA', icon: <ShoppingBag className="w-3 h-3" /> },
   { key: 'dine_in_enabled', label: 'Atención Presencial', shortLabel: 'AP', icon: <Users className="w-3 h-3" /> },
@@ -49,6 +58,17 @@ const salesChannels: SalesChannel[] = [
   { key: 'pedidosya_enabled', label: 'PedidosYa', shortLabel: 'PYA', icon: <Bike className="w-3 h-3" /> },
   { key: 'mercadopago_delivery_enabled', label: 'MP Delivery', shortLabel: 'MPD', icon: <Truck className="w-3 h-3" /> },
 ];
+
+const channelLabels: Record<string, { label: string; icon: React.ReactNode }> = {
+  atencion_presencial: { label: 'Atención Presencial', icon: <Users className="w-4 h-4" /> },
+  whatsapp: { label: 'WhatsApp', icon: <Store className="w-4 h-4" /> },
+  mas_delivery: { label: 'MásDelivery', icon: <Truck className="w-4 h-4" /> },
+  pedidos_ya: { label: 'PedidosYa', icon: <Bike className="w-4 h-4" /> },
+  rappi: { label: 'Rappi', icon: <Bike className="w-4 h-4" /> },
+  mercadopago_delivery: { label: 'MP Delivery', icon: <Truck className="w-4 h-4" /> },
+  web_app: { label: 'Web App', icon: <Store className="w-4 h-4" /> },
+  pos_local: { label: 'POS Local', icon: <Receipt className="w-4 h-4" /> },
+};
 
 export default function LocalDashboard({ branch }: LocalDashboardProps) {
   const [stats, setStats] = useState<DashboardStats>({
@@ -60,6 +80,7 @@ export default function LocalDashboard({ branch }: LocalDashboardProps) {
     monthlyOrders: 0,
     pendingOrders: 0,
     preparingOrders: 0,
+    channelStats: [],
   });
   const [loading, setLoading] = useState(true);
 
@@ -70,10 +91,10 @@ export default function LocalDashboard({ branch }: LocalDashboardProps) {
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
       const [todayOrdersRes, monthOrdersRes, todayItemsRes, pendingRes] = await Promise.all([
-        // Today's orders
+        // Today's orders with sales_channel
         supabase
           .from('orders')
-          .select('id, total')
+          .select('id, total, sales_channel')
           .eq('branch_id', branch.id)
           .gte('created_at', todayStart)
           .in('status', ['delivered', 'ready', 'preparing', 'confirmed']),
@@ -110,6 +131,27 @@ export default function LocalDashboard({ branch }: LocalDashboardProps) {
       const monthlyRevenue = monthOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
       const todayItemsCount = todayItems.reduce((sum, i) => sum + (i.quantity || 0), 0);
 
+      // Calculate channel stats
+      const channelMap = new Map<string, { revenue: number; orders: number }>();
+      todayOrders.forEach(order => {
+        const channel = order.sales_channel || 'atencion_presencial';
+        const current = channelMap.get(channel) || { revenue: 0, orders: 0 };
+        channelMap.set(channel, {
+          revenue: current.revenue + Number(order.total || 0),
+          orders: current.orders + 1,
+        });
+      });
+
+      const channelStats: ChannelStats[] = Array.from(channelMap.entries())
+        .map(([channel, data]) => ({
+          channel,
+          revenue: data.revenue,
+          orders: data.orders,
+          label: channelLabels[channel]?.label || channel,
+          icon: channelLabels[channel]?.icon || <Store className="w-4 h-4" />,
+        }))
+        .sort((a, b) => b.revenue - a.revenue);
+
       setStats({
         todayRevenue,
         todayOrders: todayOrders.length,
@@ -119,6 +161,7 @@ export default function LocalDashboard({ branch }: LocalDashboardProps) {
         monthlyOrders: monthOrders.length,
         pendingOrders: pendingOrders.filter(o => o.status === 'pending').length,
         preparingOrders: pendingOrders.filter(o => o.status === 'preparing' || o.status === 'confirmed').length,
+        channelStats,
       });
 
       setLoading(false);
@@ -134,7 +177,7 @@ export default function LocalDashboard({ branch }: LocalDashboardProps) {
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(value);
 
-  const getActiveChannels = () => salesChannels.filter(ch => branch[ch.key] as boolean);
+  const getActiveChannels = () => branchChannels.filter(ch => branch[ch.key] as boolean);
 
   if (loading) {
     return (
@@ -166,7 +209,7 @@ export default function LocalDashboard({ branch }: LocalDashboardProps) {
 
       {/* Active Channels */}
       <div className="flex flex-wrap gap-2">
-        {salesChannels.map(channel => {
+        {branchChannels.map(channel => {
           const isEnabled = branch[channel.key] as boolean ?? false;
           return (
             <Badge 
@@ -252,7 +295,59 @@ export default function LocalDashboard({ branch }: LocalDashboardProps) {
         </Card>
       </div>
 
-      {/* Monthly Stats */}
+      {/* Sales by Channel */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShoppingBag className="w-5 h-5" />
+            Ventas por Canal (Hoy)
+          </CardTitle>
+          <CardDescription>
+            Desglose de ventas del día por canal de venta
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {stats.channelStats.length > 0 ? (
+            <div className="space-y-3">
+              {stats.channelStats.map((channel) => {
+                const percentage = stats.todayRevenue > 0 
+                  ? (channel.revenue / stats.todayRevenue) * 100 
+                  : 0;
+                return (
+                  <div key={channel.channel} className="flex items-center gap-4">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                      {channel.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium text-sm truncate">{channel.label}</span>
+                        <span className="text-sm font-semibold">{formatCurrency(channel.revenue)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-primary rounded-full transition-all duration-300"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-muted-foreground w-16 text-right">
+                          {channel.orders} pedidos
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-muted-foreground">
+              <ShoppingBag className="w-10 h-10 mx-auto mb-2 opacity-50" />
+              <p>Sin ventas hoy</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
