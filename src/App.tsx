@@ -23,7 +23,7 @@ import OrdersDashboard from "./pages/pos/OrdersDashboard";
 import LocalLayout from "./pages/local/LocalLayout";
 import LocalDashboard from "./pages/local/LocalDashboard";
 import LocalPedidos from "./pages/local/LocalPedidos";
-// LocalHistorial removed - consolidated into LocalPedidos
+import LocalHistorial from "./pages/local/LocalHistorial";
 import LocalDisponibilidad from "./pages/local/LocalDisponibilidad";
 import LocalProductos from "./pages/local/LocalProductos";
 import LocalTransactions from "./pages/local/LocalTransactions";
@@ -39,7 +39,7 @@ import LocalPL from "./pages/local/LocalPL";
 import LocalFacturas from "./pages/local/LocalFacturas";
 import LocalConfig from "./pages/local/LocalConfig";
 import LocalDeliveryZones from "./pages/local/LocalDeliveryZones";
-
+import LocalIntegraciones from "./pages/local/LocalIntegraciones";
 import LocalImpresoras from "./pages/local/LocalImpresoras";
 import AttendanceKiosk from "./pages/local/AttendanceKiosk";
 
@@ -98,8 +98,7 @@ const App = () => (
               <Route index element={null} />
               {/* Operación */}
               <Route path="pedidos" element={<LocalPedidos />} />
-              {/* Historial redirect to pedidos with tab parameter */}
-              <Route path="historial" element={<LocalPedidos defaultTab="historial" />} />
+              <Route path="historial" element={<LocalHistorial />} />
               {/* Menú & Stock */}
               <Route path="disponibilidad" element={<LocalDisponibilidad />} />
               <Route path="productos" element={<LocalProductos />} />
@@ -118,8 +117,8 @@ const App = () => (
               <Route path="rrhh/sueldos" element={<LocalRRHHSueldos />} />
               {/* Configuración */}
               <Route path="config" element={<LocalConfig />} />
+              <Route path="integraciones" element={<LocalIntegraciones />} />
               <Route path="zonas-delivery" element={<LocalDeliveryZones />} />
-              
               <Route path="impresoras" element={<LocalImpresoras />} />
             </Route>
             

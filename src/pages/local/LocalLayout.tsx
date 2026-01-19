@@ -44,6 +44,7 @@ import {
   Calculator,
   FileText,
   Clock,
+  Link2,
   MapPin,
   Printer,
   Timer
@@ -255,6 +256,7 @@ export default function LocalLayout() {
       show: canManageConfig,
       items: [
         { to: 'config', label: 'Mi Sucursal', icon: Store, show: true },
+        { to: 'integraciones', label: 'Integraciones', icon: Link2, show: true },
         { to: 'zonas-delivery', label: 'Zonas Delivery', icon: MapPin, show: true },
         { to: 'impresoras', label: 'Impresoras', icon: Printer, show: true },
       ]
