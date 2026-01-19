@@ -24,6 +24,19 @@ interface ProductWithAvailability extends Product {
   category?: Category | null;
 }
 
+// Mapeo de abreviaturas por nombre de sucursal
+const branchAbbreviations: Record<string, string> = {
+  'General Paz': 'GP',
+  'Manantiales': 'MNT',
+  'Nueva Córdoba': 'NVC',
+  'Villa Allende': 'VA',
+  'Villa Carlos Paz': 'VCP',
+};
+
+const getBranchAbbreviation = (branchName: string): string => {
+  return branchAbbreviations[branchName] || branchName.substring(0, 3).toUpperCase();
+};
+
 export default function NuestroMenu() {
   const [products, setProducts] = useState<ProductWithAvailability[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -95,10 +108,10 @@ export default function NuestroMenu() {
         {/* Branch Legend */}
         <div className="mb-6 flex flex-wrap items-center gap-4 justify-center">
           <span className="text-sm text-muted-foreground font-medium">Sucursales:</span>
-          {branches.map((branch, i) => (
+          {branches.map((branch) => (
             <div key={branch.id} className="flex items-center gap-1.5 text-sm">
-              <span className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-xs font-bold">
-                {i + 1}
+              <span className="px-2 py-0.5 rounded bg-muted text-xs font-bold">
+                {getBranchAbbreviation(branch.name)}
               </span>
               <span className="text-muted-foreground">{branch.name}</span>
             </div>
@@ -125,6 +138,7 @@ export default function NuestroMenu() {
                           product={product} 
                           branches={branches}
                           formatPrice={formatPrice}
+                          getBranchAbbreviation={getBranchAbbreviation}
                         />
                       ))}
                     </div>
@@ -145,6 +159,7 @@ export default function NuestroMenu() {
                           product={product} 
                           branches={branches}
                           formatPrice={formatPrice}
+                          getBranchAbbreviation={getBranchAbbreviation}
                         />
                       ))}
                     </div>
@@ -174,9 +189,10 @@ interface ProductRowProps {
   product: ProductWithAvailability;
   branches: Branch[];
   formatPrice: (price: number) => string;
+  getBranchAbbreviation: (branchName: string) => string;
 }
 
-function ProductRow({ product, branches, formatPrice }: ProductRowProps) {
+function ProductRow({ product, branches, formatPrice, getBranchAbbreviation }: ProductRowProps) {
   return (
     <div className="flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
       {/* Left: Product Info */}
@@ -200,21 +216,22 @@ function ProductRow({ product, branches, formatPrice }: ProductRowProps) {
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="flex items-center gap-1.5 cursor-help">
-            {branches.map((branch, index) => {
+            {branches.map((branch) => {
               const availability = product.availability.find(a => a.branchId === branch.id);
               const isAvailable = availability?.available ?? false;
+              const abbr = getBranchAbbreviation(branch.name);
               
               return (
                 <div 
                   key={branch.id}
-                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                  className={`px-2 py-1 rounded text-xs font-bold transition-colors ${
                     isAvailable 
                       ? 'bg-green-500 text-white' 
                       : 'bg-red-500/20 text-red-500'
                   }`}
                   title={`${branch.name}: ${isAvailable ? 'Disponible' : 'Sin stock'}`}
                 >
-                  {index + 1}
+                  {abbr}
                 </div>
               );
             })}
