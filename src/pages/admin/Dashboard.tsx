@@ -15,7 +15,8 @@ import {
   ClipboardList,
   BarChart3,
   Building2,
-  ChefHat
+  ChefHat,
+  Shield
 } from 'lucide-react';
 import {
   Sheet,
@@ -32,6 +33,7 @@ const navItems = [
   { to: '/admin/modificadores', icon: ChefHat, label: 'Modificadores' },
   { to: '/admin/proveedores', icon: Truck, label: 'Proveedores' },
   { to: '/admin/usuarios', icon: Users, label: 'Usuarios' },
+  { to: '/admin/permisos', icon: Shield, label: 'Permisos' },
 ];
 
 export default function AdminDashboard() {
