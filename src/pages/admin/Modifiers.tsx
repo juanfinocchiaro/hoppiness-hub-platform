@@ -60,6 +60,7 @@ export default function Modifiers() {
   // Form states
   const [optionName, setOptionName] = useState('');
   const [optionPrice, setOptionPrice] = useState('0');
+  const [optionImageUrl, setOptionImageUrl] = useState('');
   const [optionLinkedProductId, setOptionLinkedProductId] = useState<string>('');
 
   useEffect(() => {
@@ -98,6 +99,7 @@ export default function Modifiers() {
             .filter(Boolean) as string[];
           return {
             ...o,
+            image_url: (o as any).image_url,
             linked_product_id: (o as any).linked_product_id,
             linkedProduct: (o as any).linked_product as Product | null,
             assignedProductIds: assignedIds,
@@ -124,12 +126,14 @@ export default function Modifiers() {
 
       if (editingOption) {
         const linkedId = optionLinkedProductId || null;
+        const imageUrlValue = optionImageUrl || null;
         const { error } = await supabase
           .from('modifier_options')
           .update({
             name: optionName,
             price_adjustment: parseFloat(optionPrice) || 0,
             linked_product_id: linkedId,
+            image_url: imageUrlValue,
           } as any)
           .eq('id', editingOption.id);
         if (error) throw error;
@@ -137,6 +141,7 @@ export default function Modifiers() {
       } else {
         const group = groups.find(g => g.id === groupId);
         const linkedId = optionLinkedProductId || null;
+        const imageUrlValue = optionImageUrl || null;
         const { error } = await supabase
           .from('modifier_options')
           .insert({
@@ -145,6 +150,7 @@ export default function Modifiers() {
             price_adjustment: parseFloat(optionPrice) || 0,
             display_order: group?.options.length || 0,
             linked_product_id: linkedId,
+            image_url: imageUrlValue,
           } as any);
         if (error) throw error;
         toast({ title: 'Opción creada' });
@@ -308,6 +314,7 @@ export default function Modifiers() {
     setSelectedGroupForOption('');
     setOptionName('');
     setOptionPrice('0');
+    setOptionImageUrl('');
     setOptionLinkedProductId('');
   };
 
@@ -315,6 +322,7 @@ export default function Modifiers() {
     setEditingOption(option);
     setOptionName(option.name);
     setOptionPrice(String(option.price_adjustment));
+    setOptionImageUrl(option.image_url || '');
     setOptionLinkedProductId(option.linked_product_id || '');
     setOptionDialog(true);
   };
@@ -507,6 +515,24 @@ export default function Modifiers() {
                 value={optionPrice}
                 onChange={(e) => setOptionPrice(e.target.value)}
               />
+            </div>
+            <div className="space-y-2">
+              <Label>URL de imagen (opcional)</Label>
+              <Input 
+                placeholder="https://... o /images/modifiers/..." 
+                value={optionImageUrl}
+                onChange={(e) => setOptionImageUrl(e.target.value)}
+              />
+              {optionImageUrl && (
+                <div className="mt-2">
+                  <img 
+                    src={optionImageUrl} 
+                    alt="Preview" 
+                    className="w-16 h-16 rounded-lg object-cover ring-1 ring-border"
+                    onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+                  />
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter className="gap-2">
