@@ -65,6 +65,51 @@ export type Database = {
           },
         ]
       }
+      attendance_tokens: {
+        Row: {
+          branch_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          token: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          token: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          token?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_tokens_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_tokens_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       branch_permissions: {
         Row: {
           branch_id: string
@@ -868,6 +913,7 @@ export type Database = {
           id: string
           is_active: boolean
           phone: string | null
+          pin_hash: string | null
           updated_at: string
           user_id: string
         }
@@ -879,6 +925,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           phone?: string | null
+          pin_hash?: string | null
           updated_at?: string
           user_id: string
         }
@@ -890,6 +937,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           phone?: string | null
+          pin_hash?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1232,6 +1280,7 @@ export type Database = {
       }
     }
     Functions: {
+      cleanup_expired_tokens: { Args: never; Returns: undefined }
       has_branch_access: {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
