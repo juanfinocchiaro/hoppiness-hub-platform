@@ -294,246 +294,274 @@ export function ProductInlineEditor({
   return (
     <div className="bg-card border-t-2 border-primary/20 animate-in slide-in-from-top-2 duration-200">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-muted/30">
-        <h3 className="font-semibold flex items-center gap-2">
-          Editando: {name}
-        </h3>
+      <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
+        <h3 className="font-semibold text-sm">Editando: {name}</h3>
         <Button variant="ghost" size="sm" onClick={onClose}>
           <ChevronUp className="w-4 h-4 mr-1" />
           Cerrar
         </Button>
       </div>
 
-      <div className="p-4 grid lg:grid-cols-2 gap-6">
-        {/* Left Column - Basic Info */}
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Nombre*</Label>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="h-9"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Categoría</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Seleccionar" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Precio de venta*</Label>
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground">$</span>
-                <Input
-                  type="number"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  className="h-9"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Tiempo prep. (min)</Label>
-              <Input
-                type="number"
-                value={preparationTime}
-                onChange={(e) => setPreparationTime(e.target.value)}
-                className="h-9"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Descripción</Label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="resize-none min-h-[60px]"
-              placeholder="Descripción del producto..."
+      {/* SECTION 1: Compact Basic Data */}
+      <div className="p-4 space-y-3 border-b">
+        {/* Row 1: Name, Category, Price, Prep Time */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Nombre*</Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="h-8 text-sm"
             />
           </div>
-
-          <div className="flex items-center gap-6 pt-2">
-            <div className="flex items-center gap-2">
-              <Switch checked={isEnabledByBrand} onCheckedChange={setIsEnabledByBrand} />
-              <span className="text-sm">Habilitado</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={isFeatured} onCheckedChange={setIsFeatured} />
-              <span className="text-sm">Destacado</span>
-            </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Categoría</Label>
+            <Select value={categoryId} onValueChange={setCategoryId}>
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder="Seleccionar" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-
-          {/* Image */}
-          <div className="flex items-start gap-4">
-            <div className="relative">
-              {imageUrl ? (
-                <div className="relative w-20 h-20 rounded-lg overflow-hidden border">
-                  <img src={imageUrl} alt={name} className="w-full h-full object-cover" />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    className="absolute top-1 right-1 h-5 w-5"
-                    onClick={() => setImageUrl('')}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              ) : (
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-20 h-20 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:border-primary/50"
-                >
-                  {uploading ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <Upload className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </div>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Precio*</Label>
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground text-sm">$</span>
+              <Input
+                type="number"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                className="h-8 text-sm"
               />
             </div>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Tiempo (min)</Label>
+            <Input
+              type="number"
+              value={preparationTime}
+              onChange={(e) => setPreparationTime(e.target.value)}
+              className="h-8 text-sm"
+              placeholder="15"
+            />
           </div>
         </div>
 
-        {/* Right Column - Recipe & Cost */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-medium text-sm">Receta / Ingredientes</h4>
-              <p className="text-xs text-muted-foreground">Cantidades en unidad de uso</p>
-            </div>
-            <div className="flex items-center gap-3 text-sm">
-              <span className="text-muted-foreground">Costo:</span>
-              <Badge variant="secondary" className="font-mono">
-                {formatPrice(totalRecipeCost)}
-              </Badge>
-              {parseFloat(price) > 0 && (
-                <Badge 
-                  variant="outline" 
-                  className={margin > 50 ? 'border-emerald-500 text-emerald-600' : margin > 30 ? 'border-amber-500 text-amber-600' : 'border-destructive text-destructive'}
+        {/* Row 2: Description */}
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Descripción</Label>
+          <Textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="resize-none h-12 text-sm"
+            placeholder="Descripción del producto..."
+          />
+        </div>
+
+        {/* Row 3: Image thumbnail + Toggles */}
+        <div className="flex items-center gap-4">
+          {/* Thumbnail */}
+          <div className="relative shrink-0">
+            {imageUrl ? (
+              <div className="relative w-10 h-10 rounded overflow-hidden border">
+                <img src={imageUrl} alt={name} className="w-full h-full object-cover" />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="absolute -top-1 -right-1 h-4 w-4"
+                  onClick={() => setImageUrl('')}
                 >
-                  {margin.toFixed(1)}% margen
-                </Badge>
-              )}
+                  <X className="h-2.5 w-2.5" />
+                </Button>
+              </div>
+            ) : (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="w-10 h-10 border-2 border-dashed rounded flex items-center justify-center cursor-pointer hover:border-primary/50"
+              >
+                {uploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+          </div>
+
+          {/* Toggles */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Switch checked={isEnabledByBrand} onCheckedChange={setIsEnabledByBrand} className="scale-90" />
+              <span className="text-xs">Habilitado</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={isFeatured} onCheckedChange={setIsFeatured} className="scale-90" />
+              <span className="text-xs">Destacado</span>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Add Ingredient Row */}
-          <div className="flex gap-2">
-            <Select value={newIngredientId} onValueChange={setNewIngredientId}>
-              <SelectTrigger className="flex-1 h-9">
-                <SelectValue placeholder="Seleccionar ingrediente..." />
-              </SelectTrigger>
-              <SelectContent>
-                {availableIngredients
-                  .filter(i => !recipeLines.some(r => r.ingredient_id === i.id))
-                  .map((ing) => (
-                    <SelectItem key={ing.id} value={ing.id}>
-                      {ing.name} ({formatPrice(ing.cost_per_unit)}/{ing.usage_unit || ing.unit})
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-            <Input
-              type="number"
-              placeholder="Cant."
-              value={newQuantity}
-              onChange={(e) => setNewQuantity(e.target.value)}
-              className="w-24 h-9"
-              step="0.01"
-            />
-            <Button size="sm" onClick={handleAddIngredient} className="h-9">
-              <Plus className="w-4 h-4" />
-            </Button>
+      {/* SECTION 2: Recipe - Full Width & Prominent */}
+      <div className="p-4 bg-muted/20">
+        {/* Recipe Header */}
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h4 className="font-medium text-sm flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-primary" />
+              Receta / Ingredientes
+            </h4>
+            <p className="text-xs text-muted-foreground">Cantidades en unidad de uso</p>
           </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">Costo receta</p>
+              <p className="font-mono font-semibold text-sm">{formatPrice(totalRecipeCost)}</p>
+            </div>
+            {parseFloat(price) > 0 && (
+              <Badge 
+                variant="outline" 
+                className={`text-sm px-3 py-1 ${
+                  margin > 50 ? 'border-emerald-500 text-emerald-600 bg-emerald-50' : 
+                  margin > 30 ? 'border-amber-500 text-amber-600 bg-amber-50' : 
+                  'border-destructive text-destructive bg-destructive/10'
+                }`}
+              >
+                {margin.toFixed(1)}% margen
+              </Badge>
+            )}
+          </div>
+        </div>
 
-          {/* Recipe Table */}
-          {recipeLines.length > 0 ? (
-            <div className="border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="text-xs">Ingrediente</TableHead>
-                    <TableHead className="text-xs text-right w-24">Cantidad</TableHead>
-                    <TableHead className="text-xs text-right w-28">Costo Unit.</TableHead>
-                    <TableHead className="text-xs text-right w-28">Subtotal</TableHead>
-                    <TableHead className="w-10"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recipeLines.map((line) => (
-                    <TableRow key={line.ingredient_id}>
-                      <TableCell className="text-sm py-2">{line.ingredient_name}</TableCell>
-                      <TableCell className="py-2">
+        {/* Add Ingredient Row */}
+        <div className="flex gap-2 mb-3">
+          <Select value={newIngredientId} onValueChange={setNewIngredientId}>
+            <SelectTrigger className="flex-1 h-9 bg-background">
+              <SelectValue placeholder="Seleccionar ingrediente para agregar..." />
+            </SelectTrigger>
+            <SelectContent>
+              {availableIngredients
+                .filter(i => !recipeLines.some(r => r.ingredient_id === i.id))
+                .map((ing) => (
+                  <SelectItem key={ing.id} value={ing.id}>
+                    {ing.name} ({formatPrice(ing.cost_per_unit)}/{ing.usage_unit || ing.unit})
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+          <Input
+            type="number"
+            placeholder="Cantidad"
+            value={newQuantity}
+            onChange={(e) => setNewQuantity(e.target.value)}
+            className="w-28 h-9 bg-background"
+            step="0.01"
+          />
+          <Button size="sm" onClick={handleAddIngredient} className="h-9 px-4">
+            <Plus className="w-4 h-4 mr-1" />
+            Agregar
+          </Button>
+        </div>
+
+        {/* Recipe Table */}
+        {recipeLines.length > 0 ? (
+          <div className="border rounded-lg overflow-hidden bg-background">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="text-xs font-medium">Ingrediente</TableHead>
+                  <TableHead className="text-xs font-medium text-center w-32">Cantidad</TableHead>
+                  <TableHead className="text-xs font-medium text-right w-28">Costo Unit.</TableHead>
+                  <TableHead className="text-xs font-medium text-right w-28">Subtotal</TableHead>
+                  <TableHead className="w-12"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recipeLines.map((line) => (
+                  <TableRow key={line.ingredient_id}>
+                    <TableCell className="text-sm py-2 font-medium">{line.ingredient_name}</TableCell>
+                    <TableCell className="py-2">
+                      <div className="flex items-center justify-center gap-1">
                         <Input
                           type="number"
                           value={line.quantity_required}
                           onChange={(e) => handleUpdateQuantity(line.ingredient_id, parseFloat(e.target.value) || 0)}
-                          className="h-7 text-right text-sm w-full"
+                          className="h-7 text-center text-sm w-20"
                           step="0.01"
                         />
-                      </TableCell>
-                      <TableCell className="text-right text-sm text-muted-foreground py-2">
-                        {formatPrice(line.unit_cost)}/{line.ingredient_unit}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-sm py-2">
-                        {formatPrice(line.line_cost)}
-                      </TableCell>
-                      <TableCell className="py-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-destructive hover:text-destructive"
-                          onClick={() => handleRemoveIngredient(line.ingredient_id)}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="border-2 border-dashed rounded-lg p-6 text-center text-muted-foreground">
-              <DollarSign className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Sin ingredientes asignados</p>
-              <p className="text-xs">Agregá ingredientes para calcular el costo</p>
-            </div>
-          )}
-        </div>
+                        <span className="text-xs text-muted-foreground w-8">{line.ingredient_unit}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-right text-muted-foreground py-2">
+                      {formatPrice(line.unit_cost)}/{line.ingredient_unit}
+                    </TableCell>
+                    <TableCell className="text-sm text-right font-medium py-2">
+                      {formatPrice(line.line_cost)}
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => handleRemoveIngredient(line.ingredient_id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {/* Total Row */}
+                <TableRow className="bg-muted/30 font-medium">
+                  <TableCell colSpan={3} className="text-right text-sm py-2">
+                    Total Costo Receta:
+                  </TableCell>
+                  <TableCell className="text-right text-sm py-2 font-mono">
+                    {formatPrice(totalRecipeCost)}
+                  </TableCell>
+                  <TableCell></TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg bg-background">
+            <p className="text-sm">No hay ingredientes en la receta</p>
+            <p className="text-xs mt-1">Agregá ingredientes para calcular el costo</p>
+          </div>
+        )}
       </div>
 
-      {/* Footer */}
-      <div className="flex items-center justify-end gap-3 p-4 border-t bg-muted/30">
-        <Button variant="outline" onClick={onClose}>
+      {/* FOOTER: Actions */}
+      <div className="flex items-center justify-end gap-3 p-4 border-t bg-muted/10">
+        <Button variant="outline" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
         <Button onClick={handleSubmit} disabled={saving}>
-          {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-          Guardar Cambios
+          {saving ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Guardando...
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4 mr-2" />
+              Guardar Cambios
+            </>
+          )}
         </Button>
       </div>
     </div>
