@@ -15,6 +15,7 @@ import {
   Store,
   Bike
 } from 'lucide-react';
+import OrdersHeatmap from '@/components/charts/OrdersHeatmap';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
@@ -426,6 +427,9 @@ export default function LocalDashboard({ branch }: LocalDashboardProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Orders Heatmap */}
+      <OrdersHeatmap branchId={branch.id} />
     </div>
   );
 }
