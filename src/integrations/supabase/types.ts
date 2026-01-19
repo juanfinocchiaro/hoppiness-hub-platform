@@ -1127,6 +1127,54 @@ export type Database = {
           },
         ]
       }
+      kds_stations: {
+        Row: {
+          branch_id: string
+          color: string | null
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          station_type: string
+        }
+        Insert: {
+          branch_id: string
+          color?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          station_type: string
+        }
+        Update: {
+          branch_id?: string
+          color?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          station_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kds_stations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kds_stations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       modifier_groups: {
         Row: {
           created_at: string
@@ -1236,6 +1284,47 @@ export type Database = {
           },
           {
             foreignKeyName: "order_item_modifiers_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_item_stations: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          id: string
+          order_item_id: string
+          started_at: string | null
+          station_type: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          order_item_id: string
+          started_at?: string | null
+          station_type: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          order_item_id?: string
+          started_at?: string | null
+          station_type?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_item_stations_order_item_id_fkey"
             columns: ["order_item_id"]
             isOneToOne: false
             referencedRelation: "order_items"
@@ -1650,6 +1739,38 @@ export type Database = {
           },
           {
             foreignKeyName: "product_modifier_assignments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_station_assignments: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          product_id: string
+          station_type: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          product_id: string
+          station_type: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          product_id?: string
+          station_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_station_assignments_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
