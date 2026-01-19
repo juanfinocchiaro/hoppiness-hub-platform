@@ -585,56 +585,53 @@ export default function LocalRRHH() {
         />
       )}
 
-      <Tabs defaultValue="operativo" className="space-y-4">
+      <Tabs defaultValue="fichajes" className="space-y-4">
         <TabsList className="flex-wrap">
-          <TabsTrigger value="operativo" className="gap-2">
+          <TabsTrigger value="fichajes" className="gap-2">
             <Clock className="h-4 w-4" />
             Fichajes
-          </TabsTrigger>
-          <TabsTrigger value="horas" className="gap-2">
-            <Clock className="h-4 w-4" />
-            Horas del Mes
           </TabsTrigger>
           <TabsTrigger value="horarios" className="gap-2">
             <Clock className="h-4 w-4" />
             Horarios
           </TabsTrigger>
-          <TabsTrigger value="personal" className="gap-2">
+          <TabsTrigger value="colaboradores" className="gap-2">
             <Users className="h-4 w-4" />
-            Usuarios Sistema
+            Colaboradores
           </TabsTrigger>
+          {(isAdmin || isFranquiciado || isGerente) && (
+            <TabsTrigger value="horas" className="gap-2">
+              <Clock className="h-4 w-4" />
+              Horas del Mes
+            </TabsTrigger>
+          )}
           <TabsTrigger value="pagos" className="gap-2">
             <Wallet className="h-4 w-4" />
             Sueldos
           </TabsTrigger>
         </TabsList>
 
-        {/* TAB: Empleados Operativos */}
-        <TabsContent value="operativo">
+        {/* TAB: Fichajes */}
+        <TabsContent value="fichajes">
           {branchId && (
             <OperationalStaffManager branchId={branchId} canManage={canManageStaff} />
           )}
         </TabsContent>
 
-        {/* TAB: Horas del Mes */}
-        <TabsContent value="horas">
-          {branchId && (
-            <MonthlyHoursStats branchId={branchId} />
-          )}
-        </TabsContent>
+        {/* TAB: Horarios */}
         <TabsContent value="horarios">
           {branchId && (
             <EmployeeScheduleEditor branchId={branchId} canManage={canManageStaff} />
           )}
         </TabsContent>
 
-        {/* TAB: Personal */}
-        <TabsContent value="personal" className="space-y-4">
+        {/* TAB: Colaboradores (antes Usuarios Sistema) */}
+        <TabsContent value="colaboradores" className="space-y-4">
           <div className="flex justify-end">
             {canManageStaff && (
               <Button onClick={() => setShowInviteDialog(true)}>
                 <UserPlus className="h-4 w-4 mr-2" />
-                Agregar Empleado
+                Agregar Colaborador
               </Button>
             )}
           </div>
@@ -644,8 +641,8 @@ export default function LocalRRHH() {
               <CardContent className="py-12">
                 <div className="text-center text-muted-foreground">
                   <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No hay personal asignado a este local</p>
-                  <p className="text-sm">Invitá empleados para que puedan operar</p>
+                  <p>No hay colaboradores asignados a este local</p>
+                  <p className="text-sm">Invitá colaboradores para que puedan operar</p>
                 </div>
               </CardContent>
             </Card>
@@ -653,13 +650,13 @@ export default function LocalRRHH() {
             <Card>
               <CardHeader>
                 <CardTitle>Equipo del Local</CardTitle>
-                <CardDescription>{staffMembers.length} persona(s) asignadas</CardDescription>
+                <CardDescription>{staffMembers.length} colaborador(es) asignados</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Empleado</TableHead>
+                      <TableHead>Colaborador</TableHead>
                       <TableHead>Rol</TableHead>
                       <TableHead>PIN Fichada</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
@@ -753,6 +750,15 @@ export default function LocalRRHH() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* TAB: Horas del Mes - Solo visible para encargados/admins */}
+        {(isAdmin || isFranquiciado || isGerente) && (
+          <TabsContent value="horas">
+            {branchId && (
+              <MonthlyHoursStats branchId={branchId} />
+            )}
+          </TabsContent>
+        )}
 
         {/* TAB: Asistencia */}
         <TabsContent value="asistencia" className="space-y-4">

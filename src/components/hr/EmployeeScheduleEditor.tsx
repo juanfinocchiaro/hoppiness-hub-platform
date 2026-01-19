@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -12,15 +13,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Calendar, Clock, Save, Loader2, Edit2 } from 'lucide-react';
+import { Calendar, Clock, Save, Loader2, Edit2, Plus, Trash2 } from 'lucide-react';
 
 interface Employee {
   id: string;
@@ -28,13 +22,16 @@ interface Employee {
   position: string | null;
 }
 
-interface ScheduleEntry {
-  id?: string;
-  employee_id: string;
-  day_of_week: number;
+interface ScheduleShift {
+  shift_number: number;
   start_time: string;
   end_time: string;
+}
+
+interface DaySchedule {
+  day_of_week: number;
   is_day_off: boolean;
+  shifts: ScheduleShift[];
 }
 
 interface EmployeeScheduleEditorProps {
@@ -43,59 +40,82 @@ interface EmployeeScheduleEditorProps {
 }
 
 const DAYS_OF_WEEK = [
-  { value: 0, label: 'Domingo' },
-  { value: 1, label: 'Lunes' },
-  { value: 2, label: 'Martes' },
-  { value: 3, label: 'Miércoles' },
-  { value: 4, label: 'Jueves' },
-  { value: 5, label: 'Viernes' },
-  { value: 6, label: 'Sábado' },
+  { value: 1, label: 'Lunes', short: 'Lun' },
+  { value: 2, label: 'Martes', short: 'Mar' },
+  { value: 3, label: 'Miércoles', short: 'Mié' },
+  { value: 4, label: 'Jueves', short: 'Jue' },
+  { value: 5, label: 'Viernes', short: 'Vie' },
+  { value: 6, label: 'Sábado', short: 'Sáb' },
+  { value: 0, label: 'Domingo', short: 'Dom' },
 ];
 
 export default function EmployeeScheduleEditor({ branchId, canManage }: EmployeeScheduleEditorProps) {
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [schedules, setSchedules] = useState<Record<string, ScheduleEntry[]>>({});
+  const [schedules, setSchedules] = useState<Record<string, DaySchedule[]>>({});
   const [loading, setLoading] = useState(true);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [editingSchedules, setEditingSchedules] = useState<ScheduleEntry[]>([]);
+  const [editingSchedules, setEditingSchedules] = useState<DaySchedule[]>([]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [empRes, schedRes] = await Promise.all([
-        supabase
-          .from('employees')
-          .select('id, full_name, position')
-          .eq('branch_id', branchId)
-          .eq('is_active', true)
-          .order('full_name'),
-        supabase
-          .from('employee_schedules')
-          .select('*')
-          .in('employee_id', 
-            (await supabase.from('employees').select('id').eq('branch_id', branchId)).data?.map(e => e.id) || []
-          ),
-      ]);
+      // First fetch employees
+      const empRes = await supabase
+        .from('employees')
+        .select('id, full_name, position')
+        .eq('branch_id', branchId)
+        .eq('is_active', true)
+        .order('full_name');
 
       if (empRes.error) throw empRes.error;
-      setEmployees(empRes.data || []);
+      const employeeList = empRes.data || [];
+      setEmployees(employeeList);
 
-      // Group schedules by employee
-      const grouped: Record<string, ScheduleEntry[]> = {};
+      if (employeeList.length === 0) {
+        setSchedules({});
+        setLoading(false);
+        return;
+      }
+
+      // Fetch schedules
+      const schedRes = await supabase
+        .from('employee_schedules')
+        .select('*')
+        .in('employee_id', employeeList.map(e => e.id));
+
+      // Group schedules by employee and day
+      const grouped: Record<string, DaySchedule[]> = {};
       if (schedRes.data) {
         schedRes.data.forEach((s: any) => {
           if (!grouped[s.employee_id]) {
             grouped[s.employee_id] = [];
           }
-          grouped[s.employee_id].push({
-            id: s.id,
-            employee_id: s.employee_id,
-            day_of_week: s.day_of_week,
-            start_time: s.start_time,
-            end_time: s.end_time,
-            is_day_off: s.is_day_off,
+          
+          let daySchedule = grouped[s.employee_id].find(d => d.day_of_week === s.day_of_week);
+          if (!daySchedule) {
+            daySchedule = {
+              day_of_week: s.day_of_week,
+              is_day_off: s.is_day_off,
+              shifts: [],
+            };
+            grouped[s.employee_id].push(daySchedule);
+          }
+          
+          if (!s.is_day_off) {
+            daySchedule.shifts.push({
+              shift_number: s.shift_number || 1,
+              start_time: s.start_time,
+              end_time: s.end_time,
+            });
+          }
+        });
+        
+        // Sort shifts within each day
+        Object.values(grouped).forEach(empSchedules => {
+          empSchedules.forEach(day => {
+            day.shifts.sort((a, b) => a.shift_number - b.shift_number);
           });
         });
       }
@@ -119,14 +139,15 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
     const empSchedules = schedules[emp.id] || [];
     
     // Create a complete week schedule
-    const weekSchedule: ScheduleEntry[] = DAYS_OF_WEEK.map(day => {
+    const weekSchedule: DaySchedule[] = DAYS_OF_WEEK.map(day => {
       const existing = empSchedules.find(s => s.day_of_week === day.value);
-      return existing || {
-        employee_id: emp.id,
+      if (existing) {
+        return { ...existing, shifts: existing.shifts.length > 0 ? [...existing.shifts] : [{ shift_number: 1, start_time: '09:00', end_time: '17:00' }] };
+      }
+      return {
         day_of_week: day.value,
-        start_time: '09:00',
-        end_time: '17:00',
         is_day_off: true,
+        shifts: [{ shift_number: 1, start_time: '09:00', end_time: '17:00' }],
       };
     });
     
@@ -145,16 +166,34 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
         .delete()
         .eq('employee_id', selectedEmployee.id);
 
-      // Insert non-day-off schedules
-      const toInsert = editingSchedules
-        .filter(s => !s.is_day_off)
-        .map(s => ({
-          employee_id: s.employee_id,
-          day_of_week: s.day_of_week,
-          start_time: s.start_time,
-          end_time: s.end_time,
-          is_day_off: s.is_day_off,
-        }));
+      // Insert new schedules
+      const toInsert: any[] = [];
+      
+      editingSchedules.forEach(day => {
+        if (day.is_day_off) {
+          // Insert a single record for day off
+          toInsert.push({
+            employee_id: selectedEmployee.id,
+            day_of_week: day.day_of_week,
+            is_day_off: true,
+            start_time: '00:00',
+            end_time: '00:00',
+            shift_number: 1,
+          });
+        } else {
+          // Insert each shift
+          day.shifts.forEach((shift, idx) => {
+            toInsert.push({
+              employee_id: selectedEmployee.id,
+              day_of_week: day.day_of_week,
+              is_day_off: false,
+              start_time: shift.start_time,
+              end_time: shift.end_time,
+              shift_number: idx + 1,
+            });
+          });
+        }
+      });
 
       if (toInsert.length > 0) {
         const { error } = await supabase
@@ -175,19 +214,63 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
     }
   };
 
-  const updateScheduleEntry = (dayOfWeek: number, field: keyof ScheduleEntry, value: any) => {
-    setEditingSchedules(prev => prev.map(s => 
-      s.day_of_week === dayOfWeek ? { ...s, [field]: value } : s
+  const toggleDayOff = (dayOfWeek: number) => {
+    setEditingSchedules(prev => prev.map(d => 
+      d.day_of_week === dayOfWeek 
+        ? { ...d, is_day_off: !d.is_day_off }
+        : d
     ));
   };
 
-  const getTodaySchedule = (employeeId: string): { start: string; end: string } | null => {
-    const today = new Date().getDay();
-    const empSchedule = schedules[employeeId]?.find(s => s.day_of_week === today && !s.is_day_off);
-    if (empSchedule) {
-      return { start: empSchedule.start_time.slice(0, 5), end: empSchedule.end_time.slice(0, 5) };
-    }
-    return null;
+  const updateShift = (dayOfWeek: number, shiftNumber: number, field: 'start_time' | 'end_time', value: string) => {
+    setEditingSchedules(prev => prev.map(d => {
+      if (d.day_of_week !== dayOfWeek) return d;
+      return {
+        ...d,
+        shifts: d.shifts.map(s => 
+          s.shift_number === shiftNumber ? { ...s, [field]: value } : s
+        ),
+      };
+    }));
+  };
+
+  const addShift = (dayOfWeek: number) => {
+    setEditingSchedules(prev => prev.map(d => {
+      if (d.day_of_week !== dayOfWeek) return d;
+      const nextNumber = d.shifts.length + 1;
+      return {
+        ...d,
+        shifts: [...d.shifts, { shift_number: nextNumber, start_time: '14:00', end_time: '22:00' }],
+      };
+    }));
+  };
+
+  const removeShift = (dayOfWeek: number, shiftNumber: number) => {
+    setEditingSchedules(prev => prev.map(d => {
+      if (d.day_of_week !== dayOfWeek) return d;
+      return {
+        ...d,
+        shifts: d.shifts.filter(s => s.shift_number !== shiftNumber).map((s, idx) => ({ ...s, shift_number: idx + 1 })),
+      };
+    }));
+  };
+
+  const getEmployeeWeekSummary = (employeeId: string): string => {
+    const empSchedule = schedules[employeeId] || [];
+    const workingDays = empSchedule.filter(d => !d.is_day_off && d.shifts.length > 0).length;
+    const hasSplitShift = empSchedule.some(d => d.shifts.length > 1);
+    
+    if (workingDays === 0) return 'Sin horario';
+    return `${workingDays} días${hasSplitShift ? ' (turno cortado)' : ''}`;
+  };
+
+  const formatDaySchedule = (employeeId: string, dayOfWeek: number): string => {
+    const empSchedule = schedules[employeeId]?.find(d => d.day_of_week === dayOfWeek);
+    if (!empSchedule || empSchedule.is_day_off || empSchedule.shifts.length === 0) return '—';
+    
+    return empSchedule.shifts
+      .map(s => `${s.start_time.slice(0, 5)}-${s.end_time.slice(0, 5)}`)
+      .join(' / ');
   };
 
   if (loading) {
@@ -200,14 +283,15 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
 
   return (
     <div className="space-y-6">
+      {/* Weekly Overview Grid */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            Planilla de Horarios
+            Horarios de la Semana
           </CardTitle>
           <CardDescription>
-            Configurá los horarios semanales de cada empleado
+            Vista general de horarios por empleado. Soporta turnos cortados.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -216,53 +300,50 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
               <p>No hay empleados activos</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {employees.map((emp) => {
-                const todaySchedule = getTodaySchedule(emp.id);
-                const hasSchedule = schedules[emp.id]?.length > 0;
-                
-                return (
-                  <div
-                    key={emp.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium">{emp.full_name}</p>
-                      {emp.position && (
-                        <p className="text-sm text-muted-foreground">{emp.position}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4">
-                      {hasSchedule ? (
-                        <div className="text-right">
-                          {todaySchedule ? (
-                            <>
-                              <p className="text-sm font-mono">
-                                {todaySchedule.start} - {todaySchedule.end}
-                              </p>
-                              <p className="text-xs text-muted-foreground">Horario de hoy</p>
-                            </>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">Día libre hoy</p>
-                          )}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-3 px-2 font-medium">Empleado</th>
+                    {DAYS_OF_WEEK.map(day => (
+                      <th key={day.value} className="text-center py-3 px-2 font-medium min-w-[80px]">
+                        {day.short}
+                      </th>
+                    ))}
+                    {canManage && <th className="text-right py-3 px-2 w-20"></th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {employees.map((emp) => (
+                    <tr key={emp.id} className="border-b hover:bg-muted/50">
+                      <td className="py-3 px-2">
+                        <div>
+                          <p className="font-medium">{emp.full_name}</p>
+                          <p className="text-xs text-muted-foreground">{getEmployeeWeekSummary(emp.id)}</p>
                         </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Sin horario configurado</p>
-                      )}
+                      </td>
+                      {DAYS_OF_WEEK.map(day => (
+                        <td key={day.value} className="text-center py-3 px-1">
+                          <span className="text-xs font-mono">
+                            {formatDaySchedule(emp.id, day.value)}
+                          </span>
+                        </td>
+                      ))}
                       {canManage && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditDialog(emp)}
-                        >
-                          <Edit2 className="h-4 w-4 mr-1" />
-                          Editar
-                        </Button>
+                        <td className="text-right py-3 px-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditDialog(emp)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        </td>
                       )}
-                    </div>
-                  </div>
-                );
-              })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>
@@ -270,62 +351,90 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
 
       {/* Schedule Editor Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
               Horarios de {selectedEmployee?.full_name}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+          <div className="space-y-3 overflow-y-auto flex-1 pr-2">
             {editingSchedules.map((schedule) => {
               const day = DAYS_OF_WEEK.find(d => d.value === schedule.day_of_week);
               return (
                 <div
                   key={schedule.day_of_week}
-                  className={`flex items-center gap-4 p-3 border rounded-lg ${
-                    schedule.is_day_off ? 'bg-muted/50 opacity-60' : ''
-                  }`}
+                  className={`p-4 border rounded-lg ${schedule.is_day_off ? 'bg-muted/50' : ''}`}
                 >
-                  <div className="w-24">
-                    <p className="font-medium">{day?.label}</p>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <span className="font-medium w-24">{day?.label}</span>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={!schedule.is_day_off}
+                          onCheckedChange={() => toggleDayOff(schedule.day_of_week)}
+                        />
+                        <span className="text-sm text-muted-foreground">
+                          {schedule.is_day_off ? 'Libre' : 'Trabaja'}
+                        </span>
+                      </div>
+                    </div>
+                    {!schedule.is_day_off && schedule.shifts.length < 3 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addShift(schedule.day_of_week)}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Turno
+                      </Button>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={!schedule.is_day_off}
-                      onCheckedChange={(checked) => updateScheduleEntry(schedule.day_of_week, 'is_day_off', !checked)}
-                    />
-                    <span className="text-sm text-muted-foreground">
-                      {schedule.is_day_off ? 'Libre' : 'Trabaja'}
-                    </span>
-                  </div>
+                  
                   {!schedule.is_day_off && (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <Label className="text-sm">Entrada:</Label>
-                        <Input
-                          type="time"
-                          className="w-32"
-                          value={schedule.start_time}
-                          onChange={(e) => updateScheduleEntry(schedule.day_of_week, 'start_time', e.target.value)}
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Label className="text-sm">Salida:</Label>
-                        <Input
-                          type="time"
-                          className="w-32"
-                          value={schedule.end_time}
-                          onChange={(e) => updateScheduleEntry(schedule.day_of_week, 'end_time', e.target.value)}
-                        />
-                      </div>
-                    </>
+                    <div className="space-y-2 ml-4">
+                      {schedule.shifts.map((shift, idx) => (
+                        <div key={shift.shift_number} className="flex items-center gap-3 p-2 bg-background rounded border">
+                          <Badge variant="secondary" className="text-xs">
+                            Turno {idx + 1}
+                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs text-muted-foreground">Entrada:</Label>
+                            <Input
+                              type="time"
+                              className="w-28 h-8"
+                              value={shift.start_time}
+                              onChange={(e) => updateShift(schedule.day_of_week, shift.shift_number, 'start_time', e.target.value)}
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs text-muted-foreground">Salida:</Label>
+                            <Input
+                              type="time"
+                              className="w-28 h-8"
+                              value={shift.end_time}
+                              onChange={(e) => updateShift(schedule.day_of_week, shift.shift_number, 'end_time', e.target.value)}
+                            />
+                          </div>
+                          {schedule.shifts.length > 1 && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => removeShift(schedule.day_of_week, shift.shift_number)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               );
             })}
           </div>
-          <DialogFooter>
+          <DialogFooter className="pt-4 border-t">
             <Button variant="outline" onClick={() => setShowDialog(false)}>
               Cancelar
             </Button>
