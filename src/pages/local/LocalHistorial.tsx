@@ -323,15 +323,15 @@ export default function LocalHistorial() {
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full table-fixed">
               <thead className="bg-muted/50">
                 <tr>
-                  <th className="w-10 p-3"></th>
-                  <th className="text-left p-3 text-sm font-medium">Fecha</th>
+                  <th className="w-12 p-3"></th>
+                  <th className="w-24 text-left p-3 text-sm font-medium">Fecha</th>
                   <th className="text-left p-3 text-sm font-medium">Cliente</th>
-                  <th className="text-left p-3 text-sm font-medium">Canal</th>
-                  <th className="text-left p-3 text-sm font-medium">Estado</th>
-                  <th className="text-right p-3 text-sm font-medium">Total</th>
+                  <th className="w-32 text-left p-3 text-sm font-medium">Canal</th>
+                  <th className="w-28 text-left p-3 text-sm font-medium">Estado</th>
+                  <th className="w-28 text-right p-3 text-sm font-medium">Total</th>
                 </tr>
               </thead>
               <tbody>
