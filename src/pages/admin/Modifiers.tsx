@@ -14,7 +14,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Plus, Settings, Trash2, Edit2, ChefHat, Package, 
-  RefreshCw, GripVertical, ToggleLeft, ToggleRight 
+  RefreshCw, GripVertical, ToggleLeft, ToggleRight, Link2, Image 
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
@@ -40,6 +40,8 @@ interface ModifierOption {
   price_adjustment: number;
   is_active: boolean;
   display_order: number;
+  linked_product_id?: string | null;
+  linkedProduct?: Product | null;
 }
 
 interface ProductAssignment {
@@ -73,6 +75,7 @@ export default function Modifiers() {
   
   const [optionName, setOptionName] = useState('');
   const [optionPrice, setOptionPrice] = useState('0');
+  const [optionLinkedProductId, setOptionLinkedProductId] = useState<string>('');
 
   useEffect(() => {
     fetchData();
@@ -89,7 +92,7 @@ export default function Modifiers() {
 
       const { data: optionsData } = await supabase
         .from('modifier_options')
-        .select('*')
+        .select('*, linked_product:products!modifier_options_linked_product_id_fkey(id, name, image_url)')
         .order('display_order');
 
       const { data: productsData } = await supabase
@@ -104,7 +107,11 @@ export default function Modifiers() {
       const groupsWithOptions: ModifierGroup[] = (groupsData || []).map(g => ({
         ...g,
         selection_type: g.selection_type as 'single' | 'multiple',
-        options: (optionsData || []).filter(o => o.group_id === g.id),
+        options: (optionsData || []).filter(o => o.group_id === g.id).map(o => ({
+          ...o,
+          linked_product_id: (o as any).linked_product_id,
+          linkedProduct: (o as any).linked_product as Product | null,
+        })),
       }));
 
       setGroups(groupsWithOptions);
@@ -187,17 +194,20 @@ export default function Modifiers() {
       if (!groupId) return;
 
       if (editingOption) {
+        const linkedId = optionLinkedProductId || null;
         const { error } = await supabase
           .from('modifier_options')
           .update({
             name: optionName,
             price_adjustment: parseFloat(optionPrice) || 0,
-          })
+            linked_product_id: linkedId,
+          } as any)
           .eq('id', editingOption.id);
         if (error) throw error;
         toast({ title: 'Opción actualizada' });
       } else {
         const group = groups.find(g => g.id === groupId);
+        const linkedId = optionLinkedProductId || null;
         const { error } = await supabase
           .from('modifier_options')
           .insert({
@@ -205,7 +215,8 @@ export default function Modifiers() {
             name: optionName,
             price_adjustment: parseFloat(optionPrice) || 0,
             display_order: group?.options.length || 0,
-          });
+            linked_product_id: linkedId,
+          } as any);
         if (error) throw error;
         toast({ title: 'Opción creada' });
       }
@@ -293,6 +304,7 @@ export default function Modifiers() {
     setSelectedGroupForOption('');
     setOptionName('');
     setOptionPrice('0');
+    setOptionLinkedProductId('');
   };
 
   const openEditGroup = (group: ModifierGroup) => {
@@ -309,6 +321,7 @@ export default function Modifiers() {
     setEditingOption(option);
     setOptionName(option.name);
     setOptionPrice(String(option.price_adjustment));
+    setOptionLinkedProductId(option.linked_product_id || '');
     setOptionDialog(true);
   };
 
@@ -436,38 +449,59 @@ export default function Modifiers() {
                   </p>
                 ) : (
                   <div className="grid gap-2">
-                    {group.options.map(option => (
-                      <div 
-                        key={option.id} 
-                        className={`flex items-center justify-between p-3 border rounded-lg ${!option.is_active ? 'opacity-50 bg-muted/50' : ''}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Switch
-                            checked={option.is_active}
-                            onCheckedChange={(checked) => handleToggleOption(option.id, checked)}
-                          />
-                          <span className="font-medium">{option.name}</span>
-                          {Number(option.price_adjustment) !== 0 && (
-                            <Badge variant={Number(option.price_adjustment) > 0 ? 'default' : 'secondary'}>
-                              {Number(option.price_adjustment) > 0 ? '+' : ''}{formatPrice(Number(option.price_adjustment))}
-                            </Badge>
-                          )}
+                    {group.options.map(option => {
+                      const linkedProduct = option.linkedProduct;
+                      const displayName = linkedProduct?.name || option.name;
+                      const imageUrl = linkedProduct?.image_url;
+                      
+                      return (
+                        <div 
+                          key={option.id} 
+                          className={`flex items-center justify-between p-3 border rounded-lg ${!option.is_active ? 'opacity-50 bg-muted/50' : ''}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Switch
+                              checked={option.is_active}
+                              onCheckedChange={(checked) => handleToggleOption(option.id, checked)}
+                            />
+                            {imageUrl && (
+                              <img 
+                                src={imageUrl} 
+                                alt={displayName} 
+                                className="w-8 h-8 rounded object-cover"
+                              />
+                            )}
+                            <div>
+                              <span className="font-medium">{displayName}</span>
+                              {linkedProduct && (
+                                <span className="ml-2 text-xs text-muted-foreground">
+                                  <Link2 className="inline w-3 h-3 mr-1" />
+                                  Vinculado
+                                </span>
+                              )}
+                            </div>
+                            {Number(option.price_adjustment) !== 0 && (
+                              <Badge variant={Number(option.price_adjustment) > 0 ? 'default' : 'secondary'}>
+                                {Number(option.price_adjustment) > 0 ? '+' : ''}{formatPrice(Number(option.price_adjustment))}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="icon" onClick={() => openEditOption(option)}>
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => handleDeleteOption(option.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => openEditOption(option)}>
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => handleDeleteOption(option.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </AccordionContent>
@@ -548,18 +582,62 @@ export default function Modifiers() {
 
       {/* Option Dialog */}
       <Dialog open={optionDialog} onOpenChange={resetOptionForm}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>{editingOption ? 'Editar Opción' : 'Nueva Opción'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Vincular a producto existente */}
             <div>
-              <Label>Nombre</Label>
+              <Label>Vincular a producto (opcional)</Label>
+              <Select 
+                value={optionLinkedProductId} 
+                onValueChange={(v) => {
+                  setOptionLinkedProductId(v === 'none' ? '' : v);
+                  if (v && v !== 'none') {
+                    const product = products.find(p => p.id === v);
+                    if (product && !editingOption) {
+                      setOptionName(product.name);
+                    }
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin vincular (opción independiente)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin vincular</SelectItem>
+                  {products.filter(p => p.product_type === 'bebida' || p.category_id).map(product => (
+                    <SelectItem key={product.id} value={product.id}>
+                      <div className="flex items-center gap-2">
+                        {product.image_url && (
+                          <img src={product.image_url} alt="" className="w-5 h-5 rounded object-cover" />
+                        )}
+                        <span>{product.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Al vincular, hereda imagen y nombre del producto. Las ventas se unifican en estadísticas.
+              </p>
+            </div>
+
+            <Separator />
+
+            <div>
+              <Label>Nombre {optionLinkedProductId && '(override)'}</Label>
               <Input 
                 placeholder="Ej: Extra Cheddar, Bacon, Jugoso" 
                 value={optionName}
                 onChange={(e) => setOptionName(e.target.value)}
               />
+              {optionLinkedProductId && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Dejalo igual al producto o cambialo para mostrar diferente
+                </p>
+              )}
             </div>
             <div>
               <Label>Ajuste de precio</Label>
@@ -571,7 +649,7 @@ export default function Modifiers() {
                 onChange={(e) => setOptionPrice(e.target.value)}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Usá valores negativos para descuentos
+                Usá valores negativos para descuentos. En combos suele ser $0.
               </p>
             </div>
           </div>
