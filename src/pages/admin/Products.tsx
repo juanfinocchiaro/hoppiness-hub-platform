@@ -445,15 +445,20 @@ export default function Products() {
                           }
                         `}
                       >
-                      {/* Product Info */}
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        {product.image_url && (
-                          <img 
-                            src={product.image_url} 
-                            alt={product.name}
-                            className="w-10 h-10 rounded-md object-cover shrink-0"
-                          />
-                        )}
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0">
+                          {product.image_url ? (
+                            <img 
+                              src={product.image_url} 
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-muted-foreground/40">
+                              <span className="text-lg">🍔</span>
+                            </div>
+                          )}
+                        </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
                             {product.is_featured && (
