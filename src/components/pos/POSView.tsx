@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import TipInput from './TipInput';
+import CheckoutDialog from './CheckoutDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -1651,290 +1652,35 @@ export default function POSView({ branch }: POSViewProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Checkout Dialog */}
-      <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Confirmar Pedido</DialogTitle>
-            <DialogDescription>
-              Ingresá los datos del cliente para completar el pedido
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            {/* Apps: Channel selector */}
-            {orderArea === 'apps' && (
-              <div className="space-y-3">
-                <Label>Plataforma *</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {APPS_CHANNELS.map(channel => (
-                    <Button
-                      key={channel.value}
-                      variant={appsChannel === channel.value ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        setAppsChannel(channel.value);
-                        // Auto-set payment method based on channel
-                        const paymentInfo = getAppPaymentInfo(channel.value);
-                        if (paymentInfo.fixed && paymentInfo.method) {
-                          setAppPaymentMethod(paymentInfo.method);
-                        } else if (paymentInfo.options && paymentInfo.options.length > 0) {
-                          setAppPaymentMethod(paymentInfo.options[0]);
-                        }
-                      }}
-                      className="text-xs"
-                    >
-                      {channel.label}
-                    </Button>
-                  ))}
-                </div>
-                <div className="space-y-2">
-                  <Label>ID de pedido externo</Label>
-                  <Input
-                    placeholder="Ej: #12345"
-                    value={externalOrderId}
-                    onChange={(e) => setExternalOrderId(e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Mostrador: Sub-type selector */}
-            {orderArea === 'mostrador' && (
-              <div className="space-y-3">
-                <Label>Tipo de pedido</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant={counterSubType === 'takeaway' ? 'default' : 'outline'}
-                    onClick={() => setCounterSubType('takeaway')}
-                    className="flex-col h-auto py-3"
-                  >
-                    <Store className="w-5 h-5 mb-1" />
-                    <span className="text-sm font-medium">Para llevar</span>
-                  </Button>
-                  <Button
-                    variant={counterSubType === 'dine_here' ? 'default' : 'outline'}
-                    onClick={() => setCounterSubType('dine_here')}
-                    className="flex-col h-auto py-3"
-                  >
-                    <Utensils className="w-5 h-5 mb-1" />
-                    <span className="text-sm font-medium">Comer acá</span>
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Mostrador: Campos dinámicos */}
-            {orderArea === 'mostrador' && counterSubType === 'takeaway' && (
-              <div className="space-y-2">
-                <Label>Nombre o Número de llamador</Label>
-                <p className="text-xs text-muted-foreground">
-                  Ingresá el nombre del cliente o un número de llamador
-                </p>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Nombre o #123"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-            )}
-
-            {orderArea === 'mostrador' && counterSubType === 'dine_here' && (
-              <div className="space-y-2">
-                <Label>Número de llamador *</Label>
-                <p className="text-xs text-muted-foreground">
-                  El cliente recibirá un llamador para retirar su pedido
-                </p>
-                <div className="relative">
-                  <Input
-                    type="number"
-                    placeholder="Ej: 42"
-                    value={callerNumber}
-                    onChange={(e) => {
-                      setCallerNumber(e.target.value);
-                      setCustomerName(`Llamador #${e.target.value}`);
-                    }}
-                    className="text-center text-2xl font-bold h-14"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Delivery y Apps: Nombre, teléfono, dirección y envío */}
-            {(orderArea === 'delivery' || orderArea === 'apps') && (
-              <>
-                <div className="space-y-2">
-                  <Label>Nombre del cliente *</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Nombre"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Teléfono *</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Teléfono"
-                      value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Dirección de entrega *</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Dirección"
-                      value={deliveryAddress}
-                      onChange={(e) => setDeliveryAddress(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Costo de envío</Label>
-                  <p className="text-xs text-muted-foreground">
-                    {orderArea === 'apps' && appsChannel === 'pedidos_ya' 
-                      ? 'En Pedidos Ya este dinero nos entra a nosotros'
-                      : 'Lo que se le cobra al cliente por el envío'
-                    }
-                  </p>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={customDeliveryFee}
-                      onChange={(e) => setCustomDeliveryFee(e.target.value)}
-                      className="pl-8"
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Método de pago - condicional según área */}
-            <div className="space-y-2">
-              <Label>Método de pago</Label>
-              
-              {/* Para Apps: mostrar según la plataforma */}
-              {orderArea === 'apps' && (() => {
-                const paymentInfo = getAppPaymentInfo(appsChannel);
-                
-                if (paymentInfo.fixed && paymentInfo.method) {
-                  // Rappi o MP Delivery: método fijo
-                  return (
-                    <div className="bg-muted rounded-lg p-3 text-center">
-                      <Badge variant="default" className="text-sm px-4 py-2">
-                        {APP_PAYMENT_LABELS[paymentInfo.method]}
-                      </Badge>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Método de pago fijo para {appsChannel === 'rappi' ? 'Rappi' : 'MercadoPago Delivery'}
-                      </p>
-                    </div>
-                  );
-                } else {
-                  // PedidosYa: puede ser efectivo o pedidos_ya
-                  return (
-                    <div className="grid grid-cols-2 gap-2">
-                      {paymentInfo.options?.map(method => (
-                        <Button
-                          key={method}
-                          variant={appPaymentMethod === method ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setAppPaymentMethod(method)}
-                          className="flex-col h-auto py-2"
-                        >
-                          {method === 'efectivo' ? (
-                            <Banknote className="w-4 h-4 mb-1" />
-                          ) : (
-                            <Bike className="w-4 h-4 mb-1" />
-                          )}
-                          <span className="text-xs">{APP_PAYMENT_LABELS[method]}</span>
-                        </Button>
-                      ))}
-                    </div>
-                  );
-                }
-              })()}
-              
-              {/* Para Mostrador y Delivery propio: métodos normales */}
-              {orderArea !== 'apps' && (
-                <div className="grid grid-cols-3 gap-2">
-                  {PAYMENT_METHODS.map(method => (
-                    <Button
-                      key={method.value}
-                      variant={paymentMethod === method.value ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setPaymentMethod(method.value)}
-                      className="flex-col h-auto py-2"
-                    >
-                      <method.icon className="w-4 h-4 mb-1" />
-                      <span className="text-xs">{method.label}</span>
-                    </Button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Tip Input - Only for dine_in */}
-            {orderArea === 'mostrador' && counterSubType === 'dine_here' && (
-              <TipInput
-                subtotal={subtotal}
-                tipAmount={tipAmount}
-                onTipChange={setTipAmount}
-              />
-            )}
-
-            <div className="bg-muted rounded-lg p-3 space-y-1">
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Subtotal</span>
-                <span>{formatPrice(subtotal)}</span>
-              </div>
-              {deliveryFee > 0 && (
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>Envío</span>
-                  <span>{formatPrice(deliveryFee)}</span>
-                </div>
-              )}
-              {tipAmount > 0 && (
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>Propina</span>
-                  <span>{formatPrice(tipAmount)}</span>
-                </div>
-              )}
-              <div className="flex justify-between font-bold pt-1 border-t">
-                <span>Total a cobrar</span>
-                <span className="text-primary">{formatPrice(total)}</span>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCheckoutOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleCheckout} disabled={isProcessing}>
-              {isProcessing ? 'Procesando...' : 'Confirmar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* NEW Checkout Dialog - Read-only info + Split Payment */}
+      <CheckoutDialog
+        open={isCheckoutOpen}
+        onOpenChange={setIsCheckoutOpen}
+        cart={cart}
+        branch={branch}
+        orderConfig={{
+          orderArea,
+          counterSubType,
+          appsChannel,
+          callerNumber,
+          customerName,
+          customerPhone,
+          customerEmail,
+          deliveryAddress,
+          externalOrderId,
+          customDeliveryFee,
+          invoiceType,
+          customerCuit,
+          customerBusinessName,
+        }}
+        activeShiftId={activeShift?.id || null}
+        userId={user?.id || null}
+        onOrderComplete={handleCancelOrder}
+        onEditOrder={() => {
+          setIsCheckoutOpen(false);
+          setShowNewOrderDialog(true);
+        }}
+      />
 
       {/* NEW ORDER DIALOG - Configure order before adding products */}
       <Dialog open={showNewOrderDialog} onOpenChange={setShowNewOrderDialog}>

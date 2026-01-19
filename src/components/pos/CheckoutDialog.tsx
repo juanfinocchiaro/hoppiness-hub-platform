@@ -91,7 +91,8 @@ interface CheckoutDialogProps {
   existingPayments?: PaymentRecord[];
 }
 
-type PaymentMethod = 'efectivo' | 'tarjeta_debito' | 'tarjeta_credito' | 'mercadopago_qr' | 'mercadopago_link' | 'transferencia';
+// Use the same type as SplitPayment
+type PaymentMethod = SplitPaymentMethod;
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ElementType }[] = [
   { value: 'efectivo', label: 'Efectivo', icon: Banknote },
