@@ -77,7 +77,7 @@ export default function Products() {
   }>({ open: false, productId: null });
 
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
-  const [showActiveOnly, setShowActiveOnly] = useState(true);
+  const [showDisabledInCategory, setShowDisabledInCategory] = useState<Set<string>>(new Set());
 
   const fetchData = async () => {
     const [productsRes, categoriesRes, branchesRes, branchProductsRes] = await Promise.all([
@@ -163,11 +163,39 @@ export default function Products() {
     });
   };
 
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase());
-    const matchesActiveFilter = showActiveOnly ? product.is_enabled_by_brand : true;
-    return matchesSearch && matchesActiveFilter;
+  // Products filtered by search only (we'll filter by active status per category)
+  const searchFilteredProducts = products.filter((product) => {
+    return product.name.toLowerCase().includes(search.toLowerCase());
   });
+
+  // Helper to get products for a category (active + optionally inactive)
+  const getProductsForCategory = (categoryId: string | null) => {
+    const categoryProducts = searchFilteredProducts.filter(p => 
+      categoryId === 'uncategorized' ? !p.category_id : p.category_id === categoryId
+    );
+    const activeProducts = categoryProducts.filter(p => p.is_enabled_by_brand);
+    const inactiveProducts = categoryProducts.filter(p => !p.is_enabled_by_brand);
+    const showInactive = showDisabledInCategory.has(categoryId || 'uncategorized');
+    
+    return {
+      visibleProducts: showInactive ? categoryProducts : activeProducts,
+      activeCount: activeProducts.length,
+      inactiveCount: inactiveProducts.length,
+      showingInactive: showInactive,
+    };
+  };
+
+  const toggleShowDisabledInCategory = (categoryId: string) => {
+    setShowDisabledInCategory(prev => {
+      const next = new Set(prev);
+      if (next.has(categoryId)) {
+        next.delete(categoryId);
+      } else {
+        next.add(categoryId);
+      }
+      return next;
+    });
+  };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-AR', {
@@ -292,16 +320,23 @@ export default function Products() {
     setDisableDialog(null);
   };
 
-  const productsByCategory = categories.map(category => ({
-    category,
-    products: filteredProducts.filter(p => p.category_id === category.id)
-  })).filter(group => group.products.length > 0);
+  // Build category groups - include categories that have any products (active or inactive)
+  const productsByCategory = categories
+    .map(category => {
+      const categoryData = getProductsForCategory(category.id);
+      return {
+        category,
+        ...categoryData,
+      };
+    })
+    .filter(group => group.activeCount > 0 || group.inactiveCount > 0);
 
-  const uncategorizedProducts = filteredProducts.filter(p => !p.category_id);
-  if (uncategorizedProducts.length > 0) {
+  // Handle uncategorized products
+  const uncategorizedData = getProductsForCategory('uncategorized');
+  if (uncategorizedData.activeCount > 0 || uncategorizedData.inactiveCount > 0) {
     productsByCategory.push({
       category: { id: 'uncategorized', name: 'Sin Categoría', display_order: 999, is_active: true, created_at: '', description: null, image_url: null },
-      products: uncategorizedProducts
+      ...uncategorizedData,
     });
   }
 
@@ -366,28 +401,12 @@ export default function Products() {
           />
         </div>
         
-        <Button
-          variant={showActiveOnly ? "default" : "outline"}
-          size="sm"
-          onClick={() => setShowActiveOnly(!showActiveOnly)}
-          className="gap-2"
-        >
-          {showActiveOnly ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-          {showActiveOnly ? 'Solo activos' : 'Todos'}
-        </Button>
-        
-        {!showActiveOnly && totalDisabled > 0 && (
-          <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-0">
-            {totalDisabled} inactivos ocultos cuando filtras
-          </Badge>
-        )}
       </div>
 
       {/* Products Grid */}
       <div className="space-y-4">
-        {productsByCategory.map(({ category, products: categoryProducts }) => {
+        {productsByCategory.map(({ category, visibleProducts, activeCount, inactiveCount, showingInactive }) => {
           const categoryStatus = getCategoryStatus(category.id);
-          const disabledInCategory = categoryProducts.filter(p => !p.is_enabled_by_brand).length;
           
           return (
           <div key={category.id} className="space-y-3">
@@ -409,11 +428,11 @@ export default function Products() {
                   {category.name}
                 </span>
                 <Badge variant="secondary" className="text-xs">
-                  {categoryProducts.length}
+                  {activeCount}
                 </Badge>
-                {category.is_active && categoryStatus === 'incomplete' && (
+                {inactiveCount > 0 && (
                   <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600 bg-amber-500/10">
-                    {disabledInCategory} desactivados
+                    +{inactiveCount} inactivos
                   </Badge>
                 )}
               </button>
@@ -457,7 +476,7 @@ export default function Products() {
             {/* Products List */}
             {expandedCategories.has(category.id) && (
               <div className="grid gap-3 pl-2">
-                {categoryProducts.map((product) => {
+                {visibleProducts.map((product) => {
                   const isDisabledByBrand = !product.is_enabled_by_brand;
                   const availableCount = getAvailableBranchesCount(product.id);
                   
@@ -615,6 +634,32 @@ export default function Products() {
                     </div>
                   );
                 })}
+                
+                {/* Show/Hide Inactive Products Button */}
+                {inactiveCount > 0 && (
+                  <button
+                    onClick={() => toggleShowDisabledInCategory(category.id)}
+                    className="flex items-center gap-2 py-3 px-4 w-full text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all group"
+                  >
+                    <div className={`
+                      flex items-center justify-center w-5 h-5 rounded-full border border-dashed 
+                      transition-all group-hover:border-primary group-hover:text-primary
+                      ${showingInactive ? 'bg-primary/10 border-primary text-primary' : 'border-muted-foreground/40'}
+                    `}>
+                      {showingInactive ? (
+                        <EyeOff className="w-3 h-3" />
+                      ) : (
+                        <Plus className="w-3 h-3" />
+                      )}
+                    </div>
+                    <span>
+                      {showingInactive 
+                        ? 'Ocultar productos desactivados' 
+                        : `Ver ${inactiveCount} producto${inactiveCount > 1 ? 's' : ''} desactivado${inactiveCount > 1 ? 's' : ''}`
+                      }
+                    </span>
+                  </button>
+                )}
               </div>
             )}
           </div>
