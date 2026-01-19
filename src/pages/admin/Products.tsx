@@ -6,6 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -53,6 +60,8 @@ export default function Products() {
   const [branchProducts, setBranchProducts] = useState<BranchProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'enabled' | 'disabled' | 'featured'>('all');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [updating, setUpdating] = useState<string | null>(null);
   const [scheduleDialog, setScheduleDialog] = useState<{
@@ -167,9 +176,23 @@ export default function Products() {
     });
   };
 
-  // Products filtered by search only (we'll filter by active status per category)
+  // Products filtered by search and filters
   const searchFilteredProducts = products.filter((product) => {
-    return product.name.toLowerCase().includes(search.toLowerCase());
+    // Text search
+    const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase());
+    
+    // Category filter
+    const matchesCategory = filterCategory === 'all' 
+      || (filterCategory === 'uncategorized' && !product.category_id)
+      || product.category_id === filterCategory;
+    
+    // Status filter
+    const matchesStatus = filterStatus === 'all'
+      || (filterStatus === 'enabled' && product.is_enabled_by_brand)
+      || (filterStatus === 'disabled' && !product.is_enabled_by_brand)
+      || (filterStatus === 'featured' && product.is_featured);
+    
+    return matchesSearch && matchesCategory && matchesStatus;
   });
 
   // Helper to get products for a category (active + optionally inactive at the end)
@@ -432,6 +455,69 @@ export default function Products() {
           />
         </div>
         
+        {/* Category Filter */}
+        <Select value={filterCategory} onValueChange={setFilterCategory}>
+          <SelectTrigger className="w-[180px] h-9">
+            <SelectValue placeholder="Categoría" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas las categorías</SelectItem>
+            {categories.map((cat) => (
+              <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+            ))}
+            <SelectItem value="uncategorized">Sin categoría</SelectItem>
+          </SelectContent>
+        </Select>
+        
+        {/* Status Filter */}
+        <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as typeof filterStatus)}>
+          <SelectTrigger className="w-[160px] h-9">
+            <SelectValue placeholder="Estado" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los estados</SelectItem>
+            <SelectItem value="enabled">
+              <span className="flex items-center gap-2">
+                <Check className="w-3 h-3 text-emerald-500" />
+                Habilitados
+              </span>
+            </SelectItem>
+            <SelectItem value="disabled">
+              <span className="flex items-center gap-2">
+                <X className="w-3 h-3 text-destructive" />
+                Deshabilitados
+              </span>
+            </SelectItem>
+            <SelectItem value="featured">
+              <span className="flex items-center gap-2">
+                <Star className="w-3 h-3 text-amber-500" />
+                Destacados
+              </span>
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        
+        {/* Active filters indicator */}
+        {(filterCategory !== 'all' || filterStatus !== 'all' || search) && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-9 text-muted-foreground"
+            onClick={() => {
+              setSearch('');
+              setFilterCategory('all');
+              setFilterStatus('all');
+            }}
+          >
+            <X className="w-3 h-3 mr-1" />
+            Limpiar filtros
+          </Button>
+        )}
+        
+        {/* Results count */}
+        <span className="text-xs text-muted-foreground ml-auto">
+          {searchFilteredProducts.length} de {products.length} productos
+        </span>
       </div>
 
       {/* Products Grid */}
