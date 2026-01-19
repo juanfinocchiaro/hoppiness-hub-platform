@@ -2186,6 +2186,7 @@ export type Database = {
           image_url: string | null
           is_active: boolean
           is_enabled_by_brand: boolean
+          linked_ingredient_id: string | null
           linked_product_id: string | null
           name: string
           price_adjustment: number
@@ -2198,6 +2199,7 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           is_enabled_by_brand?: boolean
+          linked_ingredient_id?: string | null
           linked_product_id?: string | null
           name: string
           price_adjustment?: number
@@ -2210,6 +2212,7 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           is_enabled_by_brand?: boolean
+          linked_ingredient_id?: string | null
           linked_product_id?: string | null
           name?: string
           price_adjustment?: number
@@ -2220,6 +2223,13 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "modifier_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modifier_options_linked_ingredient_id_fkey"
+            columns: ["linked_ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
             referencedColumns: ["id"]
           },
           {
