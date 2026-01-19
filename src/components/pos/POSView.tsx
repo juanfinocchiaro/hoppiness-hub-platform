@@ -1064,25 +1064,38 @@ export default function POSView({ branch }: POSViewProps) {
           
           {/* Customer/Caller Info */}
           {orderStarted && (
-            <div className="mt-3 bg-muted/50 rounded-lg p-3 space-y-1">
-              <div className="flex items-center gap-2 text-sm">
-                <User className="w-4 h-4 text-muted-foreground" />
-                <span className="font-medium">
-                  {customerName || (callerNumber ? `Llamador #${callerNumber}` : 'Sin nombre')}
-                </span>
+            <div className="mt-3 bg-muted/50 rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm">
+                    <User className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-medium">
+                      {customerName || (callerNumber ? `Llamador #${callerNumber}` : 'Sin nombre')}
+                    </span>
+                  </div>
+                  {callerNumber && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Hash className="w-4 h-4" />
+                      <span>Llamador #{callerNumber}</span>
+                    </div>
+                  )}
+                  {orderArea === 'delivery' && deliveryAddress && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <MapPin className="w-4 h-4" />
+                      <span className="truncate">{deliveryAddress}</span>
+                    </div>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancelOrder}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Cancelar
+                </Button>
               </div>
-              {callerNumber && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Hash className="w-4 h-4" />
-                  <span>Llamador #{callerNumber}</span>
-                </div>
-              )}
-              {orderArea === 'delivery' && deliveryAddress && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MapPin className="w-4 h-4" />
-                  <span className="truncate">{deliveryAddress}</span>
-                </div>
-              )}
               <div className="flex items-center gap-2 text-xs">
                 <Badge variant={invoiceType === 'factura_a' ? 'default' : 'outline'} className="text-xs">
                   {invoiceType === 'factura_a' ? 'Factura A' : 'Consumidor Final'}
