@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import TipInput from './TipInput';
 import CheckoutDialog from './CheckoutDialog';
+import CancelOrderDialog from './CancelOrderDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -243,6 +244,7 @@ export default function POSView({ branch }: POSViewProps) {
   // NEW: Order flow state - order must be configured before adding products
   const [orderStarted, setOrderStarted] = useState(false);
   const [showNewOrderDialog, setShowNewOrderDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   // Order flow dialog (shown before adding first product) - DEPRECATED, keeping for compatibility
   const [orderFlowDialog, setOrderFlowDialog] = useState<OrderFlowDialogType>(null);
@@ -378,8 +380,19 @@ export default function POSView({ branch }: POSViewProps) {
     setShowNewOrderDialog(false);
   };
 
-  // Cancel/Reset order
-  const handleCancelOrder = () => {
+  // Cancel/Reset order - if there are payments, show cancel dialog
+  const handleCancelOrderClick = () => {
+    if (draftPayments.length > 0) {
+      // Order has payments - show cancel dialog for refund management
+      setShowCancelDialog(true);
+    } else {
+      // No payments - just reset
+      handleResetOrder();
+    }
+  };
+
+  // Full reset of order state
+  const handleResetOrder = () => {
     setCart([]);
     setOrderStarted(false);
     setCustomerName('');
@@ -395,6 +408,7 @@ export default function POSView({ branch }: POSViewProps) {
     setAppPaymentMethod('pedidos_ya');
     setDraftOrderId(null);
     setDraftPayments([]);
+    setShowCancelDialog(false);
   };
 
   // Proceed to add product after order flow dialog is complete
@@ -970,7 +984,7 @@ export default function POSView({ branch }: POSViewProps) {
               className="pl-10"
             />
           </div>
-          <Button variant="outline" size="icon" onClick={handleCancelOrder} title="Cancelar pedido">
+          <Button variant="outline" size="icon" onClick={handleCancelOrderClick} title="Cancelar pedido">
             <X className="w-4 h-4" />
           </Button>
         </div>
@@ -1089,7 +1103,7 @@ export default function POSView({ branch }: POSViewProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleCancelOrder}
+                  onClick={handleCancelOrderClick}
                   className="text-destructive hover:text-destructive hover:bg-destructive/10"
                 >
                   <X className="w-4 h-4 mr-1" />
@@ -1750,7 +1764,7 @@ export default function POSView({ branch }: POSViewProps) {
           setDraftOrderId(orderId);
           setDraftPayments(payments);
         }}
-        onOrderComplete={handleCancelOrder}
+        onOrderComplete={handleResetOrder}
         onEditOrder={() => {
           // Just close the checkout dialog to return to products - don't open new order dialog
           setIsCheckoutOpen(false);
@@ -2154,6 +2168,18 @@ export default function POSView({ branch }: POSViewProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel Order Dialog - for orders with payments */}
+      <CancelOrderDialog
+        open={showCancelDialog}
+        onOpenChange={setShowCancelDialog}
+        draftOrderId={draftOrderId}
+        draftPayments={draftPayments}
+        branchId={branch.id}
+        activeShiftId={activeShift?.id || null}
+        onCancelComplete={handleResetOrder}
+        total={total}
+      />
     </div>
   );
 }
