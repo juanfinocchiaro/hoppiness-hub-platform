@@ -5,13 +5,25 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { AdminRoute, LocalRoute } from "@/components/guards";
+
+// Public pages
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Menu from "./pages/Menu";
-import MenuBranch from "./pages/MenuBranch";
+import Ingresar from "./pages/Ingresar";
+import Pedir from "./pages/Pedir";
+import PedirBranch from "./pages/PedirBranch";
+import PedidoTracking from "./pages/PedidoTracking";
+import NuestroMenu from "./pages/NuestroMenu";
 import Franquicias from "./pages/Franquicias";
+
+// POS / Local
 import POS from "./pages/pos/POS";
 import OrdersDashboard from "./pages/pos/OrdersDashboard";
+import LocalLayout from "./pages/local/LocalLayout";
+import LocalPedidos from "./pages/local/LocalPedidos";
+import LocalProductos from "./pages/local/LocalProductos";
+import LocalConfig from "./pages/local/LocalConfig";
+
+// Admin
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminHome from "./pages/admin/AdminHome";
 import Products from "./pages/admin/Products";
@@ -21,10 +33,7 @@ import BranchProducts from "./pages/admin/BranchProducts";
 import Suppliers from "./pages/admin/Suppliers";
 import Users from "./pages/admin/Users";
 import SalesReports from "./pages/admin/SalesReports";
-import LocalLayout from "./pages/local/LocalLayout";
-import LocalPedidos from "./pages/local/LocalPedidos";
-import LocalProductos from "./pages/local/LocalProductos";
-import LocalConfig from "./pages/local/LocalConfig";
+
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,12 +48,15 @@ const App = () => (
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/menu" element={<Menu />} />
-            <Route path="/menu/:branchSlug" element={<MenuBranch />} />
+            <Route path="/ingresar" element={<Ingresar />} />
+            <Route path="/auth" element={<Ingresar />} />
+            <Route path="/pedir" element={<Pedir />} />
+            <Route path="/pedir/:branchSlug" element={<PedirBranch />} />
+            <Route path="/pedido/:orderId" element={<PedidoTracking />} />
+            <Route path="/menu" element={<NuestroMenu />} />
             <Route path="/franquicias" element={<Franquicias />} />
             
-            {/* POS Routes (legacy, redirect to local) */}
+            {/* POS Routes */}
             <Route path="/pos" element={<LocalRoute><POS /></LocalRoute>} />
             <Route path="/pos/pedidos" element={<LocalRoute><OrdersDashboard /></LocalRoute>} />
             
@@ -59,7 +71,7 @@ const App = () => (
               <Route path="config" element={<LocalConfig />} />
             </Route>
             
-            {/* Admin Routes (super_admin / admin_marca) */}
+            {/* Admin Routes */}
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>}>
               <Route index element={<AdminHome />} />
               <Route path="productos" element={<Products />} />
@@ -72,7 +84,6 @@ const App = () => (
               <Route path="reportes" element={<SalesReports />} />
             </Route>
             
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
