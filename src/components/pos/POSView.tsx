@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import TipInput from './TipInput';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -220,6 +221,9 @@ export default function POSView({ branch }: POSViewProps) {
   const [invoiceType, setInvoiceType] = useState<InvoiceType>('consumidor_final');
   const [customerCuit, setCustomerCuit] = useState('');
   const [customerBusinessName, setCustomerBusinessName] = useState('');
+  
+  // Tip state
+  const [tipAmount, setTipAmount] = useState(0);
   
   // Checkout dialog
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -666,7 +670,7 @@ export default function POSView({ branch }: POSViewProps) {
   const deliveryFee = (orderArea === 'delivery' || orderArea === 'apps') && customDeliveryFee 
     ? parseFloat(customDeliveryFee) 
     : 0;
-  const total = subtotal + deliveryFee;
+  const total = subtotal + deliveryFee + tipAmount;
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-AR', {
@@ -769,6 +773,7 @@ export default function POSView({ branch }: POSViewProps) {
           external_order_id: orderArea === 'apps' ? externalOrderId : null,
           subtotal,
           delivery_fee: deliveryFee,
+          tip_amount: tipAmount > 0 ? tipAmount : null,
           total,
           status: 'pending',
           notes: orderNotes || null,
@@ -1887,8 +1892,33 @@ export default function POSView({ branch }: POSViewProps) {
               )}
             </div>
 
-            <div className="bg-muted rounded-lg p-3">
-              <div className="flex justify-between font-bold">
+            {/* Tip Input - Only for dine_in */}
+            {orderArea === 'mostrador' && counterSubType === 'dine_here' && (
+              <TipInput
+                subtotal={subtotal}
+                tipAmount={tipAmount}
+                onTipChange={setTipAmount}
+              />
+            )}
+
+            <div className="bg-muted rounded-lg p-3 space-y-1">
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Subtotal</span>
+                <span>{formatPrice(subtotal)}</span>
+              </div>
+              {deliveryFee > 0 && (
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Envío</span>
+                  <span>{formatPrice(deliveryFee)}</span>
+                </div>
+              )}
+              {tipAmount > 0 && (
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Propina</span>
+                  <span>{formatPrice(tipAmount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-bold pt-1 border-t">
                 <span>Total a cobrar</span>
                 <span className="text-primary">{formatPrice(total)}</span>
               </div>
