@@ -212,47 +212,28 @@ function ProductRow({ product, branches, formatPrice, getBranchAbbreviation }: P
         </div>
       </div>
 
-      {/* Right: Branch Availability */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex items-center gap-1.5 cursor-help">
-            {branches.map((branch) => {
-              const availability = product.availability.find(a => a.branchId === branch.id);
-              const isAvailable = availability?.available ?? false;
-              const abbr = getBranchAbbreviation(branch.name);
-              
-              return (
-                <div 
-                  key={branch.id}
-                  className={`px-2 py-1 rounded text-xs font-bold transition-colors ${
-                    isAvailable 
-                      ? 'bg-green-500 text-white' 
-                      : 'bg-red-500/20 text-red-500'
-                  }`}
-                  title={`${branch.name}: ${isAvailable ? 'Disponible' : 'Sin stock'}`}
-                >
-                  {abbr}
-                </div>
-              );
-            })}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="top">
-          <p className="font-medium">Stock en tiempo real</p>
-          <div className="mt-1 space-y-0.5">
-            {branches.map(branch => {
-              const availability = product.availability.find(a => a.branchId === branch.id);
-              const isAvailable = availability?.available ?? false;
-              return (
-                <div key={branch.id} className="flex items-center gap-2 text-xs">
-                  <Circle className={`w-2 h-2 fill-current ${isAvailable ? 'text-green-500' : 'text-red-500'}`} />
-                  <span>{branch.name}</span>
-                </div>
-              );
-            })}
-          </div>
-        </TooltipContent>
-      </Tooltip>
+      {/* Right: Branch Availability - Solo badges con title */}
+      <div className="flex items-center gap-1.5">
+        {branches.map((branch) => {
+          const availability = product.availability.find(a => a.branchId === branch.id);
+          const isAvailable = availability?.available ?? false;
+          const abbr = getBranchAbbreviation(branch.name);
+          
+          return (
+            <div 
+              key={branch.id}
+              className={`px-2 py-1 rounded text-xs font-bold transition-colors ${
+                isAvailable 
+                  ? 'bg-green-500 text-white' 
+                  : 'bg-red-500/20 text-red-500'
+              }`}
+              title={`${branch.name}: ${isAvailable ? 'Disponible' : 'Sin stock'}`}
+            >
+              {abbr}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
