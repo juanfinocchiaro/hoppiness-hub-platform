@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard,
@@ -11,9 +12,9 @@ import {
   LogOut,
   Menu,
   ChevronRight,
-  ShoppingCart,
   ClipboardList,
-  BarChart3
+  BarChart3,
+  Building2
 } from 'lucide-react';
 import {
   Sheet,
@@ -35,12 +36,32 @@ export default function AdminDashboard() {
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [hasAssignedBranch, setHasAssignedBranch] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
     }
   }, [user, loading, navigate]);
+
+  // Check if admin has any branch assigned
+  useEffect(() => {
+    async function checkBranchAccess() {
+      if (!user) return;
+      
+      const { data, error } = await supabase
+        .from('branch_permissions')
+        .select('id')
+        .eq('user_id', user.id)
+        .limit(1);
+      
+      if (!error && data && data.length > 0) {
+        setHasAssignedBranch(true);
+      }
+    }
+    
+    checkBranchAccess();
+  }, [user]);
 
   if (loading) {
     return (
@@ -91,6 +112,16 @@ export default function AdminDashboard() {
                 <h2 className="text-lg font-bold">Panel Admin</h2>
               </div>
               <NavContent />
+              {hasAssignedBranch && (
+                <div className="mt-4 pt-4 border-t">
+                  <Link to="/local">
+                    <Button variant="outline" className="w-full justify-start">
+                      <Building2 className="w-4 h-4 mr-3" />
+                      Panel Mi Local
+                    </Button>
+                  </Link>
+                </div>
+              )}
               <div className="absolute bottom-4 left-4 right-4">
                 <Button variant="outline" className="w-full" onClick={signOut}>
                   <LogOut className="w-4 h-4 mr-2" />
@@ -119,6 +150,17 @@ export default function AdminDashboard() {
           <div className="flex-1 p-4">
             <NavContent />
           </div>
+
+          {hasAssignedBranch && (
+            <div className="px-4 pb-2">
+              <Link to="/local">
+                <Button variant="outline" className="w-full justify-start">
+                  <Building2 className="w-4 h-4 mr-3" />
+                  Panel Mi Local
+                </Button>
+              </Link>
+            </div>
+          )}
           
           <div className="p-4 border-t">
             <Button variant="ghost" className="w-full justify-start" onClick={signOut}>

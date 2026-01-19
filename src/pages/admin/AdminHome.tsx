@@ -407,10 +407,12 @@ export default function AdminHome() {
         </CardContent>
       </Card>
 
-      {/* Orders Heatmap - All Branches */}
+      {/* Orders Heatmap - All Branches with selector */}
       <OrdersHeatmap 
-        title="Pedidos por horario (todas las sucursales)" 
-        description="Distribución de pedidos de canal propio en intervalos de 30 minutos"
+        title="Pedidos por horario (canal propio)" 
+        description="Distribución de pedidos en intervalos de 30 minutos"
+        showBranchSelector={true}
+        availableBranches={branches.map(b => ({ id: b.id, name: b.name }))}
       />
     </div>
   );
