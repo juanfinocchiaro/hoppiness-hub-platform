@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -29,10 +29,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Search, User, Shield, Settings, Store, RefreshCw } from 'lucide-react';
+import { Search, User, Shield, Settings, Store, RefreshCw, ArrowUpDown, Filter, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { format, isWithinInterval, parse, setHours, setMinutes } from 'date-fns';
+import { es } from 'date-fns/locale';
 import type { Tables, Enums } from '@/integrations/supabase/types';
 
 type Profile = Tables<'profiles'>;
@@ -41,6 +51,7 @@ type Branch = Tables<'branches'>;
 
 interface UserWithRole extends Profile {
   role: AppRole | null;
+  allRoles: AppRole[];
   branchPermissions?: {
     branch_id: string;
     branch_name: string;
@@ -50,6 +61,7 @@ interface UserWithRole extends Profile {
     can_manage_orders: boolean;
     can_manage_products: boolean;
   }[];
+  lastLogin?: string | null;
 }
 
 const roleLabels: Record<AppRole, string> = {
@@ -68,6 +80,9 @@ const roleColors: Record<AppRole, string> = {
 
 const ROLES_HIERARCHY: AppRole[] = ['admin', 'franquiciado', 'gerente', 'empleado'];
 
+type SortField = 'name' | 'role' | 'branch' | 'lastLogin';
+type SortDirection = 'asc' | 'desc';
+
 export default function Users() {
   const { user: currentUser } = useAuth();
   const { isAdmin, isGerente, isFranquiciado, accessibleBranches } = useUserRole();
@@ -76,6 +91,12 @@ export default function Users() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  
+  // Filters and sorting
+  const [filterBranch, setFilterBranch] = useState<string>('all');
+  const [filterRole, setFilterRole] = useState<string>('all');
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   
   // Dialog states
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
@@ -92,6 +113,35 @@ export default function Users() {
 
   const canManageUsers = isAdmin || isGerente || isFranquiciado;
 
+  // Determina si un usuario está "trabajando" según el horario de sus sucursales
+  const isUserWorking = (user: UserWithRole): boolean => {
+    if (!user.branchPermissions || user.branchPermissions.length === 0) return false;
+    
+    const now = new Date();
+    const currentTime = format(now, 'HH:mm');
+    
+    // Buscar si alguna de sus sucursales está en horario de trabajo
+    return user.branchPermissions.some(perm => {
+      const branch = branches.find(b => b.id === perm.branch_id);
+      if (!branch || !branch.opening_time || !branch.closing_time) return false;
+      if (!branch.is_active || !branch.is_open) return false;
+      
+      const opening = branch.opening_time.slice(0, 5);
+      const closing = branch.closing_time.slice(0, 5);
+      
+      return currentTime >= opening && currentTime <= closing;
+    });
+  };
+
+  // Get highest priority role
+  const getHighestRole = (roles: AppRole[]): AppRole | null => {
+    if (!roles || roles.length === 0) return null;
+    for (const role of ROLES_HIERARCHY) {
+      if (roles.includes(role)) return role;
+    }
+    return roles[0];
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -107,48 +157,49 @@ export default function Users() {
       const { data: branchesData } = await supabase
         .from('branches')
         .select('*')
-        .eq('is_active', true)
         .order('name');
 
       setBranches(branchesData || []);
 
       if (profiles) {
-        // Fetch roles and permissions for each user
-        const usersWithRoles = await Promise.all(
-          profiles.map(async (profile) => {
-            const { data: roleData } = await supabase
-              .from('user_roles')
-              .select('role')
-              .eq('user_id', profile.user_id)
-              .maybeSingle();
+        // Fetch all roles at once
+        const { data: allRoles } = await supabase
+          .from('user_roles')
+          .select('user_id, role');
 
-            const { data: permData } = await supabase
-              .from('branch_permissions')
-              .select(`
-                branch_id,
-                can_manage_inventory,
-                can_manage_staff,
-                can_view_reports,
-                can_manage_orders,
-                can_manage_products
-              `)
-              .eq('user_id', profile.user_id);
+        // Fetch all permissions at once
+        const { data: allPermissions } = await supabase
+          .from('branch_permissions')
+          .select(`
+            user_id,
+            branch_id,
+            can_manage_inventory,
+            can_manage_staff,
+            can_view_reports,
+            can_manage_orders,
+            can_manage_products
+          `);
 
-            const branchPermissions = permData?.map(p => {
-              const branch = branchesData?.find(b => b.id === p.branch_id);
-              return {
-                ...p,
-                branch_name: branch?.name || 'Sucursal desconocida',
-              };
-            }) || [];
-
+        const usersWithRoles: UserWithRole[] = profiles.map((profile) => {
+          const userRoles = allRoles?.filter(r => r.user_id === profile.user_id).map(r => r.role) || [];
+          const userPerms = allPermissions?.filter(p => p.user_id === profile.user_id) || [];
+          
+          const branchPermissions = userPerms.map(p => {
+            const branch = branchesData?.find(b => b.id === p.branch_id);
             return {
-              ...profile,
-              role: roleData?.role || null,
-              branchPermissions,
+              ...p,
+              branch_name: branch?.name || 'Sucursal desconocida',
             };
-          })
-        );
+          });
+
+          return {
+            ...profile,
+            role: getHighestRole(userRoles),
+            allRoles: userRoles,
+            branchPermissions,
+            lastLogin: profile.updated_at, // Using updated_at as proxy for last activity
+          };
+        });
 
         setUsers(usersWithRoles);
       }
@@ -195,7 +246,7 @@ export default function Users() {
     try {
       // Update role if admin
       if (isAdmin && selectedRole) {
-        // Delete existing role
+        // Delete existing roles
         await supabase
           .from('user_roles')
           .delete()
@@ -262,11 +313,63 @@ export default function Users() {
     return [];
   };
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      user.email.toLowerCase().includes(search.toLowerCase())
-  );
+  // Filtered and sorted users
+  const filteredAndSortedUsers = useMemo(() => {
+    let result = users.filter(user => {
+      // Text search
+      const matchesSearch = 
+        user.full_name.toLowerCase().includes(search.toLowerCase()) ||
+        user.email.toLowerCase().includes(search.toLowerCase());
+      
+      // Branch filter
+      const matchesBranch = filterBranch === 'all' || 
+        user.branchPermissions?.some(bp => bp.branch_id === filterBranch);
+      
+      // Role filter
+      const matchesRole = filterRole === 'all' || user.role === filterRole;
+      
+      return matchesSearch && matchesBranch && matchesRole;
+    });
+
+    // Sort
+    result.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortField) {
+        case 'name':
+          comparison = a.full_name.localeCompare(b.full_name);
+          break;
+        case 'role':
+          const aRoleIndex = a.role ? ROLES_HIERARCHY.indexOf(a.role) : 999;
+          const bRoleIndex = b.role ? ROLES_HIERARCHY.indexOf(b.role) : 999;
+          comparison = aRoleIndex - bRoleIndex;
+          break;
+        case 'branch':
+          const aBranch = a.branchPermissions?.[0]?.branch_name || 'zzz';
+          const bBranch = b.branchPermissions?.[0]?.branch_name || 'zzz';
+          comparison = aBranch.localeCompare(bBranch);
+          break;
+        case 'lastLogin':
+          const aDate = a.lastLogin ? new Date(a.lastLogin).getTime() : 0;
+          const bDate = b.lastLogin ? new Date(b.lastLogin).getTime() : 0;
+          comparison = bDate - aDate; // More recent first
+          break;
+      }
+      
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+
+    return result;
+  }, [users, search, filterBranch, filterRole, sortField, sortDirection]);
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   const availableBranchesForEdit = isAdmin ? branches : accessibleBranches;
 
@@ -283,17 +386,74 @@ export default function Users() {
         </Button>
       </div>
 
-      {/* Search */}
+      {/* Search and Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar usuarios..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
-            />
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar usuarios..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <div className="flex gap-2 flex-wrap">
+              {/* Filter by Branch */}
+              <Select value={filterBranch} onValueChange={setFilterBranch}>
+                <SelectTrigger className="w-[180px]">
+                  <Store className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Sucursal" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las sucursales</SelectItem>
+                  {branches.filter(b => b.is_active).map(branch => (
+                    <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {/* Filter by Role */}
+              <Select value={filterRole} onValueChange={setFilterRole}>
+                <SelectTrigger className="w-[160px]">
+                  <Shield className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Rol" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los roles</SelectItem>
+                  {ROLES_HIERARCHY.map(role => (
+                    <SelectItem key={role} value={role}>{roleLabels[role]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {/* Sort Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <ArrowUpDown className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Ordenar por</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => toggleSort('name')}>
+                    Nombre {sortField === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => toggleSort('role')}>
+                    Rol {sortField === 'role' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => toggleSort('branch')}>
+                    Sucursal {sortField === 'branch' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => toggleSort('lastLogin')}>
+                    Último ingreso {sortField === 'lastLogin' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -303,7 +463,7 @@ export default function Users() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
-            {filteredUsers.length} usuario{filteredUsers.length !== 1 ? 's' : ''}
+            {filteredAndSortedUsers.length} usuario{filteredAndSortedUsers.length !== 1 ? 's' : ''}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -313,7 +473,7 @@ export default function Users() {
                 <div key={i} className="h-16 bg-muted rounded animate-pulse" />
               ))}
             </div>
-          ) : filteredUsers.length === 0 ? (
+          ) : filteredAndSortedUsers.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">No se encontraron usuarios</p>
             </div>
@@ -321,84 +481,129 @@ export default function Users() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Usuario</TableHead>
-                  <TableHead>Rol</TableHead>
-                  <TableHead>Sucursales</TableHead>
-                  <TableHead>Estado</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>
+                    Usuario {sortField === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => toggleSort('role')}>
+                    Rol {sortField === 'role' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => toggleSort('branch')}>
+                    Sucursales {sortField === 'branch' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </TableHead>
+                  <TableHead>Trabajando</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => toggleSort('lastLogin')}>
+                    Último ingreso {sortField === 'lastLogin' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </TableHead>
                   {canManageUsers && <TableHead>Acciones</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                          {user.avatar_url ? (
-                            <img
-                              src={user.avatar_url}
-                              alt={user.full_name}
-                              className="w-10 h-10 rounded-full object-cover"
-                            />
+                {filteredAndSortedUsers.map((user) => {
+                  const working = isUserWorking(user);
+                  
+                  return (
+                    <TableRow key={user.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                              {user.avatar_url ? (
+                                <img
+                                  src={user.avatar_url}
+                                  alt={user.full_name}
+                                  className="w-10 h-10 rounded-full object-cover"
+                                />
+                              ) : (
+                                <User className="w-5 h-5 text-muted-foreground" />
+                              )}
+                            </div>
+                            {/* Working indicator */}
+                            <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background ${
+                              working ? 'bg-green-500' : 'bg-gray-400'
+                            }`} />
+                          </div>
+                          <div>
+                            <p className="font-medium">{user.full_name}</p>
+                            <p className="text-sm text-muted-foreground">{user.email}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {user.role ? (
+                          <Badge className={roleColors[user.role]}>
+                            <Shield className="w-3 h-3 mr-1" />
+                            {roleLabels[user.role]}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">Sin rol</Badge>
+                        )}
+                        {user.allRoles.length > 1 && (
+                          <span className="text-xs text-muted-foreground ml-1">
+                            +{user.allRoles.length - 1}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {user.branchPermissions && user.branchPermissions.length > 0 ? (
+                            user.branchPermissions.slice(0, 2).map((bp) => (
+                              <Badge key={bp.branch_id} variant="secondary" className="text-xs">
+                                <Store className="w-3 h-3 mr-1" />
+                                {bp.branch_name}
+                              </Badge>
+                            ))
                           ) : (
-                            <User className="w-5 h-5 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">Sin sucursales</span>
+                          )}
+                          {user.branchPermissions && user.branchPermissions.length > 2 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{user.branchPermissions.length - 2}
+                            </Badge>
                           )}
                         </div>
-                        <div>
-                          <p className="font-medium">{user.full_name}</p>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {user.role ? (
-                        <Badge className={roleColors[user.role]}>
-                          <Shield className="w-3 h-3 mr-1" />
-                          {roleLabels[user.role]}
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline">Sin rol</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {user.branchPermissions && user.branchPermissions.length > 0 ? (
-                          user.branchPermissions.slice(0, 2).map((bp) => (
-                            <Badge key={bp.branch_id} variant="secondary" className="text-xs">
-                              <Store className="w-3 h-3 mr-1" />
-                              {bp.branch_name}
-                            </Badge>
-                          ))
-                        ) : (
-                          <span className="text-sm text-muted-foreground">Sin sucursales</span>
-                        )}
-                        {user.branchPermissions && user.branchPermissions.length > 2 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{user.branchPermissions.length - 2}
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={user.is_active ? 'default' : 'secondary'}>
-                        {user.is_active ? 'Activo' : 'Inactivo'}
-                      </Badge>
-                    </TableCell>
-                    {canManageUsers && (
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditDialog(user)}
-                          disabled={user.user_id === currentUser?.id}
-                        >
-                          <Settings className="w-4 h-4 mr-1" />
-                          Permisos
-                        </Button>
                       </TableCell>
-                    )}
-                  </TableRow>
-                ))}
+                      <TableCell>
+                        {user.branchPermissions && user.branchPermissions.length > 0 ? (
+                          working ? (
+                            <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                              <CheckCircle2 className="w-3 h-3 mr-1" />
+                              En horario
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">
+                              <XCircle className="w-3 h-3 mr-1" />
+                              Fuera de horario
+                            </Badge>
+                          )
+                        ) : (
+                          <span className="text-sm text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {user.lastLogin ? (
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Clock className="w-3 h-3" />
+                            {format(new Date(user.lastLogin), "dd MMM yyyy, HH:mm", { locale: es })}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      {canManageUsers && (
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditDialog(user)}
+                          >
+                            <Settings className="w-4 h-4 mr-1" />
+                            Permisos
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
@@ -432,6 +637,12 @@ export default function Users() {
                     ))}
                   </SelectContent>
                 </Select>
+                {editingUser?.allRoles && editingUser.allRoles.length > 1 && (
+                  <p className="text-xs text-muted-foreground">
+                    Nota: Este usuario tiene múltiples roles ({editingUser.allRoles.map(r => roleLabels[r]).join(', ')}). 
+                    Al guardar, se reemplazarán por el rol seleccionado.
+                  </p>
+                )}
               </div>
             )}
 
