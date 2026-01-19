@@ -36,6 +36,7 @@ export default function LocalConfig() {
   const [isOpen, setIsOpen] = useState(true);
   const [deliveryEnabled, setDeliveryEnabled] = useState(true);
   const [takeawayEnabled, setTakeawayEnabled] = useState(true);
+  const [autoInvoiceIntegrations, setAutoInvoiceIntegrations] = useState(false);
   const [prepTimeMode, setPrepTimeMode] = useState<PrepTimeMode>('custom');
   const [customPrepTime, setCustomPrepTime] = useState(20);
   
@@ -63,6 +64,7 @@ export default function LocalConfig() {
       setIsOpen(data.is_open ?? true);
       setDeliveryEnabled(data.delivery_enabled ?? true);
       setTakeawayEnabled(data.takeaway_enabled ?? true);
+      setAutoInvoiceIntegrations(data.auto_invoice_integrations ?? false);
       
       const storedPrepTime = data.estimated_prep_time_min;
       if (storedPrepTime === null || storedPrepTime === 0) {
@@ -392,6 +394,31 @@ export default function LocalConfig() {
         </CardContent>
       </Card>
 
+
+      {/* Configuración de Facturación */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-base font-medium">Auto-Factura para Integraciones</Label>
+              <p className="text-sm text-muted-foreground">
+                Generar factura automáticamente para pedidos de Rappi, PedidosYa y MP Delivery
+              </p>
+            </div>
+            <Switch
+              checked={autoInvoiceIntegrations}
+              onCheckedChange={async (checked) => {
+                setAutoInvoiceIntegrations(checked);
+                if (canEdit && branchId) {
+                  await supabase.from('branches').update({ auto_invoice_integrations: checked }).eq('id', branchId);
+                  toast.success(checked ? 'Auto-factura activada' : 'Auto-factura desactivada');
+                }
+              }}
+              disabled={!canEdit}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Horarios de Atención */}
       {branchId && (

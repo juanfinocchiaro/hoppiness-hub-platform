@@ -12,8 +12,9 @@ import {
 } from 'recharts';
 import { 
   DollarSign, ShoppingCart, TrendingUp, Calendar, 
-  RefreshCw, Store, CreditCard, Megaphone 
+  RefreshCw, Store, CreditCard, Megaphone, Download 
 } from 'lucide-react';
+import { useExportToExcel } from '@/hooks/useExportToExcel';
 import { toast } from 'sonner';
 import { format, subDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -73,10 +74,12 @@ interface ReportData {
 
 export default function SalesReports() {
   const { accessibleBranches, loading: roleLoading } = useUserRole();
+  const { exportToExcel } = useExportToExcel();
   
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
   const [dateRange, setDateRange] = useState<DateRange>('today');
   const [loading, setLoading] = useState(true);
+  const [rawOrders, setRawOrders] = useState<any[]>([]);
   const [reportData, setReportData] = useState<ReportData>({
     totalSales: 0,
     totalOrders: 0,
@@ -131,7 +134,8 @@ export default function SalesReports() {
       const { data: orders, error } = await query;
       if (error) throw error;
 
-      // Calculate metrics
+      // Store raw orders for export
+      setRawOrders(orders || []);
       const completedOrders = orders?.filter(o => o.status !== 'cancelled') || [];
       const cancelledOrders = orders?.filter(o => o.status === 'cancelled') || [];
       
@@ -288,6 +292,41 @@ export default function SalesReports() {
 
           <Button variant="outline" size="icon" onClick={fetchReportData} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              const branchName = selectedBranch === 'all' 
+                ? 'todas' 
+                : accessibleBranches.find(b => b.id === selectedBranch)?.name || '';
+              
+              exportToExcel(
+                rawOrders.map(o => ({
+                  ...o,
+                  branch_name: accessibleBranches.find(b => b.id === o.branch_id)?.name || o.branch_id,
+                })),
+                [
+                  { key: 'created_at', label: 'Fecha', format: (v: string) => format(new Date(v), 'dd/MM/yyyy HH:mm') },
+                  { key: 'branch_name', label: 'Sucursal' },
+                  { key: 'customer_name', label: 'Cliente' },
+                  { key: 'customer_phone', label: 'Teléfono' },
+                  { key: 'order_type', label: 'Tipo' },
+                  { key: 'sales_channel', label: 'Canal', format: (v: string) => SALES_CHANNEL_LABELS[v] || v },
+                  { key: 'status', label: 'Estado', format: (v: string) => ORDER_STATUS_LABELS[v] || v },
+                  { key: 'payment_method', label: 'Método Pago', format: (v: string) => PAYMENT_METHOD_LABELS[v] || v },
+                  { key: 'subtotal', label: 'Subtotal', format: (v: number) => Number(v) },
+                  { key: 'delivery_fee', label: 'Envío', format: (v: number) => Number(v || 0) },
+                  { key: 'total', label: 'Total', format: (v: number) => Number(v) },
+                ],
+                { filename: `ventas_${branchName}_${dateRange}`, sheetName: 'Ventas' }
+              );
+              toast.success('Exportación iniciada');
+            }}
+            disabled={loading || rawOrders.length === 0}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Excel
           </Button>
         </div>
       </div>
