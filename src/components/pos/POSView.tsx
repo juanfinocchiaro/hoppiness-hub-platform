@@ -1199,15 +1199,59 @@ export default function POSView({ branch }: POSViewProps) {
             </div>
           </div>
 
-          <Button
-            className="w-full"
-            size="lg"
-            disabled={cart.length === 0 || !activeShift}
-            onClick={() => setIsCheckoutOpen(true)}
-          >
-            {!activeShift ? 'Abrí un turno para tomar pedidos' : 'Confirmar Pedido'}
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
+          {/* Show registered payments if any */}
+          {draftPayments.length > 0 && (
+            <div className="bg-success/10 rounded-lg p-3 space-y-2">
+              <p className="text-xs font-medium text-success">Pagos registrados</p>
+              {draftPayments.map(p => (
+                <div key={p.id} className="flex justify-between text-sm">
+                  <span className="capitalize">{p.payment_method.replace('_', ' ')}</span>
+                  <span className="font-medium text-success">{formatPrice(p.amount)}</span>
+                </div>
+              ))}
+              <Separator className="bg-success/20" />
+              <div className="flex justify-between text-sm font-bold">
+                <span>Total pagado</span>
+                <span className="text-success">{formatPrice(draftPayments.reduce((s, p) => s + p.amount, 0))}</span>
+              </div>
+              {(() => {
+                const totalPaid = draftPayments.reduce((s, p) => s + p.amount, 0);
+                const remaining = total - totalPaid;
+                return remaining > 0.01 ? (
+                  <div className="flex justify-between text-sm font-bold text-warning">
+                    <span>Saldo pendiente</span>
+                    <span>{formatPrice(remaining)}</span>
+                  </div>
+                ) : null;
+              })()}
+            </div>
+          )}
+
+          {(() => {
+            const totalPaid = draftPayments.reduce((s, p) => s + p.amount, 0);
+            const remaining = total - totalPaid;
+            const isFullyPaid = remaining <= 0.01 && draftPayments.length > 0;
+            
+            return (
+              <Button
+                className="w-full"
+                size="lg"
+                disabled={cart.length === 0 || !activeShift}
+                onClick={() => setIsCheckoutOpen(true)}
+                variant={isFullyPaid ? 'default' : 'default'}
+              >
+                {!activeShift 
+                  ? 'Abrí un turno para tomar pedidos' 
+                  : isFullyPaid 
+                    ? 'Confirmar Pedido' 
+                    : draftPayments.length > 0 
+                      ? 'Cargar pago'
+                      : 'Confirmar Pedido'
+                }
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            );
+          })()}
         </div>
       </div>
 
@@ -1708,8 +1752,8 @@ export default function POSView({ branch }: POSViewProps) {
         }}
         onOrderComplete={handleCancelOrder}
         onEditOrder={() => {
+          // Just close the checkout dialog to return to products - don't open new order dialog
           setIsCheckoutOpen(false);
-          setShowNewOrderDialog(true);
         }}
       />
 
