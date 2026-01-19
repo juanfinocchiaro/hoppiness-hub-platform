@@ -55,6 +55,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { handleError } from '@/lib/errorHandler';
 import type { Tables, Enums } from '@/integrations/supabase/types';
 
 type Product = Tables<'products'>;
@@ -886,8 +887,7 @@ export default function POSView({ branch }: POSViewProps) {
       setIsCheckoutOpen(false);
 
     } catch (error) {
-      console.error('Error creating order:', error);
-      toast.error('Error al crear el pedido');
+      handleError(error, { userMessage: 'Error al crear el pedido', context: 'POSView.handleCheckout' });
     } finally {
       setIsProcessing(false);
     }

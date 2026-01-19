@@ -21,6 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useToast } from '@/hooks/use-toast';
+import { handleError } from '@/lib/errorHandler';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Tables } from '@/integrations/supabase/types';
@@ -194,7 +195,7 @@ export default function LocalCaja() {
         setPaymentMethods(methodsData as PaymentMethod[]);
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      handleError(error, { showToast: false, context: 'LocalCaja.fetchData' });
     } finally {
       setLoading(false);
     }

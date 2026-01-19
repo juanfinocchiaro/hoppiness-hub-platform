@@ -27,8 +27,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, Trash2, ArrowRight, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, ArrowRight, RefreshCw, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { handleError } from '@/lib/errorHandler';
 
 interface UnitConversion {
   id: string;
@@ -98,8 +99,38 @@ export function IngredientUnitConversions({
       .order('is_purchase_to_usage', { ascending: false });
 
     if (data) setConversions(data);
-    if (error) console.error(error);
+    if (error) handleError(error, { showToast: false, context: 'IngredientUnitConversions.fetchConversions' });
     setLoading(false);
+  };
+
+  // D3: Validación de ciclos - verifica que no exista un camino circular
+  const wouldCreateCycle = (fromUnit: string, toUnit: string): boolean => {
+    // Build adjacency list from existing conversions
+    const edges = new Map<string, Set<string>>();
+    for (const conv of conversions) {
+      if (!edges.has(conv.from_unit)) edges.set(conv.from_unit, new Set());
+      edges.get(conv.from_unit)!.add(conv.to_unit);
+    }
+    // Add the proposed edge temporarily
+    if (!edges.has(fromUnit)) edges.set(fromUnit, new Set());
+    edges.get(fromUnit)!.add(toUnit);
+    
+    // DFS to detect cycle starting from toUnit trying to reach fromUnit
+    const visited = new Set<string>();
+    const stack = [toUnit];
+    while (stack.length > 0) {
+      const current = stack.pop()!;
+      if (current === fromUnit) return true; // Cycle detected
+      if (visited.has(current)) continue;
+      visited.add(current);
+      const neighbors = edges.get(current);
+      if (neighbors) {
+        for (const neighbor of neighbors) {
+          stack.push(neighbor);
+        }
+      }
+    }
+    return false;
   };
 
   const handleAddConversion = async () => {
@@ -110,6 +141,12 @@ export function IngredientUnitConversions({
 
     if (newFromUnit === newToUnit) {
       toast.error('Las unidades deben ser diferentes');
+      return;
+    }
+
+    // D3: Validación de ciclos antes de guardar
+    if (wouldCreateCycle(newFromUnit, newToUnit)) {
+      toast.error('Esta conversión crearía un ciclo. Verificá las equivalencias existentes.');
       return;
     }
 

@@ -35,6 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { handleError } from '@/lib/errorHandler';
 import {
   Tooltip,
   TooltipContent,
@@ -268,8 +269,7 @@ export default function LocalRRHHLiquidacion() {
       await fetchEmployeeHours(employeesData || []);
 
     } catch (error) {
-      console.error('Error fetching data:', error);
-      toast.error('Error al cargar datos');
+      handleError(error, { userMessage: 'Error al cargar datos', context: 'LocalRRHHLiquidacion.fetchData' });
     } finally {
       setLoading(false);
     }
@@ -411,8 +411,7 @@ export default function LocalRRHHLiquidacion() {
         e.id === entry.id ? { ...e, [field]: value } : e
       ));
     } catch (error) {
-      console.error('Error updating entry:', error);
-      toast.error('Error al guardar');
+      handleError(error, { userMessage: 'Error al guardar', context: 'LocalRRHHLiquidacion.handleUpdateEntry' });
     } finally {
       setSaving(false);
     }
@@ -471,8 +470,7 @@ export default function LocalRRHHLiquidacion() {
       setShowAdjustmentDialog(false);
       setAdjustmentForm({ type: 'advance', amount: '', description: '' });
     } catch (error) {
-      console.error('Error adding adjustment:', error);
-      toast.error('Error al registrar');
+      handleError(error, { userMessage: 'Error al registrar', context: 'LocalRRHHLiquidacion.handleAddAdjustment' });
     } finally {
       setSaving(false);
     }
@@ -529,8 +527,7 @@ export default function LocalRRHHLiquidacion() {
       setShowPaymentDialog(false);
       setPaymentForm({ amount: '', method: 'cash', notes: '' });
     } catch (error) {
-      console.error('Error adding payment:', error);
-      toast.error('Error al registrar');
+      handleError(error, { userMessage: 'Error al registrar', context: 'LocalRRHHLiquidacion.handleAddPayment' });
     } finally {
       setSaving(false);
     }
@@ -618,8 +615,7 @@ export default function LocalRRHHLiquidacion() {
       setShowTipDistributionDialog(false);
       setTipForm({ totalAmount: '', method: 'equal' });
     } catch (error) {
-      console.error('Error distributing tips:', error);
-      toast.error('Error al repartir propinas');
+      handleError(error, { userMessage: 'Error al repartir propinas', context: 'LocalRRHHLiquidacion.handleDistributeTips' });
     } finally {
       setSaving(false);
     }
@@ -646,8 +642,7 @@ export default function LocalRRHHLiquidacion() {
       toast.success('Período cerrado');
       setShowClosePeriodDialog(false);
     } catch (error) {
-      console.error('Error closing period:', error);
-      toast.error('Error al cerrar período');
+      handleError(error, { userMessage: 'Error al cerrar período', context: 'LocalRRHHLiquidacion.handleClosePeriod' });
     } finally {
       setSaving(false);
     }
@@ -669,8 +664,7 @@ export default function LocalRRHHLiquidacion() {
       setPeriod(prev => prev ? { ...prev, status: 'open' } : null);
       toast.success('Período reabierto');
     } catch (error) {
-      console.error('Error reopening period:', error);
-      toast.error('Error al reabrir');
+      handleError(error, { userMessage: 'Error al reabrir', context: 'LocalRRHHLiquidacion.handleReopenPeriod' });
     } finally {
       setSaving(false);
     }

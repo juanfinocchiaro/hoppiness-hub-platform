@@ -31,6 +31,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { handleError } from '@/lib/errorHandler';
 import { Package, AlertTriangle, Plus, Minus, Search, TrendingDown, TrendingUp } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -155,8 +156,7 @@ export default function LocalStock() {
       setMovementOpen(false);
       fetchIngredients();
     } catch (error) {
-      console.error(error);
-      toast.error('Error al registrar movimiento');
+      handleError(error, { userMessage: 'Error al registrar movimiento', context: 'LocalStock.handleMovement' });
     } finally {
       setIsSubmitting(false);
     }

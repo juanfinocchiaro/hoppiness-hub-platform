@@ -27,6 +27,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
+import { handleError } from '@/lib/errorHandler';
 import { 
   Calculator, 
   TrendingUp, 
@@ -249,8 +250,7 @@ export default function LocalCMVReport() {
 
       setCmvData(cmvLines);
     } catch (error) {
-      console.error('Error fetching CMV data:', error);
-      toast.error('Error al cargar datos de CMV');
+      handleError(error, { userMessage: 'Error al cargar datos de CMV', context: 'LocalCMVReport.fetchCMVData' });
     } finally {
       setLoading(false);
     }

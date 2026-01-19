@@ -9,6 +9,7 @@ import {
 } from '@react-google-maps/api';
 import { Button } from '@/components/ui/button';
 import { Trash2, Circle as CircleIcon, Hexagon, RefreshCw } from 'lucide-react';
+import { devWarn } from '@/lib/errorHandler';
 
 const libraries: ("drawing" | "geometry" | "places")[] = ['drawing', 'geometry'];
 
@@ -324,7 +325,7 @@ export default function DeliveryZoneMap(props: DeliveryZoneMapProps) {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
-          console.error('No authenticated session for Google Maps API');
+          devWarn('No authenticated session for Google Maps API');
           setLoadingKey(false);
           return;
         }
@@ -343,7 +344,7 @@ export default function DeliveryZoneMap(props: DeliveryZoneMapProps) {
           setApiKey(data.apiKey);
         }
       } catch (error) {
-        console.error('Error fetching Google Maps API key:', error);
+        devWarn('Error fetching Google Maps API key:', error);
       } finally {
         setLoadingKey(false);
       }

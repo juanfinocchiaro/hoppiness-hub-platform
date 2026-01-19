@@ -56,6 +56,7 @@ import {
   Upload
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { handleError } from '@/lib/errorHandler';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Tables } from '@/integrations/supabase/types';
@@ -319,8 +320,7 @@ export default function LocalTransactions() {
       resetForm();
       fetchData();
     } catch (error) {
-      console.error('Error:', error);
-      toast.error('Error al registrar la transacción');
+      handleError(error, { userMessage: 'Error al registrar la transacción', context: 'LocalTransactions.handleSubmit' });
     } finally {
       setIsSubmitting(false);
     }

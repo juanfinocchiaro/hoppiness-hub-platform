@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+import { handleError, devWarn } from '@/lib/errorHandler';
 import { 
   Loader2, 
   User, 
@@ -219,7 +220,7 @@ export default function RegistroStaff() {
         dniFrontUrl = await uploadFile(dniFront, userId, 'front');
         dniBackUrl = await uploadFile(dniBack, userId, 'back');
       } catch (uploadError) {
-        console.error('Error uploading files:', uploadError);
+        devWarn('Error uploading files:', uploadError);
         // Continue anyway, files can be uploaded later
       }
 
@@ -244,7 +245,7 @@ export default function RegistroStaff() {
         .eq('user_id', userId);
 
       if (profileError) {
-        console.error('Profile update error:', profileError);
+        devWarn('Profile update error:', profileError);
       }
 
       // 4. Assign role - delete existing and insert new
@@ -261,7 +262,7 @@ export default function RegistroStaff() {
         });
 
       if (roleError) {
-        console.error('Role assignment error:', roleError);
+        devWarn('Role assignment error:', roleError);
       }
 
       // 5. Assign branch permissions
@@ -278,7 +279,7 @@ export default function RegistroStaff() {
         });
 
       if (permError) {
-        console.error('Permission assignment error:', permError);
+        devWarn('Permission assignment error:', permError);
       }
 
       // 6. Grant role defaults
@@ -302,8 +303,7 @@ export default function RegistroStaff() {
       navigate('/auth?registered=true');
 
     } catch (error: any) {
-      console.error('Registration error:', error);
-      toast.error(error.message || 'Error al completar el registro');
+      handleError(error, { userMessage: error.message || 'Error al completar el registro', context: 'RegistroStaff.handleSubmit' });
     } finally {
       setSubmitting(false);
     }

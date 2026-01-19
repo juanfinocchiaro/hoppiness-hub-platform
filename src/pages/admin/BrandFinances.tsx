@@ -31,6 +31,7 @@ import {
   TrendingUp, Receipt, Eye, EyeOff, Landmark
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { handleError } from '@/lib/errorHandler';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -150,8 +151,7 @@ export default function BrandFinances() {
       setBranchCanons(canonData);
 
     } catch (error: any) {
-      console.error('Error fetching brand data:', error);
-      toast.error('Error al cargar datos de marca');
+      handleError(error, { userMessage: 'Error al cargar datos de marca', context: 'BrandFinances.fetchBrandData' });
     } finally {
       setLoading(false);
     }
@@ -213,8 +213,7 @@ export default function BrandFinances() {
       setExpenseForm({ concept: '', amount: '', receipt_type: 'OFFICIAL', notes: '' });
       fetchBrandData();
     } catch (error: any) {
-      console.error('Error adding expense:', error);
-      toast.error('Error al registrar gasto');
+      handleError(error, { userMessage: 'Error al registrar gasto', context: 'BrandFinances.handleAddExpense' });
     }
   };
 
