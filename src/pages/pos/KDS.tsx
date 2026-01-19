@@ -39,6 +39,8 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
   confirmed: 'bg-blue-500',
   preparing: 'bg-orange-500',
   ready: 'bg-green-500',
+  waiting_pickup: 'bg-purple-500',
+  in_transit: 'bg-cyan-500',
   delivered: 'bg-gray-500',
   cancelled: 'bg-red-500',
 };
@@ -49,6 +51,8 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   confirmed: 'Confirmado',
   preparing: 'Preparando',
   ready: 'Listo',
+  waiting_pickup: 'Esperando cadete',
+  in_transit: 'En viaje',
   delivered: 'Entregado',
   cancelled: 'Cancelado',
 };
@@ -255,22 +259,33 @@ export default function KDS() {
     return 'text-red-600';
   };
 
-  const getNextStatus = (currentStatus: OrderStatus): OrderStatus | null => {
+  const getNextStatus = (order: OrderWithItems): OrderStatus | null => {
+    const currentStatus = order.status;
+    const isDeliveryPropio = order.order_type === 'delivery' && 
+      !['rappi', 'pedidos_ya', 'mercadopago_delivery'].includes(order.sales_channel || '');
+    
     switch (currentStatus) {
       case 'pending': return 'confirmed';
       case 'confirmed': return 'preparing';
       case 'preparing': return 'ready';
-      case 'ready': return 'delivered';
+      case 'ready': return isDeliveryPropio ? 'waiting_pickup' : 'delivered';
+      case 'waiting_pickup': return 'in_transit';
+      case 'in_transit': return 'delivered';
       default: return null;
     }
   };
 
-  const getNextAction = (status: OrderStatus) => {
+  const getNextAction = (status: OrderStatus, order?: OrderWithItems) => {
+    const isDeliveryPropio = order && order.order_type === 'delivery' && 
+      !['rappi', 'pedidos_ya', 'mercadopago_delivery'].includes(order.sales_channel || '');
+    
     switch (status) {
       case 'pending': return 'Confirmar';
       case 'confirmed': return 'Preparar';
       case 'preparing': return '¡Listo!';
-      case 'ready': return 'Entregar';
+      case 'ready': return isDeliveryPropio ? 'Listo despacho' : 'Entregar';
+      case 'waiting_pickup': return 'Cadete retiró';
+      case 'in_transit': return 'Entregado';
       default: return null;
     }
   };
@@ -367,8 +382,8 @@ export default function KDS() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {section.orders.map(order => {
                     const AreaIcon = ORDER_AREA_ICONS[order.order_area || 'mostrador'];
-                    const nextStatus = getNextStatus(order.status);
-                    const nextAction = getNextAction(order.status);
+                    const nextStatus = getNextStatus(order);
+                    const nextAction = getNextAction(order.status, order);
                     
                     return (
                       <Card 

@@ -40,6 +40,8 @@ const STATUS_CONFIG: Record<Enums<'order_status'>, { label: string; colorClass: 
   confirmed: { label: 'Confirmado', colorClass: 'bg-primary/20 border-primary text-primary' },
   preparing: { label: 'Preparando', colorClass: 'bg-accent/20 border-accent text-accent' },
   ready: { label: 'Listo', colorClass: 'bg-success/20 border-success text-success' },
+  waiting_pickup: { label: 'Esperando cadete', colorClass: 'bg-purple-500/20 border-purple-500 text-purple-500' },
+  in_transit: { label: 'En viaje', colorClass: 'bg-cyan-500/20 border-cyan-500 text-cyan-500' },
   delivered: { label: 'Entregado', colorClass: 'bg-muted border-border text-muted-foreground' },
   cancelled: { label: 'Cancelado', colorClass: 'bg-destructive/20 border-destructive text-destructive' },
 };
@@ -130,12 +132,18 @@ export default function KDSView({ branch }: KDSViewProps) {
     toast.success(`Pedido marcado como ${STATUS_CONFIG[newStatus].label}`);
   };
 
-  const getNextStatus = (currentStatus: Enums<'order_status'>): Enums<'order_status'> | null => {
+  const getNextStatus = (order: OrderWithItems): Enums<'order_status'> | null => {
+    const currentStatus = order.status;
+    const isDeliveryPropio = order.order_type === 'delivery' && 
+      !['rappi', 'pedidos_ya', 'mercadopago_delivery'].includes(order.sales_channel || '');
+    
     const statusFlow: Record<string, Enums<'order_status'>> = {
       pending: 'confirmed',
       confirmed: 'preparing',
       preparing: 'ready',
-      ready: 'delivered',
+      ready: isDeliveryPropio ? 'waiting_pickup' : 'delivered',
+      waiting_pickup: 'in_transit',
+      in_transit: 'delivered',
     };
     return statusFlow[currentStatus] || null;
   };
@@ -282,7 +290,7 @@ export default function KDSView({ branch }: KDSViewProps) {
                     <p className="text-center text-sidebar-foreground/50 py-8">Sin pedidos</p>
                   ) : (
                     statusOrders.map(order => {
-                      const nextStatus = getNextStatus(order.status);
+                      const nextStatus = getNextStatus(order);
                       
                       return (
                         <Card key={order.id} className={`border-2 ${config.colorClass}`}>
@@ -327,6 +335,8 @@ export default function KDSView({ branch }: KDSViewProps) {
                                 {nextStatus === 'confirmed' && '✓ Confirmar'}
                                 {nextStatus === 'preparing' && '🍳 Empezar'}
                                 {nextStatus === 'ready' && '✅ Listo'}
+                                {nextStatus === 'waiting_pickup' && '🚴 Listo para despacho'}
+                                {nextStatus === 'in_transit' && '🛵 Cadete retiró'}
                                 {nextStatus === 'delivered' && '📦 Entregado'}
                               </Button>
                             )}
