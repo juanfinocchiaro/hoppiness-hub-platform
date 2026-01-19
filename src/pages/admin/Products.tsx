@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Search, Edit, Star, ChevronDown, ChevronRight, Power, Check, X, CalendarDays, Settings2, Eye, EyeOff, PowerOff } from 'lucide-react';
+import { Plus, Search, Edit, Star, ChevronDown, ChevronRight, Power, Check, X, CalendarDays, Settings2, Eye, EyeOff, PowerOff, Trash2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { ScheduleDialog } from '@/components/admin/ScheduleDialog';
@@ -70,6 +70,13 @@ export default function Products() {
     branchName: string;
     isBrandLevel: boolean;
   } | null>(null);
+
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    productId: string;
+    productName: string;
+  } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [editDrawer, setEditDrawer] = useState<{
     open: boolean;
@@ -323,6 +330,28 @@ export default function Products() {
       executeBranchToggle(disableDialog.productId, disableDialog.branchId, false);
     }
     setDisableDialog(null);
+  };
+
+  const handleDeleteProduct = async () => {
+    if (!deleteDialog) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', deleteDialog.productId);
+      
+      if (error) throw error;
+      
+      setProducts(prev => prev.filter(p => p.id !== deleteDialog.productId));
+      toast.success(`"${deleteDialog.productName}" eliminado permanentemente`);
+      setDeleteDialog(null);
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error al eliminar el producto');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // Build category groups - include categories that have any products (active or inactive)
@@ -635,6 +664,30 @@ export default function Products() {
                         >
                           <Edit className="w-3.5 h-3.5" />
                         </Button>
+                        
+                        {/* Delete Button */}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteDialog({
+                                    open: true,
+                                    productId: product.id,
+                                    productName: product.name,
+                                  });
+                                }}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Eliminar producto</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </div>
                   );
@@ -704,6 +757,37 @@ export default function Products() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Desactivar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialog?.open} onOpenChange={(open) => !open && setDeleteDialog(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              Eliminar Producto Permanentemente
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que deseas eliminar <strong>{deleteDialog?.productName}</strong>?
+              <span className="block mt-2 text-destructive font-medium">
+                Esta acción es irreversible. El nombre quedará liberado para usar en nuevos productos.
+              </span>
+              <span className="block mt-1 text-muted-foreground text-xs">
+                Los pedidos históricos conservarán el nombre y precio del producto al momento de la venta.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteProduct}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Eliminando...' : 'Eliminar permanentemente'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
