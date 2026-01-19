@@ -293,23 +293,6 @@ export default function Products() {
         />
       </div>
 
-      {/* Branch Header Pills */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Sucursales:</span>
-        {branches.map((branch) => (
-          <TooltipProvider key={branch.id}>
-            <Tooltip>
-              <TooltipTrigger>
-                <Badge variant="outline" className="text-xs font-mono">
-                  {getBranchAbbreviation(branch.name)}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>{branch.name}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ))}
-      </div>
-
       {/* Products Grid */}
       <div className="space-y-6">
         {productsByCategory.map(({ category, products: categoryProducts }) => (
@@ -370,33 +353,8 @@ export default function Products() {
                         </div>
                       </div>
 
-                      {/* Brand Toggle */}
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={() => handleBrandToggle(product)}
-                              disabled={updating === product.id}
-                              className={`
-                                w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all
-                                ${product.is_enabled_by_brand 
-                                  ? 'bg-primary text-primary-foreground' 
-                                  : 'bg-muted text-muted-foreground'
-                                }
-                                hover:scale-105 disabled:opacity-50
-                              `}
-                            >
-                              <Power className="w-3.5 h-3.5" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {product.is_enabled_by_brand ? 'Desactivar globalmente' : 'Activar globalmente'}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-
-                      {/* Branch Availability Pills */}
-                      <div className="flex items-center gap-1">
+                      {/* Branch Availability with Abbreviations */}
+                      <div className="flex items-center gap-1.5">
                         {branches.map((branch) => {
                           const isAvailable = getBranchAvailability(product.id, branch.id);
                           const isUpdating = updating === `${product.id}-${branch.id}`;
@@ -410,21 +368,27 @@ export default function Products() {
                                     onClick={() => handleBranchToggle(product, branch.id)}
                                     disabled={isDisabledByBrand || isUpdating}
                                     className={`
-                                      w-9 h-7 rounded-md text-[10px] font-bold transition-all
-                                      flex items-center justify-center
-                                      ${isActive 
-                                        ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' 
-                                        : 'bg-muted/80 text-muted-foreground/50 border border-transparent'
-                                      }
+                                      flex flex-col items-center gap-0.5 transition-all
                                       ${isDisabledByBrand ? 'opacity-30 cursor-not-allowed' : 'hover:scale-105'}
                                       disabled:hover:scale-100
                                     `}
                                   >
-                                    {isActive ? (
-                                      <Check className="w-3 h-3" />
-                                    ) : (
-                                      <X className="w-3 h-3" />
-                                    )}
+                                    <span className="text-[9px] font-semibold text-muted-foreground">
+                                      {getBranchAbbreviation(branch.name)}
+                                    </span>
+                                    <div className={`
+                                      w-6 h-6 rounded-full flex items-center justify-center transition-all
+                                      ${isActive 
+                                        ? 'bg-emerald-500 text-white' 
+                                        : 'bg-muted text-muted-foreground/40'
+                                      }
+                                    `}>
+                                      {isActive ? (
+                                        <Check className="w-3.5 h-3.5" />
+                                      ) : (
+                                        <X className="w-3.5 h-3.5" />
+                                      )}
+                                    </div>
                                   </button>
                                 </TooltipTrigger>
                                 <TooltipContent>
