@@ -52,33 +52,6 @@ export default function KDSView({ branch }: KDSViewProps) {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // If stations mode, render the stations view
-  if (viewMode === 'stations') {
-    return (
-      <div className="h-[calc(100vh-120px)] -m-6 bg-sidebar text-sidebar-foreground flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
-          <div className="flex items-center gap-3">
-            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-              <TabsList className="bg-sidebar-accent">
-                <TabsTrigger value="classic" className="gap-2">
-                  <LayoutGrid className="w-4 h-4" />
-                  Clásico
-                </TabsTrigger>
-                <TabsTrigger value="stations" className="gap-2">
-                  <Columns3 className="w-4 h-4" />
-                  Estaciones
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-        </div>
-        <div className="flex-1 m-6 -mb-0">
-          <KDSStationsView branch={branch} />
-        </div>
-      </div>
-    );
-  }
-
   const fetchOrders = async () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -187,6 +160,33 @@ export default function KDSView({ branch }: KDSViewProps) {
     acc[status] = orders.filter(o => o.status === status);
     return acc;
   }, {} as Record<Enums<'order_status'>, OrderWithItems[]>);
+
+  // If stations mode, render the stations view
+  if (viewMode === 'stations') {
+    return (
+      <div className="h-[calc(100vh-120px)] -m-6 bg-sidebar text-sidebar-foreground flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
+          <div className="flex items-center gap-3">
+            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+              <TabsList className="bg-sidebar-accent">
+                <TabsTrigger value="classic" className="gap-2">
+                  <LayoutGrid className="w-4 h-4" />
+                  Clásico
+                </TabsTrigger>
+                <TabsTrigger value="stations" className="gap-2">
+                  <Columns3 className="w-4 h-4" />
+                  Estaciones
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        </div>
+        <div className="flex-1 m-6 -mb-0">
+          <KDSStationsView branch={branch} />
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
