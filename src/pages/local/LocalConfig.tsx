@@ -119,118 +119,96 @@ export default function LocalConfig() {
         </Card>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Estado del Local */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Store className="h-5 w-5" />
-              Estado del Local
-            </CardTitle>
-            <CardDescription>
-              Controla si el local está abierto y recibiendo pedidos
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+      <Card>
+        <CardContent className="divide-y">
+          {/* Estado del Local */}
+          <div className="flex items-center justify-between py-4 first:pt-6">
+            <div className="flex items-center gap-3">
+              <Store className="h-5 w-5 text-muted-foreground" />
               <div className="space-y-0.5">
-                <Label htmlFor="is-open">Local Abierto</Label>
+                <Label htmlFor="is-open" className="text-base font-medium">Local Abierto</Label>
                 <p className="text-sm text-muted-foreground">
                   Los clientes pueden hacer pedidos
                 </p>
               </div>
-              <Switch
-                id="is-open"
-                checked={isOpen}
-                onCheckedChange={setIsOpen}
-                disabled={!canEdit}
-              />
             </div>
-          </CardContent>
-        </Card>
+            <Switch
+              id="is-open"
+              checked={isOpen}
+              onCheckedChange={setIsOpen}
+              disabled={!canEdit}
+            />
+          </div>
 
-        {/* Delivery */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Truck className="h-5 w-5" />
-              Delivery
-            </CardTitle>
-            <CardDescription>
-              Configura la disponibilidad de envíos
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+          {/* Delivery */}
+          <div className="flex items-center justify-between py-4">
+            <div className="flex items-center gap-3">
+              <Truck className="h-5 w-5 text-muted-foreground" />
               <div className="space-y-0.5">
-                <Label htmlFor="delivery-enabled">Delivery Habilitado</Label>
+                <Label htmlFor="delivery-enabled" className="text-base font-medium">Delivery Habilitado</Label>
                 <p className="text-sm text-muted-foreground">
                   Permite pedidos con envío a domicilio
                 </p>
               </div>
-              <Switch
-                id="delivery-enabled"
-                checked={deliveryEnabled}
-                onCheckedChange={setDeliveryEnabled}
-                disabled={!canEdit}
-              />
             </div>
-          </CardContent>
-        </Card>
+            <Switch
+              id="delivery-enabled"
+              checked={deliveryEnabled}
+              onCheckedChange={setDeliveryEnabled}
+              disabled={!canEdit}
+            />
+          </div>
 
-        {/* Tiempo de Preparación */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Tiempo de Preparación
-            </CardTitle>
-            <CardDescription>
-              Tiempo estimado que se muestra a los clientes
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Label htmlFor="prep-time">Minutos estimados</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="prep-time"
-                  type="number"
-                  min={5}
-                  max={120}
-                  value={estimatedPrepTime}
-                  onChange={(e) => setEstimatedPrepTime(Number(e.target.value))}
-                  disabled={!canEdit}
-                  className="w-24"
-                />
-                <span className="text-muted-foreground">minutos</span>
+          {/* Tiempo de Preparación */}
+          <div className="flex items-center justify-between py-4">
+            <div className="flex items-center gap-3">
+              <Clock className="h-5 w-5 text-muted-foreground" />
+              <div className="space-y-0.5">
+                <Label htmlFor="prep-time" className="text-base font-medium">Tiempo de Preparación</Label>
+                <p className="text-sm text-muted-foreground">
+                  Tiempo estimado que se muestra a los clientes
+                </p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex items-center gap-2">
+              <Input
+                id="prep-time"
+                type="number"
+                min={5}
+                max={120}
+                value={estimatedPrepTime}
+                onChange={(e) => setEstimatedPrepTime(Number(e.target.value))}
+                disabled={!canEdit}
+                className="w-20"
+              />
+              <span className="text-sm text-muted-foreground">min</span>
+            </div>
+          </div>
 
-        {/* Mensaje de Estado */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              Mensaje de Estado
-            </CardTitle>
-            <CardDescription>
-              Mensaje opcional que se muestra a los clientes (ej: "Demora de 15 min extra")
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              placeholder="Escribí un mensaje para los clientes..."
-              value={statusMessage}
-              onChange={(e) => setStatusMessage(e.target.value)}
-              disabled={!canEdit}
-              rows={3}
-            />
-          </CardContent>
-        </Card>
-      </div>
+          {/* Mensaje de Estado */}
+          <div className="py-4 last:pb-6">
+            <div className="flex items-start gap-3">
+              <MessageSquare className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div className="flex-1 space-y-2">
+                <div className="space-y-0.5">
+                  <Label htmlFor="status-message" className="text-base font-medium">Mensaje de Estado</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Mensaje opcional para los clientes (ej: "Demora de 15 min extra")
+                  </p>
+                </div>
+                <Textarea
+                  id="status-message"
+                  placeholder="Escribí un mensaje para los clientes..."
+                  value={statusMessage}
+                  onChange={(e) => setStatusMessage(e.target.value)}
+                  disabled={!canEdit}
+                  rows={2}
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {canEdit && (
         <div className="flex justify-end">
