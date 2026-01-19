@@ -1661,6 +1661,254 @@ export type Database = {
           },
         ]
       }
+      payroll_adjustments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          employee_id: string
+          id: string
+          ledger_transaction_id: string | null
+          period_id: string
+          source: string | null
+          type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          employee_id: string
+          id?: string
+          ledger_transaction_id?: string | null
+          period_id: string
+          source?: string | null
+          type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          employee_id?: string
+          id?: string
+          ledger_transaction_id?: string | null
+          period_id?: string
+          source?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_adjustments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_adjustments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_adjustments_ledger_transaction_id_fkey"
+            columns: ["ledger_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_adjustments_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_entries: {
+        Row: {
+          amount_black: number | null
+          amount_white: number | null
+          employee_id: string
+          id: string
+          include_in_tips: boolean | null
+          notes: string | null
+          period_id: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          amount_black?: number | null
+          amount_white?: number | null
+          employee_id: string
+          id?: string
+          include_in_tips?: boolean | null
+          notes?: string | null
+          period_id: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          amount_black?: number | null
+          amount_white?: number | null
+          employee_id?: string
+          id?: string
+          include_in_tips?: boolean | null
+          notes?: string | null
+          period_id?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_entries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_entries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_entries_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_payments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          created_by: string | null
+          employee_id: string
+          id: string
+          ledger_transaction_id: string | null
+          method: string | null
+          notes: string | null
+          payment_date: string
+          period_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          created_by?: string | null
+          employee_id: string
+          id?: string
+          ledger_transaction_id?: string | null
+          method?: string | null
+          notes?: string | null
+          payment_date?: string
+          period_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          created_by?: string | null
+          employee_id?: string
+          id?: string
+          ledger_transaction_id?: string | null
+          method?: string | null
+          notes?: string | null
+          payment_date?: string
+          period_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_payments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_payments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_payments_ledger_transaction_id_fkey"
+            columns: ["ledger_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_payments_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_periods: {
+        Row: {
+          branch_id: string
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          month: string
+          status: string
+          tip_distribution_method: string | null
+          tip_pool_amount: number | null
+        }
+        Insert: {
+          branch_id: string
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          month: string
+          status?: string
+          tip_distribution_method?: string | null
+          tip_pool_amount?: number | null
+        }
+        Update: {
+          branch_id?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          month?: string
+          status?: string
+          tip_distribution_method?: string | null
+          tip_pool_amount?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_periods_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_periods_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       permission_audit_logs: {
         Row: {
           action: string
