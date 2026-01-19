@@ -53,12 +53,26 @@ interface Ingredient {
   name: string;
   sku: string | null;
   unit: string;
+  purchase_unit: string | null;
+  purchase_unit_qty: number;
+  usage_unit: string | null;
   cost_per_unit: number;
   min_stock: number;
+  lead_time_days: number;
+  safety_stock_days: number;
+  avg_daily_consumption: number;
   category: string | null;
   is_active: boolean;
   notes: string | null;
 }
+
+// Calculated dynamic min stock
+const calculateDynamicMinStock = (ingredient: Ingredient): number => {
+  const avgDaily = ingredient.avg_daily_consumption || 0;
+  const leadTime = ingredient.lead_time_days || 2;
+  const safetyDays = ingredient.safety_stock_days || 1;
+  return avgDaily * (leadTime + safetyDays);
+};
 
 interface IngredientCategory {
   id: string;
@@ -90,9 +104,12 @@ export default function Ingredients() {
   // Form state
   const [formName, setFormName] = useState('');
   const [formSku, setFormSku] = useState('');
-  const [formUnit, setFormUnit] = useState('u');
+  const [formUsageUnit, setFormUsageUnit] = useState('u');
+  const [formPurchaseUnit, setFormPurchaseUnit] = useState('u');
+  const [formPurchaseUnitQty, setFormPurchaseUnitQty] = useState('1');
   const [formCost, setFormCost] = useState('');
-  const [formMinStock, setFormMinStock] = useState('');
+  const [formLeadTimeDays, setFormLeadTimeDays] = useState('2');
+  const [formSafetyDays, setFormSafetyDays] = useState('1');
   const [formCategory, setFormCategory] = useState('');
   const [formNotes, setFormNotes] = useState('');
   const [saving, setSaving] = useState(false);
@@ -139,9 +156,12 @@ export default function Ingredients() {
   const resetForm = () => {
     setFormName('');
     setFormSku('');
-    setFormUnit('unidad');
+    setFormUsageUnit('u');
+    setFormPurchaseUnit('u');
+    setFormPurchaseUnitQty('1');
     setFormCost('');
-    setFormMinStock('');
+    setFormLeadTimeDays('2');
+    setFormSafetyDays('1');
     setFormCategory('');
     setFormNotes('');
   };
@@ -150,9 +170,12 @@ export default function Ingredients() {
     setEditing(ingredient);
     setFormName(ingredient.name);
     setFormSku(ingredient.sku || '');
-    setFormUnit(ingredient.unit);
+    setFormUsageUnit(ingredient.usage_unit || ingredient.unit || 'u');
+    setFormPurchaseUnit(ingredient.purchase_unit || ingredient.unit || 'u');
+    setFormPurchaseUnitQty(ingredient.purchase_unit_qty?.toString() || '1');
     setFormCost(ingredient.cost_per_unit?.toString() || '');
-    setFormMinStock(ingredient.min_stock?.toString() || '');
+    setFormLeadTimeDays(ingredient.lead_time_days?.toString() || '2');
+    setFormSafetyDays(ingredient.safety_stock_days?.toString() || '1');
     setFormCategory(ingredient.category || '');
     setFormNotes(ingredient.notes || '');
     setShowDialog(true);
@@ -169,9 +192,13 @@ export default function Ingredients() {
       const data = {
         name: formName.trim(),
         sku: formSku.trim() || null,
-        unit: formUnit,
+        unit: formUsageUnit,
+        usage_unit: formUsageUnit,
+        purchase_unit: formPurchaseUnit,
+        purchase_unit_qty: parseFloat(formPurchaseUnitQty) || 1,
         cost_per_unit: parseFloat(formCost) || 0,
-        min_stock: parseFloat(formMinStock) || 0,
+        lead_time_days: parseInt(formLeadTimeDays) || 2,
+        safety_stock_days: parseInt(formSafetyDays) || 1,
         category: formCategory || null,
         notes: formNotes.trim() || null,
       };
@@ -330,9 +357,10 @@ export default function Ingredients() {
                 <TableHead>Ingrediente</TableHead>
                 <TableHead>SKU</TableHead>
                 <TableHead>Categoría</TableHead>
-                <TableHead>Unidad</TableHead>
+                <TableHead>Unidad Uso</TableHead>
+                <TableHead>Unidad Compra</TableHead>
                 <TableHead className="text-right">Costo</TableHead>
-                <TableHead className="text-right">Stock Mín.</TableHead>
+                <TableHead className="text-right">Stock Mín. (dinámico)</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
@@ -340,49 +368,70 @@ export default function Ingredients() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={7}>
+                    <TableCell colSpan={8}>
                       <Skeleton className="h-12 w-full" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : filteredIngredients.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                     No se encontraron ingredientes
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredIngredients.map((ingredient) => (
-                  <TableRow key={ingredient.id}>
-                    <TableCell>
-                      <p className="font-medium">{ingredient.name}</p>
-                      {ingredient.notes && (
-                        <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                          {ingredient.notes}
-                        </p>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {ingredient.sku && (
-                        <Badge variant="outline">{ingredient.sku}</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {ingredient.category && (
-                        <Badge variant="secondary">{ingredient.category}</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>{ingredient.unit}</TableCell>
-                    <TableCell className="text-right font-mono">
-                      {formatPrice(ingredient.cost_per_unit)} / {ingredient.unit}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {ingredient.min_stock > 0 ? (
-                        <span>{ingredient.min_stock} {ingredient.unit}</span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
+                filteredIngredients.map((ingredient) => {
+                  const dynamicMinStock = calculateDynamicMinStock(ingredient);
+                  const usageUnit = ingredient.usage_unit || ingredient.unit;
+                  const purchaseUnit = ingredient.purchase_unit || ingredient.unit;
+                  const purchaseQty = ingredient.purchase_unit_qty || 1;
+                  
+                  return (
+                    <TableRow key={ingredient.id}>
+                      <TableCell>
+                        <p className="font-medium">{ingredient.name}</p>
+                        {ingredient.notes && (
+                          <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                            {ingredient.notes}
+                          </p>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {ingredient.sku && (
+                          <Badge variant="outline">{ingredient.sku}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {ingredient.category && (
+                          <Badge variant="secondary">{ingredient.category}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>{usageUnit}</TableCell>
+                      <TableCell>
+                        <span className="text-sm">
+                          {purchaseUnit}
+                          {purchaseQty !== 1 && (
+                            <span className="text-muted-foreground text-xs ml-1">
+                              ({purchaseQty} {usageUnit})
+                            </span>
+                          )}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {formatPrice(ingredient.cost_per_unit)} / {usageUnit}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {dynamicMinStock > 0 ? (
+                          <div>
+                            <span className="font-medium">{dynamicMinStock.toFixed(1)} {usageUnit}</span>
+                            <p className="text-xs text-muted-foreground">
+                              {ingredient.avg_daily_consumption?.toFixed(1) || 0}/día × {(ingredient.lead_time_days || 2) + (ingredient.safety_stock_days || 1)}d
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">Sin datos</span>
+                        )}
+                      </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -406,7 +455,8 @@ export default function Ingredients() {
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -458,8 +508,8 @@ export default function Ingredients() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="unit">Unidad</Label>
-                <Select value={formUnit} onValueChange={setFormUnit}>
+                <Label htmlFor="usageUnit">Unidad de Uso</Label>
+                <Select value={formUsageUnit} onValueChange={setFormUsageUnit}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -485,9 +535,34 @@ export default function Ingredients() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="cost">Costo por unidad</Label>
+                <Label htmlFor="purchaseUnit">Unidad de Compra</Label>
+                <Select value={formPurchaseUnit} onValueChange={setFormPurchaseUnit}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {UNITS.map(u => (
+                      <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="purchaseQty">Equivale a</Label>
+                <Input
+                  id="purchaseQty"
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  value={formPurchaseUnitQty}
+                  onChange={(e) => setFormPurchaseUnitQty(e.target.value)}
+                  placeholder="1"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cost">Costo/{formUsageUnit}</Label>
                 <div className="flex items-center gap-2">
                   <span>$</span>
                   <Input
@@ -501,15 +576,29 @@ export default function Ingredients() {
                   />
                 </div>
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="minStock">Stock mínimo</Label>
+                <Label htmlFor="leadTime">Días de entrega (Lead Time)</Label>
                 <Input
-                  id="minStock"
+                  id="leadTime"
                   type="number"
                   min="0"
-                  value={formMinStock}
-                  onChange={(e) => setFormMinStock(e.target.value)}
-                  placeholder="0"
+                  value={formLeadTimeDays}
+                  onChange={(e) => setFormLeadTimeDays(e.target.value)}
+                  placeholder="2"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="safetyDays">Días de seguridad</Label>
+                <Input
+                  id="safetyDays"
+                  type="number"
+                  min="0"
+                  value={formSafetyDays}
+                  onChange={(e) => setFormSafetyDays(e.target.value)}
+                  placeholder="1"
                 />
               </div>
             </div>
