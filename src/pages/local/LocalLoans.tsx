@@ -3,12 +3,13 @@ import { useOutletContext } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -18,6 +19,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -32,18 +40,26 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from '@/components/ui/alert';
+import {
   Plus,
   Landmark,
-  Calendar,
   ChevronDown,
   ChevronRight,
   CheckCircle,
-  Clock,
   DollarSign,
-  Percent
+  Percent,
+  Smartphone,
+  Info,
+  AlertTriangle,
+  Calendar,
+  History
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, parseISO, addMonths } from 'date-fns';
+import { format, parseISO, addMonths, isBefore } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -79,6 +95,23 @@ interface LocalContext {
   branch: Branch;
 }
 
+// MercadoPago loan characteristics (typical for Argentina 2025)
+const MERCADOPAGO_LOAN_INFO = {
+  maxAmount: 16000000, // $16M ARS
+  minAmount: 5000,
+  typicalRates: {
+    dineroPlus: { min: 85, max: 150, term: '28 días' },
+    cuotas: { min: 70, max: 120, term: '3-12 cuotas' },
+  },
+  characteristics: [
+    'Devolución en 28 días (Dinero Plus) o cuotas mensuales',
+    'Tasa CFT variable según historial crediticio',
+    'Descuento automático de ventas MP si hay mora',
+    'Sin requisitos de garantía',
+    'Aprobación instantánea basada en ventas MP'
+  ]
+};
+
 export default function LocalLoans() {
   const { branch } = useOutletContext<LocalContext>();
   const { user } = useAuth();
@@ -91,6 +124,7 @@ export default function LocalLoans() {
   const [expandedLoans, setExpandedLoans] = useState<Set<string>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Form state - extended for historical loans
   const [formData, setFormData] = useState({
     lender_name: '',
     description: '',
@@ -99,9 +133,12 @@ export default function LocalLoans() {
     num_installments: '12',
     start_date: format(new Date(), 'yyyy-MM-dd'),
     notes: '',
+    is_historical: false,
+    already_paid_installments: '0',
   });
 
   const [payAmount, setPayAmount] = useState('');
+  const [showMPInfo, setShowMPInfo] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -131,8 +168,16 @@ export default function LocalLoans() {
       num_installments: '12',
       start_date: format(new Date(), 'yyyy-MM-dd'),
       notes: '',
+      is_historical: false,
+      already_paid_installments: '0',
     });
+    setShowMPInfo(false);
   };
+
+  // Detect if it's a MercadoPago loan
+  const isMercadoPagoLoan = formData.lender_name.toLowerCase().includes('mercado') || 
+                           formData.lender_name.toLowerCase().includes('mp') ||
+                           formData.lender_name.toLowerCase() === 'mercadopago';
 
   const handleSubmit = async () => {
     if (!formData.lender_name.trim() || !formData.principal_amount || !formData.num_installments) {
@@ -147,6 +192,7 @@ export default function LocalLoans() {
       const rate = parseFloat(formData.interest_rate) / 100;
       const numCuotas = parseInt(formData.num_installments);
       const startDate = parseISO(formData.start_date);
+      const alreadyPaid = formData.is_historical ? parseInt(formData.already_paid_installments) : 0;
 
       // Create loan
       const { data: loan, error: loanError } = await supabase
@@ -173,14 +219,20 @@ export default function LocalLoans() {
       const totalInterest = principal * rate;
       const interestPerCuota = totalInterest / numCuotas;
 
-      const installments = Array.from({ length: numCuotas }, (_, i) => ({
-        loan_id: loan.id,
-        installment_number: i + 1,
-        due_date: format(addMonths(startDate, i + 1), 'yyyy-MM-dd'),
-        amount_capital: capitalPerCuota,
-        amount_interest: interestPerCuota,
-        status: 'pending',
-      }));
+      const installments = Array.from({ length: numCuotas }, (_, i) => {
+        const isPaid = i < alreadyPaid;
+        const dueDate = format(addMonths(startDate, i + 1), 'yyyy-MM-dd');
+        return {
+          loan_id: loan.id,
+          installment_number: i + 1,
+          due_date: dueDate,
+          amount_capital: capitalPerCuota,
+          amount_interest: interestPerCuota,
+          amount_paid: isPaid ? (capitalPerCuota + interestPerCuota) : 0,
+          status: isPaid ? 'paid' : 'pending',
+          paid_at: isPaid ? new Date().toISOString() : null,
+        };
+      });
 
       const { error: installError } = await supabase
         .from('loan_installments')
@@ -188,28 +240,33 @@ export default function LocalLoans() {
 
       if (installError) throw installError;
 
-      // Create income transaction (entrada de dinero como deuda)
-      const { error: txError } = await supabase.from('transactions').insert({
-        branch_id: branch.id,
-        type: 'income',
-        amount: principal,
-        concept: `Préstamo: ${formData.lender_name}`,
-        category_group: 'DEUDA',
-        doc_status: 'documented',
-        accrual_date: formData.start_date,
-        payment_date: formData.start_date,
-        transaction_date: formData.start_date,
-        status: 'paid',
-        payment_origin: 'bank_transfer',
-        receipt_type: 'INTERNAL',
-        recorded_by: user?.id,
-        created_by: user?.id,
-        notes: `Alta préstamo ID: ${loan.id}`,
-      });
+      // Create income transaction (entrada de dinero como deuda) - only if not historical or show full
+      if (!formData.is_historical) {
+        const { error: txError } = await supabase.from('transactions').insert({
+          branch_id: branch.id,
+          type: 'income',
+          amount: principal,
+          concept: `Préstamo: ${formData.lender_name}`,
+          category_group: 'DEUDA',
+          doc_status: isMercadoPagoLoan ? 'documented' : 'internal',
+          accrual_date: formData.start_date,
+          payment_date: formData.start_date,
+          transaction_date: formData.start_date,
+          status: 'paid',
+          payment_origin: isMercadoPagoLoan ? 'mercadopago' : 'bank_transfer',
+          receipt_type: 'INTERNAL',
+          recorded_by: user?.id,
+          created_by: user?.id,
+          notes: `Alta préstamo ID: ${loan.id}`,
+        });
 
-      if (txError) console.error('Error creating income transaction:', txError);
+        if (txError) console.error('Error creating income transaction:', txError);
+      }
 
-      toast.success('Préstamo registrado con cuotas');
+      toast.success(formData.is_historical 
+        ? `Préstamo histórico registrado (${alreadyPaid} cuotas ya pagadas)`
+        : 'Préstamo registrado con cuotas'
+      );
       setIsDialogOpen(false);
       resetForm();
       fetchData();
@@ -255,6 +312,8 @@ export default function LocalLoans() {
       const capitalPaid = amount * capitalProportion;
       const interestPaid = amount - capitalPaid;
 
+      const isMPLoan = loan.lender_name.toLowerCase().includes('mercado');
+
       // Capital payment (reduces debt, not P&L expense)
       if (capitalPaid > 0) {
         await supabase.from('transactions').insert({
@@ -263,12 +322,12 @@ export default function LocalLoans() {
           amount: capitalPaid,
           concept: `Cuota ${installment.installment_number} Capital - ${loan.lender_name}`,
           category_group: 'DEUDA',
-          doc_status: 'internal',
+          doc_status: isMPLoan ? 'documented' : 'internal',
           accrual_date: installment.due_date,
           payment_date: format(new Date(), 'yyyy-MM-dd'),
           transaction_date: format(new Date(), 'yyyy-MM-dd'),
           status: 'paid',
-          payment_origin: 'bank_transfer',
+          payment_origin: isMPLoan ? 'mercadopago' : 'bank_transfer',
           receipt_type: 'INTERNAL',
           recorded_by: user?.id,
           created_by: user?.id,
@@ -283,12 +342,12 @@ export default function LocalLoans() {
           amount: interestPaid,
           concept: `Cuota ${installment.installment_number} Interés - ${loan.lender_name}`,
           category_group: 'FINANCIEROS',
-          doc_status: 'internal',
+          doc_status: isMPLoan ? 'documented' : 'internal',
           accrual_date: installment.due_date,
           payment_date: format(new Date(), 'yyyy-MM-dd'),
           transaction_date: format(new Date(), 'yyyy-MM-dd'),
           status: 'paid',
-          payment_origin: 'bank_transfer',
+          payment_origin: isMPLoan ? 'mercadopago' : 'bank_transfer',
           receipt_type: 'INTERNAL',
           recorded_by: user?.id,
           created_by: user?.id,
@@ -345,9 +404,13 @@ export default function LocalLoans() {
     return installments.reduce((sum, i) => sum + (i.amount_capital + i.amount_interest - i.amount_paid), 0);
   };
 
+  const isMPLoanCheck = (loan: Loan) => 
+    loan.lender_name.toLowerCase().includes('mercado') || loan.lender_name.toLowerCase() === 'mp';
+
   const totals = {
     totalDebt: loans.filter(l => l.status === 'active').reduce((s, l) => s + getLoanRemaining(l), 0),
     activeLoans: loans.filter(l => l.status === 'active').length,
+    mpLoans: loans.filter(l => l.status === 'active' && isMPLoanCheck(l)).length,
   };
 
   if (loading) {
@@ -378,7 +441,7 @@ export default function LocalLoans() {
               Nuevo Préstamo
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Registrar Préstamo</DialogTitle>
               <DialogDescription>
@@ -387,14 +450,49 @@ export default function LocalLoans() {
             </DialogHeader>
 
             <div className="space-y-4 py-4">
+              {/* Historical Loan Toggle */}
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <History className="w-4 h-4 text-muted-foreground" />
+                  <Label htmlFor="historical" className="text-sm font-normal">
+                    Es un préstamo viejo (ya tenía cuotas pagas)
+                  </Label>
+                </div>
+                <Switch
+                  id="historical"
+                  checked={formData.is_historical}
+                  onCheckedChange={v => setFormData(f => ({ ...f, is_historical: v }))}
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label>Prestamista</Label>
                 <Input
-                  placeholder="Nombre del banco/persona"
+                  placeholder="Nombre del banco/persona (ej: MercadoPago, Banco Galicia)"
                   value={formData.lender_name}
                   onChange={e => setFormData(f => ({ ...f, lender_name: e.target.value }))}
                 />
               </div>
+
+              {/* MercadoPago Info Alert */}
+              {isMercadoPagoLoan && (
+                <Alert className="border-blue-200 bg-blue-50">
+                  <Smartphone className="h-4 w-4 text-blue-600" />
+                  <AlertTitle className="text-blue-800">Préstamo MercadoPago Detectado</AlertTitle>
+                  <AlertDescription className="text-blue-700">
+                    <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+                      {MERCADOPAGO_LOAN_INFO.characteristics.map((c, i) => (
+                        <li key={i}>{c}</li>
+                      ))}
+                    </ul>
+                    <div className="mt-3 p-2 bg-blue-100 rounded">
+                      <p className="text-xs font-semibold">Tasas típicas 2025:</p>
+                      <p className="text-xs">Dinero Plus: {MERCADOPAGO_LOAN_INFO.typicalRates.dineroPlus.min}%-{MERCADOPAGO_LOAN_INFO.typicalRates.dineroPlus.max}% CFT ({MERCADOPAGO_LOAN_INFO.typicalRates.dineroPlus.term})</p>
+                      <p className="text-xs">Cuotas: {MERCADOPAGO_LOAN_INFO.typicalRates.cuotas.min}%-{MERCADOPAGO_LOAN_INFO.typicalRates.cuotas.max}% CFT ({MERCADOPAGO_LOAN_INFO.typicalRates.cuotas.term})</p>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
 
               <div className="space-y-2">
                 <Label>Descripción (opcional)</Label>
@@ -418,6 +516,11 @@ export default function LocalLoans() {
                       onChange={e => setFormData(f => ({ ...f, principal_amount: e.target.value }))}
                     />
                   </div>
+                  {isMercadoPagoLoan && (
+                    <p className="text-xs text-muted-foreground">
+                      Máximo MP: {formatCurrency(MERCADOPAGO_LOAN_INFO.maxAmount)}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Tasa Interés Total (%)</Label>
@@ -453,6 +556,26 @@ export default function LocalLoans() {
                   />
                 </div>
               </div>
+
+              {/* Historical: Already Paid Installments */}
+              {formData.is_historical && (
+                <div className="space-y-2 p-3 border border-dashed rounded-lg">
+                  <Label className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Cuotas ya pagadas al momento de cargar
+                  </Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max={parseInt(formData.num_installments) - 1}
+                    value={formData.already_paid_installments}
+                    onChange={e => setFormData(f => ({ ...f, already_paid_installments: e.target.value }))}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Estas cuotas se marcarán automáticamente como pagadas (sin generar transacciones retroactivas)
+                  </p>
+                </div>
+              )}
             </div>
 
             <DialogFooter>
@@ -468,7 +591,7 @@ export default function LocalLoans() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Deuda Total Activa</CardTitle>
@@ -477,6 +600,21 @@ export default function LocalLoans() {
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totals.totalDebt)}</div>
             <p className="text-xs text-muted-foreground">{totals.activeLoans} préstamos activos</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Préstamos MercadoPago</CardTitle>
+            <Smartphone className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{totals.mpLoans}</div>
+            <p className="text-xs text-muted-foreground">
+              {loans.filter(l => isMPLoanCheck(l)).reduce((s, l) => s + getLoanRemaining(l), 0) > 0 
+                ? formatCurrency(loans.filter(l => l.status === 'active' && isMPLoanCheck(l)).reduce((s, l) => s + getLoanRemaining(l), 0))
+                : 'Sin deuda MP'
+              }
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -502,100 +640,105 @@ export default function LocalLoans() {
             </CardContent>
           </Card>
         ) : (
-          loans.map(loan => {
-            const isExpanded = expandedLoans.has(loan.id);
-            const progress = getLoanProgress(loan);
-            const remaining = getLoanRemaining(loan);
-            const installments = (loan.loan_installments || []).sort((a, b) => a.installment_number - b.installment_number);
-
-            return (
-              <Card key={loan.id}>
-                <Collapsible open={isExpanded} onOpenChange={() => toggleLoan(loan.id)}>
-                  <CollapsibleTrigger asChild>
-                    <CardHeader className="cursor-pointer hover:bg-muted/50">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                          <div>
-                            <CardTitle className="text-lg">{loan.lender_name}</CardTitle>
-                            <p className="text-sm text-muted-foreground">{loan.description}</p>
-                          </div>
+          loans.map(loan => (
+            <Card key={loan.id} className={isMPLoanCheck(loan) ? 'border-blue-200' : ''}>
+              <Collapsible open={expandedLoans.has(loan.id)} onOpenChange={() => toggleLoan(loan.id)}>
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {expandedLoans.has(loan.id) ? (
+                          <ChevronDown className="w-5 h-5" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5" />
+                        )}
+                        <div>
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            {loan.lender_name}
+                            {isMPLoanCheck(loan) && (
+                              <Smartphone className="w-4 h-4 text-blue-600" />
+                            )}
+                          </CardTitle>
+                          <CardDescription>
+                            {formatCurrency(loan.principal_amount)} • {loan.num_installments} cuotas • 
+                            {loan.interest_rate}% interés
+                          </CardDescription>
                         </div>
+                      </div>
+                      <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <Badge variant={loan.status === 'active' ? 'default' : 'secondary'}>
-                            {loan.status === 'active' ? 'Activo' : loan.status === 'completed' ? 'Completado' : loan.status}
-                          </Badge>
-                          <p className="text-sm font-medium mt-1">Pendiente: {formatCurrency(remaining)}</p>
+                          <p className="font-semibold">{formatCurrency(getLoanRemaining(loan))}</p>
+                          <p className="text-xs text-muted-foreground">restante</p>
                         </div>
+                        <Badge variant={loan.status === 'completed' ? 'default' : loan.status === 'active' ? 'secondary' : 'destructive'}>
+                          {loan.status === 'completed' ? 'Completado' : loan.status === 'active' ? 'Activo' : 'Cancelado'}
+                        </Badge>
                       </div>
-                      <div className="mt-3">
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>Progreso</span>
-                          <span>{Math.round(progress)}%</span>
-                        </div>
-                        <Progress value={progress} className="h-2" />
-                      </div>
-                    </CardHeader>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <CardContent>
-                      <div className="grid grid-cols-4 gap-4 mb-4 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Capital:</span>
-                          <p className="font-medium">{formatCurrency(loan.principal_amount)}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Tasa:</span>
-                          <p className="font-medium">{loan.interest_rate}%</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Cuotas:</span>
-                          <p className="font-medium">{loan.num_installments}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Inicio:</span>
-                          <p className="font-medium">{format(parseISO(loan.start_date), 'dd/MM/yyyy')}</p>
-                        </div>
-                      </div>
-
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>#</TableHead>
-                            <TableHead>Vencimiento</TableHead>
-                            <TableHead className="text-right">Capital</TableHead>
-                            <TableHead className="text-right">Interés</TableHead>
-                            <TableHead className="text-right">Total</TableHead>
-                            <TableHead className="text-right">Pagado</TableHead>
-                            <TableHead>Estado</TableHead>
-                            <TableHead></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {installments.map(inst => {
-                            const total = inst.amount_capital + inst.amount_interest;
-                            const saldo = total - inst.amount_paid;
+                    </div>
+                    <Progress value={getLoanProgress(loan)} className="h-2 mt-2" />
+                  </CardHeader>
+                </CollapsibleTrigger>
+                
+                <CollapsibleContent>
+                  <CardContent>
+                    {/* MP Warning if applicable */}
+                    {isMPLoanCheck(loan) && loan.status === 'active' && (
+                      <Alert className="mb-4 border-amber-200 bg-amber-50">
+                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                        <AlertDescription className="text-amber-700 text-sm">
+                          <strong>Recordá:</strong> MercadoPago puede descontar automáticamente de tus ventas si hay mora.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Cuota</TableHead>
+                          <TableHead>Vencimiento</TableHead>
+                          <TableHead className="text-right">Capital</TableHead>
+                          <TableHead className="text-right">Interés</TableHead>
+                          <TableHead className="text-right">Pagado</TableHead>
+                          <TableHead className="text-center">Estado</TableHead>
+                          <TableHead></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(loan.loan_installments || [])
+                          .sort((a, b) => a.installment_number - b.installment_number)
+                          .map(inst => {
+                            const isOverdue = inst.status === 'pending' && isBefore(parseISO(inst.due_date), new Date());
                             return (
-                              <TableRow key={inst.id}>
-                                <TableCell>{inst.installment_number}</TableCell>
-                                <TableCell>{format(parseISO(inst.due_date), 'dd/MM/yyyy')}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(inst.amount_capital)}</TableCell>
-                                <TableCell className="text-right text-orange-600">{formatCurrency(inst.amount_interest)}</TableCell>
-                                <TableCell className="text-right font-medium">{formatCurrency(total)}</TableCell>
-                                <TableCell className="text-right text-green-600">{formatCurrency(inst.amount_paid)}</TableCell>
+                              <TableRow key={inst.id} className={isOverdue ? 'bg-red-50' : ''}>
+                                <TableCell className="font-medium">#{inst.installment_number}</TableCell>
                                 <TableCell>
-                                  <Badge variant={inst.status === 'paid' ? 'default' : 'outline'}>
-                                    {inst.status === 'paid' ? 'Pagada' : inst.status === 'partial' ? 'Parcial' : 'Pendiente'}
+                                  <span className={isOverdue ? 'text-destructive font-semibold' : ''}>
+                                    {format(parseISO(inst.due_date), 'dd/MM/yyyy')}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right">{formatCurrency(inst.amount_capital)}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(inst.amount_interest)}</TableCell>
+                                <TableCell className="text-right">{inst.amount_paid > 0 ? formatCurrency(inst.amount_paid) : '-'}</TableCell>
+                                <TableCell className="text-center">
+                                  <Badge variant={
+                                    inst.status === 'paid' ? 'default' : 
+                                    inst.status === 'partial' ? 'secondary' : 
+                                    isOverdue ? 'destructive' : 'outline'
+                                  }>
+                                    {inst.status === 'paid' ? 'Pagada' : 
+                                     inst.status === 'partial' ? 'Parcial' : 
+                                     isOverdue ? 'Vencida' : 'Pendiente'}
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
-                                  {inst.status !== 'paid' && (
+                                  {inst.status !== 'paid' && loan.status === 'active' && (
                                     <Button
                                       size="sm"
                                       variant="outline"
                                       onClick={() => {
                                         setSelectedInstallment({ loan, installment: inst });
-                                        setPayAmount(saldo.toString());
+                                        const remaining = (inst.amount_capital + inst.amount_interest) - inst.amount_paid;
+                                        setPayAmount(remaining.toString());
                                         setIsPayDialogOpen(true);
                                       }}
                                     >
@@ -606,41 +749,66 @@ export default function LocalLoans() {
                               </TableRow>
                             );
                           })}
-                        </TableBody>
-                      </Table>
-                    </CardContent>
-                  </CollapsibleContent>
-                </Collapsible>
-              </Card>
-            );
-          })
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
+            </Card>
+          ))
         )}
       </div>
 
-      {/* Pay Dialog */}
+      {/* Pay Installment Dialog */}
       <Dialog open={isPayDialogOpen} onOpenChange={setIsPayDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Pagar Cuota</DialogTitle>
-            <DialogDescription>
-              Cuota {selectedInstallment?.installment.installment_number} - {selectedInstallment?.loan.lender_name}
-            </DialogDescription>
+            <DialogTitle>Registrar Pago de Cuota</DialogTitle>
+            {selectedInstallment && (
+              <DialogDescription>
+                Cuota #{selectedInstallment.installment.installment_number} - {selectedInstallment.loan.lender_name}
+              </DialogDescription>
+            )}
           </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Monto a pagar</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  type="number"
-                  className="pl-10"
-                  value={payAmount}
-                  onChange={e => setPayAmount(e.target.value)}
-                />
+          
+          {selectedInstallment && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Total cuota</p>
+                  <p className="font-semibold">
+                    {formatCurrency(selectedInstallment.installment.amount_capital + selectedInstallment.installment.amount_interest)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Ya pagado</p>
+                  <p className="font-semibold">{formatCurrency(selectedInstallment.installment.amount_paid)}</p>
+                </div>
               </div>
+              
+              <div className="space-y-2">
+                <Label>Monto a pagar</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    type="number"
+                    className="pl-10"
+                    value={payAmount}
+                    onChange={e => setPayAmount(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {isMPLoanCheck(selectedInstallment.loan) && (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription className="text-sm">
+                    Si el pago fue descontado automáticamente por MercadoPago de tus ventas, registralo igualmente aquí para mantener el control.
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
-          </div>
+          )}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsPayDialogOpen(false)}>
