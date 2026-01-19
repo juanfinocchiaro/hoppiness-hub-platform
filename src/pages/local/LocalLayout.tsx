@@ -231,6 +231,7 @@ export default function LocalLayout() {
         { to: 'caja', label: 'Caja', icon: Calculator, show: true },
         { to: 'pagos', label: 'Pagos', icon: DollarSign, show: true },
         { to: 'proveedores', label: 'Proveedores', icon: Truck, show: true },
+        { to: 'facturas', label: 'Facturas', icon: FileText, show: true },
         { to: 'estado-resultados', label: 'Reporte P&L', icon: FileText, show: canViewPL },
       ]
     },

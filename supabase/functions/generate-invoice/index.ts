@@ -30,16 +30,21 @@ serve(async (req) => {
       );
     }
 
-    // Fetch order with items
+    // Fetch order with items and their modifiers
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .select(`
         *,
         order_items(
+          id,
           quantity,
           unit_price,
           notes,
-          products(name)
+          products(name),
+          order_item_modifiers(
+            option_name,
+            price_adjustment
+          )
         )
       `)
       .eq("id", orderId)
@@ -62,14 +67,13 @@ serve(async (req) => {
     // Generate HTML receipt
     const receiptHtml = generateReceiptHtml(order, branch);
 
-    // Convert HTML to PDF using simple HTML template (for basic receipts)
-    // For now, we'll store the HTML as a file that can be printed
+    // Store in dedicated invoices bucket
     const fileName = `invoice_${orderId}_${Date.now()}.html`;
-    const filePath = `invoices/${branchId}/${fileName}`;
+    const filePath = `${branchId}/${fileName}`;
 
     // Upload to storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from("staff-documents")
+    const { error: uploadError } = await supabase.storage
+      .from("invoices")
       .upload(filePath, new Blob([receiptHtml], { type: "text/html" }), {
         contentType: "text/html",
         upsert: true,
@@ -85,11 +89,8 @@ serve(async (req) => {
 
     // Get public URL
     const { data: urlData } = supabase.storage
-      .from("staff-documents")
+      .from("invoices")
       .getPublicUrl(filePath);
-
-    // Update order with invoice URL (optional - could add invoice_url column)
-    // For now just return the URL
 
     return new Response(
       JSON.stringify({ 
@@ -124,12 +125,29 @@ function generateReceiptHtml(order: any, branch: any): string {
 
   const items = order.order_items || [];
   
-  const itemsHtml = items.map((item: any) => `
+  const itemsHtml = items.map((item: any) => {
+    const modifiers = item.order_item_modifiers || [];
+    const modifiersHtml = modifiers.length > 0 
+      ? `<div style="font-size: 10px; color: #666; padding-left: 12px;">
+          ${modifiers.map((m: any) => `+ ${m.option_name}${m.price_adjustment > 0 ? ` (${formatCurrency(m.price_adjustment)})` : ''}`).join('<br/>')}
+        </div>`
+      : '';
+    
+    // Calculate item total including modifiers
+    const modifiersTotal = modifiers.reduce((sum: number, m: any) => sum + (m.price_adjustment || 0), 0);
+    const itemTotal = (item.unit_price + modifiersTotal) * item.quantity;
+    
+    return `
     <tr>
-      <td style="padding: 8px 0; border-bottom: 1px solid #eee;">${item.quantity}x ${item.products?.name || "Producto"}</td>
-      <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${formatCurrency(item.unit_price * item.quantity)}</td>
+      <td style="padding: 8px 0; border-bottom: 1px solid #eee; vertical-align: top;">
+        ${item.quantity}x ${item.products?.name || "Producto"}
+        ${modifiersHtml}
+        ${item.notes ? `<div style="font-size: 10px; color: #888; font-style: italic;">📝 ${item.notes}</div>` : ''}
+      </td>
+      <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right; vertical-align: top;">${formatCurrency(itemTotal)}</td>
     </tr>
-  `).join("");
+  `;
+  }).join("");
 
   return `
 <!DOCTYPE html>
@@ -201,6 +219,12 @@ function generateReceiptHtml(order: any, branch: any): string {
     <div class="info-row">
       <span>Razón Social:</span>
       <span>${order.customer_business_name || "-"}</span>
+    </div>
+    ` : ""}
+    ${order.delivery_address ? `
+    <div class="info-row">
+      <span>Dirección:</span>
+      <span style="max-width: 150px; text-align: right;">${order.delivery_address}</span>
     </div>
     ` : ""}
   </div>
