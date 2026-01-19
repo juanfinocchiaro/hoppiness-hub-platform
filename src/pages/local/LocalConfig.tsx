@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Clock, Truck, Store, Save, RefreshCw, Zap, Settings2 } from 'lucide-react';
+import { Clock, Truck, Store, Save, RefreshCw, Zap, Settings2, ShoppingBag } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import BranchScheduleEditor from '@/components/schedules/BranchScheduleEditor';
@@ -35,6 +35,7 @@ export default function LocalConfig() {
   // Form state
   const [isOpen, setIsOpen] = useState(true);
   const [deliveryEnabled, setDeliveryEnabled] = useState(true);
+  const [takeawayEnabled, setTakeawayEnabled] = useState(true);
   const [prepTimeMode, setPrepTimeMode] = useState<PrepTimeMode>('custom');
   const [customPrepTime, setCustomPrepTime] = useState(20);
   
@@ -61,6 +62,7 @@ export default function LocalConfig() {
       setBranch(data);
       setIsOpen(data.is_open ?? true);
       setDeliveryEnabled(data.delivery_enabled ?? true);
+      setTakeawayEnabled(data.takeaway_enabled ?? true);
       
       const storedPrepTime = data.estimated_prep_time_min;
       if (storedPrepTime === null || storedPrepTime === 0) {
@@ -148,6 +150,7 @@ export default function LocalConfig() {
         .update({
           is_open: isOpen,
           delivery_enabled: deliveryEnabled,
+          takeaway_enabled: takeawayEnabled,
           estimated_prep_time_min: prepTimeToSave,
         })
         .eq('id', branchId);
@@ -195,46 +198,80 @@ export default function LocalConfig() {
         </Card>
       )}
 
-      {/* Estado y opciones rápidas */}
-      <Card>
-        <CardContent className="divide-y">
-          {/* Estado del Local */}
-          <div className="flex items-center justify-between py-4 first:pt-6">
-            <div className="flex items-center gap-3">
-              <Store className="h-5 w-5 text-muted-foreground" />
-              <div className="space-y-0.5">
-                <Label htmlFor="is-open" className="text-base font-medium">Local Abierto</Label>
-                <p className="text-sm text-muted-foreground">
-                  Override manual del estado
-                </p>
+      {/* Control Rápido de Servicios */}
+      <Card className="border-2 border-dashed border-primary/30">
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Zap className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold">Control Rápido de Servicios</h3>
+            <Badge variant="outline" className="ml-auto">Pausa temporal</Badge>
+          </div>
+          
+          <div className="grid gap-4 sm:grid-cols-3">
+            {/* Local */}
+            <div className={`p-4 rounded-lg border-2 transition-colors ${
+              isOpen 
+                ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' 
+                : 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800'
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <Store className={`h-5 w-5 ${isOpen ? 'text-green-600' : 'text-red-500'}`} />
+                <Switch
+                  checked={isOpen}
+                  onCheckedChange={setIsOpen}
+                  disabled={!canEdit}
+                />
               </div>
+              <p className="font-medium">Local</p>
+              <p className="text-xs text-muted-foreground">Atención presencial</p>
             </div>
-            <Switch
-              id="is-open"
-              checked={isOpen}
-              onCheckedChange={setIsOpen}
-              disabled={!canEdit}
-            />
+
+            {/* Delivery */}
+            <div className={`p-4 rounded-lg border-2 transition-colors ${
+              deliveryEnabled 
+                ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' 
+                : 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800'
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <Truck className={`h-5 w-5 ${deliveryEnabled ? 'text-green-600' : 'text-red-500'}`} />
+                <Switch
+                  checked={deliveryEnabled}
+                  onCheckedChange={setDeliveryEnabled}
+                  disabled={!canEdit}
+                />
+              </div>
+              <p className="font-medium">Delivery</p>
+              <p className="text-xs text-muted-foreground">Envío a domicilio</p>
+            </div>
+
+            {/* Take Away */}
+            <div className={`p-4 rounded-lg border-2 transition-colors ${
+              takeawayEnabled 
+                ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' 
+                : 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800'
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <ShoppingBag className={`h-5 w-5 ${takeawayEnabled ? 'text-green-600' : 'text-red-500'}`} />
+                <Switch
+                  checked={takeawayEnabled}
+                  onCheckedChange={setTakeawayEnabled}
+                  disabled={!canEdit}
+                />
+              </div>
+              <p className="font-medium">Take Away</p>
+              <p className="text-xs text-muted-foreground">Para llevar</p>
+            </div>
           </div>
 
-          {/* Delivery */}
-          <div className="flex items-center justify-between py-4">
-            <div className="flex items-center gap-3">
-              <Truck className="h-5 w-5 text-muted-foreground" />
-              <div className="space-y-0.5">
-                <Label htmlFor="delivery-enabled" className="text-base font-medium">Delivery Habilitado</Label>
-                <p className="text-sm text-muted-foreground">
-                  Permite pedidos con envío a domicilio
-                </p>
-              </div>
-            </div>
-            <Switch
-              id="delivery-enabled"
-              checked={deliveryEnabled}
-              onCheckedChange={setDeliveryEnabled}
-              disabled={!canEdit}
-            />
-          </div>
+          <p className="text-xs text-muted-foreground mt-4">
+            💡 Usá estos controles cuando estés saturado. Los clientes verán el servicio como no disponible temporalmente.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Tiempo de Preparación */}
+      <Card>
+        <CardContent className="pt-6">
 
           {/* Tiempo de Preparación */}
           <div className="py-4 last:pb-6">
