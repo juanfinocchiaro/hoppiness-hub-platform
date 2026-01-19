@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { 
   Users, 
@@ -38,9 +40,17 @@ import {
   Key, 
   UserPlus,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Wallet,
+  Clock,
+  Plus,
+  LogIn,
+  LogOut,
+  DollarSign
 } from 'lucide-react';
-import type { Enums } from '@/integrations/supabase/types';
+import { format, formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/locale';
+import type { Tables, Enums } from '@/integrations/supabase/types';
 import WeeklyStaffSchedule from '@/components/schedules/WeeklyStaffSchedule';
 
 type AppRole = Enums<'app_role'>;
@@ -62,6 +72,23 @@ interface StaffMember {
   } | null;
 }
 
+interface HRPayment {
+  id: string;
+  employee_name: string;
+  amount: number;
+  type: 'adelanto' | 'jornal' | 'comida';
+  date: string;
+  notes: string | null;
+}
+
+interface AttendanceRecord {
+  id: string;
+  user_id: string;
+  full_name: string;
+  check_in: string;
+  check_out: string | null;
+}
+
 const ROLE_LABELS: Record<AppRole, string> = {
   admin: 'Admin de Marca',
   franquiciado: 'Dueño Franquicia',
@@ -78,10 +105,14 @@ export default function LocalRRHH() {
   
   const [loading, setLoading] = useState(true);
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
+  const [payments, setPayments] = useState<HRPayment[]>([]);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [monthTotals, setMonthTotals] = useState({ adelantos: 0, jornales: 0, comida: 0 });
   
   const [showPinDialog, setShowPinDialog] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [showPermissionsDialog, setShowPermissionsDialog] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
   const [newPin, setNewPin] = useState('');
@@ -100,6 +131,14 @@ export default function LocalRRHH() {
     can_view_reports: false,
   });
 
+  const [paymentForm, setPaymentForm] = useState({
+    employee_id: '',
+    amount: '',
+    type: 'adelanto' as 'adelanto' | 'jornal' | 'comida',
+    notes: '',
+  });
+
+  // Fetch staff members
   useEffect(() => {
     if (!branchId) return;
     
@@ -175,6 +214,95 @@ export default function LocalRRHH() {
     fetchStaff();
   }, [branchId]);
 
+  // Fetch HR payments
+  useEffect(() => {
+    if (!branchId) return;
+    
+    async function fetchPayments() {
+      try {
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
+        const { data, error } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('branch_id', branchId)
+          .eq('type', 'expense')
+          .gte('transaction_date', startOfMonth.toISOString().split('T')[0])
+          .ilike('concept', '%RRHH%')
+          .order('transaction_date', { ascending: false });
+
+        if (error) throw error;
+
+        const hrPayments: HRPayment[] = (data || []).map(t => {
+          const parts = t.concept.split(' - ');
+          const type = parts[1]?.toLowerCase().includes('adelanto') ? 'adelanto' 
+            : parts[1]?.toLowerCase().includes('jornal') ? 'jornal' : 'comida';
+          
+          return {
+            id: t.id,
+            employee_name: parts[2] || 'N/A',
+            amount: t.amount,
+            type,
+            date: t.transaction_date,
+            notes: t.notes,
+          };
+        });
+
+        setPayments(hrPayments);
+
+        const totals = hrPayments.reduce((acc, p) => {
+          if (p.type === 'adelanto') acc.adelantos += p.amount;
+          else if (p.type === 'jornal') acc.jornales += p.amount;
+          else acc.comida += p.amount;
+          return acc;
+        }, { adelantos: 0, jornales: 0, comida: 0 });
+
+        setMonthTotals(totals);
+      } catch (error) {
+        console.error('Error fetching payments:', error);
+      }
+    }
+
+    fetchPayments();
+  }, [branchId]);
+
+  // Fetch attendance records
+  useEffect(() => {
+    if (!branchId) return;
+    
+    async function fetchAttendance() {
+      try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const { data, error } = await supabase
+          .from('attendance_records')
+          .select('*, profiles!attendance_records_user_id_fkey(full_name)')
+          .eq('branch_id', branchId)
+          .gte('check_in', today.toISOString())
+          .order('check_in', { ascending: false });
+
+        if (error) throw error;
+
+        const records: AttendanceRecord[] = (data || []).map(r => ({
+          id: r.id,
+          user_id: r.user_id,
+          full_name: (r.profiles as any)?.full_name || 'Empleado',
+          check_in: r.check_in,
+          check_out: r.check_out,
+        }));
+
+        setAttendance(records);
+      } catch (error) {
+        console.error('Error fetching attendance:', error);
+      }
+    }
+
+    fetchAttendance();
+  }, [branchId]);
+
   const handleSetPin = async () => {
     if (!selectedStaff || !newPin || newPin.length !== 4) {
       toast.error('El PIN debe ser de 4 dígitos');
@@ -231,6 +359,61 @@ export default function LocalRRHH() {
     }
   };
 
+  const handleRegisterPayment = async () => {
+    if (!branchId || !paymentForm.employee_id || !paymentForm.amount) {
+      toast.error('Completá todos los campos requeridos');
+      return;
+    }
+
+    const employee = staffMembers.find(s => s.user_id === paymentForm.employee_id);
+    if (!employee) return;
+
+    const typeLabel = paymentForm.type === 'adelanto' ? 'Adelanto' 
+      : paymentForm.type === 'jornal' ? 'Jornal' : 'Comida Personal';
+
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .insert({
+          branch_id: branchId,
+          type: 'expense',
+          amount: parseFloat(paymentForm.amount),
+          concept: `RRHH - ${typeLabel} - ${employee.full_name}`,
+          notes: paymentForm.notes || null,
+          payment_origin: 'cash',
+          receipt_type: 'INTERNAL',
+          recorded_by: user?.id,
+        });
+
+      if (error) throw error;
+
+      toast.success('Pago registrado');
+      setShowPaymentDialog(false);
+      setPaymentForm({ employee_id: '', amount: '', type: 'adelanto', notes: '' });
+      
+      const newPayment: HRPayment = {
+        id: crypto.randomUUID(),
+        employee_name: employee.full_name,
+        amount: parseFloat(paymentForm.amount),
+        type: paymentForm.type,
+        date: new Date().toISOString().split('T')[0],
+        notes: paymentForm.notes || null,
+      };
+      setPayments(prev => [newPayment, ...prev]);
+      
+      if (paymentForm.type === 'adelanto') {
+        setMonthTotals(prev => ({ ...prev, adelantos: prev.adelantos + parseFloat(paymentForm.amount) }));
+      } else if (paymentForm.type === 'jornal') {
+        setMonthTotals(prev => ({ ...prev, jornales: prev.jornales + parseFloat(paymentForm.amount) }));
+      } else {
+        setMonthTotals(prev => ({ ...prev, comida: prev.comida + parseFloat(paymentForm.amount) }));
+      }
+    } catch (error) {
+      console.error('Error registering payment:', error);
+      toast.error('Error al registrar el pago');
+    }
+  };
+
   const canManageStaff = isAdmin || isFranquiciado || isGerente;
 
   const getHighestRole = (roles: AppRole[]): AppRole => {
@@ -262,14 +445,8 @@ export default function LocalRRHH() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Recursos Humanos</h1>
-          <p className="text-muted-foreground">Personal y horarios de la sucursal</p>
+          <p className="text-muted-foreground">Personal, asistencia y pagos</p>
         </div>
-        {canManageStaff && (
-          <Button onClick={() => setShowInviteDialog(true)}>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Agregar Empleado
-          </Button>
-        )}
       </div>
 
       {/* Weekly Schedule */}
@@ -280,120 +457,316 @@ export default function LocalRRHH() {
         />
       )}
 
-      {/* Staff List */}
-      {staffMembers.length === 0 ? (
-        <Card>
-          <CardContent className="py-12">
-            <div className="text-center text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No hay personal asignado a este local</p>
-              <p className="text-sm">Invitá empleados para que puedan operar</p>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Equipo del Local</CardTitle>
-            <CardDescription>{staffMembers.length} persona(s) asignadas</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Empleado</TableHead>
-                  <TableHead>Rol</TableHead>
-                  <TableHead>PIN Fichada</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {staffMembers.map((staff) => {
-                  const highestRole = getHighestRole(staff.roles);
-                  return (
-                    <TableRow key={staff.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{staff.full_name}</p>
-                          <p className="text-sm text-muted-foreground">{staff.email}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getRoleBadgeVariant(highestRole)}>
-                          {ROLE_LABELS[highestRole]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {staff.has_pin ? (
-                          <Badge variant="outline" className="text-green-600">
-                            <Key className="h-3 w-3 mr-1" />
-                            Configurado
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-yellow-600">
-                            <AlertCircle className="h-3 w-3 mr-1" />
-                            Sin PIN
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          {canManageStaff && (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedStaff(staff);
-                                  setNewPin('');
-                                  setShowPinDialog(true);
-                                }}
-                              >
-                                <Key className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedStaff(staff);
-                                  if (staff.permissions) {
-                                    setPermissionsForm(staff.permissions);
-                                  }
-                                  setShowPermissionsDialog(true);
-                                }}
-                              >
-                                <Shield className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+      <Tabs defaultValue="personal" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="personal" className="gap-2">
+            <Users className="h-4 w-4" />
+            Personal
+          </TabsTrigger>
+          <TabsTrigger value="asistencia" className="gap-2">
+            <Clock className="h-4 w-4" />
+            Asistencia
+          </TabsTrigger>
+          <TabsTrigger value="pagos" className="gap-2">
+            <Wallet className="h-4 w-4" />
+            Sueldos
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Role explanation card */}
-      <Card className="bg-muted/30">
-        <CardContent className="pt-6">
-          <div className="flex items-start gap-3">
-            <Shield className="h-5 w-5 text-primary mt-0.5" />
-            <div>
-              <h3 className="font-semibold mb-2">Niveles de Acceso</h3>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li><strong>Admin de Marca:</strong> Control total sobre todas las sucursales</li>
-                <li><strong>Dueño Franquicia:</strong> Gestión completa de su local, P&L y finanzas</li>
-                <li><strong>Encargado:</strong> Operación diaria, stock y gestión de personal</li>
-                <li><strong>Empleado:</strong> POS y KDS únicamente</li>
-              </ul>
-            </div>
+        {/* TAB: Personal */}
+        <TabsContent value="personal" className="space-y-4">
+          <div className="flex justify-end">
+            {canManageStaff && (
+              <Button onClick={() => setShowInviteDialog(true)}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Agregar Empleado
+              </Button>
+            )}
           </div>
-        </CardContent>
-      </Card>
+
+          {staffMembers.length === 0 ? (
+            <Card>
+              <CardContent className="py-12">
+                <div className="text-center text-muted-foreground">
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No hay personal asignado a este local</p>
+                  <p className="text-sm">Invitá empleados para que puedan operar</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Equipo del Local</CardTitle>
+                <CardDescription>{staffMembers.length} persona(s) asignadas</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Empleado</TableHead>
+                      <TableHead>Rol</TableHead>
+                      <TableHead>PIN Fichada</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {staffMembers.map((staff) => {
+                      const highestRole = getHighestRole(staff.roles);
+                      return (
+                        <TableRow key={staff.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{staff.full_name}</p>
+                              <p className="text-sm text-muted-foreground">{staff.email}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getRoleBadgeVariant(highestRole)}>
+                              {ROLE_LABELS[highestRole]}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {staff.has_pin ? (
+                              <Badge variant="outline" className="text-green-600">
+                                <Key className="h-3 w-3 mr-1" />
+                                Configurado
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-yellow-600">
+                                <AlertCircle className="h-3 w-3 mr-1" />
+                                Sin PIN
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              {canManageStaff && (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedStaff(staff);
+                                      setNewPin('');
+                                      setShowPinDialog(true);
+                                    }}
+                                  >
+                                    <Key className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedStaff(staff);
+                                      if (staff.permissions) {
+                                        setPermissionsForm(staff.permissions);
+                                      }
+                                      setShowPermissionsDialog(true);
+                                    }}
+                                  >
+                                    <Shield className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Role explanation card */}
+          <Card className="bg-muted/30">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <Shield className="h-5 w-5 text-primary mt-0.5" />
+                <div>
+                  <h3 className="font-semibold mb-2">Niveles de Acceso</h3>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li><strong>Admin de Marca:</strong> Control total sobre todas las sucursales</li>
+                    <li><strong>Dueño Franquicia:</strong> Gestión completa de su local, P&L y finanzas</li>
+                    <li><strong>Encargado:</strong> Operación diaria, stock y gestión de personal</li>
+                    <li><strong>Empleado:</strong> POS y KDS únicamente</li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* TAB: Asistencia */}
+        <TabsContent value="asistencia" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Registro del Día</CardTitle>
+              <CardDescription>Ingresos y egresos de hoy</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {attendance.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No hay registros de asistencia hoy</p>
+                  <p className="text-sm">Los empleados pueden fichar desde el kiosko de asistencia</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Empleado</TableHead>
+                      <TableHead>Entrada</TableHead>
+                      <TableHead>Salida</TableHead>
+                      <TableHead>Horas</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {attendance.map((record) => {
+                      const checkIn = new Date(record.check_in);
+                      const checkOut = record.check_out ? new Date(record.check_out) : null;
+                      const hoursWorked = checkOut 
+                        ? ((checkOut.getTime() - checkIn.getTime()) / 1000 / 60 / 60).toFixed(1)
+                        : null;
+
+                      return (
+                        <TableRow key={record.id}>
+                          <TableCell className="font-medium">{record.full_name}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <LogIn className="h-4 w-4 text-green-600" />
+                              {format(checkIn, 'HH:mm', { locale: es })}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {checkOut ? (
+                              <div className="flex items-center gap-2">
+                                <LogOut className="h-4 w-4 text-red-500" />
+                                {format(checkOut, 'HH:mm', { locale: es })}
+                              </div>
+                            ) : (
+                              <Badge variant="secondary">Trabajando</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {hoursWorked ? `${hoursWorked}h` : (
+                              <span className="text-muted-foreground">
+                                {formatDistanceToNow(checkIn, { locale: es })}
+                              </span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* TAB: Sueldos/Pagos */}
+        <TabsContent value="pagos" className="space-y-4">
+          <div className="flex justify-end">
+            <Button onClick={() => setShowPaymentDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Registrar Pago
+            </Button>
+          </div>
+
+          {/* Summary Cards */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/30">
+                    <DollarSign className="h-5 w-5 text-yellow-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Adelantos</p>
+                    <p className="text-2xl font-bold">${monthTotals.adelantos.toLocaleString()}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
+                    <Wallet className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Jornales</p>
+                    <p className="text-2xl font-bold">${monthTotals.jornales.toLocaleString()}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
+                    <Users className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Comida Personal</p>
+                    <p className="text-2xl font-bold">${monthTotals.comida.toLocaleString()}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Pagos del Mes</CardTitle>
+              <CardDescription>Adelantos, jornales y comida del personal</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {payments.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">
+                  No hay pagos registrados este mes
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Empleado</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead className="text-right">Monto</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payments.map((payment) => (
+                      <TableRow key={payment.id}>
+                        <TableCell>
+                          {format(new Date(payment.date + 'T12:00:00'), 'dd/MM', { locale: es })}
+                        </TableCell>
+                        <TableCell className="font-medium">{payment.employee_name}</TableCell>
+                        <TableCell>
+                          <Badge variant={
+                            payment.type === 'adelanto' ? 'outline' :
+                            payment.type === 'jornal' ? 'secondary' : 'default'
+                          }>
+                            {payment.type === 'adelanto' ? 'Adelanto' :
+                             payment.type === 'jornal' ? 'Jornal' : 'Comida'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          ${payment.amount.toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Dialog: Set PIN */}
       <Dialog open={showPinDialog} onOpenChange={setShowPinDialog}>
@@ -475,6 +848,77 @@ export default function LocalRRHH() {
             </Button>
             <Button onClick={handleUpdatePermissions}>
               Guardar Permisos
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Register Payment */}
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Registrar Pago RRHH</DialogTitle>
+            <DialogDescription>Adelantos, jornales y comida del personal</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Empleado</Label>
+              <Select 
+                value={paymentForm.employee_id} 
+                onValueChange={(v) => setPaymentForm(prev => ({ ...prev, employee_id: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar empleado" />
+                </SelectTrigger>
+                <SelectContent>
+                  {staffMembers.map((staff) => (
+                    <SelectItem key={staff.user_id} value={staff.user_id}>
+                      {staff.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo de Pago</Label>
+              <Select 
+                value={paymentForm.type} 
+                onValueChange={(v) => setPaymentForm(prev => ({ ...prev, type: v as typeof paymentForm.type }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="adelanto">Adelanto de Sueldo</SelectItem>
+                  <SelectItem value="jornal">Jornal</SelectItem>
+                  <SelectItem value="comida">Comida Personal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Monto</Label>
+              <Input
+                type="number"
+                placeholder="0"
+                value={paymentForm.amount}
+                onChange={(e) => setPaymentForm(prev => ({ ...prev, amount: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Notas (opcional)</Label>
+              <Textarea
+                placeholder="Detalle adicional..."
+                value={paymentForm.notes}
+                onChange={(e) => setPaymentForm(prev => ({ ...prev, notes: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleRegisterPayment}>
+              Registrar Pago
             </Button>
           </DialogFooter>
         </DialogContent>
