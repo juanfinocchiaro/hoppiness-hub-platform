@@ -32,8 +32,8 @@ const navItems = [
   { to: '/admin/productos', icon: Package, label: 'Productos' },
   { to: '/admin/modificadores', icon: ChefHat, label: 'Modificadores' },
   { to: '/admin/proveedores', icon: Truck, label: 'Proveedores' },
-  { to: '/admin/usuarios', icon: Users, label: 'Usuarios' },
-  { to: '/admin/permisos', icon: Shield, label: 'Permisos' },
+  { to: '/admin/usuarios', icon: Users, label: 'Equipo' },
+  { to: '/admin/permisos', icon: Shield, label: 'Accesos' },
 ];
 
 export default function AdminDashboard() {
