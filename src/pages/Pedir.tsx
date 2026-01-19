@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,8 @@ import {
   Clock,
   AlertTriangle,
   Truck,
-  ShoppingBag
+  ShoppingBag,
+  Home
 } from 'lucide-react';
 import { toast } from 'sonner';
 import logoHoppiness from '@/assets/logo-hoppiness.png';
@@ -174,6 +175,14 @@ export default function Pedir() {
           style={{ backgroundImage: `url(${heroBurger})` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-background" />
+        
+        {/* Home Button */}
+        <Link 
+          to="/" 
+          className="absolute top-4 left-4 z-20 bg-white/10 backdrop-blur-md hover:bg-white/20 transition-colors rounded-full p-3"
+        >
+          <Home className="w-5 h-5 text-white" />
+        </Link>
         
         <div className="relative z-10 container mx-auto px-4 py-12 text-center">
           <img src={logoHoppiness} alt="Hoppiness Club" className="w-24 h-24 mx-auto mb-6" />
