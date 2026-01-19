@@ -23,10 +23,9 @@ interface HeatmapCell {
   count: number;
 }
 
-const TIME_SLOTS = Array.from({ length: 48 }, (_, i) => {
-  const hours = Math.floor(i / 2);
-  const minutes = i % 2 === 0 ? '00' : '30';
-  return `${hours.toString().padStart(2, '0')}:${minutes}`;
+// Time slots every hour (24 slots)
+const TIME_SLOTS = Array.from({ length: 24 }, (_, i) => {
+  return `${i.toString().padStart(2, '0')}:00`;
 });
 
 const DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -137,8 +136,7 @@ export default function OrdersHeatmap({
         const day = date.getDate().toString().padStart(2, '0');
         const dateStr = `${year}-${month}-${day}`;
         const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes() < 30 ? '00' : '30';
-        const timeSlot = `${hours}:${minutes}`;
+        const timeSlot = `${hours}:00`; // Round to the hour
         
         const key = `${dateStr}-${timeSlot}`;
         const count = (heatmapData.get(key) || 0) + 1;
@@ -176,8 +174,8 @@ export default function OrdersHeatmap({
     return 'text-red-800 dark:text-red-200';
   };
 
-  // Show all time slots in descending order (23:30 at top, 00:00 at bottom)
-  const relevantTimeSlots = [...TIME_SLOTS].reverse();
+  // Show all time slots in ascending order (00:00 at top, 23:00 at bottom)
+  const relevantTimeSlots = TIME_SLOTS;
 
   if (loading) {
     return (
