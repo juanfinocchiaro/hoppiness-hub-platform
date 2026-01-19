@@ -28,7 +28,8 @@ export function CategoryManager({ open, onOpenChange, categories, onCategoriesUp
   const [saving, setSaving] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [localCategories, setLocalCategories] = useState<Category[]>([]);
-  const dragOverIndexRef = useRef<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const originalIndexRef = useRef<number | null>(null);
 
   // Sync local categories with props
   useEffect(() => {
@@ -97,7 +98,6 @@ export function CategoryManager({ open, onOpenChange, categories, onCategoriesUp
   };
 
   const handleDeleteCategory = async (categoryId: string) => {
-    // Check if category has products
     const { data: products } = await supabase
       .from('products')
       .select('id')
@@ -130,27 +130,22 @@ export function CategoryManager({ open, onOpenChange, categories, onCategoriesUp
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedIndex(index);
+    originalIndexRef.current = index;
+    setIsDragging(true);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', index.toString());
-    
-    // Make the drag image slightly transparent
-    const element = e.currentTarget as HTMLElement;
-    setTimeout(() => {
-      element.style.opacity = '0.4';
-    }, 0);
   };
 
-  const handleDragEnd = async (e: React.DragEvent) => {
-    const element = e.currentTarget as HTMLElement;
-    element.style.opacity = '1';
+  const handleDragEnd = async () => {
+    setIsDragging(false);
     
     // Save the new order if it changed
-    if (draggedIndex !== null && dragOverIndexRef.current !== null && draggedIndex !== dragOverIndexRef.current) {
+    if (originalIndexRef.current !== null && draggedIndex !== null && originalIndexRef.current !== draggedIndex) {
       await saveNewOrder();
     }
     
     setDraggedIndex(null);
-    dragOverIndexRef.current = null;
+    originalIndexRef.current = null;
   };
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
@@ -159,17 +154,12 @@ export function CategoryManager({ open, onOpenChange, categories, onCategoriesUp
     
     if (draggedIndex === null || index === draggedIndex) return;
     
-    // Only update if the target index changed
-    if (dragOverIndexRef.current !== index) {
-      dragOverIndexRef.current = index;
-      
-      // Reorder the local categories for visual preview
-      const newCategories = [...localCategories];
-      const [draggedItem] = newCategories.splice(draggedIndex, 1);
-      newCategories.splice(index, 0, draggedItem);
-      setLocalCategories(newCategories);
-      setDraggedIndex(index);
-    }
+    // Reorder the local categories for visual preview
+    const newCategories = [...localCategories];
+    const [draggedItem] = newCategories.splice(draggedIndex, 1);
+    newCategories.splice(index, 0, draggedItem);
+    setLocalCategories(newCategories);
+    setDraggedIndex(index);
   };
 
   const saveNewOrder = async () => {
@@ -194,7 +184,6 @@ export function CategoryManager({ open, onOpenChange, categories, onCategoriesUp
     } catch (error) {
       console.error('Error:', error);
       toast.error('Error al reordenar categorías');
-      // Revert to original order on error
       setLocalCategories(categories);
     } finally {
       setSaving(false);
@@ -227,7 +216,7 @@ export function CategoryManager({ open, onOpenChange, categories, onCategoriesUp
           </div>
 
           {/* Lista de categorías */}
-          <div className="space-y-1 max-h-[400px] overflow-y-auto">
+          <div className="space-y-1.5 max-h-[400px] overflow-y-auto py-1">
             {localCategories.map((category, index) => (
               <div 
                 key={category.id}
@@ -235,16 +224,34 @@ export function CategoryManager({ open, onOpenChange, categories, onCategoriesUp
                 onDragStart={(e) => handleDragStart(e, index)}
                 onDragEnd={handleDragEnd}
                 onDragOver={(e) => handleDragOver(e, index)}
-                className={`flex items-center gap-2 p-3 bg-muted/50 rounded-lg transition-all duration-200 ${
-                  draggedIndex === index ? 'shadow-lg ring-2 ring-primary/50 scale-[1.02]' : ''
-                }`}
+                className={`
+                  flex items-center gap-2 p-3 rounded-lg 
+                  transition-all duration-300 ease-out
+                  ${draggedIndex === index 
+                    ? 'bg-primary/20 shadow-lg shadow-primary/20 scale-[1.03] rotate-1 z-10 border-2 border-primary/40' 
+                    : 'bg-muted/50 hover:bg-muted/80 border-2 border-transparent'
+                  }
+                  ${isDragging && draggedIndex !== index 
+                    ? 'transition-transform' 
+                    : ''
+                  }
+                `}
                 style={{
-                  transform: draggedIndex === index ? 'scale(1.02)' : 'scale(1)',
+                  transformOrigin: 'center center',
                 }}
               >
-                <GripVertical 
-                  className="h-4 w-4 text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0 hover:text-foreground transition-colors" 
-                />
+                <div 
+                  className={`
+                    p-1 rounded cursor-grab active:cursor-grabbing
+                    transition-all duration-200
+                    ${draggedIndex === index 
+                      ? 'text-primary scale-110' 
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    }
+                  `}
+                >
+                  <GripVertical className="h-4 w-4" />
+                </div>
                 
                 {editingId === category.id ? (
                   <div className="flex-1 flex gap-2">
@@ -267,11 +274,16 @@ export function CategoryManager({ open, onOpenChange, categories, onCategoriesUp
                   </div>
                 ) : (
                   <>
-                    <span className="flex-1 font-medium">{category.name}</span>
+                    <span className={`
+                      flex-1 font-medium transition-all duration-200
+                      ${draggedIndex === index ? 'text-primary' : ''}
+                    `}>
+                      {category.name}
+                    </span>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-8 w-8 opacity-60 hover:opacity-100 transition-opacity"
                       onClick={() => handleStartEdit(category)}
                     >
                       <Pencil className="h-3.5 w-3.5" />
@@ -279,7 +291,7 @@ export function CategoryManager({ open, onOpenChange, categories, onCategoriesUp
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      className="h-8 w-8 text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-all"
                       onClick={() => handleDeleteCategory(category.id)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
