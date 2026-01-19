@@ -497,12 +497,19 @@ export type Database = {
           is_open: boolean | null
           local_channels: Json | null
           local_open_state: boolean | null
+          mercadopago_access_token: string | null
           mercadopago_delivery_enabled: boolean | null
+          mercadopago_public_key: string | null
+          mp_delivery_store_id: string | null
           name: string
           opening_time: string | null
+          pedidosya_api_key: string | null
           pedidosya_enabled: boolean | null
+          pedidosya_restaurant_id: string | null
           phone: string | null
+          rappi_api_key: string | null
           rappi_enabled: boolean | null
+          rappi_store_id: string | null
           slug: string | null
           status_message: string | null
           takeaway_enabled: boolean | null
@@ -528,12 +535,19 @@ export type Database = {
           is_open?: boolean | null
           local_channels?: Json | null
           local_open_state?: boolean | null
+          mercadopago_access_token?: string | null
           mercadopago_delivery_enabled?: boolean | null
+          mercadopago_public_key?: string | null
+          mp_delivery_store_id?: string | null
           name: string
           opening_time?: string | null
+          pedidosya_api_key?: string | null
           pedidosya_enabled?: boolean | null
+          pedidosya_restaurant_id?: string | null
           phone?: string | null
+          rappi_api_key?: string | null
           rappi_enabled?: boolean | null
+          rappi_store_id?: string | null
           slug?: string | null
           status_message?: string | null
           takeaway_enabled?: boolean | null
@@ -559,12 +573,19 @@ export type Database = {
           is_open?: boolean | null
           local_channels?: Json | null
           local_open_state?: boolean | null
+          mercadopago_access_token?: string | null
           mercadopago_delivery_enabled?: boolean | null
+          mercadopago_public_key?: string | null
+          mp_delivery_store_id?: string | null
           name?: string
           opening_time?: string | null
+          pedidosya_api_key?: string | null
           pedidosya_enabled?: boolean | null
+          pedidosya_restaurant_id?: string | null
           phone?: string | null
+          rappi_api_key?: string | null
           rappi_enabled?: boolean | null
+          rappi_store_id?: string | null
           slug?: string | null
           status_message?: string | null
           takeaway_enabled?: boolean | null
