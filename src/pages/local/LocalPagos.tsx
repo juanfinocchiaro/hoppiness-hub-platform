@@ -157,6 +157,22 @@ export default function LocalPagos() {
     fetchPayments();
   }, [branchId]);
 
+  // Map category to category_group for ledger
+  const getCategoryGroup = (category: string) => {
+    switch (category) {
+      case 'servicios':
+      case 'alquiler':
+      case 'mantenimiento':
+        return 'Gastos Operativos';
+      case 'impuestos':
+        return 'Impuestos';
+      case 'marketing':
+        return 'Estructura';
+      default:
+        return 'Gastos Operativos';
+    }
+  };
+
   const handleRegisterPayment = async () => {
     if (!branchId || !paymentForm.concept || !paymentForm.amount) {
       toast.error('Completá concepto y monto');
@@ -164,34 +180,39 @@ export default function LocalPagos() {
     }
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('transactions')
         .insert({
           branch_id: branchId,
           type: 'expense',
+          direction: 'expense',
           amount: parseFloat(paymentForm.amount),
           concept: paymentForm.concept,
+          category_group: getCategoryGroup(paymentForm.category),
           supplier_id: paymentForm.supplier_id || null,
           notes: paymentForm.notes || null,
           payment_origin: 'cash',
           receipt_type: 'INTERNAL',
           recorded_by: user?.id,
-        });
+          created_by: user?.id,
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      toast.success('Pago registrado');
+      toast.success('Pago registrado en ledger unificado');
       setShowPaymentDialog(false);
       setPaymentForm({ concept: '', amount: '', category: 'servicios', supplier_id: '', notes: '' });
       
-      // Refresh
+      // Refresh with actual data from DB
       const newPayment: GeneralPayment = {
-        id: crypto.randomUUID(),
-        concept: paymentForm.concept,
-        amount: parseFloat(paymentForm.amount),
+        id: data.id,
+        concept: data.concept,
+        amount: data.amount,
         category: paymentForm.category,
-        date: new Date().toISOString().split('T')[0],
-        notes: paymentForm.notes || null,
+        date: data.transaction_date,
+        notes: data.notes,
         supplier_name: suppliers.find(s => s.id === paymentForm.supplier_id)?.name,
       };
       setPayments(prev => [newPayment, ...prev]);

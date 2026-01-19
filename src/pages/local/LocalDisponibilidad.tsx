@@ -579,6 +579,60 @@ export default function LocalDisponibilidad() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Availability Reason Dialog */}
+      <Dialog 
+        open={availabilityDialog?.open || false} 
+        onOpenChange={(open) => !open && setAvailabilityDialog(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Desactivar {availabilityDialog?.type === 'product' ? 'producto' : 'extra'}</DialogTitle>
+            <DialogDescription>
+              ¿Por qué desactivás "{availabilityDialog?.itemName}"?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Motivo *</Label>
+              <Select value={availabilityReason} onValueChange={setAvailabilityReason}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar motivo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {AVAILABILITY_REASONS.map(r => (
+                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>¿Hasta cuándo? (opcional)</Label>
+              <Input
+                type="datetime-local"
+                value={availabilityUntil}
+                onChange={(e) => setAvailabilityUntil(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Notas adicionales (opcional)</Label>
+              <Textarea
+                placeholder="Detalles..."
+                value={availabilityNotes}
+                onChange={(e) => setAvailabilityNotes(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAvailabilityDialog(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmAvailability} disabled={!availabilityReason}>
+              Desactivar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

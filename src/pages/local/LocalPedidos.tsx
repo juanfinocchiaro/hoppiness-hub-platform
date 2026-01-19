@@ -69,7 +69,11 @@ const CANCEL_REASONS = [
   { value: 'otro', label: 'Otro' },
 ];
 
-export default function LocalPedidos() {
+interface LocalPedidosProps {
+  defaultTab?: string;
+}
+
+export default function LocalPedidos({ defaultTab = 'active' }: LocalPedidosProps) {
   const { branchId } = useParams();
   const { branch } = useOutletContext<{ branch: Tables<'branches'> | null }>();
   const { isAdmin, isGerente, branchPermissions } = useUserRole();
@@ -78,7 +82,7 @@ export default function LocalPedidos() {
   
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('active');
+  const [activeTab, setActiveTab] = useState(defaultTab === 'historial' ? 'history' : defaultTab);
   const [searchTerm, setSearchTerm] = useState('');
   
   // Cancel dialog state
