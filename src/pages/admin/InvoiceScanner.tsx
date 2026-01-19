@@ -29,6 +29,7 @@ export default function InvoiceScanner() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+  const [reprocessingAll, setReprocessingAll] = useState(false);
 
   // Fetch all scanned documents
   const { data: documents, isLoading } = useQuery({
@@ -185,26 +186,23 @@ export default function InvoiceScanner() {
       toast.error('No se puede reintentar: falta la ruta del archivo');
       return;
     }
-    
-    setProcessingIds(prev => new Set(prev).add(doc.id));
-    
-    await supabase
-      .from('scanned_documents')
-      .update({ status: 'pending', error_message: null })
-      .eq('id', doc.id);
 
-    processInvoice.mutate(
-      { documentId: doc.id, filePath: doc.file_path },
-      {
-        onSettled: () => {
-          setProcessingIds(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(doc.id);
-            return newSet;
-          });
-        }
-      }
-    );
+    setProcessingIds(prev => new Set(prev).add(doc.id));
+
+    try {
+      await supabase
+        .from('scanned_documents')
+        .update({ status: 'pending', error_message: null })
+        .eq('id', doc.id);
+
+      await processInvoice.mutateAsync({ documentId: doc.id, filePath: doc.file_path });
+    } finally {
+      setProcessingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(doc.id);
+        return newSet;
+      });
+    }
   }, [processInvoice]);
 
   // Group documents by status
@@ -227,18 +225,25 @@ export default function InvoiceScanner() {
           {pendingDocs.length > 0 && (
             <Button
               variant="default"
-              onClick={() => {
-                pendingDocs.forEach(doc => {
-                  if (doc.file_path && !processingIds.has(doc.id)) {
-                    retryProcessing(doc);
+              onClick={async () => {
+                setReprocessingAll(true);
+                try {
+                  toast.info(`Reprocesando ${pendingDocs.length} documentos...`);
+                  // Procesar en serie para evitar 503/BOOT_ERROR por demasiada concurrencia
+                  for (const doc of pendingDocs) {
+                    if (doc.file_path) {
+                      await retryProcessing(doc);
+                    }
                   }
-                });
-                toast.info(`Reprocesando ${pendingDocs.length} documentos...`);
+                  queryClient.invalidateQueries({ queryKey: ['scanned-documents'] });
+                } finally {
+                  setReprocessingAll(false);
+                }
               }}
-              disabled={processingIds.size > 0}
+              disabled={reprocessingAll}
             >
               <ScanLine className="h-4 w-4 mr-2" />
-              Reprocesar Todo ({pendingDocs.length})
+              {reprocessingAll ? 'Reprocesando…' : `Reprocesar Todo (${pendingDocs.length})`}
             </Button>
           )}
           <Button
