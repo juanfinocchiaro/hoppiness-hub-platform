@@ -15,7 +15,8 @@ interface Stats {
   categories: number;
 }
 
-interface MonthlyStats {
+interface BranchStats {
+  branchId: string;
   totalRevenue: number;
   totalItems: number;
   orderCount: number;
@@ -40,12 +41,7 @@ const salesChannels: SalesChannel[] = [
 
 export default function AdminHome() {
   const [stats, setStats] = useState<Stats>({ products: 0, categories: 0 });
-  const [monthlyStats, setMonthlyStats] = useState<MonthlyStats>({
-    totalRevenue: 0,
-    totalItems: 0,
-    orderCount: 0,
-    averageTicket: 0,
-  });
+  const [branchStats, setBranchStats] = useState<Map<string, BranchStats>>(new Map());
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -59,10 +55,10 @@ export default function AdminHome() {
         supabase.from('products').select('id', { count: 'exact', head: true }),
         supabase.from('product_categories').select('id', { count: 'exact', head: true }),
         supabase.from('branches').select('*').order('name'),
-        // Get monthly orders (delivered only for accurate revenue)
+        // Get monthly orders with branch_id
         supabase
           .from('orders')
-          .select('id, total')
+          .select('id, total, branch_id')
           .gte('created_at', firstDayOfMonth)
           .in('status', ['delivered', 'ready', 'preparing', 'confirmed']),
         // Get total items sold this month
@@ -76,25 +72,55 @@ export default function AdminHome() {
         products: productsRes.count || 0,
         categories: categoriesRes.count || 0,
       });
-      setBranches(branchesRes.data || []);
+      const branchesData = branchesRes.data || [];
+      setBranches(branchesData);
 
-      // Calculate monthly stats
+      // Calculate stats per branch
       const orders = ordersRes.data || [];
-      const orderIds = new Set(orders.map(o => o.id));
-      const items = (orderItemsRes.data || []).filter(item => orderIds.has(item.order_id));
+      const orderItems = orderItemsRes.data || [];
       
-      const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total || 0), 0);
-      const totalItems = items.reduce((sum, i) => sum + (i.quantity || 0), 0);
-      const orderCount = orders.length;
-      const averageTicket = orderCount > 0 ? totalRevenue / orderCount : 0;
-
-      setMonthlyStats({
-        totalRevenue,
-        totalItems,
-        orderCount,
-        averageTicket,
+      // Create a map of order_id to branch_id
+      const orderToBranch = new Map(orders.map(o => [o.id, o.branch_id]));
+      
+      const statsMap = new Map<string, BranchStats>();
+      
+      // Initialize stats for all branches
+      branchesData.forEach(branch => {
+        statsMap.set(branch.id, {
+          branchId: branch.id,
+          totalRevenue: 0,
+          totalItems: 0,
+          orderCount: 0,
+          averageTicket: 0,
+        });
+      });
+      
+      // Calculate revenue and order count per branch
+      orders.forEach(order => {
+        const stats = statsMap.get(order.branch_id);
+        if (stats) {
+          stats.totalRevenue += Number(order.total || 0);
+          stats.orderCount += 1;
+        }
+      });
+      
+      // Calculate items per branch
+      orderItems.forEach(item => {
+        const branchId = orderToBranch.get(item.order_id);
+        if (branchId) {
+          const stats = statsMap.get(branchId);
+          if (stats) {
+            stats.totalItems += item.quantity || 0;
+          }
+        }
+      });
+      
+      // Calculate average ticket
+      statsMap.forEach(stats => {
+        stats.averageTicket = stats.orderCount > 0 ? stats.totalRevenue / stats.orderCount : 0;
       });
 
+      setBranchStats(statsMap);
       setLoading(false);
     }
     fetchData();
@@ -121,7 +147,7 @@ export default function AdminHome() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2">
         <Link to="/admin/productos">
           <Card className="hover:shadow-elevated transition-shadow cursor-pointer">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -158,66 +184,6 @@ export default function AdminHome() {
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {branches.filter(b => isBranchOperational(b)).length} operativas ahora
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Facturación Mensual */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Facturación Mensual
-            </CardTitle>
-            <div className="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-white" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {loading ? <Skeleton className="h-9 w-24" /> : formatCurrency(monthlyStats.totalRevenue)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {monthlyStats.orderCount} pedidos este mes
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Hamburguesas Vendidas */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Hamburguesas Vendidas
-            </CardTitle>
-            <div className="w-10 h-10 rounded-lg bg-orange-500 flex items-center justify-center">
-              <Utensils className="w-5 h-5 text-white" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {loading ? <Skeleton className="h-9 w-16" /> : monthlyStats.totalItems.toLocaleString('es-AR')}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              unidades este mes
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Ticket Promedio */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Ticket Promedio
-            </CardTitle>
-            <div className="w-10 h-10 rounded-lg bg-violet-500 flex items-center justify-center">
-              <Receipt className="w-5 h-5 text-white" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {loading ? <Skeleton className="h-9 w-20" /> : formatCurrency(monthlyStats.averageTicket)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              por pedido este mes
             </p>
           </CardContent>
         </Card>
@@ -322,7 +288,7 @@ export default function AdminHome() {
 
                     {/* Channels Status - Read Only */}
                     {branch.is_active && (
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2 mb-3">
                         {salesChannels.map(channel => {
                           const isEnabled = branch[channel.key] as boolean ?? false;
                           
@@ -341,6 +307,39 @@ export default function AdminHome() {
                             </div>
                           );
                         })}
+                      </div>
+                    )}
+
+                    {/* Monthly Stats per Branch */}
+                    {branch.is_active && (
+                      <div className="grid grid-cols-3 gap-3 pt-3 border-t">
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-1">
+                            <DollarSign className="w-3 h-3" />
+                            Facturación
+                          </div>
+                          <div className="font-semibold text-sm">
+                            {formatCurrency(branchStats.get(branch.id)?.totalRevenue || 0)}
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-1">
+                            <Utensils className="w-3 h-3" />
+                            Unidades
+                          </div>
+                          <div className="font-semibold text-sm">
+                            {(branchStats.get(branch.id)?.totalItems || 0).toLocaleString('es-AR')}
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-1">
+                            <Receipt className="w-3 h-3" />
+                            Ticket Prom.
+                          </div>
+                          <div className="font-semibold text-sm">
+                            {formatCurrency(branchStats.get(branch.id)?.averageTicket || 0)}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
