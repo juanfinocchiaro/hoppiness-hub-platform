@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Store, Package, Plus, MapPin, Clock, Settings, Truck, ShoppingBag, Users, Bike, DollarSign, Utensils, Receipt } from 'lucide-react';
+import OrdersHeatmap from '@/components/charts/OrdersHeatmap';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
@@ -349,6 +350,12 @@ export default function AdminHome() {
           )}
         </CardContent>
       </Card>
+
+      {/* Orders Heatmap - All Branches */}
+      <OrdersHeatmap 
+        title="Pedidos por horario (todas las sucursales)" 
+        description="Distribución de pedidos de canal propio en intervalos de 30 minutos"
+      />
     </div>
   );
 }
