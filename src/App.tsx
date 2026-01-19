@@ -62,6 +62,17 @@ import BrandFinances from "./pages/admin/BrandFinances";
 import Users from "./pages/admin/Users";
 import Permissions from "./pages/admin/Permissions";
 import SalesReports from "./pages/admin/SalesReports";
+import Customers from "./pages/admin/Customers";
+import Ingredients from "./pages/admin/Ingredients";
+import Discounts from "./pages/admin/Discounts";
+
+// Local Stock & Inventory
+import LocalStock from "./pages/local/LocalStock";
+import LocalInventory from "./pages/local/LocalInventory";
+import LocalCustomers from "./pages/local/LocalCustomers";
+
+// Public Menu
+import MenuPublic from "./pages/MenuPublic";
 
 import NotFound from "./pages/NotFound";
 
