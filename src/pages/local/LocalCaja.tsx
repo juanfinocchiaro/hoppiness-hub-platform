@@ -94,6 +94,7 @@ export default function LocalCaja() {
   const [movementDialog, setMovementDialog] = useState(false);
   const [paymentMethodsDialog, setPaymentMethodsDialog] = useState(false);
   const [historyDialog, setHistoryDialog] = useState(false);
+  const [registersConfigDialog, setRegistersConfigDialog] = useState(false);
   
   // Form states
   const [openingAmount, setOpeningAmount] = useState('');
@@ -108,6 +109,9 @@ export default function LocalCaja() {
   const [newMethodName, setNewMethodName] = useState('');
   const [newMethodCode, setNewMethodCode] = useState('');
   const [newMethodIsCash, setNewMethodIsCash] = useState(false);
+  
+  // Register editing
+  const [editingRegisters, setEditingRegisters] = useState<CashRegister[]>([]);
 
   useEffect(() => {
     if (branch?.id) {
@@ -124,22 +128,24 @@ export default function LocalCaja() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch cash registers
-      const { data: registersData } = await supabase
+      // Fetch ALL cash registers (including inactive for config)
+      const { data: allRegistersData } = await supabase
         .from('cash_registers')
         .select('*')
         .eq('branch_id', branch.id)
-        .eq('is_active', true)
         .order('display_order');
+      
+      // Fetch active registers for operation
+      const activeRegisters = (allRegistersData || []).filter(r => r.is_active);
 
-      if (registersData) {
-        setRegisters(registersData as CashRegister[]);
+      if (activeRegisters.length > 0) {
+        setRegisters(activeRegisters as CashRegister[]);
         
         // Fetch open shifts for each register
         const shiftsMap: Record<string, CashRegisterShift | null> = {};
         const movementsMap: Record<string, CashRegisterMovement[]> = {};
         
-        for (const register of registersData) {
+        for (const register of activeRegisters) {
           const { data: shiftData } = await supabase
             .from('cash_register_shifts')
             .select('*')
@@ -165,7 +171,12 @@ export default function LocalCaja() {
         
         setShifts(shiftsMap);
         setMovements(movementsMap);
+      } else {
+        setRegisters([]);
       }
+      
+      // Store all registers for config
+      setEditingRegisters((allRegistersData || []) as CashRegister[]);
 
       // Fetch payment methods
       const { data: methodsData } = await supabase
@@ -325,6 +336,40 @@ export default function LocalCaja() {
     }
   };
 
+  const handleUpdateRegisterName = (id: string, newName: string) => {
+    setEditingRegisters(prev => 
+      prev.map(r => r.id === id ? { ...r, name: newName } : r)
+    );
+  };
+
+  const handleToggleRegister = (id: string, isActive: boolean) => {
+    setEditingRegisters(prev => 
+      prev.map(r => r.id === id ? { ...r, is_active: isActive } : r)
+    );
+  };
+
+  const handleSaveRegistersConfig = async () => {
+    try {
+      for (const register of editingRegisters) {
+        const { error } = await supabase
+          .from('cash_registers')
+          .update({ 
+            name: register.name, 
+            is_active: register.is_active 
+          })
+          .eq('id', register.id);
+        
+        if (error) throw error;
+      }
+      
+      toast({ title: 'Configuración guardada' });
+      setRegistersConfigDialog(false);
+      fetchData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
   const calculateExpectedAmount = (registerId: string): number => {
     const shift = shifts[registerId];
     const registerMovements = movements[registerId] || [];
@@ -378,18 +423,63 @@ export default function LocalCaja() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold">Caja</h1>
           <p className="text-muted-foreground">Arqueos y cierres de turno</p>
         </div>
-        <Dialog open={paymentMethodsDialog} onOpenChange={setPaymentMethodsDialog}>
-          <DialogTrigger asChild>
-            <Button variant="outline">
-              <CreditCard className="h-4 w-4 mr-2" />
-              Medios de Pago
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Dialog open={registersConfigDialog} onOpenChange={setRegistersConfigDialog}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Settings className="h-4 w-4 mr-2" />
+                Configurar Cajas
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Configurar Cajas</DialogTitle>
+                <DialogDescription>Editá los nombres y habilitá o deshabilitá las cajas de esta sucursal</DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-3">
+                {editingRegisters.map((register, idx) => (
+                  <div key={register.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                    <span className="text-sm font-medium text-muted-foreground w-6">{idx + 1}</span>
+                    <Input 
+                      value={register.name}
+                      onChange={(e) => handleUpdateRegisterName(register.id, e.target.value)}
+                      className="flex-1"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm text-muted-foreground">Activa</Label>
+                      <Switch 
+                        checked={register.is_active}
+                        onCheckedChange={(checked) => handleToggleRegister(register.id, checked)}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setRegistersConfigDialog(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSaveRegistersConfig}>
+                  Guardar Cambios
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog open={paymentMethodsDialog} onOpenChange={setPaymentMethodsDialog}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <CreditCard className="h-4 w-4 mr-2" />
+                Medios de Pago
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Gestionar Medios de Pago</DialogTitle>
@@ -476,6 +566,7 @@ export default function LocalCaja() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {registers.length === 0 ? (
