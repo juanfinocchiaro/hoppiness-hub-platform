@@ -38,7 +38,9 @@ import {
   UserPlus,
   RefreshCw,
   AlertCircle,
+  Mail,
 } from 'lucide-react';
+import { InviteStaffDialog } from '@/components/hr/InviteStaffDialog';
 import type { Enums } from '@/integrations/supabase/types';
 
 type AppRole = Enums<'app_role'>;

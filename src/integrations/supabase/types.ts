@@ -793,12 +793,15 @@ export type Database = {
       }
       employee_private_details: {
         Row: {
+          accepted_terms_at: string | null
           address: string | null
           birth_date: string | null
           cbu: string | null
           created_at: string
           cuit: string | null
           dni: string | null
+          dni_back_url: string | null
+          dni_front_url: string | null
           emergency_contact: string | null
           emergency_phone: string | null
           employee_id: string
@@ -807,12 +810,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accepted_terms_at?: string | null
           address?: string | null
           birth_date?: string | null
           cbu?: string | null
           created_at?: string
           cuit?: string | null
           dni?: string | null
+          dni_back_url?: string | null
+          dni_front_url?: string | null
           emergency_contact?: string | null
           emergency_phone?: string | null
           employee_id: string
@@ -821,12 +827,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accepted_terms_at?: string | null
           address?: string | null
           birth_date?: string | null
           cbu?: string | null
           created_at?: string
           cuit?: string | null
           dni?: string | null
+          dni_back_url?: string | null
+          dni_front_url?: string | null
           emergency_contact?: string | null
           emergency_phone?: string | null
           employee_id?: string
@@ -1688,11 +1697,22 @@ export type Database = {
       }
       profiles: {
         Row: {
+          accepted_terms_at: string | null
+          address: string | null
           avatar_url: string | null
+          birth_date: string | null
+          cbu: string | null
           created_at: string
+          cuit: string | null
+          dni: string | null
+          dni_back_url: string | null
+          dni_front_url: string | null
           email: string
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
           full_name: string
           id: string
+          invitation_token: string | null
           is_active: boolean
           phone: string | null
           pin_hash: string | null
@@ -1700,11 +1720,22 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          accepted_terms_at?: string | null
+          address?: string | null
           avatar_url?: string | null
+          birth_date?: string | null
+          cbu?: string | null
           created_at?: string
+          cuit?: string | null
+          dni?: string | null
+          dni_back_url?: string | null
+          dni_front_url?: string | null
           email: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           full_name: string
           id?: string
+          invitation_token?: string | null
           is_active?: boolean
           phone?: string | null
           pin_hash?: string | null
@@ -1712,11 +1743,22 @@ export type Database = {
           user_id: string
         }
         Update: {
+          accepted_terms_at?: string | null
+          address?: string | null
           avatar_url?: string | null
+          birth_date?: string | null
+          cbu?: string | null
           created_at?: string
+          cuit?: string | null
+          dni?: string | null
+          dni_back_url?: string | null
+          dni_front_url?: string | null
           email?: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           full_name?: string
           id?: string
+          invitation_token?: string | null
           is_active?: boolean
           phone?: string | null
           pin_hash?: string | null
@@ -1724,6 +1766,63 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      staff_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          branch_id: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          role: Database["public"]["Enums"]["app_role"]
+          status: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          branch_id: string
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          branch_id?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_invitations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_invitations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
       }
       supplier_payments: {
         Row: {
