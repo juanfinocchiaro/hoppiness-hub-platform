@@ -24,6 +24,7 @@ import LocalDashboard from "./pages/local/LocalDashboard";
 import LocalPedidos from "./pages/local/LocalPedidos";
 import LocalProductos from "./pages/local/LocalProductos";
 import LocalConfig from "./pages/local/LocalConfig";
+import LocalTransactions from "./pages/local/LocalTransactions";
 
 // Admin
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -71,6 +72,7 @@ const App = () => (
             <Route path="/local/:branchId" element={<LocalRoute><LocalLayout /></LocalRoute>}>
               <Route index element={null} />
               <Route path="pedidos" element={<LocalPedidos />} />
+              <Route path="transacciones" element={<LocalTransactions />} />
               <Route path="productos" element={<LocalProductos />} />
               <Route path="config" element={<LocalConfig />} />
             </Route>
