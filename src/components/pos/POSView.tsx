@@ -1214,6 +1214,18 @@ export default function POSView({ branch }: POSViewProps) {
               <span>Total</span>
               <span className="text-primary">{formatPrice(total)}</span>
             </div>
+            {/* Always show Saldo */}
+            {(() => {
+              const totalPaid = draftPayments.reduce((s, p) => s + p.amount, 0);
+              const remaining = total - totalPaid;
+              const isFullyPaid = remaining <= 0.01;
+              return (
+                <div className={`flex justify-between font-bold ${isFullyPaid ? 'text-success' : 'text-warning'}`}>
+                  <span>Saldo</span>
+                  <span>{formatPrice(Math.max(0, remaining))}</span>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Show registered payments if any */}
@@ -1231,16 +1243,6 @@ export default function POSView({ branch }: POSViewProps) {
                 <span>Total pagado</span>
                 <span className="text-success">{formatPrice(draftPayments.reduce((s, p) => s + p.amount, 0))}</span>
               </div>
-              {(() => {
-                const totalPaid = draftPayments.reduce((s, p) => s + p.amount, 0);
-                const remaining = total - totalPaid;
-                return remaining > 0.01 ? (
-                  <div className="flex justify-between text-sm font-bold text-warning">
-                    <span>Saldo pendiente</span>
-                    <span>{formatPrice(remaining)}</span>
-                  </div>
-                ) : null;
-              })()}
             </div>
           )}
 
@@ -1251,17 +1253,19 @@ export default function POSView({ branch }: POSViewProps) {
             
             return (
               <div className="space-y-2">
-                {/* Always show "Cargar pago" button */}
+                {/* "Cargar pago" - disabled when fully paid */}
                 <Button
                   className="w-full"
                   size="lg"
                   variant="outline"
-                  disabled={cart.length === 0 || !activeShift}
+                  disabled={cart.length === 0 || !activeShift || isFullyPaid}
                   onClick={() => setIsCheckoutOpen(true)}
                 >
                   {!activeShift 
                     ? 'Abrí un turno para tomar pedidos' 
-                    : 'Cargar pago'
+                    : isFullyPaid
+                      ? 'Pedido pagado'
+                      : 'Cargar pago'
                   }
                   <CreditCard className="w-4 h-4 ml-2" />
                 </Button>
