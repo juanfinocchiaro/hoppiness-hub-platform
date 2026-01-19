@@ -2190,10 +2190,15 @@ export type Database = {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
       }
-      has_branch_permission: {
-        Args: { _branch_id: string; _permission: string; _user_id: string }
-        Returns: boolean
-      }
+      has_branch_permission:
+        | {
+            Args: { _branch_id: string; _permission: string; _user_id: string }
+            Returns: boolean
+          }
+        | {
+            Args: { _branch_id: string; _permission: string; _user_id: string }
+            Returns: boolean
+          }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2204,7 +2209,13 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "gerente" | "empleado" | "franquiciado"
+      app_role:
+        | "admin"
+        | "gerente"
+        | "empleado"
+        | "franquiciado"
+        | "socio"
+        | "coordinador"
       order_area: "salon" | "mostrador" | "delivery"
       order_status:
         | "pending"
@@ -2361,7 +2372,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "gerente", "empleado", "franquiciado"],
+      app_role: [
+        "admin",
+        "gerente",
+        "empleado",
+        "franquiciado",
+        "socio",
+        "coordinador",
+      ],
       order_area: ["salon", "mostrador", "delivery"],
       order_status: [
         "pending",

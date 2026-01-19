@@ -80,6 +80,8 @@ const moduleLabels: Record<string, string> = {
 
 const roleLabels: Record<AppRole, string> = {
   admin: 'Admin',
+  coordinador: 'Coordinador',
+  socio: 'Socio',
   franquiciado: 'Franquiciado',
   gerente: 'Gerente',
   empleado: 'Empleado',
@@ -87,12 +89,14 @@ const roleLabels: Record<AppRole, string> = {
 
 const roleColors: Record<AppRole, string> = {
   admin: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  coordinador: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+  socio: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300',
   franquiciado: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
   gerente: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
   empleado: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
 };
 
-const ROLES_HIERARCHY: AppRole[] = ['admin', 'franquiciado', 'gerente', 'empleado'];
+const ROLES_HIERARCHY: AppRole[] = ['admin', 'coordinador', 'socio', 'franquiciado', 'gerente', 'empleado'];
 
 export default function Permissions() {
   const { user: currentUser } = useAuth();

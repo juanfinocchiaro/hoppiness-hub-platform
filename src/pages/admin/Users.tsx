@@ -66,6 +66,8 @@ interface UserWithRole extends Profile {
 
 const roleLabels: Record<AppRole, string> = {
   admin: 'Administrador',
+  coordinador: 'Coordinador',
+  socio: 'Socio',
   gerente: 'Gerente',
   empleado: 'Empleado',
   franquiciado: 'Franquiciado',
@@ -73,12 +75,14 @@ const roleLabels: Record<AppRole, string> = {
 
 const roleColors: Record<AppRole, string> = {
   admin: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+  coordinador: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+  socio: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
   gerente: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
   empleado: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
   franquiciado: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
 };
 
-const ROLES_HIERARCHY: AppRole[] = ['admin', 'franquiciado', 'gerente', 'empleado'];
+const ROLES_HIERARCHY: AppRole[] = ['admin', 'coordinador', 'socio', 'franquiciado', 'gerente', 'empleado'];
 
 type SortField = 'name' | 'role' | 'branch' | 'lastLogin';
 type SortDirection = 'asc' | 'desc';
