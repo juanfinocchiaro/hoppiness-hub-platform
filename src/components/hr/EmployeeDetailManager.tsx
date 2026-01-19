@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useCanViewPrivateData } from '@/hooks/useCanViewPrivateData';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { RestrictedField, RestrictedSectionHeader } from '@/components/ui/restricted-field';
 import { toast } from 'sonner';
 import { 
   User, 
@@ -55,6 +57,9 @@ import {
   FileCheck,
   X,
   Eye,
+  Lock,
+  DollarSign,
+  ShieldAlert,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -64,17 +69,23 @@ interface Employee {
   full_name: string;
   position: string | null;
   phone: string | null;
+  photo_url: string | null;
+  hire_date: string | null;
+  is_active: boolean;
+  current_status: string;
+}
+
+interface EmployeePrivateDetails {
+  id: string;
+  employee_id: string;
   hourly_rate: number | null;
   address: string | null;
   cbu: string | null;
   cuit: string | null;
   dni: string | null;
-  photo_url: string | null;
   birth_date: string | null;
-  hire_date: string | null;
   emergency_contact: string | null;
   emergency_phone: string | null;
-  is_active: boolean;
 }
 
 interface EmployeeDocument {
@@ -123,10 +134,13 @@ const WARNING_TYPES = [
 
 export default function EmployeeDetailManager({ branchId, canManage }: EmployeeDetailManagerProps) {
   const { user } = useAuth();
+  const { canViewPrivateData, loading: loadingPermissions } = useCanViewPrivateData(branchId);
+  
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInactive, setShowInactive] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [selectedPrivateDetails, setSelectedPrivateDetails] = useState<EmployeePrivateDetails | null>(null);
   const [documents, setDocuments] = useState<EmployeeDocument[]>([]);
   const [warnings, setWarnings] = useState<EmployeeWarning[]>([]);
   
@@ -174,7 +188,7 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
-  // Fetch employees
+  // Fetch employees (basic info only - no sensitive data)
   useEffect(() => {
     if (!branchId) return;
     
@@ -183,7 +197,7 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
       try {
         let query = supabase
           .from('employees')
-          .select('*')
+          .select('id, full_name, position, phone, photo_url, hire_date, is_active, current_status')
           .eq('branch_id', branchId)
           .order('full_name');
         
@@ -206,9 +220,10 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
     fetchEmployees();
   }, [branchId, showInactive]);
 
-  // Fetch documents and warnings when employee is selected
+  // Fetch private details and documents when employee is selected
   useEffect(() => {
     if (!selectedEmployee) {
+      setSelectedPrivateDetails(null);
       setDocuments([]);
       setWarnings([]);
       return;
@@ -231,13 +246,36 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
 
         setDocuments(docsRes.data || []);
         setWarnings(warningsRes.data || []);
+
+        // Only fetch private details if user has permission
+        if (canViewPrivateData) {
+          const { data: privateData } = await supabase
+            .from('employee_private_details')
+            .select('*')
+            .eq('employee_id', selectedEmployee.id)
+            .maybeSingle();
+          
+          setSelectedPrivateDetails(privateData || null);
+        }
       } catch (error) {
         console.error('Error fetching employee data:', error);
+        // Handle 403/406 errors gracefully
+        if ((error as any)?.code === '42501' || (error as any)?.code === 'PGRST301') {
+          toast.error('No tenés permisos para ver esta información');
+        }
+      }
+    }
+      } catch (error) {
+        console.error('Error fetching employee data:', error);
+        // Handle 403/406 errors gracefully
+        if ((error as any)?.code === '42501' || (error as any)?.code === 'PGRST301') {
+          toast.error('No tenés permisos para ver esta información');
+        }
       }
     }
 
     fetchEmployeeData();
-  }, [selectedEmployee]);
+  }, [selectedEmployee, canViewPrivateData]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -288,31 +326,46 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
         photoUrl = await uploadPhoto();
       }
 
-      const { data, error } = await supabase
+      // Insert basic employee data
+      const { data: newEmployee, error: empError } = await supabase
         .from('employees')
         .insert({
           branch_id: branchId,
           full_name: employeeForm.full_name,
           position: employeeForm.position || null,
           phone: employeeForm.phone || null,
-          hourly_rate: employeeForm.hourly_rate ? parseFloat(employeeForm.hourly_rate) : null,
-          address: employeeForm.address || null,
-          cbu: employeeForm.cbu || null,
-          cuit: employeeForm.cuit || null,
-          dni: employeeForm.dni,
           photo_url: photoUrl,
-          birth_date: employeeForm.birth_date || null,
           hire_date: employeeForm.hire_date || null,
-          emergency_contact: employeeForm.emergency_contact || null,
-          emergency_phone: employeeForm.emergency_phone || null,
           pin_code: employeeForm.pin_code,
+          // Keep DNI in main table for PIN lookup but also in private
+          dni: employeeForm.dni,
         })
-        .select()
+        .select('id, full_name, position, phone, photo_url, hire_date, is_active, current_status')
         .single();
 
-      if (error) throw error;
+      if (empError) throw empError;
 
-      setEmployees(prev => [...prev, data]);
+      // Insert private details
+      const { error: privateError } = await supabase
+        .from('employee_private_details')
+        .insert({
+          employee_id: newEmployee.id,
+          dni: employeeForm.dni,
+          cuit: employeeForm.cuit || null,
+          cbu: employeeForm.cbu || null,
+          address: employeeForm.address || null,
+          birth_date: employeeForm.birth_date || null,
+          emergency_contact: employeeForm.emergency_contact || null,
+          emergency_phone: employeeForm.emergency_phone || null,
+          hourly_rate: employeeForm.hourly_rate ? parseFloat(employeeForm.hourly_rate) : null,
+        });
+
+      if (privateError) {
+        console.error('Error inserting private details:', privateError);
+        // Don't fail the whole operation, private details are secondary
+      }
+
+      setEmployees(prev => [...prev, newEmployee]);
       setShowAddDialog(false);
       resetEmployeeForm();
       toast.success('Empleado agregado correctamente');
@@ -334,33 +387,52 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
         photoUrl = await uploadPhoto();
       }
 
-      const { error } = await supabase
+      // Update basic employee data
+      const { error: empError } = await supabase
         .from('employees')
         .update({
           full_name: employeeForm.full_name,
           position: employeeForm.position || null,
           phone: employeeForm.phone || null,
-          hourly_rate: employeeForm.hourly_rate ? parseFloat(employeeForm.hourly_rate) : null,
-          address: employeeForm.address || null,
-          cbu: employeeForm.cbu || null,
-          cuit: employeeForm.cuit || null,
-          dni: employeeForm.dni,
           photo_url: photoUrl,
-          birth_date: employeeForm.birth_date || null,
           hire_date: employeeForm.hire_date || null,
-          emergency_contact: employeeForm.emergency_contact || null,
-          emergency_phone: employeeForm.emergency_phone || null,
         })
         .eq('id', selectedEmployee.id);
 
-      if (error) throw error;
+      if (empError) throw empError;
+
+      // Update or insert private details (upsert)
+      if (canViewPrivateData) {
+        const privateData = {
+          employee_id: selectedEmployee.id,
+          dni: employeeForm.dni || null,
+          cuit: employeeForm.cuit || null,
+          cbu: employeeForm.cbu || null,
+          address: employeeForm.address || null,
+          birth_date: employeeForm.birth_date || null,
+          emergency_contact: employeeForm.emergency_contact || null,
+          emergency_phone: employeeForm.emergency_phone || null,
+          hourly_rate: employeeForm.hourly_rate ? parseFloat(employeeForm.hourly_rate) : null,
+        };
+
+        if (selectedPrivateDetails) {
+          await supabase
+            .from('employee_private_details')
+            .update(privateData)
+            .eq('id', selectedPrivateDetails.id);
+        } else {
+          await supabase
+            .from('employee_private_details')
+            .insert(privateData);
+        }
+      }
 
       setEmployees(prev => prev.map(e => 
         e.id === selectedEmployee.id 
-          ? { ...e, ...employeeForm, hourly_rate: employeeForm.hourly_rate ? parseFloat(employeeForm.hourly_rate) : null, photo_url: photoUrl }
+          ? { ...e, full_name: employeeForm.full_name, position: employeeForm.position || null, phone: employeeForm.phone || null, photo_url: photoUrl, hire_date: employeeForm.hire_date || null }
           : e
       ));
-      setSelectedEmployee(prev => prev ? { ...prev, ...employeeForm, hourly_rate: employeeForm.hourly_rate ? parseFloat(employeeForm.hourly_rate) : null, photo_url: photoUrl } : null);
+      setSelectedEmployee(prev => prev ? { ...prev, full_name: employeeForm.full_name, position: employeeForm.position || null, phone: employeeForm.phone || null, photo_url: photoUrl, hire_date: employeeForm.hire_date || null } : null);
       setShowEditDialog(false);
       toast.success('Empleado actualizado');
     } catch (error) {
@@ -474,7 +546,10 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
   };
 
   const handlePrintFicha = () => {
-    if (!selectedEmployee) return;
+    if (!selectedEmployee || !canViewPrivateData) {
+      toast.error('No tenés permisos para imprimir la ficha completa');
+      return;
+    }
     
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
@@ -511,23 +586,23 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
         
         <div class="section">Datos Personales</div>
         <div class="field"><span class="label">Nombre Completo:</span><span class="value">${selectedEmployee.full_name}</span></div>
-        <div class="field"><span class="label">DNI:</span><span class="value">${selectedEmployee.dni || '-'}</span></div>
-        <div class="field"><span class="label">CUIT:</span><span class="value">${selectedEmployee.cuit || '-'}</span></div>
-        <div class="field"><span class="label">Fecha de Nacimiento:</span><span class="value">${selectedEmployee.birth_date ? format(new Date(selectedEmployee.birth_date), 'dd/MM/yyyy') : '-'}</span></div>
+        <div class="field"><span class="label">DNI:</span><span class="value">${selectedPrivateDetails?.dni || '-'}</span></div>
+        <div class="field"><span class="label">CUIT:</span><span class="value">${selectedPrivateDetails?.cuit || '-'}</span></div>
+        <div class="field"><span class="label">Fecha de Nacimiento:</span><span class="value">${selectedPrivateDetails?.birth_date ? format(new Date(selectedPrivateDetails.birth_date), 'dd/MM/yyyy') : '-'}</span></div>
         <div class="field"><span class="label">Teléfono:</span><span class="value">${selectedEmployee.phone || '-'}</span></div>
-        <div class="field"><span class="label">Dirección:</span><span class="value">${selectedEmployee.address || '-'}</span></div>
+        <div class="field"><span class="label">Dirección:</span><span class="value">${selectedPrivateDetails?.address || '-'}</span></div>
         
         <div class="section">Datos Bancarios</div>
-        <div class="field"><span class="label">CBU:</span><span class="value">${selectedEmployee.cbu || '-'}</span></div>
+        <div class="field"><span class="label">CBU:</span><span class="value">${selectedPrivateDetails?.cbu || '-'}</span></div>
         
         <div class="section">Datos Laborales</div>
         <div class="field"><span class="label">Puesto:</span><span class="value">${selectedEmployee.position || '-'}</span></div>
         <div class="field"><span class="label">Fecha de Ingreso:</span><span class="value">${selectedEmployee.hire_date ? format(new Date(selectedEmployee.hire_date), 'dd/MM/yyyy') : '-'}</span></div>
-        <div class="field"><span class="label">Valor Hora:</span><span class="value">${selectedEmployee.hourly_rate ? '$' + selectedEmployee.hourly_rate : '-'}</span></div>
+        <div class="field"><span class="label">Valor Hora:</span><span class="value">${selectedPrivateDetails?.hourly_rate ? '$' + selectedPrivateDetails.hourly_rate : '-'}</span></div>
         
         <div class="section">Contacto de Emergencia</div>
-        <div class="field"><span class="label">Nombre:</span><span class="value">${selectedEmployee.emergency_contact || '-'}</span></div>
-        <div class="field"><span class="label">Teléfono:</span><span class="value">${selectedEmployee.emergency_phone || '-'}</span></div>
+        <div class="field"><span class="label">Nombre:</span><span class="value">${selectedPrivateDetails?.emergency_contact || '-'}</span></div>
+        <div class="field"><span class="label">Teléfono:</span><span class="value">${selectedPrivateDetails?.emergency_phone || '-'}</span></div>
         
         <div class="signature">
           <div class="signature-line">
@@ -572,15 +647,15 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
       full_name: employee.full_name,
       position: employee.position || '',
       phone: employee.phone || '',
-      hourly_rate: employee.hourly_rate?.toString() || '',
-      address: employee.address || '',
-      cbu: employee.cbu || '',
-      cuit: employee.cuit || '',
-      dni: employee.dni || '',
-      birth_date: employee.birth_date || '',
+      hourly_rate: selectedPrivateDetails?.hourly_rate?.toString() || '',
+      address: selectedPrivateDetails?.address || '',
+      cbu: selectedPrivateDetails?.cbu || '',
+      cuit: selectedPrivateDetails?.cuit || '',
+      dni: selectedPrivateDetails?.dni || '',
+      birth_date: selectedPrivateDetails?.birth_date || '',
       hire_date: employee.hire_date || '',
-      emergency_contact: employee.emergency_contact || '',
-      emergency_phone: employee.emergency_phone || '',
+      emergency_contact: selectedPrivateDetails?.emergency_contact || '',
+      emergency_phone: selectedPrivateDetails?.emergency_phone || '',
       pin_code: '',
     });
     setPhotoPreview(employee.photo_url);
@@ -629,7 +704,7 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
     }
   };
 
-  if (loading) {
+  if (loading || loadingPermissions) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -645,6 +720,12 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
           <p className="text-sm text-muted-foreground">Personal que ficha con PIN</p>
         </div>
         <div className="flex items-center gap-3">
+          {!canViewPrivateData && (
+            <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">
+              <Lock className="h-3 w-3 mr-1" />
+              Vista limitada
+            </Badge>
+          )}
           <label className="flex items-center gap-2 text-sm">
             <input 
               type="checkbox" 
@@ -727,10 +808,12 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Detalle del Empleado</CardTitle>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={handlePrintFicha}>
-                    <Printer className="h-4 w-4 mr-1" />
-                    Imprimir Ficha
-                  </Button>
+                  {canViewPrivateData && (
+                    <Button variant="outline" size="sm" onClick={handlePrintFicha}>
+                      <Printer className="h-4 w-4 mr-1" />
+                      Imprimir Ficha
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardHeader>
@@ -738,8 +821,14 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
               <Tabs defaultValue="info">
                 <TabsList className="w-full">
                   <TabsTrigger value="info" className="flex-1">Datos</TabsTrigger>
+                  <TabsTrigger value="private" className="flex-1">
+                    <span className="flex items-center gap-1">
+                      Privado
+                      {!canViewPrivateData && <Lock className="h-3 w-3" />}
+                    </span>
+                  </TabsTrigger>
                   <TabsTrigger value="documents" className="flex-1">Documentos</TabsTrigger>
-                  <TabsTrigger value="warnings" className="flex-1">Apercibimientos</TabsTrigger>
+                  <TabsTrigger value="warnings" className="flex-1">Aperc.</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="info" className="mt-4 space-y-4">
@@ -758,29 +847,9 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
                   
                   <div className="grid gap-3 text-sm">
                     <div className="flex items-center gap-2">
-                      <CreditCard className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">DNI:</span>
-                      <span>{selectedEmployee.dni || '-'}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">CUIT:</span>
-                      <span>{selectedEmployee.cuit || '-'}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-muted-foreground" />
                       <span className="text-muted-foreground">Teléfono:</span>
                       <span>{selectedEmployee.phone || '-'}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">Dirección:</span>
-                      <span className="truncate">{selectedEmployee.address || '-'}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">CBU:</span>
-                      <span className="font-mono text-xs">{selectedEmployee.cbu || '-'}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -788,6 +857,84 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
                       <span>{selectedEmployee.hire_date ? format(new Date(selectedEmployee.hire_date), 'dd/MM/yyyy') : '-'}</span>
                     </div>
                   </div>
+                </TabsContent>
+
+                <TabsContent value="private" className="mt-4 space-y-4">
+                  {!canViewPrivateData ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <ShieldAlert className="h-12 w-12 mx-auto mb-4 text-amber-500" />
+                      <h3 className="font-semibold text-foreground mb-1">Acceso Restringido</h3>
+                      <p className="text-sm">Solo administradores y encargados pueden ver datos personales sensibles</p>
+                      <p className="text-xs mt-2 opacity-75">DNI, CUIT, CBU, dirección y datos de emergencia están protegidos</p>
+                    </div>
+                  ) : (
+                    <>
+                      <RestrictedSectionHeader title="Documentación Personal" isRestricted={false} />
+                      <div className="grid gap-3 text-sm">
+                        <RestrictedField 
+                          label="DNI" 
+                          value={selectedPrivateDetails?.dni} 
+                          canView={canViewPrivateData}
+                          icon={<CreditCard className="h-4 w-4" />}
+                        />
+                        <RestrictedField 
+                          label="CUIT" 
+                          value={selectedPrivateDetails?.cuit} 
+                          canView={canViewPrivateData}
+                          icon={<CreditCard className="h-4 w-4" />}
+                        />
+                        <RestrictedField 
+                          label="Fecha Nacimiento" 
+                          value={selectedPrivateDetails?.birth_date ? format(new Date(selectedPrivateDetails.birth_date), 'dd/MM/yyyy') : null} 
+                          canView={canViewPrivateData}
+                          icon={<Calendar className="h-4 w-4" />}
+                        />
+                      </div>
+                      
+                      <Separator />
+                      
+                      <RestrictedSectionHeader title="Dirección y Contacto de Emergencia" isRestricted={false} />
+                      <div className="grid gap-3 text-sm">
+                        <RestrictedField 
+                          label="Dirección" 
+                          value={selectedPrivateDetails?.address} 
+                          canView={canViewPrivateData}
+                          icon={<MapPin className="h-4 w-4" />}
+                        />
+                        <RestrictedField 
+                          label="Contacto Emergencia" 
+                          value={selectedPrivateDetails?.emergency_contact} 
+                          canView={canViewPrivateData}
+                          icon={<User className="h-4 w-4" />}
+                        />
+                        <RestrictedField 
+                          label="Tel. Emergencia" 
+                          value={selectedPrivateDetails?.emergency_phone} 
+                          canView={canViewPrivateData}
+                          icon={<Phone className="h-4 w-4" />}
+                        />
+                      </div>
+                      
+                      <Separator />
+                      
+                      <RestrictedSectionHeader title="Datos Bancarios y Salariales" isRestricted={false} />
+                      <div className="grid gap-3 text-sm">
+                        <RestrictedField 
+                          label="CBU" 
+                          value={selectedPrivateDetails?.cbu} 
+                          canView={canViewPrivateData}
+                          icon={<CreditCard className="h-4 w-4" />}
+                          className="font-mono text-xs"
+                        />
+                        <RestrictedField 
+                          label="Valor Hora" 
+                          value={selectedPrivateDetails?.hourly_rate ? `$${selectedPrivateDetails.hourly_rate}` : null} 
+                          canView={canViewPrivateData}
+                          icon={<DollarSign className="h-4 w-4" />}
+                        />
+                      </div>
+                    </>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="documents" className="mt-4 space-y-4">
@@ -918,40 +1065,20 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
                 <Input value={employeeForm.full_name} onChange={e => setEmployeeForm(p => ({ ...p, full_name: e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <Label>DNI *</Label>
-                <Input value={employeeForm.dni} onChange={e => setEmployeeForm(p => ({ ...p, dni: e.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>CUIT</Label>
-                <Input placeholder="20-12345678-9" value={employeeForm.cuit} onChange={e => setEmployeeForm(p => ({ ...p, cuit: e.target.value }))} />
+                <Label>Puesto</Label>
+                <Input placeholder="Cajero, Cocinero, etc." value={employeeForm.position} onChange={e => setEmployeeForm(p => ({ ...p, position: e.target.value }))} />
               </div>
               <div className="space-y-2">
                 <Label>Teléfono</Label>
                 <Input value={employeeForm.phone} onChange={e => setEmployeeForm(p => ({ ...p, phone: e.target.value }))} />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label>Dirección Completa</Label>
-                <Input placeholder="Calle, Número, Localidad, Provincia" value={employeeForm.address} onChange={e => setEmployeeForm(p => ({ ...p, address: e.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>CBU</Label>
-                <Input placeholder="22 dígitos" value={employeeForm.cbu} onChange={e => setEmployeeForm(p => ({ ...p, cbu: e.target.value }))} maxLength={22} />
-              </div>
-              <div className="space-y-2">
-                <Label>Fecha de Nacimiento</Label>
-                <Input type="date" value={employeeForm.birth_date} onChange={e => setEmployeeForm(p => ({ ...p, birth_date: e.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>Puesto</Label>
-                <Input placeholder="Cajero, Cocinero, etc." value={employeeForm.position} onChange={e => setEmployeeForm(p => ({ ...p, position: e.target.value }))} />
               </div>
               <div className="space-y-2">
                 <Label>Fecha de Ingreso</Label>
                 <Input type="date" value={employeeForm.hire_date} onChange={e => setEmployeeForm(p => ({ ...p, hire_date: e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <Label>Valor Hora ($)</Label>
-                <Input type="number" value={employeeForm.hourly_rate} onChange={e => setEmployeeForm(p => ({ ...p, hourly_rate: e.target.value }))} />
+                <Label>DNI *</Label>
+                <Input value={employeeForm.dni} onChange={e => setEmployeeForm(p => ({ ...p, dni: e.target.value }))} />
               </div>
               <div className="space-y-2">
                 <Label>PIN de Fichada (4 dígitos) *</Label>
@@ -959,18 +1086,46 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
               </div>
             </div>
 
-            <Separator />
+            {canViewPrivateData && (
+              <>
+                <Separator />
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Lock className="h-4 w-4" />
+                  <span>Datos Privados (solo visible para administradores)</span>
+                </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Contacto de Emergencia</Label>
-                <Input value={employeeForm.emergency_contact} onChange={e => setEmployeeForm(p => ({ ...p, emergency_contact: e.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>Teléfono Emergencia</Label>
-                <Input value={employeeForm.emergency_phone} onChange={e => setEmployeeForm(p => ({ ...p, emergency_phone: e.target.value }))} />
-              </div>
-            </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>CUIT</Label>
+                    <Input placeholder="20-12345678-9" value={employeeForm.cuit} onChange={e => setEmployeeForm(p => ({ ...p, cuit: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>CBU</Label>
+                    <Input placeholder="22 dígitos" value={employeeForm.cbu} onChange={e => setEmployeeForm(p => ({ ...p, cbu: e.target.value }))} maxLength={22} />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Dirección Completa</Label>
+                    <Input placeholder="Calle, Número, Localidad, Provincia" value={employeeForm.address} onChange={e => setEmployeeForm(p => ({ ...p, address: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Fecha de Nacimiento</Label>
+                    <Input type="date" value={employeeForm.birth_date} onChange={e => setEmployeeForm(p => ({ ...p, birth_date: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Valor Hora ($)</Label>
+                    <Input type="number" value={employeeForm.hourly_rate} onChange={e => setEmployeeForm(p => ({ ...p, hourly_rate: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Contacto de Emergencia</Label>
+                    <Input value={employeeForm.emergency_contact} onChange={e => setEmployeeForm(p => ({ ...p, emergency_contact: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Teléfono Emergencia</Label>
+                    <Input value={employeeForm.emergency_phone} onChange={e => setEmployeeForm(p => ({ ...p, emergency_phone: e.target.value }))} />
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <DialogFooter>
@@ -983,7 +1138,7 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
         </DialogContent>
       </Dialog>
 
-      {/* Edit Employee Dialog - Similar structure */}
+      {/* Edit Employee Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -1009,55 +1164,63 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
                 <Input value={employeeForm.full_name} onChange={e => setEmployeeForm(p => ({ ...p, full_name: e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <Label>DNI</Label>
-                <Input value={employeeForm.dni} onChange={e => setEmployeeForm(p => ({ ...p, dni: e.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>CUIT</Label>
-                <Input value={employeeForm.cuit} onChange={e => setEmployeeForm(p => ({ ...p, cuit: e.target.value }))} />
+                <Label>Puesto</Label>
+                <Input value={employeeForm.position} onChange={e => setEmployeeForm(p => ({ ...p, position: e.target.value }))} />
               </div>
               <div className="space-y-2">
                 <Label>Teléfono</Label>
                 <Input value={employeeForm.phone} onChange={e => setEmployeeForm(p => ({ ...p, phone: e.target.value }))} />
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label>Dirección Completa</Label>
-                <Input value={employeeForm.address} onChange={e => setEmployeeForm(p => ({ ...p, address: e.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>CBU</Label>
-                <Input value={employeeForm.cbu} onChange={e => setEmployeeForm(p => ({ ...p, cbu: e.target.value }))} maxLength={22} />
-              </div>
-              <div className="space-y-2">
-                <Label>Fecha de Nacimiento</Label>
-                <Input type="date" value={employeeForm.birth_date} onChange={e => setEmployeeForm(p => ({ ...p, birth_date: e.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>Puesto</Label>
-                <Input value={employeeForm.position} onChange={e => setEmployeeForm(p => ({ ...p, position: e.target.value }))} />
-              </div>
               <div className="space-y-2">
                 <Label>Fecha de Ingreso</Label>
                 <Input type="date" value={employeeForm.hire_date} onChange={e => setEmployeeForm(p => ({ ...p, hire_date: e.target.value }))} />
               </div>
-              <div className="space-y-2">
-                <Label>Valor Hora ($)</Label>
-                <Input type="number" value={employeeForm.hourly_rate} onChange={e => setEmployeeForm(p => ({ ...p, hourly_rate: e.target.value }))} />
-              </div>
             </div>
 
-            <Separator />
+            {canViewPrivateData && (
+              <>
+                <Separator />
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Lock className="h-4 w-4" />
+                  <span>Datos Privados</span>
+                </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Contacto de Emergencia</Label>
-                <Input value={employeeForm.emergency_contact} onChange={e => setEmployeeForm(p => ({ ...p, emergency_contact: e.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>Teléfono Emergencia</Label>
-                <Input value={employeeForm.emergency_phone} onChange={e => setEmployeeForm(p => ({ ...p, emergency_phone: e.target.value }))} />
-              </div>
-            </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>DNI</Label>
+                    <Input value={employeeForm.dni} onChange={e => setEmployeeForm(p => ({ ...p, dni: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>CUIT</Label>
+                    <Input value={employeeForm.cuit} onChange={e => setEmployeeForm(p => ({ ...p, cuit: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>CBU</Label>
+                    <Input value={employeeForm.cbu} onChange={e => setEmployeeForm(p => ({ ...p, cbu: e.target.value }))} maxLength={22} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Fecha de Nacimiento</Label>
+                    <Input type="date" value={employeeForm.birth_date} onChange={e => setEmployeeForm(p => ({ ...p, birth_date: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Dirección Completa</Label>
+                    <Input value={employeeForm.address} onChange={e => setEmployeeForm(p => ({ ...p, address: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Valor Hora ($)</Label>
+                    <Input type="number" value={employeeForm.hourly_rate} onChange={e => setEmployeeForm(p => ({ ...p, hourly_rate: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Contacto de Emergencia</Label>
+                    <Input value={employeeForm.emergency_contact} onChange={e => setEmployeeForm(p => ({ ...p, emergency_contact: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Teléfono Emergencia</Label>
+                    <Input value={employeeForm.emergency_phone} onChange={e => setEmployeeForm(p => ({ ...p, emergency_phone: e.target.value }))} />
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <DialogFooter>

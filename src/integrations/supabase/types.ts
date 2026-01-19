@@ -61,6 +61,13 @@ export type Database = {
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "attendance_logs_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_basic"
+            referencedColumns: ["id"]
+          },
         ]
       }
       attendance_records: {
@@ -775,6 +782,73 @@ export type Database = {
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "employee_documents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_basic"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_private_details: {
+        Row: {
+          address: string | null
+          birth_date: string | null
+          cbu: string | null
+          created_at: string
+          cuit: string | null
+          dni: string | null
+          emergency_contact: string | null
+          emergency_phone: string | null
+          employee_id: string
+          hourly_rate: number | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          birth_date?: string | null
+          cbu?: string | null
+          created_at?: string
+          cuit?: string | null
+          dni?: string | null
+          emergency_contact?: string | null
+          emergency_phone?: string | null
+          employee_id: string
+          hourly_rate?: number | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          birth_date?: string | null
+          cbu?: string | null
+          created_at?: string
+          cuit?: string | null
+          dni?: string | null
+          emergency_contact?: string | null
+          emergency_phone?: string | null
+          employee_id?: string
+          hourly_rate?: number | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_private_details_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: true
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_private_details_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: true
+            referencedRelation: "employees_basic"
+            referencedColumns: ["id"]
+          },
         ]
       }
       employee_schedules: {
@@ -825,6 +899,13 @@ export type Database = {
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "employee_schedules_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_basic"
+            referencedColumns: ["id"]
+          },
         ]
       }
       employee_warnings: {
@@ -870,6 +951,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_warnings_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_basic"
             referencedColumns: ["id"]
           },
         ]
@@ -1882,6 +1970,75 @@ export type Database = {
       }
     }
     Views: {
+      employees_basic: {
+        Row: {
+          branch_id: string | null
+          current_status: string | null
+          full_name: string | null
+          id: string | null
+          is_active: boolean | null
+          photo_url: string | null
+          position: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          current_status?: string | null
+          full_name?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          photo_url?: string | null
+          position?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          current_status?: string | null
+          full_name?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          photo_url?: string | null
+          position?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
+      profiles_public: {
+        Row: {
+          avatar_url: string | null
+          full_name: string | null
+          id: string | null
+          is_active: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          full_name?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          full_name?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       supplier_balances: {
         Row: {
           branch_id: string | null
@@ -1896,6 +2053,10 @@ export type Database = {
       }
     }
     Functions: {
+      can_view_employee_private_details: {
+        Args: { _employee_id: string; _user_id: string }
+        Returns: boolean
+      }
       cleanup_expired_tokens: { Args: never; Returns: undefined }
       has_branch_access: {
         Args: { _branch_id: string; _user_id: string }
