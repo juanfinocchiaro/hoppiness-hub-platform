@@ -92,7 +92,7 @@ export default function Modifiers() {
 
       const { data: optionsData } = await supabase
         .from('modifier_options')
-        .select('*, linked_product:products!modifier_options_linked_product_id_fkey(id, name, image_url)')
+        .select('*, linked_product:products(id, name, image_url)')
         .order('display_order');
 
       const { data: productsData } = await supabase
