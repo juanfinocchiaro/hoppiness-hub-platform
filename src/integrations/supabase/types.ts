@@ -1411,6 +1411,54 @@ export type Database = {
           },
         ]
       }
+      permission_audit_logs: {
+        Row: {
+          action: string
+          branch_id: string
+          created_at: string
+          id: string
+          permission_keys: string[]
+          reason: string | null
+          target_user_id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          branch_id: string
+          created_at?: string
+          id?: string
+          permission_keys: string[]
+          reason?: string | null
+          target_user_id: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          branch_id?: string
+          created_at?: string
+          id?: string
+          permission_keys?: string[]
+          reason?: string | null
+          target_user_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permission_audit_logs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permission_audit_logs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       permission_definitions: {
         Row: {
           created_at: string | null
