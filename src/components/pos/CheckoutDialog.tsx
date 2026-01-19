@@ -89,6 +89,8 @@ interface CheckoutDialogProps {
   // For existing draft orders
   existingOrderId?: string | null;
   existingPayments?: PaymentRecord[];
+  // Lift draft state to parent so closing/reopening doesn't forget payments
+  onDraftUpdated?: (draft: { orderId: string; payments: PaymentRecord[] }) => void;
 }
 
 // Use the same type as SplitPayment
@@ -127,6 +129,7 @@ export default function CheckoutDialog({
   onEditOrder,
   existingOrderId,
   existingPayments = [],
+  onDraftUpdated,
 }: CheckoutDialogProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSplitPayment, setShowSplitPayment] = useState(false);
@@ -251,6 +254,7 @@ export default function CheckoutDialog({
     if (itemsError) throw itemsError;
 
     setCurrentOrderId(order.id);
+    onDraftUpdated?.({ orderId: order.id, payments: [] });
     return order.id;
   };
 
@@ -299,14 +303,16 @@ export default function CheckoutDialog({
           });
       }
 
-      // Refresh payments
-      const { data: updatedPayments } = await supabase
-        .from('order_payments')
-        .select('*')
-        .eq('order_id', orderId);
-
-      setPayments(updatedPayments || []);
-      toast.success('Pago registrado');
+       // Refresh payments
+       const { data: updatedPayments } = await supabase
+         .from('order_payments')
+         .select('*')
+         .eq('order_id', orderId);
+ 
+       const nextPayments = (updatedPayments || []) as PaymentRecord[];
+       setPayments(nextPayments);
+       onDraftUpdated?.({ orderId, payments: nextPayments });
+       toast.success('Pago registrado');
 
     } catch (error) {
       console.error('Error processing payment:', error);
@@ -372,7 +378,9 @@ export default function CheckoutDialog({
         .select('*')
         .eq('order_id', orderId);
 
-      setPayments(updatedPayments || []);
+      const nextPayments = (updatedPayments || []) as PaymentRecord[];
+      setPayments(nextPayments);
+      onDraftUpdated?.({ orderId, payments: nextPayments });
       setShowSplitPayment(false);
       toast.success('Pagos registrados');
 
