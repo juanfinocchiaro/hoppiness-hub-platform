@@ -19,8 +19,14 @@ interface BranchPermission {
 interface UserRoleData {
   roles: AppRole[];
   isAdmin: boolean;
-  isGerente: boolean;
+  isCoordinador: boolean;
+  isSocio: boolean;
   isFranquiciado: boolean;
+  isEncargado: boolean;
+  isCajero: boolean;
+  isKds: boolean;
+  // Legacy aliases
+  isGerente: boolean;
   branchPermissions: BranchPermission[];
   accessibleBranches: Branch[];
   loading: boolean;
@@ -113,11 +119,25 @@ export function useUserRole(): UserRoleData {
     fetchUserRoleData();
   }, [user]);
 
+  const isAdmin = roles.includes('admin');
+  const isCoordinador = roles.includes('coordinador');
+  const isSocio = roles.includes('socio');
+  const isFranquiciado = roles.includes('franquiciado');
+  const isEncargado = roles.includes('encargado') || roles.includes('gerente');
+  const isCajero = roles.includes('cajero') || roles.includes('empleado');
+  const isKds = roles.includes('kds');
+
   return {
     roles,
-    isAdmin: roles.includes('admin'),
-    isGerente: roles.includes('gerente'),
-    isFranquiciado: roles.includes('franquiciado'),
+    isAdmin,
+    isCoordinador,
+    isSocio,
+    isFranquiciado,
+    isEncargado,
+    isCajero,
+    isKds,
+    // Legacy alias
+    isGerente: isEncargado,
     branchPermissions,
     accessibleBranches,
     loading,

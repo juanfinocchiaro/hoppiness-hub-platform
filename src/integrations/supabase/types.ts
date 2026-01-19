@@ -2216,6 +2216,9 @@ export type Database = {
         | "franquiciado"
         | "socio"
         | "coordinador"
+        | "encargado"
+        | "cajero"
+        | "kds"
       order_area: "salon" | "mostrador" | "delivery"
       order_status:
         | "pending"
@@ -2379,6 +2382,9 @@ export const Constants = {
         "franquiciado",
         "socio",
         "coordinador",
+        "encargado",
+        "cajero",
+        "kds",
       ],
       order_area: ["salon", "mostrador", "delivery"],
       order_status: [

@@ -65,24 +65,32 @@ interface UserWithRole extends Profile {
 }
 
 const roleLabels: Record<AppRole, string> = {
-  admin: 'Administrador',
-  coordinador: 'Coordinador',
-  socio: 'Socio',
-  gerente: 'Gerente',
-  empleado: 'Empleado',
+  admin: 'Superadmin',
+  coordinador: 'Coordinador Digital',
+  socio: 'Brandpartner',
   franquiciado: 'Franquiciado',
+  encargado: 'Encargado',
+  cajero: 'Cajero',
+  kds: 'KDS',
+  // Legacy (no usar)
+  gerente: 'Encargado',
+  empleado: 'Cajero',
 };
 
 const roleColors: Record<AppRole, string> = {
   admin: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
   coordinador: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
   socio: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
+  franquiciado: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+  encargado: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  cajero: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  kds: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200',
+  // Legacy
   gerente: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
   empleado: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  franquiciado: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
 };
 
-const ROLES_HIERARCHY: AppRole[] = ['admin', 'coordinador', 'socio', 'franquiciado', 'gerente', 'empleado'];
+const ROLES_HIERARCHY: AppRole[] = ['admin', 'coordinador', 'socio', 'franquiciado', 'encargado', 'cajero', 'kds'];
 
 type SortField = 'name' | 'role' | 'branch' | 'lastLogin';
 type SortDirection = 'asc' | 'desc';
@@ -312,8 +320,8 @@ export default function Users() {
 
   const getAvailableRoles = (): AppRole[] => {
     if (isAdmin) return ROLES_HIERARCHY;
-    if (isFranquiciado) return ['gerente', 'empleado'];
-    if (isGerente) return ['empleado'];
+    if (isFranquiciado) return ['encargado', 'cajero', 'kds'];
+    if (isGerente) return ['cajero', 'kds'];
     return [];
   };
 
