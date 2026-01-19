@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 import { ShoppingBag, Menu as MenuIcon, LogOut, LayoutDashboard, Store } from 'lucide-react';
 import logoHoppiness from '@/assets/logo-hoppiness.png';
@@ -12,10 +13,14 @@ import { useState } from 'react';
 
 export function PublicHeader() {
   const { user, signOut } = useAuth();
+  const { isAdmin, roles, loading: roleLoading } = useUserRole();
   const location = useLocation();
   const [open, setOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
+
+  // Check if user has access to "Mi Local" (any role except just admin)
+  const hasLocalAccess = user && (isAdmin || roles.includes('gerente') || roles.includes('empleado') || roles.includes('franquiciado'));
 
   const navLinks = [
     { href: '/pedir', label: 'Pedir', icon: ShoppingBag },
@@ -60,18 +65,22 @@ export function PublicHeader() {
           
           {user ? (
             <>
-              <Link to="/local">
-                <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10">
-                  <Store className="w-4 h-4 mr-2" />
-                  Local
-                </Button>
-              </Link>
-              <Link to="/admin">
-                <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10">
-                  <LayoutDashboard className="w-4 h-4 mr-2" />
-                  Admin
-                </Button>
-              </Link>
+              {hasLocalAccess && (
+                <Link to="/local">
+                  <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10">
+                    <Store className="w-4 h-4 mr-2" />
+                    Mi Local
+                  </Button>
+                </Link>
+              )}
+              {isAdmin && (
+                <Link to="/admin">
+                  <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10">
+                    <LayoutDashboard className="w-4 h-4 mr-2" />
+                    Admin
+                  </Button>
+                </Link>
+              )}
               <Button variant="ghost" size="sm" onClick={signOut} className="text-primary-foreground hover:bg-primary-foreground/10">
                 <LogOut className="w-4 h-4" />
               </Button>
@@ -115,18 +124,22 @@ export function PublicHeader() {
               
               {user ? (
                 <>
-                  <Link to="/local" onClick={() => setOpen(false)}>
-                    <Button variant="ghost" className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10">
-                      <Store className="w-4 h-4 mr-2" />
-                      Panel Local
-                    </Button>
-                  </Link>
-                  <Link to="/admin" onClick={() => setOpen(false)}>
-                    <Button variant="ghost" className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10">
-                      <LayoutDashboard className="w-4 h-4 mr-2" />
-                      Admin
-                    </Button>
-                  </Link>
+                  {hasLocalAccess && (
+                    <Link to="/local" onClick={() => setOpen(false)}>
+                      <Button variant="ghost" className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10">
+                        <Store className="w-4 h-4 mr-2" />
+                        Mi Local
+                      </Button>
+                    </Link>
+                  )}
+                  {isAdmin && (
+                    <Link to="/admin" onClick={() => setOpen(false)}>
+                      <Button variant="ghost" className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10">
+                        <LayoutDashboard className="w-4 h-4 mr-2" />
+                        Admin
+                      </Button>
+                    </Link>
+                  )}
                   <Button variant="ghost" onClick={() => { signOut(); setOpen(false); }} className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10">
                     <LogOut className="w-4 h-4 mr-2" />
                     Cerrar sesión
