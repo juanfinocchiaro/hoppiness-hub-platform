@@ -96,6 +96,14 @@ interface CashRegisterShift {
 type OrderArea = 'salon' | 'mostrador' | 'delivery';
 type PaymentMethod = 'efectivo' | 'tarjeta_debito' | 'tarjeta_credito' | 'mercadopago_qr' | 'mercadopago_link' | 'transferencia' | 'vales';
 type OrderType = Enums<'order_type'>;
+type CounterSubType = 'takeaway' | 'dine_here';
+
+interface BranchTable {
+  id: string;
+  table_number: string;
+  area: string;
+  is_occupied: boolean;
+}
 
 interface CartItem {
   id: string; // Unique cart item ID
@@ -159,6 +167,12 @@ export default function POSView({ branch }: POSViewProps) {
   const [customerEmail, setCustomerEmail] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   
+  // Additional POS state
+  const [counterSubType, setCounterSubType] = useState<CounterSubType>('takeaway');
+  const [callerNumber, setCallerNumber] = useState('');
+  const [selectedTableId, setSelectedTableId] = useState('');
+  const [tables, setTables] = useState<BranchTable[]>([]);
+  
   // Checkout dialog
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -207,6 +221,23 @@ export default function POSView({ branch }: POSViewProps) {
     
     checkActiveShift();
   }, [selectedCashRegister]);
+
+  // Fetch tables for salon
+  useEffect(() => {
+    async function fetchTables() {
+      if (!branch.dine_in_enabled) return;
+      
+      const { data } = await supabase
+        .from('tables')
+        .select('id, table_number, area, is_occupied')
+        .eq('branch_id', branch.id)
+        .order('table_number');
+      
+      if (data) setTables(data);
+    }
+    
+    fetchTables();
+  }, [branch.id, branch.dine_in_enabled]);
 
   // Fetch products and categories
   useEffect(() => {
@@ -439,15 +470,57 @@ export default function POSView({ branch }: POSViewProps) {
     switch (orderArea) {
       case 'salon': return 'dine_in';
       case 'delivery': return 'delivery';
+      case 'mostrador': 
+        return counterSubType === 'dine_here' ? 'dine_in' : 'takeaway';
       default: return 'takeaway';
     }
   };
 
+  // Filter order areas based on branch settings
+  const availableOrderAreas = ORDER_AREAS.filter(area => {
+    if (area.value === 'salon' && !branch.dine_in_enabled) return false;
+    if (area.value === 'delivery' && !branch.delivery_enabled) return false;
+    return true;
+  });
+  
+  // Reset to mostrador if salon is selected but not available
+  useEffect(() => {
+    if (orderArea === 'salon' && !branch.dine_in_enabled) {
+      setOrderArea('mostrador');
+    }
+  }, [branch.dine_in_enabled, orderArea]);
+
   const handleCheckout = async () => {
     if (cart.length === 0) return;
-    if (!customerName.trim() || !customerPhone.trim()) {
-      toast.error('Nombre y teléfono son requeridos');
-      return;
+    
+    // Validation based on order area
+    if (orderArea === 'salon') {
+      if (!selectedTableId) {
+        toast.error('Seleccioná una mesa');
+        return;
+      }
+      if (!customerName.trim()) {
+        toast.error('Ingresá el nombre del cliente');
+        return;
+      }
+    } else if (orderArea === 'mostrador') {
+      if (counterSubType === 'dine_here' && !callerNumber.trim()) {
+        toast.error('Ingresá el número de llamador');
+        return;
+      }
+      if (counterSubType === 'takeaway' && !customerName.trim()) {
+        toast.error('Ingresá el nombre o número de llamador');
+        return;
+      }
+    } else if (orderArea === 'delivery') {
+      if (!customerName.trim() || !customerPhone.trim()) {
+        toast.error('Nombre y teléfono son requeridos');
+        return;
+      }
+      if (!deliveryAddress.trim()) {
+        toast.error('Ingresá la dirección de entrega');
+        return;
+      }
     }
 
     setIsProcessing(true);
@@ -466,14 +539,21 @@ export default function POSView({ branch }: POSViewProps) {
         return note;
       }).filter(Boolean).join(' | ');
 
+      // Get table number if salon
+      const tableNumber = orderArea === 'salon' 
+        ? tables.find(t => t.id === selectedTableId)?.table_number 
+        : null;
+
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
           branch_id: branch.id,
-          customer_name: customerName,
-          customer_phone: customerPhone,
+          customer_name: customerName || `Llamador #${callerNumber}`,
+          customer_phone: customerPhone || '',
           customer_email: customerEmail || null,
           delivery_address: orderArea === 'delivery' ? deliveryAddress : null,
+          table_number: tableNumber,
+          caller_number: callerNumber ? parseInt(callerNumber) : null,
           order_type: mapOrderType(),
           order_area: orderArea,
           payment_method: paymentMethod,
@@ -538,6 +618,8 @@ export default function POSView({ branch }: POSViewProps) {
       setCustomerPhone('');
       setCustomerEmail('');
       setDeliveryAddress('');
+      setCallerNumber('');
+      setSelectedTableId('');
       setIsCheckoutOpen(false);
 
     } catch (error) {
@@ -577,7 +659,7 @@ export default function POSView({ branch }: POSViewProps) {
             )}
             
             <div className="flex bg-card rounded-lg p-1 border">
-              {ORDER_AREAS.map(area => (
+              {availableOrderAreas.map(area => (
                 <Button
                   key={area.value}
                   variant={orderArea === area.value ? 'default' : 'ghost'}
@@ -920,35 +1002,128 @@ export default function POSView({ branch }: POSViewProps) {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Nombre del cliente *</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Nombre"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="pl-10"
-                />
+            {/* Salon: Mesa selector */}
+            {orderArea === 'salon' && tables.length > 0 && (
+              <div className="space-y-2">
+                <Label>Mesa *</Label>
+                <Select value={selectedTableId} onValueChange={setSelectedTableId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccioná una mesa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tables.map(table => (
+                      <SelectItem 
+                        key={table.id} 
+                        value={table.id}
+                        disabled={table.is_occupied}
+                      >
+                        Mesa {table.table_number} {table.is_occupied ? '(Ocupada)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
+            )}
 
-            <div className="space-y-2">
-              <Label>Teléfono *</Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Teléfono"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="pl-10"
-                />
+            {/* Mostrador: Sub-type selector */}
+            {orderArea === 'mostrador' && (
+              <div className="space-y-3">
+                <Label>Tipo de pedido</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant={counterSubType === 'takeaway' ? 'default' : 'outline'}
+                    onClick={() => setCounterSubType('takeaway')}
+                    className="flex-col h-auto py-3"
+                  >
+                    <Store className="w-5 h-5 mb-1" />
+                    <span className="text-sm font-medium">Para llevar</span>
+                  </Button>
+                  <Button
+                    variant={counterSubType === 'dine_here' ? 'default' : 'outline'}
+                    onClick={() => setCounterSubType('dine_here')}
+                    className="flex-col h-auto py-3"
+                  >
+                    <Utensils className="w-5 h-5 mb-1" />
+                    <span className="text-sm font-medium">Comer acá</span>
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Mostrador: Campos dinámicos */}
+            {orderArea === 'mostrador' && counterSubType === 'takeaway' && (
+              <div className="space-y-2">
+                <Label>Nombre o Número de llamador</Label>
+                <p className="text-xs text-muted-foreground">
+                  Ingresá el nombre del cliente o un número de llamador
+                </p>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Nombre o #123"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+            )}
+
+            {orderArea === 'mostrador' && counterSubType === 'dine_here' && (
+              <div className="space-y-2">
+                <Label>Número de llamador *</Label>
+                <p className="text-xs text-muted-foreground">
+                  El cliente recibirá un llamador para retirar su pedido
+                </p>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    placeholder="Ej: 42"
+                    value={callerNumber}
+                    onChange={(e) => {
+                      setCallerNumber(e.target.value);
+                      setCustomerName(`Llamador #${e.target.value}`);
+                    }}
+                    className="text-center text-2xl font-bold h-14"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Salon y Delivery: Nombre y teléfono */}
+            {(orderArea === 'salon' || orderArea === 'delivery') && (
+              <>
+                <div className="space-y-2">
+                  <Label>Nombre del cliente *</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Nombre"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Teléfono {orderArea === 'delivery' ? '*' : ''}</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Teléfono"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
 
             {orderArea === 'delivery' && (
               <div className="space-y-2">
-                <Label>Dirección de entrega</Label>
+                <Label>Dirección de entrega *</Label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
