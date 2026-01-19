@@ -1,83 +1,28 @@
-import { useAuth } from '@/hooks/useAuth';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Link } from 'react-router-dom';
 import { 
   ShoppingBag, 
   MapPin, 
   Star,
-  LogOut,
-  LayoutDashboard,
   Users,
   Award,
   Clock,
   ArrowRight,
   Instagram
 } from 'lucide-react';
+import { PublicHeader } from '@/components/layout/PublicHeader';
+import { PublicFooter } from '@/components/layout/PublicFooter';
 import heroBurger from '@/assets/hero-burger.jpg';
 import logoHoppiness from '@/assets/logo-hoppiness.png';
 import local1 from '@/assets/local-1.jpg';
 import local2 from '@/assets/local-2.jpg';
 import designAmbiente from '@/assets/design-ambiente.jpg';
-import teamPhoto from '@/assets/team-photo.jpg';
 
 export default function Index() {
-  const { user, signOut, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-primary">
-        <div className="animate-pulse flex flex-col items-center gap-4">
-          <img src={logoHoppiness} alt="Hoppiness Club" className="w-24 h-24 object-contain" />
-          <p className="text-primary-foreground">Cargando...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-primary text-primary-foreground sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3">
-            <img src={logoHoppiness} alt="Hoppiness Club" className="w-10 h-10 object-contain" />
-            <span className="text-lg font-bold tracking-wide font-brand hidden sm:inline">HOPPINESS CLUB</span>
-          </Link>
-          
-          <nav className="flex items-center gap-2 sm:gap-4">
-            <Link to="/menu">
-              <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10">
-                Pedir
-              </Button>
-            </Link>
-            <Link to="/franquicias">
-              <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10">
-                Franquicias
-              </Button>
-            </Link>
-            {user ? (
-              <>
-                <Link to="/admin">
-                  <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10">
-                    <LayoutDashboard className="w-4 h-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Admin</span>
-                  </Button>
-                </Link>
-                <Button variant="ghost" size="sm" onClick={signOut} className="text-primary-foreground hover:bg-primary-foreground/10">
-                  <LogOut className="w-4 h-4" />
-                </Button>
-              </>
-            ) : (
-              <Link to="/auth">
-                <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                  Ingresar
-                </Button>
-              </Link>
-            )}
-          </nav>
-        </div>
-      </header>
+      <PublicHeader />
 
       {/* Hero Section */}
       <section className="relative h-[90vh] min-h-[600px] flex items-center">
@@ -312,42 +257,7 @@ export default function Index() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-foreground text-background py-12 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <div className="grid md:grid-cols-3 gap-8 mb-8">
-            <div>
-              <img src={logoHoppiness} alt="Hoppiness Club" className="w-16 h-16 mb-4 invert" />
-              <p className="text-background/70">
-                Club de hamburguesas 100% cordobés. Culto al sabor desde 2018.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-bold mb-4 font-brand">ENLACES</h4>
-              <div className="space-y-2">
-                <Link to="/menu" className="block text-background/70 hover:text-background">Menú</Link>
-                <Link to="/franquicias" className="block text-background/70 hover:text-background">Franquicias</Link>
-                <Link to="/auth" className="block text-background/70 hover:text-background">Ingresar</Link>
-              </div>
-            </div>
-            <div>
-              <h4 className="font-bold mb-4 font-brand">SEGUINOS</h4>
-              <a 
-                href="https://instagram.com/hoppinessclub" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-background/70 hover:text-background"
-              >
-                <Instagram className="w-5 h-5" />
-                @hoppinessclub
-              </a>
-            </div>
-          </div>
-          <div className="border-t border-background/20 pt-8 text-center text-background/50 text-sm">
-            <p>© 2024 Hoppiness Club. Todos los derechos reservados.</p>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }
