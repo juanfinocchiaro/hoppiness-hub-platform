@@ -11,7 +11,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, ChefHat, ChevronDown, ChevronRight } from 'lucide-react';
+import { Search, Package, ChefHat, ChevronDown, ChevronRight, Info } from 'lucide-react';
+import { format, formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import {
   Collapsible,
@@ -27,6 +30,21 @@ const AVAILABILITY_REASONS = [
   { value: 'otro', label: 'Otro' },
 ];
 
+const getReasonLabel = (reason: string | null) => {
+  return AVAILABILITY_REASONS.find(r => r.value === reason)?.label || reason || 'Desconocido';
+};
+
+interface AvailabilityLog {
+  id: string;
+  item_type: 'product' | 'modifier';
+  item_id: string;
+  new_state: boolean;
+  reason: string | null;
+  notes: string | null;
+  until_date: string | null;
+  created_at: string;
+}
+
 interface ProductAvailability {
   id: string;
   product_id: string;
@@ -38,6 +56,7 @@ interface ProductAvailability {
     price: number;
     image_url: string | null;
   };
+  lastLog?: AvailabilityLog;
 }
 
 interface Category {
@@ -62,6 +81,7 @@ interface ModifierOptionAvailability {
     price_adjustment: number;
     group_id: string;
   };
+  lastLog?: AvailabilityLog;
 }
 
 export default function LocalDisponibilidad() {
@@ -90,7 +110,7 @@ export default function LocalDisponibilidad() {
 
   const fetchData = async () => {
     try {
-      const [productsRes, categoriesRes, modifierGroupsRes, branchModifiersRes] = await Promise.all([
+      const [productsRes, categoriesRes, modifierGroupsRes, branchModifiersRes, logsRes] = await Promise.all([
         supabase
           .from('branch_products')
           .select(`
@@ -118,13 +138,32 @@ export default function LocalDisponibilidad() {
             is_available,
             option:modifier_options(id, name, price_adjustment, group_id)
           `)
+          .eq('branch_id', branchId!),
+        supabase
+          .from('availability_logs')
+          .select('*')
           .eq('branch_id', branchId!)
+          .order('created_at', { ascending: false })
       ]);
 
       if (productsRes.error) throw productsRes.error;
       if (categoriesRes.error) throw categoriesRes.error;
       
-      const validProducts = (productsRes.data || []).filter(p => p.product !== null) as ProductAvailability[];
+      // Create a map of latest logs per item
+      const logsMap = new Map<string, AvailabilityLog>();
+      (logsRes.data || []).forEach(log => {
+        const key = `${log.item_type}-${log.item_id}`;
+        if (!logsMap.has(key)) {
+          logsMap.set(key, log as AvailabilityLog);
+        }
+      });
+      
+      const validProducts = (productsRes.data || [])
+        .filter(p => p.product !== null)
+        .map(p => ({
+          ...p,
+          lastLog: logsMap.get(`product-${p.product_id}`)
+        })) as ProductAvailability[];
       setProducts(validProducts);
       setCategories(categoriesRes.data || []);
       
@@ -140,7 +179,12 @@ export default function LocalDisponibilidad() {
       }
 
       if (branchModifiersRes.data) {
-        const validModifiers = branchModifiersRes.data.filter(m => m.option !== null) as ModifierOptionAvailability[];
+        const validModifiers = branchModifiersRes.data
+          .filter(m => m.option !== null)
+          .map(m => ({
+            ...m,
+            lastLog: logsMap.get(`modifier-${m.modifier_option_id}`)
+          })) as ModifierOptionAvailability[];
         setModifierOptions(validModifiers);
       }
     } catch (error) {
@@ -459,7 +503,25 @@ export default function LocalDisponibilidad() {
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            {!item.is_available && (
+                            {!item.is_available && item.lastLog && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="outline" className="text-xs cursor-help gap-1">
+                                    <Info className="h-3 w-3" />
+                                    {getReasonLabel(item.lastLog.reason)}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">
+                                    {formatDistanceToNow(new Date(item.lastLog.created_at), { addSuffix: true, locale: es })}
+                                    {item.lastLog.until_date && (
+                                      <> · Hasta {format(new Date(item.lastLog.until_date), 'dd/MM HH:mm')}</>
+                                    )}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {!item.is_available && !item.lastLog && (
                               <Badge variant="destructive" className="text-xs">Sin stock</Badge>
                             )}
                             <Switch

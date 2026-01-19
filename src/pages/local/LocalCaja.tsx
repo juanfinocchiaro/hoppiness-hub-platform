@@ -443,6 +443,7 @@ export default function LocalCaja() {
     }
   };
 
+  // Calculate expected amount from movements (linked to transactions ledger)
   const calculateExpectedAmount = (registerId: string): number => {
     const shift = shifts[registerId];
     const registerMovements = movements[registerId] || [];
@@ -451,6 +452,7 @@ export default function LocalCaja() {
     
     let expected = shift.opening_amount;
     
+    // Filter cash movements only for physical count
     for (const mov of registerMovements) {
       const isCashMethod = paymentMethods.find(m => m.code === mov.payment_method)?.is_cash;
       if (!isCashMethod) continue;
@@ -465,6 +467,7 @@ export default function LocalCaja() {
     return expected;
   };
 
+  // Get shift totals - these are derived from movements which are linked to transactions
   const getShiftTotals = (registerId: string) => {
     const registerMovements = movements[registerId] || [];
     
