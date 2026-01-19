@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useNavigate, useLocation, useParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
@@ -19,7 +18,6 @@ import {
 } from '@/components/ui/collapsible';
 import {
   LayoutDashboard,
-  ClipboardList,
   Package,
   Settings,
   LogOut,
@@ -29,10 +27,23 @@ import {
   Store,
   Home,
   RefreshCw,
-  ShoppingCart,
   ChefHat,
   Monitor,
-  Receipt
+  Receipt,
+  Zap,
+  Wallet,
+  Users,
+  Truck,
+  ClipboardList,
+  History,
+  QrCode,
+  ToggleLeft,
+  Plus,
+  Calculator,
+  FileText,
+  Clock,
+  MapPin,
+  Printer
 } from 'lucide-react';
 import {
   Sheet,
@@ -45,8 +56,23 @@ import KDSView from '@/components/pos/KDSView';
 import LocalDashboard from '@/pages/local/LocalDashboard';
 
 type Branch = Tables<'branches'>;
-
 type ActivePOSView = 'none' | 'pos' | 'kds';
+
+interface NavSection {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  show: boolean;
+  items: NavItem[];
+}
+
+interface NavItem {
+  to?: string;
+  label: string;
+  icon: React.ElementType;
+  action?: 'pos' | 'kds';
+  show: boolean;
+}
 
 export default function LocalLayout() {
   const { user, signOut, loading: authLoading } = useAuth();
@@ -56,8 +82,8 @@ export default function LocalLayout() {
   const { branchId } = useParams();
   
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
-  const [posOpen, setPosOpen] = useState(false);
   const [activePOSView, setActivePOSView] = useState<ActivePOSView>('none');
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['operacion']));
 
   // Redirect if not authenticated or no access
   useEffect(() => {
@@ -66,7 +92,6 @@ export default function LocalLayout() {
         navigate('/auth');
         return;
       }
-      // Must be admin, gerente, or have branch permissions
       if (!isAdmin && !isGerente && accessibleBranches.length === 0) {
         navigate('/');
         return;
@@ -81,11 +106,9 @@ export default function LocalLayout() {
       if (branch) {
         setSelectedBranch(branch);
       } else if (!isAdmin) {
-        // User doesn't have access to this branch
         navigate('/local');
       }
     } else if (!branchId && accessibleBranches.length > 0) {
-      // No branch in URL, redirect to first accessible with dashboard
       navigate(`/local/${accessibleBranches[0].id}`);
     }
   }, [branchId, accessibleBranches, isAdmin, navigate]);
@@ -105,24 +128,82 @@ export default function LocalLayout() {
     setActivePOSView(view);
   };
 
+  const toggleSection = (sectionId: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(sectionId)) {
+        next.delete(sectionId);
+      } else {
+        next.add(sectionId);
+      }
+      return next;
+    });
+  };
+
   // Get permissions for current branch
   const currentPermissions = branchPermissions.find(p => p.branch_id === branchId);
   const canManageProducts = isAdmin || isGerente || currentPermissions?.can_manage_products;
   const canManageConfig = isAdmin || isGerente || currentPermissions?.can_manage_staff;
+  const canViewReports = isAdmin || isGerente || currentPermissions?.can_view_reports;
 
-  const navItems = [
-    { to: '', icon: LayoutDashboard, label: 'Dashboard', show: true, exact: true },
-    { to: 'pedidos', icon: ClipboardList, label: 'Pedidos', show: true, exact: false },
-    { to: 'transacciones', icon: Receipt, label: 'Transacciones', show: canManageConfig, exact: false },
-    { to: 'proveedores', icon: Store, label: 'Proveedores', show: canManageConfig, exact: false },
-    { to: 'productos', icon: Package, label: 'Productos', show: canManageProducts, exact: false },
-    { to: 'config', icon: Settings, label: 'Configuración', show: canManageConfig, exact: false },
-  ].filter(item => item.show);
-
-  const posItems = [
-    { id: 'pos' as const, icon: Monitor, label: 'Tomar Pedidos' },
-    { id: 'kds' as const, icon: ChefHat, label: 'Cocina (KDS)' },
-  ];
+  // Navigation structure
+  const navSections: NavSection[] = [
+    {
+      id: 'dashboard',
+      label: 'Escritorio',
+      icon: LayoutDashboard,
+      show: true,
+      items: [
+        { to: '', label: 'Resumen del Día', icon: LayoutDashboard, show: true },
+      ]
+    },
+    {
+      id: 'operacion',
+      label: 'Operación',
+      icon: Zap,
+      show: true,
+      items: [
+        { label: 'Tomar Pedidos', icon: Monitor, action: 'pos' as const, show: true },
+        { label: 'Cocina (KDS)', icon: ChefHat, action: 'kds' as const, show: true },
+        { to: 'pedidos', label: 'Gestor de Pedidos', icon: ClipboardList, show: true },
+        { to: 'historial', label: 'Historial', icon: History, show: true },
+      ]
+    },
+    {
+      id: 'menu',
+      label: 'Menú & Stock',
+      icon: Package,
+      show: canManageProducts,
+      items: [
+        { to: 'disponibilidad', label: 'Disponibilidad (86)', icon: ToggleLeft, show: true },
+        { to: 'productos', label: 'Productos', icon: Package, show: true },
+      ]
+    },
+    {
+      id: 'finanzas',
+      label: 'Finanzas',
+      icon: Wallet,
+      show: canManageConfig,
+      items: [
+        { to: 'transacciones', label: 'Movimientos', icon: Receipt, show: true },
+        { to: 'caja', label: 'Caja', icon: Calculator, show: true },
+        { to: 'proveedores', label: 'Proveedores', icon: Truck, show: true },
+        { to: 'rrhh', label: 'RRHH', icon: Users, show: true },
+        { to: 'estado-resultados', label: 'Reporte P&L', icon: FileText, show: canViewReports },
+      ]
+    },
+    {
+      id: 'config',
+      label: 'Configuración',
+      icon: Settings,
+      show: canManageConfig,
+      items: [
+        { to: 'config', label: 'Mi Sucursal', icon: Store, show: true },
+        { to: 'usuarios', label: 'Usuarios', icon: Users, show: isAdmin || isGerente },
+        { to: 'impresoras', label: 'Impresoras', icon: Printer, show: true },
+      ]
+    }
+  ].filter(section => section.show);
 
   if (authLoading || roleLoading) {
     return (
@@ -138,7 +219,7 @@ export default function LocalLayout() {
       <div className="min-h-screen bg-muted/30 p-4 md:p-8">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Panel de Sucursal</h1>
+            <h1 className="text-3xl font-bold mb-2">Panel Mi Local</h1>
             <p className="text-muted-foreground">Seleccioná tu sucursal para comenzar</p>
           </div>
 
@@ -166,61 +247,100 @@ export default function LocalLayout() {
     setActivePOSView('none');
   };
 
+  const isItemActive = (item: NavItem): boolean => {
+    if (item.action) {
+      return activePOSView === item.action;
+    }
+    if (item.to === '') {
+      return location.pathname === `/local/${branchId}` && activePOSView === 'none';
+    }
+    return location.pathname.includes(`/${item.to}`) && activePOSView === 'none';
+  };
+
   const NavContent = () => (
     <nav className="space-y-1">
-      {navItems.map((item) => {
-        const fullPath = item.to ? `/local/${branchId}/${item.to}` : `/local/${branchId}`;
-        const isActive = item.exact 
-          ? location.pathname === `/local/${branchId}` && activePOSView === 'none'
-          : location.pathname.includes(item.to) && activePOSView === 'none';
+      {navSections.map((section) => {
+        const isExpanded = expandedSections.has(section.id);
+        const hasActiveItem = section.items.some(item => item.show && isItemActive(item));
+        
+        // Single item sections (like Dashboard) - render as direct link
+        if (section.items.length === 1 && section.items[0].to === '') {
+          const item = section.items[0];
+          const isActive = isItemActive(item);
+          return (
+            <Link key={section.id} to={`/local/${branchId}`} onClick={handleNavItemClick}>
+              <Button
+                variant={isActive ? 'secondary' : 'ghost'}
+                className={`w-full justify-start ${isActive ? 'bg-primary/10 text-primary' : ''}`}
+              >
+                <section.icon className="w-4 h-4 mr-3" />
+                {section.label}
+                {isActive && <ChevronRight className="w-4 h-4 ml-auto" />}
+              </Button>
+            </Link>
+          );
+        }
+
         return (
-          <Link key={item.to || 'dashboard'} to={fullPath} onClick={handleNavItemClick}>
-            <Button
-              variant={isActive ? 'secondary' : 'ghost'}
-              className={`w-full justify-start ${isActive ? 'bg-primary/10 text-primary' : ''}`}
-            >
-              <item.icon className="w-4 h-4 mr-3" />
-              {item.label}
-              {isActive && <ChevronRight className="w-4 h-4 ml-auto" />}
-            </Button>
-          </Link>
+          <Collapsible 
+            key={section.id} 
+            open={isExpanded} 
+            onOpenChange={() => toggleSection(section.id)}
+          >
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                className={`w-full justify-start ${hasActiveItem ? 'bg-primary/5 text-primary' : ''}`}
+              >
+                <section.icon className="w-4 h-4 mr-3" />
+                {section.label}
+                {isExpanded ? (
+                  <ChevronDown className="w-4 h-4 ml-auto" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 ml-auto" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4 space-y-0.5 mt-1">
+              {section.items.filter(item => item.show).map((item, idx) => {
+                const isActive = isItemActive(item);
+                
+                if (item.action) {
+                  return (
+                    <Button
+                      key={item.action}
+                      variant={isActive ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className={`w-full justify-start ${isActive ? 'bg-primary/10 text-primary' : ''}`}
+                      onClick={() => handlePOSItemClick(item.action!)}
+                    >
+                      <item.icon className="w-4 h-4 mr-3" />
+                      {item.label}
+                    </Button>
+                  );
+                }
+
+                return (
+                  <Link 
+                    key={item.to || idx} 
+                    to={item.to ? `/local/${branchId}/${item.to}` : `/local/${branchId}`}
+                    onClick={handleNavItemClick}
+                  >
+                    <Button
+                      variant={isActive ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className={`w-full justify-start ${isActive ? 'bg-primary/10 text-primary' : ''}`}
+                    >
+                      <item.icon className="w-4 h-4 mr-3" />
+                      {item.label}
+                    </Button>
+                  </Link>
+                );
+              })}
+            </CollapsibleContent>
+          </Collapsible>
         );
       })}
-      
-      {/* POS Submenu */}
-      <Collapsible open={posOpen} onOpenChange={setPosOpen}>
-        <CollapsibleTrigger asChild>
-          <Button
-            variant="ghost"
-            className={`w-full justify-start ${activePOSView !== 'none' ? 'bg-primary/10 text-primary' : ''}`}
-          >
-            <ShoppingCart className="w-4 h-4 mr-3" />
-            Punto de Venta
-            {posOpen ? (
-              <ChevronDown className="w-4 h-4 ml-auto" />
-            ) : (
-              <ChevronRight className="w-4 h-4 ml-auto" />
-            )}
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pl-4 space-y-1 mt-1">
-          {posItems.map((item) => {
-            const isActive = activePOSView === item.id;
-            return (
-              <Button
-                key={item.id}
-                variant={isActive ? 'secondary' : 'ghost'}
-                size="sm"
-                className={`w-full justify-start ${isActive ? 'bg-primary/10 text-primary' : ''}`}
-                onClick={() => handlePOSItemClick(item.id)}
-              >
-                <item.icon className="w-4 h-4 mr-3" />
-                {item.label}
-              </Button>
-            );
-          })}
-        </CollapsibleContent>
-      </Collapsible>
     </nav>
   );
 
@@ -263,12 +383,14 @@ export default function LocalLayout() {
               </div>
               <NavContent />
               <div className="absolute bottom-4 left-4 right-4 space-y-2">
-                <Link to="/admin">
-                  <Button variant="outline" className="w-full" size="sm">
-                    <Home className="w-4 h-4 mr-2" />
-                    Ir a Admin
-                  </Button>
-                </Link>
+                {isAdmin && (
+                  <Link to="/admin">
+                    <Button variant="outline" className="w-full" size="sm">
+                      <Home className="w-4 h-4 mr-2" />
+                      Ir a Admin
+                    </Button>
+                  </Link>
+                )}
                 <Button variant="outline" className="w-full" onClick={signOut}>
                   <LogOut className="w-4 h-4 mr-2" />
                   Cerrar Sesión
@@ -289,15 +411,15 @@ export default function LocalLayout() {
               <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
                 <Store className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="text-lg font-bold">Panel Mi Local</span>
+              <span className="text-lg font-bold">Mi Local</span>
             </Link>
           </div>
           
           {/* Branch Selector */}
           <div className="p-4 border-b">
             <Select value={branchId} onValueChange={handleBranchChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar sucursal" />
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Sucursal" />
               </SelectTrigger>
               <SelectContent>
                 {accessibleBranches.map(branch => (
@@ -309,30 +431,30 @@ export default function LocalLayout() {
             </Select>
             {selectedBranch && (
               <Badge 
-                variant={selectedBranch.is_active ? 'default' : 'secondary'} 
+                variant={selectedBranch.is_open ? 'default' : 'secondary'} 
                 className="mt-2"
               >
-                {selectedBranch.is_active ? 'Abierto' : 'Cerrado'}
+                {selectedBranch.is_open ? '🟢 Abierto' : '🔴 Cerrado'}
               </Badge>
             )}
           </div>
           
-          <div className="flex-1 p-4">
+          <div className="flex-1 p-3 overflow-y-auto">
             <NavContent />
           </div>
           
-          <div className="p-4 border-t space-y-2">
+          <div className="p-3 border-t space-y-1">
             {isAdmin && (
               <Link to="/admin">
                 <Button variant="ghost" className="w-full justify-start" size="sm">
                   <Home className="w-4 h-4 mr-3" />
-                  Ir a Admin
+                  Panel Admin
                 </Button>
               </Link>
             )}
-            <Button variant="ghost" className="w-full justify-start" onClick={signOut}>
+            <Button variant="ghost" className="w-full justify-start text-muted-foreground" size="sm" onClick={signOut}>
               <LogOut className="w-4 h-4 mr-3" />
-              Cerrar Sesión
+              Salir
             </Button>
           </div>
         </aside>

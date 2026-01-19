@@ -22,10 +22,17 @@ import OrdersDashboard from "./pages/pos/OrdersDashboard";
 import LocalLayout from "./pages/local/LocalLayout";
 import LocalDashboard from "./pages/local/LocalDashboard";
 import LocalPedidos from "./pages/local/LocalPedidos";
+import LocalHistorial from "./pages/local/LocalHistorial";
+import LocalDisponibilidad from "./pages/local/LocalDisponibilidad";
 import LocalProductos from "./pages/local/LocalProductos";
-import LocalConfig from "./pages/local/LocalConfig";
 import LocalTransactions from "./pages/local/LocalTransactions";
+import LocalCaja from "./pages/local/LocalCaja";
 import LocalSuppliers from "./pages/local/LocalSuppliers";
+import LocalRRHH from "./pages/local/LocalRRHH";
+import LocalPL from "./pages/local/LocalPL";
+import LocalConfig from "./pages/local/LocalConfig";
+import LocalUsuarios from "./pages/local/LocalUsuarios";
+import LocalImpresoras from "./pages/local/LocalImpresoras";
 
 // Admin
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -73,11 +80,22 @@ const App = () => (
             </Route>
             <Route path="/local/:branchId" element={<LocalRoute><LocalLayout /></LocalRoute>}>
               <Route index element={null} />
+              {/* Operación */}
               <Route path="pedidos" element={<LocalPedidos />} />
-              <Route path="transacciones" element={<LocalTransactions />} />
-              <Route path="proveedores" element={<LocalSuppliers />} />
+              <Route path="historial" element={<LocalHistorial />} />
+              {/* Menú & Stock */}
+              <Route path="disponibilidad" element={<LocalDisponibilidad />} />
               <Route path="productos" element={<LocalProductos />} />
+              {/* Finanzas */}
+              <Route path="transacciones" element={<LocalTransactions />} />
+              <Route path="caja" element={<LocalCaja />} />
+              <Route path="proveedores" element={<LocalSuppliers />} />
+              <Route path="rrhh" element={<LocalRRHH />} />
+              <Route path="estado-resultados" element={<LocalPL />} />
+              {/* Configuración */}
               <Route path="config" element={<LocalConfig />} />
+              <Route path="usuarios" element={<LocalUsuarios />} />
+              <Route path="impresoras" element={<LocalImpresoras />} />
             </Route>
             
             {/* Admin Routes */}
