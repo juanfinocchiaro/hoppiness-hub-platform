@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Store, Package, Plus, MapPin, Clock, Settings, Truck, ShoppingBag, Users, Bike, DollarSign, Utensils, Receipt } from 'lucide-react';
+import { Store, Package, MapPin, Clock, Settings, Truck, ShoppingBag, Users, Bike, DollarSign, Utensils, Receipt } from 'lucide-react';
 import OrdersHeatmap from '@/components/charts/OrdersHeatmap';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -188,28 +188,6 @@ export default function AdminHome() {
             </p>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="flex flex-wrap gap-2">
-        <Link to="/admin/productos/nuevo">
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            Nuevo Producto
-          </Button>
-        </Link>
-        <Link to="/admin/sucursales">
-          <Button variant="outline">
-            <Store className="w-4 h-4 mr-2" />
-            Gestionar Sucursales
-          </Button>
-        </Link>
-        <Link to="/admin/estado-sucursales">
-          <Button variant="outline">
-            <Settings className="w-4 h-4 mr-2" />
-            Modificar Estado
-          </Button>
-        </Link>
       </div>
 
       {/* Branch Status Panel - Read Only */}
