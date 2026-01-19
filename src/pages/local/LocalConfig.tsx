@@ -2,17 +2,26 @@ import { useState, useEffect } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
-import { Settings, Clock, Truck, Store, MessageSquare, Save, RefreshCw } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Clock, Truck, Store, Save, RefreshCw, Zap, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
+
+type PrepTimeMode = 'dynamic' | 'custom';
 
 export default function LocalConfig() {
   const { branchId } = useParams();
@@ -26,8 +35,12 @@ export default function LocalConfig() {
   // Form state
   const [isOpen, setIsOpen] = useState(true);
   const [deliveryEnabled, setDeliveryEnabled] = useState(true);
-  const [estimatedPrepTime, setEstimatedPrepTime] = useState(20);
-  const [statusMessage, setStatusMessage] = useState('');
+  const [prepTimeMode, setPrepTimeMode] = useState<PrepTimeMode>('custom');
+  const [customPrepTime, setCustomPrepTime] = useState(20);
+  
+  // Dynamic prep time calculation
+  const [dynamicPrepTime, setDynamicPrepTime] = useState<number | null>(null);
+  const [loadingDynamic, setLoadingDynamic] = useState(false);
 
   const currentPermissions = branchPermissions.find(p => p.branch_id === branchId);
   const canEdit = isAdmin || isGerente || currentPermissions?.can_manage_staff;
@@ -46,14 +59,18 @@ export default function LocalConfig() {
       if (error) throw error;
       
       setBranch(data);
-      // @ts-ignore - new columns might not be in types yet
       setIsOpen(data.is_open ?? true);
-      // @ts-ignore
       setDeliveryEnabled(data.delivery_enabled ?? true);
-      // @ts-ignore
-      setEstimatedPrepTime(data.estimated_prep_time_min ?? 20);
-      // @ts-ignore
-      setStatusMessage(data.status_message || '');
+      
+      // Check if using dynamic mode (estimated_prep_time_min = null or 0)
+      const storedPrepTime = data.estimated_prep_time_min;
+      if (storedPrepTime === null || storedPrepTime === 0) {
+        setPrepTimeMode('dynamic');
+        setCustomPrepTime(20); // default fallback
+      } else {
+        setPrepTimeMode('custom');
+        setCustomPrepTime(storedPrepTime);
+      }
     } catch (error: any) {
       toast.error('Error al cargar sucursal: ' + error.message);
     } finally {
@@ -61,8 +78,64 @@ export default function LocalConfig() {
     }
   };
 
+  // Calculate dynamic prep time from recent orders
+  const calculateDynamicPrepTime = async () => {
+    if (!branchId) return;
+    
+    setLoadingDynamic(true);
+    try {
+      // Get orders from last 7 days that went through full cycle
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const { data: orders, error } = await supabase
+        .from('orders')
+        .select('created_at, updated_at, status')
+        .eq('branch_id', branchId)
+        .in('status', ['ready', 'delivered'])
+        .gte('created_at', sevenDaysAgo.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      if (!orders || orders.length === 0) {
+        setDynamicPrepTime(null);
+        return;
+      }
+
+      // Calculate average time from created_at to updated_at (when it became ready/delivered)
+      const prepTimes = orders.map(order => {
+        const created = new Date(order.created_at).getTime();
+        const updated = new Date(order.updated_at).getTime();
+        return (updated - created) / 1000 / 60; // minutes
+      }).filter(time => time > 0 && time < 180); // Filter outliers (0-3 hours)
+
+      if (prepTimes.length === 0) {
+        setDynamicPrepTime(null);
+        return;
+      }
+
+      // Calculate average and round to nearest 5 minutes
+      const avgTime = prepTimes.reduce((a, b) => a + b, 0) / prepTimes.length;
+      const roundedTime = Math.round(avgTime / 5) * 5;
+      setDynamicPrepTime(Math.max(5, Math.min(120, roundedTime))); // Clamp between 5-120
+    } catch (error) {
+      console.error('Error calculating dynamic prep time:', error);
+      setDynamicPrepTime(null);
+    } finally {
+      setLoadingDynamic(false);
+    }
+  };
+
   useEffect(() => {
     fetchBranch();
+  }, [branchId]);
+
+  useEffect(() => {
+    if (branchId) {
+      calculateDynamicPrepTime();
+    }
   }, [branchId]);
 
   const handleSave = async () => {
@@ -73,13 +146,16 @@ export default function LocalConfig() {
 
     setSaving(true);
     try {
+      // If dynamic mode, store 0 to indicate dynamic
+      // If custom mode, store the custom value
+      const prepTimeToSave = prepTimeMode === 'dynamic' ? 0 : customPrepTime;
+
       const { error } = await supabase
         .from('branches')
         .update({
           is_open: isOpen,
           delivery_enabled: deliveryEnabled,
-          estimated_prep_time_min: estimatedPrepTime,
-          status_message: statusMessage || null,
+          estimated_prep_time_min: prepTimeToSave,
         })
         .eq('id', branchId);
 
@@ -92,6 +168,14 @@ export default function LocalConfig() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Get the displayed prep time
+  const getDisplayedPrepTime = (): number => {
+    if (prepTimeMode === 'dynamic') {
+      return dynamicPrepTime ?? 20; // Fallback to 20 if no data
+    }
+    return customPrepTime;
   };
 
   if (loading) {
@@ -160,52 +244,116 @@ export default function LocalConfig() {
           </div>
 
           {/* Tiempo de Preparación */}
-          <div className="flex items-center justify-between py-4">
-            <div className="flex items-center gap-3">
-              <Clock className="h-5 w-5 text-muted-foreground" />
-              <div className="space-y-0.5">
-                <Label htmlFor="prep-time" className="text-base font-medium">Tiempo de Preparación</Label>
-                <p className="text-sm text-muted-foreground">
-                  Tiempo estimado que se muestra a los clientes
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Input
-                id="prep-time"
-                type="number"
-                min={5}
-                max={120}
-                value={estimatedPrepTime}
-                onChange={(e) => setEstimatedPrepTime(Number(e.target.value))}
-                disabled={!canEdit}
-                className="w-20"
-              />
-              <span className="text-sm text-muted-foreground">min</span>
-            </div>
-          </div>
-
-          {/* Mensaje de Estado */}
           <div className="py-4 last:pb-6">
             <div className="flex items-start gap-3">
-              <MessageSquare className="h-5 w-5 text-muted-foreground mt-0.5" />
-              <div className="flex-1 space-y-2">
+              <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div className="flex-1 space-y-4">
                 <div className="space-y-0.5">
-                  <Label htmlFor="status-message" className="text-base font-medium">Mensaje de Estado</Label>
+                  <Label className="text-base font-medium">Tiempo de Preparación</Label>
                   <p className="text-sm text-muted-foreground">
-                    Mensaje opcional para los clientes (ej: "Demora de 15 min extra")
+                    Tiempo estimado que se muestra a los clientes
                   </p>
                 </div>
-                <Textarea
-                  id="status-message"
-                  placeholder="Escribí un mensaje para los clientes..."
-                  value={statusMessage}
-                  onChange={(e) => setStatusMessage(e.target.value)}
-                  disabled={!canEdit}
-                  rows={2}
-                />
+
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Select
+                    value={prepTimeMode}
+                    onValueChange={(v) => setPrepTimeMode(v as PrepTimeMode)}
+                    disabled={!canEdit}
+                  >
+                    <SelectTrigger className="w-full sm:w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="dynamic">
+                        <div className="flex items-center gap-2">
+                          <Zap className="h-4 w-4" />
+                          Dinámico
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="custom">
+                        <div className="flex items-center gap-2">
+                          <Settings2 className="h-4 w-4" />
+                          Personalizado
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {prepTimeMode === 'custom' ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={5}
+                        max={120}
+                        value={customPrepTime}
+                        onChange={(e) => setCustomPrepTime(Number(e.target.value))}
+                        disabled={!canEdit}
+                        className="w-20"
+                      />
+                      <span className="text-sm text-muted-foreground">min</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      {loadingDynamic ? (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          <span className="text-sm">Calculando...</span>
+                        </div>
+                      ) : dynamicPrepTime !== null ? (
+                        <Badge variant="secondary" className="text-base px-3 py-1">
+                          ~{dynamicPrepTime} min
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-base px-3 py-1">
+                          ~20 min (sin datos)
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {prepTimeMode === 'dynamic' && (
+                  <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+                    <p className="flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-primary" />
+                      <span>
+                        Calculado automáticamente según el tiempo promedio de los últimos 50 pedidos completados (7 días).
+                      </span>
+                    </p>
+                    {dynamicPrepTime !== null && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="mt-2 h-7 px-2"
+                        onClick={calculateDynamicPrepTime}
+                        disabled={loadingDynamic}
+                      >
+                        <RefreshCw className={`h-3 w-3 mr-1 ${loadingDynamic ? 'animate-spin' : ''}`} />
+                        Recalcular ahora
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Preview Card */}
+      <Card className="bg-primary/5 border-primary/20">
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Vista previa para clientes</p>
+              <p className="text-muted-foreground text-sm">
+                {isOpen ? 'Abierto' : 'Cerrado'} · Tiempo estimado: ~{getDisplayedPrepTime()} min
+              </p>
+            </div>
+            <Badge variant={isOpen ? 'default' : 'secondary'}>
+              {isOpen ? '🟢 Abierto' : '🔴 Cerrado'}
+            </Badge>
           </div>
         </CardContent>
       </Card>
