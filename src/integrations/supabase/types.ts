@@ -110,6 +110,52 @@ export type Database = {
           },
         ]
       }
+      branch_modifier_options: {
+        Row: {
+          branch_id: string
+          created_at: string
+          id: string
+          is_available: boolean
+          modifier_option_id: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          id?: string
+          is_available?: boolean
+          modifier_option_id: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          id?: string
+          is_available?: boolean
+          modifier_option_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_modifier_options_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_modifier_options_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "branch_modifier_options_modifier_option_id_fkey"
+            columns: ["modifier_option_id"]
+            isOneToOne: false
+            referencedRelation: "modifier_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branch_permissions: {
         Row: {
           branch_id: string
