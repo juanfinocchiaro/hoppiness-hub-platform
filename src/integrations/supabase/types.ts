@@ -56,6 +56,13 @@ export type Database = {
             referencedRelation: "branches"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "attendance_records_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
         ]
       }
       branch_permissions: {
@@ -100,6 +107,13 @@ export type Database = {
             referencedRelation: "branches"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "branch_permissions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
         ]
       }
       branch_products: {
@@ -134,6 +148,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "branches"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_products_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
           },
           {
             foreignKeyName: "branch_products_product_id_fkey"
@@ -176,6 +197,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "branches"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_suppliers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "branch_suppliers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["supplier_id"]
           },
           {
             foreignKeyName: "branch_suppliers_supplier_id_fkey"
@@ -306,6 +341,13 @@ export type Database = {
             referencedRelation: "branches"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "financial_transactions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
         ]
       }
       order_items: {
@@ -434,6 +476,13 @@ export type Database = {
             referencedRelation: "branches"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "orders_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
         ]
       }
       product_categories: {
@@ -555,6 +604,81 @@ export type Database = {
         }
         Relationships: []
       }
+      supplier_payments: {
+        Row: {
+          amount: number
+          branch_id: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          payment_date: string
+          payment_origin: Database["public"]["Enums"]["payment_origin"]
+          recorded_by: string | null
+          supplier_id: string
+          transaction_id: string | null
+        }
+        Insert: {
+          amount: number
+          branch_id: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_origin?: Database["public"]["Enums"]["payment_origin"]
+          recorded_by?: string | null
+          supplier_id: string
+          transaction_id?: string | null
+        }
+        Update: {
+          amount?: number
+          branch_id?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_origin?: Database["public"]["Enums"]["payment_origin"]
+          recorded_by?: string | null
+          supplier_id?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_payments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           address: string | null
@@ -631,10 +755,151 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tables_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
             foreignKeyName: "tables_current_order_id_fkey"
             columns: ["current_order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transaction_categories: {
+        Row: {
+          category_group: string
+          created_at: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          parent_id: string | null
+        }
+        Insert: {
+          category_group: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          parent_id?: string | null
+        }
+        Update: {
+          category_group?: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          parent_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          amount: number
+          branch_id: string
+          category_id: string | null
+          concept: string
+          created_at: string | null
+          id: string
+          is_payment_to_supplier: boolean | null
+          notes: string | null
+          payment_origin: Database["public"]["Enums"]["payment_origin"]
+          receipt_number: string | null
+          receipt_type: Database["public"]["Enums"]["receipt_type"]
+          recorded_by: string | null
+          supplier_id: string | null
+          tax_percentage: number | null
+          transaction_date: string
+          type: Database["public"]["Enums"]["transaction_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          branch_id: string
+          category_id?: string | null
+          concept: string
+          created_at?: string | null
+          id?: string
+          is_payment_to_supplier?: boolean | null
+          notes?: string | null
+          payment_origin?: Database["public"]["Enums"]["payment_origin"]
+          receipt_number?: string | null
+          receipt_type?: Database["public"]["Enums"]["receipt_type"]
+          recorded_by?: string | null
+          supplier_id?: string | null
+          tax_percentage?: number | null
+          transaction_date?: string
+          type: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          branch_id?: string
+          category_id?: string | null
+          concept?: string
+          created_at?: string | null
+          id?: string
+          is_payment_to_supplier?: boolean | null
+          notes?: string | null
+          payment_origin?: Database["public"]["Enums"]["payment_origin"]
+          receipt_number?: string | null
+          receipt_type?: Database["public"]["Enums"]["receipt_type"]
+          recorded_by?: string | null
+          supplier_id?: string | null
+          tax_percentage?: number | null
+          transaction_date?: string
+          type?: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "transactions_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -662,7 +927,18 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      supplier_balances: {
+        Row: {
+          branch_id: string | null
+          branch_name: string | null
+          current_balance: number | null
+          supplier_id: string | null
+          supplier_name: string | null
+          total_paid: number | null
+          total_purchased: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_branch_access: {
@@ -701,6 +977,8 @@ export type Database = {
         | "mercadopago_link"
         | "transferencia"
         | "vales"
+      payment_origin: "cash" | "mercadopago" | "bank_transfer" | "credit_card"
+      receipt_type: "OFFICIAL" | "INTERNAL"
       sales_channel:
         | "atencion_presencial"
         | "whatsapp"
@@ -858,6 +1136,8 @@ export const Constants = {
         "transferencia",
         "vales",
       ],
+      payment_origin: ["cash", "mercadopago", "bank_transfer", "credit_card"],
+      receipt_type: ["OFFICIAL", "INTERNAL"],
       sales_channel: [
         "atencion_presencial",
         "whatsapp",
