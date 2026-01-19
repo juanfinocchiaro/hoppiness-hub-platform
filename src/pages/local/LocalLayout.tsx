@@ -234,6 +234,7 @@ export default function LocalLayout() {
       items: [
         { to: 'stock', label: 'Stock Ingredientes', icon: Boxes, show: true },
         { to: 'inventario', label: 'Conteo Inventario', icon: ClipboardCheck, show: true },
+        { to: 'cmv', label: 'Reporte CMV', icon: Calculator, show: canViewReports },
       ]
     },
     {
