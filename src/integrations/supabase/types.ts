@@ -296,6 +296,186 @@ export type Database = {
         }
         Relationships: []
       }
+      cash_register_movements: {
+        Row: {
+          amount: number
+          branch_id: string
+          concept: string
+          created_at: string
+          id: string
+          order_id: string | null
+          payment_method: string
+          recorded_by: string | null
+          shift_id: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          branch_id: string
+          concept: string
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          payment_method: string
+          recorded_by?: string | null
+          shift_id: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          branch_id?: string
+          concept?: string
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          payment_method?: string
+          recorded_by?: string | null
+          shift_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_register_movements_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_movements_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "cash_register_movements_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_movements_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "cash_register_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_register_shifts: {
+        Row: {
+          branch_id: string
+          cash_register_id: string
+          closed_at: string | null
+          closed_by: string | null
+          closing_amount: number | null
+          difference: number | null
+          expected_amount: number | null
+          id: string
+          notes: string | null
+          opened_at: string
+          opened_by: string
+          opening_amount: number
+          status: string
+        }
+        Insert: {
+          branch_id: string
+          cash_register_id: string
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_amount?: number | null
+          difference?: number | null
+          expected_amount?: number | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by: string
+          opening_amount?: number
+          status?: string
+        }
+        Update: {
+          branch_id?: string
+          cash_register_id?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_amount?: number | null
+          difference?: number | null
+          expected_amount?: number | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string
+          opening_amount?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_register_shifts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_shifts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "cash_register_shifts_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_registers: {
+        Row: {
+          branch_id: string
+          created_at: string
+          display_order: number | null
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_registers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_registers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       delivery_zones: {
         Row: {
           branch_id: string
@@ -541,6 +721,54 @@ export type Database = {
           },
           {
             foreignKeyName: "orders_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
+      payment_methods: {
+        Row: {
+          branch_id: string
+          code: string
+          created_at: string
+          display_order: number | null
+          id: string
+          is_active: boolean
+          is_cash: boolean
+          name: string
+        }
+        Insert: {
+          branch_id: string
+          code: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          is_cash?: boolean
+          name: string
+        }
+        Update: {
+          branch_id?: string
+          code?: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          is_cash?: boolean
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_methods_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_methods_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "supplier_balances"
