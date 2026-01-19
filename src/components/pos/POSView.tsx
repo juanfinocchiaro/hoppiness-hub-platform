@@ -100,6 +100,9 @@ type PaymentMethod = 'efectivo' | 'tarjeta_debito' | 'tarjeta_credito' | 'mercad
 type OrderType = Enums<'order_type'>;
 type CounterSubType = 'takeaway' | 'dine_here';
 
+// Order flow dialog type
+type OrderFlowDialogType = 'delivery_info' | 'counter_type' | 'apps_channel' | null;
+
 interface BranchTable {
   id: string;
   table_number: string;
@@ -189,6 +192,10 @@ export default function POSView({ branch }: POSViewProps) {
   // Checkout dialog
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Order flow dialog (shown before adding first product)
+  const [orderFlowDialog, setOrderFlowDialog] = useState<OrderFlowDialogType>(null);
+  const [pendingProduct, setPendingProduct] = useState<ProductWithAvailability | null>(null);
 
   // Product modifier dialog
   const [selectedProduct, setSelectedProduct] = useState<ProductWithAvailability | null>(null);
@@ -303,8 +310,29 @@ export default function POSView({ branch }: POSViewProps) {
     return matchesSearch && matchesCategory;
   });
 
-  // Handle product click - fetch modifiers and show dialog
+  // Handle product click - check if order flow dialog is needed
   const handleProductClick = async (product: ProductWithAvailability) => {
+    // If cart is empty, show the order type configuration dialog first
+    if (cart.length === 0) {
+      setPendingProduct(product);
+      
+      if (orderArea === 'delivery') {
+        setOrderFlowDialog('delivery_info');
+        return;
+      } else if (orderArea === 'apps') {
+        setOrderFlowDialog('apps_channel');
+        return;
+      } else if (orderArea === 'mostrador') {
+        setOrderFlowDialog('counter_type');
+        return;
+      }
+    }
+    
+    await proceedToAddProduct(product);
+  };
+
+  // Proceed to add product after order flow dialog is complete
+  const proceedToAddProduct = async (product: ProductWithAvailability) => {
     setSelectedProduct(product);
     setTempNotes('');
     setTempSelectedModifiers({});
@@ -380,6 +408,18 @@ export default function POSView({ branch }: POSViewProps) {
 
     setLoadingModifiers(false);
   };
+
+  // Continue after order flow dialog selection
+  const handleOrderFlowComplete = () => {
+    setOrderFlowDialog(null);
+    if (pendingProduct) {
+      proceedToAddProduct(pendingProduct);
+      setPendingProduct(null);
+    }
+  };
+
+  // Caller numbers for selection (1-20)
+  const CALLER_NUMBERS = Array.from({ length: 20 }, (_, i) => i + 1);
 
   const addToCartDirect = (product: ProductWithAvailability) => {
     const price = product.branchProduct?.custom_price || product.price;
@@ -1131,6 +1171,320 @@ export default function POSView({ branch }: POSViewProps) {
                   Agregar al Pedido
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Order Flow Dialog - Counter Type */}
+      <Dialog open={orderFlowDialog === 'counter_type'} onOpenChange={(open) => !open && setOrderFlowDialog(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Store className="w-5 h-5" />
+              Tipo de Pedido
+            </DialogTitle>
+            <DialogDescription>
+              ¿El cliente va a comer acá o se lo lleva?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                variant={counterSubType === 'takeaway' ? 'default' : 'outline'}
+                onClick={() => setCounterSubType('takeaway')}
+                className="flex-col h-auto py-6"
+              >
+                <Store className="w-8 h-8 mb-2" />
+                <span className="text-base font-medium">Para llevar</span>
+              </Button>
+              <Button
+                variant={counterSubType === 'dine_here' ? 'default' : 'outline'}
+                onClick={() => setCounterSubType('dine_here')}
+                className="flex-col h-auto py-6"
+              >
+                <Utensils className="w-8 h-8 mb-2" />
+                <span className="text-base font-medium">Comer acá</span>
+              </Button>
+            </div>
+
+            {counterSubType === 'dine_here' && (
+              <div className="space-y-3">
+                <Label>Número de Llamador *</Label>
+                <div className="grid grid-cols-5 gap-2">
+                  {CALLER_NUMBERS.map(num => (
+                    <Button
+                      key={num}
+                      variant={callerNumber === String(num) ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setCallerNumber(String(num));
+                        setCustomerName(`Llamador #${num}`);
+                      }}
+                      className="h-10 text-lg font-bold"
+                    >
+                      {num}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {counterSubType === 'takeaway' && (
+              <div className="space-y-3">
+                <Label>Nombre del cliente o Número de Llamador</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Nombre del cliente"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">O elegí un número de llamador:</p>
+                <div className="grid grid-cols-5 gap-2">
+                  {CALLER_NUMBERS.map(num => (
+                    <Button
+                      key={num}
+                      variant={callerNumber === String(num) ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setCallerNumber(String(num));
+                        if (!customerName.trim()) {
+                          setCustomerName(`Llamador #${num}`);
+                        }
+                      }}
+                      className="h-8 text-sm font-medium"
+                    >
+                      {num}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setOrderFlowDialog(null);
+              setPendingProduct(null);
+            }}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleOrderFlowComplete}
+              disabled={counterSubType === 'dine_here' && !callerNumber}
+            >
+              Continuar
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Order Flow Dialog - Delivery Info */}
+      <Dialog open={orderFlowDialog === 'delivery_info'} onOpenChange={(open) => !open && setOrderFlowDialog(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bike className="w-5 h-5" />
+              Datos de Delivery
+            </DialogTitle>
+            <DialogDescription>
+              Ingresá los datos del cliente para el envío
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nombre del cliente *</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Nombre"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Teléfono *</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Teléfono"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Dirección de entrega *</Label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Dirección"
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Costo de envío</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={customDeliveryFee}
+                  onChange={(e) => setCustomDeliveryFee(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setOrderFlowDialog(null);
+              setPendingProduct(null);
+            }}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleOrderFlowComplete}
+              disabled={!customerName.trim() || !customerPhone.trim() || !deliveryAddress.trim()}
+            >
+              Continuar
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Order Flow Dialog - Apps Channel */}
+      <Dialog open={orderFlowDialog === 'apps_channel'} onOpenChange={(open) => !open && setOrderFlowDialog(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bike className="w-5 h-5" />
+              App de Delivery
+            </DialogTitle>
+            <DialogDescription>
+              ¿Por qué plataforma ingresó el pedido?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-3">
+              <Label>Plataforma *</Label>
+              <div className="grid grid-cols-1 gap-2">
+                {APPS_CHANNELS.map(channel => (
+                  <Button
+                    key={channel.value}
+                    variant={appsChannel === channel.value ? 'default' : 'outline'}
+                    onClick={() => setAppsChannel(channel.value)}
+                    className="justify-start h-12 text-base"
+                  >
+                    <Bike className="w-5 h-5 mr-3" />
+                    {channel.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>ID de pedido externo</Label>
+              <Input
+                placeholder="Ej: #12345"
+                value={externalOrderId}
+                onChange={(e) => setExternalOrderId(e.target.value)}
+              />
+            </div>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label>Nombre del cliente *</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Nombre"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Teléfono</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Teléfono"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Dirección de entrega *</Label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Dirección"
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Costo de envío</Label>
+              <p className="text-xs text-muted-foreground">
+                {appsChannel === 'pedidos_ya' 
+                  ? 'En Pedidos Ya este dinero nos entra a nosotros'
+                  : 'Lo que se le cobra al cliente por el envío'
+                }
+              </p>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={customDeliveryFee}
+                  onChange={(e) => setCustomDeliveryFee(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setOrderFlowDialog(null);
+              setPendingProduct(null);
+            }}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleOrderFlowComplete}
+              disabled={!customerName.trim() || !deliveryAddress.trim()}
+            >
+              Continuar
+              <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </DialogFooter>
         </DialogContent>
