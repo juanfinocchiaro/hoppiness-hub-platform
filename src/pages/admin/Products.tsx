@@ -62,10 +62,13 @@ interface ProductSalesData {
 
 type TimeFilter = 'today' | 'week' | 'month' | 'year' | 'custom';
 
+// Availability mode for dialog
+type AvailabilityEditMode = 'brand' | 'branch';
+
 // Pending changes type for batch save
 interface PendingChange {
   productId: string;
-  branchId: string;
+  branchId?: string; // undefined = global brand change
   newValue: boolean;
 }
 
@@ -88,6 +91,7 @@ export default function Products() {
   
   // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editMode, setEditMode] = useState<AvailabilityEditMode>('brand');
   const [pendingChanges, setPendingChanges] = useState<Map<string, boolean>>(new Map());
   const [savingAvailability, setSavingAvailability] = useState(false);
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
@@ -219,13 +223,27 @@ export default function Products() {
     return bp?.is_available ?? true;
   };
 
-  // Get availability considering pending changes
+  const getBrandEnabled = (productId: string): boolean => {
+    const product = products.find(p => p.id === productId);
+    return product?.is_enabled_by_brand ?? true;
+  };
+
+  // Get availability considering pending changes (branch mode)
   const getEditingAvailability = (productId: string, branchId: string): boolean => {
     const key = `${productId}-${branchId}`;
     if (pendingChanges.has(key)) {
       return pendingChanges.get(key)!;
     }
     return getBranchAvailability(productId, branchId);
+  };
+
+  // Get brand enabled considering pending changes (brand mode)
+  const getEditingBrandEnabled = (productId: string): boolean => {
+    const key = `brand-${productId}`;
+    if (pendingChanges.has(key)) {
+      return pendingChanges.get(key)!;
+    }
+    return getBrandEnabled(productId);
   };
 
   const getProductSales = (productId: string, branchId: string): number => {
@@ -243,10 +261,21 @@ export default function Products() {
     return branches.filter(b => getBranchAvailability(productId, b.id)).length;
   };
 
-  // Toggle in pending changes (not saved yet)
+  // Toggle in pending changes (not saved yet) - branch mode
   const togglePendingChange = (productId: string, branchId: string) => {
     const key = `${productId}-${branchId}`;
     const currentValue = getEditingAvailability(productId, branchId);
+    setPendingChanges(prev => {
+      const newMap = new Map(prev);
+      newMap.set(key, !currentValue);
+      return newMap;
+    });
+  };
+
+  // Toggle brand enabled in pending changes (brand mode)
+  const toggleBrandPendingChange = (productId: string) => {
+    const key = `brand-${productId}`;
+    const currentValue = getEditingBrandEnabled(productId);
     setPendingChanges(prev => {
       const newMap = new Map(prev);
       newMap.set(key, !currentValue);
@@ -283,27 +312,44 @@ export default function Products() {
     setSavingAvailability(true);
     
     try {
-      for (const [key, newValue] of pendingChanges.entries()) {
-        const [productId, branchId] = key.split('-');
-        const existingBp = branchProducts.find(bp => bp.product_id === productId && bp.branch_id === branchId);
-        
-        if (existingBp) {
-          const { error } = await supabase
-            .from('branch_products')
-            .update({ is_available: newValue })
-            .eq('id', existingBp.id);
-          if (error) throw error;
-        } else {
-          const { error } = await supabase
-            .from('branch_products')
-            .insert({ product_id: productId, branch_id: branchId, is_available: newValue });
-          if (error) throw error;
+      if (editMode === 'brand') {
+        // Brand mode: update products.is_enabled_by_brand
+        for (const [key, newValue] of pendingChanges.entries()) {
+          if (key.startsWith('brand-')) {
+            const productId = key.replace('brand-', '');
+            const { error } = await supabase
+              .from('products')
+              .update({ is_enabled_by_brand: newValue })
+              .eq('id', productId);
+            if (error) throw error;
+          }
         }
+        // Refresh products
+        const { data: newProducts } = await supabase.from('products').select('*').order('name');
+        if (newProducts) setProducts(newProducts);
+      } else {
+        // Branch mode: update branch_products.is_available
+        for (const [key, newValue] of pendingChanges.entries()) {
+          const [productId, branchId] = key.split('-');
+          const existingBp = branchProducts.find(bp => bp.product_id === productId && bp.branch_id === branchId);
+          
+          if (existingBp) {
+            const { error } = await supabase
+              .from('branch_products')
+              .update({ is_available: newValue })
+              .eq('id', existingBp.id);
+            if (error) throw error;
+          } else {
+            const { error } = await supabase
+              .from('branch_products')
+              .insert({ product_id: productId, branch_id: branchId, is_available: newValue });
+            if (error) throw error;
+          }
+        }
+        // Refresh branch products
+        const { data: newBranchProducts } = await supabase.from('branch_products').select('*');
+        if (newBranchProducts) setBranchProducts(newBranchProducts);
       }
-      
-      // Refresh data
-      const { data: newBranchProducts } = await supabase.from('branch_products').select('*');
-      if (newBranchProducts) setBranchProducts(newBranchProducts);
       
       setPendingChanges(new Map());
       toast.success(`${pendingChanges.size} cambios guardados correctamente`);
@@ -521,9 +567,15 @@ export default function Products() {
                         {formatPrice(product.price)}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant={product.is_available ? 'default' : 'secondary'}>
-                          {getAvailableBranchesCount(product.id)}/{branches.length}
-                        </Badge>
+                        {product.is_enabled_by_brand ? (
+                          <Badge variant={product.is_available ? 'default' : 'secondary'}>
+                            {getAvailableBranchesCount(product.id)}/{branches.length}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            Deshabilitado
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-center font-semibold">
                         {getTotalSales(product.id)}
@@ -572,10 +624,12 @@ export default function Products() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Store className="w-5 h-5" />
-              Editar Disponibilidad por Sucursal
+              Editar Disponibilidad
             </DialogTitle>
             <DialogDescription>
-              Activa o desactiva productos en cada sucursal. Los cambios no se guardan hasta presionar "Aplicar".
+              {editMode === 'brand' 
+                ? 'Habilita o deshabilita productos a nivel marca. Los deshabilitados no estarán disponibles en ningún local.' 
+                : 'Activa o desactiva productos en cada sucursal.'}
               {hasUnsavedChanges && (
                 <span className="ml-2 text-orange-600 font-medium">
                   ({pendingChanges.size} cambio{pendingChanges.size !== 1 ? 's' : ''} pendiente{pendingChanges.size !== 1 ? 's' : ''})
@@ -583,53 +637,133 @@ export default function Products() {
               )}
             </DialogDescription>
           </DialogHeader>
+
+          {/* Mode Tabs */}
+          <div className="flex gap-2 border-b pb-3">
+            <Button
+              variant={editMode === 'brand' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => {
+                if (hasUnsavedChanges) {
+                  setConfirmCloseOpen(true);
+                } else {
+                  setPendingChanges(new Map());
+                  setEditMode('brand');
+                }
+              }}
+            >
+              Por Marca (Global)
+            </Button>
+            <Button
+              variant={editMode === 'branch' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => {
+                if (hasUnsavedChanges) {
+                  setConfirmCloseOpen(true);
+                } else {
+                  setPendingChanges(new Map());
+                  setEditMode('branch');
+                }
+              }}
+            >
+              Por Sucursal
+            </Button>
+          </div>
           
           <div className="flex-1 overflow-auto">
-            <Table>
-              <TableHeader className="sticky top-0 bg-background z-10">
-                <TableRow>
-                  <TableHead className="min-w-[200px]">Producto</TableHead>
-                  {branches.map(branch => (
-                    <TableHead key={branch.id} className="text-center min-w-[100px]">
-                      <span title={branch.name}>{getBranchAbbr(branch.name)}</span>
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProducts.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {product.is_featured && (
-                          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500 shrink-0" />
-                        )}
-                        <span className="font-medium">{product.name}</span>
-                      </div>
-                    </TableCell>
-                    {branches.map(branch => {
-                      const isAvailable = getEditingAvailability(product.id, branch.id);
-                      const key = `${product.id}-${branch.id}`;
-                      const hasChange = pendingChanges.has(key);
-                      
-                      return (
-                        <TableCell key={branch.id} className="text-center">
+            {editMode === 'brand' ? (
+              /* Brand Mode - Simple list with single toggle per product */
+              <Table>
+                <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableRow>
+                    <TableHead className="min-w-[200px]">Producto</TableHead>
+                    <TableHead>Categoría</TableHead>
+                    <TableHead className="text-center w-[120px]">Habilitado</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProducts.map((product) => {
+                    const isEnabled = getEditingBrandEnabled(product.id);
+                    const key = `brand-${product.id}`;
+                    const hasChange = pendingChanges.has(key);
+                    
+                    return (
+                      <TableRow key={product.id} className={!isEnabled ? 'opacity-60' : ''}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {product.is_featured && (
+                              <Star className="w-4 h-4 text-yellow-500 fill-yellow-500 shrink-0" />
+                            )}
+                            <span className="font-medium">{product.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{getCategoryName(product.category_id)}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
                           <div className={cn(
                             "inline-flex rounded-md p-1",
                             hasChange && "bg-orange-100 dark:bg-orange-950"
                           )}>
                             <Switch
-                              checked={isAvailable}
-                              onCheckedChange={() => togglePendingChange(product.id, branch.id)}
+                              checked={isEnabled}
+                              onCheckedChange={() => toggleBrandPendingChange(product.id)}
                             />
                           </div>
                         </TableCell>
-                      );
-                    })}
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            ) : (
+              /* Branch Mode - Matrix with toggle per branch */
+              <Table>
+                <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableRow>
+                    <TableHead className="min-w-[200px]">Producto</TableHead>
+                    {branches.map(branch => (
+                      <TableHead key={branch.id} className="text-center min-w-[100px]">
+                        <span title={branch.name}>{getBranchAbbr(branch.name)}</span>
+                      </TableHead>
+                    ))}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredProducts.filter(p => p.is_enabled_by_brand).map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {product.is_featured && (
+                            <Star className="w-4 h-4 text-yellow-500 fill-yellow-500 shrink-0" />
+                          )}
+                          <span className="font-medium">{product.name}</span>
+                        </div>
+                      </TableCell>
+                      {branches.map(branch => {
+                        const isAvailable = getEditingAvailability(product.id, branch.id);
+                        const key = `${product.id}-${branch.id}`;
+                        const hasChange = pendingChanges.has(key);
+                        
+                        return (
+                          <TableCell key={branch.id} className="text-center">
+                            <div className={cn(
+                              "inline-flex rounded-md p-1",
+                              hasChange && "bg-orange-100 dark:bg-orange-950"
+                            )}>
+                              <Switch
+                                checked={isAvailable}
+                                onCheckedChange={() => togglePendingChange(product.id, branch.id)}
+                              />
+                            </div>
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </div>
 
           <DialogFooter className="border-t pt-4">

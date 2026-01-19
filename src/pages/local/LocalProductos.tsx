@@ -69,10 +69,13 @@ export default function LocalProductos() {
         (branchProductsData || []).map(bp => [bp.product_id, bp])
       );
 
-      const combined = (productsData || []).map(p => ({
-        ...p,
-        branchProduct: branchProductsMap.get(p.id) || null,
-      }));
+      // Only show products enabled by brand
+      const combined = (productsData || [])
+        .filter(p => p.is_enabled_by_brand)
+        .map(p => ({
+          ...p,
+          branchProduct: branchProductsMap.get(p.id) || null,
+        }));
 
       setProducts(combined);
     } catch (error: any) {
@@ -133,7 +136,7 @@ export default function LocalProductos() {
   );
 
   const activeCount = filteredProducts.filter(p => 
-    p.is_available && (p.branchProduct?.is_available !== false)
+    p.is_available && p.is_enabled_by_brand && (p.branchProduct?.is_available !== false)
   ).length;
 
   const formatPrice = (price: number) => 
@@ -205,7 +208,7 @@ export default function LocalProductos() {
               </TableHeader>
               <TableBody>
                 {filteredProducts.map((product) => {
-                  const isGlobalActive = product.is_available;
+                  const isGlobalActive = product.is_available && product.is_enabled_by_brand;
                   const isBranchActive = product.branchProduct?.is_available !== false;
                   const customPrice = product.branchProduct?.custom_price;
                   const finalPrice = customPrice || product.price;
