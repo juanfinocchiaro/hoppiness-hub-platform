@@ -642,11 +642,9 @@ export default function POSView({ branch }: POSViewProps) {
     return 'pos_local';
   };
 
-  // Filter order areas based on branch settings
-  const availableOrderAreas = ORDER_AREAS.filter(area => {
-    if (area.value === 'delivery' && !branch.delivery_enabled) return false;
-    return true;
-  });
+  // All order areas are always available in POS
+  const availableOrderAreas = ORDER_AREAS;
+
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
