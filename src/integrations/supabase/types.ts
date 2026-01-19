@@ -2183,6 +2183,7 @@ export type Database = {
           display_order: number | null
           group_id: string
           id: string
+          image_url: string | null
           is_active: boolean
           is_enabled_by_brand: boolean
           linked_product_id: string | null
@@ -2194,6 +2195,7 @@ export type Database = {
           display_order?: number | null
           group_id: string
           id?: string
+          image_url?: string | null
           is_active?: boolean
           is_enabled_by_brand?: boolean
           linked_product_id?: string | null
@@ -2205,6 +2207,7 @@ export type Database = {
           display_order?: number | null
           group_id?: string
           id?: string
+          image_url?: string | null
           is_active?: boolean
           is_enabled_by_brand?: boolean
           linked_product_id?: string | null

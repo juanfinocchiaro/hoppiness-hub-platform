@@ -19,6 +19,7 @@ export interface ModifierOption {
   price_adjustment: number;
   is_active: boolean;
   display_order: number;
+  image_url?: string | null;
   linked_product_id?: string | null;
   linkedProduct?: Product | null;
   assignedProductIds: string[];
@@ -82,7 +83,7 @@ export function ModifierOptionCard({
   };
 
   const displayName = option.linkedProduct?.name || option.name;
-  const imageUrl = option.linkedProduct?.image_url;
+  const imageUrl = option.image_url || option.linkedProduct?.image_url;
   const assignedCount = option.assignedProductIds.length;
 
   return (
@@ -124,22 +125,20 @@ export function ModifierOptionCard({
         </div>
       )}
 
-      {/* Image */}
-      {type === 'adicional' && (
-        <div className="flex-shrink-0">
-          {imageUrl ? (
-            <img 
-              src={imageUrl} 
-              alt={displayName} 
-              className="w-12 h-12 rounded-lg object-cover ring-1 ring-border"
-            />
-          ) : (
-            <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
-              <Package className="h-5 w-5 text-muted-foreground" />
-            </div>
-          )}
-        </div>
-      )}
+      {/* Image - Visible for both types */}
+      <div className="flex-shrink-0">
+        {imageUrl ? (
+          <img 
+            src={imageUrl} 
+            alt={displayName} 
+            className="w-12 h-12 rounded-lg object-cover ring-1 ring-border"
+          />
+        ) : (
+          <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
+            <Package className="h-5 w-5 text-muted-foreground" />
+          </div>
+        )}
+      </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
