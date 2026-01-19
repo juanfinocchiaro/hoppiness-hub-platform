@@ -13,15 +13,24 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
   ClipboardList,
   Package,
   Settings,
   LogOut,
   Menu,
   ChevronRight,
+  ChevronDown,
   Store,
   Home,
-  RefreshCw
+  RefreshCw,
+  ShoppingCart,
+  ChefHat,
+  Monitor
 } from 'lucide-react';
 import {
   Sheet,
@@ -88,6 +97,13 @@ export default function LocalLayout() {
     { to: 'config', icon: Settings, label: 'Configuración', show: canManageConfig },
   ].filter(item => item.show);
 
+  const posItems = [
+    { to: `/pos`, icon: Monitor, label: 'Tomar Pedidos' },
+    { to: `/pos/${branchId}/kds`, icon: ChefHat, label: 'Cocina (KDS)' },
+  ];
+
+  const [posOpen, setPosOpen] = useState(false);
+
   if (authLoading || roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -144,6 +160,41 @@ export default function LocalLayout() {
           </Link>
         );
       })}
+      
+      {/* POS Submenu */}
+      <Collapsible open={posOpen} onOpenChange={setPosOpen}>
+        <CollapsibleTrigger asChild>
+          <Button
+            variant="ghost"
+            className={`w-full justify-start ${location.pathname.includes('/pos') ? 'bg-primary/10 text-primary' : ''}`}
+          >
+            <ShoppingCart className="w-4 h-4 mr-3" />
+            Punto de Venta
+            {posOpen ? (
+              <ChevronDown className="w-4 h-4 ml-auto" />
+            ) : (
+              <ChevronRight className="w-4 h-4 ml-auto" />
+            )}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pl-4 space-y-1 mt-1">
+          {posItems.map((item) => {
+            const isActive = location.pathname === item.to;
+            return (
+              <Link key={item.to} to={item.to}>
+                <Button
+                  variant={isActive ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className={`w-full justify-start ${isActive ? 'bg-primary/10 text-primary' : ''}`}
+                >
+                  <item.icon className="w-4 h-4 mr-3" />
+                  {item.label}
+                </Button>
+              </Link>
+            );
+          })}
+        </CollapsibleContent>
+      </Collapsible>
     </nav>
   );
 
