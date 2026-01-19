@@ -21,7 +21,9 @@ import {
   UtensilsCrossed,
   TrendingUp,
   Landmark,
-  ShieldCheck
+  ShieldCheck,
+  Boxes,
+  ShoppingCart
 } from 'lucide-react';
 import {
   Sheet,
@@ -48,25 +50,47 @@ interface NavSection {
   items: NavItem[];
 }
 
-const navItems: NavItem[] = [
+// Solo items fijos sin sección
+const fixedItems: NavItem[] = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
   { to: '/admin/sucursales', icon: Store, label: 'Sucursales' },
-  { to: '/admin/proveedores', icon: Truck, label: 'Proveedores' },
-  { to: '/admin/control-proveedores', icon: ShieldCheck, label: 'Control Proveedores' },
-  { to: '/admin/usuarios', icon: Users, label: 'Equipo' },
-  { to: '/admin/permisos', icon: Shield, label: 'Accesos' },
 ];
 
-const menuSection: NavSection = {
-  id: 'menu-marca',
-  label: 'Menú Marca',
+// Sección Catálogo (lo que se vende)
+const catalogoSection: NavSection = {
+  id: 'catalogo',
+  label: 'Catálogo',
   icon: UtensilsCrossed,
   items: [
     { to: '/admin/productos', icon: Package, label: 'Productos' },
-    { to: '/admin/modificadores', icon: ChefHat, label: 'Extras / Modificadores' },
+    { to: '/admin/modificadores', icon: ChefHat, label: 'Modificadores' },
   ]
 };
 
+// Sección Insumos & Compras (lo que se compra)
+const insumosSection: NavSection = {
+  id: 'insumos',
+  label: 'Insumos & Compras',
+  icon: ShoppingCart,
+  items: [
+    { to: '/admin/ingredientes', icon: Boxes, label: 'Ingredientes' },
+    { to: '/admin/proveedores', icon: Truck, label: 'Proveedores' },
+    { to: '/admin/control-proveedores', icon: ShieldCheck, label: 'Control por Ingrediente' },
+  ]
+};
+
+// Sección Equipo & Accesos
+const equipoSection: NavSection = {
+  id: 'equipo',
+  label: 'Equipo & Accesos',
+  icon: Users,
+  items: [
+    { to: '/admin/usuarios', icon: Users, label: 'Usuarios' },
+    { to: '/admin/permisos', icon: Shield, label: 'Permisos' },
+  ]
+};
+
+// Sección Reportes
 const reportsSection: NavSection = {
   id: 'reportes',
   label: 'Reportes',
@@ -79,13 +103,20 @@ const reportsSection: NavSection = {
   ]
 };
 
+// Todas las secciones colapsables en orden
+const allSections: NavSection[] = [catalogoSection, insumosSection, equipoSection, reportsSection];
+
 export default function AdminDashboard() {
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [hasAssignedBranch, setHasAssignedBranch] = useState(false);
-  const [menuExpanded, setMenuExpanded] = useState(true);
-  const [reportsExpanded, setReportsExpanded] = useState(true);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    catalogo: true,
+    insumos: true,
+    equipo: true,
+    reportes: true,
+  });
 
   useEffect(() => {
     if (!loading && !user) {
@@ -144,13 +175,17 @@ export default function AdminDashboard() {
     );
   }
 
-  const isMenuSectionActive = menuSection.items.some(item => location.pathname.startsWith(item.to));
-  const isReportsSectionActive = reportsSection.items.some(item => location.pathname.startsWith(item.to));
+  const isSectionActive = (section: NavSection) => 
+    section.items.some(item => location.pathname.startsWith(item.to));
+
+  const toggleSection = (sectionId: string) => {
+    setExpandedSections(prev => ({ ...prev, [sectionId]: !prev[sectionId] }));
+  };
 
   const NavContent = () => (
     <nav className="space-y-1">
-      {/* Regular nav items */}
-      {navItems.slice(0, 4).map((item) => {
+      {/* Fixed items (Dashboard, Sucursales) */}
+      {fixedItems.map((item) => {
         const isActive = item.exact 
           ? location.pathname === item.to
           : location.pathname.startsWith(item.to);
@@ -168,90 +203,49 @@ export default function AdminDashboard() {
         );
       })}
 
-      {/* Menú Marca collapsible section */}
-      <Collapsible open={menuExpanded || isMenuSectionActive} onOpenChange={setMenuExpanded}>
-        <CollapsibleTrigger asChild>
-          <Button
-            variant="ghost"
-            className={`w-full justify-start ${isMenuSectionActive ? 'bg-primary/5 text-primary' : ''}`}
-          >
-            <menuSection.icon className="w-4 h-4 mr-3" />
-            {menuSection.label}
-            {menuExpanded || isMenuSectionActive ? (
-              <ChevronDown className="w-4 h-4 ml-auto" />
-            ) : (
-              <ChevronRight className="w-4 h-4 ml-auto" />
-            )}
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pl-4 space-y-0.5 mt-1">
-          {menuSection.items.map((item) => {
-            const isActive = location.pathname.startsWith(item.to);
-            return (
-              <Link key={item.to} to={item.to}>
-                <Button
-                  variant={isActive ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className={`w-full justify-start ${isActive ? 'bg-primary/10 text-primary' : ''}`}
-                >
-                  <item.icon className="w-4 h-4 mr-3" />
-                  {item.label}
-                </Button>
-              </Link>
-            );
-          })}
-        </CollapsibleContent>
-      </Collapsible>
-
-      {/* Reportes collapsible section */}
-      <Collapsible open={reportsExpanded || isReportsSectionActive} onOpenChange={setReportsExpanded}>
-        <CollapsibleTrigger asChild>
-          <Button
-            variant="ghost"
-            className={`w-full justify-start ${isReportsSectionActive ? 'bg-primary/5 text-primary' : ''}`}
-          >
-            <reportsSection.icon className="w-4 h-4 mr-3" />
-            {reportsSection.label}
-            {reportsExpanded || isReportsSectionActive ? (
-              <ChevronDown className="w-4 h-4 ml-auto" />
-            ) : (
-              <ChevronRight className="w-4 h-4 ml-auto" />
-            )}
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pl-4 space-y-0.5 mt-1">
-          {reportsSection.items.map((item) => {
-            const isActive = location.pathname.startsWith(item.to);
-            return (
-              <Link key={item.to} to={item.to}>
-                <Button
-                  variant={isActive ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className={`w-full justify-start ${isActive ? 'bg-primary/10 text-primary' : ''}`}
-                >
-                  <item.icon className="w-4 h-4 mr-3" />
-                  {item.label}
-                </Button>
-              </Link>
-            );
-          })}
-        </CollapsibleContent>
-      </Collapsible>
-      {navItems.slice(4).map((item) => {
-        const isActive = item.exact 
-          ? location.pathname === item.to
-          : location.pathname.startsWith(item.to);
+      {/* All collapsible sections */}
+      {allSections.map((section) => {
+        const isActive = isSectionActive(section);
+        const isExpanded = expandedSections[section.id] || isActive;
+        
         return (
-          <Link key={item.to} to={item.to}>
-            <Button
-              variant={isActive ? 'secondary' : 'ghost'}
-              className={`w-full justify-start ${isActive ? 'bg-primary/10 text-primary' : ''}`}
-            >
-              <item.icon className="w-4 h-4 mr-3" />
-              {item.label}
-              {isActive && <ChevronRight className="w-4 h-4 ml-auto" />}
-            </Button>
-          </Link>
+          <Collapsible 
+            key={section.id} 
+            open={isExpanded} 
+            onOpenChange={() => toggleSection(section.id)}
+          >
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                className={`w-full justify-start ${isActive ? 'bg-primary/5 text-primary' : ''}`}
+              >
+                <section.icon className="w-4 h-4 mr-3" />
+                {section.label}
+                {isExpanded ? (
+                  <ChevronDown className="w-4 h-4 ml-auto" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 ml-auto" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4 space-y-0.5 mt-1">
+              {section.items.map((item) => {
+                const itemActive = location.pathname.startsWith(item.to);
+                return (
+                  <Link key={item.to} to={item.to}>
+                    <Button
+                      variant={itemActive ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className={`w-full justify-start ${itemActive ? 'bg-primary/10 text-primary' : ''}`}
+                    >
+                      <item.icon className="w-4 h-4 mr-3" />
+                      {item.label}
+                    </Button>
+                  </Link>
+                );
+              })}
+            </CollapsibleContent>
+          </Collapsible>
         );
       })}
     </nav>
