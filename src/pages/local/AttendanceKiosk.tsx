@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { handleError } from '@/lib/errorHandler';
 import { Clock, Users, RefreshCw } from 'lucide-react';
 
 const QR_REFRESH_INTERVAL = 15000; // 15 seconds
@@ -50,7 +51,7 @@ export default function AttendanceKiosk() {
       setProgress(100);
       setError(null);
     } catch (err: any) {
-      console.error('Error generating token:', err);
+      handleError(err, { showToast: false, context: 'AttendanceKiosk.generateToken' });
       setError('Error generando código QR');
     } finally {
       setLoading(false);

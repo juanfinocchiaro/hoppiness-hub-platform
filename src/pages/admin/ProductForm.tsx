@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { ArrowLeft, Save, Loader2, Upload, X, Package, Utensils } from 'lucide-react';
 import { toast } from 'sonner';
+import { handleError } from '@/lib/errorHandler';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Category = Tables<'product_categories'>;
@@ -208,8 +209,7 @@ export default function ProductForm() {
       setImageUrl(urlData.publicUrl);
       toast.success('Imagen subida correctamente');
     } catch (error) {
-      console.error('Error uploading image:', error);
-      toast.error('Error al subir la imagen');
+      handleError(error, { userMessage: 'Error al subir la imagen', context: 'ProductForm.handleImageUpload' });
     } finally {
       setUploading(false);
     }
@@ -340,8 +340,7 @@ export default function ProductForm() {
       toast.success(isEditing ? 'Producto actualizado' : 'Producto creado');
       navigate('/admin/productos');
     } catch (error) {
-      console.error('Error saving product:', error);
-      toast.error('Error al guardar el producto');
+      handleError(error, { userMessage: 'Error al guardar el producto', context: 'ProductForm.handleSubmit' });
     } finally {
       setSaving(false);
     }

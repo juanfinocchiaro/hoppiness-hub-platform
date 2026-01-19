@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { handleError } from '@/lib/errorHandler';
 import { ChefHat, Volume2, Bell, Palette, Save, Clock } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -93,8 +94,7 @@ export default function LocalKDSSettings() {
       if (error) throw error;
       toast.success('Configuración guardada');
     } catch (error) {
-      console.error(error);
-      toast.error('Error al guardar');
+      handleError(error, { userMessage: 'Error al guardar', context: 'LocalKDSSettings.handleSave' });
     } finally {
       setSaving(false);
     }

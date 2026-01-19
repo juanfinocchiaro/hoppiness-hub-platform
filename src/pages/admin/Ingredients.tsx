@@ -71,6 +71,7 @@ import {
   CircleDashed,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { handleError } from '@/lib/errorHandler';
 
 interface Ingredient {
   id: string;
@@ -335,8 +336,7 @@ export default function Ingredients() {
       resetForm();
       fetchData();
     } catch (error) {
-      console.error(error);
-      toast.error('Error al guardar');
+      handleError(error, { userMessage: 'Error al guardar', context: 'Ingredients.handleSave' });
     } finally {
       setSaving(false);
     }
@@ -423,8 +423,7 @@ export default function Ingredients() {
       cancelEditingEquiv();
       fetchData();
     } catch (error: any) {
-      console.error(error);
-      toast.error('Error al guardar equivalencia');
+      handleError(error, { userMessage: 'Error al guardar equivalencia', context: 'Ingredients.handleSaveEquivalence' });
     } finally {
       setSavingEquiv(false);
     }

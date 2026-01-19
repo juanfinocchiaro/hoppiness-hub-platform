@@ -42,7 +42,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { 
+import { handleError } from '@/lib/errorHandler';
+import {
   Printer, 
   Plus, 
   Edit2, 
@@ -126,8 +127,7 @@ export default function LocalImpresoras() {
         if (error) throw error;
         setPrinters((data || []) as PrinterConfig[]);
       } catch (error) {
-        console.error('Error fetching printers:', error);
-        toast.error('Error al cargar impresoras');
+        handleError(error, { userMessage: 'Error al cargar impresoras', context: 'LocalImpresoras.fetchPrinters' });
       } finally {
         setLoading(false);
       }
@@ -231,8 +231,7 @@ export default function LocalImpresoras() {
       setShowDialog(false);
       resetForm();
     } catch (error) {
-      console.error('Error saving printer:', error);
-      toast.error('Error al guardar impresora');
+      handleError(error, { userMessage: 'Error al guardar impresora', context: 'LocalImpresoras.handleSave' });
     }
   };
 
@@ -252,8 +251,7 @@ export default function LocalImpresoras() {
       setShowDeleteDialog(false);
       setPrinterToDelete(null);
     } catch (error) {
-      console.error('Error deleting printer:', error);
-      toast.error('Error al eliminar impresora');
+      handleError(error, { userMessage: 'Error al eliminar impresora', context: 'LocalImpresoras.handleDelete' });
     }
   };
 
@@ -270,8 +268,7 @@ export default function LocalImpresoras() {
         p.id === printer.id ? { ...p, is_active: !printer.is_active } : p
       ));
     } catch (error) {
-      console.error('Error toggling printer:', error);
-      toast.error('Error al cambiar estado');
+      handleError(error, { userMessage: 'Error al cambiar estado', context: 'LocalImpresoras.handleToggleActive' });
     }
   };
 

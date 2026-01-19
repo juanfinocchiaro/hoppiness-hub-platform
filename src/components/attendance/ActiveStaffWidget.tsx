@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { handleError } from '@/lib/errorHandler';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Users, Clock } from 'lucide-react';
@@ -32,7 +33,7 @@ export default function ActiveStaffWidget({ branchId, compact = false }: ActiveS
       if (error) throw error;
       setActiveStaff(data || []);
     } catch (error) {
-      console.error('Error fetching active staff:', error);
+      handleError(error, { showToast: false, context: 'ActiveStaffWidget.fetchActiveStaff' });
     } finally {
       setLoading(false);
     }

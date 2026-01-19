@@ -14,6 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { FileText, Download, Printer, Search, RefreshCw, ExternalLink } from 'lucide-react';
+import { handleError } from '@/lib/errorHandler';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Tables } from '@/integrations/supabase/types';
@@ -51,7 +52,7 @@ export default function LocalFacturas() {
       if (error) throw error;
       setInvoices(data || []);
     } catch (error) {
-      console.error('Error fetching invoices:', error);
+      handleError(error, { showToast: false, context: 'LocalFacturas.fetchInvoices' });
     } finally {
       setLoading(false);
     }
