@@ -166,6 +166,60 @@ export type Database = {
           },
         ]
       }
+      availability_logs: {
+        Row: {
+          branch_id: string
+          changed_by: string | null
+          created_at: string | null
+          id: string
+          item_id: string
+          item_type: string
+          new_state: boolean
+          notes: string | null
+          reason: string | null
+          until_date: string | null
+        }
+        Insert: {
+          branch_id: string
+          changed_by?: string | null
+          created_at?: string | null
+          id?: string
+          item_id: string
+          item_type: string
+          new_state: boolean
+          notes?: string | null
+          reason?: string | null
+          until_date?: string | null
+        }
+        Update: {
+          branch_id?: string
+          changed_by?: string | null
+          created_at?: string | null
+          id?: string
+          item_id?: string
+          item_type?: string
+          new_state?: boolean
+          notes?: string | null
+          reason?: string | null
+          until_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_logs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_logs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       branch_modifier_options: {
         Row: {
           branch_id: string
@@ -425,6 +479,8 @@ export type Database = {
       branches: {
         Row: {
           address: string
+          admin_force_channels: Json | null
+          admin_force_state: string | null
           allowed_ips: string[] | null
           auto_invoice_integrations: boolean
           city: string
@@ -439,6 +495,8 @@ export type Database = {
           invoice_provider: string | null
           is_active: boolean
           is_open: boolean | null
+          local_channels: Json | null
+          local_open_state: boolean | null
           mercadopago_delivery_enabled: boolean | null
           name: string
           opening_time: string | null
@@ -452,6 +510,8 @@ export type Database = {
         }
         Insert: {
           address: string
+          admin_force_channels?: Json | null
+          admin_force_state?: string | null
           allowed_ips?: string[] | null
           auto_invoice_integrations?: boolean
           city: string
@@ -466,6 +526,8 @@ export type Database = {
           invoice_provider?: string | null
           is_active?: boolean
           is_open?: boolean | null
+          local_channels?: Json | null
+          local_open_state?: boolean | null
           mercadopago_delivery_enabled?: boolean | null
           name: string
           opening_time?: string | null
@@ -479,6 +541,8 @@ export type Database = {
         }
         Update: {
           address?: string
+          admin_force_channels?: Json | null
+          admin_force_state?: string | null
           allowed_ips?: string[] | null
           auto_invoice_integrations?: boolean
           city?: string
@@ -493,6 +557,8 @@ export type Database = {
           invoice_provider?: string | null
           is_active?: boolean
           is_open?: boolean | null
+          local_channels?: Json | null
+          local_open_state?: boolean | null
           mercadopago_delivery_enabled?: boolean | null
           name?: string
           opening_time?: string | null
@@ -517,6 +583,7 @@ export type Database = {
           payment_method: string
           recorded_by: string | null
           shift_id: string
+          transaction_id: string | null
           type: string
         }
         Insert: {
@@ -529,6 +596,7 @@ export type Database = {
           payment_method: string
           recorded_by?: string | null
           shift_id: string
+          transaction_id?: string | null
           type: string
         }
         Update: {
@@ -541,6 +609,7 @@ export type Database = {
           payment_method?: string
           recorded_by?: string | null
           shift_id?: string
+          transaction_id?: string | null
           type?: string
         }
         Relationships: [
@@ -570,6 +639,13 @@ export type Database = {
             columns: ["shift_id"]
             isOneToOne: false
             referencedRelation: "cash_register_shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_movements_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -1245,6 +1321,47 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "modifier_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_cancellations: {
+        Row: {
+          cancel_notes: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          id: string
+          order_id: string
+          refund_amount: number | null
+          refund_method: string | null
+        }
+        Insert: {
+          cancel_notes?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          id?: string
+          order_id: string
+          refund_amount?: number | null
+          refund_method?: string | null
+        }
+        Update: {
+          cancel_notes?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          id?: string
+          order_id?: string
+          refund_amount?: number | null
+          refund_method?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_cancellations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
@@ -2169,14 +2286,22 @@ export type Database = {
       }
       transactions: {
         Row: {
+          account_id: string | null
           amount: number
           branch_id: string
+          caja_id: string | null
+          category_group: string | null
           category_id: string | null
           concept: string
           created_at: string | null
+          created_by: string | null
+          direction: string | null
           id: string
+          is_locked: boolean | null
           is_payment_to_supplier: boolean | null
+          metadata: Json | null
           notes: string | null
+          order_id: string | null
           payment_origin: Database["public"]["Enums"]["payment_origin"]
           receipt_number: string | null
           receipt_type: Database["public"]["Enums"]["receipt_type"]
@@ -2184,18 +2309,28 @@ export type Database = {
           supplier_id: string | null
           tax_percentage: number | null
           transaction_date: string
+          turno_id: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string | null
+          updated_by: string | null
         }
         Insert: {
+          account_id?: string | null
           amount: number
           branch_id: string
+          caja_id?: string | null
+          category_group?: string | null
           category_id?: string | null
           concept: string
           created_at?: string | null
+          created_by?: string | null
+          direction?: string | null
           id?: string
+          is_locked?: boolean | null
           is_payment_to_supplier?: boolean | null
+          metadata?: Json | null
           notes?: string | null
+          order_id?: string | null
           payment_origin?: Database["public"]["Enums"]["payment_origin"]
           receipt_number?: string | null
           receipt_type?: Database["public"]["Enums"]["receipt_type"]
@@ -2203,18 +2338,28 @@ export type Database = {
           supplier_id?: string | null
           tax_percentage?: number | null
           transaction_date?: string
+          turno_id?: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string | null
+          updated_by?: string | null
         }
         Update: {
+          account_id?: string | null
           amount?: number
           branch_id?: string
+          caja_id?: string | null
+          category_group?: string | null
           category_id?: string | null
           concept?: string
           created_at?: string | null
+          created_by?: string | null
+          direction?: string | null
           id?: string
+          is_locked?: boolean | null
           is_payment_to_supplier?: boolean | null
+          metadata?: Json | null
           notes?: string | null
+          order_id?: string | null
           payment_origin?: Database["public"]["Enums"]["payment_origin"]
           receipt_number?: string | null
           receipt_type?: Database["public"]["Enums"]["receipt_type"]
@@ -2222,8 +2367,10 @@ export type Database = {
           supplier_id?: string | null
           tax_percentage?: number | null
           transaction_date?: string
+          turno_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string | null
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -2241,10 +2388,24 @@ export type Database = {
             referencedColumns: ["branch_id"]
           },
           {
+            foreignKeyName: "transactions_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "transactions_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "transaction_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
           {
@@ -2259,6 +2420,13 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "cash_register_shifts"
             referencedColumns: ["id"]
           },
         ]
@@ -2416,6 +2584,10 @@ export type Database = {
         Returns: boolean
       }
       cleanup_expired_tokens: { Args: never; Returns: undefined }
+      get_branch_effective_state: {
+        Args: { p_branch_id: string }
+        Returns: string
+      }
       grant_role_defaults: {
         Args: {
           _branch_id: string

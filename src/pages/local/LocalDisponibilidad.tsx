@@ -5,14 +5,27 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, AlertTriangle, Package, ChefHat, ChevronDown, ChevronRight } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Search, Package, ChefHat, ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+
+const AVAILABILITY_REASONS = [
+  { value: 'sin_stock', label: 'Sin stock' },
+  { value: 'rotura', label: 'Rotura de equipo' },
+  { value: 'falta_insumo', label: 'Falta de insumo' },
+  { value: 'decision_comercial', label: 'Decisión comercial' },
+  { value: 'otro', label: 'Otro' },
+];
 
 interface ProductAvailability {
   id: string;
@@ -138,7 +151,39 @@ export default function LocalDisponibilidad() {
     }
   };
 
-  const toggleProductAvailability = async (productId: string, currentValue: boolean) => {
+  // State for availability reason dialog
+  const [availabilityDialog, setAvailabilityDialog] = useState<{
+    open: boolean;
+    type: 'product' | 'modifier';
+    itemId: string;
+    currentValue: boolean;
+    itemName: string;
+  } | null>(null);
+  const [availabilityReason, setAvailabilityReason] = useState('');
+  const [availabilityNotes, setAvailabilityNotes] = useState('');
+  const [availabilityUntil, setAvailabilityUntil] = useState('');
+
+  const handleAvailabilityToggle = (type: 'product' | 'modifier', itemId: string, currentValue: boolean, itemName: string) => {
+    // If turning OFF, show dialog for reason
+    if (currentValue) {
+      setAvailabilityDialog({ open: true, type, itemId, currentValue, itemName });
+    } else {
+      // Turning ON - just toggle directly
+      if (type === 'product') {
+        executeProductToggle(itemId, currentValue, null, null, null);
+      } else {
+        executeModifierToggle(itemId, currentValue, null, null, null);
+      }
+    }
+  };
+
+  const executeProductToggle = async (
+    productId: string, 
+    currentValue: boolean, 
+    reason: string | null,
+    notes: string | null,
+    untilDate: string | null
+  ) => {
     setUpdating(productId);
     try {
       const { error } = await supabase
@@ -147,6 +192,20 @@ export default function LocalDisponibilidad() {
         .eq('id', productId);
 
       if (error) throw error;
+
+      // Log availability change
+      if (reason) {
+        const product = products.find(p => p.id === productId);
+        await supabase.from('availability_logs').insert({
+          branch_id: branchId,
+          item_type: 'product',
+          item_id: product?.product_id,
+          new_state: !currentValue,
+          reason: reason,
+          notes: notes,
+          until_date: untilDate || null,
+        });
+      }
 
       setProducts(prev =>
         prev.map(p =>
@@ -163,7 +222,13 @@ export default function LocalDisponibilidad() {
     }
   };
 
-  const toggleModifierAvailability = async (modifierId: string, currentValue: boolean) => {
+  const executeModifierToggle = async (
+    modifierId: string,
+    currentValue: boolean,
+    reason: string | null,
+    notes: string | null,
+    untilDate: string | null
+  ) => {
     setUpdating(modifierId);
     try {
       const { error } = await supabase
@@ -172,6 +237,20 @@ export default function LocalDisponibilidad() {
         .eq('id', modifierId);
 
       if (error) throw error;
+
+      // Log availability change
+      if (reason) {
+        const modifier = modifierOptions.find(m => m.id === modifierId);
+        await supabase.from('availability_logs').insert({
+          branch_id: branchId,
+          item_type: 'modifier',
+          item_id: modifier?.modifier_option_id,
+          new_state: !currentValue,
+          reason: reason,
+          notes: notes,
+          until_date: untilDate || null,
+        });
+      }
 
       setModifierOptions(prev =>
         prev.map(m =>
@@ -187,6 +266,37 @@ export default function LocalDisponibilidad() {
       setUpdating(null);
     }
   };
+
+  const handleConfirmAvailability = () => {
+    if (!availabilityDialog || !availabilityReason) {
+      toast.error('Seleccioná un motivo');
+      return;
+    }
+
+    if (availabilityDialog.type === 'product') {
+      executeProductToggle(
+        availabilityDialog.itemId,
+        availabilityDialog.currentValue,
+        availabilityReason,
+        availabilityNotes || null,
+        availabilityUntil || null
+      );
+    } else {
+      executeModifierToggle(
+        availabilityDialog.itemId,
+        availabilityDialog.currentValue,
+        availabilityReason,
+        availabilityNotes || null,
+        availabilityUntil || null
+      );
+    }
+
+    setAvailabilityDialog(null);
+    setAvailabilityReason('');
+    setAvailabilityNotes('');
+    setAvailabilityUntil('');
+  };
+
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories(prev => {
@@ -354,7 +464,7 @@ export default function LocalDisponibilidad() {
                             )}
                             <Switch
                               checked={item.is_available}
-                              onCheckedChange={() => toggleProductAvailability(item.id, item.is_available)}
+                              onCheckedChange={() => handleAvailabilityToggle('product', item.id, item.is_available, item.product.name)}
                               disabled={updating === item.id}
                             />
                           </div>
@@ -445,7 +555,7 @@ export default function LocalDisponibilidad() {
                             )}
                             <Switch
                               checked={item.is_available}
-                              onCheckedChange={() => toggleModifierAvailability(item.id, item.is_available)}
+                              onCheckedChange={() => handleAvailabilityToggle('modifier', item.id, item.is_available, item.option.name)}
                               disabled={updating === item.id}
                             />
                           </div>
