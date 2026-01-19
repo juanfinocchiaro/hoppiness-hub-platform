@@ -29,6 +29,7 @@ import LocalTransactions from "./pages/local/LocalTransactions";
 import LocalCaja from "./pages/local/LocalCaja";
 import LocalSuppliers from "./pages/local/LocalSuppliers";
 import LocalRRHH from "./pages/local/LocalRRHH";
+import LocalPagos from "./pages/local/LocalPagos";
 import LocalPL from "./pages/local/LocalPL";
 import LocalConfig from "./pages/local/LocalConfig";
 import LocalDeliveryZones from "./pages/local/LocalDeliveryZones";
@@ -96,9 +97,11 @@ const App = () => (
               {/* Finanzas */}
               <Route path="transacciones" element={<LocalTransactions />} />
               <Route path="caja" element={<LocalCaja />} />
+              <Route path="pagos" element={<LocalPagos />} />
               <Route path="proveedores" element={<LocalSuppliers />} />
-              <Route path="rrhh" element={<LocalRRHH />} />
               <Route path="estado-resultados" element={<LocalPL />} />
+              {/* RRHH */}
+              <Route path="rrhh" element={<LocalRRHH />} />
               {/* Configuración */}
               <Route path="config" element={<LocalConfig />} />
               <Route path="zonas-delivery" element={<LocalDeliveryZones />} />

@@ -35,6 +35,7 @@ import {
   Users,
   Truck,
   ClipboardList,
+  DollarSign,
   History,
   QrCode,
   ToggleLeft,
@@ -188,9 +189,18 @@ export default function LocalLayout() {
       items: [
         { to: 'transacciones', label: 'Movimientos', icon: Receipt, show: true },
         { to: 'caja', label: 'Caja', icon: Calculator, show: true },
+        { to: 'pagos', label: 'Pagos', icon: DollarSign, show: true },
         { to: 'proveedores', label: 'Proveedores', icon: Truck, show: true },
-        { to: 'rrhh', label: 'RRHH', icon: Users, show: true },
         { to: 'estado-resultados', label: 'Reporte P&L', icon: FileText, show: canViewPL },
+      ]
+    },
+    {
+      id: 'rrhh',
+      label: 'RRHH',
+      icon: Users,
+      show: canManageConfig,
+      items: [
+        { to: 'rrhh', label: 'Personal', icon: Users, show: true },
       ]
     },
     {
