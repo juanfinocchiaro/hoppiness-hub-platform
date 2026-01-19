@@ -11,13 +11,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { 
   Calculator, Clock, DollarSign, ArrowUpRight, ArrowDownRight, 
   Plus, Settings, CreditCard, Banknote, Play, Square, History,
-  Wallet, TrendingUp, TrendingDown, RefreshCw, Trash2, Edit2
+  Wallet, TrendingUp, TrendingDown, RefreshCw, Trash2, Edit2, Ban
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -79,7 +81,10 @@ interface PaymentMethod {
 export default function LocalCaja() {
   const { branch } = useOutletContext<LocalContext>();
   const { user } = useAuth();
+  const { isAdmin, isGerente } = useUserRole();
   const { toast } = useToast();
+  
+  const canVoidMovements = isAdmin || isGerente;
 
   const [registers, setRegisters] = useState<CashRegister[]>([]);
   const [shifts, setShifts] = useState<Record<string, CashRegisterShift | null>>({});
@@ -258,7 +263,7 @@ export default function LocalCaja() {
     if (!user || !currentShift) return;
     
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('cash_register_movements')
         .insert({
           shift_id: currentShift.id,
@@ -268,16 +273,51 @@ export default function LocalCaja() {
           amount: parseFloat(movementAmount) || 0,
           concept: movementConcept,
           recorded_by: user.id
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Update state locally without refetching
+      if (data) {
+        setMovements(prev => ({
+          ...prev,
+          [selectedTab]: [data as CashRegisterMovement, ...(prev[selectedTab] || [])]
+        }));
+      }
 
       toast({ title: 'Movimiento registrado' });
       setMovementDialog(false);
       setMovementAmount('');
       setMovementConcept('');
       setMovementPaymentMethod('');
-      fetchData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const handleVoidMovement = async (movementId: string, registerId: string) => {
+    if (!canVoidMovements) {
+      toast({ title: 'Sin permisos', description: 'No tenés permisos para anular movimientos', variant: 'destructive' });
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('cash_register_movements')
+        .delete()
+        .eq('id', movementId);
+
+      if (error) throw error;
+
+      // Update state locally
+      setMovements(prev => ({
+        ...prev,
+        [registerId]: (prev[registerId] || []).filter(m => m.id !== movementId)
+      }));
+
+      toast({ title: 'Movimiento anulado', description: 'El movimiento fue eliminado correctamente' });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
@@ -835,7 +875,7 @@ export default function LocalCaja() {
                               {registerMovements.slice(0, 5).map((mov) => (
                                 <div 
                                   key={mov.id} 
-                                  className="flex items-center justify-between p-2 bg-muted/30 rounded-lg text-sm"
+                                  className="flex items-center justify-between p-2 bg-muted/30 rounded-lg text-sm group"
                                 >
                                   <div className="flex items-center gap-2">
                                     {mov.type === 'income' || mov.type === 'deposit' ? (
@@ -848,14 +888,46 @@ export default function LocalCaja() {
                                       {format(new Date(mov.created_at), 'HH:mm')}
                                     </span>
                                   </div>
-                                  <span className={`font-semibold ${
-                                    mov.type === 'income' || mov.type === 'deposit' 
-                                      ? 'text-green-600' 
-                                      : 'text-red-600'
-                                  }`}>
-                                    {mov.type === 'income' || mov.type === 'deposit' ? '+' : '-'}
-                                    {formatCurrency(mov.amount)}
-                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`font-semibold ${
+                                      mov.type === 'income' || mov.type === 'deposit' 
+                                        ? 'text-green-600' 
+                                        : 'text-red-600'
+                                    }`}>
+                                      {mov.type === 'income' || mov.type === 'deposit' ? '+' : '-'}
+                                      {formatCurrency(mov.amount)}
+                                    </span>
+                                    {canVoidMovements && (
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                          >
+                                            <Ban className="h-3 w-3 text-destructive" />
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>¿Anular movimiento?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                              Vas a eliminar el movimiento "{mov.concept}" por {formatCurrency(mov.amount)}. Esta acción no se puede deshacer.
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                            <AlertDialogAction 
+                                              onClick={() => handleVoidMovement(mov.id, register.id)}
+                                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                            >
+                                              Anular
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    )}
+                                  </div>
                                 </div>
                               ))}
                               {registerMovements.length > 5 && (
@@ -890,7 +962,7 @@ export default function LocalCaja() {
                                   {registerMovements.map((mov) => (
                                     <div 
                                       key={mov.id} 
-                                      className="flex items-center justify-between p-3 border rounded-lg"
+                                      className="flex items-center justify-between p-3 border rounded-lg group"
                                     >
                                       <div className="flex items-center gap-3">
                                         {mov.type === 'income' || mov.type === 'deposit' ? (
@@ -909,14 +981,46 @@ export default function LocalCaja() {
                                           </p>
                                         </div>
                                       </div>
-                                      <span className={`font-bold ${
-                                        mov.type === 'income' || mov.type === 'deposit' 
-                                          ? 'text-green-600' 
-                                          : 'text-red-600'
-                                      }`}>
-                                        {mov.type === 'income' || mov.type === 'deposit' ? '+' : '-'}
-                                        {formatCurrency(mov.amount)}
-                                      </span>
+                                      <div className="flex items-center gap-3">
+                                        <span className={`font-bold ${
+                                          mov.type === 'income' || mov.type === 'deposit' 
+                                            ? 'text-green-600' 
+                                            : 'text-red-600'
+                                        }`}>
+                                          {mov.type === 'income' || mov.type === 'deposit' ? '+' : '-'}
+                                          {formatCurrency(mov.amount)}
+                                        </span>
+                                        {canVoidMovements && (
+                                          <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                              <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className="h-8 w-8 opacity-50 hover:opacity-100 transition-opacity"
+                                              >
+                                                <Ban className="h-4 w-4 text-destructive" />
+                                              </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                              <AlertDialogHeader>
+                                                <AlertDialogTitle>¿Anular movimiento?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                  Vas a eliminar el movimiento "{mov.concept}" por {formatCurrency(mov.amount)}. Esta acción no se puede deshacer.
+                                                </AlertDialogDescription>
+                                              </AlertDialogHeader>
+                                              <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction 
+                                                  onClick={() => handleVoidMovement(mov.id, register.id)}
+                                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                >
+                                                  Anular
+                                                </AlertDialogAction>
+                                              </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                          </AlertDialog>
+                                        )}
+                                      </div>
                                     </div>
                                   ))}
                                 </div>
