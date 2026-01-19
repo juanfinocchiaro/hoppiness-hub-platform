@@ -536,26 +536,26 @@ export function ProductInlineEditor({
             <p className="text-xs mt-1">Agregá ingredientes para calcular el costo</p>
           </div>
         )}
-      </div>
 
-      {/* FOOTER: Actions */}
-      <div className="flex items-center justify-end gap-3 p-4 border-t bg-muted/10">
-        <Button variant="outline" onClick={onClose} disabled={saving}>
-          Cancelar
-        </Button>
-        <Button onClick={handleSubmit} disabled={saving}>
-          {saving ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Guardando...
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4 mr-2" />
-              Guardar Cambios
-            </>
-          )}
-        </Button>
+        {/* Actions - dentro de la sección de receta */}
+        <div className="flex items-center justify-end gap-3 pt-4 mt-4 border-t">
+          <Button variant="outline" onClick={onClose} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSubmit} disabled={saving}>
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Guardar Cambios
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );
