@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Store, Package, Plus, MapPin, Clock, Settings, Truck, ShoppingBag, Users, Bike } from 'lucide-react';
+import { Store, Package, Plus, MapPin, Clock, Settings, Truck, ShoppingBag, Users, Bike, DollarSign, Utensils, Receipt } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
@@ -13,6 +13,13 @@ type Branch = Tables<'branches'>;
 interface Stats {
   products: number;
   categories: number;
+}
+
+interface MonthlyStats {
+  totalRevenue: number;
+  totalItems: number;
+  orderCount: number;
+  averageTicket: number;
 }
 
 type SalesChannel = {
@@ -33,15 +40,36 @@ const salesChannels: SalesChannel[] = [
 
 export default function AdminHome() {
   const [stats, setStats] = useState<Stats>({ products: 0, categories: 0 });
+  const [monthlyStats, setMonthlyStats] = useState<MonthlyStats>({
+    totalRevenue: 0,
+    totalItems: 0,
+    orderCount: 0,
+    averageTicket: 0,
+  });
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
-      const [productsRes, categoriesRes, branchesRes] = await Promise.all([
+      // Get first day of current month
+      const now = new Date();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+      const [productsRes, categoriesRes, branchesRes, ordersRes, orderItemsRes] = await Promise.all([
         supabase.from('products').select('id', { count: 'exact', head: true }),
         supabase.from('product_categories').select('id', { count: 'exact', head: true }),
         supabase.from('branches').select('*').order('name'),
+        // Get monthly orders (delivered only for accurate revenue)
+        supabase
+          .from('orders')
+          .select('id, total')
+          .gte('created_at', firstDayOfMonth)
+          .in('status', ['delivered', 'ready', 'preparing', 'confirmed']),
+        // Get total items sold this month
+        supabase
+          .from('order_items')
+          .select('quantity, order_id')
+          .gte('created_at', firstDayOfMonth),
       ]);
 
       setStats({
@@ -49,10 +77,31 @@ export default function AdminHome() {
         categories: categoriesRes.count || 0,
       });
       setBranches(branchesRes.data || []);
+
+      // Calculate monthly stats
+      const orders = ordersRes.data || [];
+      const orderIds = new Set(orders.map(o => o.id));
+      const items = (orderItemsRes.data || []).filter(item => orderIds.has(item.order_id));
+      
+      const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+      const totalItems = items.reduce((sum, i) => sum + (i.quantity || 0), 0);
+      const orderCount = orders.length;
+      const averageTicket = orderCount > 0 ? totalRevenue / orderCount : 0;
+
+      setMonthlyStats({
+        totalRevenue,
+        totalItems,
+        orderCount,
+        averageTicket,
+      });
+
       setLoading(false);
     }
     fetchData();
   }, []);
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(value);
 
   // Determina si una sucursal está "abierta" basándose en si tiene algún canal activo
   const isBranchOperational = (branch: Branch): boolean => {
@@ -72,7 +121,7 @@ export default function AdminHome() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Link to="/admin/productos">
           <Card className="hover:shadow-elevated transition-shadow cursor-pointer">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -109,6 +158,66 @@ export default function AdminHome() {
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {branches.filter(b => isBranchOperational(b)).length} operativas ahora
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Facturación Mensual */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Facturación Mensual
+            </CardTitle>
+            <div className="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center">
+              <DollarSign className="w-5 h-5 text-white" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {loading ? <Skeleton className="h-9 w-24" /> : formatCurrency(monthlyStats.totalRevenue)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {monthlyStats.orderCount} pedidos este mes
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Hamburguesas Vendidas */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Hamburguesas Vendidas
+            </CardTitle>
+            <div className="w-10 h-10 rounded-lg bg-orange-500 flex items-center justify-center">
+              <Utensils className="w-5 h-5 text-white" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">
+              {loading ? <Skeleton className="h-9 w-16" /> : monthlyStats.totalItems.toLocaleString('es-AR')}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              unidades este mes
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Ticket Promedio */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Ticket Promedio
+            </CardTitle>
+            <div className="w-10 h-10 rounded-lg bg-violet-500 flex items-center justify-center">
+              <Receipt className="w-5 h-5 text-white" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {loading ? <Skeleton className="h-9 w-20" /> : formatCurrency(monthlyStats.averageTicket)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              por pedido este mes
             </p>
           </CardContent>
         </Card>
