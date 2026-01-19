@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link, Outlet, useNavigate, useLocation, useParams } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
@@ -113,6 +114,32 @@ export default function LocalLayout() {
       navigate(`/local/${accessibleBranches[0].id}`);
     }
   }, [branchId, accessibleBranches, isAdmin, navigate]);
+
+  // Realtime subscription for branch status updates
+  useEffect(() => {
+    if (!branchId) return;
+
+    const channel = supabase
+      .channel(`branch-status-${branchId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'branches',
+          filter: `id=eq.${branchId}`,
+        },
+        (payload) => {
+          const updated = payload.new as Branch;
+          setSelectedBranch(prev => prev ? { ...prev, ...updated } : updated);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [branchId]);
 
   // Reset POS view when changing branch
   useEffect(() => {
