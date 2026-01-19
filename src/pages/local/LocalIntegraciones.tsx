@@ -18,7 +18,8 @@ import {
   RefreshCw,
   CreditCard,
   Truck,
-  Bike
+  Bike,
+  FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
@@ -87,6 +88,19 @@ const INTEGRATIONS: IntegrationConfig[] = [
     fields: [
       { key: 'pedidosya_restaurant_id', label: 'Restaurant ID', type: 'text', placeholder: 'ID de restaurante', required: true },
       { key: 'pedidosya_api_key', label: 'API Key', type: 'password', placeholder: 'Tu API Key de PedidosYa', required: true },
+    ],
+  },
+  {
+    key: 'facturante',
+    name: 'Facturante',
+    description: 'Facturación electrónica AFIP - Facturas A, B y C',
+    icon: <FileText className="h-6 w-6 text-blue-600" />,
+    docsUrl: 'https://www.facturante.com/api-factura-electronica.html',
+    enabledKey: 'facturante_enabled',
+    fields: [
+      { key: 'facturante_cuit', label: 'CUIT Emisor', type: 'text', placeholder: '20-12345678-9', required: true },
+      { key: 'facturante_api_key', label: 'API Key', type: 'password', placeholder: 'Tu API Key de Facturante', required: true },
+      { key: 'facturante_punto_venta', label: 'Punto de Venta AFIP', type: 'text', placeholder: '1', required: true },
     ],
   },
 ];
@@ -221,7 +235,7 @@ export default function LocalIntegraciones() {
       )}
 
       <Tabs defaultValue="mercadopago" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-5">
           {INTEGRATIONS.map(integration => (
             <TabsTrigger key={integration.key} value={integration.key} className="gap-2">
               {integration.icon}

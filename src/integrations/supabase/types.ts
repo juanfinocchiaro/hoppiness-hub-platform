@@ -611,6 +611,10 @@ export type Database = {
           email: string | null
           enforce_labor_law: boolean
           estimated_prep_time_min: number | null
+          facturante_api_key: string | null
+          facturante_cuit: string | null
+          facturante_enabled: boolean | null
+          facturante_punto_venta: number | null
           id: string
           invoice_provider: string | null
           is_active: boolean
@@ -650,6 +654,10 @@ export type Database = {
           email?: string | null
           enforce_labor_law?: boolean
           estimated_prep_time_min?: number | null
+          facturante_api_key?: string | null
+          facturante_cuit?: string | null
+          facturante_enabled?: boolean | null
+          facturante_punto_venta?: number | null
           id?: string
           invoice_provider?: string | null
           is_active?: boolean
@@ -689,6 +697,10 @@ export type Database = {
           email?: string | null
           enforce_labor_law?: boolean
           estimated_prep_time_min?: number | null
+          facturante_api_key?: string | null
+          facturante_cuit?: string | null
+          facturante_enabled?: boolean | null
+          facturante_punto_venta?: number | null
           id?: string
           invoice_provider?: string | null
           is_active?: boolean
