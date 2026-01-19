@@ -14,14 +14,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -41,7 +33,10 @@ import {
   Star,
   Zap,
   Gift,
-  ChevronRight
+  ChevronRight,
+  X,
+  Banknote,
+  CreditCard
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables, Enums } from '@/integrations/supabase/types';
@@ -51,6 +46,7 @@ import heroBurger from '@/assets/hero-burger.jpg';
 type Branch = Tables<'branches'>;
 type Product = Tables<'products'>;
 type Category = Tables<'product_categories'>;
+type PaymentMethod = Enums<'payment_method'>;
 
 interface ProductWithPrice extends Product {
   finalPrice: number;
@@ -106,6 +102,10 @@ export default function PedirBranch() {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Payment
+  const [paymentMethod, setPaymentMethod] = useState<'efectivo' | 'mercadopago'>('efectivo');
+  const [cashAmount, setCashAmount] = useState('');
 
   useEffect(() => {
     const savedAddress = sessionStorage.getItem('orderAddress');
@@ -263,6 +263,10 @@ export default function PedirBranch() {
   const formatPrice = (price: number) => 
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(price);
 
+  const currentExtrasTotal = selectedExtras.reduce((sum, id) => 
+    sum + (UPSELL_OPTIONS.find(o => o.id === id)?.price || 0), 0
+  );
+
   const handleCheckout = async () => {
     if (!branch || cart.length === 0) return;
     if (!customerName.trim() || !customerPhone.trim()) {
@@ -272,6 +276,13 @@ export default function PedirBranch() {
     if (orderType === 'delivery' && !deliveryAddress.trim()) {
       toast.error('Dirección de entrega es requerida');
       return;
+    }
+
+    // For MercadoPago, we'd redirect to payment gateway
+    // For now, we just create the order
+    if (paymentMethod === 'mercadopago') {
+      toast.info('Integración con MercadoPago próximamente');
+      // In production: create preference and redirect
     }
 
     setIsProcessing(true);
@@ -289,9 +300,11 @@ export default function PedirBranch() {
           delivery_fee: deliveryFee,
           total,
           status: 'pending',
-          notes: notes || null,
+          notes: paymentMethod === 'efectivo' && cashAmount ? 
+            `${notes || ''} | Paga con: $${cashAmount}`.trim() : notes || null,
           sales_channel: 'web_app',
           order_area: orderType === 'delivery' ? 'delivery' : 'mostrador',
+          payment_method: paymentMethod as PaymentMethod,
         })
         .select()
         .single();
@@ -327,10 +340,10 @@ export default function PedirBranch() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="h-64 bg-muted animate-pulse" />
+        <div className="h-48 bg-muted animate-pulse" />
         <div className="container mx-auto px-4 py-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32" />)}
+            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-28" />)}
           </div>
         </div>
       </div>
@@ -341,8 +354,8 @@ export default function PedirBranch() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      {/* Hero Header */}
-      <div className="relative h-64 md:h-80 overflow-hidden">
+      {/* Compact Header */}
+      <div className="relative h-48 md:h-56 overflow-hidden">
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${heroBurger})` }}
@@ -351,64 +364,64 @@ export default function PedirBranch() {
         
         {/* Top Bar */}
         <div className="absolute top-0 left-0 right-0 z-20">
-          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="container mx-auto px-4 py-3 flex items-center justify-between">
             <Link to="/pedir">
-              <Button variant="ghost" size="icon" className="text-white hover:bg-white/20">
+              <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-9 w-9">
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             </Link>
-            <img src={logoHoppiness} alt="Hoppiness" className="h-10 w-10" />
-            <div className="w-10" />
+            <img src={logoHoppiness} alt="Hoppiness" className="h-8 w-8" />
+            <div className="w-9" />
           </div>
         </div>
 
-        {/* Branch Info */}
+        {/* Branch Info - Compact */}
         <div className="absolute bottom-0 left-0 right-0 z-10">
-          <div className="container mx-auto px-4 pb-6">
-            <div className="flex items-center gap-2 mb-2">
-              <Badge className="bg-primary/90 text-primary-foreground">
+          <div className="container mx-auto px-4 pb-4">
+            <div className="flex items-center gap-2 text-xs mb-1">
+              <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs py-0">
                 <MapPin className="w-3 h-3 mr-1" />
-                {userAddress || 'Tu ubicación'}
+                {userAddress ? userAddress.substring(0, 25) + '...' : 'Tu ubicación'}
               </Badge>
+              {branch.is_open ? (
+                <Badge className="bg-green-500/90 text-white text-xs py-0">Abierto</Badge>
+              ) : (
+                <Badge variant="destructive" className="text-xs py-0">Cerrado</Badge>
+              )}
             </div>
-            <h1 className="text-3xl md:text-4xl font-black text-white font-brand">
+            <h1 className="text-2xl md:text-3xl font-black text-white font-brand">
               Hoppiness {branch.name}
             </h1>
-            <div className="flex items-center gap-4 mt-2 text-white/80 text-sm">
+            <div className="flex items-center gap-3 mt-1 text-white/80 text-xs">
               <span className="flex items-center gap-1">
-                <Zap className="w-4 h-4" />
+                <Zap className="w-3 h-3" />
                 ~{branch.estimated_prep_time_min || 25} min
               </span>
-              {branch.is_open ? (
-                <Badge className="bg-green-500 text-white">Abierto</Badge>
-              ) : (
-                <Badge variant="destructive">Cerrado</Badge>
-              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Order Type Toggle */}
-      <div className="sticky top-0 z-30 bg-background border-b shadow-sm">
-        <div className="container mx-auto px-4 py-3">
+      {/* Order Type Toggle - More Compact */}
+      <div className="sticky top-0 z-30 bg-background border-b">
+        <div className="container mx-auto px-4 py-2">
           <div className="flex gap-2">
             <Button
-              variant={orderType === 'delivery' ? 'default' : 'outline'}
+              variant={orderType === 'delivery' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setOrderType('delivery')}
-              className={orderType === 'delivery' ? 'bg-primary' : ''}
+              className="h-8 text-xs"
             >
-              <Truck className="w-4 h-4 mr-2" />
+              <Truck className="w-3 h-3 mr-1" />
               Delivery
             </Button>
             <Button
-              variant={orderType === 'takeaway' ? 'default' : 'outline'}
+              variant={orderType === 'takeaway' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setOrderType('takeaway')}
-              className={orderType === 'takeaway' ? 'bg-primary' : ''}
+              className="h-8 text-xs"
             >
-              <ShoppingBag className="w-4 h-4 mr-2" />
+              <ShoppingBag className="w-3 h-3 mr-1" />
               Pick-up
             </Button>
           </div>
@@ -417,20 +430,20 @@ export default function PedirBranch() {
 
       {/* Category Navigation */}
       {categories.length > 0 && (
-        <div className="sticky top-[60px] z-20 bg-background border-b">
+        <div className="sticky top-[48px] z-20 bg-background border-b">
           <div className="container mx-auto px-4">
-            <div className="flex gap-2 overflow-x-auto py-3 scrollbar-hide">
+            <div className="flex gap-2 overflow-x-auto py-2 scrollbar-hide">
               {featuredProducts.length > 0 && (
                 <Button
                   variant={activeCategory === 'featured' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => {
                     setActiveCategory('featured');
-                    window.scrollTo({ top: 400, behavior: 'smooth' });
+                    window.scrollTo({ top: 300, behavior: 'smooth' });
                   }}
-                  className="shrink-0"
+                  className="shrink-0 h-7 text-xs"
                 >
-                  <Star className="w-4 h-4 mr-1" />
+                  <Star className="w-3 h-3 mr-1" />
                   Best Sellers
                 </Button>
               )}
@@ -440,7 +453,7 @@ export default function PedirBranch() {
                   variant={activeCategory === cat.id ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => scrollToCategory(cat.id)}
-                  className="shrink-0"
+                  className="shrink-0 h-7 text-xs"
                 >
                   {cat.name}
                 </Button>
@@ -451,41 +464,41 @@ export default function PedirBranch() {
       )}
 
       {/* Loyalty Banner */}
-      <div className="container mx-auto px-4 py-4">
+      <div className="container mx-auto px-4 py-3">
         <Card className="bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-red-500/20 border-amber-500/30">
-          <CardContent className="p-4">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center">
-                  <Gift className="w-5 h-5 text-white" />
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center">
+                  <Gift className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <p className="font-bold text-sm">Club Hoppiness 🍺 Gold</p>
-                  <p className="text-xs text-muted-foreground">
-                    {LOYALTY_POINTS} puntos • Te faltan {POINTS_FOR_FREE_BURGER - LOYALTY_POINTS} para tu burger gratis
+                  <p className="font-bold text-xs">Club Hoppiness 🍺 Gold</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {LOYALTY_POINTS} pts • Faltan {POINTS_FOR_FREE_BURGER - LOYALTY_POINTS} para burger gratis
                   </p>
                 </div>
               </div>
-              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </div>
             <Progress 
               value={(LOYALTY_POINTS / POINTS_FOR_FREE_BURGER) * 100} 
-              className="mt-3 h-2"
+              className="mt-2 h-1.5"
             />
           </CardContent>
         </Card>
       </div>
 
       {/* Products by Category */}
-      <div className="container mx-auto px-4 space-y-8 pb-8">
+      <div className="container mx-auto px-4 space-y-6 pb-8">
         {/* Best Sellers */}
         {featuredProducts.length > 0 && (
           <section>
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
+            <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
+              <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
               Best Sellers
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {featuredProducts.map(product => (
                 <ProductCard 
                   key={product.id} 
@@ -509,8 +522,8 @@ export default function PedirBranch() {
               key={category.id}
               ref={(el) => { if (el) categoryRefs.current.set(category.id, el); }}
             >
-              <h2 className="text-xl font-bold mb-4">{category.name}</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <h2 className="text-lg font-bold mb-3">{category.name}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {categoryProducts.map(product => (
                   <ProductCard 
                     key={product.id} 
@@ -545,35 +558,60 @@ export default function PedirBranch() {
         </div>
       )}
 
-      {/* Product Customization Dialog */}
-      <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-xl">{selectedProduct?.name}</DialogTitle>
-            <DialogDescription>{selectedProduct?.description}</DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            {/* Product Image */}
-            <div className="aspect-video rounded-lg bg-muted overflow-hidden">
-              {selectedProduct?.image_url ? (
-                <img 
-                  src={selectedProduct.image_url} 
-                  alt={selectedProduct.name} 
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-6xl">🍔</div>
+      {/* Product Customization Sheet - Immersive Full Screen */}
+      <Sheet open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
+        <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl p-0 flex flex-col">
+          {/* Full-Width Image Header */}
+          <div className="relative aspect-[16/9] w-full shrink-0">
+            {selectedProduct?.image_url ? (
+              <img 
+                src={selectedProduct.image_url} 
+                alt={selectedProduct.name} 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+                <span className="text-8xl">🍔</span>
+              </div>
+            )}
+            {/* Gradient overlay for close button visibility */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent" />
+            
+            {/* Close Button */}
+            <Button 
+              variant="ghost" 
+              size="icon"
+              className="absolute top-4 right-4 bg-black/30 hover:bg-black/50 text-white rounded-full h-10 w-10"
+              onClick={() => setSelectedProduct(null)}
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+            {/* Title and Price */}
+            <div>
+              <h2 className="text-2xl font-bold">{selectedProduct?.name}</h2>
+              <p className="text-xl font-bold text-primary mt-1">
+                {formatPrice(selectedProduct?.finalPrice || 0)}
+              </p>
+              {selectedProduct?.description && (
+                <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
+                  {selectedProduct.description}
+                </p>
               )}
             </div>
 
             {/* Upsell Options */}
             <div className="space-y-3">
-              <h4 className="font-bold text-sm">¿Querés hacerla más épica?</h4>
+              <h4 className="font-bold">¿Querés hacerla más épica?</h4>
               {UPSELL_OPTIONS.map(option => (
                 <div 
                   key={option.id}
-                  className="flex items-center space-x-3 p-3 rounded-lg border cursor-pointer hover:bg-muted transition-colors"
+                  className={`flex items-center space-x-3 p-4 rounded-xl bg-muted/50 cursor-pointer hover:bg-muted transition-colors ${
+                    selectedExtras.includes(option.id) ? 'ring-2 ring-primary bg-primary/10' : ''
+                  }`}
                   onClick={() => {
                     setSelectedExtras(prev => 
                       prev.includes(option.id) 
@@ -585,8 +623,9 @@ export default function PedirBranch() {
                   <Checkbox 
                     checked={selectedExtras.includes(option.id)}
                     onCheckedChange={() => {}}
+                    className="h-5 w-5"
                   />
-                  <span className="text-xl">{option.emoji}</span>
+                  <span className="text-2xl">{option.emoji}</span>
                   <span className="flex-1 font-medium">{option.label}</span>
                   <span className="text-sm text-primary font-bold">+{formatPrice(option.price)}</span>
                 </div>
@@ -594,33 +633,31 @@ export default function PedirBranch() {
             </div>
 
             {/* Notes */}
-            <div>
-              <Label htmlFor="notes">¿Alguna indicación especial?</Label>
+            <div className="bg-muted/50 rounded-xl p-4">
+              <Label htmlFor="notes" className="font-bold">¿Alguna indicación especial?</Label>
               <Textarea
                 id="notes"
                 placeholder="Ej: Sin cebolla, punto de la carne..."
                 value={productNotes}
                 onChange={(e) => setProductNotes(e.target.value)}
-                className="mt-1"
+                className="mt-2 bg-background"
                 rows={2}
               />
             </div>
           </div>
 
-          <DialogFooter>
+          {/* Sticky Footer */}
+          <div className="shrink-0 p-4 border-t bg-background">
             <Button 
-              className="w-full h-12"
+              className="w-full h-14 text-lg"
               onClick={addToCartWithExtras}
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Agregar {formatPrice(
-                (selectedProduct?.finalPrice || 0) + 
-                selectedExtras.reduce((sum, id) => sum + (UPSELL_OPTIONS.find(o => o.id === id)?.price || 0), 0)
-              )}
+              <Plus className="w-5 h-5 mr-2" />
+              Agregar {formatPrice((selectedProduct?.finalPrice || 0) + currentExtrasTotal)}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Cart Sheet */}
       <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
@@ -636,11 +673,11 @@ export default function PedirBranch() {
           <div className="flex-1 overflow-y-auto py-4 space-y-3">
             {cart.map((item, index) => (
               <div key={index} className="flex items-center gap-3 bg-muted/50 rounded-lg p-3">
-                <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center overflow-hidden shrink-0">
                   {item.product.image_url ? (
                     <img src={item.product.image_url} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-2xl">🍔</span>
+                    <span className="text-xl">🍔</span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -655,15 +692,15 @@ export default function PedirBranch() {
                   </p>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(index, -1)}>
+                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(index, -1)}>
                     <Minus className="w-3 h-3" />
                   </Button>
-                  <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
-                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(index, 1)}>
+                  <span className="w-5 text-center text-sm font-medium">{item.quantity}</span>
+                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(index, 1)}>
                     <Plus className="w-3 h-3" />
                   </Button>
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeFromCart(index)}>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeFromCart(index)}>
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
@@ -699,15 +736,15 @@ export default function PedirBranch() {
         </SheetContent>
       </Sheet>
 
-      {/* Checkout Dialog */}
-      <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Completá tu pedido</DialogTitle>
-            <DialogDescription>Hoppiness {branch.name}</DialogDescription>
-          </DialogHeader>
+      {/* Checkout Sheet - Redesigned */}
+      <Sheet open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
+        <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl flex flex-col">
+          <SheetHeader className="pb-4">
+            <SheetTitle>Completá tu pedido</SheetTitle>
+            <SheetDescription>Hoppiness {branch.name}</SheetDescription>
+          </SheetHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="flex-1 overflow-y-auto space-y-4">
             {/* Order Type */}
             <div className="flex gap-2">
               <Button
@@ -730,90 +767,177 @@ export default function PedirBranch() {
               )}
             </div>
 
-            {/* Customer Info */}
-            <div className="space-y-3">
-              <div>
-                <Label htmlFor="name">Nombre *</Label>
-                <Input
-                  id="name"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Tu nombre"
-                />
-              </div>
-              <div>
-                <Label htmlFor="phone">Teléfono *</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  placeholder="3512345678"
-                />
-              </div>
-              <div>
-                <Label htmlFor="email">Email (opcional)</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={customerEmail}
-                  onChange={(e) => setCustomerEmail(e.target.value)}
-                  placeholder="tu@email.com"
-                />
-              </div>
-              {orderType === 'delivery' && (
-                <div>
-                  <Label htmlFor="address">Dirección de entrega *</Label>
-                  <Input
-                    id="address"
-                    value={deliveryAddress}
-                    onChange={(e) => setDeliveryAddress(e.target.value)}
-                    placeholder="Calle y número, barrio"
-                  />
+            {/* Customer Info Card */}
+            <Card className="shadow-sm">
+              <CardContent className="p-4 space-y-3">
+                <h3 className="font-bold text-sm flex items-center gap-2">
+                  📍 Datos de entrega
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="name" className="text-xs">Nombre *</Label>
+                    <Input
+                      id="name"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Tu nombre"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="phone" className="text-xs">Teléfono *</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      placeholder="3512345678"
+                      className="mt-1"
+                    />
+                  </div>
+                  {orderType === 'delivery' && (
+                    <div>
+                      <Label htmlFor="address" className="text-xs">Dirección de entrega *</Label>
+                      <Input
+                        id="address"
+                        value={deliveryAddress}
+                        onChange={(e) => setDeliveryAddress(e.target.value)}
+                        placeholder="Calle y número, barrio"
+                        className="mt-1"
+                      />
+                    </div>
+                  )}
                 </div>
-              )}
-              <div>
-                <Label htmlFor="orderNotes">Notas (opcional)</Label>
+              </CardContent>
+            </Card>
+
+            {/* Payment Method Card */}
+            <Card className="shadow-sm">
+              <CardContent className="p-4 space-y-3">
+                <h3 className="font-bold text-sm flex items-center gap-2">
+                  💳 ¿Cómo vas a pagar?
+                </h3>
+                <RadioGroup value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as 'efectivo' | 'mercadopago')}>
+                  <div 
+                    className={`flex items-center space-x-3 p-4 rounded-xl border cursor-pointer transition-colors ${
+                      paymentMethod === 'mercadopago' ? 'border-primary bg-primary/5' : 'border-muted hover:bg-muted/50'
+                    }`}
+                    onClick={() => setPaymentMethod('mercadopago')}
+                  >
+                    <RadioGroupItem value="mercadopago" id="mp" />
+                    <CreditCard className="w-5 h-5 text-blue-500" />
+                    <div className="flex-1">
+                      <Label htmlFor="mp" className="font-medium cursor-pointer">Mercado Pago</Label>
+                      <p className="text-xs text-muted-foreground">Tarjeta, QR o dinero en cuenta</p>
+                    </div>
+                    <img src="https://http2.mlstatic.com/frontend-assets/mp-web-navigation/ui-navigation/5.21.22/mercadopago/logo__small@2x.png" alt="MP" className="h-6" />
+                  </div>
+                  
+                  <div 
+                    className={`flex items-center space-x-3 p-4 rounded-xl border cursor-pointer transition-colors ${
+                      paymentMethod === 'efectivo' ? 'border-primary bg-primary/5' : 'border-muted hover:bg-muted/50'
+                    }`}
+                    onClick={() => setPaymentMethod('efectivo')}
+                  >
+                    <RadioGroupItem value="efectivo" id="cash" />
+                    <Banknote className="w-5 h-5 text-green-600" />
+                    <div className="flex-1">
+                      <Label htmlFor="cash" className="font-medium cursor-pointer">Efectivo</Label>
+                      <p className="text-xs text-muted-foreground">Pagás cuando recibís</p>
+                    </div>
+                  </div>
+                </RadioGroup>
+
+                {/* Cash Change Calculator */}
+                {paymentMethod === 'efectivo' && (
+                  <div className="bg-muted/50 rounded-xl p-4 mt-3">
+                    <Label htmlFor="cashAmount" className="text-xs">¿Con cuánto abonás?</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-muted-foreground">$</span>
+                      <Input
+                        id="cashAmount"
+                        type="number"
+                        value={cashAmount}
+                        onChange={(e) => setCashAmount(e.target.value)}
+                        placeholder={total.toString()}
+                        className="bg-background"
+                      />
+                    </div>
+                    {cashAmount && Number(cashAmount) >= total && (
+                      <p className="text-xs text-green-600 mt-2">
+                        Tu vuelto: {formatPrice(Number(cashAmount) - total)}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Notes */}
+            <Card className="shadow-sm">
+              <CardContent className="p-4">
+                <Label htmlFor="orderNotes" className="text-xs">Notas adicionales (opcional)</Label>
                 <Textarea
                   id="orderNotes"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Indicaciones especiales..."
+                  placeholder="Indicaciones especiales, timbre, piso..."
                   rows={2}
+                  className="mt-1"
                 />
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            {/* Summary */}
-            <div className="border-t pt-4 space-y-1 text-sm">
-              <div className="flex justify-between font-bold text-lg">
-                <span>Total a pagar</span>
-                <span className="text-primary">{formatPrice(total)}</span>
-              </div>
-            </div>
+            {/* Order Summary */}
+            <Card className="shadow-sm bg-muted/30">
+              <CardContent className="p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal ({cartCount} items)</span>
+                  <span>{formatPrice(subtotal)}</span>
+                </div>
+                {deliveryFee > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Costo de envío</span>
+                    <span>{formatPrice(deliveryFee)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-lg font-bold pt-2 border-t">
+                  <span>Total</span>
+                  <span className="text-primary">{formatPrice(total)}</span>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          <DialogFooter>
+          {/* Sticky Footer CTA */}
+          <div className="shrink-0 pt-4 border-t">
             <Button 
-              className="w-full h-12"
+              className="w-full h-14 text-lg"
               onClick={handleCheckout}
               disabled={isProcessing}
             >
               {isProcessing ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              ) : paymentMethod === 'mercadopago' ? (
+                <>
+                  <CreditCard className="w-5 h-5 mr-2" />
+                  Pagar con Mercado Pago
+                </>
               ) : (
-                <ShoppingCart className="w-4 h-4 mr-2" />
+                <>
+                  <ShoppingCart className="w-5 h-5 mr-2" />
+                  Confirmar Pedido
+                </>
               )}
-              Confirmar Pedido
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
 
-// Product Card Component
+// Product Card Component - Cleaner Design
 interface ProductCardProps {
   product: ProductWithPrice;
   onAdd: () => void;
@@ -824,7 +948,7 @@ interface ProductCardProps {
 function ProductCard({ product, onAdd, cartQuantity, formatPrice }: ProductCardProps) {
   return (
     <Card 
-      className={`overflow-hidden cursor-pointer hover:shadow-lg transition-all ${
+      className={`overflow-hidden cursor-pointer hover:shadow-md transition-all group ${
         cartQuantity > 0 ? 'ring-2 ring-primary' : ''
       }`}
       onClick={onAdd}
@@ -832,37 +956,38 @@ function ProductCard({ product, onAdd, cartQuantity, formatPrice }: ProductCardP
       <CardContent className="p-0">
         <div className="flex">
           {/* Text Content */}
-          <div className="flex-1 p-4">
-            <div className="flex items-start justify-between mb-1">
-              <h3 className="font-bold text-base line-clamp-2">{product.name}</h3>
+          <div className="flex-1 p-3">
+            <div className="flex items-start justify-between mb-0.5">
+              <h3 className="font-bold text-sm line-clamp-2">{product.name}</h3>
               {product.is_featured && (
-                <Badge variant="secondary" className="shrink-0 ml-2">
-                  <Star className="w-3 h-3 mr-1 fill-current" />
+                <Badge variant="secondary" className="shrink-0 ml-2 text-[10px] py-0 px-1">
+                  <Star className="w-2.5 h-2.5 mr-0.5 fill-current" />
                   Top
                 </Badge>
               )}
             </div>
             {product.description && (
-              <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+              <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
                 {product.description}
               </p>
             )}
             <div className="flex items-center justify-between mt-auto">
-              <span className="text-lg font-bold text-primary">
+              <span className="text-base font-bold text-primary">
                 {formatPrice(product.finalPrice)}
               </span>
               <Button 
+                variant={cartQuantity > 0 ? "default" : "outline"}
                 size="sm" 
-                className="rounded-full w-8 h-8 p-0"
+                className="rounded-full h-7 w-7 p-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
                 onClick={(e) => { e.stopPropagation(); onAdd(); }}
               >
-                {cartQuantity > 0 ? cartQuantity : <Plus className="w-4 h-4" />}
+                {cartQuantity > 0 ? cartQuantity : <Plus className="w-3.5 h-3.5" />}
               </Button>
             </div>
           </div>
           
           {/* Image */}
-          <div className="w-28 h-28 md:w-32 md:h-32 shrink-0 bg-muted overflow-hidden">
+          <div className="w-24 h-24 md:w-28 md:h-28 shrink-0 bg-muted overflow-hidden rounded-lg m-2">
             {product.image_url ? (
               <img 
                 src={product.image_url} 
@@ -870,7 +995,7 @@ function ProductCard({ product, onAdd, cartQuantity, formatPrice }: ProductCardP
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-4xl bg-muted">
+              <div className="w-full h-full flex items-center justify-center text-3xl bg-gradient-to-br from-amber-100 to-orange-100">
                 🍔
               </div>
             )}
