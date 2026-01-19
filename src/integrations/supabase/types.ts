@@ -1178,6 +1178,8 @@ export type Database = {
           branch_id: string
           caller_number: number | null
           created_at: string
+          customer_business_name: string | null
+          customer_cuit: string | null
           customer_email: string | null
           customer_name: string
           customer_phone: string
@@ -1186,6 +1188,7 @@ export type Database = {
           estimated_time: string | null
           external_order_id: string | null
           id: string
+          invoice_type: string
           notes: string | null
           order_area: Database["public"]["Enums"]["order_area"] | null
           order_type: Database["public"]["Enums"]["order_type"]
@@ -1202,6 +1205,8 @@ export type Database = {
           branch_id: string
           caller_number?: number | null
           created_at?: string
+          customer_business_name?: string | null
+          customer_cuit?: string | null
           customer_email?: string | null
           customer_name: string
           customer_phone: string
@@ -1210,6 +1215,7 @@ export type Database = {
           estimated_time?: string | null
           external_order_id?: string | null
           id?: string
+          invoice_type?: string
           notes?: string | null
           order_area?: Database["public"]["Enums"]["order_area"] | null
           order_type: Database["public"]["Enums"]["order_type"]
@@ -1226,6 +1232,8 @@ export type Database = {
           branch_id?: string
           caller_number?: number | null
           created_at?: string
+          customer_business_name?: string | null
+          customer_cuit?: string | null
           customer_email?: string | null
           customer_name?: string
           customer_phone?: string
@@ -1234,6 +1242,7 @@ export type Database = {
           estimated_time?: string | null
           external_order_id?: string | null
           id?: string
+          invoice_type?: string
           notes?: string | null
           order_area?: Database["public"]["Enums"]["order_area"] | null
           order_type?: Database["public"]["Enums"]["order_type"]
