@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
@@ -8,7 +8,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Plus, Pencil, GripVertical, Trash2 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
@@ -27,6 +26,9 @@ export function CategoryManager({ open, onOpenChange, categories, onCategoriesUp
   const [editingName, setEditingName] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const dragCounter = useRef(0);
 
   const handleStartEdit = (category: Category) => {
     setEditingId(category.id);
@@ -121,6 +123,95 @@ export function CategoryManager({ open, onOpenChange, categories, onCategoriesUp
     }
   };
 
+  const handleDragStart = (e: React.DragEvent, categoryId: string) => {
+    setDraggedId(categoryId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', categoryId);
+    // Add a slight delay to allow the drag image to be set
+    setTimeout(() => {
+      const element = e.target as HTMLElement;
+      element.style.opacity = '0.5';
+    }, 0);
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    const element = e.target as HTMLElement;
+    element.style.opacity = '1';
+    setDraggedId(null);
+    setDragOverId(null);
+    dragCounter.current = 0;
+  };
+
+  const handleDragEnter = (e: React.DragEvent, categoryId: string) => {
+    e.preventDefault();
+    dragCounter.current++;
+    if (categoryId !== draggedId) {
+      setDragOverId(categoryId);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setDragOverId(null);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetCategoryId: string) => {
+    e.preventDefault();
+    setDragOverId(null);
+    dragCounter.current = 0;
+    
+    if (!draggedId || draggedId === targetCategoryId) {
+      setDraggedId(null);
+      return;
+    }
+
+    // Find indices
+    const draggedIndex = categories.findIndex(c => c.id === draggedId);
+    const targetIndex = categories.findIndex(c => c.id === targetCategoryId);
+
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    // Reorder categories
+    const newCategories = [...categories];
+    const [removed] = newCategories.splice(draggedIndex, 1);
+    newCategories.splice(targetIndex, 0, removed);
+
+    // Update display_order for all affected categories
+    setSaving(true);
+    try {
+      const updates = newCategories.map((cat, index) => ({
+        id: cat.id,
+        display_order: index + 1,
+      }));
+
+      for (const update of updates) {
+        const { error } = await supabase
+          .from('product_categories')
+          .update({ display_order: update.display_order })
+          .eq('id', update.id);
+        
+        if (error) throw error;
+      }
+
+      toast.success('Orden actualizado');
+      onCategoriesUpdated();
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error al reordenar categorías');
+    } finally {
+      setSaving(false);
+      setDraggedId(null);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -151,9 +242,22 @@ export function CategoryManager({ open, onOpenChange, categories, onCategoriesUp
             {categories.map((category) => (
               <div 
                 key={category.id}
-                className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg"
+                draggable={editingId !== category.id}
+                onDragStart={(e) => handleDragStart(e, category.id)}
+                onDragEnd={handleDragEnd}
+                onDragEnter={(e) => handleDragEnter(e, category.id)}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, category.id)}
+                className={`flex items-center gap-2 p-3 bg-muted/50 rounded-lg transition-all ${
+                  dragOverId === category.id && draggedId !== category.id
+                    ? 'border-2 border-primary border-dashed bg-primary/10'
+                    : 'border-2 border-transparent'
+                } ${draggedId === category.id ? 'opacity-50' : ''}`}
               >
-                <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                <GripVertical 
+                  className="h-4 w-4 text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0" 
+                />
                 
                 {editingId === category.id ? (
                   <div className="flex-1 flex gap-2">
