@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
@@ -26,9 +26,14 @@ export function CategoryManager({ open, onOpenChange, categories, onCategoriesUp
   const [editingName, setEditingName] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [saving, setSaving] = useState(false);
-  const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
-  const dragCounter = useRef(0);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [localCategories, setLocalCategories] = useState<Category[]>([]);
+  const dragOverIndexRef = useRef<number | null>(null);
+
+  // Sync local categories with props
+  useEffect(() => {
+    setLocalCategories(categories);
+  }, [categories]);
 
   const handleStartEdit = (category: Category) => {
     setEditingId(category.id);
@@ -68,7 +73,7 @@ export function CategoryManager({ open, onOpenChange, categories, onCategoriesUp
     
     setSaving(true);
     try {
-      const maxOrder = Math.max(...categories.map(c => c.display_order || 0), 0);
+      const maxOrder = Math.max(...localCategories.map(c => c.display_order || 0), 0);
       
       const { error } = await supabase
         .from('product_categories')
@@ -123,71 +128,54 @@ export function CategoryManager({ open, onOpenChange, categories, onCategoriesUp
     }
   };
 
-  const handleDragStart = (e: React.DragEvent, categoryId: string) => {
-    setDraggedId(categoryId);
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', categoryId);
-    // Add a slight delay to allow the drag image to be set
+    e.dataTransfer.setData('text/plain', index.toString());
+    
+    // Make the drag image slightly transparent
+    const element = e.currentTarget as HTMLElement;
     setTimeout(() => {
-      const element = e.target as HTMLElement;
-      element.style.opacity = '0.5';
+      element.style.opacity = '0.4';
     }, 0);
   };
 
-  const handleDragEnd = (e: React.DragEvent) => {
-    const element = e.target as HTMLElement;
+  const handleDragEnd = async (e: React.DragEvent) => {
+    const element = e.currentTarget as HTMLElement;
     element.style.opacity = '1';
-    setDraggedId(null);
-    setDragOverId(null);
-    dragCounter.current = 0;
-  };
-
-  const handleDragEnter = (e: React.DragEvent, categoryId: string) => {
-    e.preventDefault();
-    dragCounter.current++;
-    if (categoryId !== draggedId) {
-      setDragOverId(categoryId);
+    
+    // Save the new order if it changed
+    if (draggedIndex !== null && dragOverIndexRef.current !== null && draggedIndex !== dragOverIndexRef.current) {
+      await saveNewOrder();
     }
+    
+    setDraggedIndex(null);
+    dragOverIndexRef.current = null;
   };
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    dragCounter.current--;
-    if (dragCounter.current === 0) {
-      setDragOverId(null);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    
+    if (draggedIndex === null || index === draggedIndex) return;
+    
+    // Only update if the target index changed
+    if (dragOverIndexRef.current !== index) {
+      dragOverIndexRef.current = index;
+      
+      // Reorder the local categories for visual preview
+      const newCategories = [...localCategories];
+      const [draggedItem] = newCategories.splice(draggedIndex, 1);
+      newCategories.splice(index, 0, draggedItem);
+      setLocalCategories(newCategories);
+      setDraggedIndex(index);
+    }
   };
 
-  const handleDrop = async (e: React.DragEvent, targetCategoryId: string) => {
-    e.preventDefault();
-    setDragOverId(null);
-    dragCounter.current = 0;
-    
-    if (!draggedId || draggedId === targetCategoryId) {
-      setDraggedId(null);
-      return;
-    }
-
-    // Find indices
-    const draggedIndex = categories.findIndex(c => c.id === draggedId);
-    const targetIndex = categories.findIndex(c => c.id === targetCategoryId);
-
-    if (draggedIndex === -1 || targetIndex === -1) return;
-
-    // Reorder categories
-    const newCategories = [...categories];
-    const [removed] = newCategories.splice(draggedIndex, 1);
-    newCategories.splice(targetIndex, 0, removed);
-
-    // Update display_order for all affected categories
+  const saveNewOrder = async () => {
     setSaving(true);
     try {
-      const updates = newCategories.map((cat, index) => ({
+      const updates = localCategories.map((cat, index) => ({
         id: cat.id,
         display_order: index + 1,
       }));
@@ -206,9 +194,10 @@ export function CategoryManager({ open, onOpenChange, categories, onCategoriesUp
     } catch (error) {
       console.error('Error:', error);
       toast.error('Error al reordenar categorías');
+      // Revert to original order on error
+      setLocalCategories(categories);
     } finally {
       setSaving(false);
-      setDraggedId(null);
     }
   };
 
@@ -216,7 +205,7 @@ export function CategoryManager({ open, onOpenChange, categories, onCategoriesUp
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Gestionar Categorías</DialogTitle>
+          <DialogTitle>Categorías de Productos</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
@@ -238,25 +227,23 @@ export function CategoryManager({ open, onOpenChange, categories, onCategoriesUp
           </div>
 
           {/* Lista de categorías */}
-          <div className="space-y-2 max-h-[400px] overflow-y-auto">
-            {categories.map((category) => (
+          <div className="space-y-1 max-h-[400px] overflow-y-auto">
+            {localCategories.map((category, index) => (
               <div 
                 key={category.id}
                 draggable={editingId !== category.id}
-                onDragStart={(e) => handleDragStart(e, category.id)}
+                onDragStart={(e) => handleDragStart(e, index)}
                 onDragEnd={handleDragEnd}
-                onDragEnter={(e) => handleDragEnter(e, category.id)}
-                onDragLeave={handleDragLeave}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, category.id)}
-                className={`flex items-center gap-2 p-3 bg-muted/50 rounded-lg transition-all ${
-                  dragOverId === category.id && draggedId !== category.id
-                    ? 'border-2 border-primary border-dashed bg-primary/10'
-                    : 'border-2 border-transparent'
-                } ${draggedId === category.id ? 'opacity-50' : ''}`}
+                onDragOver={(e) => handleDragOver(e, index)}
+                className={`flex items-center gap-2 p-3 bg-muted/50 rounded-lg transition-all duration-200 ${
+                  draggedIndex === index ? 'shadow-lg ring-2 ring-primary/50 scale-[1.02]' : ''
+                }`}
+                style={{
+                  transform: draggedIndex === index ? 'scale(1.02)' : 'scale(1)',
+                }}
               >
                 <GripVertical 
-                  className="h-4 w-4 text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0" 
+                  className="h-4 w-4 text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0 hover:text-foreground transition-colors" 
                 />
                 
                 {editingId === category.id ? (
@@ -303,7 +290,7 @@ export function CategoryManager({ open, onOpenChange, categories, onCategoriesUp
             ))}
           </div>
 
-          {categories.length === 0 && (
+          {localCategories.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-4">
               No hay categorías. Crea una nueva arriba.
             </p>
