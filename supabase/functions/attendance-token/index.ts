@@ -285,8 +285,80 @@ serve(async (req) => {
 
       case 'set-pin': {
         // Set PIN for a user (called by admin/manager)
-        const { userId, pin } = params;
+        // SECURITY: Must verify caller has permission to manage this user
+        const { userId, pin, branchId } = params;
         
+        // Validate authorization header
+        const authHeader = req.headers.get('Authorization');
+        if (!authHeader) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'No autorizado' }),
+            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Create authenticated client to verify caller permissions
+        const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
+        const authClient = createClient(supabaseUrl, supabaseAnon, {
+          global: { headers: { Authorization: authHeader } }
+        });
+
+        // Get the calling user
+        const { data: { user: caller }, error: authError } = await authClient.auth.getUser();
+        if (authError || !caller) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Sesión inválida' }),
+            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Check if caller is admin or has can_manage_staff permission for the branch
+        const { data: callerRoles } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', caller.id);
+        
+        const isAdmin = callerRoles?.some(r => r.role === 'admin');
+        
+        if (!isAdmin) {
+          // Check branch permission
+          if (!branchId) {
+            return new Response(
+              JSON.stringify({ success: false, error: 'branchId requerido para verificar permisos' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          const { data: permission } = await supabase
+            .from('branch_permissions')
+            .select('can_manage_staff')
+            .eq('user_id', caller.id)
+            .eq('branch_id', branchId)
+            .single();
+          
+          if (!permission?.can_manage_staff) {
+            return new Response(
+              JSON.stringify({ success: false, error: 'No tenés permisos para gestionar personal' }),
+              { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          // Additionally verify the target user belongs to this branch
+          const { data: targetProfile } = await supabase
+            .from('profiles')
+            .select('branch_id')
+            .eq('user_id', userId)
+            .single();
+          
+          if (targetProfile?.branch_id !== branchId) {
+            return new Response(
+              JSON.stringify({ success: false, error: 'El usuario no pertenece a tu sucursal' }),
+              { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+
+        // Validate PIN format
         if (!pin || pin.length !== 4 || !/^\d+$/.test(pin)) {
           return new Response(
             JSON.stringify({ success: false, error: 'PIN debe ser de 4 dígitos' }),

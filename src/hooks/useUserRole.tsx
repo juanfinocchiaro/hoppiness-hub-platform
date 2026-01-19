@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { devLog } from '@/lib/errorHandler';
 import type { Tables, Enums } from '@/integrations/supabase/types';
 
 type AppRole = Enums<'app_role'>;
@@ -110,7 +111,7 @@ export function useUserRole(): UserRoleData {
           }
         }
       } catch (error) {
-        console.error('Error fetching user role data:', error);
+        devLog('Error fetching user role data', error);
       } finally {
         setLoading(false);
       }

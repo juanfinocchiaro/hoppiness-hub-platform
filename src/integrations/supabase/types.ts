@@ -2006,6 +2006,7 @@ export type Database = {
           category: string | null
           cost_category: string | null
           cost_per_unit: number | null
+          cost_updated_at: string | null
           created_at: string
           id: string
           is_active: boolean
@@ -2027,6 +2028,7 @@ export type Database = {
           category?: string | null
           cost_category?: string | null
           cost_per_unit?: number | null
+          cost_updated_at?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
@@ -2048,6 +2050,7 @@ export type Database = {
           category?: string | null
           cost_category?: string | null
           cost_per_unit?: number | null
+          cost_updated_at?: string | null
           created_at?: string
           id?: string
           is_active?: boolean

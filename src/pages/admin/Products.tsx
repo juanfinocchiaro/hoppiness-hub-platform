@@ -31,6 +31,7 @@ import {
 import { Plus, Search, Edit, Star, ChevronDown, ChevronRight, Power, Check, X, CalendarDays, Settings2, Eye, EyeOff, PowerOff, Trash2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
+import { handleError } from '@/lib/errorHandler';
 import { ScheduleDialog } from '@/components/admin/ScheduleDialog';
 import { ProductInlineEditor } from '@/components/admin/ProductInlineEditor';
 import { CategoryManager } from '@/components/admin/CategoryManager';
@@ -144,8 +145,7 @@ export default function Products() {
       ));
       toast.success(newValue ? 'Categoría activada' : 'Categoría y sus productos desactivados');
     } catch (error) {
-      console.error('Error:', error);
-      toast.error('Error al actualizar categoría');
+      handleError(error, { userMessage: 'Error al actualizar categoría', context: 'Products.toggleCategoryActive' });
     }
   };
 
@@ -299,8 +299,7 @@ export default function Products() {
       ));
       toast.success(newValue ? 'Producto habilitado' : 'Producto deshabilitado');
     } catch (error) {
-      console.error('Error:', error);
-      toast.error('Error al actualizar disponibilidad');
+      handleError(error, { userMessage: 'Error al actualizar disponibilidad', context: 'Products.executeBrandToggle' });
     } finally {
       setUpdating(null);
     }
@@ -335,8 +334,7 @@ export default function Products() {
 
       toast.success(newValue ? 'Producto habilitado' : 'Producto deshabilitado');
     } catch (error) {
-      console.error('Error:', error);
-      toast.error('Error al actualizar disponibilidad');
+      handleError(error, { userMessage: 'Error al actualizar disponibilidad', context: 'Products.executeBranchToggle' });
     } finally {
       setUpdating(null);
     }
@@ -367,8 +365,7 @@ export default function Products() {
       toast.success(`"${deleteDialog.productName}" eliminado permanentemente`);
       setDeleteDialog(null);
     } catch (error) {
-      console.error('Error:', error);
-      toast.error('Error al eliminar el producto');
+      handleError(error, { userMessage: 'Error al eliminar el producto', context: 'Products.handleDeleteProduct' });
     } finally {
       setDeleting(false);
     }

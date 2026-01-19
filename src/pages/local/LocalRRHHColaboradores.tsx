@@ -194,10 +194,12 @@ export default function LocalRRHHColaboradores() {
           action: 'set-pin',
           userId: selectedStaff.user_id,
           pin: newPin,
+          branchId, // Required for authorization check
         }
       });
 
       if (response.error) throw response.error;
+      if (response.data?.error) throw new Error(response.data.error);
 
       toast.success(`PIN actualizado para ${selectedStaff.full_name}`);
       setShowPinDialog(false);
@@ -206,9 +208,8 @@ export default function LocalRRHHColaboradores() {
       setStaffMembers(prev => prev.map(s => 
         s.user_id === selectedStaff.user_id ? { ...s, has_pin: true } : s
       ));
-    } catch (error) {
-      console.error('Error setting PIN:', error);
-      toast.error('Error al actualizar el PIN');
+    } catch (error: any) {
+      toast.error(error?.message || 'Error al actualizar el PIN');
     }
   };
 
