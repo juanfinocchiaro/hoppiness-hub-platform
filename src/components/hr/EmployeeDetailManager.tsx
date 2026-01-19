@@ -125,6 +125,7 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
   const { user } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showInactive, setShowInactive] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [documents, setDocuments] = useState<EmployeeDocument[]>([]);
   const [warnings, setWarnings] = useState<EmployeeWarning[]>([]);
@@ -180,12 +181,17 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
     async function fetchEmployees() {
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('employees')
           .select('*')
           .eq('branch_id', branchId)
-          .eq('is_active', true)
           .order('full_name');
+        
+        if (!showInactive) {
+          query = query.eq('is_active', true);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
         setEmployees(data || []);
@@ -198,7 +204,7 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
     }
 
     fetchEmployees();
-  }, [branchId]);
+  }, [branchId, showInactive]);
 
   // Fetch documents and warnings when employee is selected
   useEffect(() => {
@@ -599,6 +605,30 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
     }
   };
 
+  const toggleEmployeeActive = async (employee: Employee) => {
+    try {
+      const { error } = await supabase
+        .from('employees')
+        .update({ is_active: !employee.is_active })
+        .eq('id', employee.id);
+      
+      if (error) throw error;
+      
+      toast.success(employee.is_active ? 'Empleado deshabilitado' : 'Empleado habilitado');
+      
+      setEmployees(prev => prev.map(e => 
+        e.id === employee.id ? { ...e, is_active: !e.is_active } : e
+      ));
+      
+      if (selectedEmployee?.id === employee.id) {
+        setSelectedEmployee({ ...selectedEmployee, is_active: !employee.is_active });
+      }
+    } catch (error) {
+      console.error('Error toggling employee status:', error);
+      toast.error('Error al cambiar estado');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -614,12 +644,23 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
           <h2 className="text-xl font-bold">Empleados Operativos</h2>
           <p className="text-sm text-muted-foreground">Personal que ficha con PIN</p>
         </div>
-        {canManage && (
-          <Button onClick={() => { resetEmployeeForm(); setShowAddDialog(true); }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-sm">
+            <input 
+              type="checkbox" 
+              checked={showInactive} 
+              onChange={(e) => setShowInactive(e.target.checked)}
+              className="rounded border-input"
+            />
+            Ver deshabilitados
+          </label>
+          {canManage && (
+            <Button onClick={() => { resetEmployeeForm(); setShowAddDialog(true); }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nuevo
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -640,7 +681,7 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
                   {employees.map(emp => (
                     <div
                       key={emp.id}
-                      className={`p-3 border rounded-lg cursor-pointer transition-colors hover:bg-muted/50 ${selectedEmployee?.id === emp.id ? 'border-primary bg-primary/5' : ''}`}
+                      className={`p-3 border rounded-lg cursor-pointer transition-colors hover:bg-muted/50 ${selectedEmployee?.id === emp.id ? 'border-primary bg-primary/5' : ''} ${!emp.is_active ? 'opacity-60' : ''}`}
                       onClick={() => setSelectedEmployee(emp)}
                     >
                       <div className="flex items-center gap-3">
@@ -649,13 +690,26 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
                           <AvatarFallback>{emp.full_name.split(' ').map(n => n[0]).join('').slice(0, 2)}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{emp.full_name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium truncate">{emp.full_name}</p>
+                            {!emp.is_active && <Badge variant="secondary" className="text-xs">Inactivo</Badge>}
+                          </div>
                           <p className="text-xs text-muted-foreground">{emp.position || 'Sin puesto'}</p>
                         </div>
                         {canManage && (
-                          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); openEditDialog(emp); }}>
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); openEditDialog(emp); }}>
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={(e) => { e.stopPropagation(); toggleEmployeeActive(emp); }}
+                              title={emp.is_active ? 'Deshabilitar' : 'Habilitar'}
+                            >
+                              {emp.is_active ? <X className="h-4 w-4 text-destructive" /> : <User className="h-4 w-4 text-green-600" />}
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </div>

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Store, Package, MapPin, Clock, Settings, Truck, ShoppingBag, Users, Bike, DollarSign, Utensils, Receipt } from 'lucide-react';
+import { Store, Package, MapPin, Clock, Settings, Truck, ShoppingBag, Users, Bike, DollarSign, Utensils, Receipt, BarChart3 } from 'lucide-react';
 import OrdersHeatmap from '@/components/charts/OrdersHeatmap';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -18,6 +18,15 @@ interface Stats {
   globalItems: number;
   globalOrders: number;
   globalAvgTicket: number;
+  globalHours: number;
+  globalProductivity: number;
+}
+
+interface BranchHoursStats {
+  branchId: string;
+  totalHours: number;
+  totalItems: number;
+  productivity: number;
 }
 
 interface BranchStats {
@@ -45,8 +54,9 @@ const salesChannels: SalesChannel[] = [
 ];
 
 export default function AdminHome() {
-  const [stats, setStats] = useState<Stats>({ products: 0, categories: 0, globalRevenue: 0, globalItems: 0, globalOrders: 0, globalAvgTicket: 0 });
+  const [stats, setStats] = useState<Stats>({ products: 0, categories: 0, globalRevenue: 0, globalItems: 0, globalOrders: 0, globalAvgTicket: 0, globalHours: 0, globalProductivity: 0 });
   const [branchStats, setBranchStats] = useState<Map<string, BranchStats>>(new Map());
+  const [branchHoursStats, setBranchHoursStats] = useState<Map<string, BranchHoursStats>>(new Map());
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -55,8 +65,9 @@ export default function AdminHome() {
       // Get first day of current month
       const now = new Date();
       const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
 
-      const [productsRes, categoriesRes, branchesRes, ordersRes, orderItemsRes] = await Promise.all([
+      const [productsRes, categoriesRes, branchesRes, ordersRes, orderItemsRes, attendanceRes] = await Promise.all([
         supabase.from('products').select('id', { count: 'exact', head: true }),
         supabase.from('product_categories').select('id', { count: 'exact', head: true }),
         supabase.from('branches').select('*').order('name'),
@@ -71,6 +82,13 @@ export default function AdminHome() {
           .from('order_items')
           .select('quantity, order_id')
           .gte('created_at', firstDayOfMonth),
+        // Get attendance logs for all branches
+        supabase
+          .from('attendance_logs')
+          .select('employee_id, branch_id, log_type, timestamp')
+          .gte('timestamp', firstDayOfMonth)
+          .lte('timestamp', lastDayOfMonth)
+          .order('timestamp', { ascending: true }),
       ]);
 
       const branchesData = branchesRes.data || [];
@@ -131,6 +149,61 @@ export default function AdminHome() {
 
       const globalAvgTicket = globalOrders > 0 ? globalRevenue / globalOrders : 0;
 
+      // Calculate hours per branch from attendance logs
+      const attendanceLogs = attendanceRes.data || [];
+      const hoursStatsMap = new Map<string, BranchHoursStats>();
+      
+      // Initialize hours stats for all branches
+      branchesData.forEach(branch => {
+        hoursStatsMap.set(branch.id, {
+          branchId: branch.id,
+          totalHours: 0,
+          totalItems: statsMap.get(branch.id)?.totalItems || 0,
+          productivity: 0,
+        });
+      });
+      
+      // Group logs by branch and employee
+      const branchEmployeeLogs = new Map<string, Map<string, { in: Date | null }>>();
+      let globalTotalMinutes = 0;
+      
+      attendanceLogs.forEach(log => {
+        const branchId = log.branch_id;
+        const empId = log.employee_id;
+        const timestamp = new Date(log.timestamp);
+        
+        if (!branchEmployeeLogs.has(branchId)) {
+          branchEmployeeLogs.set(branchId, new Map());
+        }
+        const branchLogs = branchEmployeeLogs.get(branchId)!;
+        
+        if (log.log_type === 'IN') {
+          branchLogs.set(empId, { in: timestamp });
+        } else if (log.log_type === 'OUT') {
+          const empData = branchLogs.get(empId);
+          if (empData?.in) {
+            const minutes = (timestamp.getTime() - empData.in.getTime()) / (1000 * 60);
+            if (minutes > 0 && minutes < 960) { // Max 16 hours shift
+              const branchHours = hoursStatsMap.get(branchId);
+              if (branchHours) {
+                branchHours.totalHours += minutes / 60;
+              }
+              globalTotalMinutes += minutes;
+            }
+            branchLogs.set(empId, { in: null });
+          }
+        }
+      });
+      
+      // Calculate productivity for each branch
+      hoursStatsMap.forEach(stat => {
+        stat.totalHours = Math.round(stat.totalHours * 10) / 10;
+        stat.productivity = stat.totalHours > 0 ? Math.round(stat.totalItems / stat.totalHours * 10) / 10 : 0;
+      });
+      
+      const globalHours = Math.round(globalTotalMinutes / 60 * 10) / 10;
+      const globalProductivity = globalHours > 0 ? Math.round(globalItems / globalHours * 10) / 10 : 0;
+
       setStats({
         products: productsRes.count || 0,
         categories: categoriesRes.count || 0,
@@ -138,8 +211,11 @@ export default function AdminHome() {
         globalItems,
         globalOrders,
         globalAvgTicket,
+        globalHours,
+        globalProductivity,
       });
       setBranchStats(statsMap);
+      setBranchHoursStats(hoursStatsMap);
       setLoading(false);
     }
     fetchData();
@@ -172,7 +248,7 @@ export default function AdminHome() {
           <CardDescription>Totales de todas las sucursales</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
             <div className="text-center p-4 bg-muted/50 rounded-lg">
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
                 <DollarSign className="w-4 h-4" />
@@ -219,6 +295,30 @@ export default function AdminHome() {
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 este mes
+              </p>
+            </div>
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
+                <Clock className="w-4 h-4" />
+                Horas Registradas
+              </div>
+              <div className="text-2xl font-bold text-primary">
+                {loading ? <Skeleton className="h-8 w-16 mx-auto" /> : `${stats.globalHours.toLocaleString('es-AR')}h`}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                este mes
+              </p>
+            </div>
+            <div className="text-center p-4 bg-accent/20 rounded-lg border-2 border-accent">
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
+                <BarChart3 className="w-4 h-4" />
+                Productividad
+              </div>
+              <div className="text-2xl font-bold text-accent-foreground">
+                {loading ? <Skeleton className="h-8 w-16 mx-auto" /> : stats.globalProductivity.toLocaleString('es-AR')}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                unid/hora
               </p>
             </div>
           </div>
@@ -369,7 +469,7 @@ export default function AdminHome() {
 
                     {/* Monthly Stats per Branch */}
                     {branch.is_active && (
-                      <div className="grid grid-cols-3 gap-3 pt-3 border-t">
+                      <div className="grid grid-cols-5 gap-3 pt-3 border-t">
                         <div className="text-center">
                           <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-1">
                             <DollarSign className="w-3 h-3" />
@@ -395,6 +495,24 @@ export default function AdminHome() {
                           </div>
                           <div className="font-semibold text-sm">
                             {formatCurrency(branchStats.get(branch.id)?.averageTicket || 0)}
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-1">
+                            <Clock className="w-3 h-3" />
+                            Horas
+                          </div>
+                          <div className="font-semibold text-sm">
+                            {(branchHoursStats.get(branch.id)?.totalHours || 0).toLocaleString('es-AR')}h
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-1">
+                            <BarChart3 className="w-3 h-3" />
+                            Productividad
+                          </div>
+                          <div className="font-semibold text-sm text-accent-foreground">
+                            {(branchHoursStats.get(branch.id)?.productivity || 0).toLocaleString('es-AR')}
                           </div>
                         </div>
                       </div>

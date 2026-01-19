@@ -73,6 +73,12 @@ const channelLabels: Record<string, { label: string; icon: React.ReactNode }> = 
   pos_local: { label: 'POS Local', icon: <Receipt className="w-4 h-4" /> },
 };
 
+interface HoursStats {
+  monthlyHours: number;
+  monthlyItems: number;
+  productivity: number;
+}
+
 function DashboardContent({ branch }: { branch: Branch }) {
   const { filters, dateRange, periodLabel } = useDashboardFilters();
   const [stats, setStats] = useState<DashboardStats>({
@@ -86,6 +92,11 @@ function DashboardContent({ branch }: { branch: Branch }) {
     preparingOrders: 0,
     channelStats: [],
   });
+  const [hoursStats, setHoursStats] = useState<HoursStats>({
+    monthlyHours: 0,
+    monthlyItems: 0,
+    productivity: 0,
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -93,6 +104,7 @@ function DashboardContent({ branch }: { branch: Branch }) {
       setLoading(true);
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
 
       // Build base query for orders with filters
       let ordersQuery = supabase
@@ -107,7 +119,7 @@ function DashboardContent({ branch }: { branch: Branch }) {
         ordersQuery = ordersQuery.eq('sales_channel', filters.channel as Enums<'sales_channel'>);
       }
 
-      const [filteredOrdersRes, monthOrdersRes, itemsRes, pendingRes] = await Promise.all([
+      const [filteredOrdersRes, monthOrdersRes, itemsRes, pendingRes, monthItemsRes, attendanceRes] = await Promise.all([
         ordersQuery,
         
         // Monthly orders (always full month for comparison)
@@ -132,6 +144,23 @@ function DashboardContent({ branch }: { branch: Branch }) {
           .select('status')
           .eq('branch_id', branch.id)
           .in('status', ['pending', 'preparing', 'confirmed']),
+        
+        // Monthly items for productivity calculation
+        supabase
+          .from('order_items')
+          .select('quantity, orders!inner(branch_id, created_at)')
+          .eq('orders.branch_id', branch.id)
+          .gte('orders.created_at', monthStart)
+          .lte('orders.created_at', monthEnd),
+        
+        // Monthly attendance logs for hours calculation
+        supabase
+          .from('attendance_logs')
+          .select('employee_id, log_type, timestamp')
+          .eq('branch_id', branch.id)
+          .gte('timestamp', monthStart)
+          .lte('timestamp', monthEnd)
+          .order('timestamp', { ascending: true }),
       ]);
 
       const filteredOrders = filteredOrdersRes.data || [];
@@ -171,6 +200,35 @@ function DashboardContent({ branch }: { branch: Branch }) {
         }))
         .sort((a, b) => b.revenue - a.revenue);
 
+      // Calculate monthly hours from attendance logs
+      const attendanceLogs = attendanceRes.data || [];
+      const monthlyItemsTotal = (monthItemsRes.data || []).reduce((sum, i) => sum + (i.quantity || 0), 0);
+      
+      // Group logs by employee and calculate hours
+      const employeeLogs = new Map<string, { in: Date | null }>();
+      let totalMinutes = 0;
+      
+      attendanceLogs.forEach(log => {
+        const empId = log.employee_id;
+        const timestamp = new Date(log.timestamp);
+        
+        if (log.log_type === 'IN') {
+          employeeLogs.set(empId, { in: timestamp });
+        } else if (log.log_type === 'OUT') {
+          const empData = employeeLogs.get(empId);
+          if (empData?.in) {
+            const minutes = (timestamp.getTime() - empData.in.getTime()) / (1000 * 60);
+            if (minutes > 0 && minutes < 960) { // Max 16 hours shift
+              totalMinutes += minutes;
+            }
+            employeeLogs.set(empId, { in: null });
+          }
+        }
+      });
+      
+      const monthlyHours = Math.round(totalMinutes / 60 * 10) / 10;
+      const productivity = monthlyHours > 0 ? Math.round(monthlyItemsTotal / monthlyHours * 10) / 10 : 0;
+
       setStats({
         filteredRevenue,
         filteredOrders: filteredOrders.length,
@@ -181,6 +239,12 @@ function DashboardContent({ branch }: { branch: Branch }) {
         pendingOrders: pendingOrders.filter(o => o.status === 'pending').length,
         preparingOrders: pendingOrders.filter(o => o.status === 'preparing' || o.status === 'confirmed').length,
         channelStats: channelStatsArr,
+      });
+      
+      setHoursStats({
+        monthlyHours,
+        monthlyItems: monthlyItemsTotal,
+        productivity,
       });
 
       setLoading(false);
@@ -379,7 +443,7 @@ function DashboardContent({ branch }: { branch: Branch }) {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
                   <div className="text-center p-4 bg-muted/50 rounded-lg">
                     <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
                       <DollarSign className="w-4 h-4" />
@@ -406,6 +470,34 @@ function DashboardContent({ branch }: { branch: Branch }) {
                     <div className="text-2xl font-bold text-primary">
                       {formatCurrency(stats.monthlyOrders > 0 ? stats.monthlyRevenue / stats.monthlyOrders : 0)}
                     </div>
+                  </div>
+                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
+                      <Clock className="w-4 h-4" />
+                      Horas Registradas
+                    </div>
+                    <div className="text-2xl font-bold text-primary">
+                      {hoursStats.monthlyHours.toLocaleString('es-AR')}h
+                    </div>
+                  </div>
+                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
+                      <Utensils className="w-4 h-4" />
+                      Unidades Vendidas
+                    </div>
+                    <div className="text-2xl font-bold text-primary">
+                      {hoursStats.monthlyItems.toLocaleString('es-AR')}
+                    </div>
+                  </div>
+                  <div className="text-center p-4 bg-accent/20 rounded-lg border-2 border-accent">
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
+                      <TrendingUp className="w-4 h-4" />
+                      Productividad
+                    </div>
+                    <div className="text-2xl font-bold text-accent-foreground">
+                      {hoursStats.productivity.toLocaleString('es-AR')}
+                    </div>
+                    <p className="text-xs text-muted-foreground">unid/hora</p>
                   </div>
                 </div>
               </CardContent>
