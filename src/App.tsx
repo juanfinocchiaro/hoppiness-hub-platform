@@ -34,8 +34,10 @@ import LocalConfig from "./pages/local/LocalConfig";
 import LocalDeliveryZones from "./pages/local/LocalDeliveryZones";
 import LocalUsuarios from "./pages/local/LocalUsuarios";
 import LocalImpresoras from "./pages/local/LocalImpresoras";
+import AttendanceKiosk from "./pages/local/AttendanceKiosk";
 
-// Admin
+// Attendance
+import ClockIn from "./pages/ClockIn";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminHome from "./pages/admin/AdminHome";
 import BranchStatus from "./pages/admin/BranchStatus";
@@ -60,7 +62,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Public Routes */}
+          {/* Public Routes */}
             <Route path="/" element={<Index />} />
             <Route path="/ingresar" element={<Ingresar />} />
             <Route path="/auth" element={<Ingresar />} />
@@ -69,6 +71,10 @@ const App = () => (
             <Route path="/pedido/:orderId" element={<PedidoTracking />} />
             <Route path="/menu" element={<NuestroMenu />} />
             <Route path="/franquicias" element={<Franquicias />} />
+            <Route path="/clock-in" element={<ClockIn />} />
+            
+            {/* Attendance Kiosk (requires auth) */}
+            <Route path="/attendance-kiosk/:branchId" element={<LocalRoute><AttendanceKiosk /></LocalRoute>} />
             
             {/* POS Routes */}
             <Route path="/pos" element={<LocalRoute><POS /></LocalRoute>} />
