@@ -16,6 +16,7 @@ import {
   Columns3
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { handleError, devLog } from '@/lib/errorHandler';
 import type { Tables, Enums } from '@/integrations/supabase/types';
 import KDSStationsView from './KDSStationsView';
 
@@ -74,8 +75,11 @@ export default function KDSView({ branch }: KDSViewProps) {
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.error('Error fetching orders:', error);
-      toast.error('Error al cargar pedidos');
+      handleError(error, { 
+        userMessage: 'Error al cargar pedidos', 
+        context: 'KDSView.fetchOrders',
+        showToast: true 
+      });
       return;
     }
 
@@ -97,7 +101,7 @@ export default function KDSView({ branch }: KDSViewProps) {
           filter: `branch_id=eq.${branch.id}`,
         },
         (payload) => {
-          console.log('Order change:', payload);
+          devLog('Order change:', payload);
           if (payload.eventType === 'INSERT' && soundEnabled) {
             playNotificationSound();
           }

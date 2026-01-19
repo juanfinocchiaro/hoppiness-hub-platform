@@ -81,6 +81,7 @@ interface Ingredient {
   purchase_unit_qty: number;
   usage_unit: string | null;
   cost_per_unit: number;
+  cost_updated_at: string | null;
   min_stock: number;
   lead_time_days: number;
   safety_stock_days: number;
@@ -762,9 +763,29 @@ export default function Ingredients() {
                       
                       {/* Cost Purchase */}
                       <TableCell className="text-right">
-                        <div className="font-mono text-sm">
-                          {formatCurrency(costPurchase)}/{purchaseUnit}
-                        </div>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="cursor-help">
+                                <div className="font-mono text-sm">
+                                  {formatCurrency(costPurchase)}/{purchaseUnit}
+                                </div>
+                                {ingredient.cost_updated_at && (
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {new Date(ingredient.cost_updated_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+                                  </p>
+                                )}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">
+                                {ingredient.cost_updated_at 
+                                  ? `Actualizado: ${new Date(ingredient.cost_updated_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}`
+                                  : 'Sin fecha de actualización'}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </TableCell>
                       
                       {/* Cost Usage */}
