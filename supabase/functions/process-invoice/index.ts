@@ -94,15 +94,13 @@ serve(async (req) => {
     }
 
     const imageUrl = signedUrlData.signedUrl;
-    console.log('Generated signed URL for file:', file_path);
+    console.log('Processing document:', document_id, 'with signed URL (starts with):', imageUrl.substring(0, 100));
 
     // Update status to processing
     await supabase
       .from('scanned_documents')
       .update({ status: 'processing' })
       .eq('id', document_id);
-
-    console.log('Processing document:', document_id);
 
     // Call Lovable AI with vision capabilities
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
