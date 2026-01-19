@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { ClipboardList, Play, Check, AlertTriangle, Search, Save } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
@@ -48,6 +49,8 @@ interface CountLine {
   difference: number;
 }
 
+type CountType = 'weekly' | 'monthly';
+
 export default function LocalInventory() {
   const { branch } = useOutletContext<ContextType>();
   const { user } = useAuth();
@@ -63,6 +66,7 @@ export default function LocalInventory() {
   
   // New count dialog
   const [newCountOpen, setNewCountOpen] = useState(false);
+  const [selectedCountType, setSelectedCountType] = useState<CountType>('weekly');
 
   useEffect(() => {
     fetchCounts();
@@ -134,7 +138,8 @@ export default function LocalInventory() {
         branch_id: branch.id,
         status: 'in_progress',
         started_by: user?.id,
-      })
+        count_type: selectedCountType,
+      } as any)
       .select()
       .single();
 
@@ -143,7 +148,7 @@ export default function LocalInventory() {
       return;
     }
 
-    toast.success('Conteo iniciado');
+    toast.success(`Conteo ${selectedCountType === 'monthly' ? 'mensual' : 'semanal'} iniciado`);
     loadActiveCount(data);
     fetchCounts();
   }
@@ -414,6 +419,7 @@ export default function LocalInventory() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Fecha</TableHead>
+                  <TableHead>Tipo</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Notas</TableHead>
                 </TableRow>
@@ -423,11 +429,16 @@ export default function LocalInventory() {
                   <TableRow key={count.id}>
                     <TableCell>{formatDate(count.count_date)}</TableCell>
                     <TableCell>
-                      <Badge variant={count.status === 'completed' ? 'default' : 'secondary'}>
+                      <Badge variant={(count as any).count_type === 'monthly' ? 'default' : 'outline'}>
+                        {(count as any).count_type === 'monthly' ? 'Mensual' : 'Semanal'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={count.status === 'completed' ? 'secondary' : 'outline'}>
                         {count.status === 'completed' ? 'Completado' : 'En progreso'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground max-w-xs truncate">
                       {count.notes || '—'}
                     </TableCell>
                   </TableRow>
@@ -444,14 +455,35 @@ export default function LocalInventory() {
           <DialogHeader>
             <DialogTitle>Iniciar Nuevo Conteo</DialogTitle>
             <DialogDescription>
-              Se creará un nuevo conteo de inventario. Podrás registrar las cantidades físicas de cada ingrediente y el sistema calculará las diferencias.
+              Seleccioná el tipo de conteo que vas a realizar.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <div className="flex items-center gap-2 p-3 bg-amber-50 text-amber-800 rounded-lg">
-              <AlertTriangle className="w-5 h-5" />
+          <div className="py-4 space-y-4">
+            <RadioGroup value={selectedCountType} onValueChange={(v) => setSelectedCountType(v as CountType)}>
+              <div className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50">
+                <RadioGroupItem value="weekly" id="weekly" className="mt-1" />
+                <Label htmlFor="weekly" className="flex-1 cursor-pointer">
+                  <p className="font-medium">Conteo Semanal</p>
+                  <p className="text-sm text-muted-foreground">
+                    Para control de stock y gestión de pedidos a proveedores
+                  </p>
+                </Label>
+              </div>
+              <div className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50">
+                <RadioGroupItem value="monthly" id="monthly" className="mt-1" />
+                <Label htmlFor="monthly" className="flex-1 cursor-pointer">
+                  <p className="font-medium">Conteo Mensual (CMV)</p>
+                  <p className="text-sm text-muted-foreground">
+                    Para cálculo del Costo de Mercadería Vendida del mes
+                  </p>
+                </Label>
+              </div>
+            </RadioGroup>
+            
+            <div className="flex items-center gap-2 p-3 bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-200 rounded-lg">
+              <AlertTriangle className="w-5 h-5 shrink-0" />
               <p className="text-sm">
-                Al finalizar el conteo, las diferencias se aplicarán automáticamente como ajustes de stock.
+                Al finalizar, las diferencias se aplicarán como ajustes de stock.
               </p>
             </div>
           </div>

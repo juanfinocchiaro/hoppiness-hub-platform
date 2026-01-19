@@ -1721,6 +1721,7 @@ export type Database = {
       ingredients: {
         Row: {
           category: string | null
+          cost_category: string | null
           cost_per_unit: number | null
           created_at: string
           id: string
@@ -1734,6 +1735,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          cost_category?: string | null
           cost_per_unit?: number | null
           created_at?: string
           id?: string
@@ -1747,6 +1749,7 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          cost_category?: string | null
           cost_per_unit?: number | null
           created_at?: string
           id?: string
@@ -1833,6 +1836,7 @@ export type Database = {
           completed_at: string | null
           completed_by: string | null
           count_date: string
+          count_type: string | null
           created_at: string
           id: string
           notes: string | null
@@ -1844,6 +1848,7 @@ export type Database = {
           completed_at?: string | null
           completed_by?: string | null
           count_date?: string
+          count_type?: string | null
           created_at?: string
           id?: string
           notes?: string | null
@@ -1855,6 +1860,7 @@ export type Database = {
           completed_at?: string | null
           completed_by?: string | null
           count_date?: string
+          count_type?: string | null
           created_at?: string
           id?: string
           notes?: string | null

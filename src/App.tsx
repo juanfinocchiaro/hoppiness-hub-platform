@@ -69,6 +69,7 @@ import Discounts from "./pages/admin/Discounts";
 // Local Stock & Inventory
 import LocalStock from "./pages/local/LocalStock";
 import LocalInventory from "./pages/local/LocalInventory";
+import LocalCMVReport from "./pages/local/LocalCMVReport";
 import LocalCustomers from "./pages/local/LocalCustomers";
 import LocalKDSSettings from "./pages/local/LocalKDSSettings";
 
@@ -123,6 +124,7 @@ const App = () => (
               {/* Stock & Inventario */}
               <Route path="stock" element={<LocalStock />} />
               <Route path="inventario" element={<LocalInventory />} />
+              <Route path="cmv" element={<LocalCMVReport />} />
               {/* Clientes */}
               <Route path="clientes" element={<LocalCustomers />} />
               {/* Finanzas */}
