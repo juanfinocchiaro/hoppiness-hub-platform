@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Search, Edit, Star, ChevronDown, ChevronRight, Power, Check, X, CalendarDays, Settings2 } from 'lucide-react';
+import { Plus, Search, Edit, Star, ChevronDown, ChevronRight, Power, Check, X, CalendarDays, Settings2, Eye, EyeOff, PowerOff } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { ScheduleDialog } from '@/components/admin/ScheduleDialog';
@@ -77,6 +77,7 @@ export default function Products() {
   }>({ open: false, productId: null });
 
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
+  const [showActiveOnly, setShowActiveOnly] = useState(true);
 
   const fetchData = async () => {
     const [productsRes, categoriesRes, branchesRes, branchProductsRes] = await Promise.all([
@@ -163,7 +164,9 @@ export default function Products() {
   };
 
   const filteredProducts = products.filter((product) => {
-    return product.name.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase());
+    const matchesActiveFilter = showActiveOnly ? product.is_enabled_by_brand : true;
+    return matchesSearch && matchesActiveFilter;
   });
 
   const formatPrice = (price: number) => {
@@ -351,15 +354,33 @@ export default function Products() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar productos..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9 h-9"
-        />
+      {/* Search & Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar productos..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 h-9"
+          />
+        </div>
+        
+        <Button
+          variant={showActiveOnly ? "default" : "outline"}
+          size="sm"
+          onClick={() => setShowActiveOnly(!showActiveOnly)}
+          className="gap-2"
+        >
+          {showActiveOnly ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+          {showActiveOnly ? 'Solo activos' : 'Todos'}
+        </Button>
+        
+        {!showActiveOnly && totalDisabled > 0 && (
+          <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-0">
+            {totalDisabled} inactivos ocultos cuando filtras
+          </Badge>
+        )}
       </div>
 
       {/* Products Grid */}
@@ -552,18 +573,45 @@ export default function Products() {
                         </Badge>
                       )}
 
-                      {/* Edit Button */}
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditDrawer({ open: true, productId: product.id });
-                        }}
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                      </Button>
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-1">
+                        {/* Toggle Active Button */}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className={`h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity ${
+                                  isDisabledByBrand ? 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10' : 'text-destructive hover:text-destructive hover:bg-destructive/10'
+                                }`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleBrandToggle(product);
+                                }}
+                              >
+                                {isDisabledByBrand ? <Power className="w-3.5 h-3.5" /> : <PowerOff className="w-3.5 h-3.5" />}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {isDisabledByBrand ? 'Activar producto' : 'Desactivar producto'}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        
+                        {/* Edit Button */}
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditDrawer({ open: true, productId: product.id });
+                          }}
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
