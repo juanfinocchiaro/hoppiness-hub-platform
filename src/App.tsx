@@ -23,7 +23,7 @@ import OrdersDashboard from "./pages/pos/OrdersDashboard";
 import LocalLayout from "./pages/local/LocalLayout";
 import LocalDashboard from "./pages/local/LocalDashboard";
 import LocalPedidos from "./pages/local/LocalPedidos";
-import LocalHistorial from "./pages/local/LocalHistorial";
+// LocalHistorial removed - consolidated into LocalPedidos
 import LocalDisponibilidad from "./pages/local/LocalDisponibilidad";
 import LocalProductos from "./pages/local/LocalProductos";
 import LocalTransactions from "./pages/local/LocalTransactions";
@@ -98,7 +98,8 @@ const App = () => (
               <Route index element={null} />
               {/* Operación */}
               <Route path="pedidos" element={<LocalPedidos />} />
-              <Route path="historial" element={<LocalHistorial />} />
+              {/* Historial redirect to pedidos with tab parameter */}
+              <Route path="historial" element={<LocalPedidos defaultTab="historial" />} />
               {/* Menú & Stock */}
               <Route path="disponibilidad" element={<LocalDisponibilidad />} />
               <Route path="productos" element={<LocalProductos />} />
