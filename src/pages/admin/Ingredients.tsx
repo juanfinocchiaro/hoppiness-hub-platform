@@ -316,8 +316,8 @@ export default function Ingredients() {
       </div>
 
       {/* Table */}
-      <Card>
-        <ScrollArea className="h-[500px]">
+      <Card className="flex-1">
+        <ScrollArea className="h-[calc(100vh-380px)]">
           <Table>
             <TableHeader>
               <TableRow>
