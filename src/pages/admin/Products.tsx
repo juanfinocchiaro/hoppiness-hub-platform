@@ -168,7 +168,7 @@ export default function Products() {
     return product.name.toLowerCase().includes(search.toLowerCase());
   });
 
-  // Helper to get products for a category (active + optionally inactive)
+  // Helper to get products for a category (active + optionally inactive at the end)
   const getProductsForCategory = (categoryId: string | null) => {
     const categoryProducts = searchFilteredProducts.filter(p => 
       categoryId === 'uncategorized' ? !p.category_id : p.category_id === categoryId
@@ -177,8 +177,13 @@ export default function Products() {
     const inactiveProducts = categoryProducts.filter(p => !p.is_enabled_by_brand);
     const showInactive = showDisabledInCategory.has(categoryId || 'uncategorized');
     
+    // Active products first, then inactive at the end (if showing)
+    const visibleProducts = showInactive 
+      ? [...activeProducts, ...inactiveProducts]
+      : activeProducts;
+    
     return {
-      visibleProducts: showInactive ? categoryProducts : activeProducts,
+      visibleProducts,
       activeCount: activeProducts.length,
       inactiveCount: inactiveProducts.length,
       showingInactive: showInactive,
