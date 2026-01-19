@@ -37,6 +37,7 @@ import {
   Banknote,
   QrCode,
   ArrowRight,
+  ArrowLeft,
   Store,
   Utensils,
   Bike,
@@ -305,6 +306,15 @@ export default function POS() {
     return (
       <div className="min-h-screen bg-muted/30 p-4 md:p-8">
         <div className="max-w-4xl mx-auto">
+          <Button 
+            variant="ghost" 
+            className="mb-4"
+            onClick={() => navigate('/local')}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver al panel
+          </Button>
+          
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold mb-2">Punto de Venta</h1>
             <p className="text-muted-foreground">Seleccioná la sucursal para comenzar</p>
@@ -357,11 +367,19 @@ export default function POS() {
           <div className="flex items-center gap-3">
             <Button 
               variant="ghost" 
+              size="icon"
+              onClick={() => navigate('/local')}
+              className="text-muted-foreground"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <Button 
+              variant="ghost" 
               size="sm"
               onClick={() => setSelectedBranch(null)}
               className="text-muted-foreground"
             >
-              ← Cambiar
+              Cambiar sucursal
             </Button>
             <div>
               <h1 className="text-xl font-bold">{selectedBranch.name}</h1>
