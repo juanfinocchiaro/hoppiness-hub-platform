@@ -61,15 +61,18 @@ interface StaffMember {
 }
 
 const ROLE_LABELS: Record<AppRole, string> = {
-  admin: 'Admin de Marca',
-  coordinador: 'Coordinador',
-  socio: 'Socio',
-  franquiciado: 'Dueño Franquicia',
+  admin: 'Superadmin',
+  coordinador: 'Coordinador Digital',
+  socio: 'Brandpartner',
+  franquiciado: 'Franquiciado',
+  encargado: 'Encargado',
+  cajero: 'Cajero',
+  kds: 'KDS',
   gerente: 'Encargado',
-  empleado: 'Empleado',
+  empleado: 'Cajero',
 };
 
-const ROLE_HIERARCHY: AppRole[] = ['admin', 'coordinador', 'socio', 'franquiciado', 'gerente', 'empleado'];
+const ROLE_HIERARCHY: AppRole[] = ['admin', 'coordinador', 'socio', 'franquiciado', 'encargado', 'cajero', 'kds'];
 
 export default function LocalRRHHColaboradores() {
   const { branchId } = useParams<{ branchId: string }>();
@@ -493,10 +496,12 @@ export default function LocalRRHHColaboradores() {
             <div>
               <h3 className="font-semibold mb-2">Niveles de Acceso</h3>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li><strong>Admin de Marca:</strong> Control total sobre todas las sucursales</li>
-                <li><strong>Dueño Franquicia:</strong> Gestión completa de su local, P&L y finanzas</li>
-                <li><strong>Encargado:</strong> Operación diaria, stock y gestión de personal</li>
-                <li><strong>Empleado:</strong> POS y KDS únicamente</li>
+                <li><strong>Superadmin:</strong> Control total sobre todas las sucursales</li>
+                <li><strong>Coordinador Digital:</strong> Gestión de productos y usuarios globales</li>
+                <li><strong>Franquiciado:</strong> Gestión completa de su local, P&L y finanzas</li>
+                <li><strong>Encargado:</strong> Operación diaria, horarios, compras y gastos</li>
+                <li><strong>Cajero:</strong> POS, cobros y disponibilidad de productos</li>
+                <li><strong>KDS:</strong> Solo vista de cocina y fichaje</li>
               </ul>
             </div>
           </div>

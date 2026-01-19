@@ -79,12 +79,15 @@ const moduleLabels: Record<string, string> = {
 };
 
 const roleLabels: Record<AppRole, string> = {
-  admin: 'Admin',
-  coordinador: 'Coordinador',
-  socio: 'Socio',
+  admin: 'Superadmin',
+  coordinador: 'Coordinador Digital',
+  socio: 'Brandpartner',
   franquiciado: 'Franquiciado',
-  gerente: 'Gerente',
-  empleado: 'Empleado',
+  encargado: 'Encargado',
+  cajero: 'Cajero',
+  kds: 'KDS',
+  gerente: 'Encargado',
+  empleado: 'Cajero',
 };
 
 const roleColors: Record<AppRole, string> = {
@@ -92,11 +95,14 @@ const roleColors: Record<AppRole, string> = {
   coordinador: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
   socio: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300',
   franquiciado: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+  encargado: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  cajero: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  kds: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
   gerente: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
   empleado: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
 };
 
-const ROLES_HIERARCHY: AppRole[] = ['admin', 'coordinador', 'socio', 'franquiciado', 'gerente', 'empleado'];
+const ROLES_HIERARCHY: AppRole[] = ['admin', 'coordinador', 'socio', 'franquiciado', 'encargado', 'cajero', 'kds'];
 
 export default function Permissions() {
   const { user: currentUser } = useAuth();

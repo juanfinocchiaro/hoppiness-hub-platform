@@ -7,7 +7,7 @@ interface RequireLocalProps {
 }
 
 export function RequireLocal({ children }: RequireLocalProps) {
-  const { isAdmin, isGerente, roles, loading } = useUserRole();
+  const { isAdmin, isCoordinador, isFranquiciado, isEncargado, isCajero, isKds, roles, loading } = useUserRole();
 
   if (loading) {
     return (
@@ -17,8 +17,8 @@ export function RequireLocal({ children }: RequireLocalProps) {
     );
   }
 
-  // admin, gerente, empleado, franquiciado pueden acceder a /local
-  const hasLocalAccess = isAdmin || isGerente || roles.includes('empleado') || roles.includes('franquiciado');
+  // Todos los roles de franquicia pueden acceder a /local
+  const hasLocalAccess = isAdmin || isCoordinador || isFranquiciado || isEncargado || isCajero || isKds;
 
   if (!hasLocalAccess) {
     return <Navigate to="/" replace />;
