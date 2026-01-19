@@ -47,7 +47,10 @@ import {
   Link2,
   MapPin,
   Printer,
-  Timer
+  Timer,
+  Boxes,
+  ClipboardCheck,
+  UserCircle
 } from 'lucide-react';
 import {
   Sheet,
@@ -224,6 +227,25 @@ export default function LocalLayout() {
       ]
     },
     {
+      id: 'stock',
+      label: 'Stock & Inventario',
+      icon: Boxes,
+      show: canManageProducts,
+      items: [
+        { to: 'stock', label: 'Stock Ingredientes', icon: Boxes, show: true },
+        { to: 'inventario', label: 'Conteo Inventario', icon: ClipboardCheck, show: true },
+      ]
+    },
+    {
+      id: 'clientes',
+      label: 'Clientes',
+      icon: UserCircle,
+      show: canManageConfig,
+      items: [
+        { to: 'clientes', label: 'Cuenta Corriente', icon: UserCircle, show: true },
+      ]
+    },
+    {
       id: 'finanzas',
       label: 'Finanzas',
       icon: Wallet,
@@ -260,6 +282,7 @@ export default function LocalLayout() {
         { to: 'integraciones', label: 'Integraciones', icon: Link2, show: true },
         { to: 'zonas-delivery', label: 'Zonas Delivery', icon: MapPin, show: true },
         { to: 'impresoras', label: 'Impresoras', icon: Printer, show: true },
+        { to: 'kds-config', label: 'Configuración KDS', icon: ChefHat, show: true },
       ]
     }
   ].filter(section => section.show);
