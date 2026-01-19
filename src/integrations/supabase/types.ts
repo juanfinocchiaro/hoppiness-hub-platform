@@ -426,6 +426,7 @@ export type Database = {
         Row: {
           address: string
           allowed_ips: string[] | null
+          auto_invoice_integrations: boolean
           city: string
           closing_time: string | null
           created_at: string
@@ -435,6 +436,7 @@ export type Database = {
           enforce_labor_law: boolean
           estimated_prep_time_min: number | null
           id: string
+          invoice_provider: string | null
           is_active: boolean
           is_open: boolean | null
           mercadopago_delivery_enabled: boolean | null
@@ -451,6 +453,7 @@ export type Database = {
         Insert: {
           address: string
           allowed_ips?: string[] | null
+          auto_invoice_integrations?: boolean
           city: string
           closing_time?: string | null
           created_at?: string
@@ -460,6 +463,7 @@ export type Database = {
           enforce_labor_law?: boolean
           estimated_prep_time_min?: number | null
           id?: string
+          invoice_provider?: string | null
           is_active?: boolean
           is_open?: boolean | null
           mercadopago_delivery_enabled?: boolean | null
@@ -476,6 +480,7 @@ export type Database = {
         Update: {
           address?: string
           allowed_ips?: string[] | null
+          auto_invoice_integrations?: boolean
           city?: string
           closing_time?: string | null
           created_at?: string
@@ -485,6 +490,7 @@ export type Database = {
           enforce_labor_law?: boolean
           estimated_prep_time_min?: number | null
           id?: string
+          invoice_provider?: string | null
           is_active?: boolean
           is_open?: boolean | null
           mercadopago_delivery_enabled?: boolean | null
@@ -682,6 +688,7 @@ export type Database = {
       }
       delivery_zones: {
         Row: {
+          base_fee: number | null
           branch_id: string
           created_at: string
           delivery_fee: number | null
@@ -690,13 +697,17 @@ export type Database = {
           estimated_time_min: number | null
           id: string
           is_active: boolean
+          max_distance_km: number | null
           min_order_amount: number | null
           name: string
           neighborhoods: string[] | null
           polygon_coords: Json | null
+          price_per_km: number | null
+          pricing_mode: string
           updated_at: string
         }
         Insert: {
+          base_fee?: number | null
           branch_id: string
           created_at?: string
           delivery_fee?: number | null
@@ -705,13 +716,17 @@ export type Database = {
           estimated_time_min?: number | null
           id?: string
           is_active?: boolean
+          max_distance_km?: number | null
           min_order_amount?: number | null
           name: string
           neighborhoods?: string[] | null
           polygon_coords?: Json | null
+          price_per_km?: number | null
+          pricing_mode?: string
           updated_at?: string
         }
         Update: {
+          base_fee?: number | null
           branch_id?: string
           created_at?: string
           delivery_fee?: number | null
@@ -720,10 +735,13 @@ export type Database = {
           estimated_time_min?: number | null
           id?: string
           is_active?: boolean
+          max_distance_km?: number | null
           min_order_amount?: number | null
           name?: string
           neighborhoods?: string[] | null
           polygon_coords?: Json | null
+          price_per_km?: number | null
+          pricing_mode?: string
           updated_at?: string
         }
         Relationships: [

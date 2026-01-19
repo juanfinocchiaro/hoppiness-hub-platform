@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Eye, Filter } from 'lucide-react';
+import { Search, Eye, Filter, Download } from 'lucide-react';
+import { useExportToExcel } from '@/hooks/useExportToExcel';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -41,6 +42,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function LocalHistorial() {
   const { branchId } = useParams<{ branchId: string }>();
+  const { exportToExcel } = useExportToExcel();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -88,9 +90,33 @@ export default function LocalHistorial() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Historial de Pedidos</h1>
-        <p className="text-muted-foreground">Buscador de órdenes pasadas</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Historial de Pedidos</h1>
+          <p className="text-muted-foreground">Buscador de órdenes pasadas</p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => {
+            exportToExcel(
+              filteredOrders,
+              [
+                { key: 'created_at', label: 'Fecha', format: (v: string) => format(new Date(v), 'dd/MM/yyyy HH:mm', { locale: es }) },
+                { key: 'customer_name', label: 'Cliente' },
+                { key: 'customer_phone', label: 'Teléfono' },
+                { key: 'order_type', label: 'Tipo' },
+                { key: 'sales_channel', label: 'Canal' },
+                { key: 'status', label: 'Estado', format: (v: string) => STATUS_LABELS[v] || v },
+                { key: 'total', label: 'Total', format: (v: number) => Number(v) },
+              ],
+              { filename: 'historial_pedidos', sheetName: 'Pedidos' }
+            );
+          }}
+          disabled={filteredOrders.length === 0}
+        >
+          <Download className="h-4 w-4 mr-2" />
+          Exportar Excel
+        </Button>
       </div>
 
       <div className="relative">

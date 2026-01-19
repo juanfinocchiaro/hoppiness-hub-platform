@@ -10,6 +10,13 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { MapPin, Plus, Pencil, Trash2, DollarSign, Clock, RefreshCw, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
@@ -34,6 +41,10 @@ interface DeliveryZone {
   estimated_time_min: number;
   is_active: boolean;
   display_order: number;
+  pricing_mode: 'fixed' | 'distance';
+  base_fee: number;
+  price_per_km: number;
+  max_distance_km: number | null;
 }
 
 // Helper to safely parse polygon_coords from DB
@@ -71,6 +82,10 @@ export default function LocalDeliveryZones() {
     estimated_time_min: 30,
     is_active: true,
     polygon_coords: null as ZoneShape | null,
+    pricing_mode: 'fixed' as 'fixed' | 'distance',
+    base_fee: 0,
+    price_per_km: 0,
+    max_distance_km: null as number | null,
   });
 
   const currentPermissions = branchPermissions.find(p => p.branch_id === branchId);
@@ -116,6 +131,10 @@ export default function LocalDeliveryZones() {
       estimated_time_min: 30,
       is_active: true,
       polygon_coords: null,
+      pricing_mode: 'fixed',
+      base_fee: 0,
+      price_per_km: 0,
+      max_distance_km: null,
     });
     setEditingZone(null);
   };
@@ -136,6 +155,10 @@ export default function LocalDeliveryZones() {
       estimated_time_min: zone.estimated_time_min,
       is_active: zone.is_active,
       polygon_coords: zone.polygon_coords,
+      pricing_mode: zone.pricing_mode || 'fixed',
+      base_fee: zone.base_fee || 0,
+      price_per_km: zone.price_per_km || 0,
+      max_distance_km: zone.max_distance_km,
     });
     setDialogOpen(true);
   };
@@ -164,10 +187,14 @@ export default function LocalDeliveryZones() {
         description: formData.description.trim() || null,
         neighborhoods: neighborhoods.length > 0 ? neighborhoods : null,
         polygon_coords: formData.polygon_coords,
-        delivery_fee: formData.delivery_fee,
+        delivery_fee: formData.pricing_mode === 'fixed' ? formData.delivery_fee : 0,
         min_order_amount: formData.min_order_amount,
         estimated_time_min: formData.estimated_time_min,
         is_active: formData.is_active,
+        pricing_mode: formData.pricing_mode,
+        base_fee: formData.pricing_mode === 'distance' ? formData.base_fee : 0,
+        price_per_km: formData.pricing_mode === 'distance' ? formData.price_per_km : 0,
+        max_distance_km: formData.pricing_mode === 'distance' ? formData.max_distance_km : null,
       };
 
       if (editingZone) {
@@ -326,35 +353,113 @@ export default function LocalDeliveryZones() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* Pricing Mode */}
+            <div className="space-y-4 p-4 rounded-lg bg-muted/50">
               <div className="space-y-2">
-                <Label htmlFor="delivery_fee">Costo de Envío</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input
-                    id="delivery_fee"
-                    type="number"
-                    min={0}
-                    value={formData.delivery_fee}
-                    onChange={(e) => setFormData({ ...formData, delivery_fee: Number(e.target.value) })}
-                    className="pl-7"
-                  />
-                </div>
+                <Label>Modo de Tarifa</Label>
+                <Select
+                  value={formData.pricing_mode}
+                  onValueChange={(v: 'fixed' | 'distance') => setFormData({ ...formData, pricing_mode: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fixed">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4" />
+                        Tarifa Fija
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="distance">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        Por Distancia ($/km)
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="min_order">Pedido Mínimo</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input
-                    id="min_order"
-                    type="number"
-                    min={0}
-                    value={formData.min_order_amount}
-                    onChange={(e) => setFormData({ ...formData, min_order_amount: Number(e.target.value) })}
-                    className="pl-7"
-                  />
+              {formData.pricing_mode === 'fixed' ? (
+                <div className="space-y-2">
+                  <Label htmlFor="delivery_fee">Costo de Envío Fijo</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input
+                      id="delivery_fee"
+                      type="number"
+                      min={0}
+                      value={formData.delivery_fee}
+                      onChange={(e) => setFormData({ ...formData, delivery_fee: Number(e.target.value) })}
+                      className="pl-7"
+                    />
+                  </div>
                 </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="base_fee">Tarifa Base</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                        <Input
+                          id="base_fee"
+                          type="number"
+                          min={0}
+                          value={formData.base_fee}
+                          onChange={(e) => setFormData({ ...formData, base_fee: Number(e.target.value) })}
+                          className="pl-7"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="price_per_km">Precio por Km</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                        <Input
+                          id="price_per_km"
+                          type="number"
+                          min={0}
+                          value={formData.price_per_km}
+                          onChange={(e) => setFormData({ ...formData, price_per_km: Number(e.target.value) })}
+                          className="pl-7"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="max_distance">Distancia Máxima (km, opcional)</Label>
+                    <Input
+                      id="max_distance"
+                      type="number"
+                      min={0}
+                      step={0.5}
+                      value={formData.max_distance_km ?? ''}
+                      onChange={(e) => setFormData({ ...formData, max_distance_km: e.target.value ? Number(e.target.value) : null })}
+                      className="w-32"
+                      placeholder="Sin límite"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Ejemplo: Base $500 + $150/km → 3km = $500 + (3 × $150) = $950
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="min_order">Pedido Mínimo</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <Input
+                  id="min_order"
+                  type="number"
+                  min={0}
+                  value={formData.min_order_amount}
+                  onChange={(e) => setFormData({ ...formData, min_order_amount: Number(e.target.value) })}
+                  className="pl-7"
+                />
               </div>
             </div>
 
@@ -494,7 +599,11 @@ export default function LocalDeliveryZones() {
                 <div className="grid grid-cols-3 gap-2 text-sm">
                   <div className="flex items-center gap-1.5 text-muted-foreground">
                     <DollarSign className="h-4 w-4" />
-                    <span>Envío: {formatCurrency(zone.delivery_fee)}</span>
+                    {zone.pricing_mode === 'distance' ? (
+                      <span>${zone.base_fee} + ${zone.price_per_km}/km</span>
+                    ) : (
+                      <span>Envío: {formatCurrency(zone.delivery_fee)}</span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1.5 text-muted-foreground">
                     <DollarSign className="h-4 w-4" />
