@@ -131,7 +131,11 @@ export default function OrdersHeatmap({
 
       orders?.forEach(order => {
         const date = new Date(order.created_at);
-        const dateStr = date.toISOString().split('T')[0];
+        // Use local time consistently for both date and time
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
         const hours = date.getHours().toString().padStart(2, '0');
         const minutes = date.getMinutes() < 30 ? '00' : '30';
         const timeSlot = `${hours}:${minutes}`;
