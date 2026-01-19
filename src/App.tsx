@@ -25,6 +25,7 @@ import LocalDashboard from "./pages/local/LocalDashboard";
 import LocalPedidos from "./pages/local/LocalPedidos";
 import LocalHistorial from "./pages/local/LocalHistorial";
 import LocalDisponibilidad from "./pages/local/LocalDisponibilidad";
+import LocalExtras from "./pages/local/LocalExtras";
 import LocalProductos from "./pages/local/LocalProductos";
 import LocalTransactions from "./pages/local/LocalTransactions";
 import LocalCaja from "./pages/local/LocalCaja";
@@ -99,9 +100,10 @@ const App = () => (
               {/* Operación */}
               <Route path="pedidos" element={<LocalPedidos />} />
               <Route path="historial" element={<LocalHistorial />} />
-              {/* Menú & Stock */}
-              <Route path="disponibilidad" element={<LocalDisponibilidad />} />
+              {/* Menú Local */}
               <Route path="productos" element={<LocalProductos />} />
+              <Route path="extras" element={<LocalExtras />} />
+              <Route path="disponibilidad" element={<LocalDisponibilidad />} /> {/* Legacy redirect */}
               {/* Finanzas */}
               <Route path="transacciones" element={<LocalTransactions />} />
               <Route path="caja" element={<LocalCaja />} />

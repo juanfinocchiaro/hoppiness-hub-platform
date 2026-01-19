@@ -12,35 +12,65 @@ import {
   LogOut,
   Menu,
   ChevronRight,
+  ChevronDown,
   ClipboardList,
   BarChart3,
   Building2,
   ChefHat,
-  Shield
+  Shield,
+  UtensilsCrossed
 } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
-const navItems = [
+interface NavItem {
+  to: string;
+  icon: React.ElementType;
+  label: string;
+  exact?: boolean;
+}
+
+interface NavSection {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  items: NavItem[];
+}
+
+const navItems: NavItem[] = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
   { to: '/admin/reportes', icon: BarChart3, label: 'Ventas' },
   { to: '/admin/estado-resultados', icon: ClipboardList, label: 'Estado de Resultados' },
   { to: '/admin/sucursales', icon: Store, label: 'Sucursales' },
-  { to: '/admin/productos', icon: Package, label: 'Productos' },
-  { to: '/admin/modificadores', icon: ChefHat, label: 'Modificadores' },
   { to: '/admin/proveedores', icon: Truck, label: 'Proveedores' },
   { to: '/admin/usuarios', icon: Users, label: 'Equipo' },
   { to: '/admin/permisos', icon: Shield, label: 'Accesos' },
 ];
+
+const menuSection: NavSection = {
+  id: 'menu-marca',
+  label: 'Menú Marca',
+  icon: UtensilsCrossed,
+  items: [
+    { to: '/admin/productos', icon: Package, label: 'Productos' },
+    { to: '/admin/modificadores', icon: ChefHat, label: 'Extras / Modificadores' },
+  ]
+};
 
 export default function AdminDashboard() {
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [hasAssignedBranch, setHasAssignedBranch] = useState(false);
+  const [menuExpanded, setMenuExpanded] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -99,9 +129,66 @@ export default function AdminDashboard() {
     );
   }
 
+  const isMenuSectionActive = menuSection.items.some(item => location.pathname.startsWith(item.to));
+
   const NavContent = () => (
     <nav className="space-y-1">
-      {navItems.map((item) => {
+      {/* Regular nav items */}
+      {navItems.slice(0, 4).map((item) => {
+        const isActive = item.exact 
+          ? location.pathname === item.to
+          : location.pathname.startsWith(item.to);
+        return (
+          <Link key={item.to} to={item.to}>
+            <Button
+              variant={isActive ? 'secondary' : 'ghost'}
+              className={`w-full justify-start ${isActive ? 'bg-primary/10 text-primary' : ''}`}
+            >
+              <item.icon className="w-4 h-4 mr-3" />
+              {item.label}
+              {isActive && <ChevronRight className="w-4 h-4 ml-auto" />}
+            </Button>
+          </Link>
+        );
+      })}
+
+      {/* Menú Marca collapsible section */}
+      <Collapsible open={menuExpanded || isMenuSectionActive} onOpenChange={setMenuExpanded}>
+        <CollapsibleTrigger asChild>
+          <Button
+            variant="ghost"
+            className={`w-full justify-start ${isMenuSectionActive ? 'bg-primary/5 text-primary' : ''}`}
+          >
+            <menuSection.icon className="w-4 h-4 mr-3" />
+            {menuSection.label}
+            {menuExpanded || isMenuSectionActive ? (
+              <ChevronDown className="w-4 h-4 ml-auto" />
+            ) : (
+              <ChevronRight className="w-4 h-4 ml-auto" />
+            )}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pl-4 space-y-0.5 mt-1">
+          {menuSection.items.map((item) => {
+            const isActive = location.pathname.startsWith(item.to);
+            return (
+              <Link key={item.to} to={item.to}>
+                <Button
+                  variant={isActive ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className={`w-full justify-start ${isActive ? 'bg-primary/10 text-primary' : ''}`}
+                >
+                  <item.icon className="w-4 h-4 mr-3" />
+                  {item.label}
+                </Button>
+              </Link>
+            );
+          })}
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Remaining nav items */}
+      {navItems.slice(4).map((item) => {
         const isActive = item.exact 
           ? location.pathname === item.to
           : location.pathname.startsWith(item.to);
