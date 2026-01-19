@@ -155,10 +155,23 @@ serve(async (req) => {
     // Parse JSON from response (handle markdown code blocks)
     let extractedData;
     try {
-      // Remove markdown code blocks if present
-      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
-      const jsonString = jsonMatch[1]?.trim() || content.trim();
-      extractedData = JSON.parse(jsonString);
+      const raw = typeof content === 'string' ? content : JSON.stringify(content);
+      const trimmed = raw.trim();
+
+      // 1) Try to extract the first JSON object from anywhere in the text
+      const firstBrace = trimmed.indexOf('{');
+      const lastBrace = trimmed.lastIndexOf('}');
+      const candidate = (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace)
+        ? trimmed.slice(firstBrace, lastBrace + 1)
+        : trimmed;
+
+      // 2) Remove common markdown fences if they are still present
+      const unfenced = candidate
+        .replace(/^```[a-zA-Z]*\s*/m, '')
+        .replace(/```\s*$/m, '')
+        .trim();
+
+      extractedData = JSON.parse(unfenced);
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
       await supabase
