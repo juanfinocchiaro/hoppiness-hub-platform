@@ -6,12 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Clock, 
-  CheckCircle, 
   ChefHat,
   Timer,
   Volume2,
-  VolumeX
+  VolumeX,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables, Enums } from '@/integrations/supabase/types';
@@ -29,13 +28,13 @@ interface KDSViewProps {
   branch: Branch;
 }
 
-const STATUS_CONFIG: Record<Enums<'order_status'>, { label: string; color: string; bgColor: string }> = {
-  pending: { label: 'Pendiente', color: 'text-yellow-700', bgColor: 'bg-yellow-100 border-yellow-300' },
-  confirmed: { label: 'Confirmado', color: 'text-blue-700', bgColor: 'bg-blue-100 border-blue-300' },
-  preparing: { label: 'Preparando', color: 'text-orange-700', bgColor: 'bg-orange-100 border-orange-300' },
-  ready: { label: 'Listo', color: 'text-green-700', bgColor: 'bg-green-100 border-green-300' },
-  delivered: { label: 'Entregado', color: 'text-gray-700', bgColor: 'bg-gray-100 border-gray-300' },
-  cancelled: { label: 'Cancelado', color: 'text-red-700', bgColor: 'bg-red-100 border-red-300' },
+const STATUS_CONFIG: Record<Enums<'order_status'>, { label: string; colorClass: string }> = {
+  pending: { label: 'Pendiente', colorClass: 'bg-warning/20 border-warning text-warning-foreground' },
+  confirmed: { label: 'Confirmado', colorClass: 'bg-primary/20 border-primary text-primary' },
+  preparing: { label: 'Preparando', colorClass: 'bg-accent/20 border-accent text-accent' },
+  ready: { label: 'Listo', colorClass: 'bg-success/20 border-success text-success' },
+  delivered: { label: 'Entregado', colorClass: 'bg-muted border-border text-muted-foreground' },
+  cancelled: { label: 'Cancelado', colorClass: 'bg-destructive/20 border-destructive text-destructive' },
 };
 
 const KITCHEN_STATUSES: Enums<'order_status'>[] = ['pending', 'confirmed', 'preparing', 'ready'];
@@ -77,7 +76,6 @@ export default function KDSView({ branch }: KDSViewProps) {
   useEffect(() => {
     fetchOrders();
 
-    // Subscribe to real-time changes
     const channel = supabase
       .channel(`kds-orders-${branch.id}`)
       .on(
@@ -143,12 +141,12 @@ export default function KDSView({ branch }: KDSViewProps) {
     return `${hours}h ${minutes % 60}m`;
   };
 
-  const getTimeColor = (createdAt: string) => {
+  const getTimeColorClass = (createdAt: string) => {
     const diff = Date.now() - new Date(createdAt).getTime();
     const minutes = Math.floor(diff / 60000);
-    if (minutes < 10) return 'text-green-600';
-    if (minutes < 20) return 'text-yellow-600';
-    return 'text-red-600';
+    if (minutes < 10) return 'text-success';
+    if (minutes < 20) return 'text-warning';
+    return 'text-destructive';
   };
 
   const groupedOrders = KITCHEN_STATUSES.reduce((acc, status) => {
@@ -158,13 +156,13 @@ export default function KDSView({ branch }: KDSViewProps) {
 
   if (loading) {
     return (
-      <div className="h-[calc(100vh-120px)] -m-6 p-4 bg-gray-900">
+      <div className="h-[calc(100vh-120px)] -m-6 p-4 bg-sidebar">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 h-full">
           {[1, 2, 3, 4].map(i => (
             <div key={i} className="space-y-3">
-              <Skeleton className="h-8 w-full bg-gray-700" />
-              <Skeleton className="h-48 w-full bg-gray-800" />
-              <Skeleton className="h-48 w-full bg-gray-800" />
+              <Skeleton className="h-8 w-full bg-sidebar-accent" />
+              <Skeleton className="h-48 w-full bg-sidebar-accent" />
+              <Skeleton className="h-48 w-full bg-sidebar-accent" />
             </div>
           ))}
         </div>
@@ -173,19 +171,21 @@ export default function KDSView({ branch }: KDSViewProps) {
   }
 
   return (
-    <div className="h-[calc(100vh-120px)] -m-6 bg-gray-900 text-white flex flex-col">
+    <div className="h-[calc(100vh-120px)] -m-6 bg-sidebar text-sidebar-foreground flex flex-col">
       {/* Audio element for notifications */}
       <audio ref={audioRef} preload="auto">
         <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleVxTu+/11rpWLx9Ik8bZx31YVJ/p+uC9YUA7aL/v6K5jQQAQaKr12r9xXHCf6vfbpF5DIluX2+rXrl5Lb7T16MFpUEMxYKbt5bpmUV+C0fDhtmNJMS9mtPLkuGpWh8/v376+//7" type="audio/wav" />
       </audio>
 
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-700">
+      <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <ChefHat className="w-8 h-8 text-orange-500" />
+          <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center">
+            <ChefHat className="w-5 h-5 text-accent-foreground" />
+          </div>
           <div>
-            <h1 className="text-2xl font-bold">Cocina - {branch.name}</h1>
-            <p className="text-gray-400 text-sm">Kitchen Display System</p>
+            <h1 className="text-xl font-bold">Cocina - {branch.name}</h1>
+            <p className="text-sidebar-foreground/60 text-sm">Kitchen Display System</p>
           </div>
         </div>
 
@@ -193,12 +193,20 @@ export default function KDSView({ branch }: KDSViewProps) {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => fetchOrders()}
+            className="border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className={soundEnabled ? 'border-green-500 text-green-500' : 'border-gray-500 text-gray-500'}
+            className={`border-sidebar-border ${soundEnabled ? 'text-success' : 'text-sidebar-foreground/50'} hover:bg-sidebar-accent`}
           >
             {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </Button>
-          <Badge variant="outline" className="text-lg px-3 py-1">
+          <Badge className="bg-accent text-accent-foreground px-3 py-1">
             {orders.length} pedidos activos
           </Badge>
         </div>
@@ -212,35 +220,35 @@ export default function KDSView({ branch }: KDSViewProps) {
 
           return (
             <div key={status} className="flex flex-col h-full">
-              <div className={`p-2 rounded-t-lg ${config.bgColor} border-b-2`}>
-                <h2 className={`font-bold text-center ${config.color}`}>
+              <div className={`p-2 rounded-t-lg border-2 ${config.colorClass}`}>
+                <h2 className="font-bold text-center">
                   {config.label} ({statusOrders.length})
                 </h2>
               </div>
 
-              <ScrollArea className="flex-1 bg-gray-800 rounded-b-lg">
+              <ScrollArea className="flex-1 bg-sidebar-accent rounded-b-lg border border-t-0 border-sidebar-border">
                 <div className="p-2 space-y-3">
                   {statusOrders.length === 0 ? (
-                    <p className="text-center text-gray-500 py-8">Sin pedidos</p>
+                    <p className="text-center text-sidebar-foreground/50 py-8">Sin pedidos</p>
                   ) : (
                     statusOrders.map(order => {
                       const nextStatus = getNextStatus(order.status);
                       
                       return (
-                        <Card key={order.id} className={`${config.bgColor} border-2`}>
+                        <Card key={order.id} className={`border-2 ${config.colorClass}`}>
                           <CardHeader className="py-2 px-3">
                             <div className="flex items-center justify-between">
-                              <CardTitle className={`text-lg ${config.color}`}>
+                              <CardTitle className="text-lg">
                                 #{order.caller_number || order.id.slice(-4)}
                               </CardTitle>
-                              <div className={`flex items-center gap-1 ${getTimeColor(order.created_at)}`}>
+                              <div className={`flex items-center gap-1 ${getTimeColorClass(order.created_at)}`}>
                                 <Timer className="w-4 h-4" />
                                 <span className="font-mono text-sm font-bold">
                                   {getTimeSinceOrder(order.created_at)}
                                 </span>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2 text-xs text-gray-600">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               <span>{order.order_type === 'delivery' ? '🚴 Delivery' : order.order_type === 'dine_in' ? '🍽️ Salón' : '🛍️ Mostrador'}</span>
                               <span>• {order.customer_name}</span>
                             </div>
@@ -248,14 +256,14 @@ export default function KDSView({ branch }: KDSViewProps) {
                           <CardContent className="py-2 px-3">
                             <ul className="space-y-1">
                               {order.order_items.map((item, idx) => (
-                                <li key={idx} className="flex items-start gap-2 text-sm text-gray-800">
-                                  <span className="font-bold text-orange-600">{item.quantity}x</span>
+                                <li key={idx} className="flex items-start gap-2 text-sm">
+                                  <span className="font-bold text-accent">{item.quantity}x</span>
                                   <span className="flex-1">{item.products?.name}</span>
                                 </li>
                               ))}
                             </ul>
                             {order.notes && (
-                              <p className="mt-2 text-xs text-gray-600 italic bg-white/50 p-1 rounded">
+                              <p className="mt-2 text-xs text-muted-foreground italic bg-muted/50 p-1 rounded">
                                 📝 {order.notes}
                               </p>
                             )}

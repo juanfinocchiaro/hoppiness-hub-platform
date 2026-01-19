@@ -20,6 +20,7 @@ import POS from "./pages/pos/POS";
 import KDS from "./pages/pos/KDS";
 import OrdersDashboard from "./pages/pos/OrdersDashboard";
 import LocalLayout from "./pages/local/LocalLayout";
+import LocalDashboard from "./pages/local/LocalDashboard";
 import LocalPedidos from "./pages/local/LocalPedidos";
 import LocalProductos from "./pages/local/LocalProductos";
 import LocalConfig from "./pages/local/LocalConfig";
@@ -68,7 +69,7 @@ const App = () => (
               <Route index element={<div />} />
             </Route>
             <Route path="/local/:branchId" element={<LocalRoute><LocalLayout /></LocalRoute>}>
-              <Route index element={<LocalPedidos />} />
+              <Route index element={null} />
               <Route path="pedidos" element={<LocalPedidos />} />
               <Route path="productos" element={<LocalProductos />} />
               <Route path="config" element={<LocalConfig />} />

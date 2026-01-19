@@ -87,7 +87,7 @@ export default function AdminDashboard() {
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-4">
               <div className="mb-6">
-                <h2 className="text-lg font-bold">Hoppiness Admin</h2>
+                <h2 className="text-lg font-bold">Panel Admin</h2>
               </div>
               <NavContent />
               <div className="absolute bottom-4 left-4 right-4">
@@ -98,7 +98,7 @@ export default function AdminDashboard() {
               </div>
             </SheetContent>
           </Sheet>
-          <h1 className="font-bold">Hoppiness Admin</h1>
+          <h1 className="font-bold">Panel Admin</h1>
           <div className="w-10" />
         </div>
       </header>
@@ -111,7 +111,7 @@ export default function AdminDashboard() {
               <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
                 <span className="text-primary-foreground font-bold">HC</span>
               </div>
-              <span className="text-lg font-bold">Hoppiness Admin</span>
+              <span className="text-lg font-bold">Panel Admin</span>
             </Link>
           </div>
           
