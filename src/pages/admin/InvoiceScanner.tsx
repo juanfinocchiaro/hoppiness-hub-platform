@@ -224,6 +224,23 @@ export default function InvoiceScanner() {
           </p>
         </div>
         <div className="flex gap-2">
+          {pendingDocs.length > 0 && (
+            <Button
+              variant="default"
+              onClick={() => {
+                pendingDocs.forEach(doc => {
+                  if (doc.file_path && !processingIds.has(doc.id)) {
+                    retryProcessing(doc);
+                  }
+                });
+                toast.info(`Reprocesando ${pendingDocs.length} documentos...`);
+              }}
+              disabled={processingIds.size > 0}
+            >
+              <ScanLine className="h-4 w-4 mr-2" />
+              Reprocesar Todo ({pendingDocs.length})
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={() => queryClient.invalidateQueries({ queryKey: ['scanned-documents'] })}
