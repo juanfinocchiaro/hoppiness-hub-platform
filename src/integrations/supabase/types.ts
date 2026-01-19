@@ -1959,6 +1959,47 @@ export type Database = {
         }
         Relationships: []
       }
+      ingredient_unit_conversions: {
+        Row: {
+          conversion_factor: number
+          created_at: string
+          from_unit: string
+          id: string
+          ingredient_id: string
+          is_purchase_to_usage: boolean | null
+          notes: string | null
+          to_unit: string
+        }
+        Insert: {
+          conversion_factor?: number
+          created_at?: string
+          from_unit: string
+          id?: string
+          ingredient_id: string
+          is_purchase_to_usage?: boolean | null
+          notes?: string | null
+          to_unit: string
+        }
+        Update: {
+          conversion_factor?: number
+          created_at?: string
+          from_unit?: string
+          id?: string
+          ingredient_id?: string
+          is_purchase_to_usage?: boolean | null
+          notes?: string | null
+          to_unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_unit_conversions_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingredients: {
         Row: {
           avg_daily_consumption: number | null

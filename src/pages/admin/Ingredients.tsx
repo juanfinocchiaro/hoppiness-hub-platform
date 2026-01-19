@@ -45,7 +45,9 @@ import {
   Trash2,
   DollarSign,
   AlertTriangle,
+  ArrowLeftRight,
 } from 'lucide-react';
+import { IngredientUnitConversions } from '@/components/admin/IngredientUnitConversions';
 import { toast } from 'sonner';
 
 interface Ingredient {
@@ -100,6 +102,12 @@ export default function Ingredients() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState<Ingredient | null>(null);
+  
+  // Unit conversions dialog
+  const [conversionsDialog, setConversionsDialog] = useState<{
+    open: boolean;
+    ingredient: Ingredient | null;
+  }>({ open: false, ingredient: null });
 
   // Form state
   const [formName, setFormName] = useState('');
@@ -444,6 +452,12 @@ export default function Ingredients() {
                             <Edit className="w-4 h-4 mr-2" />
                             Editar
                           </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => setConversionsDialog({ open: true, ingredient })}
+                          >
+                            <ArrowLeftRight className="w-4 h-4 mr-2" />
+                            Equivalencias
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleDelete(ingredient)}
                             className="text-destructive"
@@ -631,6 +645,19 @@ export default function Ingredients() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Unit Conversions Dialog */}
+      {conversionsDialog.ingredient && (
+        <IngredientUnitConversions
+          open={conversionsDialog.open}
+          onOpenChange={(open) => setConversionsDialog({ open, ingredient: open ? conversionsDialog.ingredient : null })}
+          ingredientId={conversionsDialog.ingredient.id}
+          ingredientName={conversionsDialog.ingredient.name}
+          purchaseUnit={conversionsDialog.ingredient.purchase_unit || conversionsDialog.ingredient.unit}
+          usageUnit={conversionsDialog.ingredient.usage_unit || conversionsDialog.ingredient.unit}
+          onUpdated={fetchData}
+        />
+      )}
     </div>
   );
 }
