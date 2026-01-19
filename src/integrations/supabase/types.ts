@@ -349,6 +349,7 @@ export type Database = {
           delivery_address: string | null
           delivery_fee: number | null
           estimated_time: string | null
+          external_order_id: string | null
           id: string
           notes: string | null
           order_area: Database["public"]["Enums"]["order_area"] | null
@@ -372,6 +373,7 @@ export type Database = {
           delivery_address?: string | null
           delivery_fee?: number | null
           estimated_time?: string | null
+          external_order_id?: string | null
           id?: string
           notes?: string | null
           order_area?: Database["public"]["Enums"]["order_area"] | null
@@ -395,6 +397,7 @@ export type Database = {
           delivery_address?: string | null
           delivery_fee?: number | null
           estimated_time?: string | null
+          external_order_id?: string | null
           id?: string
           notes?: string | null
           order_area?: Database["public"]["Enums"]["order_area"] | null
@@ -690,6 +693,8 @@ export type Database = {
         | "pedidos_ya"
         | "rappi"
         | "mercadopago_delivery"
+        | "web_app"
+        | "pos_local"
       transaction_type: "income" | "expense"
     }
     CompositeTypes: {
@@ -845,6 +850,8 @@ export const Constants = {
         "pedidos_ya",
         "rappi",
         "mercadopago_delivery",
+        "web_app",
+        "pos_local",
       ],
       transaction_type: ["income", "expense"],
     },
