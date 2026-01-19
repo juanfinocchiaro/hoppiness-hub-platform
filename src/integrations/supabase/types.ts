@@ -220,6 +220,7 @@ export type Database = {
           is_enabled: boolean
           opens_at: string
           service_type: string
+          shift_number: number
           updated_at: string
         }
         Insert: {
@@ -231,6 +232,7 @@ export type Database = {
           is_enabled?: boolean
           opens_at?: string
           service_type: string
+          shift_number?: number
           updated_at?: string
         }
         Update: {
@@ -242,6 +244,7 @@ export type Database = {
           is_enabled?: boolean
           opens_at?: string
           service_type?: string
+          shift_number?: number
           updated_at?: string
         }
         Relationships: [
