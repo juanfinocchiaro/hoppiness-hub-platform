@@ -508,7 +508,7 @@ export default function LocalLayout() {
               <Link to="/admin">
                 <Button variant="ghost" className="w-full justify-start" size="sm">
                   <Home className="w-4 h-4 mr-3" />
-                  Panel Admin
+                  Panel Marca
                 </Button>
               </Link>
             )}

@@ -134,7 +134,7 @@ export default function AdminDashboard() {
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-4">
               <div className="mb-6">
-                <h2 className="text-lg font-bold">Panel Admin</h2>
+                <h2 className="text-lg font-bold">Panel Marca</h2>
               </div>
               <NavContent />
               {hasAssignedBranch && (
@@ -155,7 +155,7 @@ export default function AdminDashboard() {
               </div>
             </SheetContent>
           </Sheet>
-          <h1 className="font-bold">Panel Admin</h1>
+          <h1 className="font-bold">Panel Marca</h1>
           <div className="w-10" />
         </div>
       </header>
@@ -168,7 +168,7 @@ export default function AdminDashboard() {
               <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
                 <span className="text-primary-foreground font-bold">HC</span>
               </div>
-              <span className="text-lg font-bold">Panel Admin</span>
+              <span className="text-lg font-bold">Panel Marca</span>
             </Link>
           </div>
           
