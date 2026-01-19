@@ -25,6 +25,7 @@ type Order = Tables<'orders'> & {
 type OrderStatus = Enums<'order_status'>;
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; icon: React.ReactNode }> = {
+  draft: { label: 'Borrador', color: 'bg-slate-400', icon: <Clock className="h-4 w-4" /> },
   pending: { label: 'Pendiente', color: 'bg-yellow-500', icon: <Clock className="h-4 w-4" /> },
   confirmed: { label: 'Confirmado', color: 'bg-blue-500', icon: <CheckCircle className="h-4 w-4" /> },
   preparing: { label: 'Preparando', color: 'bg-orange-500', icon: <ChefHat className="h-4 w-4" /> },
@@ -154,6 +155,7 @@ export default function OrdersDashboard() {
 
   const getNextStatus = (currentStatus: OrderStatus): OrderStatus | null => {
     const flow: Record<OrderStatus, OrderStatus | null> = {
+      draft: 'pending',
       pending: 'confirmed',
       confirmed: 'preparing',
       preparing: 'ready',

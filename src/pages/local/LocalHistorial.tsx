@@ -36,6 +36,7 @@ interface OrderWithItems extends Order {
 }
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string }> = {
+  draft: { label: 'Borrador', color: 'bg-slate-400' },
   pending: { label: 'Pendiente', color: 'bg-yellow-500' },
   confirmed: { label: 'Confirmado', color: 'bg-blue-500' },
   preparing: { label: 'Preparando', color: 'bg-orange-500' },
