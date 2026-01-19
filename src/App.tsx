@@ -41,6 +41,7 @@ import LocalPL from "./pages/local/LocalPL";
 import LocalFacturas from "./pages/local/LocalFacturas";
 import LocalTaxes from "./pages/local/LocalTaxes";
 import LocalLoans from "./pages/local/LocalLoans";
+import LocalPaymentPlans from "./pages/local/LocalPaymentPlans";
 import LocalFinanceReports from "./pages/local/LocalFinanceReports";
 import LocalConfig from "./pages/local/LocalConfig";
 import LocalDeliveryZones from "./pages/local/LocalDeliveryZones";
@@ -119,6 +120,7 @@ const App = () => (
               <Route path="estado-resultados" element={<LocalPL />} />
               <Route path="impuestos" element={<LocalTaxes />} />
               <Route path="prestamos" element={<LocalLoans />} />
+              <Route path="planes-pago" element={<LocalPaymentPlans />} />
               <Route path="reportes" element={<LocalFinanceReports />} />
               {/* RRHH */}
               <Route path="rrhh/fichajes" element={<LocalRRHHFichajes />} />
