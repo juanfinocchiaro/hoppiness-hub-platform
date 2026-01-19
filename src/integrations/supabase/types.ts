@@ -3340,6 +3340,7 @@ export type Database = {
           preparation_time: number | null
           price: number
           product_type: string
+          sku: string | null
           updated_at: string
         }
         Insert: {
@@ -3356,6 +3357,7 @@ export type Database = {
           preparation_time?: number | null
           price: number
           product_type?: string
+          sku?: string | null
           updated_at?: string
         }
         Update: {
@@ -3372,6 +3374,7 @@ export type Database = {
           preparation_time?: number | null
           price?: number
           product_type?: string
+          sku?: string | null
           updated_at?: string
         }
         Relationships: [
