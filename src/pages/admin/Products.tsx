@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Plus, Search, Edit, Star, ChevronDown, ChevronRight, Power, Check, X } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -64,7 +65,7 @@ export default function Products() {
   const fetchData = async () => {
     const [productsRes, categoriesRes, branchesRes, branchProductsRes] = await Promise.all([
       supabase.from('products').select('*').order('name'),
-      supabase.from('product_categories').select('*').eq('is_active', true).order('display_order'),
+      supabase.from('product_categories').select('*').order('display_order'),
       supabase.from('branches').select('*').eq('is_active', true).order('name'),
       supabase.from('branch_products').select('*'),
     ]);
@@ -79,6 +80,24 @@ export default function Products() {
     if (branchesRes.data) setBranches(branchesRes.data);
     if (branchProductsRes.data) setBranchProducts(branchProductsRes.data);
     setLoading(false);
+  };
+
+  const handleCategoryToggle = async (categoryId: string, currentValue: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('product_categories')
+        .update({ is_active: !currentValue })
+        .eq('id', categoryId);
+      if (error) throw error;
+
+      setCategories(prev => prev.map(c => 
+        c.id === categoryId ? { ...c, is_active: !currentValue } : c
+      ));
+      toast.success(!currentValue ? 'Categoría activada' : 'Categoría desactivada');
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error al actualizar categoría');
+    }
   };
 
   useEffect(() => {
@@ -298,18 +317,33 @@ export default function Products() {
         {productsByCategory.map(({ category, products: categoryProducts }) => (
           <div key={category.id} className="space-y-2">
             {/* Category Header */}
-            <button
-              onClick={() => toggleCategory(category.id)}
-              className="flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {expandedCategories.has(category.id) ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
+            <div className={`flex items-center justify-between py-2 px-3 rounded-lg transition-all ${!category.is_active ? 'bg-muted/50 opacity-60' : 'bg-muted/30'}`}>
+              <button
+                onClick={() => toggleCategory(category.id)}
+                className="flex items-center gap-2 text-sm font-semibold text-foreground hover:text-primary transition-colors"
+              >
+                {expandedCategories.has(category.id) ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+                <span className={!category.is_active ? 'line-through' : ''}>{category.name}</span>
+                <span className="text-xs font-normal text-muted-foreground">({categoryProducts.length})</span>
+              </button>
+              
+              {category.id !== 'uncategorized' && (
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs ${category.is_active ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+                    {category.is_active ? 'Activa' : 'Inactiva'}
+                  </span>
+                  <Switch
+                    checked={category.is_active}
+                    onCheckedChange={() => handleCategoryToggle(category.id, category.is_active)}
+                    className="data-[state=checked]:bg-emerald-500"
+                  />
+                </div>
               )}
-              {category.name}
-              <span className="text-xs font-normal opacity-60">({categoryProducts.length})</span>
-            </button>
+            </div>
 
             {/* Products List */}
             {expandedCategories.has(category.id) && (
