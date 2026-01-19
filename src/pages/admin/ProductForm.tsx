@@ -62,6 +62,8 @@ export default function ProductForm() {
   const [isFeatured, setIsFeatured] = useState(false);
   const [preparationTime, setPreparationTime] = useState('');
   const [productType, setProductType] = useState<'final' | 'composite'>('final');
+  const [containsAlcohol, setContainsAlcohol] = useState(false);
+  const [isEnabledByBrand, setIsEnabledByBrand] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
@@ -114,6 +116,9 @@ export default function ProductForm() {
           setPreparationTime(product.preparation_time?.toString() || '');
           // @ts-ignore - product_type may not be in types yet
           setProductType(product.product_type || 'final');
+          // @ts-ignore
+          setContainsAlcohol(product.contains_alcohol || false);
+          setIsEnabledByBrand(product.is_enabled_by_brand ?? true);
         }
 
         // Obtener sucursales donde está el producto
@@ -229,6 +234,8 @@ export default function ProductForm() {
         is_featured: isFeatured,
         preparation_time: preparationTime ? parseInt(preparationTime) : null,
         product_type: productType,
+        contains_alcohol: containsAlcohol,
+        is_enabled_by_brand: isEnabledByBrand,
       };
 
       let savedProductId = productId;
@@ -544,6 +551,33 @@ export default function ProductForm() {
                   <Switch
                     checked={isFeatured}
                     onCheckedChange={setIsFeatured}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <div>
+                    <Label>Contiene alcohol</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Marcar si el producto contiene bebidas alcohólicas
+                    </p>
+                  </div>
+                  <Switch
+                    checked={containsAlcohol}
+                    onCheckedChange={setContainsAlcohol}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <div>
+                    <Label>Habilitado para venta</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Si está apagado, no se podrá vender en ninguna sucursal
+                    </p>
+                  </div>
+                  <Switch
+                    checked={isEnabledByBrand}
+                    onCheckedChange={setIsEnabledByBrand}
+                    className="data-[state=checked]:bg-emerald-500"
                   />
                 </div>
               </CardContent>
