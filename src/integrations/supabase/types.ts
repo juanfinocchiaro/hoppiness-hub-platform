@@ -1961,49 +1961,67 @@ export type Database = {
       }
       ingredients: {
         Row: {
+          avg_daily_consumption: number | null
           category: string | null
           cost_category: string | null
           cost_per_unit: number | null
           created_at: string
           id: string
           is_active: boolean
+          lead_time_days: number | null
           min_stock: number | null
           name: string
           notes: string | null
+          purchase_unit: string | null
+          purchase_unit_qty: number | null
+          safety_stock_days: number | null
           sku: string | null
           supplier_control: Database["public"]["Enums"]["supplier_control_type"]
           unit: string
           updated_at: string
+          usage_unit: string | null
         }
         Insert: {
+          avg_daily_consumption?: number | null
           category?: string | null
           cost_category?: string | null
           cost_per_unit?: number | null
           created_at?: string
           id?: string
           is_active?: boolean
+          lead_time_days?: number | null
           min_stock?: number | null
           name: string
           notes?: string | null
+          purchase_unit?: string | null
+          purchase_unit_qty?: number | null
+          safety_stock_days?: number | null
           sku?: string | null
           supplier_control?: Database["public"]["Enums"]["supplier_control_type"]
           unit?: string
           updated_at?: string
+          usage_unit?: string | null
         }
         Update: {
+          avg_daily_consumption?: number | null
           category?: string | null
           cost_category?: string | null
           cost_per_unit?: number | null
           created_at?: string
           id?: string
           is_active?: boolean
+          lead_time_days?: number | null
           min_stock?: number | null
           name?: string
           notes?: string | null
+          purchase_unit?: string | null
+          purchase_unit_qty?: number | null
+          safety_stock_days?: number | null
           sku?: string | null
           supplier_control?: Database["public"]["Enums"]["supplier_control_type"]
           unit?: string
           updated_at?: string
+          usage_unit?: string | null
         }
         Relationships: []
       }
