@@ -39,10 +39,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Search, User, Shield, Settings, Store, RefreshCw, ArrowUpDown, Filter, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { Search, User, Shield, Settings, Store, RefreshCw, ArrowUpDown, Clock, CheckCircle2, XCircle, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, isWithinInterval, parse, setHours, setMinutes } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Link } from 'react-router-dom';
 import type { Tables, Enums } from '@/integrations/supabase/types';
 
 type Profile = Tables<'profiles'>;
@@ -52,14 +53,10 @@ type Branch = Tables<'branches'>;
 interface UserWithRole extends Profile {
   role: AppRole | null;
   allRoles: AppRole[];
-  branchPermissions?: {
+  branchAccess?: {
     branch_id: string;
     branch_name: string;
-    can_manage_inventory: boolean;
-    can_manage_staff: boolean;
-    can_view_reports: boolean;
-    can_manage_orders: boolean;
-    can_manage_products: boolean;
+    permissionCount: number;
   }[];
   lastLogin?: string | null;
 }
@@ -113,28 +110,20 @@ export default function Users() {
   // Dialog states
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
   const [selectedRole, setSelectedRole] = useState<AppRole | ''>('');
-  const [selectedBranches, setSelectedBranches] = useState<Record<string, {
-    selected: boolean;
-    can_manage_inventory: boolean;
-    can_manage_staff: boolean;
-    can_view_reports: boolean;
-    can_manage_orders: boolean;
-    can_manage_products: boolean;
-  }>>({});
+  const [selectedBranches, setSelectedBranches] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
 
   const canManageUsers = isAdmin || isGerente || isFranquiciado;
 
   // Determina si un usuario está "trabajando" según el horario de sus sucursales
   const isUserWorking = (user: UserWithRole): boolean => {
-    if (!user.branchPermissions || user.branchPermissions.length === 0) return false;
+    if (!user.branchAccess || user.branchAccess.length === 0) return false;
     
     const now = new Date();
     const currentTime = format(now, 'HH:mm');
     
-    // Buscar si alguna de sus sucursales está en horario de trabajo
-    return user.branchPermissions.some(perm => {
-      const branch = branches.find(b => b.id === perm.branch_id);
+    return user.branchAccess.some(access => {
+      const branch = branches.find(b => b.id === access.branch_id);
       if (!branch || !branch.opening_time || !branch.closing_time) return false;
       if (!branch.is_active || !branch.is_open) return false;
       
@@ -179,28 +168,27 @@ export default function Users() {
           .from('user_roles')
           .select('user_id, role');
 
-        // Fetch all permissions at once
-        const { data: allPermissions } = await supabase
-          .from('branch_permissions')
-          .select(`
-            user_id,
-            branch_id,
-            can_manage_inventory,
-            can_manage_staff,
-            can_view_reports,
-            can_manage_orders,
-            can_manage_products
-          `);
+        // Fetch granular permissions (user_branch_permissions)
+        const { data: allGranularPerms } = await supabase
+          .from('user_branch_permissions')
+          .select('user_id, branch_id, permission_key');
 
         const usersWithRoles: UserWithRole[] = profiles.map((profile) => {
           const userRoles = allRoles?.filter(r => r.user_id === profile.user_id).map(r => r.role) || [];
-          const userPerms = allPermissions?.filter(p => p.user_id === profile.user_id) || [];
           
-          const branchPermissions = userPerms.map(p => {
-            const branch = branchesData?.find(b => b.id === p.branch_id);
+          // Aggregate granular permissions by branch
+          const userPerms = allGranularPerms?.filter(p => p.user_id === profile.user_id) || [];
+          const branchPermMap = new Map<string, number>();
+          userPerms.forEach(p => {
+            branchPermMap.set(p.branch_id, (branchPermMap.get(p.branch_id) || 0) + 1);
+          });
+          
+          const branchAccess = Array.from(branchPermMap.entries()).map(([branch_id, count]) => {
+            const branch = branchesData?.find(b => b.id === branch_id);
             return {
-              ...p,
+              branch_id,
               branch_name: branch?.name || 'Sucursal desconocida',
+              permissionCount: count,
             };
           });
 
@@ -208,8 +196,8 @@ export default function Users() {
             ...profile,
             role: getHighestRole(userRoles),
             allRoles: userRoles,
-            branchPermissions,
-            lastLogin: profile.updated_at, // Using updated_at as proxy for last activity
+            branchAccess,
+            lastLogin: profile.updated_at,
           };
         });
 
@@ -230,25 +218,16 @@ export default function Users() {
     setEditingUser(user);
     setSelectedRole(user.role || '');
     
-    // Initialize branch permissions
-    const branchPerms: typeof selectedBranches = {};
-    
-    // If admin, show all branches; otherwise show accessible branches
+    // Initialize branch selection based on existing permissions
+    const branchSelection: Record<string, boolean> = {};
     const availableBranches = isAdmin ? branches : accessibleBranches;
     
     availableBranches.forEach(branch => {
-      const existingPerm = user.branchPermissions?.find(p => p.branch_id === branch.id);
-      branchPerms[branch.id] = {
-        selected: !!existingPerm,
-        can_manage_inventory: existingPerm?.can_manage_inventory || false,
-        can_manage_staff: existingPerm?.can_manage_staff || false,
-        can_view_reports: existingPerm?.can_view_reports || false,
-        can_manage_orders: existingPerm?.can_manage_orders || false,
-        can_manage_products: existingPerm?.can_manage_products || false,
-      };
+      const hasAccess = user.branchAccess?.some(a => a.branch_id === branch.id);
+      branchSelection[branch.id] = !!hasAccess;
     });
     
-    setSelectedBranches(branchPerms);
+    setSelectedBranches(branchSelection);
   };
 
   const saveUserPermissions = async () => {
@@ -258,13 +237,11 @@ export default function Users() {
     try {
       // Update role if admin
       if (isAdmin && selectedRole) {
-        // Delete existing roles
         await supabase
           .from('user_roles')
           .delete()
           .eq('user_id', editingUser.user_id);
         
-        // Insert new role
         const { error: roleError } = await supabase
           .from('user_roles')
           .insert({
@@ -275,40 +252,32 @@ export default function Users() {
         if (roleError) throw roleError;
       }
 
-      // Update branch permissions
+      // Update branch access via grant_role_defaults
       const availableBranches = isAdmin ? branches : accessibleBranches;
+      const userRole = (selectedRole || editingUser.role || 'empleado') as AppRole;
       
       for (const branch of availableBranches) {
-        const perm = selectedBranches[branch.id];
+        const shouldHaveAccess = selectedBranches[branch.id];
+        const currentlyHasAccess = editingUser.branchAccess?.some(a => a.branch_id === branch.id);
         
-        if (perm?.selected) {
-          // Upsert permission
-          const { error } = await supabase
-            .from('branch_permissions')
-            .upsert({
-              user_id: editingUser.user_id,
-              branch_id: branch.id,
-              can_manage_inventory: perm.can_manage_inventory,
-              can_manage_staff: perm.can_manage_staff,
-              can_view_reports: perm.can_view_reports,
-              can_manage_orders: perm.can_manage_orders,
-              can_manage_products: perm.can_manage_products,
-            }, {
-              onConflict: 'user_id,branch_id',
-            });
-          
-          if (error) throw error;
-        } else {
-          // Remove permission if unchecked
+        if (shouldHaveAccess && !currentlyHasAccess) {
+          // Grant default permissions for their role
+          await supabase.rpc('grant_role_defaults', {
+            _branch_id: branch.id,
+            _role: userRole,
+            _user_id: editingUser.user_id,
+          });
+        } else if (!shouldHaveAccess && currentlyHasAccess) {
+          // Remove all permissions for this branch
           await supabase
-            .from('branch_permissions')
+            .from('user_branch_permissions')
             .delete()
             .eq('user_id', editingUser.user_id)
             .eq('branch_id', branch.id);
         }
       }
 
-      toast.success('Permisos actualizados correctamente');
+      toast.success('Permisos actualizados. Usa el panel de Permisos para ajustes granulares.');
       setEditingUser(null);
       fetchData();
     } catch (error: any) {
@@ -328,22 +297,18 @@ export default function Users() {
   // Filtered and sorted users
   const filteredAndSortedUsers = useMemo(() => {
     let result = users.filter(user => {
-      // Text search
       const matchesSearch = 
         user.full_name.toLowerCase().includes(search.toLowerCase()) ||
         user.email.toLowerCase().includes(search.toLowerCase());
       
-      // Branch filter
       const matchesBranch = filterBranch === 'all' || 
-        user.branchPermissions?.some(bp => bp.branch_id === filterBranch);
+        user.branchAccess?.some(ba => ba.branch_id === filterBranch);
       
-      // Role filter
       const matchesRole = filterRole === 'all' || user.role === filterRole;
       
       return matchesSearch && matchesBranch && matchesRole;
     });
 
-    // Sort
     result.sort((a, b) => {
       let comparison = 0;
       
@@ -357,14 +322,14 @@ export default function Users() {
           comparison = aRoleIndex - bRoleIndex;
           break;
         case 'branch':
-          const aBranch = a.branchPermissions?.[0]?.branch_name || 'zzz';
-          const bBranch = b.branchPermissions?.[0]?.branch_name || 'zzz';
+          const aBranch = a.branchAccess?.[0]?.branch_name || 'zzz';
+          const bBranch = b.branchAccess?.[0]?.branch_name || 'zzz';
           comparison = aBranch.localeCompare(bBranch);
           break;
         case 'lastLogin':
           const aDate = a.lastLogin ? new Date(a.lastLogin).getTime() : 0;
           const bDate = b.lastLogin ? new Date(b.lastLogin).getTime() : 0;
-          comparison = bDate - aDate; // More recent first
+          comparison = bDate - aDate;
           break;
       }
       
@@ -390,12 +355,22 @@ export default function Users() {
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Gestión de Usuarios</h1>
-          <p className="text-muted-foreground">Administra usuarios, roles y permisos</p>
+          <p className="text-muted-foreground">Administra usuarios, roles y acceso a sucursales</p>
         </div>
-        <Button variant="outline" onClick={fetchData} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Actualizar
-        </Button>
+        <div className="flex gap-2">
+          {isAdmin && (
+            <Link to="/admin/permisos">
+              <Button variant="outline">
+                <Shield className="h-4 w-4 mr-2" />
+                Permisos Granulares
+              </Button>
+            </Link>
+          )}
+          <Button variant="outline" onClick={fetchData} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Actualizar
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -413,7 +388,6 @@ export default function Users() {
             </div>
             
             <div className="flex gap-2 flex-wrap">
-              {/* Filter by Branch */}
               <Select value={filterBranch} onValueChange={setFilterBranch}>
                 <SelectTrigger className="w-[180px]">
                   <Store className="w-4 h-4 mr-2" />
@@ -427,7 +401,6 @@ export default function Users() {
                 </SelectContent>
               </Select>
               
-              {/* Filter by Role */}
               <Select value={filterRole} onValueChange={setFilterRole}>
                 <SelectTrigger className="w-[160px]">
                   <Shield className="w-4 h-4 mr-2" />
@@ -441,7 +414,6 @@ export default function Users() {
                 </SelectContent>
               </Select>
               
-              {/* Sort Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="icon">
@@ -502,7 +474,7 @@ export default function Users() {
                   <TableHead className="cursor-pointer" onClick={() => toggleSort('branch')}>
                     Sucursales {sortField === 'branch' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </TableHead>
-                  <TableHead>Trabajando</TableHead>
+                  <TableHead>Estado</TableHead>
                   <TableHead className="cursor-pointer" onClick={() => toggleSort('lastLogin')}>
                     Último ingreso {sortField === 'lastLogin' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </TableHead>
@@ -529,7 +501,6 @@ export default function Users() {
                                 <User className="w-5 h-5 text-muted-foreground" />
                               )}
                             </div>
-                            {/* Working indicator */}
                             <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background ${
                               working ? 'bg-green-500' : 'bg-gray-400'
                             }`} />
@@ -547,35 +518,33 @@ export default function Users() {
                             {roleLabels[user.role]}
                           </Badge>
                         ) : (
-                          <Badge variant="outline">Sin rol</Badge>
-                        )}
-                        {user.allRoles.length > 1 && (
-                          <span className="text-xs text-muted-foreground ml-1">
-                            +{user.allRoles.length - 1}
-                          </span>
+                          <Badge variant="outline">Cliente</Badge>
                         )}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          {user.branchPermissions && user.branchPermissions.length > 0 ? (
-                            user.branchPermissions.slice(0, 2).map((bp) => (
-                              <Badge key={bp.branch_id} variant="secondary" className="text-xs">
-                                <Store className="w-3 h-3 mr-1" />
-                                {bp.branch_name}
-                              </Badge>
-                            ))
+                          {user.branchAccess && user.branchAccess.length > 0 ? (
+                            <>
+                              {user.branchAccess.slice(0, 2).map((ba) => (
+                                <Badge key={ba.branch_id} variant="secondary" className="text-xs">
+                                  <Store className="w-3 h-3 mr-1" />
+                                  {ba.branch_name}
+                                  <span className="ml-1 opacity-60">({ba.permissionCount})</span>
+                                </Badge>
+                              ))}
+                              {user.branchAccess.length > 2 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{user.branchAccess.length - 2}
+                                </Badge>
+                              )}
+                            </>
                           ) : (
                             <span className="text-sm text-muted-foreground">Sin sucursales</span>
-                          )}
-                          {user.branchPermissions && user.branchPermissions.length > 2 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{user.branchPermissions.length - 2}
-                            </Badge>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
-                        {user.branchPermissions && user.branchPermissions.length > 0 ? (
+                        {user.branchAccess && user.branchAccess.length > 0 ? (
                           working ? (
                             <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                               <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -603,14 +572,23 @@ export default function Users() {
                       </TableCell>
                       {canManageUsers && (
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditDialog(user)}
-                          >
-                            <Settings className="w-4 h-4 mr-1" />
-                            Permisos
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditDialog(user)}
+                            >
+                              <Settings className="w-4 h-4 mr-1" />
+                              Editar
+                            </Button>
+                            {isAdmin && user.branchAccess && user.branchAccess.length > 0 && (
+                              <Link to={`/admin/permisos?user=${user.user_id}`}>
+                                <Button variant="ghost" size="sm">
+                                  <ExternalLink className="w-4 h-4" />
+                                </Button>
+                              </Link>
+                            )}
+                          </div>
                         </TableCell>
                       )}
                     </TableRow>
@@ -622,11 +600,11 @@ export default function Users() {
         </CardContent>
       </Card>
 
-      {/* Edit Dialog */}
+      {/* Simplified Edit Dialog - Role + Branch Access */}
       <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Editar Permisos</DialogTitle>
+            <DialogTitle>Editar Usuario</DialogTitle>
             <DialogDescription>
               {editingUser?.full_name} ({editingUser?.email})
             </DialogDescription>
@@ -649,79 +627,38 @@ export default function Users() {
                     ))}
                   </SelectContent>
                 </Select>
-                {editingUser?.allRoles && editingUser.allRoles.length > 1 && (
-                  <p className="text-xs text-muted-foreground">
-                    Nota: Este usuario tiene múltiples roles ({editingUser.allRoles.map(r => roleLabels[r]).join(', ')}). 
-                    Al guardar, se reemplazarán por el rol seleccionado.
-                  </p>
-                )}
               </div>
             )}
 
-            {/* Branch Permissions */}
-            <div className="space-y-4">
+            {/* Branch Access (simplified - just checkboxes) */}
+            <div className="space-y-3">
               <Label className="text-base font-semibold">Acceso a Sucursales</Label>
+              <p className="text-sm text-muted-foreground">
+                Al activar una sucursal, se asignan permisos por defecto según el rol.
+                Usa "Permisos Granulares" para ajustes detallados.
+              </p>
               
               {availableBranchesForEdit.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No hay sucursales disponibles</p>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-2 max-h-64 overflow-y-auto">
                   {availableBranchesForEdit.map((branch) => (
-                    <Card key={branch.id} className="p-4">
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                          <Checkbox
-                            id={`branch-${branch.id}`}
-                            checked={selectedBranches[branch.id]?.selected || false}
-                            onCheckedChange={(checked) => {
-                              setSelectedBranches(prev => ({
-                                ...prev,
-                                [branch.id]: {
-                                  ...prev[branch.id],
-                                  selected: !!checked,
-                                },
-                              }));
-                            }}
-                          />
-                          <Label htmlFor={`branch-${branch.id}`} className="font-medium">
-                            <Store className="w-4 h-4 inline mr-2" />
-                            {branch.name}
-                          </Label>
-                          <Badge variant="outline" className="ml-auto">{branch.city}</Badge>
-                        </div>
-
-                        {selectedBranches[branch.id]?.selected && (
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pl-7">
-                            {[
-                              { key: 'can_manage_orders', label: 'Gestionar Pedidos' },
-                              { key: 'can_manage_products', label: 'Gestionar Productos' },
-                              { key: 'can_manage_inventory', label: 'Gestionar Inventario' },
-                              { key: 'can_manage_staff', label: 'Gestionar Personal' },
-                              { key: 'can_view_reports', label: 'Ver Reportes' },
-                            ].map(({ key, label }) => (
-                              <div key={key} className="flex items-center gap-2">
-                                <Checkbox
-                                  id={`${branch.id}-${key}`}
-                                  checked={selectedBranches[branch.id]?.[key as keyof typeof selectedBranches[string]] || false}
-                                  onCheckedChange={(checked) => {
-                                    setSelectedBranches(prev => ({
-                                      ...prev,
-                                      [branch.id]: {
-                                        ...prev[branch.id],
-                                        [key]: !!checked,
-                                      },
-                                    }));
-                                  }}
-                                />
-                                <Label htmlFor={`${branch.id}-${key}`} className="text-sm">
-                                  {label}
-                                </Label>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </Card>
+                    <div key={branch.id} className="flex items-center gap-3 p-2 rounded border">
+                      <Checkbox
+                        id={`branch-${branch.id}`}
+                        checked={selectedBranches[branch.id] || false}
+                        onCheckedChange={(checked) => {
+                          setSelectedBranches(prev => ({
+                            ...prev,
+                            [branch.id]: !!checked,
+                          }));
+                        }}
+                      />
+                      <Label htmlFor={`branch-${branch.id}`} className="flex-1 cursor-pointer">
+                        <span className="font-medium">{branch.name}</span>
+                        <span className="text-muted-foreground ml-2 text-sm">{branch.city}</span>
+                      </Label>
+                    </div>
                   ))}
                 </div>
               )}
