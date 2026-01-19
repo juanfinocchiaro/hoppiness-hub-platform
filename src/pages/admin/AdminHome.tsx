@@ -14,6 +14,10 @@ type Branch = Tables<'branches'>;
 interface Stats {
   products: number;
   categories: number;
+  globalRevenue: number;
+  globalItems: number;
+  globalOrders: number;
+  globalAvgTicket: number;
 }
 
 interface BranchStats {
@@ -41,7 +45,7 @@ const salesChannels: SalesChannel[] = [
 ];
 
 export default function AdminHome() {
-  const [stats, setStats] = useState<Stats>({ products: 0, categories: 0 });
+  const [stats, setStats] = useState<Stats>({ products: 0, categories: 0, globalRevenue: 0, globalItems: 0, globalOrders: 0, globalAvgTicket: 0 });
   const [branchStats, setBranchStats] = useState<Map<string, BranchStats>>(new Map());
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,10 +73,6 @@ export default function AdminHome() {
           .gte('created_at', firstDayOfMonth),
       ]);
 
-      setStats({
-        products: productsRes.count || 0,
-        categories: categoriesRes.count || 0,
-      });
       const branchesData = branchesRes.data || [];
       setBranches(branchesData);
 
@@ -96,31 +96,49 @@ export default function AdminHome() {
         });
       });
       
+      // Calculate global totals
+      let globalRevenue = 0;
+      let globalOrders = 0;
+      
       // Calculate revenue and order count per branch
       orders.forEach(order => {
-        const stats = statsMap.get(order.branch_id);
-        if (stats) {
-          stats.totalRevenue += Number(order.total || 0);
-          stats.orderCount += 1;
+        const branchStat = statsMap.get(order.branch_id);
+        if (branchStat) {
+          branchStat.totalRevenue += Number(order.total || 0);
+          branchStat.orderCount += 1;
         }
+        globalRevenue += Number(order.total || 0);
+        globalOrders += 1;
       });
       
-      // Calculate items per branch
+      // Calculate items per branch and global
+      let globalItems = 0;
       orderItems.forEach(item => {
         const branchId = orderToBranch.get(item.order_id);
         if (branchId) {
-          const stats = statsMap.get(branchId);
-          if (stats) {
-            stats.totalItems += item.quantity || 0;
+          const branchStat = statsMap.get(branchId);
+          if (branchStat) {
+            branchStat.totalItems += item.quantity || 0;
           }
         }
+        globalItems += item.quantity || 0;
       });
       
       // Calculate average ticket
-      statsMap.forEach(stats => {
-        stats.averageTicket = stats.orderCount > 0 ? stats.totalRevenue / stats.orderCount : 0;
+      statsMap.forEach(stat => {
+        stat.averageTicket = stat.orderCount > 0 ? stat.totalRevenue / stat.orderCount : 0;
       });
 
+      const globalAvgTicket = globalOrders > 0 ? globalRevenue / globalOrders : 0;
+
+      setStats({
+        products: productsRes.count || 0,
+        categories: categoriesRes.count || 0,
+        globalRevenue,
+        globalItems,
+        globalOrders,
+        globalAvgTicket,
+      });
       setBranchStats(statsMap);
       setLoading(false);
     }
@@ -147,7 +165,67 @@ export default function AdminHome() {
         <p className="text-muted-foreground">Gestión de productos y sucursales de Hoppiness Club</p>
       </div>
 
-      {/* Stats */}
+      {/* Global Monthly Stats */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Resumen del Mes</CardTitle>
+          <CardDescription>Totales de todas las sucursales</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-4">
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
+                <DollarSign className="w-4 h-4" />
+                Facturación Total
+              </div>
+              <div className="text-2xl font-bold text-primary">
+                {loading ? <Skeleton className="h-8 w-24 mx-auto" /> : formatCurrency(stats.globalRevenue)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {stats.globalOrders} pedidos
+              </p>
+            </div>
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
+                <Utensils className="w-4 h-4" />
+                Unidades Vendidas
+              </div>
+              <div className="text-2xl font-bold text-primary">
+                {loading ? <Skeleton className="h-8 w-16 mx-auto" /> : stats.globalItems.toLocaleString('es-AR')}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                productos
+              </p>
+            </div>
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
+                <Receipt className="w-4 h-4" />
+                Ticket Promedio
+              </div>
+              <div className="text-2xl font-bold text-primary">
+                {loading ? <Skeleton className="h-8 w-20 mx-auto" /> : formatCurrency(stats.globalAvgTicket)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                por pedido
+              </p>
+            </div>
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
+                <ShoppingBag className="w-4 h-4" />
+                Total Pedidos
+              </div>
+              <div className="text-2xl font-bold text-primary">
+                {loading ? <Skeleton className="h-8 w-16 mx-auto" /> : stats.globalOrders.toLocaleString('es-AR')}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                este mes
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Products & Branches Stats */}
       <div className="grid gap-4 md:grid-cols-2">
         <Link to="/admin/productos">
           <Card className="hover:shadow-elevated transition-shadow cursor-pointer">
