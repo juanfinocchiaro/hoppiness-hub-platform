@@ -151,9 +151,18 @@ export default function LocalLayout() {
   }, [branchId]);
 
   const handleBranchChange = (newBranchId: string) => {
-    const currentPath = location.pathname.split('/').slice(-1)[0];
     setActivePOSView('none');
-    navigate(`/local/${newBranchId}/${currentPath}`);
+    
+    // Extract the sub-path after /local/:branchId/
+    const pathParts = location.pathname.split('/');
+    // pathParts: ['', 'local', 'branchId', ...subPath]
+    const subPath = pathParts.slice(3).join('/'); // Everything after branchId
+    
+    if (subPath) {
+      navigate(`/local/${newBranchId}/${subPath}`);
+    } else {
+      navigate(`/local/${newBranchId}`);
+    }
   };
 
   const handlePOSItemClick = (view: 'pos' | 'kds') => {
