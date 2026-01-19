@@ -284,10 +284,21 @@ export default function Permissions() {
   }, [currentPermissions, originalPermissions]);
 
   const savePermissions = async () => {
-    if (!selectedUserId || !selectedBranchId) return;
+    if (!selectedUserId || !selectedBranchId || !currentUser?.id) return;
     
     setSaving(true);
     try {
+      // Calculate granted and revoked permissions for audit
+      const granted: string[] = [];
+      const revoked: string[] = [];
+      
+      currentPermissions.forEach(key => {
+        if (!originalPermissions.has(key)) granted.push(key);
+      });
+      originalPermissions.forEach(key => {
+        if (!currentPermissions.has(key)) revoked.push(key);
+      });
+
       // Delete all existing permissions for this user/branch
       await supabase
         .from('user_branch_permissions')
@@ -301,7 +312,7 @@ export default function Permissions() {
           user_id: selectedUserId,
           branch_id: selectedBranchId,
           permission_key: key,
-          granted_by: currentUser?.id,
+          granted_by: currentUser.id,
         }));
 
         const { error } = await supabase
@@ -309,6 +320,33 @@ export default function Permissions() {
           .insert(inserts);
 
         if (error) throw error;
+      }
+
+      // Log audit entries
+      const auditLogs = [];
+      
+      if (granted.length > 0) {
+        auditLogs.push({
+          user_id: currentUser.id,
+          branch_id: selectedBranchId,
+          target_user_id: selectedUserId,
+          action: granted.length > 1 ? 'bulk_grant' : 'grant',
+          permission_keys: granted,
+        });
+      }
+      
+      if (revoked.length > 0) {
+        auditLogs.push({
+          user_id: currentUser.id,
+          branch_id: selectedBranchId,
+          target_user_id: selectedUserId,
+          action: revoked.length > 1 ? 'bulk_revoke' : 'revoke',
+          permission_keys: revoked,
+        });
+      }
+
+      if (auditLogs.length > 0) {
+        await supabase.from('permission_audit_logs').insert(auditLogs);
       }
 
       setOriginalPermissions(new Set(currentPermissions));
