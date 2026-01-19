@@ -215,11 +215,12 @@ export default function LocalLayout() {
     },
     {
       id: 'menu',
-      label: 'Menú & Stock',
+      label: 'Menú Local',
       icon: Package,
       show: canManageProducts,
       items: [
-        { to: 'disponibilidad', label: 'Disponibilidad', icon: ToggleLeft, show: true },
+        { to: 'productos', label: 'Productos', icon: Package, show: true },
+        { to: 'extras', label: 'Extras / Modificadores', icon: ChefHat, show: true },
       ]
     },
     {
