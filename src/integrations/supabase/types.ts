@@ -741,6 +741,7 @@ export type Database = {
           end_time: string
           id: string
           is_day_off: boolean | null
+          shift_number: number
           start_time: string
           updated_at: string
         }
@@ -751,6 +752,7 @@ export type Database = {
           end_time: string
           id?: string
           is_day_off?: boolean | null
+          shift_number?: number
           start_time: string
           updated_at?: string
         }
@@ -761,6 +763,7 @@ export type Database = {
           end_time?: string
           id?: string
           is_day_off?: boolean | null
+          shift_number?: number
           start_time?: string
           updated_at?: string
         }
