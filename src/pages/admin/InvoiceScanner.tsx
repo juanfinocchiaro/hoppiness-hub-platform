@@ -57,9 +57,9 @@ export default function InvoiceScanner() {
 
   // Process invoice mutation
   const processInvoice = useMutation({
-    mutationFn: async ({ documentId, imageUrl }: { documentId: string; imageUrl: string }) => {
+    mutationFn: async ({ documentId, filePath }: { documentId: string; filePath: string }) => {
       const { data, error } = await supabase.functions.invoke('process-invoice', {
-        body: { document_id: documentId, image_url: imageUrl }
+        body: { document_id: documentId, file_path: filePath }
       });
       
       if (error) throw error;
@@ -83,7 +83,7 @@ export default function InvoiceScanner() {
 
     const totalFiles = files.length;
     let uploadedCount = 0;
-    const uploadedDocs: { id: string; url: string }[] = [];
+    const uploadedDocs: { id: string; filePath: string }[] = [];
 
     try {
       for (const file of Array.from(files)) {
@@ -105,16 +105,17 @@ export default function InvoiceScanner() {
           continue;
         }
 
-        // Get public URL
+        // Get public URL for display purposes only
         const { data: urlData } = supabase.storage
           .from('scanned-documents')
           .getPublicUrl(fileName);
 
-        // Create document record
+        // Create document record - store both the display URL and file path
         const { data: docData, error: docError } = await supabase
           .from('scanned_documents')
           .insert({
             file_url: urlData.publicUrl,
+            file_path: fileName,
             file_name: file.name,
             status: 'pending'
           })
@@ -126,7 +127,8 @@ export default function InvoiceScanner() {
           continue;
         }
 
-        uploadedDocs.push({ id: docData.id, url: urlData.publicUrl });
+        // Store file path (not URL) for processing
+        uploadedDocs.push({ id: docData.id, filePath: fileName });
         uploadedCount++;
         setUploadProgress((uploadedCount / totalFiles) * 100);
       }
@@ -140,7 +142,7 @@ export default function InvoiceScanner() {
       for (const doc of uploadedDocs) {
         setProcessingIds(prev => new Set(prev).add(doc.id));
         processInvoice.mutate(
-          { documentId: doc.id, imageUrl: doc.url },
+          { documentId: doc.id, filePath: doc.filePath },
           {
             onSettled: () => {
               setProcessingIds(prev => {
@@ -179,6 +181,11 @@ export default function InvoiceScanner() {
 
   // Retry processing mutation
   const retryProcessing = useCallback(async (doc: any) => {
+    if (!doc.file_path) {
+      toast.error('No se puede reintentar: falta la ruta del archivo');
+      return;
+    }
+    
     setProcessingIds(prev => new Set(prev).add(doc.id));
     
     await supabase
@@ -187,7 +194,7 @@ export default function InvoiceScanner() {
       .eq('id', doc.id);
 
     processInvoice.mutate(
-      { documentId: doc.id, imageUrl: doc.file_url },
+      { documentId: doc.id, filePath: doc.file_path },
       {
         onSettled: () => {
           setProcessingIds(prev => {
