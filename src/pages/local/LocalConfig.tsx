@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Clock, Truck, Store, Save, RefreshCw, Zap, Settings2, ShoppingBag } from 'lucide-react';
+import { Clock, Truck, Store, RefreshCw, Zap, Settings2, ShoppingBag } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import BranchScheduleEditor from '@/components/schedules/BranchScheduleEditor';
@@ -218,7 +218,13 @@ export default function LocalConfig() {
                 <Store className={`h-5 w-5 ${isOpen ? 'text-green-600' : 'text-red-500'}`} />
                 <Switch
                   checked={isOpen}
-                  onCheckedChange={setIsOpen}
+                  onCheckedChange={async (checked) => {
+                    setIsOpen(checked);
+                    if (canEdit && branchId) {
+                      await supabase.from('branches').update({ is_open: checked }).eq('id', branchId);
+                      toast.success(checked ? 'Local abierto' : 'Local cerrado');
+                    }
+                  }}
                   disabled={!canEdit}
                 />
               </div>
@@ -236,7 +242,13 @@ export default function LocalConfig() {
                 <Truck className={`h-5 w-5 ${deliveryEnabled ? 'text-green-600' : 'text-red-500'}`} />
                 <Switch
                   checked={deliveryEnabled}
-                  onCheckedChange={setDeliveryEnabled}
+                  onCheckedChange={async (checked) => {
+                    setDeliveryEnabled(checked);
+                    if (canEdit && branchId) {
+                      await supabase.from('branches').update({ delivery_enabled: checked }).eq('id', branchId);
+                      toast.success(checked ? 'Delivery activado' : 'Delivery pausado');
+                    }
+                  }}
                   disabled={!canEdit}
                 />
               </div>
@@ -254,7 +266,13 @@ export default function LocalConfig() {
                 <ShoppingBag className={`h-5 w-5 ${takeawayEnabled ? 'text-green-600' : 'text-red-500'}`} />
                 <Switch
                   checked={takeawayEnabled}
-                  onCheckedChange={setTakeawayEnabled}
+                  onCheckedChange={async (checked) => {
+                    setTakeawayEnabled(checked);
+                    if (canEdit && branchId) {
+                      await supabase.from('branches').update({ takeaway_enabled: checked }).eq('id', branchId);
+                      toast.success(checked ? 'Take Away activado' : 'Take Away pausado');
+                    }
+                  }}
                   disabled={!canEdit}
                 />
               </div>
@@ -371,24 +389,6 @@ export default function LocalConfig() {
         </CardContent>
       </Card>
 
-      {/* Save button for quick settings */}
-      {canEdit && (
-        <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Guardando...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Guardar Estado
-              </>
-            )}
-          </Button>
-        </div>
-      )}
 
       {/* Horarios de Atención */}
       {branchId && (
