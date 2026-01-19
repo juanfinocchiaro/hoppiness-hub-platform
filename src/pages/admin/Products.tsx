@@ -25,6 +25,7 @@ import { Plus, Search, Edit, Star, ChevronDown, ChevronRight, Power, Check, X, C
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { ScheduleDialog } from '@/components/admin/ScheduleDialog';
+import { ProductEditDrawer } from '@/components/admin/ProductEditDrawer';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Product = Tables<'products'>;
@@ -68,6 +69,11 @@ export default function Products() {
     branchName: string;
     isBrandLevel: boolean;
   } | null>(null);
+
+  const [editDrawer, setEditDrawer] = useState<{
+    open: boolean;
+    productId: string | null;
+  }>({ open: false, productId: null });
 
   const fetchData = async () => {
     const [productsRes, categoriesRes, branchesRes, branchProductsRes] = await Promise.all([
@@ -427,17 +433,18 @@ export default function Products() {
                   const isDisabledByBrand = !product.is_enabled_by_brand;
                   const availableCount = getAvailableBranchesCount(product.id);
                   
-                  return (
-                    <div 
-                      key={product.id} 
-                      className={`
-                        group flex items-center gap-4 p-4 rounded-xl transition-all
-                        ${isDisabledByBrand 
-                          ? 'bg-muted/40 border border-dashed border-border' 
-                          : 'bg-card hover:bg-accent/30 border border-border shadow-sm'
-                        }
-                      `}
-                    >
+                    return (
+                      <div 
+                        key={product.id} 
+                        onClick={() => setEditDrawer({ open: true, productId: product.id })}
+                        className={`
+                          group flex items-center gap-4 p-4 rounded-xl transition-all cursor-pointer
+                          ${isDisabledByBrand 
+                            ? 'bg-muted/40 border border-dashed border-border' 
+                            : 'bg-card hover:bg-accent/30 border border-border shadow-sm hover:shadow-md'
+                          }
+                        `}
+                      >
                       {/* Product Info */}
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         {product.image_url && (
@@ -474,7 +481,10 @@ export default function Products() {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <button
-                                    onClick={() => handleBranchToggle(product, branch.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleBranchToggle(product, branch.id);
+                                    }}
                                     disabled={isDisabledByBrand || isUpdating}
                                     className={`
                                       flex flex-col items-center gap-0.5 transition-all
@@ -531,15 +541,17 @@ export default function Products() {
                       )}
 
                       {/* Edit Button */}
-                      <Link to={`/admin/productos/${product.id}`}>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                        </Button>
-                      </Link>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditDrawer({ open: true, productId: product.id });
+                        }}
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </Button>
                     </div>
                   );
                 })}
@@ -597,6 +609,15 @@ export default function Products() {
           itemName={scheduleDialog.name}
         />
       )}
+
+      {/* Product Edit Drawer */}
+      <ProductEditDrawer
+        open={editDrawer.open}
+        onOpenChange={(open) => setEditDrawer({ open, productId: open ? editDrawer.productId : null })}
+        productId={editDrawer.productId}
+        categories={categories}
+        onProductUpdated={fetchData}
+      />
     </div>
   );
 }
