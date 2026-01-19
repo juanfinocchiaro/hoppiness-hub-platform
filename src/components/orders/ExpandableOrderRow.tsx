@@ -149,35 +149,48 @@ export default function ExpandableOrderRow({ order, statusConfig }: ExpandableOr
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <tr className="border-t hover:bg-muted/50 transition-colors">
-        <td className="p-3">
+        {/* Expand toggle */}
+        <td className="p-3 w-10">
           <CollapsibleTrigger asChild>
             <Button variant="ghost" size="sm" className="p-1 h-6 w-6">
               {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </Button>
           </CollapsibleTrigger>
         </td>
-        <td className="p-3 text-sm">
+        
+        {/* Date */}
+        <td className="p-3 text-sm whitespace-nowrap">
           <div>{format(new Date(order.created_at), 'dd/MM/yy')}</div>
           <div className="text-muted-foreground text-xs">
             {format(new Date(order.created_at), 'HH:mm')}
           </div>
         </td>
+        
+        {/* Customer */}
         <td className="p-3">
-          <div className="font-medium text-sm">{order.customer_name}</div>
-          <div className="text-muted-foreground text-xs">{order.customer_phone}</div>
+          <div className="font-medium text-sm truncate max-w-[200px]">{order.customer_name || '-'}</div>
+          {order.customer_phone && order.customer_phone !== '-' && (
+            <div className="text-muted-foreground text-xs">{order.customer_phone}</div>
+          )}
         </td>
+        
+        {/* Channel */}
         <td className="p-3">
-          <Badge variant="outline" className="text-xs gap-1">
+          <Badge variant="outline" className="text-xs gap-1 whitespace-nowrap">
             {channelInfo.icon}
             {channelInfo.label}
           </Badge>
         </td>
+        
+        {/* Status */}
         <td className="p-3">
-          <Badge className={`text-xs ${statusConfig[order.status]?.color || ''} text-white`}>
+          <Badge className={`text-xs ${statusConfig[order.status]?.color || ''} text-white whitespace-nowrap`}>
             {statusConfig[order.status]?.label || order.status}
           </Badge>
         </td>
-        <td className="p-3 text-right font-medium">
+        
+        {/* Total */}
+        <td className="p-3 text-right font-medium whitespace-nowrap">
           ${Number(order.total).toLocaleString('es-AR', { minimumFractionDigits: 0 })}
         </td>
       </tr>
