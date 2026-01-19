@@ -45,6 +45,9 @@ import {
   Wallet,
   X,
   ChefHat,
+  Hash,
+  Receipt,
+  FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -211,6 +214,12 @@ export default function POSView({ branch }: POSViewProps) {
   const [appPaymentMethod, setAppPaymentMethod] = useState<AppPaymentMethod>('pedidos_ya');
   const [externalOrderId, setExternalOrderId] = useState('');
   const [customDeliveryFee, setCustomDeliveryFee] = useState('');
+  
+  // Invoice type state
+  type InvoiceType = 'consumidor_final' | 'factura_a';
+  const [invoiceType, setInvoiceType] = useState<InvoiceType>('consumidor_final');
+  const [customerCuit, setCustomerCuit] = useState('');
+  const [customerBusinessName, setCustomerBusinessName] = useState('');
   
   // Checkout dialog
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -710,6 +719,18 @@ export default function POSView({ branch }: POSViewProps) {
       }
     }
 
+    // Validate Factura A requirements
+    if (invoiceType === 'factura_a') {
+      if (!customerCuit.trim()) {
+        toast.error('CUIT es requerido para Factura A');
+        return;
+      }
+      if (!customerBusinessName.trim()) {
+        toast.error('Razón Social es requerida para Factura A');
+        return;
+      }
+    }
+
     setIsProcessing(true);
 
     try {
@@ -751,6 +772,9 @@ export default function POSView({ branch }: POSViewProps) {
           total,
           status: 'pending',
           notes: orderNotes || null,
+          invoice_type: invoiceType,
+          customer_cuit: invoiceType === 'factura_a' ? customerCuit : null,
+          customer_business_name: invoiceType === 'factura_a' ? customerBusinessName : null,
         })
         .select()
         .single();
@@ -821,6 +845,9 @@ export default function POSView({ branch }: POSViewProps) {
       setSelectedTableId('');
       setExternalOrderId('');
       setCustomDeliveryFee('');
+      setInvoiceType('consumidor_final');
+      setCustomerCuit('');
+      setCustomerBusinessName('');
       setIsCheckoutOpen(false);
 
     } catch (error) {
@@ -1016,6 +1043,38 @@ export default function POSView({ branch }: POSViewProps) {
               <Badge variant="secondary">{cart.reduce((sum, item) => sum + item.quantity, 0)} items</Badge>
             )}
           </div>
+          
+          {/* Customer/Caller Info */}
+          {orderStarted && (
+            <div className="mt-3 bg-muted/50 rounded-lg p-3 space-y-1">
+              <div className="flex items-center gap-2 text-sm">
+                <User className="w-4 h-4 text-muted-foreground" />
+                <span className="font-medium">
+                  {customerName || (callerNumber ? `Llamador #${callerNumber}` : 'Sin nombre')}
+                </span>
+              </div>
+              {callerNumber && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Hash className="w-4 h-4" />
+                  <span>Llamador #{callerNumber}</span>
+                </div>
+              )}
+              {orderArea === 'delivery' && deliveryAddress && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="w-4 h-4" />
+                  <span className="truncate">{deliveryAddress}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-xs">
+                <Badge variant={invoiceType === 'factura_a' ? 'default' : 'outline'} className="text-xs">
+                  {invoiceType === 'factura_a' ? 'Factura A' : 'Consumidor Final'}
+                </Badge>
+                {invoiceType === 'factura_a' && customerCuit && (
+                  <span className="text-muted-foreground">CUIT: {customerCuit}</span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <ScrollArea className="flex-1 p-4">
@@ -1948,6 +2007,53 @@ export default function POSView({ branch }: POSViewProps) {
                     />
                   </div>
                 </div>
+
+                <Separator />
+
+                {/* Invoice Type Selection */}
+                <div className="space-y-3">
+                  <Label className="text-base">Tipo de Factura</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant={invoiceType === 'consumidor_final' ? 'default' : 'outline'}
+                      onClick={() => setInvoiceType('consumidor_final')}
+                      className="flex-col h-auto py-3"
+                    >
+                      <Receipt className="w-5 h-5 mb-1" />
+                      <span className="text-sm font-medium">Consumidor Final</span>
+                    </Button>
+                    <Button
+                      variant={invoiceType === 'factura_a' ? 'default' : 'outline'}
+                      onClick={() => setInvoiceType('factura_a')}
+                      className="flex-col h-auto py-3"
+                    >
+                      <FileText className="w-5 h-5 mb-1" />
+                      <span className="text-sm font-medium">Factura A</span>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Factura A Fields */}
+                {invoiceType === 'factura_a' && (
+                  <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                    <div className="space-y-2">
+                      <Label>CUIT *</Label>
+                      <Input
+                        placeholder="XX-XXXXXXXX-X"
+                        value={customerCuit}
+                        onChange={(e) => setCustomerCuit(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Razón Social *</Label>
+                      <Input
+                        placeholder="Nombre de la empresa"
+                        value={customerBusinessName}
+                        onChange={(e) => setCustomerBusinessName(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -2006,6 +2112,53 @@ export default function POSView({ branch }: POSViewProps) {
                     />
                   </div>
                 </div>
+
+                <Separator />
+
+                {/* Invoice Type Selection for Delivery */}
+                <div className="space-y-3">
+                  <Label className="text-base">Tipo de Factura</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant={invoiceType === 'consumidor_final' ? 'default' : 'outline'}
+                      onClick={() => setInvoiceType('consumidor_final')}
+                      className="flex-col h-auto py-3"
+                    >
+                      <Receipt className="w-5 h-5 mb-1" />
+                      <span className="text-sm font-medium">Consumidor Final</span>
+                    </Button>
+                    <Button
+                      variant={invoiceType === 'factura_a' ? 'default' : 'outline'}
+                      onClick={() => setInvoiceType('factura_a')}
+                      className="flex-col h-auto py-3"
+                    >
+                      <FileText className="w-5 h-5 mb-1" />
+                      <span className="text-sm font-medium">Factura A</span>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Factura A Fields */}
+                {invoiceType === 'factura_a' && (
+                  <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                    <div className="space-y-2">
+                      <Label>CUIT *</Label>
+                      <Input
+                        placeholder="XX-XXXXXXXX-X"
+                        value={customerCuit}
+                        onChange={(e) => setCustomerCuit(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Razón Social *</Label>
+                      <Input
+                        placeholder="Nombre de la empresa"
+                        value={customerBusinessName}
+                        onChange={(e) => setCustomerBusinessName(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
