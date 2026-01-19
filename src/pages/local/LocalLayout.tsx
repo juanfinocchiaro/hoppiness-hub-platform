@@ -45,7 +45,8 @@ import {
   FileText,
   Clock,
   MapPin,
-  Printer
+  Printer,
+  Timer
 } from 'lucide-react';
 import {
   Sheet,
@@ -56,6 +57,8 @@ import type { Tables } from '@/integrations/supabase/types';
 import POSView from '@/components/pos/POSView';
 import KDSView from '@/components/pos/KDSView';
 import LocalDashboard from '@/pages/local/LocalDashboard';
+import ClockInModal from '@/components/attendance/ClockInModal';
+import ActiveStaffWidget from '@/components/attendance/ActiveStaffWidget';
 
 type Branch = Tables<'branches'>;
 type ActivePOSView = 'none' | 'pos' | 'kds';
@@ -86,6 +89,7 @@ export default function LocalLayout() {
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
   const [activePOSView, setActivePOSView] = useState<ActivePOSView>('none');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['operacion']));
+  const [showClockInModal, setShowClockInModal] = useState(false);
 
   // Redirect if not authenticated or no access
   useEffect(() => {
@@ -469,15 +473,29 @@ export default function LocalLayout() {
               </SelectContent>
             </Select>
             {selectedBranch && (
-              <Badge 
-                variant={selectedBranch.is_open ? 'default' : 'secondary'} 
-                className="mt-2"
-              >
-                {selectedBranch.is_open ? '🟢 Abierto' : '🔴 Cerrado'}
-              </Badge>
+              <div className="mt-2 space-y-2">
+                <Badge 
+                  variant={selectedBranch.is_open ? 'default' : 'secondary'} 
+                >
+                  {selectedBranch.is_open ? '🟢 Abierto' : '🔴 Cerrado'}
+                </Badge>
+                <ActiveStaffWidget branchId={selectedBranch.id} compact />
+              </div>
             )}
           </div>
           
+          {/* Clock In Button */}
+          <div className="px-3 py-2 border-b">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start gap-2"
+              onClick={() => setShowClockInModal(true)}
+            >
+              <Timer className="h-4 w-4" />
+              Fichar Asistencia
+            </Button>
+          </div>
+
           <div className="flex-1 p-3 overflow-y-auto">
             <NavContent />
           </div>
@@ -505,6 +523,15 @@ export default function LocalLayout() {
           </div>
         </main>
       </div>
+
+      {/* Clock In Modal */}
+      {branchId && (
+        <ClockInModal
+          open={showClockInModal}
+          onOpenChange={setShowClockInModal}
+          branchId={branchId}
+        />
+      )}
     </div>
   );
 }

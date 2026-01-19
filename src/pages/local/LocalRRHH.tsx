@@ -52,6 +52,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Tables, Enums } from '@/integrations/supabase/types';
 import WeeklyStaffSchedule from '@/components/schedules/WeeklyStaffSchedule';
+import OperationalStaffManager from '@/components/hr/OperationalStaffManager';
 
 type AppRole = Enums<'app_role'>;
 
@@ -582,21 +583,28 @@ export default function LocalRRHH() {
         />
       )}
 
-      <Tabs defaultValue="personal" className="space-y-4">
+      <Tabs defaultValue="operativo" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="operativo" className="gap-2">
+            <Clock className="h-4 w-4" />
+            Fichajes
+          </TabsTrigger>
           <TabsTrigger value="personal" className="gap-2">
             <Users className="h-4 w-4" />
-            Personal
-          </TabsTrigger>
-          <TabsTrigger value="asistencia" className="gap-2">
-            <Clock className="h-4 w-4" />
-            Asistencia
+            Usuarios Sistema
           </TabsTrigger>
           <TabsTrigger value="pagos" className="gap-2">
             <Wallet className="h-4 w-4" />
             Sueldos
           </TabsTrigger>
         </TabsList>
+
+        {/* TAB: Empleados Operativos */}
+        <TabsContent value="operativo">
+          {branchId && (
+            <OperationalStaffManager branchId={branchId} canManage={canManageStaff} />
+          )}
+        </TabsContent>
 
         {/* TAB: Personal */}
         <TabsContent value="personal" className="space-y-4">

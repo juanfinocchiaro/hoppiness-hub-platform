@@ -14,6 +14,55 @@ export type Database = {
   }
   public: {
     Tables: {
+      attendance_logs: {
+        Row: {
+          branch_id: string
+          employee_id: string
+          id: string
+          log_type: string
+          notes: string | null
+          timestamp: string
+        }
+        Insert: {
+          branch_id: string
+          employee_id: string
+          id?: string
+          log_type: string
+          notes?: string | null
+          timestamp?: string
+        }
+        Update: {
+          branch_id?: string
+          employee_id?: string
+          id?: string
+          log_type?: string
+          notes?: string | null
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_logs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_logs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "attendance_logs_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance_records: {
         Row: {
           branch_id: string
@@ -677,6 +726,63 @@ export type Database = {
           },
           {
             foreignKeyName: "delivery_zones_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
+      employees: {
+        Row: {
+          branch_id: string
+          created_at: string
+          current_status: string
+          full_name: string
+          hourly_rate: number | null
+          id: string
+          is_active: boolean
+          phone: string | null
+          pin_code: string
+          position: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          current_status?: string
+          full_name: string
+          hourly_rate?: number | null
+          id?: string
+          is_active?: boolean
+          phone?: string | null
+          pin_code: string
+          position?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          current_status?: string
+          full_name?: string
+          hourly_rate?: number | null
+          id?: string
+          is_active?: boolean
+          phone?: string | null
+          pin_code?: string
+          position?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "supplier_balances"
