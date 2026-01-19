@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/tooltip';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
+import { handleError } from '@/lib/errorHandler';
 import { Calendar, Clock, Save, Loader2, Edit2, Plus, Trash2, AlertTriangle, Info, ChevronLeft, ChevronRight, Scale, DollarSign, Moon, Settings } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
 
@@ -498,8 +499,7 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
       }
       setSchedules(grouped);
     } catch (error) {
-      console.error('Error fetching schedules:', error);
-      toast.error('Error al cargar horarios');
+      handleError(error, { userMessage: 'Error al cargar horarios', context: 'EmployeeScheduleEditor.fetchData' });
     } finally {
       setLoading(false);
     }
@@ -596,8 +596,7 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
       setShowDialog(false);
       fetchData();
     } catch (error) {
-      console.error('Error saving schedules:', error);
-      toast.error('Error al guardar horarios');
+      handleError(error, { userMessage: 'Error al guardar horarios', context: 'EmployeeScheduleEditor.handleSave' });
     } finally {
       setSaving(false);
     }
@@ -616,8 +615,7 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
       toast.success(enforceLaborLaw ? 'Validación laboral activada' : 'Validación laboral desactivada');
       setShowSettingsDialog(false);
     } catch (error) {
-      console.error('Error saving settings:', error);
-      toast.error('Error al guardar configuración');
+      handleError(error, { userMessage: 'Error al guardar configuración', context: 'EmployeeScheduleEditor.handleSaveSettings' });
     } finally {
       setSavingSettings(false);
     }

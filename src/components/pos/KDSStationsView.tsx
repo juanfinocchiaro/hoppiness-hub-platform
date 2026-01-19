@@ -18,6 +18,7 @@ import {
   Package
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { handleError } from '@/lib/errorHandler';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
@@ -80,7 +81,7 @@ export default function KDSStationsView({ branch }: KDSStationsViewProps) {
       .order('display_order');
 
     if (error) {
-      console.error('Error fetching stations:', error);
+      handleError(error, { showToast: false, context: 'KDSStationsView.fetchStations' });
       return;
     }
 
@@ -116,7 +117,7 @@ export default function KDSStationsView({ branch }: KDSStationsViewProps) {
       .order('created_at', { ascending: true });
 
     if (ordersError) {
-      console.error('Error fetching orders:', ordersError);
+      handleError(ordersError, { showToast: false, context: 'KDSStationsView.fetchOrderItems' });
       return;
     }
 

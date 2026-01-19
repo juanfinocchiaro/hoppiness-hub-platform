@@ -31,7 +31,8 @@ import {
 } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { 
+import { handleError } from '@/lib/errorHandler';
+import {
   Users, 
   Shield, 
   Key, 
@@ -172,8 +173,7 @@ export default function LocalRRHHColaboradores() {
 
         setStaffMembers(staff);
       } catch (error) {
-        console.error('Error fetching staff:', error);
-        toast.error('Error al cargar el personal');
+        handleError(error, { userMessage: 'Error al cargar el personal', context: 'LocalRRHHColaboradores.fetchStaff' });
       } finally {
         setLoading(false);
       }
@@ -234,8 +234,7 @@ export default function LocalRRHHColaboradores() {
           : s
       ));
     } catch (error) {
-      console.error('Error updating permissions:', error);
-      toast.error('Error al actualizar permisos');
+      handleError(error, { userMessage: 'Error al actualizar permisos', context: 'LocalRRHHColaboradores.handleUpdatePermissions' });
     }
   };
 
@@ -350,8 +349,7 @@ export default function LocalRRHHColaboradores() {
       }
 
     } catch (error) {
-      console.error('Error inviting employee:', error);
-      toast.error('Error al agregar empleado');
+      handleError(error, { userMessage: 'Error al agregar empleado', context: 'LocalRRHHColaboradores.handleInviteEmployee' });
     } finally {
       setInviteLoading(false);
     }

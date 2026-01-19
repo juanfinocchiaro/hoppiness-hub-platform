@@ -20,6 +20,7 @@ import {
   ScanLine
 } from "lucide-react";
 import { toast } from "sonner";
+import { handleError } from '@/lib/errorHandler';
 import { InvoiceReviewDialog } from "@/components/admin/InvoiceReviewDialog";
 import { ScannedDocumentCard } from "@/components/admin/ScannedDocumentCard";
 
@@ -157,8 +158,7 @@ export default function InvoiceScanner() {
       }
 
     } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('Error durante la carga');
+      handleError(error, { userMessage: 'Error durante la carga', context: 'InvoiceScanner.handleFileUpload' });
     } finally {
       setUploading(false);
       setUploadProgress(0);

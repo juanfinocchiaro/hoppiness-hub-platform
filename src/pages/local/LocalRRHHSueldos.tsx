@@ -32,7 +32,8 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { 
+import { handleError } from '@/lib/errorHandler';
+import {
   Users, 
   Wallet,
   Plus,
@@ -139,7 +140,7 @@ export default function LocalRRHHSueldos() {
 
         setMonthTotals(totals);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        handleError(error, { showToast: false, context: 'LocalRRHHSueldos.fetchData' });
       } finally {
         setLoading(false);
       }
@@ -198,8 +199,7 @@ export default function LocalRRHHSueldos() {
         setMonthTotals(prev => ({ ...prev, comida: prev.comida + parseFloat(paymentForm.amount) }));
       }
     } catch (error) {
-      console.error('Error registering payment:', error);
-      toast.error('Error al registrar el pago');
+      handleError(error, { userMessage: 'Error al registrar el pago', context: 'LocalRRHHSueldos.handleRegisterPayment' });
     }
   };
 
