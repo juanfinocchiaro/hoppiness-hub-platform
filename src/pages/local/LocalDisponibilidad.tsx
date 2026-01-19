@@ -49,12 +49,14 @@ interface ProductAvailability {
   id: string;
   product_id: string;
   is_available: boolean;
+  is_enabled_by_brand: boolean;
   product: {
     id: string;
     name: string;
     category_id: string | null;
     price: number;
     image_url: string | null;
+    is_enabled_by_brand: boolean;
   };
   lastLog?: AvailabilityLog;
 }
@@ -75,11 +77,13 @@ interface ModifierOptionAvailability {
   id: string;
   modifier_option_id: string;
   is_available: boolean;
+  is_enabled_by_brand: boolean;
   option: {
     id: string;
     name: string;
     price_adjustment: number;
     group_id: string;
+    is_enabled_by_brand: boolean;
   };
   lastLog?: AvailabilityLog;
 }
@@ -117,7 +121,8 @@ export default function LocalDisponibilidad() {
             id,
             product_id,
             is_available,
-            product:products(id, name, category_id, price, image_url)
+            is_enabled_by_brand,
+            product:products(id, name, category_id, price, image_url, is_enabled_by_brand)
           `)
           .eq('branch_id', branchId!),
         supabase
@@ -136,7 +141,8 @@ export default function LocalDisponibilidad() {
             id,
             modifier_option_id,
             is_available,
-            option:modifier_options(id, name, price_adjustment, group_id)
+            is_enabled_by_brand,
+            option:modifier_options(id, name, price_adjustment, group_id, is_enabled_by_brand)
           `)
           .eq('branch_id', branchId!),
         supabase
@@ -159,9 +165,10 @@ export default function LocalDisponibilidad() {
       });
       
       const validProducts = (productsRes.data || [])
-        .filter(p => p.product !== null)
+        .filter(p => p.product !== null && p.product.is_enabled_by_brand)
         .map(p => ({
           ...p,
+          is_enabled_by_brand: p.is_enabled_by_brand,
           lastLog: logsMap.get(`product-${p.product_id}`)
         })) as ProductAvailability[];
       setProducts(validProducts);
@@ -180,9 +187,10 @@ export default function LocalDisponibilidad() {
 
       if (branchModifiersRes.data) {
         const validModifiers = branchModifiersRes.data
-          .filter(m => m.option !== null)
+          .filter(m => m.option !== null && m.option.is_enabled_by_brand)
           .map(m => ({
             ...m,
+            is_enabled_by_brand: m.is_enabled_by_brand,
             lastLog: logsMap.get(`modifier-${m.modifier_option_id}`)
           })) as ModifierOptionAvailability[];
         setModifierOptions(validModifiers);
