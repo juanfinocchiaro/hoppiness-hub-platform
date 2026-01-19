@@ -91,20 +91,50 @@ export default function Products() {
 
   const handleCategoryToggle = async (categoryId: string, currentValue: boolean) => {
     try {
+      const newValue = !currentValue;
+      
+      // Update category
       const { error } = await supabase
         .from('product_categories')
-        .update({ is_active: !currentValue })
+        .update({ is_active: newValue })
         .eq('id', categoryId);
       if (error) throw error;
 
+      // If disabling category, also disable all products in it
+      if (!newValue) {
+        const productsInCategory = products.filter(p => p.category_id === categoryId);
+        if (productsInCategory.length > 0) {
+          const productIds = productsInCategory.map(p => p.id);
+          await supabase
+            .from('products')
+            .update({ is_enabled_by_brand: false })
+            .in('id', productIds);
+          
+          setProducts(prev => prev.map(p => 
+            p.category_id === categoryId ? { ...p, is_enabled_by_brand: false } : p
+          ));
+        }
+      }
+
       setCategories(prev => prev.map(c => 
-        c.id === categoryId ? { ...c, is_active: !currentValue } : c
+        c.id === categoryId ? { ...c, is_active: newValue } : c
       ));
-      toast.success(!currentValue ? 'Categoría activada' : 'Categoría desactivada');
+      toast.success(newValue ? 'Categoría activada' : 'Categoría y sus productos desactivados');
     } catch (error) {
       console.error('Error:', error);
       toast.error('Error al actualizar categoría');
     }
+  };
+
+  // Check if category has disabled products
+  const getCategoryStatus = (categoryId: string) => {
+    const categoryProducts = products.filter(p => p.category_id === categoryId);
+    const disabledCount = categoryProducts.filter(p => !p.is_enabled_by_brand).length;
+    const totalCount = categoryProducts.length;
+    
+    if (disabledCount === 0) return 'complete';
+    if (disabledCount === totalCount) return 'disabled';
+    return 'incomplete';
   };
 
   useEffect(() => {
@@ -320,22 +350,38 @@ export default function Products() {
       </div>
 
       {/* Products Grid */}
-      <div className="space-y-6">
-        {productsByCategory.map(({ category, products: categoryProducts }) => (
-          <div key={category.id} className="space-y-2">
+      <div className="space-y-4">
+        {productsByCategory.map(({ category, products: categoryProducts }) => {
+          const categoryStatus = getCategoryStatus(category.id);
+          const disabledInCategory = categoryProducts.filter(p => !p.is_enabled_by_brand).length;
+          
+          return (
+          <div key={category.id} className="space-y-3">
             {/* Category Header */}
-            <div className={`flex items-center justify-between py-2 px-3 rounded-lg transition-all ${!category.is_active ? 'bg-muted/50 opacity-60' : 'bg-muted/30'}`}>
+            <div className={`
+              flex items-center justify-between p-4 rounded-xl transition-all
+              ${!category.is_active ? 'bg-muted/60' : 'bg-muted hover:bg-muted/80'}
+            `}>
               <button
                 onClick={() => toggleCategory(category.id)}
-                className="flex items-center gap-2 text-sm font-semibold text-foreground hover:text-primary transition-colors"
+                className="flex items-center gap-3 font-semibold text-foreground hover:text-primary transition-colors"
               >
                 {expandedCategories.has(category.id) ? (
-                  <ChevronDown className="h-4 w-4" />
+                  <ChevronDown className="h-5 w-5" />
                 ) : (
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-5 w-5" />
                 )}
-                <span className={!category.is_active ? 'line-through' : ''}>{category.name}</span>
-                <span className="text-xs font-normal text-muted-foreground">({categoryProducts.length})</span>
+                <span className={`text-base ${!category.is_active ? 'line-through text-muted-foreground' : ''}`}>
+                  {category.name}
+                </span>
+                <Badge variant="secondary" className="text-xs">
+                  {categoryProducts.length}
+                </Badge>
+                {category.is_active && categoryStatus === 'incomplete' && (
+                  <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600 bg-amber-500/10">
+                    {disabledInCategory} desactivados
+                  </Badge>
+                )}
               </button>
               
               {category.id !== 'uncategorized' && (
@@ -346,7 +392,7 @@ export default function Products() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7"
+                          className="h-8 w-8"
                           onClick={(e) => {
                             e.stopPropagation();
                             setScheduleDialog({
@@ -362,7 +408,7 @@ export default function Products() {
                       <TooltipContent>Programar disponibilidad</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                  <span className={`text-xs ${category.is_active ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+                  <span className={`text-sm font-medium ${category.is_active ? 'text-emerald-600' : 'text-muted-foreground'}`}>
                     {category.is_active ? 'Activa' : 'Inactiva'}
                   </span>
                   <Switch
@@ -376,7 +422,7 @@ export default function Products() {
 
             {/* Products List */}
             {expandedCategories.has(category.id) && (
-              <div className="grid gap-2">
+              <div className="grid gap-3 pl-2">
                 {categoryProducts.map((product) => {
                   const isDisabledByBrand = !product.is_enabled_by_brand;
                   const availableCount = getAvailableBranchesCount(product.id);
@@ -385,10 +431,10 @@ export default function Products() {
                     <div 
                       key={product.id} 
                       className={`
-                        group flex items-center gap-4 p-3 rounded-lg transition-all
+                        group flex items-center gap-4 p-4 rounded-xl transition-all
                         ${isDisabledByBrand 
-                          ? 'bg-muted/50 opacity-60' 
-                          : 'bg-card hover:bg-accent/50 border border-border/50'
+                          ? 'bg-muted/40 border border-dashed border-border' 
+                          : 'bg-card hover:bg-accent/30 border border-border shadow-sm'
                         }
                       `}
                     >
@@ -500,7 +546,9 @@ export default function Products() {
               </div>
             )}
           </div>
-        ))}
+        );
+        })}
+
 
         {productsByCategory.length === 0 && (
           <div className="py-12 text-center text-muted-foreground">
