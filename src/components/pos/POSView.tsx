@@ -57,10 +57,9 @@ type BranchProduct = Tables<'branch_products'>;
 
 interface ModifierGroup {
   id: string;
-  product_id: string;
   name: string;
   description: string | null;
-  type: 'single' | 'multiple' | 'required';
+  selection_type: 'single' | 'multiple';
   min_selections: number;
   max_selections: number | null;
   display_order: number;
@@ -72,7 +71,6 @@ interface ModifierOption {
   group_id: string;
   name: string;
   price_adjustment: number;
-  is_default: boolean;
   display_order: number;
 }
 
@@ -266,45 +264,67 @@ export default function POSView({ branch }: POSViewProps) {
     setTempSelectedModifiers({});
     setLoadingModifiers(true);
 
-    // Fetch modifier groups for this product
-    const { data: groups } = await supabase
-      .from('product_modifier_groups')
-      .select('*')
+    // Fetch modifier group assignments for this product
+    const { data: assignments } = await supabase
+      .from('product_modifier_assignments')
+      .select(`
+        modifier_group_id,
+        display_order,
+        modifier_groups (
+          id,
+          name,
+          description,
+          selection_type,
+          min_selections,
+          max_selections,
+          is_active
+        )
+      `)
       .eq('product_id', product.id)
-      .eq('is_active', true)
-      .order('display_order');
+      .eq('is_enabled', true);
 
-    if (groups && groups.length > 0) {
-      // Fetch options for all groups
-      const groupIds = groups.map(g => g.id);
-      const { data: options } = await supabase
-        .from('modifier_options')
-        .select('*')
-        .in('group_id', groupIds)
-        .eq('is_available', true)
-        .order('display_order');
+    if (assignments && assignments.length > 0) {
+      // Get active groups
+      const activeGroups = assignments
+        .filter(a => a.modifier_groups && (a.modifier_groups as any).is_active)
+        .map(a => ({
+          ...(a.modifier_groups as any),
+          display_order: a.display_order
+        }));
 
-      const groupsWithOptions: ModifierGroup[] = groups.map(g => ({
-        ...g,
-        type: g.type as 'single' | 'multiple' | 'required',
-        options: (options || []).filter(o => o.group_id === g.id),
-      }));
+      if (activeGroups.length > 0) {
+        // Fetch options for all groups
+        const groupIds = activeGroups.map(g => g.id);
+        const { data: options } = await supabase
+          .from('modifier_options')
+          .select('*')
+          .in('group_id', groupIds)
+          .eq('is_active', true)
+          .order('display_order');
 
-      setProductModifiers(groupsWithOptions);
+        const groupsWithOptions: ModifierGroup[] = activeGroups.map(g => ({
+          ...g,
+          selection_type: g.selection_type as 'single' | 'multiple',
+          options: (options || []).filter(o => o.group_id === g.id),
+        }));
 
-      // Set default selections
-      const defaults: Record<string, string[]> = {};
-      groupsWithOptions.forEach(group => {
-        const defaultOptions = group.options.filter(o => o.is_default).map(o => o.id);
-        if (defaultOptions.length > 0) {
-          defaults[group.id] = defaultOptions;
-        } else if (group.type === 'required' && group.options.length > 0) {
-          defaults[group.id] = [group.options[0].id];
-        } else {
-          defaults[group.id] = [];
-        }
-      });
-      setTempSelectedModifiers(defaults);
+        setProductModifiers(groupsWithOptions);
+
+        // Set default selections (first option for required groups)
+        const defaults: Record<string, string[]> = {};
+        groupsWithOptions.forEach(group => {
+          if (group.min_selections && group.min_selections > 0 && group.options.length > 0) {
+            defaults[group.id] = [group.options[0].id];
+          } else {
+            defaults[group.id] = [];
+          }
+        });
+        setTempSelectedModifiers(defaults);
+      } else {
+        setProductModifiers([]);
+        addToCartDirect(product);
+        setSelectedProduct(null);
+      }
     } else {
       setProductModifiers([]);
       // No modifiers - add directly to cart
@@ -329,11 +349,11 @@ export default function POSView({ branch }: POSViewProps) {
     toast.success(`${product.name} agregado`);
   };
 
-  const handleModifierToggle = (groupId: string, optionId: string, groupType: string) => {
+  const handleModifierToggle = (groupId: string, optionId: string, selectionType: string) => {
     setTempSelectedModifiers(prev => {
       const current = prev[groupId] || [];
       
-      if (groupType === 'single' || groupType === 'required') {
+      if (selectionType === 'single') {
         return { ...prev, [groupId]: [optionId] };
       } else {
         // Multiple selection
@@ -792,64 +812,69 @@ export default function POSView({ branch }: POSViewProps) {
               </div>
             ) : (
               <div className="space-y-6 py-2">
-                {productModifiers.map(group => (
-                  <div key={group.id} className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="font-semibold">{group.name}</Label>
-                      <Badge variant={group.type === 'required' ? 'destructive' : 'secondary'}>
-                        {group.type === 'required' ? 'Requerido' : group.type === 'single' ? 'Elegir uno' : 'Múltiple'}
-                      </Badge>
-                    </div>
-                    {group.description && (
-                      <p className="text-xs text-muted-foreground">{group.description}</p>
-                    )}
-
-                    {group.type === 'single' || group.type === 'required' ? (
-                      <RadioGroup
-                        value={tempSelectedModifiers[group.id]?.[0] || ''}
-                        onValueChange={(value) => handleModifierToggle(group.id, value, group.type)}
-                      >
-                        {group.options.map(option => (
-                          <div key={option.id} className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <RadioGroupItem value={option.id} id={option.id} />
-                              <Label htmlFor={option.id} className="cursor-pointer font-normal">
-                                {option.name}
-                              </Label>
-                            </div>
-                            {Number(option.price_adjustment) !== 0 && (
-                              <span className={Number(option.price_adjustment) > 0 ? 'text-primary font-medium' : 'text-green-600'}>
-                                {Number(option.price_adjustment) > 0 ? '+' : ''}{formatPrice(Number(option.price_adjustment))}
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </RadioGroup>
-                    ) : (
-                      <div className="space-y-2">
-                        {group.options.map(option => (
-                          <div key={option.id} className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <Checkbox
-                                id={option.id}
-                                checked={(tempSelectedModifiers[group.id] || []).includes(option.id)}
-                                onCheckedChange={() => handleModifierToggle(group.id, option.id, group.type)}
-                              />
-                              <Label htmlFor={option.id} className="cursor-pointer font-normal">
-                                {option.name}
-                              </Label>
-                            </div>
-                            {Number(option.price_adjustment) !== 0 && (
-                              <span className={Number(option.price_adjustment) > 0 ? 'text-primary font-medium' : 'text-green-600'}>
-                                {Number(option.price_adjustment) > 0 ? '+' : ''}{formatPrice(Number(option.price_adjustment))}
-                              </span>
-                            )}
-                          </div>
-                        ))}
+                {productModifiers.map(group => {
+                  const isRequired = group.min_selections && group.min_selections > 0;
+                  const isSingle = group.selection_type === 'single';
+                  
+                  return (
+                    <div key={group.id} className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="font-semibold">{group.name}</Label>
+                        <Badge variant={isRequired ? 'destructive' : 'secondary'}>
+                          {isRequired ? 'Requerido' : isSingle ? 'Elegir uno' : 'Múltiple'}
+                        </Badge>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      {group.description && (
+                        <p className="text-xs text-muted-foreground">{group.description}</p>
+                      )}
+
+                      {isSingle ? (
+                        <RadioGroup
+                          value={tempSelectedModifiers[group.id]?.[0] || ''}
+                          onValueChange={(value) => handleModifierToggle(group.id, value, group.selection_type)}
+                        >
+                          {group.options.map(option => (
+                            <div key={option.id} className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <RadioGroupItem value={option.id} id={option.id} />
+                                <Label htmlFor={option.id} className="cursor-pointer font-normal">
+                                  {option.name}
+                                </Label>
+                              </div>
+                              {Number(option.price_adjustment) !== 0 && (
+                                <span className={Number(option.price_adjustment) > 0 ? 'text-primary font-medium' : 'text-green-600'}>
+                                  {Number(option.price_adjustment) > 0 ? '+' : ''}{formatPrice(Number(option.price_adjustment))}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </RadioGroup>
+                      ) : (
+                        <div className="space-y-2">
+                          {group.options.map(option => (
+                            <div key={option.id} className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <Checkbox
+                                  id={option.id}
+                                  checked={(tempSelectedModifiers[group.id] || []).includes(option.id)}
+                                  onCheckedChange={() => handleModifierToggle(group.id, option.id, group.selection_type)}
+                                />
+                                <Label htmlFor={option.id} className="cursor-pointer font-normal">
+                                  {option.name}
+                                </Label>
+                              </div>
+                              {Number(option.price_adjustment) !== 0 && (
+                                <span className={Number(option.price_adjustment) > 0 ? 'text-primary font-medium' : 'text-green-600'}>
+                                  {Number(option.price_adjustment) > 0 ? '+' : ''}{formatPrice(Number(option.price_adjustment))}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
 
                 {/* Notes */}
                 <div className="space-y-2">

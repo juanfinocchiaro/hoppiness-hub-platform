@@ -47,6 +47,7 @@ import ProductForm from "./pages/admin/ProductForm";
 import Branches from "./pages/admin/Branches";
 import BranchProducts from "./pages/admin/BranchProducts";
 import Suppliers from "./pages/admin/Suppliers";
+import Modifiers from "./pages/admin/Modifiers";
 import ProfitLossReport from "./pages/admin/ProfitLossReport";
 import Users from "./pages/admin/Users";
 import SalesReports from "./pages/admin/SalesReports";
@@ -116,6 +117,7 @@ const App = () => (
               <Route path="productos" element={<Products />} />
               <Route path="productos/nuevo" element={<ProductForm />} />
               <Route path="productos/:productId" element={<ProductForm />} />
+              <Route path="modificadores" element={<Modifiers />} />
               <Route path="sucursales" element={<Branches />} />
               <Route path="sucursales/:branchId/productos" element={<BranchProducts />} />
               <Route path="proveedores" element={<Suppliers />} />

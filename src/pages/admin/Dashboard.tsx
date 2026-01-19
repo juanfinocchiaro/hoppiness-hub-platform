@@ -14,7 +14,8 @@ import {
   ChevronRight,
   ClipboardList,
   BarChart3,
-  Building2
+  Building2,
+  ChefHat
 } from 'lucide-react';
 import {
   Sheet,
@@ -28,6 +29,7 @@ const navItems = [
   { to: '/admin/estado-resultados', icon: ClipboardList, label: 'Estado de Resultados' },
   { to: '/admin/sucursales', icon: Store, label: 'Sucursales' },
   { to: '/admin/productos', icon: Package, label: 'Productos' },
+  { to: '/admin/modificadores', icon: ChefHat, label: 'Modificadores' },
   { to: '/admin/proveedores', icon: Truck, label: 'Proveedores' },
   { to: '/admin/usuarios', icon: Users, label: 'Usuarios' },
 ];
