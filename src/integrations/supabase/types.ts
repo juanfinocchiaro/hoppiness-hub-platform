@@ -1880,6 +1880,58 @@ export type Database = {
           },
         ]
       }
+      ingredient_approved_suppliers: {
+        Row: {
+          created_at: string
+          id: string
+          ingredient_id: string
+          is_primary: boolean
+          negotiated_price: number | null
+          notes: string | null
+          supplier_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ingredient_id: string
+          is_primary?: boolean
+          negotiated_price?: number | null
+          notes?: string | null
+          supplier_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ingredient_id?: string
+          is_primary?: boolean
+          negotiated_price?: number | null
+          notes?: string | null
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_approved_suppliers_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_approved_suppliers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "ingredient_approved_suppliers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingredients: {
         Row: {
           category: string | null
@@ -1892,6 +1944,7 @@ export type Database = {
           name: string
           notes: string | null
           sku: string | null
+          supplier_control: Database["public"]["Enums"]["supplier_control_type"]
           unit: string
           updated_at: string
         }
@@ -1906,6 +1959,7 @@ export type Database = {
           name: string
           notes?: string | null
           sku?: string | null
+          supplier_control?: Database["public"]["Enums"]["supplier_control_type"]
           unit?: string
           updated_at?: string
         }
@@ -1920,6 +1974,7 @@ export type Database = {
           name?: string
           notes?: string | null
           sku?: string | null
+          supplier_control?: Database["public"]["Enums"]["supplier_control_type"]
           unit?: string
           updated_at?: string
         }
@@ -3998,6 +4053,7 @@ export type Database = {
           email: string | null
           id: string
           is_active: boolean
+          is_brand_supplier: boolean
           name: string
           notes: string | null
           payment_terms_days: number | null
@@ -4016,6 +4072,7 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean
+          is_brand_supplier?: boolean
           name: string
           notes?: string | null
           payment_terms_days?: number | null
@@ -4034,6 +4091,7 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean
+          is_brand_supplier?: boolean
           name?: string
           notes?: string | null
           payment_terms_days?: number | null
@@ -4600,6 +4658,16 @@ export type Database = {
         Returns: boolean
       }
       cleanup_expired_tokens: { Args: never; Returns: undefined }
+      get_allowed_suppliers_for_ingredient: {
+        Args: { p_ingredient_id: string }
+        Returns: {
+          is_approved: boolean
+          is_primary: boolean
+          negotiated_price: number
+          supplier_id: string
+          supplier_name: string
+        }[]
+      }
       get_branch_effective_state: {
         Args: { p_branch_id: string }
         Returns: string
@@ -4635,6 +4703,10 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_item_available_now: {
         Args: { p_category_id?: string; p_product_id?: string }
+        Returns: boolean
+      }
+      validate_supplier_for_ingredient: {
+        Args: { p_ingredient_id: string; p_supplier_id: string }
         Returns: boolean
       }
     }
@@ -4689,6 +4761,7 @@ export type Database = {
         | "transfer_out"
         | "count_adjust"
         | "production"
+      supplier_control_type: "brand_only" | "brand_preferred" | "free"
       transaction_type: "income" | "expense"
     }
     CompositeTypes: {
@@ -4872,6 +4945,7 @@ export const Constants = {
         "count_adjust",
         "production",
       ],
+      supplier_control_type: ["brand_only", "brand_preferred", "free"],
       transaction_type: ["income", "expense"],
     },
   },
