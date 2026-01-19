@@ -410,18 +410,21 @@ export default function Products() {
                           {branches.map((branch) => {
                             const isAvailable = getBranchAvailability(product.id, branch.id);
                             const isUpdating = updating === `${product.id}-${branch.id}`;
+                            const isActive = isAvailable && !isDisabledByBrand;
                             
                             return (
                               <div 
                                 key={branch.id} 
                                 className={`w-24 min-w-24 p-3 border-r flex items-center justify-center ${isDisabledByBrand ? 'opacity-30' : ''}`}
                               >
-                                <Switch
-                                  checked={isAvailable && !isDisabledByBrand}
-                                  onCheckedChange={() => handleBranchToggle(product, branch.id)}
-                                  disabled={isDisabledByBrand || isUpdating}
-                                  className="data-[state=checked]:bg-success"
-                                />
+                                <div className={`p-1.5 rounded-full transition-colors ${isActive ? 'bg-emerald-500/20' : 'bg-muted'}`}>
+                                  <Switch
+                                    checked={isActive}
+                                    onCheckedChange={() => handleBranchToggle(product, branch.id)}
+                                    disabled={isDisabledByBrand || isUpdating}
+                                    className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-muted-foreground/30"
+                                  />
+                                </div>
                               </div>
                             );
                           })}
