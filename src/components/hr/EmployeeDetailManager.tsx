@@ -265,14 +265,6 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
         }
       }
     }
-      } catch (error) {
-        console.error('Error fetching employee data:', error);
-        // Handle 403/406 errors gracefully
-        if ((error as any)?.code === '42501' || (error as any)?.code === 'PGRST301') {
-          toast.error('No tenés permisos para ver esta información');
-        }
-      }
-    }
 
     fetchEmployeeData();
   }, [selectedEmployee, canViewPrivateData]);
