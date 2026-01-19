@@ -438,7 +438,7 @@ export default function CheckoutDialog({
   return (
     <>
       <Dialog open={open && !showSplitPayment} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Receipt className="w-5 h-5" />
@@ -617,7 +617,7 @@ export default function CheckoutDialog({
             </div>
           </ScrollArea>
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="flex-col sm:flex-row gap-2 flex-shrink-0">
             {!isPaid ? (
               <>
                 <Button
