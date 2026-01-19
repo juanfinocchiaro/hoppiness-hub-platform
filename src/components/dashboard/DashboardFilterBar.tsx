@@ -26,28 +26,25 @@ import {
   periodLabels 
 } from '@/contexts/DashboardFilterContext';
 
+// Canales de venta unificados: Delivery, TakeAway, Mostrador, Rappi, PedidosYa, MP Delivery
 const channelIcons: Record<SalesChannelFilter, React.ReactNode> = {
   all: <Store className="w-4 h-4" />,
-  atencion_presencial: <Users className="w-4 h-4" />,
-  pos_local: <Receipt className="w-4 h-4" />,
-  whatsapp: <MessageCircle className="w-4 h-4" />,
-  web_app: <Globe className="w-4 h-4" />,
-  pedidos_ya: <Bike className="w-4 h-4" />,
+  delivery: <Truck className="w-4 h-4" />,
+  takeaway: <ShoppingBag className="w-4 h-4" />,
+  mostrador: <Store className="w-4 h-4" />,
   rappi: <Bike className="w-4 h-4" />,
+  pedidos_ya: <Bike className="w-4 h-4" />,
   mercadopago_delivery: <Truck className="w-4 h-4" />,
-  mas_delivery: <Truck className="w-4 h-4" />,
 };
 
 const channelOptions: SalesChannelFilter[] = [
   'all',
-  'atencion_presencial',
-  'pos_local',
-  'whatsapp',
-  'web_app',
-  'pedidos_ya',
+  'delivery',
+  'takeaway',
+  'mostrador',
   'rappi',
+  'pedidos_ya',
   'mercadopago_delivery',
-  'mas_delivery',
 ];
 
 const periodOptions: PeriodPreset[] = [

@@ -62,15 +62,20 @@ const branchChannels: BranchChannel[] = [
   { key: 'mercadopago_delivery_enabled', label: 'MP Delivery', icon: <Truck className="w-3 h-3" /> },
 ];
 
+// Canales de venta unificados: Delivery, TakeAway, Mostrador, Rappi, PedidosYa, MP Delivery
 const channelLabels: Record<string, { label: string; icon: React.ReactNode }> = {
-  atencion_presencial: { label: 'Atención Presencial', icon: <Users className="w-4 h-4" /> },
-  whatsapp: { label: 'WhatsApp', icon: <Store className="w-4 h-4" /> },
-  mas_delivery: { label: 'MásDelivery', icon: <Truck className="w-4 h-4" /> },
-  pedidos_ya: { label: 'PedidosYa', icon: <Bike className="w-4 h-4" /> },
+  delivery: { label: 'Delivery', icon: <Truck className="w-4 h-4" /> },
+  takeaway: { label: 'Take Away', icon: <ShoppingBag className="w-4 h-4" /> },
+  mostrador: { label: 'Mostrador', icon: <Store className="w-4 h-4" /> },
   rappi: { label: 'Rappi', icon: <Bike className="w-4 h-4" /> },
+  pedidos_ya: { label: 'PedidosYa', icon: <Bike className="w-4 h-4" /> },
   mercadopago_delivery: { label: 'MP Delivery', icon: <Truck className="w-4 h-4" /> },
-  web_app: { label: 'Web App', icon: <Store className="w-4 h-4" /> },
-  pos_local: { label: 'POS Local', icon: <Receipt className="w-4 h-4" /> },
+  // Legacy mappings for existing data
+  atencion_presencial: { label: 'Mostrador', icon: <Store className="w-4 h-4" /> },
+  pos_local: { label: 'Mostrador', icon: <Store className="w-4 h-4" /> },
+  whatsapp: { label: 'Delivery', icon: <Truck className="w-4 h-4" /> },
+  mas_delivery: { label: 'Delivery', icon: <Truck className="w-4 h-4" /> },
+  web_app: { label: 'Delivery', icon: <Truck className="w-4 h-4" /> },
 };
 
 interface HoursStats {
