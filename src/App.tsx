@@ -65,6 +65,7 @@ import SalesReports from "./pages/admin/SalesReports";
 import Customers from "./pages/admin/Customers";
 import Ingredients from "./pages/admin/Ingredients";
 import Discounts from "./pages/admin/Discounts";
+import InvoiceScanner from "./pages/admin/InvoiceScanner";
 
 // Local Stock & Inventory
 import LocalStock from "./pages/local/LocalStock";
@@ -169,6 +170,7 @@ const App = () => (
               <Route path="usuarios" element={<Users />} />
               <Route path="permisos" element={<Permissions />} />
               <Route path="reportes" element={<SalesReports />} />
+              <Route path="escaner-comprobantes" element={<InvoiceScanner />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />

@@ -1670,6 +1670,168 @@ export type Database = {
           },
         ]
       }
+      extracted_invoice_items: {
+        Row: {
+          created_at: string
+          description: string
+          discount_percent: number | null
+          display_order: number | null
+          id: string
+          invoice_id: string
+          iva_rate: number | null
+          matched_ingredient_id: string | null
+          matched_product_id: string | null
+          quantity: number | null
+          subtotal: number | null
+          unit: string | null
+          unit_price: number | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          discount_percent?: number | null
+          display_order?: number | null
+          id?: string
+          invoice_id: string
+          iva_rate?: number | null
+          matched_ingredient_id?: string | null
+          matched_product_id?: string | null
+          quantity?: number | null
+          subtotal?: number | null
+          unit?: string | null
+          unit_price?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          discount_percent?: number | null
+          display_order?: number | null
+          id?: string
+          invoice_id?: string
+          iva_rate?: number | null
+          matched_ingredient_id?: string | null
+          matched_product_id?: string | null
+          quantity?: number | null
+          subtotal?: number | null
+          unit?: string | null
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extracted_invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "extracted_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extracted_invoice_items_matched_ingredient_id_fkey"
+            columns: ["matched_ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extracted_invoice_items_matched_product_id_fkey"
+            columns: ["matched_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      extracted_invoices: {
+        Row: {
+          confidence_score: number | null
+          created_at: string
+          currency: string | null
+          document_id: string
+          due_date: string | null
+          id: string
+          invoice_date: string | null
+          invoice_number: string | null
+          invoice_type: string | null
+          is_reviewed: boolean | null
+          iva_amount: number | null
+          notes: string | null
+          other_taxes: number | null
+          payment_condition: string | null
+          payment_method: string | null
+          raw_extracted_data: Json | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          subtotal: number | null
+          supplier_address: string | null
+          supplier_cuit: string | null
+          supplier_iva_condition: string | null
+          supplier_name: string | null
+          total: number | null
+          updated_at: string
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string
+          currency?: string | null
+          document_id: string
+          due_date?: string | null
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          invoice_type?: string | null
+          is_reviewed?: boolean | null
+          iva_amount?: number | null
+          notes?: string | null
+          other_taxes?: number | null
+          payment_condition?: string | null
+          payment_method?: string | null
+          raw_extracted_data?: Json | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          subtotal?: number | null
+          supplier_address?: string | null
+          supplier_cuit?: string | null
+          supplier_iva_condition?: string | null
+          supplier_name?: string | null
+          total?: number | null
+          updated_at?: string
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string
+          currency?: string | null
+          document_id?: string
+          due_date?: string | null
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          invoice_type?: string | null
+          is_reviewed?: boolean | null
+          iva_amount?: number | null
+          notes?: string | null
+          other_taxes?: number | null
+          payment_condition?: string | null
+          payment_method?: string | null
+          raw_extracted_data?: Json | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          subtotal?: number | null
+          supplier_address?: string | null
+          supplier_cuit?: string | null
+          supplier_iva_condition?: string | null
+          supplier_name?: string | null
+          total?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extracted_invoices_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "scanned_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       finance_accounts: {
         Row: {
           account_type: string
@@ -3532,6 +3694,60 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      scanned_documents: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          document_type: string | null
+          error_message: string | null
+          file_name: string
+          file_url: string
+          id: string
+          processed_at: string | null
+          status: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_type?: string | null
+          error_message?: string | null
+          file_name: string
+          file_url: string
+          id?: string
+          processed_at?: string | null
+          status?: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_type?: string | null
+          error_message?: string | null
+          file_name?: string
+          file_url?: string
+          id?: string
+          processed_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scanned_documents_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scanned_documents_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
       }
       staff_invitations: {
         Row: {
