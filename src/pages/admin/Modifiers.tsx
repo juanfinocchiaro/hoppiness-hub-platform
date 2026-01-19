@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Plus, Trash2, Edit2, ChefHat, Package, 
-  RefreshCw, Link2, Minus
+  RefreshCw, Link2, Minus, Check
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
@@ -584,41 +584,43 @@ export default function Modifiers() {
 
       {/* Assign to Products Dialog */}
       <Dialog open={assignDialog} onOpenChange={() => { setAssignDialog(false); setSelectedOptionForAssign(null); }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Asignar "{selectedOptionForAssign?.name}" a productos</DialogTitle>
-            <DialogDescription>
-              Seleccioná los productos que tendrán disponible esta opción
-            </DialogDescription>
+            <DialogTitle>Asignar "{selectedOptionForAssign?.name}"</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-4">
+          <ScrollArea className="h-[60vh] pr-4">
+            <div className="space-y-6">
               {Object.entries(getProductsByCategory()).map(([categoryName, categoryProducts]) => (
                 <div key={categoryName}>
-                  <h4 className="font-semibold text-sm text-muted-foreground mb-2">{categoryName}</h4>
-                  <div className="space-y-1">
+                  <div className="sticky top-0 bg-background py-2 z-10 border-b mb-2">
+                    <h4 className="font-semibold text-sm">{categoryName}</h4>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
                     {categoryProducts.map(product => {
                       const isAssigned = selectedOptionForAssign?.assignedProductIds.includes(product.id) || false;
                       return (
-                        <div 
+                        <button
+                          type="button"
                           key={product.id} 
-                          className="flex items-center justify-between p-2 border rounded hover:bg-muted/50"
+                          onClick={() => {
+                            if (selectedOptionForAssign) {
+                              handleToggleProductOptionAssignment(product.id, selectedOptionForAssign.id, isAssigned);
+                            }
+                          }}
+                          className={`flex items-center gap-3 p-3 rounded-lg border-2 text-left transition-all ${
+                            isAssigned 
+                              ? 'border-primary bg-primary/10' 
+                              : 'border-muted hover:border-primary/50'
+                          }`}
                         >
-                          <div className="flex items-center gap-3">
-                            <Checkbox
-                              checked={isAssigned}
-                              onCheckedChange={() => {
-                                if (selectedOptionForAssign) {
-                                  handleToggleProductOptionAssignment(product.id, selectedOptionForAssign.id, isAssigned);
-                                }
-                              }}
-                            />
-                            {product.image_url && (
-                              <img src={product.image_url} alt="" className="w-8 h-8 rounded object-cover" />
-                            )}
-                            <span className="text-sm">{product.name}</span>
-                          </div>
-                        </div>
+                          {product.image_url && (
+                            <img src={product.image_url} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0" />
+                          )}
+                          <span className="text-sm font-medium truncate">{product.name}</span>
+                          {isAssigned && (
+                            <Check className="h-4 w-4 text-primary ml-auto flex-shrink-0" />
+                          )}
+                        </button>
                       );
                     })}
                   </div>
@@ -627,7 +629,9 @@ export default function Modifiers() {
             </div>
           </ScrollArea>
           <DialogFooter>
-            <Button onClick={() => { setAssignDialog(false); setSelectedOptionForAssign(null); }}>Listo</Button>
+            <Button onClick={() => { setAssignDialog(false); setSelectedOptionForAssign(null); }}>
+              Listo
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
