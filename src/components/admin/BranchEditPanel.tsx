@@ -26,7 +26,8 @@ import {
   UserPlus,
   X,
   Circle,
-  Copy
+  Copy,
+  CheckCircle2
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import BranchLocationMap from '@/components/maps/BranchLocationMap';
@@ -388,7 +389,15 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="address">Dirección *</Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="address">Dirección *</Label>
+              {latitude && longitude && (
+                <span className="flex items-center gap-1 text-xs text-primary">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Ubicado en el mapa
+                </span>
+              )}
+            </div>
             <Input
               id="address"
               value={address}
