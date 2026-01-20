@@ -1274,42 +1274,119 @@ export type Database = {
       }
       contact_messages: {
         Row: {
+          assigned_to: string | null
           created_at: string | null
           email: string
+          employment_branch_id: string | null
+          employment_cv_link: string | null
+          employment_motivation: string | null
+          employment_position: string | null
+          franchise_has_location: string | null
+          franchise_has_zone: string | null
+          franchise_investment_capital: string | null
           id: string
-          message: string
+          message: string | null
           name: string
-          phone: string | null
+          notes: string | null
+          order_branch_id: string | null
+          order_date: string | null
+          order_issue: string | null
+          order_number: string | null
+          phone: string
+          priority: string | null
+          read_at: string | null
           replied_at: string | null
           replied_by: string | null
           status: string | null
           subject: string
+          updated_at: string | null
         }
         Insert: {
+          assigned_to?: string | null
           created_at?: string | null
           email: string
+          employment_branch_id?: string | null
+          employment_cv_link?: string | null
+          employment_motivation?: string | null
+          employment_position?: string | null
+          franchise_has_location?: string | null
+          franchise_has_zone?: string | null
+          franchise_investment_capital?: string | null
           id?: string
-          message: string
+          message?: string | null
           name: string
-          phone?: string | null
+          notes?: string | null
+          order_branch_id?: string | null
+          order_date?: string | null
+          order_issue?: string | null
+          order_number?: string | null
+          phone: string
+          priority?: string | null
+          read_at?: string | null
           replied_at?: string | null
           replied_by?: string | null
           status?: string | null
           subject: string
+          updated_at?: string | null
         }
         Update: {
+          assigned_to?: string | null
           created_at?: string | null
           email?: string
+          employment_branch_id?: string | null
+          employment_cv_link?: string | null
+          employment_motivation?: string | null
+          employment_position?: string | null
+          franchise_has_location?: string | null
+          franchise_has_zone?: string | null
+          franchise_investment_capital?: string | null
           id?: string
-          message?: string
+          message?: string | null
           name?: string
-          phone?: string | null
+          notes?: string | null
+          order_branch_id?: string | null
+          order_date?: string | null
+          order_issue?: string | null
+          order_number?: string | null
+          phone?: string
+          priority?: string | null
+          read_at?: string | null
           replied_at?: string | null
           replied_by?: string | null
           status?: string | null
           subject?: string
+          updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contact_messages_employment_branch_id_fkey"
+            columns: ["employment_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_messages_employment_branch_id_fkey"
+            columns: ["employment_branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "contact_messages_order_branch_id_fkey"
+            columns: ["order_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_messages_order_branch_id_fkey"
+            columns: ["order_branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
       }
       customer_account_movements: {
         Row: {
