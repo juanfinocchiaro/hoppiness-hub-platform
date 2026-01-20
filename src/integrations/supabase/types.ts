@@ -813,12 +813,15 @@ export type Database = {
           facturante_cuit: string | null
           facturante_enabled: boolean | null
           facturante_punto_venta: number | null
+          fiscal_data: Json | null
           id: string
           invoice_provider: string | null
           is_active: boolean
           is_open: boolean | null
+          latitude: number | null
           local_channels: Json | null
           local_open_state: boolean | null
+          longitude: number | null
           mercadopago_access_token: string | null
           mercadopago_delivery_enabled: boolean | null
           mercadopago_public_key: string | null
@@ -856,12 +859,15 @@ export type Database = {
           facturante_cuit?: string | null
           facturante_enabled?: boolean | null
           facturante_punto_venta?: number | null
+          fiscal_data?: Json | null
           id?: string
           invoice_provider?: string | null
           is_active?: boolean
           is_open?: boolean | null
+          latitude?: number | null
           local_channels?: Json | null
           local_open_state?: boolean | null
+          longitude?: number | null
           mercadopago_access_token?: string | null
           mercadopago_delivery_enabled?: boolean | null
           mercadopago_public_key?: string | null
@@ -899,12 +905,15 @@ export type Database = {
           facturante_cuit?: string | null
           facturante_enabled?: boolean | null
           facturante_punto_venta?: number | null
+          fiscal_data?: Json | null
           id?: string
           invoice_provider?: string | null
           is_active?: boolean
           is_open?: boolean | null
+          latitude?: number | null
           local_channels?: Json | null
           local_open_state?: boolean | null
+          longitude?: number | null
           mercadopago_access_token?: string | null
           mercadopago_delivery_enabled?: boolean | null
           mercadopago_public_key?: string | null

@@ -22,15 +22,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Edit, MapPin, Clock, Package, Trash2 } from 'lucide-react';
+import { Plus, Edit, MapPin, Clock, Users, Trash2, Circle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
+import BranchEditDrawer from '@/components/admin/BranchEditDrawer';
 
 type Branch = Tables<'branches'>;
 
 interface BranchWithStats extends Branch {
-  productCount: number;
-  supplierCount: number;
+  teamCount: number;
+  workingCount: number;
 }
 
 export default function Branches() {
@@ -39,6 +40,10 @@ export default function Branches() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [branchToDelete, setBranchToDelete] = useState<BranchWithStats | null>(null);
   const [deleting, setDeleting] = useState(false);
+  
+  // Drawer state
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
 
   const fetchData = async () => {
     const { data: branchesData } = await supabase
@@ -49,22 +54,23 @@ export default function Branches() {
     if (branchesData) {
       const branchesWithStats = await Promise.all(
         branchesData.map(async (branch) => {
-          const [productsRes, suppliersRes] = await Promise.all([
+          const [teamRes, workingRes] = await Promise.all([
             supabase
-              .from('branch_products')
+              .from('user_roles')
               .select('id', { count: 'exact', head: true })
               .eq('branch_id', branch.id)
-              .eq('is_available', true),
+              .eq('is_active', true),
             supabase
-              .from('branch_suppliers')
+              .from('employees')
               .select('id', { count: 'exact', head: true })
-              .eq('branch_id', branch.id),
+              .eq('branch_id', branch.id)
+              .eq('current_status', 'WORKING'),
           ]);
 
           return {
             ...branch,
-            productCount: productsRes.count || 0,
-            supplierCount: suppliersRes.count || 0,
+            teamCount: teamRes.count || 0,
+            workingCount: workingRes.count || 0,
           };
         })
       );
@@ -77,6 +83,11 @@ export default function Branches() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleEditClick = (branch: BranchWithStats) => {
+    setSelectedBranch(branch);
+    setEditDrawerOpen(true);
+  };
 
   const handleDeleteClick = (branch: BranchWithStats) => {
     setBranchToDelete(branch);
@@ -124,23 +135,6 @@ export default function Branches() {
         </Link>
       </div>
 
-      {/* Info Card */}
-      <Card className="bg-primary/5 border-primary/20">
-        <CardContent className="pt-6">
-          <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Package className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <p className="font-medium">Auto-configuración habilitada</p>
-              <p className="text-sm text-muted-foreground">
-                Al crear una sucursal nueva, automáticamente se le asignan todos los productos del catálogo maestro.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Branches Table */}
       <Card>
         <CardHeader>
@@ -158,9 +152,9 @@ export default function Branches() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Sucursal</TableHead>
+                  <TableHead>Dirección</TableHead>
                   <TableHead>Horario</TableHead>
-                  <TableHead>Productos</TableHead>
-                  <TableHead>Proveedores</TableHead>
+                  <TableHead>Equipo</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead className="w-24"></TableHead>
                 </TableRow>
@@ -169,12 +163,15 @@ export default function Branches() {
                 {branches.map((branch) => (
                   <TableRow key={branch.id}>
                     <TableCell>
-                      <div>
-                        <p className="font-medium">{branch.name}</p>
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          {branch.address}, {branch.city}
-                        </p>
+                      <p className="font-medium">{branch.name}</p>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-start gap-1.5 text-sm text-muted-foreground">
+                        <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                        <div>
+                          <p>{branch.address}</p>
+                          <p className="text-xs">{branch.city}</p>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -184,10 +181,18 @@ export default function Branches() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{branch.productCount} productos</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{branch.supplierCount} proveedores</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="gap-1">
+                          <Users className="w-3 h-3" />
+                          {branch.teamCount}
+                        </Badge>
+                        {branch.workingCount > 0 && (
+                          <Badge variant="secondary" className="gap-1 text-xs">
+                            <Circle className="w-2 h-2 fill-primary text-primary" />
+                            {branch.workingCount} activos
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant={branch.is_active ? 'default' : 'secondary'}>
@@ -196,11 +201,13 @@ export default function Branches() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <Link to={`/admin/sucursales/${branch.id}`}>
-                          <Button variant="ghost" size="icon">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                        </Link>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleEditClick(branch)}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
                         <Button 
                           variant="ghost" 
                           size="icon"
@@ -213,11 +220,26 @@ export default function Branches() {
                     </TableCell>
                   </TableRow>
                 ))}
+                {branches.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      No hay sucursales creadas
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Drawer */}
+      <BranchEditDrawer
+        branch={selectedBranch}
+        open={editDrawerOpen}
+        onOpenChange={setEditDrawerOpen}
+        onSaved={fetchData}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -227,7 +249,7 @@ export default function Branches() {
             <AlertDialogDescription>
               Estás por eliminar <strong>{branchToDelete?.name}</strong>. 
               Esta acción no se puede deshacer y eliminará todos los datos asociados 
-              (productos, proveedores, pedidos, etc).
+              (pedidos, cuentas, etc).
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
