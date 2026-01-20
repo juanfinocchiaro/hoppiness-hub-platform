@@ -24,6 +24,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -43,10 +49,12 @@ import {
   Zap,
   Gift,
   ChevronRight,
+  ChevronDown,
   X,
   Banknote,
   CreditCard,
-  AlertTriangle
+  AlertTriangle,
+  Store
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables, Enums } from '@/integrations/supabase/types';
@@ -63,6 +71,8 @@ type PaymentMethod = Enums<'payment_method'>;
 interface ProductWithPrice extends Product {
   finalPrice: number;
   category?: Category | null;
+  isAvailable?: boolean;
+  stockQuantity?: number | null;
 }
 
 interface SelectedModifiers {
@@ -83,12 +93,16 @@ type OrderType = Enums<'order_type'>;
 const LOYALTY_POINTS = 350;
 const POINTS_FOR_FREE_BURGER = 500;
 
+// Stock thresholds
+const LOW_STOCK_THRESHOLD = 5;
+
 export default function PedirBranch() {
   const { branchSlug } = useParams();
   const navigate = useNavigate();
   const categoryRefs = useRef<Map<string, HTMLElement>>(new Map());
   
   const [branch, setBranch] = useState<Branch | null>(null);
+  const [allBranches, setAllBranches] = useState<Branch[]>([]);
   const [products, setProducts] = useState<ProductWithPrice[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,7 +117,8 @@ export default function PedirBranch() {
   const [productNotes, setProductNotes] = useState('');
   
   // Branch change confirmation
-  const [pendingBranchChange, setPendingBranchChange] = useState<string | null>(null);
+  const [pendingBranchChange, setPendingBranchChange] = useState<Branch | null>(null);
+  const [showBranchChangeModal, setShowBranchChangeModal] = useState(false);
   
   // Dynamic modifiers hook
   const { modifiers: productModifiers, loading: modifiersLoading } = useProductModifiers(
@@ -135,6 +150,19 @@ export default function PedirBranch() {
     if (savedType) setOrderType(savedType);
   }, []);
 
+  // Fetch all branches for the selector
+  useEffect(() => {
+    async function fetchAllBranches() {
+      const { data } = await supabase
+        .from('branches')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      if (data) setAllBranches(data);
+    }
+    fetchAllBranches();
+  }, []);
+
   useEffect(() => {
     async function fetchData() {
       if (!branchSlug) return;
@@ -161,15 +189,15 @@ export default function PedirBranch() {
           .select(`
             is_available,
             custom_price,
+            stock_quantity,
             product:products(
               *,
               category:product_categories(*)
             )
           `)
-          .eq('branch_id', branchData.id)
-          .eq('is_available', true);
+          .eq('branch_id', branchData.id);
 
-        const availableProducts: ProductWithPrice[] = (branchProducts || [])
+        const allProducts: ProductWithPrice[] = (branchProducts || [])
           .filter(bp => bp.product && (bp.product as any).is_available)
           .map(bp => {
             const prod = bp.product as Product & { category?: Category };
@@ -177,21 +205,27 @@ export default function PedirBranch() {
               ...prod,
               finalPrice: bp.custom_price || prod.price,
               category: prod.category || null,
+              isAvailable: bp.is_available,
+              stockQuantity: bp.stock_quantity,
             };
           });
 
-        // Sort by featured first, then by name
-        availableProducts.sort((a, b) => {
+        // Sort: available first (featured > rest), then unavailable
+        allProducts.sort((a, b) => {
+          // Unavailable at end
+          if (a.isAvailable && !b.isAvailable) return -1;
+          if (!a.isAvailable && b.isAvailable) return 1;
+          // Featured first
           if (a.is_featured && !b.is_featured) return -1;
           if (!a.is_featured && b.is_featured) return 1;
           return a.name.localeCompare(b.name);
         });
 
-        setProducts(availableProducts);
+        setProducts(allProducts);
 
         // Get unique categories
         const catMap = new Map<string, Category>();
-        availableProducts.forEach(p => {
+        allProducts.forEach(p => {
           if (p.category) {
             catMap.set(p.category.id, p.category);
           }
@@ -213,6 +247,30 @@ export default function PedirBranch() {
 
     fetchData();
   }, [branchSlug, navigate]);
+
+  // Handle branch change with cart warning
+  const handleBranchChange = (newBranch: Branch) => {
+    if (cart.length > 0 && newBranch.id !== branch?.id) {
+      setPendingBranchChange(newBranch);
+      setShowBranchChangeModal(true);
+    } else {
+      navigateToBranch(newBranch);
+    }
+  };
+
+  const confirmBranchChange = () => {
+    if (pendingBranchChange) {
+      setCart([]); // Clear cart
+      navigateToBranch(pendingBranchChange);
+    }
+    setShowBranchChangeModal(false);
+    setPendingBranchChange(null);
+  };
+
+  const navigateToBranch = (targetBranch: Branch) => {
+    const slug = targetBranch.slug || targetBranch.id;
+    navigate(`/pedir/${slug}`);
+  };
 
   const scrollToCategory = (categoryId: string) => {
     setActiveCategory(categoryId);
@@ -395,6 +453,30 @@ export default function PedirBranch() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
+      {/* Branch Change Confirmation Modal */}
+      <AlertDialog open={showBranchChangeModal} onOpenChange={setShowBranchChangeModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              Cambiar de sucursal
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Tu carrito es de <strong>Hoppiness {branch?.name}</strong>. 
+              Si cambiás a <strong>Hoppiness {pendingBranchChange?.name}</strong>, se vaciará tu pedido actual.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingBranchChange(null)}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmBranchChange} className="bg-destructive hover:bg-destructive/90">
+              Vaciar carrito y cambiar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Compact Header */}
       <div className="relative h-48 md:h-56 overflow-hidden">
         <div 
@@ -425,7 +507,7 @@ export default function PedirBranch() {
                 {userAddress ? userAddress.substring(0, 25) + '...' : 'Tu ubicación'}
               </Badge>
               {branch.is_open ? (
-                <Badge className="bg-green-500/90 text-white text-xs py-0">Abierto</Badge>
+                <Badge className="bg-emerald-500/90 text-white text-xs py-0">Abierto</Badge>
               ) : (
                 <Badge variant="destructive" className="text-xs py-0">Cerrado</Badge>
               )}
@@ -443,28 +525,65 @@ export default function PedirBranch() {
         </div>
       </div>
 
-      {/* Order Type Toggle - More Compact */}
+      {/* Sticky Header: Branch Selector + Order Type Toggle */}
       <div className="sticky top-0 z-30 bg-background border-b">
         <div className="container mx-auto px-4 py-2">
-          <div className="flex gap-2">
-            <Button
-              variant={orderType === 'delivery' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setOrderType('delivery')}
-              className="h-8 text-xs"
-            >
-              <Truck className="w-3 h-3 mr-1" />
-              Delivery
-            </Button>
-            <Button
-              variant={orderType === 'takeaway' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setOrderType('takeaway')}
-              className="h-8 text-xs"
-            >
-              <ShoppingBag className="w-3 h-3 mr-1" />
-              Pick-up
-            </Button>
+          <div className="flex items-center justify-between gap-3">
+            {/* Branch Selector Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 text-xs gap-1">
+                  <Store className="w-3 h-3" />
+                  <span className="font-medium">{branch.name}</span>
+                  <ChevronDown className="w-3 h-3 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                {allBranches.map((b) => (
+                  <DropdownMenuItem
+                    key={b.id}
+                    onClick={() => handleBranchChange(b)}
+                    className={b.id === branch.id ? 'bg-accent' : ''}
+                    disabled={!b.is_open}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span>Hoppiness {b.name}</span>
+                      {b.is_open ? (
+                        <Badge variant="secondary" className="text-[10px] py-0 px-1 bg-emerald-100 text-emerald-700">
+                          Abierto
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-[10px] py-0 px-1 text-muted-foreground">
+                          Cerrado
+                        </Badge>
+                      )}
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Order Type Toggle */}
+            <div className="flex gap-1">
+              <Button
+                variant={orderType === 'delivery' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setOrderType('delivery')}
+                className="h-8 text-xs"
+              >
+                <Truck className="w-3 h-3 mr-1" />
+                Delivery
+              </Button>
+              <Button
+                variant={orderType === 'takeaway' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setOrderType('takeaway')}
+                className="h-8 text-xs"
+              >
+                <ShoppingBag className="w-3 h-3 mr-1" />
+                Pick-up
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -985,7 +1104,7 @@ export default function PedirBranch() {
   );
 }
 
-// Product Card Component - Cleaner Design
+// Product Card Component with Stock Badges
 interface ProductCardProps {
   product: ProductWithPrice;
   onAdd: () => void;
@@ -993,26 +1112,57 @@ interface ProductCardProps {
   formatPrice: (price: number) => string;
 }
 
+const LOW_STOCK_THRESHOLD_CARD = 5;
+
 function ProductCard({ product, onAdd, cartQuantity, formatPrice }: ProductCardProps) {
+  const isUnavailable = product.isAvailable === false;
+  const isLowStock = product.stockQuantity !== null && 
+                     product.stockQuantity !== undefined && 
+                     product.stockQuantity > 0 && 
+                     product.stockQuantity <= LOW_STOCK_THRESHOLD_CARD;
+
+  const handleClick = () => {
+    if (isUnavailable) {
+      return; // Don't allow adding unavailable products
+    }
+    onAdd();
+  };
+
   return (
     <Card 
-      className={`overflow-hidden cursor-pointer hover:shadow-md transition-all group ${
-        cartQuantity > 0 ? 'ring-2 ring-primary' : ''
-      }`}
-      onClick={onAdd}
+      className={`overflow-hidden transition-all group ${
+        isUnavailable 
+          ? 'opacity-60 cursor-not-allowed' 
+          : 'cursor-pointer hover:shadow-md'
+      } ${cartQuantity > 0 ? 'ring-2 ring-primary' : ''}`}
+      onClick={handleClick}
     >
       <CardContent className="p-0">
         <div className="flex">
           {/* Text Content */}
           <div className="flex-1 p-3">
-            <div className="flex items-start justify-between mb-0.5">
-              <h3 className="font-bold text-sm line-clamp-2">{product.name}</h3>
-              {product.is_featured && (
-                <Badge variant="secondary" className="shrink-0 ml-2 text-[10px] py-0 px-1">
-                  <Star className="w-2.5 h-2.5 mr-0.5 fill-current" />
-                  Top
-                </Badge>
-              )}
+            <div className="flex items-start justify-between mb-0.5 gap-1">
+              <h3 className={`font-bold text-sm line-clamp-2 ${isUnavailable ? 'line-through text-muted-foreground' : ''}`}>
+                {product.name}
+              </h3>
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                {isUnavailable && (
+                  <Badge variant="destructive" className="text-[10px] py-0 px-1.5">
+                    Agotado
+                  </Badge>
+                )}
+                {!isUnavailable && isLowStock && (
+                  <Badge variant="secondary" className="text-[10px] py-0 px-1.5 bg-amber-100 text-amber-700">
+                    Últimos {product.stockQuantity}
+                  </Badge>
+                )}
+                {product.is_featured && !isUnavailable && (
+                  <Badge variant="secondary" className="text-[10px] py-0 px-1">
+                    <Star className="w-2.5 h-2.5 mr-0.5 fill-current" />
+                    Top
+                  </Badge>
+                )}
+              </div>
             </div>
             {product.description && (
               <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
@@ -1020,22 +1170,24 @@ function ProductCard({ product, onAdd, cartQuantity, formatPrice }: ProductCardP
               </p>
             )}
             <div className="flex items-center justify-between mt-auto">
-              <span className="text-base font-bold text-primary">
+              <span className={`text-base font-bold ${isUnavailable ? 'text-muted-foreground' : 'text-primary'}`}>
                 {formatPrice(product.finalPrice)}
               </span>
-              <Button 
-                variant={cartQuantity > 0 ? "default" : "outline"}
-                size="sm" 
-                className="rounded-full h-7 w-7 p-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
-                onClick={(e) => { e.stopPropagation(); onAdd(); }}
-              >
-                {cartQuantity > 0 ? cartQuantity : <Plus className="w-3.5 h-3.5" />}
-              </Button>
+              {!isUnavailable && (
+                <Button 
+                  variant={cartQuantity > 0 ? "default" : "outline"}
+                  size="sm" 
+                  className="rounded-full h-7 w-7 p-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
+                  onClick={(e) => { e.stopPropagation(); handleClick(); }}
+                >
+                  {cartQuantity > 0 ? cartQuantity : <Plus className="w-3.5 h-3.5" />}
+                </Button>
+              )}
             </div>
           </div>
           
           {/* Image */}
-          <div className="w-24 h-24 md:w-28 md:h-28 shrink-0 bg-muted overflow-hidden rounded-lg m-2">
+          <div className={`w-24 h-24 md:w-28 md:h-28 shrink-0 bg-muted overflow-hidden rounded-lg m-2 relative ${isUnavailable ? 'grayscale' : ''}`}>
             {product.image_url ? (
               <img 
                 src={product.image_url} 
@@ -1043,7 +1195,7 @@ function ProductCard({ product, onAdd, cartQuantity, formatPrice }: ProductCardP
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-3xl bg-gradient-to-br from-amber-100 to-orange-100">
+              <div className="w-full h-full flex items-center justify-center text-3xl bg-gradient-to-br from-primary/10 to-primary/20">
                 🍔
               </div>
             )}
