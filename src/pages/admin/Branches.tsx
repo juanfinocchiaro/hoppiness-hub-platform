@@ -22,10 +22,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Edit, MapPin, Clock, Users, Trash2, Circle } from 'lucide-react';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
+import { Plus, MapPin, Clock, Users, Trash2, Circle, ChevronRight, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
-import BranchEditDrawer from '@/components/admin/BranchEditDrawer';
+import BranchEditPanel from '@/components/admin/BranchEditPanel';
 
 type Branch = Tables<'branches'>;
 
@@ -41,9 +42,8 @@ export default function Branches() {
   const [branchToDelete, setBranchToDelete] = useState<BranchWithStats | null>(null);
   const [deleting, setDeleting] = useState(false);
   
-  // Drawer state
-  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
-  const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
+  // Expandable row state
+  const [expandedBranchId, setExpandedBranchId] = useState<string | null>(null);
 
   const fetchData = async () => {
     const { data: branchesData } = await supabase
@@ -84,12 +84,12 @@ export default function Branches() {
     fetchData();
   }, []);
 
-  const handleEditClick = (branch: BranchWithStats) => {
-    setSelectedBranch(branch);
-    setEditDrawerOpen(true);
+  const handleRowClick = (branchId: string) => {
+    setExpandedBranchId(prev => prev === branchId ? null : branchId);
   };
 
-  const handleDeleteClick = (branch: BranchWithStats) => {
+  const handleDeleteClick = (e: React.MouseEvent, branch: BranchWithStats) => {
+    e.stopPropagation(); // Prevent row expansion
     setBranchToDelete(branch);
     setDeleteDialogOpen(true);
   };
@@ -107,12 +107,22 @@ export default function Branches() {
       toast.error('No se pudo eliminar la sucursal. Puede tener datos asociados.');
     } else {
       toast.success(`Sucursal "${branchToDelete.name}" eliminada`);
+      setExpandedBranchId(null);
       fetchData();
     }
 
     setDeleting(false);
     setDeleteDialogOpen(false);
     setBranchToDelete(null);
+  };
+
+  const handleSaved = () => {
+    fetchData();
+    // Keep expanded to show saved state
+  };
+
+  const handleCancel = () => {
+    setExpandedBranchId(null);
   };
 
   const formatTime = (time: string | null) => {
@@ -156,70 +166,95 @@ export default function Branches() {
                   <TableHead>Horario</TableHead>
                   <TableHead>Equipo</TableHead>
                   <TableHead>Estado</TableHead>
-                  <TableHead className="w-24"></TableHead>
+                  <TableHead className="w-16"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {branches.map((branch) => (
-                  <TableRow key={branch.id}>
-                    <TableCell>
-                      <p className="font-medium">{branch.name}</p>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-start gap-1.5 text-sm text-muted-foreground">
-                        <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                        <div>
-                          <p>{branch.address}</p>
-                          <p className="text-xs">{branch.city}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Clock className="w-3 h-3" />
-                        {formatTime(branch.opening_time)} - {formatTime(branch.closing_time)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="gap-1">
-                          <Users className="w-3 h-3" />
-                          {branch.teamCount}
-                        </Badge>
-                        {branch.workingCount > 0 && (
-                          <Badge variant="secondary" className="gap-1 text-xs">
-                            <Circle className="w-2 h-2 fill-primary text-primary" />
-                            {branch.workingCount} activos
+                {branches.map((branch) => {
+                  const isExpanded = expandedBranchId === branch.id;
+                  
+                  return (
+                    <>
+                      <TableRow 
+                        key={branch.id}
+                        onClick={() => handleRowClick(branch.id)}
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            <span className="font-medium">{branch.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-start gap-1.5 text-sm text-muted-foreground">
+                            <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                            <div>
+                              <p className="line-clamp-1">{branch.address}</p>
+                              <p className="text-xs">{branch.city}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Clock className="w-3 h-3" />
+                            {formatTime(branch.opening_time)} - {formatTime(branch.closing_time)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="gap-1">
+                              <Users className="w-3 h-3" />
+                              {branch.teamCount}
+                            </Badge>
+                            {branch.workingCount > 0 && (
+                              <Badge variant="secondary" className="gap-1 text-xs">
+                                <Circle className="w-2 h-2 fill-primary text-primary" />
+                                {branch.workingCount}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={branch.is_active ? 'default' : 'secondary'}>
+                            {branch.is_active ? 'Activa' : 'Inactiva'}
                           </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={branch.is_active ? 'default' : 'secondary'}>
-                        {branch.is_active ? 'Activa' : 'Inactiva'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleEditClick(branch)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => handleDeleteClick(branch)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={(e) => handleDeleteClick(e, branch)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                      
+                      {/* Expanded Content Row */}
+                      <TableRow key={`${branch.id}-expanded`} className="hover:bg-transparent">
+                        <TableCell colSpan={6} className="p-0">
+                          <Collapsible open={isExpanded}>
+                            <CollapsibleContent className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
+                              <div className="p-6 bg-muted/30 border-t">
+                                <BranchEditPanel 
+                                  branch={branch} 
+                                  onSaved={handleSaved}
+                                  onCancel={handleCancel}
+                                />
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        </TableCell>
+                      </TableRow>
+                    </>
+                  );
+                })}
                 {branches.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
@@ -232,14 +267,6 @@ export default function Branches() {
           )}
         </CardContent>
       </Card>
-
-      {/* Edit Drawer */}
-      <BranchEditDrawer
-        branch={selectedBranch}
-        open={editDrawerOpen}
-        onOpenChange={setEditDrawerOpen}
-        onSaved={fetchData}
-      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
