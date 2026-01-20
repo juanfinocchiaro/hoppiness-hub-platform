@@ -87,8 +87,10 @@ export default function Conciliacion() {
     setExpandedPanel(expandedPanel === panel ? null : panel);
   };
 
-  const localUrl = selectedBranchId ? `/local/${selectedBranchId}` : '';
-  const marcaUrl = '/admin';
+  // Mark iframe navigations so the header can avoid navigating only the iframe
+  const embedQuery = '?embed=conciliacion';
+  const localUrl = selectedBranchId ? `/local/${selectedBranchId}${embedQuery}` : '';
+  const marcaUrl = `/admin${embedQuery}`;
 
   return (
     <div className="h-screen flex flex-col bg-background">

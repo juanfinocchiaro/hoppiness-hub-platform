@@ -19,24 +19,17 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useState, useMemo } from 'react';
 
-// Helper to detect iframe - must be called only in browser
-const getIsInIframe = () => {
-  if (typeof window === 'undefined') return false;
-  try {
-    return window.self !== window.top;
-  } catch (e) {
-    return true; // If we can't access window.top, we're probably in an iframe
-  }
-};
-
 export function PublicHeader() {
   const { user, signOut } = useAuth();
   const { canUseLocalPanel, canUseBrandPanel, canUseMiCuenta, loading: roleLoading } = useUserRoles();
   const location = useLocation();
   const [open, setOpen] = useState(false);
-  
-  // Detect if we're inside an iframe (memo to only check once)
-  const isInIframe = useMemo(() => getIsInIframe(), []);
+
+  // When running inside the Conciliación iframes we mark the URL with ?embed=conciliacion
+  // so we can ensure navigation happens in the parent (not only inside the iframe).
+  const isConciliacionEmbed = useMemo(() => {
+    return new URLSearchParams(location.search).get('embed') === 'conciliacion';
+  }, [location.search]);
 
   const isActive = (path: string) => location.pathname.startsWith(path);
 
@@ -150,12 +143,19 @@ export function PublicHeader() {
                   </DropdownMenuItem>
                 )}
                 
-                {canUseBrandPanel && canUseLocalPanel && !isInIframe && (
+                {canUseBrandPanel && canUseLocalPanel && (
                   <DropdownMenuItem asChild>
-                    <Link to="/conciliacion" className="cursor-pointer">
-                      <Columns className="w-4 h-4 mr-2" />
-                      Conciliación
-                    </Link>
+                    {isConciliacionEmbed ? (
+                      <a href="/conciliacion" target="_parent" className="cursor-pointer">
+                        <Columns className="w-4 h-4 mr-2" />
+                        Conciliación
+                      </a>
+                    ) : (
+                      <Link to="/conciliacion" className="cursor-pointer">
+                        <Columns className="w-4 h-4 mr-2" />
+                        Conciliación
+                      </Link>
+                    )}
                   </DropdownMenuItem>
                 )}
                 
@@ -279,18 +279,26 @@ export function PublicHeader() {
                       </Link>
                     )}
                     
-                    {canUseBrandPanel && canUseLocalPanel && !isInIframe && (
-                      <Link to="/conciliacion" onClick={() => setOpen(false)}>
-                        <Button 
-                          variant="ghost" 
-                          className={`w-full justify-start text-primary-foreground hover:bg-primary-foreground/10 ${
-                            isActive('/conciliacion') ? 'bg-primary-foreground/20' : ''
-                          }`}
-                        >
-                          <Columns className="w-4 h-4 mr-2" />
-                          Conciliación
-                        </Button>
-                      </Link>
+                    {canUseBrandPanel && canUseLocalPanel && (
+                      <Button
+                        asChild
+                        variant="ghost"
+                        className={`w-full justify-start text-primary-foreground hover:bg-primary-foreground/10 ${
+                          isActive('/conciliacion') ? 'bg-primary-foreground/20' : ''
+                        }`}
+                      >
+                        {isConciliacionEmbed ? (
+                          <a href="/conciliacion" target="_parent" onClick={() => setOpen(false)}>
+                            <Columns className="w-4 h-4 mr-2" />
+                            Conciliación
+                          </a>
+                        ) : (
+                          <Link to="/conciliacion" onClick={() => setOpen(false)}>
+                            <Columns className="w-4 h-4 mr-2" />
+                            Conciliación
+                          </Link>
+                        )}
+                      </Button>
                     )}
                     
                     <div className="border-t border-primary-foreground/20 my-2" />
