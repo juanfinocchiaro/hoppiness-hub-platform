@@ -38,6 +38,7 @@ import LocalRRHHColaboradores from "./pages/local/LocalRRHHColaboradores";
 import LocalRRHHHoras from "./pages/local/LocalRRHHHoras";
 import LocalRRHHSueldos from "./pages/local/LocalRRHHSueldos";
 import LocalRRHHLiquidacion from "./pages/local/LocalRRHHLiquidacion";
+import LocalUsuarios from "./pages/local/LocalUsuarios";
 import LocalFacturas from "./pages/local/LocalFacturas";
 import LocalObligaciones from "./pages/local/LocalObligaciones";
 import LocalFinanceReports from "./pages/local/LocalFinanceReports";
@@ -159,6 +160,7 @@ const App = () => (
               <Route path="obligaciones" element={<LocalObligaciones />} />
               <Route path="reportes" element={<LocalFinanceReports />} />
               {/* RRHH */}
+              <Route path="usuarios" element={<LocalUsuarios />} />
               <Route path="rrhh/fichajes" element={<LocalRRHHFichajes />} />
               <Route path="rrhh/horarios" element={<LocalRRHHHorarios />} />
               <Route path="rrhh/colaboradores" element={<LocalRRHHColaboradores />} />
