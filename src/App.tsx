@@ -54,7 +54,13 @@ import LocalCierre from "./pages/local/LocalCierre";
 import LocalStockFactura from "./pages/local/LocalStockFactura";
 import LocalStockPedir from "./pages/local/LocalStockPedir";
 import LocalStockHistorial from "./pages/local/LocalStockHistorial";
-
+import LocalIntegrador from "./pages/local/LocalIntegrador";
+import LocalComprasProveedores from "./pages/local/LocalComprasProveedores";
+import LocalComprasCuentas from "./pages/local/LocalComprasCuentas";
+import LocalComprasHistorial from "./pages/local/LocalComprasHistorial";
+import LocalMenuCombos from "./pages/local/LocalMenuCombos";
+import LocalReportesVentas from "./pages/local/LocalReportesVentas";
+import LocalReportesMovimientosStock from "./pages/local/LocalReportesMovimientosStock";
 // Attendance
 import ClockIn from "./pages/ClockIn";
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -168,6 +174,7 @@ const App = () => (
               <Route index element={null} />
               
               {/* OPERACIÓN DIARIA */}
+              <Route path="integrador" element={<LocalIntegrador />} />
               <Route path="pos" element={<LocalPOS />} />
               <Route path="kds" element={<LocalKDS />} />
               <Route path="pedidos" element={<LocalPedidos />} />
@@ -185,6 +192,23 @@ const App = () => (
               <Route path="stock/historial" element={<LocalStockHistorial />} />
               <Route path="stock/conteo" element={<LocalInventory />} />
               <Route path="stock/cmv" element={<LocalCMVReport />} />
+              
+              {/* COMPRAS */}
+              <Route path="compras/factura" element={<LocalStockFactura />} />
+              <Route path="compras/proveedores" element={<LocalComprasProveedores />} />
+              <Route path="compras/cuentas" element={<LocalComprasCuentas />} />
+              <Route path="compras/historial" element={<LocalComprasHistorial />} />
+              
+              {/* MENÚ DEL LOCAL */}
+              <Route path="menu/productos" element={<LocalProductos />} />
+              <Route path="menu/combos" element={<LocalMenuCombos />} />
+              <Route path="menu/extras" element={<LocalExtras />} />
+              
+              {/* REPORTES */}
+              <Route path="reportes/ventas" element={<LocalReportesVentas />} />
+              <Route path="reportes/resultados" element={<LocalFinanceReports />} />
+              <Route path="reportes/cmv" element={<LocalCMVReport />} />
+              <Route path="reportes/movimientos-stock" element={<LocalReportesMovimientosStock />} />
               
               {/* MENÚ DEL LOCAL */}
               <Route path="menu/productos" element={<LocalProductos />} />
