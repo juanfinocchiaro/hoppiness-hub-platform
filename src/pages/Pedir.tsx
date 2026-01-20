@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Home, ArrowRight, ChevronDown } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Home, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCart } from '@/contexts/CartContext';
 import { BranchCard, DeliveryModeToggle, AddressInput } from '@/components/store/BranchSelector';
@@ -54,6 +54,8 @@ export default function Pedir() {
   const [loading, setLoading] = useState(true);
   const [matchedBranch, setMatchedBranch] = useState<Branch | null>(null);
   const [showBranchList, setShowBranchList] = useState(false);
+  const [openBranchesExpanded, setOpenBranchesExpanded] = useState(true);
+  const [closedBranchesExpanded, setClosedBranchesExpanded] = useState(false);
 
   useEffect(() => {
     async function fetchBranches() {
@@ -289,36 +291,50 @@ export default function Pedir() {
                   )}
                 </div>
                 
-                {/* Scrollable branch list with visible scrollbar */}
-                <div className="relative">
-                  <ScrollArea className="h-[40vh] pr-3">
-                    <div className="space-y-3">
-                      {openBranches.map(branch => (
-                        <BranchCard
-                          key={branch.id}
-                          branch={branch}
-                          isRecommended={matchedBranch?.id === branch.id}
-                          onSelect={() => handleSelectBranch(branch)}
-                        />
-                      ))}
-                    </div>
-                  </ScrollArea>
-                  
-                  {/* Scroll hint indicator */}
-                  {openBranches.length > 2 && (
-                    <div className="absolute bottom-0 left-0 right-3 h-12 bg-gradient-to-t from-card to-transparent pointer-events-none flex items-end justify-center pb-1">
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground animate-[bounce_2s_ease-in-out_infinite]">
-                        <ChevronDown className="w-3 h-3" />
-                        <span>Deslizá para ver más</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                {/* Open branches - Collapsible */}
+                <Collapsible open={openBranchesExpanded} onOpenChange={setOpenBranchesExpanded}>
+                  <CollapsibleTrigger asChild>
+                    <button className="flex items-center justify-between w-full py-2 text-sm font-medium text-left hover:bg-muted/50 rounded-md px-2 transition-colors">
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                        Abiertas ahora ({openBranches.length})
+                      </span>
+                      {openBranchesExpanded ? (
+                        <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-3 pt-2">
+                    {openBranches.map(branch => (
+                      <BranchCard
+                        key={branch.id}
+                        branch={branch}
+                        isRecommended={matchedBranch?.id === branch.id}
+                        onSelect={() => handleSelectBranch(branch)}
+                      />
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
 
+                {/* Closed branches - Collapsible */}
                 {closedBranches.length > 0 && (
-                  <div className="border-t pt-4">
-                    <p className="text-sm text-muted-foreground mb-2">Cerradas ahora:</p>
-                    <div className="space-y-2 opacity-60">
+                  <Collapsible open={closedBranchesExpanded} onOpenChange={setClosedBranchesExpanded}>
+                    <CollapsibleTrigger asChild>
+                      <button className="flex items-center justify-between w-full py-2 text-sm font-medium text-left hover:bg-muted/50 rounded-md px-2 transition-colors border-t pt-4">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-muted-foreground"></span>
+                          Cerradas ahora ({closedBranches.length})
+                        </span>
+                        {closedBranchesExpanded ? (
+                          <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-2 pt-2 opacity-60">
                       {closedBranches.map(branch => (
                         <BranchCard
                           key={branch.id}
@@ -326,8 +342,8 @@ export default function Pedir() {
                           onSelect={() => {}}
                         />
                       ))}
-                    </div>
-                  </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                 )}
 
                 {matchedBranch && matchedBranch.is_open && (
