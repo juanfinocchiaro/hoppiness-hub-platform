@@ -3,6 +3,8 @@ import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useRoleLanding } from '@/hooks/useRoleLanding';
 import { usePanelAccess } from '@/hooks/usePanelAccess';
+import { useEmbedMode } from '@/hooks/useEmbedMode';
+import { ExternalLink } from '@/components/ui/ExternalLink';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -137,6 +139,7 @@ export default function AdminDashboard() {
   const { user, signOut, loading } = useAuth();
   const { avatarInfo, canAccessLocal } = useRoleLanding();
   const { canUseBrandPanel, canUseLocalPanel, branchAccess, loading: panelLoading } = usePanelAccess();
+  const { isEmbedded } = useEmbedMode();
   const navigate = useNavigate();
   const location = useLocation();
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -324,14 +327,14 @@ export default function AdminDashboard() {
                 <h2 className="text-lg font-bold">Panel Marca</h2>
               </div>
               <NavContent />
-              {hasLocalPanelAccess && (
+              {hasLocalPanelAccess && !isEmbedded && (
                 <div className="mt-4 pt-4 border-t">
-                  <Link to={`/local/${branchAccess[0].id}`}>
+                  <ExternalLink to={`/local/${branchAccess[0].id}`}>
                     <Button variant="outline" className="w-full justify-start">
                       <Building2 className="w-4 h-4 mr-3" />
                       Panel Mi Local
                     </Button>
-                  </Link>
+                  </ExternalLink>
                 </div>
               )}
               <div className="absolute bottom-4 left-4 right-4">
@@ -351,26 +354,26 @@ export default function AdminDashboard() {
         {/* Desktop Sidebar */}
         <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-card border-r">
           <div className="p-6 border-b">
-            <Link to="/" className="flex items-center gap-3">
+            <ExternalLink to="/" className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
                 <span className="text-primary-foreground font-bold">HC</span>
               </div>
               <span className="text-lg font-bold">Panel Marca</span>
-            </Link>
+            </ExternalLink>
           </div>
           
           <div className="flex-1 p-4">
             <NavContent />
           </div>
 
-          {hasLocalPanelAccess && (
+          {hasLocalPanelAccess && !isEmbedded && (
             <div className="px-4 pb-2">
-              <Link to={`/local/${branchAccess[0].id}`}>
+              <ExternalLink to={`/local/${branchAccess[0].id}`}>
                 <Button variant="outline" className="w-full justify-start">
                   <Building2 className="w-4 h-4 mr-3" />
                   Panel Mi Local
                 </Button>
-              </Link>
+              </ExternalLink>
             </div>
           )}
           

@@ -5,6 +5,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useRoleLanding } from '@/hooks/useRoleLanding';
 import { usePanelAccess } from '@/hooks/usePanelAccess';
+import { useEmbedMode } from '@/hooks/useEmbedMode';
+import { ExternalLink } from '@/components/ui/ExternalLink';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -87,6 +89,7 @@ export default function LocalLayout() {
   const { isAdmin, isGerente, branchPermissions, roles, loading: roleLoading } = useUserRole();
   const { avatarInfo } = useRoleLanding();
   const { canUseLocalPanel, canUseBrandPanel, branchAccess, loading: panelLoading } = usePanelAccess();
+  const { isEmbedded } = useEmbedMode();
   const navigate = useNavigate();
   const location = useLocation();
   const { branchId } = useParams();
@@ -477,13 +480,13 @@ export default function LocalLayout() {
               </div>
               <NavContent />
               <div className="absolute bottom-4 left-4 right-4 space-y-2">
-                {canUseBrandPanel && (
-                  <Link to="/admin">
+                {canUseBrandPanel && !isEmbedded && (
+                  <ExternalLink to="/admin">
                     <Button variant="outline" className="w-full" size="sm">
                       <Home className="w-4 h-4 mr-2" />
                       Ir a Panel Marca
                     </Button>
-                  </Link>
+                  </ExternalLink>
                 )}
                 <Button variant="outline" className="w-full" onClick={signOut}>
                   <LogOut className="w-4 h-4 mr-2" />
@@ -501,12 +504,12 @@ export default function LocalLayout() {
         {/* Desktop Sidebar */}
         <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-card border-r">
           <div className="p-6 border-b">
-            <Link to="/" className="flex items-center gap-3">
+            <ExternalLink to="/" className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
                 <Store className="w-5 h-5 text-primary-foreground" />
               </div>
               <span className="text-lg font-bold">Mi Local</span>
-            </Link>
+            </ExternalLink>
           </div>
           
           {/* Branch Selector */}
@@ -552,13 +555,13 @@ export default function LocalLayout() {
           </div>
           
           <div className="p-3 border-t space-y-1">
-            {canUseBrandPanel && (
-              <Link to="/admin">
+            {canUseBrandPanel && !isEmbedded && (
+              <ExternalLink to="/admin">
                 <Button variant="ghost" className="w-full justify-start" size="sm">
                   <Home className="w-4 h-4 mr-3" />
                   Panel Marca
                 </Button>
-              </Link>
+              </ExternalLink>
             )}
             <Button variant="ghost" className="w-full justify-start text-muted-foreground" size="sm" onClick={signOut}>
               <LogOut className="w-4 h-4 mr-3" />
