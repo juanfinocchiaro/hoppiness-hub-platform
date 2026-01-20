@@ -75,6 +75,7 @@ import Discounts from "./pages/admin/Discounts";
 import InvoiceScanner from "./pages/admin/InvoiceScanner";
 import IngredientSuppliers from "./pages/admin/IngredientSuppliers";
 import Channels from "./pages/admin/Channels";
+import Messages from "./pages/admin/Messages";
 
 // Local Stock & Inventory
 import LocalStock from "./pages/local/LocalStock";
@@ -212,6 +213,7 @@ const App = () => (
               <Route path="reportes" element={<SalesReports />} />
               <Route path="escaner-comprobantes" element={<InvoiceScanner />} />
               <Route path="canales" element={<Channels />} />
+              <Route path="mensajes" element={<Messages />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />

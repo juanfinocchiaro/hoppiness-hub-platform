@@ -1275,6 +1275,8 @@ export type Database = {
       contact_messages: {
         Row: {
           assigned_to: string | null
+          attachment_name: string | null
+          attachment_url: string | null
           created_at: string | null
           email: string
           employment_branch_id: string | null
@@ -1303,6 +1305,8 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          attachment_name?: string | null
+          attachment_url?: string | null
           created_at?: string | null
           email: string
           employment_branch_id?: string | null
@@ -1331,6 +1335,8 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          attachment_name?: string | null
+          attachment_url?: string | null
           created_at?: string | null
           email?: string
           employment_branch_id?: string | null
