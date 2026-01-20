@@ -8,12 +8,12 @@ import {
   Users,
   Award,
   Clock,
-  ArrowRight,
-  Beer
+  ArrowRight
 } from 'lucide-react';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import heroBurger from '@/assets/hero-burger.jpg';
+import logoWhite from '@/assets/logo-hoppiness-white.png';
 import local1 from '@/assets/local-1.jpg';
 import local2 from '@/assets/local-2.jpg';
 import designAmbiente from '@/assets/design-ambiente.jpg';
@@ -33,15 +33,9 @@ export default function Index() {
         
         <div className="relative container mx-auto px-4">
           <div className="max-w-2xl">
-            {/* Modern Logo Mark */}
-            <div className="inline-flex items-center gap-3 mb-8">
-              <div className="w-14 h-14 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center">
-                <Beer className="w-7 h-7 text-white" strokeWidth={1.5} />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-white font-bold text-xl tracking-wide">HOPPINESS</span>
-                <span className="text-white/60 text-xs tracking-[0.3em]">CLUB</span>
-              </div>
+            {/* Logo */}
+            <div className="mb-8">
+              <img src={logoWhite} alt="Hoppiness Club" className="w-28 h-28 object-contain" />
             </div>
             
             <h1 className="text-5xl md:text-7xl font-black text-white mb-6 font-brand tracking-tight">
