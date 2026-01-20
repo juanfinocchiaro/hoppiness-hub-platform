@@ -92,47 +92,6 @@ export default function Conciliacion() {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      {/* Header */}
-      <header className="bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4">
-          <h1 className="text-lg font-bold">Panel Conciliación</h1>
-          
-          {branches.length > 0 && (
-            <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
-              <SelectTrigger className="w-[200px] bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground">
-                <SelectValue placeholder="Seleccionar sucursal" />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.map((branch) => (
-                  <SelectItem key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={handleRefresh}
-            className="text-primary-foreground hover:bg-primary-foreground/10"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={signOut}
-            className="text-primary-foreground hover:bg-primary-foreground/10"
-          >
-            <LogOut className="w-4 h-4" />
-          </Button>
-        </div>
-      </header>
-
       {/* Split panels */}
       <div className="flex-1 flex overflow-hidden">
         {/* Panel Mi Local */}
