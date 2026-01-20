@@ -303,7 +303,8 @@ export default function Checkout() {
       
       <div className="container mx-auto px-4 py-6 max-w-2xl">
         <div className="space-y-6">
-          {debug && <TracePanel />}
+          {/* Debug panel - always visible for now to troubleshoot */}
+          <TracePanel />
           
           {/* Order Summary Card */}
           <Card>
