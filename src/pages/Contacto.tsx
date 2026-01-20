@@ -209,11 +209,22 @@ export default function Contacto() {
           break;
       }
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('contact_messages')
-        .insert([insertData as never]);
+        .insert([insertData as never])
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Send email notification (fire and forget)
+      try {
+        await supabase.functions.invoke('contact-notification', {
+          body: data
+        });
+      } catch (emailErr) {
+        console.warn('Email notification failed:', emailErr);
+      }
 
       const successMsg = getSuccessMessage(formData.subject);
       toast({
