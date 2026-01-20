@@ -45,7 +45,7 @@ export default function Index() {
               Un club de hamburguesas que se distingue por un producto de sabor y calidad inigualable.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link to="/menu">
+              <Link to="/pedir">
                 <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8">
                   <ShoppingBag className="w-5 h-5 mr-2" />
                   Pedir Ahora
@@ -232,7 +232,7 @@ export default function Index() {
           </div>
 
           <div className="text-center mt-12">
-            <Link to="/menu">
+            <Link to="/pedir">
               <Button size="lg">
                 <ShoppingBag className="w-5 h-5 mr-2" />
                 Pedir Ahora
