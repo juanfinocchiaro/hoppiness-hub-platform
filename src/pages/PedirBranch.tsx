@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -26,11 +26,14 @@ import {
 import { toast } from 'sonner';
 import { useCart } from '@/contexts/CartContext';
 import { useBranchMenu, type MenuProduct } from '@/hooks/store/useBranchMenu';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { CategoryTabs, ProductCard } from '@/components/store/Menu';
 import { FloatingCartButton, CartSummary } from '@/components/store/Cart';
 import { ProductSheet } from '@/components/store/Product';
 import { DeliveryModeToggle } from '@/components/store/BranchSelector';
 import { BranchChangeModal } from '@/components/store/common';
+import { PullToRefreshIndicator } from '@/components/store/PullToRefreshIndicator';
+import { ScrollIndicator } from '@/components/store/ScrollIndicator';
 import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
 import heroBurger from '@/assets/hero-burger.jpg';
 import type { Tables } from '@/integrations/supabase/types';
@@ -69,7 +72,20 @@ export default function PedirBranch() {
   const [selectedProduct, setSelectedProduct] = useState<MenuProduct | null>(null);
 
   // Fetch branch and menu data using the hook
-  const { data: menuData, isLoading: loading, error } = useBranchMenu(branchSlug);
+  const { data: menuData, isLoading: loading, error, refetch } = useBranchMenu(branchSlug);
+
+  // Pull to Refresh handler
+  const handleRefresh = useCallback(async () => {
+    await refetch();
+    toast.success('Menú actualizado', { duration: 1500 });
+  }, [refetch]);
+
+  const { 
+    isPulling, 
+    isRefreshing, 
+    pullDistance, 
+    pullProgress 
+  } = usePullToRefresh({ onRefresh: handleRefresh });
 
   // Sync branch from menu data to cart context
   useEffect(() => {
@@ -168,7 +184,14 @@ export default function PedirBranch() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24 overflow-x-hidden">
+    <div className="min-h-screen bg-background pb-24 overflow-x-hidden scroll-smooth">
+      {/* Pull to Refresh Indicator */}
+      <PullToRefreshIndicator
+        pullDistance={pullDistance}
+        pullProgress={pullProgress}
+        isRefreshing={isRefreshing}
+      />
+
       {/* Branch Change Confirmation Modal */}
       <BranchChangeModal
         open={showBranchChangeModal}
@@ -341,6 +364,9 @@ export default function PedirBranch() {
           );
         })}
       </div>
+
+      {/* Scroll Indicator */}
+      <ScrollIndicator show={products.length > 4 && itemCount === 0} />
 
       {/* Floating Cart Button */}
       {itemCount > 0 && (
