@@ -544,20 +544,41 @@ export default function Users() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          {user.role ? (
-                            <Badge className={roleColors[user.role]}>
-                              <Shield className="w-3 h-3 mr-1" />
-                              {roleLabels[user.role]}
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline">Cliente</Badge>
-                          )}
-                          {user.overrideCount && user.overrideCount > 0 ? (
-                            <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 dark:text-amber-400">
-                              ⚠️ Custom ({user.overrideCount})
-                            </Badge>
-                          ) : null}
+                        <div className="flex flex-col gap-1">
+                          {/* Rol */}
+                          <div className="flex items-center gap-2">
+                            {user.role ? (
+                              <Badge className={roleColors[user.role]}>
+                                <Shield className="w-3 h-3 mr-1" />
+                                {roleLabels[user.role]}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline">Cliente</Badge>
+                            )}
+                            {user.overrideCount && user.overrideCount > 0 ? (
+                              <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 dark:text-amber-400">
+                                ⚠️ Custom ({user.overrideCount})
+                              </Badge>
+                            ) : null}
+                          </div>
+                          {/* Modos de Panel */}
+                          <div className="flex items-center gap-1">
+                            {user.panelAccess?.can_use_brand_panel && (
+                              <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                                <Landmark className="w-3 h-3 mr-0.5" />
+                                Marca
+                              </Badge>
+                            )}
+                            {user.panelAccess?.can_use_local_panel && (
+                              <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                                <Building2 className="w-3 h-3 mr-0.5" />
+                                Local
+                              </Badge>
+                            )}
+                            {!user.panelAccess?.can_use_brand_panel && !user.panelAccess?.can_use_local_panel && (
+                              <span className="text-xs text-muted-foreground">Sin paneles</span>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
