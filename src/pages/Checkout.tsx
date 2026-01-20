@@ -36,6 +36,7 @@ import {
 import { toast } from 'sonner';
 import { useCart } from '@/contexts/CartContext';
 import { CartSummary } from '@/components/store/Cart';
+import { traceLog } from '@/lib/trace';
 import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
 import type { Enums } from '@/integrations/supabase/types';
 
@@ -105,15 +106,34 @@ export default function Checkout() {
                       (!wantsInvoice || invoiceType === 'B' || (customerCuit.trim() && customerBusinessName.trim()));
   
   const handleSubmit = async () => {
-    if (!branch || items.length === 0) return;
+    traceLog('checkout', 'submit_clicked', {
+      branchId: branch?.id,
+      itemsCount: items.length,
+      paymentMethod,
+      hasCashAmount: !!cashAmount.trim(),
+      wantsInvoice,
+      invoiceType,
+    });
+
+    if (!branch || items.length === 0) {
+      traceLog('checkout', 'blocked_no_branch_or_items');
+      return;
+    }
 
     if (!isFormValid) {
+      traceLog('checkout', 'validation_failed', {
+        customerName: !!customerName.trim(),
+        customerPhone: !!customerPhone.trim(),
+        deliveryAddress: isDelivery ? !!deliveryAddress.trim() : 'n/a',
+        invoiceOk: !wantsInvoice || invoiceType === 'B' || (!!customerCuit.trim() && !!customerBusinessName.trim()),
+      });
       toast.error('Completá los campos requeridos');
       return;
     }
 
     // Validate cash amount if paying with cash
     if (paymentMethod === 'efectivo' && cashAmountNum > 0 && cashAmountNum < total) {
+      traceLog('checkout', 'validation_failed_cash_amount', { cashAmountNum, total });
       toast.error('El monto en efectivo debe ser mayor o igual al total');
       return;
     }
@@ -121,30 +141,37 @@ export default function Checkout() {
     setIsProcessing(true);
 
     try {
-      // Useful debug: know if we are anon or authenticated
       const { data: sessionData } = await supabase.auth.getSession();
-      console.log('[checkout] session role', sessionData?.session ? 'authenticated' : 'anon');
+      traceLog('checkout', 'session_loaded', {
+        role: sessionData?.session ? 'authenticated' : 'anon',
+      });
 
       // Build notes with cash info if applicable
       let orderNotes = notes;
       if (paymentMethod === 'efectivo' && cashAmountNum > 0) {
         orderNotes = `${notes ? notes + ' | ' : ''}Paga con: ${formatPrice(cashAmountNum)}`;
       }
+      traceLog('checkout', 'notes_built', { hasNotes: !!orderNotes });
 
       // Find or create customer by phone
-      const { data: customerId, error: customerError } = await supabase
-        .rpc('find_or_create_customer', {
-          p_phone: customerPhone.trim(),
-          p_name: customerName.trim(),
-          p_email: customerEmail.trim() || null,
-        });
+      traceLog('checkout', 'customer_rpc_start');
+      const { data: customerId, error: customerError } = await supabase.rpc('find_or_create_customer', {
+        p_phone: customerPhone.trim(),
+        p_name: customerName.trim(),
+        p_email: customerEmail.trim() || null,
+      });
 
       if (customerError) {
-        console.error('Error finding/creating customer:', customerError);
+        traceLog('checkout', 'customer_rpc_error', {
+          message: customerError.message,
+          code: (customerError as any)?.code,
+          details: (customerError as any)?.details,
+        });
         // Continue without customer_id - not a blocking error
+      } else {
+        traceLog('checkout', 'customer_rpc_ok', { hasCustomerId: !!customerId });
       }
 
-      // Create order with customer_id
       const orderPayload: any = {
         branch_id: branch.id,
         customer_id: customerId || null,
@@ -166,7 +193,7 @@ export default function Checkout() {
         customer_business_name: invoiceType === 'A' ? customerBusinessName.trim() : null,
       };
 
-      console.log('ORDER PAYLOAD:', JSON.stringify(orderPayload, null, 2));
+      traceLog('checkout', 'order_insert_payload', orderPayload);
 
       const { data: order, error: orderError } = await supabase
         .from('orders')
@@ -174,11 +201,21 @@ export default function Checkout() {
         .select()
         .single();
 
-      console.log('INSERT RESULT:', { order, orderError });
+      if (orderError) {
+        traceLog('checkout', 'order_insert_error', {
+          message: orderError.message,
+          code: (orderError as any)?.code,
+          details: (orderError as any)?.details,
+          hint: (orderError as any)?.hint,
+        });
+        throw orderError;
+      }
 
-      if (orderError) throw orderError;
+      traceLog('checkout', 'order_insert_ok', {
+        orderId: order.id,
+        trackingToken: order.tracking_token,
+      });
 
-      // Create order items
       const orderItems = items.map(item => ({
         order_id: order.id,
         product_id: item.product.id,
@@ -187,35 +224,54 @@ export default function Checkout() {
         product_name_snapshot: item.product.name,
         notes: [
           ...(item.modifierNames || []),
-          item.notes ? `"${item.notes}"` : null
-        ].filter(Boolean).join(', ') || null,
+          item.notes ? `"${item.notes}"` : null,
+        ]
+          .filter(Boolean)
+          .join(', ') || null,
       }));
 
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
+      traceLog('checkout', 'order_items_insert_payload', { count: orderItems.length });
 
-      if (itemsError) throw itemsError;
-      
-      // Handle payment method
-      if (paymentMethod === 'mercadopago_link') {
-        // TODO: Create MercadoPago preference and redirect
-        toast.info('Redirigiendo a MercadoPago...');
-        // For now, just show success
+      const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
+
+      if (itemsError) {
+        traceLog('checkout', 'order_items_insert_error', {
+          message: itemsError.message,
+          code: (itemsError as any)?.code,
+          details: (itemsError as any)?.details,
+          hint: (itemsError as any)?.hint,
+        });
+        throw itemsError;
       }
-      
-      // Clear cart and redirect to tracking
+
+      traceLog('checkout', 'order_items_insert_ok');
+
+      if (paymentMethod === 'mercadopago_link') {
+        traceLog('checkout', 'mp_flow_start');
+        toast.info('Redirigiendo a MercadoPago...');
+      }
+
       clearCart();
+      traceLog('checkout', 'cart_cleared');
       toast.success('¡Pedido realizado con éxito!');
-      navigate(`/pedido/${order.tracking_token || order.id}`);
-      
+
+      const trackingPath = `/pedido/${order.tracking_token || order.id}`;
+      traceLog('checkout', 'navigate_tracking', { trackingPath });
+      navigate(trackingPath);
     } catch (error: any) {
+      traceLog('checkout', 'fatal_error', {
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+      });
       console.error('Checkout error:', error);
       const msg = error?.message || 'Error desconocido';
       const details = error?.details || error?.hint || error?.code;
       toast.error(`Error al procesar el pedido: ${msg}${details ? ` (${details})` : ''}`);
     } finally {
       setIsProcessing(false);
+      traceLog('checkout', 'processing_end');
     }
   };
   
@@ -436,6 +492,9 @@ export default function Checkout() {
               {paymentMethod === 'efectivo' && (
                 <div className="space-y-3 pt-2">
                   <Label>¿Con cuánto abonás? (opcional)</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Si no lo completás, igual podés confirmar el pedido.
+                  </p>
                   <div className="flex gap-2 flex-wrap">
                     {CASH_PRESETS.map(amount => (
                       <Button
