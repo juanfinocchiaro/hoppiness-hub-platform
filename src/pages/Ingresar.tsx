@@ -3,13 +3,11 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useRoleLanding } from '@/hooks/useRoleLanding';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Loader2, LogIn, UserPlus } from 'lucide-react';
+import { ArrowLeft, Loader2, LogIn, UserPlus, Beer } from 'lucide-react';
 import { toast } from 'sonner';
-import logoHoppiness from '@/assets/logo-hoppiness.png';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('Email inválido');
@@ -100,124 +98,175 @@ export default function Ingresar() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-primary">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-primary/90 to-accent">
         <div className="animate-pulse flex flex-col items-center gap-4">
-          <img src={logoHoppiness} alt="Hoppiness Club" className="w-24 h-24 object-contain" />
-          <p className="text-primary-foreground">Cargando...</p>
+          <div className="relative">
+            <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center">
+              <Beer className="w-10 h-10 text-white" />
+            </div>
+            <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-accent to-primary opacity-50 blur-lg -z-10" />
+          </div>
+          <p className="text-white/80 font-medium">Cargando...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary via-primary to-accent flex flex-col">
-      {/* Header simple */}
-      <header className="p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary via-primary/95 to-accent flex flex-col relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-accent/20 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-primary-foreground/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-accent/10 rounded-full blur-2xl" />
+      </div>
+
+      {/* Header */}
+      <header className="relative z-10 p-6">
         <Link to="/">
-          <Button variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/10">
+          <Button variant="ghost" className="text-white/90 hover:text-white hover:bg-white/10 transition-colors">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Volver al inicio
           </Button>
         </Link>
       </header>
 
-      <div className="flex-1 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-elevated">
-          <CardHeader className="text-center">
-            <img src={logoHoppiness} alt="Hoppiness Club" className="w-20 h-20 mx-auto mb-4" />
-            <CardTitle className="text-2xl font-brand">Ingresar</CardTitle>
-            <CardDescription>Acceso para personal de Hoppiness</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="login">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
-                <TabsTrigger value="signup">Registrarse</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="login">
-                <form onSubmit={handleLogin} className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
-                    <Input
-                      id="login-email"
-                      type="email"
-                      placeholder="tu@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="login-password">Contraseña</Label>
-                    <Input
-                      id="login-password"
-                      type="password"
-                      placeholder="••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <LogIn className="w-4 h-4 mr-2" />
-                    )}
-                    Ingresar
-                  </Button>
-                </form>
-              </TabsContent>
-              
-              <TabsContent value="signup">
-                <form onSubmit={handleSignup} className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Nombre completo</Label>
-                    <Input
-                      id="signup-name"
-                      type="text"
-                      placeholder="Juan Pérez"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="tu@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Contraseña</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="Mínimo 6 caracteres"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <UserPlus className="w-4 h-4 mr-2" />
-                    )}
-                    Crear cuenta
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+      <div className="flex-1 flex items-center justify-center p-4 relative z-10">
+        <div className="w-full max-w-md">
+          {/* Modern Logo Section */}
+          <div className="text-center mb-8">
+            <div className="inline-flex flex-col items-center">
+              <div className="relative mb-4">
+                <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-2xl">
+                  <Beer className="w-10 h-10 text-white" strokeWidth={1.5} />
+                </div>
+                <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-accent/40 to-primary/40 blur-xl -z-10" />
+              </div>
+              <h1 className="text-3xl font-bold text-white tracking-tight">HOPPINESS</h1>
+              <span className="text-white/60 text-sm tracking-[0.3em] mt-1">CLUB</span>
+            </div>
+          </div>
+
+          {/* Card */}
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/50">
+            <div className="p-8">
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-foreground">Bienvenido</h2>
+                <p className="text-muted-foreground mt-1">Acceso para el equipo Hoppiness</p>
+              </div>
+
+              <Tabs defaultValue="login" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted/50 p-1 rounded-xl">
+                  <TabsTrigger value="login" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
+                    Iniciar Sesión
+                  </TabsTrigger>
+                  <TabsTrigger value="signup" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
+                    Registrarse
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="login" className="mt-0">
+                  <form onSubmit={handleLogin} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="login-email" className="text-sm font-medium">Email</Label>
+                      <Input
+                        id="login-email"
+                        type="email"
+                        placeholder="tu@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="h-12 rounded-xl border-muted-foreground/20 focus:border-primary transition-colors"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="login-password" className="text-sm font-medium">Contraseña</Label>
+                      <Input
+                        id="login-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="h-12 rounded-xl border-muted-foreground/20 focus:border-primary transition-colors"
+                        required
+                      />
+                    </div>
+                    <Button 
+                      type="submit" 
+                      className="w-full h-12 rounded-xl text-base font-semibold bg-primary hover:bg-primary/90 transition-all shadow-lg shadow-primary/25" 
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      ) : (
+                        <LogIn className="w-5 h-5 mr-2" />
+                      )}
+                      Ingresar
+                    </Button>
+                  </form>
+                </TabsContent>
+                
+                <TabsContent value="signup" className="mt-0">
+                  <form onSubmit={handleSignup} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-name" className="text-sm font-medium">Nombre completo</Label>
+                      <Input
+                        id="signup-name"
+                        type="text"
+                        placeholder="Juan Pérez"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="h-12 rounded-xl border-muted-foreground/20 focus:border-primary transition-colors"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email" className="text-sm font-medium">Email</Label>
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        placeholder="tu@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="h-12 rounded-xl border-muted-foreground/20 focus:border-primary transition-colors"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password" className="text-sm font-medium">Contraseña</Label>
+                      <Input
+                        id="signup-password"
+                        type="password"
+                        placeholder="Mínimo 6 caracteres"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="h-12 rounded-xl border-muted-foreground/20 focus:border-primary transition-colors"
+                        required
+                      />
+                    </div>
+                    <Button 
+                      type="submit" 
+                      className="w-full h-12 rounded-xl text-base font-semibold bg-primary hover:bg-primary/90 transition-all shadow-lg shadow-primary/25" 
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      ) : (
+                        <UserPlus className="w-5 h-5 mr-2" />
+                      )}
+                      Crear cuenta
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
+
+          {/* Footer text */}
+          <p className="text-center text-white/40 text-xs mt-6">
+            © 2024 Hoppiness Club. Todos los derechos reservados.
+          </p>
+        </div>
       </div>
     </div>
   );
