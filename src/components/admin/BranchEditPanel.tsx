@@ -38,6 +38,8 @@ interface BranchEditPanelProps {
   branch: Branch;
   onSaved: () => void;
   onCancel: () => void;
+  initialTab?: 'datos' | 'horarios' | 'equipo' | 'fiscal';
+  hideTabs?: boolean;
 }
 
 interface TeamMember {
@@ -96,8 +98,8 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   return { value: `${hour}:${minutes}:00`, label: `${hour}:${minutes}` };
 });
 
-export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEditPanelProps) {
-  const [activeTab, setActiveTab] = useState('datos');
+export default function BranchEditPanel({ branch, onSaved, onCancel, initialTab = 'datos', hideTabs = false }: BranchEditPanelProps) {
+  const [activeTab, setActiveTab] = useState<string>(initialTab);
   const [saving, setSaving] = useState(false);
   
   // Datos básicos

@@ -1,15 +1,20 @@
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, MapPin } from 'lucide-react';
+import { ArrowLeft, MapPin, Building2, Clock, Users, Receipt, UserRound, BarChart3, TrendingUp } from 'lucide-react';
 import BranchEditPanel from '@/components/admin/BranchEditPanel';
+import BranchCustomersTab from '@/components/admin/BranchCustomersTab';
+import BranchSalesTab from '@/components/admin/BranchSalesTab';
+import BranchResultsTab from '@/components/admin/BranchResultsTab';
 
 export default function BranchDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('datos');
 
   const { data: branch, isLoading, refetch } = useQuery({
     queryKey: ['branch-detail', slug],
@@ -71,12 +76,88 @@ export default function BranchDetail() {
         </Badge>
       </div>
 
-      {/* Content with tabs - reusing BranchEditPanel */}
-      <BranchEditPanel
-        branch={branch}
-        onSaved={refetch}
-        onCancel={() => navigate('/admin')}
-      />
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid grid-cols-7 w-full max-w-3xl">
+          <TabsTrigger value="datos" className="gap-1.5">
+            <Building2 className="h-4 w-4" />
+            <span className="hidden lg:inline">Datos</span>
+          </TabsTrigger>
+          <TabsTrigger value="horarios" className="gap-1.5">
+            <Clock className="h-4 w-4" />
+            <span className="hidden lg:inline">Horarios</span>
+          </TabsTrigger>
+          <TabsTrigger value="equipo" className="gap-1.5">
+            <Users className="h-4 w-4" />
+            <span className="hidden lg:inline">Equipo</span>
+          </TabsTrigger>
+          <TabsTrigger value="clientes" className="gap-1.5">
+            <UserRound className="h-4 w-4" />
+            <span className="hidden lg:inline">Clientes</span>
+          </TabsTrigger>
+          <TabsTrigger value="ventas" className="gap-1.5">
+            <BarChart3 className="h-4 w-4" />
+            <span className="hidden lg:inline">Ventas</span>
+          </TabsTrigger>
+          <TabsTrigger value="resultados" className="gap-1.5">
+            <TrendingUp className="h-4 w-4" />
+            <span className="hidden lg:inline">Resultados</span>
+          </TabsTrigger>
+          <TabsTrigger value="fiscal" className="gap-1.5">
+            <Receipt className="h-4 w-4" />
+            <span className="hidden lg:inline">Fiscal</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Use BranchEditPanel for Datos, Horarios, Equipo, Fiscal */}
+        <TabsContent value="datos" className="mt-4">
+          <BranchEditPanel 
+            branch={branch} 
+            onSaved={refetch} 
+            onCancel={() => navigate('/admin')}
+            initialTab="datos"
+          />
+        </TabsContent>
+        
+        <TabsContent value="horarios" className="mt-4">
+          <BranchEditPanel 
+            branch={branch} 
+            onSaved={refetch} 
+            onCancel={() => navigate('/admin')}
+            initialTab="horarios"
+          />
+        </TabsContent>
+        
+        <TabsContent value="equipo" className="mt-4">
+          <BranchEditPanel 
+            branch={branch} 
+            onSaved={refetch} 
+            onCancel={() => navigate('/admin')}
+            initialTab="equipo"
+          />
+        </TabsContent>
+        
+        <TabsContent value="clientes" className="mt-4">
+          <BranchCustomersTab branchId={branch.id} />
+        </TabsContent>
+        
+        <TabsContent value="ventas" className="mt-4">
+          <BranchSalesTab branchId={branch.id} branchName={branch.name} />
+        </TabsContent>
+        
+        <TabsContent value="resultados" className="mt-4">
+          <BranchResultsTab branchId={branch.id} branchName={branch.name} />
+        </TabsContent>
+        
+        <TabsContent value="fiscal" className="mt-4">
+          <BranchEditPanel 
+            branch={branch} 
+            onSaved={refetch} 
+            onCancel={() => navigate('/admin')}
+            initialTab="fiscal"
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

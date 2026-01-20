@@ -84,6 +84,8 @@ import Conciliacion from "./pages/admin/Conciliacion";
 import BrandSettings from "./pages/admin/BrandSettings";
 import CentralTeam from "./pages/admin/CentralTeam";
 import BranchDetail from "./pages/admin/BranchDetail";
+import Integrations from "./pages/admin/Integrations";
+import Notifications from "./pages/admin/Notifications";
 
 // Local Stock & Inventory
 import LocalStock from "./pages/local/LocalStock";
@@ -273,6 +275,8 @@ const App = () => (
               {/* CONFIGURACIÓN */}
               <Route path="configuracion/marca" element={<BrandSettings />} />
               <Route path="configuracion/canales" element={<Channels />} />
+              <Route path="configuracion/integraciones" element={<Integrations />} />
+              <Route path="configuracion/notificaciones" element={<Notifications />} />
               
               {/* OTROS */}
               <Route path="clientes" element={<Customers />} />
