@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Disable blue highlight on mobile taps */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
 /* =============================================
    HOPPINESS CLUB - Design System
    Brand Manual Colors: #00139b (azul), #ff521d (naranja), #ffd41f (amarillo)

@@ -32,13 +32,12 @@ export function ScrollIndicator({ show = true, className }: ScrollIndicatorProps
 
   return (
     <div className={cn(
-      "fixed bottom-28 left-1/2 -translate-x-1/2 z-20 pointer-events-none",
-      "animate-[bounce_3s_ease-in-out_infinite] transition-opacity duration-300",
+      "fixed bottom-32 inset-x-0 flex justify-center z-20 pointer-events-none",
       className
     )}>
-      <div className="flex flex-col items-center gap-1 bg-background/80 backdrop-blur-sm rounded-full px-3 py-1.5 shadow-md border">
+      <div className="flex flex-col items-center gap-0.5 bg-background/90 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border animate-[pulse_4s_ease-in-out_infinite]">
         <span className="text-xs text-muted-foreground font-medium">Deslizá para ver más</span>
-        <ChevronDown className="w-4 h-4 text-muted-foreground" />
+        <ChevronDown className="w-4 h-4 text-muted-foreground animate-[bounce_2s_ease-in-out_infinite]" />
       </div>
     </div>
   );
