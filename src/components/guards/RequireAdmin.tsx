@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useRoleLanding } from '@/hooks/useRoleLanding';
 import { RequireAuth } from './RequireAuth';
 
 interface RequireAdminProps {
@@ -7,7 +7,7 @@ interface RequireAdminProps {
 }
 
 export function RequireAdmin({ children }: RequireAdminProps) {
-  const { isAdmin, loading } = useUserRole();
+  const { avatarInfo, loading, canAccessAdmin } = useRoleLanding();
 
   if (loading) {
     return (
@@ -17,8 +17,10 @@ export function RequireAdmin({ children }: RequireAdminProps) {
     );
   }
 
-  if (!isAdmin) {
-    return <Navigate to="/" replace />;
+  // Verificar si el usuario puede acceder al panel de admin
+  if (!canAccessAdmin) {
+    // Redirigir a su landing ideal
+    return <Navigate to={avatarInfo.landingPath} replace />;
   }
 
   return <>{children}</>;

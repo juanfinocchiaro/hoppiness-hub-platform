@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useRoleLanding } from '@/hooks/useRoleLanding';
 import { RequireAuth } from './RequireAuth';
 
 interface RequireLocalProps {
@@ -7,7 +7,7 @@ interface RequireLocalProps {
 }
 
 export function RequireLocal({ children }: RequireLocalProps) {
-  const { isAdmin, isCoordinador, isFranquiciado, isEncargado, isCajero, isKds, roles, loading } = useUserRole();
+  const { avatarInfo, loading, canAccessLocal } = useRoleLanding();
 
   if (loading) {
     return (
@@ -17,11 +17,10 @@ export function RequireLocal({ children }: RequireLocalProps) {
     );
   }
 
-  // Todos los roles de franquicia pueden acceder a /local
-  const hasLocalAccess = isAdmin || isCoordinador || isFranquiciado || isEncargado || isCajero || isKds;
-
-  if (!hasLocalAccess) {
-    return <Navigate to="/" replace />;
+  // Verificar si el usuario puede acceder al panel local
+  if (!canAccessLocal) {
+    // Redirigir a su landing ideal (ej: socio va a reportes de marca)
+    return <Navigate to={avatarInfo.landingPath} replace />;
   }
 
   return <>{children}</>;

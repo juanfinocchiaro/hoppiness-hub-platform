@@ -10,6 +10,8 @@ export type AvatarType =
   | 'kds'              // KDS - cocina
   | 'employee';        // Empleado general
 
+export type ScopeType = 'brand' | 'franchise' | 'branch';
+
 export interface AvatarInfo {
   type: AvatarType;
   label: string;
@@ -17,11 +19,17 @@ export interface AvatarInfo {
   description: string;
   directToPOS?: boolean;
   directToKDS?: boolean;
+  scope: ScopeType;
+  canOperate: boolean;        // Puede crear/editar/operar
+  canViewBrandReports: boolean; // Ve reportes consolidados de marca
+  canViewLocalReports: boolean; // Ve reportes del local
+  canAccessAdmin: boolean;    // Accede al panel de marca
+  canAccessLocal: boolean;    // Accede al panel de local
 }
 
 /**
  * Determina el avatar del usuario basado en sus roles y permisos
- * y devuelve la landing ideal para ese avatar
+ * y devuelve la landing ideal, scope y capacidades para ese avatar
  */
 export function useRoleLanding() {
   const {
@@ -47,6 +55,12 @@ export function useRoleLanding() {
         landingPath: accessibleBranches[0] ? `/local/${accessibleBranches[0].id}` : '/local',
         description: 'Vista de cocina por estaciones',
         directToKDS: true,
+        scope: 'branch',
+        canOperate: false,
+        canViewBrandReports: false,
+        canViewLocalReports: false,
+        canAccessAdmin: false,
+        canAccessLocal: true,
       };
     }
 
@@ -58,6 +72,12 @@ export function useRoleLanding() {
         landingPath: accessibleBranches[0] ? `/local/${accessibleBranches[0].id}` : '/local',
         description: 'Punto de venta y cobro rápido',
         directToPOS: true,
+        scope: 'branch',
+        canOperate: true,
+        canViewBrandReports: false,
+        canViewLocalReports: false,
+        canAccessAdmin: false,
+        canAccessLocal: true,
       };
     }
 
@@ -68,6 +88,12 @@ export function useRoleLanding() {
         label: 'Encargado',
         landingPath: accessibleBranches[0] ? `/local/${accessibleBranches[0].id}` : '/local',
         description: 'Gestión operativa diaria',
+        scope: 'branch',
+        canOperate: true,
+        canViewBrandReports: false,
+        canViewLocalReports: true,
+        canAccessAdmin: false,
+        canAccessLocal: true,
       };
     }
 
@@ -78,16 +104,28 @@ export function useRoleLanding() {
         label: 'Dueño de Franquicia',
         landingPath: accessibleBranches[0] ? `/local/${accessibleBranches[0].id}` : '/local',
         description: 'Vista completa de tu local',
+        scope: 'franchise',
+        canOperate: true,
+        canViewBrandReports: false,
+        canViewLocalReports: true,
+        canAccessAdmin: false,
+        canAccessLocal: true,
       };
     }
 
-    // Socio ve reportes de marca
+    // Socio ve reportes de marca (sin operar)
     if (isSocio && !isAdmin) {
       return {
         type: 'partner',
         label: 'Socio',
         landingPath: '/admin/reportes',
         description: 'Reportes financieros de la marca',
+        scope: 'brand',
+        canOperate: false,
+        canViewBrandReports: true,
+        canViewLocalReports: true,
+        canAccessAdmin: true,
+        canAccessLocal: false,
       };
     }
 
@@ -98,6 +136,12 @@ export function useRoleLanding() {
         label: 'Coordinador',
         landingPath: '/admin',
         description: 'Gestión de catálogo y operaciones',
+        scope: 'brand',
+        canOperate: true,
+        canViewBrandReports: true,
+        canViewLocalReports: true,
+        canAccessAdmin: true,
+        canAccessLocal: true,
       };
     }
 
@@ -108,6 +152,12 @@ export function useRoleLanding() {
         label: 'Administrador',
         landingPath: '/admin',
         description: 'Control total de la marca',
+        scope: 'brand',
+        canOperate: true,
+        canViewBrandReports: true,
+        canViewLocalReports: true,
+        canAccessAdmin: true,
+        canAccessLocal: true,
       };
     }
 
@@ -117,6 +167,12 @@ export function useRoleLanding() {
       label: 'Empleado',
       landingPath: accessibleBranches[0] ? `/local/${accessibleBranches[0].id}` : '/',
       description: 'Acceso básico',
+      scope: 'branch',
+      canOperate: false,
+      canViewBrandReports: false,
+      canViewLocalReports: false,
+      canAccessAdmin: false,
+      canAccessLocal: true,
     };
   };
 
@@ -129,5 +185,11 @@ export function useRoleLanding() {
     isOperationalRole: ['cashier', 'kds', 'employee'].includes(avatarInfo.type),
     isManagementRole: ['manager', 'franchise_owner'].includes(avatarInfo.type),
     isBrandRole: ['brand_owner', 'partner', 'coordinator'].includes(avatarInfo.type),
+    // Scope helpers
+    scope: avatarInfo.scope,
+    canOperate: avatarInfo.canOperate,
+    canViewBrandReports: avatarInfo.canViewBrandReports,
+    canAccessAdmin: avatarInfo.canAccessAdmin,
+    canAccessLocal: avatarInfo.canAccessLocal,
   };
 }

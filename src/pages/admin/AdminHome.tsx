@@ -7,6 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Store, Package, MapPin, Clock, Settings, Truck, ShoppingBag, Users, Bike, DollarSign, Utensils, Receipt, BarChart3 } from 'lucide-react';
 import OrdersHeatmap from '@/components/charts/OrdersHeatmap';
+import { RoleWelcomeCard } from '@/components/dashboard/RoleWelcomeCard';
+import { useRoleLanding } from '@/hooks/useRoleLanding';
+import { useAuth } from '@/hooks/useAuth';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
@@ -54,6 +57,8 @@ const salesChannels: SalesChannel[] = [
 ];
 
 export default function AdminHome() {
+  const { avatarInfo } = useRoleLanding();
+  const { user } = useAuth();
   const [stats, setStats] = useState<Stats>({ products: 0, categories: 0, globalRevenue: 0, globalItems: 0, globalOrders: 0, globalAvgTicket: 0, globalHours: 0, globalProductivity: 0 });
   const [branchStats, setBranchStats] = useState<Map<string, BranchStats>>(new Map());
   const [branchHoursStats, setBranchHoursStats] = useState<Map<string, BranchHoursStats>>(new Map());
@@ -236,6 +241,14 @@ export default function AdminHome() {
 
   return (
     <div className="space-y-6">
+      {/* Role Welcome Card for partners */}
+      <RoleWelcomeCard 
+        avatarType={avatarInfo.type}
+        avatarLabel={avatarInfo.label}
+        userName={user?.user_metadata?.full_name?.split(' ')[0]}
+        variant="brand"
+      />
+
       <div>
         <h1 className="text-3xl font-bold">Administración Central</h1>
         <p className="text-muted-foreground">Gestión de productos y sucursales de Hoppiness Club</p>
