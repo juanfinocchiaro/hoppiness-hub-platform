@@ -5564,6 +5564,11 @@ export type Database = {
         Args: { _employee_id: string; _user_id: string }
         Returns: boolean
       }
+      check_is_admin: { Args: { _user_id: string }; Returns: boolean }
+      check_is_franquiciado_for_branch: {
+        Args: { _branch_id: string; _user_id: string }
+        Returns: boolean
+      }
       cleanup_expired_tokens: { Args: never; Returns: undefined }
       find_or_create_customer: {
         Args: { p_email?: string; p_name: string; p_phone: string }
