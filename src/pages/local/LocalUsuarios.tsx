@@ -296,10 +296,13 @@ export default function LocalUsuarios() {
               <UserCircle className="w-4 h-4" />
               Clientes ({counts.clientes})
             </TabsTrigger>
-            <TabsTrigger value="equipo" className="gap-2">
-              <Briefcase className="w-4 h-4" />
-              Equipo ({counts.equipo})
-            </TabsTrigger>
+            {/* FIX 3: Solo mostrar tab Equipo si puede gestionar staff */}
+            {canInvite && (
+              <TabsTrigger value="equipo" className="gap-2">
+                <Briefcase className="w-4 h-4" />
+                Equipo ({counts.equipo})
+              </TabsTrigger>
+            )}
           </TabsList>
           
           <div className="relative w-full sm:w-64">
