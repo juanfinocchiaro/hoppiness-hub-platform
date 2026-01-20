@@ -89,6 +89,8 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   show: boolean;
+  badge?: number;
+  badgeVariant?: 'default' | 'destructive';
 }
 
 export default function LocalLayout() {
@@ -100,6 +102,9 @@ export default function LocalLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { branchId } = useParams();
+  
+  // Get pending orders count for badge
+  const pendingOrdersCount = usePendingOrdersCount(branchId);
   
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['vision', 'operacion']));
@@ -258,7 +263,7 @@ export default function LocalLayout() {
       icon: Zap,
       show: true,
       items: [
-        { to: 'integrador', label: 'Integrador', icon: Inbox, show: true },
+        { to: 'integrador', label: 'Integrador', icon: Inbox, show: true, badge: pendingOrdersCount > 0 ? pendingOrdersCount : undefined, badgeVariant: (pendingOrdersCount > 0 ? 'destructive' : 'default') as 'default' | 'destructive' },
         { to: 'pos', label: 'Punto de Venta', icon: Monitor, show: true },
         { to: 'kds', label: 'Cocina (KDS)', icon: ChefHat, show: true },
         { to: 'pedidos', label: 'Pedidos Activos', icon: ClipboardList, show: true },
@@ -520,6 +525,14 @@ export default function LocalLayout() {
                     >
                       <item.icon className="w-4 h-4 mr-3" />
                       {item.label}
+                      {item.badge !== undefined && item.badge > 0 && (
+                        <Badge 
+                          variant={item.badgeVariant || 'default'} 
+                          className="ml-auto text-xs px-1.5 py-0.5 min-w-[1.25rem] flex items-center justify-center"
+                        >
+                          {item.badge}
+                        </Badge>
+                      )}
                     </Button>
                   </Link>
                 );

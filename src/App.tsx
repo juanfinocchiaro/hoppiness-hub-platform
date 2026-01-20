@@ -240,13 +240,13 @@ const App = () => (
               <Route path="productos" element={<LocalRedirect to="menu/productos" />} />
               <Route path="extras" element={<LocalRedirect to="menu/extras" />} />
               <Route path="inventario" element={<LocalRedirect to="stock/conteo" />} />
-              <Route path="cmv" element={<LocalRedirect to="stock/cmv" />} />
+              <Route path="cmv" element={<LocalRedirect to="reportes/cmv" />} />
               <Route path="clientes" element={<LocalRedirect to="cuenta-corriente" />} />
               <Route path="transacciones" element={<LocalRedirect to="finanzas/movimientos" />} />
-              <Route path="proveedores" element={<LocalRedirect to="finanzas/proveedores" />} />
+              <Route path="proveedores" element={<LocalRedirect to="compras/proveedores" />} />
               <Route path="facturas" element={<LocalRedirect to="finanzas/facturas" />} />
               <Route path="obligaciones" element={<LocalRedirect to="finanzas/obligaciones" />} />
-              <Route path="reportes" element={<LocalRedirect to="finanzas/reportes" />} />
+              <Route path="reportes" element={<LocalRedirect to="reportes/ventas" />} />
               <Route path="rrhh/fichajes" element={<LocalRedirect to="equipo/fichar" />} />
               <Route path="rrhh/horarios" element={<LocalRedirect to="equipo/horarios" />} />
               <Route path="rrhh/horas" element={<LocalRedirect to="equipo/horas" />} />
@@ -258,6 +258,8 @@ const App = () => (
               <Route path="integraciones" element={<LocalRedirect to="config/integraciones" />} />
               <Route path="impresoras" element={<LocalRedirect to="config/impresoras" />} />
               <Route path="kds-config" element={<LocalRedirect to="config/kds" />} />
+              <Route path="stock/factura" element={<LocalRedirect to="compras/factura" />} />
+              <Route path="config/datos" element={<LocalConfig />} />
             </Route>
             
             {/* Conciliacion Panel (Admin only) */}
