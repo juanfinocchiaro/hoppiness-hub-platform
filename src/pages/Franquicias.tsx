@@ -7,7 +7,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import {
-  ArrowLeft,
   ArrowRight,
   Check,
   Users,
@@ -17,9 +16,9 @@ import {
   Package,
   HeadphonesIcon,
   Store,
-  MapPin,
-  Star
+  MapPin
 } from 'lucide-react';
+import { PublicHeader } from '@/components/layout/PublicHeader';
 import logoHoppiness from '@/assets/logo-hoppiness.png';
 import heroBurger from '@/assets/hero-burger.jpg';
 import local1 from '@/assets/local-1.jpg';
@@ -87,23 +86,7 @@ export default function Franquicias() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-primary text-primary-foreground sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <img src={logoHoppiness} alt="Hoppiness Club" className="w-10 h-10 object-contain" />
-            <span className="text-lg font-bold tracking-wide font-brand hidden sm:inline">HOPPINESS CLUB</span>
-          </Link>
-          <Link to="/menu">
-            <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-              Pedir
-            </Button>
-          </Link>
-        </div>
-      </header>
+      <PublicHeader />
 
       {/* Hero */}
       <section className="relative h-[60vh] min-h-[400px] flex items-center">
