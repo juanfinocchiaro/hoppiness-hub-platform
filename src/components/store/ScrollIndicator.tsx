@@ -33,7 +33,7 @@ export function ScrollIndicator({ show = true, className }: ScrollIndicatorProps
   return (
     <div className={cn(
       "fixed bottom-28 left-1/2 -translate-x-1/2 z-20 pointer-events-none",
-      "animate-bounce transition-opacity duration-300",
+      "animate-[bounce_3s_ease-in-out_infinite] transition-opacity duration-300",
       className
     )}>
       <div className="flex flex-col items-center gap-1 bg-background/80 backdrop-blur-sm rounded-full px-3 py-1.5 shadow-md border">
