@@ -189,40 +189,13 @@ export default function Checkout() {
         subtotal,
         delivery_fee: deliveryFee,
         total,
-        status: 'pending',
-        sales_channel: 'web_app',
-        order_area: isDelivery ? 'delivery' : 'mostrador',
         payment_method: paymentMethod as PaymentMethod,
         invoice_type: wantsInvoice ? (invoiceType === 'A' ? 'factura_a' : 'factura_b') : 'consumidor_final',
         customer_cuit: invoiceType === 'A' ? customerCuit.trim() : null,
         customer_business_name: invoiceType === 'A' ? customerBusinessName.trim() : null,
       };
 
-      traceLog('checkout', 'order_insert_payload', orderPayload);
-
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert(orderPayload as any)
-        .select()
-        .single();
-
-      if (orderError) {
-        traceLog('checkout', 'order_insert_error', {
-          message: orderError.message,
-          code: (orderError as any)?.code,
-          details: (orderError as any)?.details,
-          hint: (orderError as any)?.hint,
-        });
-        throw orderError;
-      }
-
-      traceLog('checkout', 'order_insert_ok', {
-        orderId: order.id,
-        trackingToken: order.tracking_token,
-      });
-
-      const orderItems = items.map(item => ({
-        order_id: order.id,
+      const itemsPayload = items.map(item => ({
         product_id: item.product.id,
         quantity: item.quantity,
         unit_price: item.product.finalPrice + (item.modifiersTotal || 0),
@@ -235,21 +208,39 @@ export default function Checkout() {
           .join(', ') || null,
       }));
 
-      traceLog('checkout', 'order_items_insert_payload', { count: orderItems.length });
+      traceLog('checkout', 'create_web_order_request', {
+        branchId: branch.id,
+        itemsCount: itemsPayload.length,
+        paymentMethod,
+        orderType: orderMode,
+      });
 
-      const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
+      const { data: sessionData2 } = await supabase.auth.getSession();
+      const session = sessionData2?.session;
 
-      if (itemsError) {
-        traceLog('checkout', 'order_items_insert_error', {
-          message: itemsError.message,
-          code: (itemsError as any)?.code,
-          details: (itemsError as any)?.details,
-          hint: (itemsError as any)?.hint,
-        });
-        throw itemsError;
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-web-order`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
+          body: JSON.stringify({ order: orderPayload, items: itemsPayload }),
+        }
+      );
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        traceLog('checkout', 'create_web_order_error', result);
+        throw new Error(result?.error || 'No se pudo crear el pedido');
       }
 
-      traceLog('checkout', 'order_items_insert_ok');
+      const { trackingToken } = result as { trackingToken: string };
+
+      traceLog('checkout', 'create_web_order_ok', { trackingToken });
 
       if (paymentMethod === 'mercadopago_link') {
         traceLog('checkout', 'mp_flow_start');
@@ -260,7 +251,7 @@ export default function Checkout() {
       traceLog('checkout', 'cart_cleared');
       toast.success('¡Pedido realizado con éxito!');
 
-      const trackingPath = `/pedido/${order.tracking_token || order.id}`;
+      const trackingPath = `/pedido/${trackingToken}`;
       traceLog('checkout', 'navigate_tracking', { trackingPath });
       navigate(trackingPath);
     } catch (error: any) {
