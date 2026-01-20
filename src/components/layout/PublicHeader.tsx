@@ -17,19 +17,26 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
+
+// Helper to detect iframe - must be called only in browser
+const getIsInIframe = () => {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.self !== window.top;
+  } catch (e) {
+    return true; // If we can't access window.top, we're probably in an iframe
+  }
+};
 
 export function PublicHeader() {
   const { user, signOut } = useAuth();
   const { canUseLocalPanel, canUseBrandPanel, canUseMiCuenta, loading: roleLoading } = useUserRoles();
   const location = useLocation();
   const [open, setOpen] = useState(false);
-  const [isInIframe, setIsInIframe] = useState(false);
-
-  // Detect if we're inside an iframe
-  useEffect(() => {
-    setIsInIframe(window.self !== window.top);
-  }, []);
+  
+  // Detect if we're inside an iframe (memo to only check once)
+  const isInIframe = useMemo(() => getIsInIframe(), []);
 
   const isActive = (path: string) => location.pathname.startsWith(path);
 
