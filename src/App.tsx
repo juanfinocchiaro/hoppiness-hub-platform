@@ -13,6 +13,7 @@ import Ingresar from "./pages/Ingresar";
 import RegistroStaff from "./pages/RegistroStaff";
 import Pedir from "./pages/Pedir";
 import PedirBranch from "./pages/PedirBranch";
+import Checkout from "./pages/Checkout";
 import PedidoTracking from "./pages/PedidoTracking";
 import NuestroMenu from "./pages/NuestroMenu";
 import Franquicias from "./pages/Franquicias";
@@ -101,6 +102,7 @@ const App = () => (
             <Route path="/ingresar" element={<Ingresar />} />
             <Route path="/pedir" element={<Pedir />} />
             <Route path="/pedir/:branchSlug" element={<PedirBranch />} />
+            <Route path="/checkout" element={<Checkout />} />
             <Route path="/pedido/:trackingToken" element={<PedidoTracking />} />
             <Route path="/menu" element={<NuestroMenu />} />
             <Route path="/menu/:branchSlug" element={<MenuPublic />} />
