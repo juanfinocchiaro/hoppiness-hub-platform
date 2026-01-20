@@ -12,7 +12,18 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, Edit, MapPin, Clock, Package } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Plus, Edit, MapPin, Clock, Package, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
@@ -25,44 +36,73 @@ interface BranchWithStats extends Branch {
 export default function Branches() {
   const [branches, setBranches] = useState<BranchWithStats[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [branchToDelete, setBranchToDelete] = useState<BranchWithStats | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const fetchData = async () => {
+    const { data: branchesData } = await supabase
+      .from('branches')
+      .select('*')
+      .order('name');
+
+    if (branchesData) {
+      const branchesWithStats = await Promise.all(
+        branchesData.map(async (branch) => {
+          const [productsRes, suppliersRes] = await Promise.all([
+            supabase
+              .from('branch_products')
+              .select('id', { count: 'exact', head: true })
+              .eq('branch_id', branch.id)
+              .eq('is_available', true),
+            supabase
+              .from('branch_suppliers')
+              .select('id', { count: 'exact', head: true })
+              .eq('branch_id', branch.id),
+          ]);
+
+          return {
+            ...branch,
+            productCount: productsRes.count || 0,
+            supplierCount: suppliersRes.count || 0,
+          };
+        })
+      );
+
+      setBranches(branchesWithStats);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    async function fetchData() {
-      const { data: branchesData } = await supabase
-        .from('branches')
-        .select('*')
-        .order('name');
-
-      if (branchesData) {
-        // Get counts for each branch
-        const branchesWithStats = await Promise.all(
-          branchesData.map(async (branch) => {
-            const [productsRes, suppliersRes] = await Promise.all([
-              supabase
-                .from('branch_products')
-                .select('id', { count: 'exact', head: true })
-                .eq('branch_id', branch.id)
-                .eq('is_available', true),
-              supabase
-                .from('branch_suppliers')
-                .select('id', { count: 'exact', head: true })
-                .eq('branch_id', branch.id),
-            ]);
-
-            return {
-              ...branch,
-              productCount: productsRes.count || 0,
-              supplierCount: suppliersRes.count || 0,
-            };
-          })
-        );
-
-        setBranches(branchesWithStats);
-      }
-      setLoading(false);
-    }
     fetchData();
   }, []);
+
+  const handleDeleteClick = (branch: BranchWithStats) => {
+    setBranchToDelete(branch);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!branchToDelete) return;
+
+    setDeleting(true);
+    const { error } = await supabase
+      .from('branches')
+      .delete()
+      .eq('id', branchToDelete.id);
+
+    if (error) {
+      toast.error('No se pudo eliminar la sucursal. Puede tener datos asociados.');
+    } else {
+      toast.success(`Sucursal "${branchToDelete.name}" eliminada`);
+      fetchData();
+    }
+
+    setDeleting(false);
+    setDeleteDialogOpen(false);
+    setBranchToDelete(null);
+  };
 
   const formatTime = (time: string | null) => {
     if (!time) return '-';
@@ -122,7 +162,7 @@ export default function Branches() {
                   <TableHead>Productos</TableHead>
                   <TableHead>Proveedores</TableHead>
                   <TableHead>Estado</TableHead>
-                  <TableHead className="w-20"></TableHead>
+                  <TableHead className="w-24"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -155,11 +195,21 @@ export default function Branches() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Link to={`/admin/sucursales/${branch.id}`}>
-                        <Button variant="ghost" size="icon">
-                          <Edit className="w-4 h-4" />
+                      <div className="flex gap-1">
+                        <Link to={`/admin/sucursales/${branch.id}`}>
+                          <Button variant="ghost" size="icon">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        </Link>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDeleteClick(branch)}
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </Button>
-                      </Link>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -168,6 +218,30 @@ export default function Branches() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar sucursal?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Estás por eliminar <strong>{branchToDelete?.name}</strong>. 
+              Esta acción no se puede deshacer y eliminará todos los datos asociados 
+              (productos, proveedores, pedidos, etc).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Eliminando...' : 'Eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
