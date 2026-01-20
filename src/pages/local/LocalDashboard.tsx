@@ -18,7 +18,10 @@ import {
 import OrdersHeatmap from '@/components/charts/OrdersHeatmap';
 import DashboardFilterBar from '@/components/dashboard/DashboardFilterBar';
 import RecentCompletedOrders from '@/components/dashboard/RecentCompletedOrders';
+import { RoleWelcomeCard } from '@/components/dashboard/RoleWelcomeCard';
 import { DashboardFilterProvider, useDashboardFilters } from '@/contexts/DashboardFilterContext';
+import { useRoleLanding } from '@/hooks/useRoleLanding';
+import { useAuth } from '@/hooks/useAuth';
 import type { Tables, Enums } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
@@ -86,6 +89,8 @@ interface HoursStats {
 
 function DashboardContent({ branch }: { branch: Branch }) {
   const { filters, dateRange, periodLabel } = useDashboardFilters();
+  const { avatarInfo } = useRoleLanding();
+  const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     filteredRevenue: 0,
     filteredOrders: 0,
@@ -272,6 +277,14 @@ function DashboardContent({ branch }: { branch: Branch }) {
 
       {/* Dashboard Content */}
       <div className="flex-1 p-6 space-y-6">
+        {/* Role Welcome Card */}
+        <RoleWelcomeCard 
+          avatarType={avatarInfo.type}
+          avatarLabel={avatarInfo.label}
+          branchId={branch.id}
+          userName={user?.user_metadata?.full_name?.split(' ')[0]}
+        />
+
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>

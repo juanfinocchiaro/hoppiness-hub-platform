@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useRoleLanding } from '@/hooks/useRoleLanding';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -19,26 +19,27 @@ export default function Ingresar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading, signIn, signUp } = useAuth();
-  const { isAdmin, isGerente, roles, accessibleBranches, loading: roleLoading } = useUserRole();
+  const { avatarInfo, loading: roleLoading } = useRoleLanding();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Redirigir usuarios autenticados
+  // Redirigir usuarios autenticados a su landing ideal según su rol
   useEffect(() => {
     if (!loading && !roleLoading && user) {
-      // Todos van a Mi Local, excepto si solo son admin (sin acceso a locales)
-      const hasLocalAccess = isAdmin || isGerente || roles.includes('empleado') || roles.includes('franquiciado');
-      
-      if (hasLocalAccess) {
-        navigate('/local');
-      } else {
-        navigate('/');
+      // Si venían de alguna página específica, respetar ese destino
+      const from = (location.state as { from?: { pathname: string } })?.from?.pathname;
+      if (from && from !== '/ingresar') {
+        navigate(from, { replace: true });
+        return;
       }
+      
+      // Ir a la landing ideal según el avatar/rol
+      navigate(avatarInfo.landingPath, { replace: true });
     }
-  }, [user, loading, roleLoading, isAdmin, isGerente, roles, navigate]);
+  }, [user, loading, roleLoading, avatarInfo.landingPath, navigate, location.state]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
