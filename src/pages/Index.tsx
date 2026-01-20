@@ -9,12 +9,11 @@ import {
   Award,
   Clock,
   ArrowRight,
-  Instagram
+  Beer
 } from 'lucide-react';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import heroBurger from '@/assets/hero-burger.jpg';
-import logoHoppiness from '@/assets/logo-hoppiness.png';
 import local1 from '@/assets/local-1.jpg';
 import local2 from '@/assets/local-2.jpg';
 import designAmbiente from '@/assets/design-ambiente.jpg';
@@ -34,7 +33,17 @@ export default function Index() {
         
         <div className="relative container mx-auto px-4">
           <div className="max-w-2xl">
-            <img src={logoHoppiness} alt="Hoppiness Club" className="w-32 h-32 mb-8" />
+            {/* Modern Logo Mark */}
+            <div className="inline-flex items-center gap-3 mb-8">
+              <div className="w-14 h-14 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center">
+                <Beer className="w-7 h-7 text-white" strokeWidth={1.5} />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-white font-bold text-xl tracking-wide">HOPPINESS</span>
+                <span className="text-white/60 text-xs tracking-[0.3em]">CLUB</span>
+              </div>
+            </div>
+            
             <h1 className="text-5xl md:text-7xl font-black text-white mb-6 font-brand tracking-tight">
               CULTO AL<br />SABOR
             </h1>
@@ -49,7 +58,7 @@ export default function Index() {
                 </Button>
               </Link>
               <Link to="/franquicias">
-                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 text-lg px-8">
+                <Button size="lg" variant="outline" className="border-2 border-white/80 text-white bg-white/5 hover:bg-white/15 backdrop-blur-sm text-lg px-8">
                   <Users className="w-5 h-5 mr-2" />
                   Franquicias
                 </Button>
