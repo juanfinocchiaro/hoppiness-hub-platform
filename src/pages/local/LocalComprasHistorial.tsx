@@ -125,9 +125,6 @@ export default function LocalComprasHistorial() {
         total: inv.total,
         is_paid: inv.is_paid,
       })) as Invoice[];
-        ...inv,
-        supplier_name: (inv.suppliers as any)?.name || 'Desconocido',
-      })) as Invoice[];
     },
     enabled: !!branchId,
   });

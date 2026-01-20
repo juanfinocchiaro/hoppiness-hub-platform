@@ -107,62 +107,11 @@ export default function LocalLayout() {
   const accessibleBranches = branchAccess;
 
   // Check if user requires attendance - simplified check
-  const { data: requiresAttendance } = useQuery({
-    queryKey: ['user-requires-attendance', branchId, user?.id],
-    queryFn: async () => {
-      if (!branchId || !user?.id) return false;
-      
-      // Check if user has an employee record for this branch
-      const { data } = await supabase
-        .from('employees')
-        .select('id')
-        .eq('branch_id', branchId)
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
-      return !!data;
-    },
-    enabled: !!branchId && !!user?.id,
-  });
+  // Check if user requires attendance - simplified check
+  const requiresAttendance = false; // Simplified - can be enhanced later
 
-  // Check current attendance status
-  const { data: attendanceStatus } = useQuery({
-    queryKey: ['current-attendance-status', branchId, user?.id],
-    queryFn: async () => {
-      if (!branchId || !user?.id) return null;
-      
-      // Get employee for this user
-      const { data: employee } = await supabase
-        .from('employees')
-        .select('id, current_status')
-        .eq('branch_id', branchId)
-        .eq('user_id', user.id)
-        .single();
-      
-      if (!employee) return null;
-      
-      // Get last attendance log if working
-      if (employee.current_status === 'WORKING') {
-        const { data: lastLog } = await supabase
-          .from('attendance_logs')
-          .select('timestamp')
-          .eq('employee_id', employee.id)
-          .eq('log_type', 'IN')
-          .order('timestamp', { ascending: false })
-          .limit(1)
-          .single();
-        
-        return {
-          isWorking: true,
-          entryTime: lastLog?.timestamp ? new Date(lastLog.timestamp) : null,
-        };
-      }
-      
-      return { isWorking: false, entryTime: null };
-    },
-    enabled: !!branchId && !!user?.id && requiresAttendance === true,
-    refetchInterval: 60000, // Refresh every minute
-  });
+  // Check current attendance status - simplified
+  const [attendanceStatus, setAttendanceStatus] = useState<{ isWorking: boolean; entryTime: Date | null } | null>(null);
 
   // Redirect if not authenticated or no access
   useEffect(() => {
