@@ -2,29 +2,18 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { 
-  MapPin, 
-  Navigation, 
-  Loader2, 
-  Store, 
-  Clock,
-  AlertTriangle,
-  Truck,
-  ShoppingBag,
-  Home
-} from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Home, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCart } from '@/contexts/CartContext';
+import { BranchCard, DeliveryModeToggle, AddressInput } from '@/components/store/BranchSelector';
+import { BranchChangeModal } from '@/components/store/common';
 import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
 import heroBurger from '@/assets/hero-burger.jpg';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
-
-// Córdoba center coordinates
-const CORDOBA_CENTER = { lat: -31.4201, lng: -64.1888 };
 
 // Simulated branch coordinates (in production, these would come from DB)
 const BRANCH_COORDS: Record<string, { lat: number; lng: number; radius: number }> = {
@@ -36,7 +25,7 @@ const BRANCH_COORDS: Record<string, { lat: number; lng: number; radius: number }
 };
 
 function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371; // Earth's radius in km
+  const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLng = (lng2 - lng1) * Math.PI / 180;
   const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -48,13 +37,21 @@ function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
 
 export default function Pedir() {
   const navigate = useNavigate();
+  const { 
+    orderMode, 
+    setOrderMode, 
+    deliveryAddress, 
+    setDeliveryAddress,
+    showBranchChangeModal,
+    pendingBranchChange,
+    confirmBranchChange,
+    cancelBranchChange,
+    branch: currentBranch,
+  } = useCart();
+  
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
-  const [address, setAddress] = useState('');
-  const [isLocating, setIsLocating] = useState(false);
-  const [orderType, setOrderType] = useState<'delivery' | 'pickup'>('delivery');
   const [matchedBranch, setMatchedBranch] = useState<Branch | null>(null);
-  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [showBranchList, setShowBranchList] = useState(false);
 
   useEffect(() => {
@@ -90,46 +87,26 @@ export default function Pedir() {
     return nearestBranch;
   };
 
-  const handleGeolocation = () => {
-    if (!navigator.geolocation) {
-      toast.error('Tu navegador no soporta geolocalización');
-      return;
+  const handleGeolocation = (coords: { lat: number; lng: number }) => {
+    const nearest = findNearestBranch(coords.lat, coords.lng);
+    if (nearest) {
+      setMatchedBranch(nearest);
+      setDeliveryAddress(`${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`);
+      toast.success(`¡Encontramos tu sucursal más cercana!`);
+    } else {
+      toast.info('Estás fuera de nuestra zona de delivery. Podés retirar en local.');
+      setOrderMode('takeaway');
+      setShowBranchList(true);
     }
-
-    setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setUserCoords({ lat: latitude, lng: longitude });
-        
-        const nearest = findNearestBranch(latitude, longitude);
-        if (nearest) {
-          setMatchedBranch(nearest);
-          setAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-          toast.success(`¡Encontramos tu sucursal más cercana!`);
-        } else {
-          toast.info('Estás fuera de nuestra zona de delivery. Podés retirar en local.');
-          setOrderType('pickup');
-          setShowBranchList(true);
-        }
-        setIsLocating(false);
-      },
-      () => {
-        toast.error('No pudimos obtener tu ubicación');
-        setIsLocating(false);
-      }
-    );
   };
 
   const handleAddressSubmit = () => {
-    if (!address.trim()) {
+    if (!deliveryAddress.trim()) {
       toast.error('Ingresá una dirección');
       return;
     }
 
-    // Simulate geocoding - in production, use a geocoding API
-    // For demo, we'll match by keywords
-    const addressLower = address.toLowerCase();
+    const addressLower = deliveryAddress.toLowerCase();
     let matched: Branch | null = null;
 
     if (addressLower.includes('manantiales') || addressLower.includes('circunvalación')) {
@@ -143,7 +120,6 @@ export default function Pedir() {
     } else if (addressLower.includes('carlos paz') || addressLower.includes('villa carlos')) {
       matched = branches.find(b => b.slug === 'villa-carlos-paz') || null;
     } else {
-      // Default to nearest open branch or show list
       matched = branches.find(b => b.is_open) || branches[0] || null;
     }
 
@@ -157,17 +133,48 @@ export default function Pedir() {
   const handleContinue = () => {
     if (matchedBranch) {
       const slug = matchedBranch.slug || matchedBranch.id;
-      // Store address and order type in sessionStorage for the menu page
-      sessionStorage.setItem('orderAddress', address);
-      sessionStorage.setItem('orderType', orderType);
+      sessionStorage.setItem('orderAddress', deliveryAddress);
+      sessionStorage.setItem('orderType', orderMode);
       navigate(`/pedir/${slug}`);
     }
   };
 
+  const handleSelectBranch = (branch: Branch) => {
+    setMatchedBranch(branch);
+    setShowBranchList(false);
+  };
+
   const openBranches = branches.filter(b => b.is_open);
+  const closedBranches = branches.filter(b => !b.is_open);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-primary to-primary/95">
+        <div className="relative min-h-[45vh] flex items-center justify-center">
+          <div className="container mx-auto px-4 py-12 text-center">
+            <Skeleton className="w-24 h-24 mx-auto rounded-full" />
+            <Skeleton className="h-12 w-3/4 mx-auto mt-6" />
+            <Skeleton className="h-6 w-1/2 mx-auto mt-4" />
+          </div>
+        </div>
+        <div className="container mx-auto px-4 -mt-12 relative z-20 pb-12">
+          <Skeleton className="max-w-xl mx-auto h-[400px] rounded-xl" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary to-primary/95">
+      {/* Branch Change Modal */}
+      <BranchChangeModal
+        open={showBranchChangeModal}
+        currentBranch={currentBranch}
+        newBranch={pendingBranchChange}
+        onConfirm={() => pendingBranchChange && confirmBranchChange(pendingBranchChange)}
+        onCancel={cancelBranchChange}
+      />
+
       {/* Hero Section */}
       <div className="relative min-h-[45vh] flex items-center justify-center overflow-hidden">
         <div 
@@ -191,115 +198,57 @@ export default function Pedir() {
             className="w-24 h-24 mx-auto mb-6 rounded-full shadow-2xl ring-4 ring-white/20" 
           />
           <h1 className="text-4xl md:text-5xl font-black text-white mb-4 font-brand">
-            ¿Dónde te llevamos tu Hoppiness?
+            {orderMode === 'delivery' 
+              ? '¿Dónde te llevamos tu Hoppiness?' 
+              : '¿En qué local retirás?'}
           </h1>
           <p className="text-xl text-white/70 max-w-lg mx-auto">
-            Ingresá tu dirección y te asignamos la sucursal más cercana
+            {orderMode === 'delivery'
+              ? 'Ingresá tu dirección y te asignamos la sucursal más cercana'
+              : 'Elegí la sucursal donde querés retirar tu pedido'}
           </p>
         </div>
       </div>
 
       {/* Address Input Section */}
       <div className="container mx-auto px-4 -mt-12 relative z-20 pb-12">
-        <Card className="max-w-xl mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
+        <Card className="max-w-xl mx-auto shadow-2xl border-0 bg-card/95 backdrop-blur-sm">
           <CardContent className="p-6 space-y-6">
             {/* Order Type Toggle */}
-            <div className="flex bg-muted rounded-lg p-1">
-              <Button
-                variant={orderType === 'delivery' ? 'default' : 'ghost'}
-                className="flex-1"
-                onClick={() => setOrderType('delivery')}
-              >
-                <Truck className="w-4 h-4 mr-2" />
-                Delivery
-              </Button>
-              <Button
-                variant={orderType === 'pickup' ? 'default' : 'ghost'}
-                className="flex-1"
-                onClick={() => { setOrderType('pickup'); setShowBranchList(true); }}
-              >
-                <ShoppingBag className="w-4 h-4 mr-2" />
-                Retiro en local
-              </Button>
-            </div>
+            <DeliveryModeToggle
+              mode={orderMode}
+              onChange={(mode) => {
+                setOrderMode(mode);
+                if (mode === 'takeaway') {
+                  setShowBranchList(true);
+                } else {
+                  setShowBranchList(false);
+                }
+              }}
+            />
 
-            {orderType === 'delivery' && !showBranchList && (
-              <>
-                {/* Address Input */}
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    placeholder="Ingresá tu dirección..."
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddressSubmit()}
-                    className="pl-11 h-12 text-lg"
-                  />
-                </div>
-
-                <div className="flex gap-3">
-                  <Button 
-                    variant="outline" 
-                    className="flex-1"
-                    onClick={handleGeolocation}
-                    disabled={isLocating}
-                  >
-                    {isLocating ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Navigation className="w-4 h-4 mr-2" />
-                    )}
-                    Usar mi ubicación
-                  </Button>
-                  <Button 
-                    className="flex-1"
-                    onClick={handleAddressSubmit}
-                    disabled={!address.trim()}
-                  >
-                    Buscar
-                  </Button>
-                </div>
-              </>
+            {/* Address Input for Delivery */}
+            {orderMode === 'delivery' && !showBranchList && (
+              <AddressInput
+                value={deliveryAddress}
+                onChange={setDeliveryAddress}
+                onSubmit={handleAddressSubmit}
+                onGeolocation={handleGeolocation}
+              />
             )}
 
             {/* Matched Branch Result */}
             {matchedBranch && !showBranchList && (
               <div className="border-t pt-6 space-y-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Store className="w-4 h-4" />
-                  <span>Tu pedido será preparado en:</span>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  Tu pedido será preparado en:
+                </p>
                 
-                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-bold text-lg text-primary">
-                        Hoppiness {matchedBranch.name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {matchedBranch.address}, {matchedBranch.city}
-                      </p>
-                    </div>
-                    {matchedBranch.is_open ? (
-                      <Badge className="bg-green-500">
-                        <span className="w-2 h-2 bg-white rounded-full mr-1 animate-pulse"></span>
-                        Abierto
-                      </Badge>
-                    ) : (
-                      <Badge variant="destructive">
-                        <AlertTriangle className="w-3 h-3 mr-1" />
-                        Cerrado
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-4 mt-3 text-sm">
-                    <span className="flex items-center gap-1 text-muted-foreground">
-                      <Clock className="w-4 h-4" />
-                      ~{matchedBranch.estimated_prep_time_min || 25} min
-                    </span>
-                  </div>
-                </div>
+                <BranchCard
+                  branch={matchedBranch}
+                  isRecommended
+                  onSelect={() => {}}
+                />
 
                 <Button 
                   size="lg" 
@@ -307,7 +256,14 @@ export default function Pedir() {
                   onClick={handleContinue}
                   disabled={!matchedBranch.is_open}
                 >
-                  {matchedBranch.is_open ? 'Ver Menú y Pedir' : 'Sucursal cerrada'}
+                  {matchedBranch.is_open ? (
+                    <>
+                      Ver Menú y Pedir
+                      <ArrowRight className="w-5 h-5 ml-2" />
+                    </>
+                  ) : (
+                    'Sucursal cerrada'
+                  )}
                 </Button>
 
                 <Button 
@@ -320,12 +276,12 @@ export default function Pedir() {
               </div>
             )}
 
-            {/* Branch List (for pickup or manual selection) */}
+            {/* Branch List */}
             {showBranchList && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold">Elegí una sucursal</h3>
-                  {orderType === 'delivery' && (
+                  {orderMode === 'delivery' && (
                     <Button variant="ghost" size="sm" onClick={() => setShowBranchList(false)}>
                       Volver
                     </Button>
@@ -334,48 +290,45 @@ export default function Pedir() {
                 
                 <div className="space-y-3 max-h-[40vh] overflow-y-auto">
                   {openBranches.map(branch => (
-                    <Card 
+                    <BranchCard
                       key={branch.id}
-                      className={`cursor-pointer transition-all hover:shadow-md ${
-                        matchedBranch?.id === branch.id ? 'ring-2 ring-primary' : ''
-                      }`}
-                      onClick={() => {
-                        setMatchedBranch(branch);
-                        setShowBranchList(false);
-                      }}
-                    >
-                      <CardContent className="p-4 flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Hoppiness {branch.name}</h4>
-                          <p className="text-sm text-muted-foreground">{branch.city}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs">
-                            <Clock className="w-3 h-3 mr-1" />
-                            ~{branch.estimated_prep_time_min || 25}'
-                          </Badge>
-                        </div>
-                      </CardContent>
-                    </Card>
+                      branch={branch}
+                      isRecommended={matchedBranch?.id === branch.id}
+                      onSelect={() => handleSelectBranch(branch)}
+                    />
                   ))}
                 </div>
 
-                {branches.filter(b => !b.is_open).length > 0 && (
+                {closedBranches.length > 0 && (
                   <div className="border-t pt-4">
                     <p className="text-sm text-muted-foreground mb-2">Cerradas ahora:</p>
-                    {branches.filter(b => !b.is_open).map(branch => (
-                      <div key={branch.id} className="opacity-50 p-3 text-sm">
-                        Hoppiness {branch.name} - Cerrado
-                      </div>
-                    ))}
+                    <div className="space-y-2 opacity-60">
+                      {closedBranches.map(branch => (
+                        <BranchCard
+                          key={branch.id}
+                          branch={branch}
+                          onSelect={() => {}}
+                        />
+                      ))}
+                    </div>
                   </div>
+                )}
+
+                {matchedBranch && matchedBranch.is_open && (
+                  <Button 
+                    size="lg" 
+                    className="w-full h-14 text-lg"
+                    onClick={handleContinue}
+                  >
+                    Continuar con {matchedBranch.name}
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
                 )}
               </div>
             )}
           </CardContent>
         </Card>
       </div>
-
     </div>
   );
 }
