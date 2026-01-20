@@ -40,7 +40,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables, Enums } from '@/integrations/supabase/types';
-import logoHoppiness from '@/assets/logo-hoppiness.png';
+import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
 import heroBurger from '@/assets/hero-burger.jpg';
 
 type Branch = Tables<'branches'>;
@@ -370,7 +370,7 @@ export default function PedirBranch() {
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             </Link>
-            <img src={logoHoppiness} alt="Hoppiness" className="h-8 w-8" />
+            <img src={logoOriginal} alt="Hoppiness" className="h-8 w-8 rounded-full" />
             <div className="w-9" />
           </div>
         </div>
@@ -560,9 +560,9 @@ export default function PedirBranch() {
 
       {/* Product Customization Sheet - Immersive Full Screen */}
       <Sheet open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
-        <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl p-0 flex flex-col">
-          {/* Full-Width Image Header */}
-          <div className="relative aspect-[16/9] w-full shrink-0">
+        <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl p-0 flex flex-col">
+          {/* Compact Image Header */}
+          <div className="relative h-48 md:h-56 w-full shrink-0">
             {selectedProduct?.image_url ? (
               <img 
                 src={selectedProduct.image_url} 
@@ -571,7 +571,7 @@ export default function PedirBranch() {
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-                <span className="text-8xl">🍔</span>
+                <span className="text-6xl">🍔</span>
               </div>
             )}
             {/* Gradient overlay for close button visibility */}
