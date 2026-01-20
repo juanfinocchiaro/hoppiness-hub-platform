@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Loader2, LogIn, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
-import logoWhite from '@/assets/logo-hoppiness-white.png';
+import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
 import logoBlue from '@/assets/logo-hoppiness-blue.png';
 import { z } from 'zod';
 
@@ -102,7 +102,7 @@ export default function Ingresar() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-primary/90 to-accent">
         <div className="animate-pulse flex flex-col items-center gap-4">
-          <img src={logoWhite} alt="Hoppiness Club" className="w-24 h-24 object-contain" />
+          <img src={logoOriginal} alt="Hoppiness Club" className="w-24 h-24 object-contain rounded-full" />
           <p className="text-white/80 font-medium">Cargando...</p>
         </div>
       </div>
@@ -132,7 +132,7 @@ export default function Ingresar() {
         <div className="w-full max-w-md">
           {/* Logo Section */}
           <div className="text-center mb-8">
-            <img src={logoWhite} alt="Hoppiness Club" className="w-24 h-24 mx-auto" />
+            <img src={logoOriginal} alt="Hoppiness Club" className="w-24 h-24 mx-auto rounded-full shadow-2xl" />
           </div>
 
           {/* Card */}

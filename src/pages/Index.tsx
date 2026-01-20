@@ -13,7 +13,7 @@ import {
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import heroBurger from '@/assets/hero-burger.jpg';
-import logoWhite from '@/assets/logo-hoppiness-white.png';
+import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
 import local1 from '@/assets/local-1.jpg';
 import local2 from '@/assets/local-2.jpg';
 import designAmbiente from '@/assets/design-ambiente.jpg';
@@ -35,7 +35,7 @@ export default function Index() {
           <div className="max-w-2xl">
             {/* Logo */}
             <div className="mb-8">
-              <img src={logoWhite} alt="Hoppiness Club" className="w-28 h-28 object-contain" />
+              <img src={logoOriginal} alt="Hoppiness Club" className="w-28 h-28 object-contain rounded-full shadow-2xl" />
             </div>
             
             <h1 className="text-5xl md:text-7xl font-black text-white mb-6 font-brand tracking-tight">
