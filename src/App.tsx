@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/contexts/CartContext";
 import { AdminRoute, LocalRoute } from "@/components/guards";
@@ -29,7 +29,6 @@ import LocalLayout from "./pages/local/LocalLayout";
 import LocalDashboard from "./pages/local/LocalDashboard";
 import LocalPedidos from "./pages/local/LocalPedidos";
 import LocalHistorial from "./pages/local/LocalHistorial";
-import LocalDisponibilidad from "./pages/local/LocalDisponibilidad";
 import LocalExtras from "./pages/local/LocalExtras";
 import LocalProductos from "./pages/local/LocalProductos";
 import LocalTransactions from "./pages/local/LocalTransactions";
@@ -37,7 +36,6 @@ import LocalCaja from "./pages/local/LocalCaja";
 import LocalSuppliers from "./pages/local/LocalSuppliers";
 import LocalRRHHFichajes from "./pages/local/LocalRRHHFichajes";
 import LocalRRHHHorarios from "./pages/local/LocalRRHHHorarios";
-import LocalRRHHColaboradores from "./pages/local/LocalRRHHColaboradores";
 import LocalRRHHHoras from "./pages/local/LocalRRHHHoras";
 import LocalRRHHSueldos from "./pages/local/LocalRRHHSueldos";
 import LocalRRHHLiquidacion from "./pages/local/LocalRRHHLiquidacion";
@@ -50,6 +48,9 @@ import LocalDeliveryZones from "./pages/local/LocalDeliveryZones";
 import LocalIntegraciones from "./pages/local/LocalIntegraciones";
 import LocalImpresoras from "./pages/local/LocalImpresoras";
 import AttendanceKiosk from "./pages/local/AttendanceKiosk";
+import LocalPOS from "./pages/local/LocalPOS";
+import LocalKDS from "./pages/local/LocalKDS";
+import LocalCierre from "./pages/local/LocalCierre";
 
 // Attendance
 import ClockIn from "./pages/ClockIn";
@@ -83,8 +84,6 @@ import LocalInventory from "./pages/local/LocalInventory";
 import LocalCMVReport from "./pages/local/LocalCMVReport";
 import LocalCustomers from "./pages/local/LocalCustomers";
 import LocalKDSSettings from "./pages/local/LocalKDSSettings";
-import LocalChannels from "./pages/local/LocalChannels";
-import LocalChannelAvailability from "./pages/local/LocalChannelAvailability";
 
 // Public Menu
 import MenuPublic from "./pages/MenuPublic";
@@ -97,6 +96,17 @@ import CuentaDirecciones from "./pages/cuenta/CuentaDirecciones";
 
 import NotFound from "./pages/NotFound";
 import { RequireAuth } from "./components/guards/RequireAuth";
+
+// Helper component for local redirects
+function LocalRedirect({ to }: { to: string }) {
+  const { branchId } = useParams();
+  return <Navigate to={`/local/${branchId}/${to}`} replace />;
+}
+
+// Helper component for admin redirects  
+function AdminRedirect({ to }: { to: string }) {
+  return <Navigate to={`/admin/${to}`} replace />;
+}
 
 const queryClient = new QueryClient();
 
@@ -147,73 +157,130 @@ const App = () => (
             </Route>
             <Route path="/local/:branchId" element={<LocalRoute><LocalLayout /></LocalRoute>}>
               <Route index element={null} />
-              {/* Operación */}
+              
+              {/* OPERACIÓN DIARIA */}
+              <Route path="pos" element={<LocalPOS />} />
+              <Route path="kds" element={<LocalKDS />} />
               <Route path="pedidos" element={<LocalPedidos />} />
               <Route path="historial" element={<LocalHistorial />} />
-              {/* Menú Local */}
-              <Route path="productos" element={<LocalProductos />} />
-              <Route path="extras" element={<LocalExtras />} />
-              <Route path="disponibilidad" element={<LocalDisponibilidad />} />
-              {/* Stock & Inventario */}
-              <Route path="stock" element={<LocalStock />} />
-              <Route path="inventario" element={<LocalInventory />} />
-              <Route path="cmv" element={<LocalCMVReport />} />
-              {/* Clientes */}
-              <Route path="clientes" element={<LocalCustomers />} />
-              {/* Finanzas */}
-              <Route path="transacciones" element={<LocalTransactions />} />
+              
+              {/* CAJA Y PAGOS */}
               <Route path="caja" element={<LocalCaja />} />
-              <Route path="proveedores" element={<LocalSuppliers />} />
-              <Route path="facturas" element={<LocalFacturas />} />
-              <Route path="obligaciones" element={<LocalObligaciones />} />
-              <Route path="reportes" element={<LocalFinanceReports />} />
-              {/* RRHH */}
-              <Route path="usuarios" element={<LocalUsuarios />} />
-              <Route path="rrhh/fichajes" element={<LocalRRHHFichajes />} />
-              <Route path="rrhh/horarios" element={<LocalRRHHHorarios />} />
-              <Route path="rrhh/colaboradores" element={<LocalRRHHColaboradores />} />
-              <Route path="rrhh/horas" element={<LocalRRHHHoras />} />
-              <Route path="rrhh/sueldos" element={<LocalRRHHSueldos />} />
-              <Route path="rrhh/liquidacion" element={<LocalRRHHLiquidacion />} />
-              {/* Configuración */}
-              <Route path="config" element={<LocalConfig />} />
-              <Route path="integraciones" element={<LocalIntegraciones />} />
-              <Route path="zonas-delivery" element={<LocalDeliveryZones />} />
-              <Route path="impresoras" element={<LocalImpresoras />} />
-              <Route path="canales" element={<LocalChannels />} />
-              <Route path="disponibilidad-canales" element={<LocalChannelAvailability />} />
-              <Route path="kds-config" element={<LocalKDSSettings />} />
+              <Route path="cuenta-corriente" element={<LocalCustomers />} />
+              <Route path="cierre" element={<LocalCierre />} />
+              
+              {/* STOCK Y COMPRAS */}
+              <Route path="stock" element={<LocalStock />} />
+              <Route path="stock/conteo" element={<LocalInventory />} />
+              <Route path="stock/cmv" element={<LocalCMVReport />} />
+              
+              {/* MENÚ DEL LOCAL */}
+              <Route path="menu/productos" element={<LocalProductos />} />
+              <Route path="menu/extras" element={<LocalExtras />} />
+              
+              {/* EQUIPO */}
+              <Route path="equipo" element={<LocalUsuarios />} />
+              <Route path="equipo/fichar" element={<LocalRRHHFichajes />} />
+              <Route path="equipo/horarios" element={<LocalRRHHHorarios />} />
+              <Route path="equipo/horas" element={<LocalRRHHHoras />} />
+              <Route path="equipo/liquidacion" element={<LocalRRHHLiquidacion />} />
+              <Route path="equipo/sueldos" element={<LocalRRHHSueldos />} />
+              
+              {/* FINANZAS */}
+              <Route path="finanzas/movimientos" element={<LocalTransactions />} />
+              <Route path="finanzas/proveedores" element={<LocalSuppliers />} />
+              <Route path="finanzas/facturas" element={<LocalFacturas />} />
+              <Route path="finanzas/obligaciones" element={<LocalObligaciones />} />
+              <Route path="finanzas/reportes" element={<LocalFinanceReports />} />
+              
+              {/* CONFIGURACIÓN */}
+              <Route path="config/local" element={<LocalConfig />} />
+              <Route path="config/zonas" element={<LocalDeliveryZones />} />
+              <Route path="config/integraciones" element={<LocalIntegraciones />} />
+              <Route path="config/impresoras" element={<LocalImpresoras />} />
+              <Route path="config/kds" element={<LocalKDSSettings />} />
+              
+              {/* LEGACY REDIRECTS - Rutas viejas redirigen a nuevas */}
+              <Route path="productos" element={<LocalRedirect to="menu/productos" />} />
+              <Route path="extras" element={<LocalRedirect to="menu/extras" />} />
+              <Route path="inventario" element={<LocalRedirect to="stock/conteo" />} />
+              <Route path="cmv" element={<LocalRedirect to="stock/cmv" />} />
+              <Route path="clientes" element={<LocalRedirect to="cuenta-corriente" />} />
+              <Route path="transacciones" element={<LocalRedirect to="finanzas/movimientos" />} />
+              <Route path="proveedores" element={<LocalRedirect to="finanzas/proveedores" />} />
+              <Route path="facturas" element={<LocalRedirect to="finanzas/facturas" />} />
+              <Route path="obligaciones" element={<LocalRedirect to="finanzas/obligaciones" />} />
+              <Route path="reportes" element={<LocalRedirect to="finanzas/reportes" />} />
+              <Route path="rrhh/fichajes" element={<LocalRedirect to="equipo/fichar" />} />
+              <Route path="rrhh/horarios" element={<LocalRedirect to="equipo/horarios" />} />
+              <Route path="rrhh/horas" element={<LocalRedirect to="equipo/horas" />} />
+              <Route path="rrhh/liquidacion" element={<LocalRedirect to="equipo/liquidacion" />} />
+              <Route path="rrhh/sueldos" element={<LocalRedirect to="equipo/sueldos" />} />
+              <Route path="usuarios" element={<LocalRedirect to="equipo" />} />
+              <Route path="config" element={<LocalRedirect to="config/local" />} />
+              <Route path="zonas-delivery" element={<LocalRedirect to="config/zonas" />} />
+              <Route path="integraciones" element={<LocalRedirect to="config/integraciones" />} />
+              <Route path="impresoras" element={<LocalRedirect to="config/impresoras" />} />
+              <Route path="kds-config" element={<LocalRedirect to="config/kds" />} />
             </Route>
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>}>
               <Route index element={<AdminHome />} />
-              <Route path="estado-sucursales" element={<BranchStatus />} />
-              <Route path="productos" element={<Products />} />
-              <Route path="productos/nuevo" element={<ProductForm />} />
-              <Route path="productos/:productId" element={<ProductForm />} />
-              <Route path="modificadores" element={<Modifiers />} />
-              <Route path="ingredientes" element={<Ingredients />} />
+              
+              {/* ATENCIÓN */}
+              <Route path="mensajes" element={<Messages />} />
+              <Route path="clientes" element={<Customers />} />
+              
+              {/* SUCURSALES */}
               <Route path="sucursales" element={<Branches />} />
               <Route path="sucursales/:branchId/productos" element={<BranchProducts />} />
+              <Route path="canales" element={<Channels />} />
+              <Route path="estado-sucursales" element={<BranchStatus />} />
+              
+              {/* CATÁLOGO */}
+              <Route path="catalogo/productos" element={<Products />} />
+              <Route path="catalogo/productos/nuevo" element={<ProductForm />} />
+              <Route path="catalogo/productos/:productId" element={<ProductForm />} />
+              <Route path="catalogo/modificadores" element={<Modifiers />} />
+              <Route path="catalogo/ingredientes" element={<Ingredients />} />
+              <Route path="catalogo/descuentos" element={<Discounts />} />
+              
+              {/* PROVEEDORES */}
               <Route path="proveedores" element={<Suppliers />} />
-              <Route path="control-proveedores" element={<IngredientSuppliers />} />
-              <Route path="clientes" element={<Customers />} />
-              <Route path="descuentos" element={<Discounts />} />
-              <Route path="estado-resultados" element={<ProfitLossReport />} />
-              <Route path="performance" element={<BranchPerformance />} />
-              <Route path="finanzas-marca" element={<BrandFinances />} />
-              <Route path="equipo" element={<Users />} />
-              <Route path="plantillas" element={<RoleTemplates />} />
+              <Route path="proveedores/ingredientes" element={<IngredientSuppliers />} />
+              
+              {/* EQUIPO */}
+              <Route path="equipo/usuarios" element={<Users />} />
+              <Route path="equipo/plantillas" element={<RoleTemplates />} />
               <Route path="overrides" element={<UserBranchOverrides />} />
-              {/* Legacy redirects */}
-              <Route path="usuarios" element={<Users />} />
+              
+              {/* REPORTES */}
+              <Route path="reportes/performance" element={<BranchPerformance />} />
+              <Route path="reportes/ventas" element={<SalesReports />} />
+              <Route path="reportes/pyl" element={<ProfitLossReport />} />
+              <Route path="reportes/finanzas" element={<BrandFinances />} />
+              
+              {/* OTROS */}
+              <Route path="escaner-comprobantes" element={<InvoiceScanner />} />
+              
+              {/* LEGACY REDIRECTS - Rutas viejas redirigen a nuevas */}
+              <Route path="productos" element={<AdminRedirect to="catalogo/productos" />} />
+              <Route path="productos/nuevo" element={<AdminRedirect to="catalogo/productos/nuevo" />} />
+              <Route path="productos/:productId" element={<AdminRedirect to="catalogo/productos" />} />
+              <Route path="modificadores" element={<AdminRedirect to="catalogo/modificadores" />} />
+              <Route path="ingredientes" element={<AdminRedirect to="catalogo/ingredientes" />} />
+              <Route path="descuentos" element={<AdminRedirect to="catalogo/descuentos" />} />
+              <Route path="control-proveedores" element={<AdminRedirect to="proveedores/ingredientes" />} />
+              <Route path="equipo" element={<AdminRedirect to="equipo/usuarios" />} />
+              <Route path="plantillas" element={<AdminRedirect to="equipo/plantillas" />} />
+              <Route path="usuarios" element={<AdminRedirect to="equipo/usuarios" />} />
               <Route path="accesos" element={<UserBranchOverrides />} />
               <Route path="permisos" element={<UserBranchOverrides />} />
-              <Route path="reportes" element={<SalesReports />} />
-              <Route path="escaner-comprobantes" element={<InvoiceScanner />} />
-              <Route path="canales" element={<Channels />} />
-              <Route path="mensajes" element={<Messages />} />
+              <Route path="performance" element={<AdminRedirect to="reportes/performance" />} />
+              <Route path="reportes" element={<AdminRedirect to="reportes/ventas" />} />
+              <Route path="estado-resultados" element={<AdminRedirect to="reportes/pyl" />} />
+              <Route path="finanzas-marca" element={<AdminRedirect to="reportes/finanzas" />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />
