@@ -431,15 +431,15 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
                     {!canUseLocalPanel && <Badge variant="outline" className="text-xs">Panel deshabilitado</Badge>}
                   </Label>
                   <Select 
-                    value={localTemplateId} 
-                    onValueChange={setLocalTemplateId}
+                    value={localTemplateId || 'none'} 
+                    onValueChange={(v) => setLocalTemplateId(v === 'none' ? '' : v)}
                     disabled={!isAdmin || !canUseLocalPanel}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Sin plantilla local" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Sin plantilla</SelectItem>
+                      <SelectItem value="none">Sin plantilla</SelectItem>
                       {localTemplates.map(t => (
                         <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                       ))}
@@ -455,15 +455,15 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
                     {!canUseBrandPanel && <Badge variant="outline" className="text-xs">Panel deshabilitado</Badge>}
                   </Label>
                   <Select 
-                    value={brandTemplateId} 
-                    onValueChange={setBrandTemplateId}
+                    value={brandTemplateId || 'none'} 
+                    onValueChange={(v) => setBrandTemplateId(v === 'none' ? '' : v)}
                     disabled={!isAdmin || !canUseBrandPanel}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Sin plantilla marca" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Sin plantilla</SelectItem>
+                      <SelectItem value="none">Sin plantilla</SelectItem>
                       {brandTemplates.map(t => (
                         <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                       ))}
