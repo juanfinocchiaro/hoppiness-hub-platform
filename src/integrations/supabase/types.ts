@@ -3850,6 +3850,38 @@ export type Database = {
         }
         Relationships: []
       }
+      role_default_permissions: {
+        Row: {
+          created_at: string | null
+          id: string
+          permission_key: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          permission_key: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          permission_key?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_default_permissions_permission_key_fkey"
+            columns: ["permission_key"]
+            isOneToOne: false
+            referencedRelation: "permission_definitions"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       scanned_documents: {
         Row: {
           branch_id: string | null
@@ -4558,6 +4590,7 @@ export type Database = {
           granted_at: string | null
           granted_by: string | null
           id: string
+          override_type: string | null
           permission_key: string
           user_id: string
         }
@@ -4566,6 +4599,7 @@ export type Database = {
           granted_at?: string | null
           granted_by?: string | null
           id?: string
+          override_type?: string | null
           permission_key: string
           user_id: string
         }
@@ -4574,6 +4608,7 @@ export type Database = {
           granted_at?: string | null
           granted_by?: string | null
           id?: string
+          override_type?: string | null
           permission_key?: string
           user_id?: string
         }
@@ -4744,6 +4779,16 @@ export type Database = {
           supplier_name: string | null
           total_paid: number | null
           total_purchased: number | null
+        }
+        Relationships: []
+      }
+      user_effective_permissions: {
+        Row: {
+          branch_id: string | null
+          is_granted: boolean | null
+          permission_key: string | null
+          source: string | null
+          user_id: string | null
         }
         Relationships: []
       }

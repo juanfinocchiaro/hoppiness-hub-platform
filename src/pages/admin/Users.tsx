@@ -59,6 +59,7 @@ interface UserWithRole extends Profile {
     permissionCount: number;
   }[];
   lastLogin?: string | null;
+  overrideCount?: number;
 }
 
 const roleLabels: Record<AppRole, string> = {
@@ -167,13 +168,27 @@ export default function Users() {
           .from('user_roles')
           .select('user_id, role');
 
-        // Fetch granular permissions (user_branch_permissions)
+        // Fetch granular permissions (user_branch_permissions) with override_type
         const { data: allGranularPerms } = await supabase
           .from('user_branch_permissions')
-          .select('user_id, branch_id, permission_key');
+          .select('user_id, branch_id, permission_key, override_type');
+
+        // Fetch role default permissions for override calculation
+        const { data: roleDefaults } = await supabase
+          .from('role_default_permissions')
+          .select('role, permission_key');
+
+        const roleDefaultsMap = new Map<string, Set<string>>();
+        roleDefaults?.forEach(rd => {
+          if (!roleDefaultsMap.has(rd.role)) {
+            roleDefaultsMap.set(rd.role, new Set());
+          }
+          roleDefaultsMap.get(rd.role)!.add(rd.permission_key);
+        });
 
         const usersWithRoles: UserWithRole[] = profiles.map((profile) => {
           const userRoles = allRoles?.filter(r => r.user_id === profile.user_id).map(r => r.role) || [];
+          const highestRole = getHighestRole(userRoles);
           
           // Aggregate granular permissions by branch
           const userPerms = allGranularPerms?.filter(p => p.user_id === profile.user_id) || [];
@@ -191,12 +206,32 @@ export default function Users() {
             };
           });
 
+          // Calculate override count (permissions different from role defaults)
+          let overrideCount = 0;
+          if (highestRole) {
+            const roleDefaultPerms = roleDefaultsMap.get(highestRole) || new Set();
+            userPerms.forEach(p => {
+              // Override grant: permission not in role defaults
+              if (p.override_type === 'grant' && !roleDefaultPerms.has(p.permission_key)) {
+                overrideCount++;
+              }
+              // Override revoke: permission revoked from role defaults
+              if (p.override_type === 'revoke' && roleDefaultPerms.has(p.permission_key)) {
+                overrideCount++;
+              }
+            });
+          } else {
+            // No role means all permissions are overrides
+            overrideCount = userPerms.length;
+          }
+
           return {
             ...profile,
-            role: getHighestRole(userRoles),
+            role: highestRole,
             allRoles: userRoles,
             branchAccess,
             lastLogin: profile.updated_at,
+            overrideCount,
           };
         });
 
@@ -317,18 +352,16 @@ export default function Users() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Gestión de Usuarios</h1>
-          <p className="text-muted-foreground">Administra usuarios, roles y acceso a sucursales</p>
+          <h1 className="text-2xl font-bold">Equipo</h1>
+          <p className="text-muted-foreground">Identidad, roles y estado de los miembros del equipo</p>
         </div>
         <div className="flex gap-2">
-          {isAdmin && (
-            <Link to="/admin/permisos">
-              <Button variant="outline">
-                <Shield className="h-4 w-4 mr-2" />
-                Permisos Granulares
-              </Button>
-            </Link>
-          )}
+          <Link to="/admin/accesos">
+            <Button variant="outline">
+              <Shield className="h-4 w-4 mr-2" />
+              Ver Accesos
+            </Button>
+          </Link>
           <Button variant="outline" onClick={fetchData} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Actualizar
@@ -475,14 +508,21 @@ export default function Users() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {user.role ? (
-                          <Badge className={roleColors[user.role]}>
-                            <Shield className="w-3 h-3 mr-1" />
-                            {roleLabels[user.role]}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline">Cliente</Badge>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {user.role ? (
+                            <Badge className={roleColors[user.role]}>
+                              <Shield className="w-3 h-3 mr-1" />
+                              {roleLabels[user.role]}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline">Cliente</Badge>
+                          )}
+                          {user.overrideCount && user.overrideCount > 0 ? (
+                            <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 dark:text-amber-400">
+                              ⚠️ Custom ({user.overrideCount})
+                            </Badge>
+                          ) : null}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
@@ -545,8 +585,8 @@ export default function Users() {
                               Editar
                             </Button>
                             {isAdmin && user.branchAccess && user.branchAccess.length > 0 && (
-                              <Link to={`/admin/permisos?user=${user.user_id}`}>
-                                <Button variant="ghost" size="sm">
+                              <Link to={`/admin/accesos?user=${user.user_id}`}>
+                                <Button variant="ghost" size="sm" title="Ver accesos">
                                   <ExternalLink className="w-4 h-4" />
                                 </Button>
                               </Link>
@@ -618,10 +658,10 @@ export default function Users() {
             </div>
 
             {/* Link to permissions */}
-            <Link to={`/admin/permisos?user=${editingUser?.user_id}`} onClick={() => setEditingUser(null)}>
+            <Link to={`/admin/accesos?user=${editingUser?.user_id}`} onClick={() => setEditingUser(null)}>
               <Button variant="outline" className="w-full">
                 <Shield className="w-4 h-4 mr-2" />
-                Gestionar Permisos Granulares
+                Personalizar Accesos
                 <ExternalLink className="w-4 h-4 ml-auto" />
               </Button>
             </Link>

@@ -169,6 +169,9 @@ const App = () => (
               <Route path="estado-resultados" element={<ProfitLossReport />} />
               <Route path="performance" element={<BranchPerformance />} />
               <Route path="finanzas-marca" element={<BrandFinances />} />
+              <Route path="equipo" element={<Users />} />
+              <Route path="accesos" element={<Permissions />} />
+              {/* Legacy redirects */}
               <Route path="usuarios" element={<Users />} />
               <Route path="permisos" element={<Permissions />} />
               <Route path="reportes" element={<SalesReports />} />

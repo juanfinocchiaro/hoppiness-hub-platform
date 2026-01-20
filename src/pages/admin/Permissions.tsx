@@ -117,6 +117,7 @@ export default function Permissions() {
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [selectedBranchId, setSelectedBranchId] = useState<string>('');
   const [userSearch, setUserSearch] = useState('');
+  const [permissionSearch, setPermissionSearch] = useState('');
   
   // Permissions state
   const [currentPermissions, setCurrentPermissions] = useState<Set<string>>(new Set());
@@ -215,17 +216,28 @@ export default function Permissions() {
     }
   }, [selectedUserId, selectedBranchId]);
 
-  // Group permissions by module
+  // Group permissions by module (filtered by search)
   const permissionsByModule = useMemo(() => {
     const grouped: Record<string, PermissionDefinition[]> = {};
+    const searchLower = permissionSearch.toLowerCase();
+    
     permissionDefinitions.forEach(perm => {
+      // Filter by search if provided
+      if (permissionSearch) {
+        const matchesSearch = 
+          perm.name.toLowerCase().includes(searchLower) ||
+          perm.key.toLowerCase().includes(searchLower) ||
+          (perm.description?.toLowerCase().includes(searchLower));
+        if (!matchesSearch) return;
+      }
+      
       if (!grouped[perm.module]) {
         grouped[perm.module] = [];
       }
       grouped[perm.module].push(perm);
     });
     return grouped;
-  }, [permissionDefinitions]);
+  }, [permissionDefinitions, permissionSearch]);
 
   // Filter users by search
   const filteredUsers = useMemo(() => {
@@ -380,9 +392,9 @@ export default function Permissions() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Shield className="h-6 w-6" />
-            Gestión de Permisos
+            Accesos
           </h1>
-          <p className="text-muted-foreground">Asigna permisos granulares a usuarios por sucursal</p>
+          <p className="text-muted-foreground">Configura permisos por usuario y sucursal</p>
         </div>
         <Button variant="outline" onClick={fetchData} disabled={loading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -528,7 +540,19 @@ export default function Permissions() {
                 <p>Selecciona un usuario y una sucursal para ver los permisos</p>
               </div>
             ) : (
-              <Accordion type="multiple" defaultValue={Object.keys(permissionsByModule)} className="space-y-2">
+              <div className="space-y-4">
+                {/* Permission Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar permiso por nombre o key..."
+                    value={permissionSearch}
+                    onChange={(e) => setPermissionSearch(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                
+                <Accordion type="multiple" defaultValue={Object.keys(permissionsByModule)} className="space-y-2">
                 {Object.entries(permissionsByModule).map(([module, permissions]) => {
                   const { granted, total } = getModulePermissionCount(module);
                   const allGranted = granted === total;
@@ -605,6 +629,7 @@ export default function Permissions() {
                   );
                 })}
               </Accordion>
+              </div>
             )}
           </CardContent>
         </Card>
