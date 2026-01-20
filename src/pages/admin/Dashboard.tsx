@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useRoleLanding } from '@/hooks/useRoleLanding';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   LayoutDashboard,
   Store,
@@ -108,6 +110,7 @@ const allSections: NavSection[] = [catalogoSection, insumosSection, equipoSectio
 
 export default function AdminDashboard() {
   const { user, signOut, loading } = useAuth();
+  const { avatarInfo, canOperate, canAccessLocal } = useRoleLanding();
   const navigate = useNavigate();
   const location = useLocation();
   const [hasAssignedBranch, setHasAssignedBranch] = useState(false);
@@ -117,6 +120,29 @@ export default function AdminDashboard() {
     equipo: true,
     reportes: true,
   });
+
+  // Filtrar secciones según el scope del usuario
+  const visibleSections = useMemo(() => {
+    // Socios solo ven reportes
+    if (avatarInfo.type === 'partner') {
+      return [reportsSection];
+    }
+    // Coordinadores ven catálogo e insumos (sin equipo)
+    if (avatarInfo.type === 'coordinator') {
+      return [catalogoSection, insumosSection, reportsSection];
+    }
+    // Admin ve todo
+    return allSections;
+  }, [avatarInfo.type]);
+
+  // Filtrar items fijos según el scope
+  const visibleFixedItems = useMemo(() => {
+    // Socios solo ven reportes, no dashboard ni sucursales
+    if (avatarInfo.type === 'partner') {
+      return [];
+    }
+    return fixedItems;
+  }, [avatarInfo.type]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -184,8 +210,17 @@ export default function AdminDashboard() {
 
   const NavContent = () => (
     <nav className="space-y-1">
-      {/* Fixed items (Dashboard, Sucursales) */}
-      {fixedItems.map((item) => {
+      {/* Role badge */}
+      {avatarInfo.type !== 'brand_owner' && (
+        <div className="px-3 py-2 mb-2">
+          <Badge variant="secondary" className="text-xs">
+            {avatarInfo.label}
+          </Badge>
+        </div>
+      )}
+
+      {/* Fixed items (Dashboard, Sucursales) - filtered by scope */}
+      {visibleFixedItems.map((item) => {
         const isActive = item.exact 
           ? location.pathname === item.to
           : location.pathname.startsWith(item.to);
@@ -203,8 +238,8 @@ export default function AdminDashboard() {
         );
       })}
 
-      {/* All collapsible sections */}
-      {allSections.map((section) => {
+      {/* Collapsible sections - filtered by scope */}
+      {visibleSections.map((section) => {
         const isActive = isSectionActive(section);
         const isExpanded = expandedSections[section.id] || isActive;
         
@@ -267,7 +302,7 @@ export default function AdminDashboard() {
                 <h2 className="text-lg font-bold">Panel Marca</h2>
               </div>
               <NavContent />
-              {hasAssignedBranch && (
+              {hasAssignedBranch && canAccessLocal && (
                 <div className="mt-4 pt-4 border-t">
                   <Link to="/local">
                     <Button variant="outline" className="w-full justify-start">
@@ -306,7 +341,7 @@ export default function AdminDashboard() {
             <NavContent />
           </div>
 
-          {hasAssignedBranch && (
+          {hasAssignedBranch && canAccessLocal && (
             <div className="px-4 pb-2">
               <Link to="/local">
                 <Button variant="outline" className="w-full justify-start">

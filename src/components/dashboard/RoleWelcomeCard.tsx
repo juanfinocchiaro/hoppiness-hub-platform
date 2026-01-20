@@ -91,20 +91,38 @@ const roleConfigs: Record<AvatarType, RoleConfig> = {
   },
 };
 
+// Variante para panel de marca (admin)
+const brandRoleConfigs: Partial<Record<AvatarType, RoleConfig>> = {
+  partner: {
+    icon: Users,
+    color: 'bg-purple-500',
+    quickActions: [
+      { label: 'Ventas', to: '/admin/reportes', icon: BarChart3 },
+      { label: 'Performance', to: '/admin/performance', icon: BarChart3 },
+      { label: 'Finanzas Marca', to: '/admin/finanzas-marca', icon: DollarSign },
+    ],
+  },
+};
+
 interface RoleWelcomeCardProps {
   avatarType: AvatarType;
   avatarLabel: string;
   branchId?: string;
   userName?: string;
+  variant?: 'local' | 'brand';
 }
 
 export function RoleWelcomeCard({ 
   avatarType, 
   avatarLabel, 
   branchId,
-  userName 
+  userName,
+  variant = 'local'
 }: RoleWelcomeCardProps) {
-  const config = roleConfigs[avatarType];
+  // Usar configuración de marca si corresponde
+  const config = variant === 'brand' && brandRoleConfigs[avatarType] 
+    ? brandRoleConfigs[avatarType]! 
+    : roleConfigs[avatarType];
   const Icon = config.icon;
 
   // Para roles operativos (cajero/kds) no mostramos tarjeta de bienvenida
