@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
+import { RegisterBanner } from '@/components/store/RegisterBanner';
 import type { Enums } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
 
@@ -414,6 +415,9 @@ export default function PedidoTracking() {
               </CardContent>
             </Card>
           )}
+
+          {/* Registration CTA Banner */}
+          <RegisterBanner />
 
           {/* Order Time */}
           <div className="text-center text-xs text-muted-foreground py-2">
