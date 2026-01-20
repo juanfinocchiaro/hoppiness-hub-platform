@@ -1320,6 +1320,62 @@ export type Database = {
           },
         ]
       }
+      customer_addresses: {
+        Row: {
+          apartment: string | null
+          city: string | null
+          created_at: string | null
+          customer_id: string
+          id: string
+          is_default: boolean | null
+          label: string | null
+          latitude: number | null
+          longitude: number | null
+          notes: string | null
+          postal_code: string | null
+          street_address: string
+          updated_at: string | null
+        }
+        Insert: {
+          apartment?: string | null
+          city?: string | null
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          is_default?: boolean | null
+          label?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          notes?: string | null
+          postal_code?: string | null
+          street_address: string
+          updated_at?: string | null
+        }
+        Update: {
+          apartment?: string | null
+          city?: string | null
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          is_default?: boolean | null
+          label?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          notes?: string | null
+          postal_code?: string | null
+          street_address?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_addresses_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_discounts: {
         Row: {
           auto_apply: boolean
@@ -1441,9 +1497,15 @@ export type Database = {
           full_name: string
           id: string
           is_active: boolean
+          is_registered: boolean | null
+          last_order_at: string | null
           notes: string | null
           phone: string | null
+          preferred_branch_id: string | null
+          registered_at: string | null
+          total_orders: number | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -1453,9 +1515,15 @@ export type Database = {
           full_name: string
           id?: string
           is_active?: boolean
+          is_registered?: boolean | null
+          last_order_at?: string | null
           notes?: string | null
           phone?: string | null
+          preferred_branch_id?: string | null
+          registered_at?: string | null
+          total_orders?: number | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -1465,11 +1533,32 @@ export type Database = {
           full_name?: string
           id?: string
           is_active?: boolean
+          is_registered?: boolean | null
+          last_order_at?: string | null
           notes?: string | null
           phone?: string | null
+          preferred_branch_id?: string | null
+          registered_at?: string | null
+          total_orders?: number | null
           updated_at?: string
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customers_preferred_branch_id_fkey"
+            columns: ["preferred_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_preferred_branch_id_fkey"
+            columns: ["preferred_branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
       }
       delivery_zones: {
         Row: {
@@ -5297,6 +5386,10 @@ export type Database = {
         Returns: boolean
       }
       cleanup_expired_tokens: { Args: never; Returns: undefined }
+      find_or_create_customer: {
+        Args: { p_email?: string; p_name: string; p_phone: string }
+        Returns: string
+      }
       get_allowed_suppliers_for_ingredient: {
         Args: { p_ingredient_id: string }
         Returns: {
