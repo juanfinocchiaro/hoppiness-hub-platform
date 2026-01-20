@@ -63,6 +63,7 @@ const moduleIcons: Record<string, React.ReactNode> = {
   hr: <Users className="h-4 w-4" />,
   config: <Settings className="h-4 w-4" />,
   reports: <BarChart3 className="h-4 w-4" />,
+  users: <User className="h-4 w-4" />,
 };
 
 const moduleLabels: Record<string, string> = {
@@ -76,6 +77,7 @@ const moduleLabels: Record<string, string> = {
   hr: 'Recursos Humanos',
   config: 'Configuración',
   reports: 'Reportes',
+  users: 'Usuarios',
 };
 
 const roleLabels: Record<AppRole, string> = {
@@ -216,6 +218,9 @@ export default function Permissions() {
     }
   }, [selectedUserId, selectedBranchId]);
 
+  // Module display order (logical grouping)
+  const moduleOrder = ['pos', 'orders', 'kds', 'cash', 'inventory', 'finance', 'hr', 'suppliers', 'config', 'reports', 'users'];
+  
   // Group permissions by module (filtered by search)
   const permissionsByModule = useMemo(() => {
     const grouped: Record<string, PermissionDefinition[]> = {};
@@ -236,7 +241,22 @@ export default function Permissions() {
       }
       grouped[perm.module].push(perm);
     });
-    return grouped;
+    
+    // Sort modules by defined order
+    const sorted: Record<string, PermissionDefinition[]> = {};
+    moduleOrder.forEach(mod => {
+      if (grouped[mod]) {
+        sorted[mod] = grouped[mod];
+      }
+    });
+    // Add any remaining modules not in order
+    Object.keys(grouped).forEach(mod => {
+      if (!sorted[mod]) {
+        sorted[mod] = grouped[mod];
+      }
+    });
+    
+    return sorted;
   }, [permissionDefinitions, permissionSearch]);
 
   // Filter users by search
