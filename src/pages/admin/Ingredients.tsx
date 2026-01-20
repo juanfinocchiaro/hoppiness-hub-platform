@@ -87,7 +87,8 @@ interface Ingredient {
   lead_time_days: number;
   safety_stock_days: number;
   avg_daily_consumption: number;
-  category: string | null;
+  category: string | null; // deprecated, use category_id
+  category_id: string | null;
   is_active: boolean;
   notes: string | null;
 }
@@ -175,7 +176,7 @@ export default function Ingredients() {
   const [formCost, setFormCost] = useState('');
   const [formLeadTimeDays, setFormLeadTimeDays] = useState('2');
   const [formSafetyDays, setFormSafetyDays] = useState('1');
-  const [formCategory, setFormCategory] = useState('');
+  const [formCategoryId, setFormCategoryId] = useState('');
   const [formNotes, setFormNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -248,7 +249,7 @@ export default function Ingredients() {
       
       const matchesSearch = i.name.toLowerCase().includes(search.toLowerCase()) ||
         i.sku?.toLowerCase().includes(search.toLowerCase());
-      const matchesCategory = categoryFilter === 'all' || i.category === categoryFilter;
+      const matchesCategory = categoryFilter === 'all' || i.category_id === categoryFilter;
       
       let matchesStatus = true;
       if (statusFilter === 'no-equiv') {
@@ -275,7 +276,7 @@ export default function Ingredients() {
     setFormCost('');
     setFormLeadTimeDays('2');
     setFormSafetyDays('1');
-    setFormCategory('');
+    setFormCategoryId('');
     setFormNotes('');
   };
 
@@ -289,7 +290,7 @@ export default function Ingredients() {
     setFormCost(ingredient.cost_per_unit?.toString() || '');
     setFormLeadTimeDays(ingredient.lead_time_days?.toString() || '2');
     setFormSafetyDays(ingredient.safety_stock_days?.toString() || '1');
-    setFormCategory(ingredient.category || '');
+    setFormCategoryId(ingredient.category_id || '');
     setFormNotes(ingredient.notes || '');
     setShowDialog(true);
   };
@@ -302,6 +303,9 @@ export default function Ingredients() {
 
     setSaving(true);
     try {
+      // Get category name for backward compat
+      const selectedCategory = categories.find(c => c.id === formCategoryId);
+      
       const data = {
         name: formName.trim(),
         sku: formSku.trim() || null,
@@ -312,7 +316,8 @@ export default function Ingredients() {
         cost_per_unit: parseFloat(formCost) || 0,
         lead_time_days: parseInt(formLeadTimeDays) || 2,
         safety_stock_days: parseInt(formSafetyDays) || 1,
-        category: formCategory || null,
+        category_id: formCategoryId || null,
+        category: selectedCategory?.name || null, // keep in sync for compat
         notes: formNotes.trim() || null,
       };
 
@@ -580,7 +585,7 @@ export default function Ingredients() {
           <SelectContent>
             <SelectItem value="all">Todas las categorías</SelectItem>
             {categories.map(cat => (
-              <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+              <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -960,13 +965,13 @@ export default function Ingredients() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category">Categoría</Label>
-                <Select value={formCategory} onValueChange={setFormCategory}>
+                <Select value={formCategoryId} onValueChange={setFormCategoryId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar..." />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map(c => (
-                      <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

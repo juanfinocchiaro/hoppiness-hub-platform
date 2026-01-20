@@ -12,6 +12,7 @@ import { Search, Phone, Mail, MapPin, TrendingUp, TrendingDown, DollarSign } fro
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { handleError } from '@/lib/errorHandler';
 
 interface SupplierBalance {
   supplier_id: string;
@@ -95,8 +96,7 @@ export default function LocalSuppliers() {
         setSuppliers(data || []);
       }
     } catch (error) {
-      console.error('Error fetching suppliers:', error);
-      toast.error('Error al cargar proveedores');
+      handleError(error, { userMessage: 'Error al cargar proveedores', context: 'LocalSuppliers.fetchSuppliers' });
     } finally {
       setLoading(false);
     }
@@ -112,7 +112,7 @@ export default function LocalSuppliers() {
       if (error) throw error;
       setBalances(data || []);
     } catch (error) {
-      console.error('Error fetching balances:', error);
+      handleError(error, { showToast: false, context: 'LocalSuppliers.fetchBalances' });
     }
   };
 
@@ -182,8 +182,7 @@ export default function LocalSuppliers() {
 
       setMovements(allMovements);
     } catch (error) {
-      console.error('Error fetching movements:', error);
-      toast.error('Error al cargar movimientos');
+      handleError(error, { userMessage: 'Error al cargar movimientos', context: 'LocalSuppliers.fetchMovements' });
     } finally {
       setLoadingMovements(false);
     }
