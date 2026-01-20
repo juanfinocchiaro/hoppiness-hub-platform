@@ -14,11 +14,20 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Checkbox } from '@/components/ui/checkbox';
 import { 
   ArrowLeft, 
   ShoppingCart, 
@@ -36,12 +45,15 @@ import {
   ChevronRight,
   X,
   Banknote,
-  CreditCard
+  CreditCard,
+  AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables, Enums } from '@/integrations/supabase/types';
 import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
 import heroBurger from '@/assets/hero-burger.jpg';
+import { useProductModifiers, calculateModifiersTotal, validateSelections } from '@/hooks/useProductModifiers';
+import { ProductModifierSelector } from '@/components/store/ProductModifierSelector';
 
 type Branch = Tables<'branches'>;
 type Product = Tables<'products'>;
@@ -53,22 +65,19 @@ interface ProductWithPrice extends Product {
   category?: Category | null;
 }
 
+interface SelectedModifiers {
+  [groupId: string]: string[];
+}
+
 interface CartItem {
   product: ProductWithPrice;
   quantity: number;
-  extras?: string[];
+  modifiers?: SelectedModifiers;
+  modifiersTotal?: number;
   notes?: string;
 }
 
 type OrderType = Enums<'order_type'>;
-
-// Upsell options for products
-const UPSELL_OPTIONS = [
-  { id: 'double', label: '¿La hacemos doble?', price: 2500, emoji: '🍔' },
-  { id: 'bacon', label: 'Extra bacon', price: 800, emoji: '🥓' },
-  { id: 'cheese', label: 'Extra cheddar', price: 500, emoji: '🧀' },
-  { id: 'egg', label: 'Agregale huevo', price: 600, emoji: '🍳' },
-];
 
 // Loyalty points simulation
 const LOYALTY_POINTS = 350;
@@ -90,8 +99,17 @@ export default function PedirBranch() {
   
   // Product customization
   const [selectedProduct, setSelectedProduct] = useState<ProductWithPrice | null>(null);
-  const [selectedExtras, setSelectedExtras] = useState<string[]>([]);
+  const [modifierSelections, setModifierSelections] = useState<SelectedModifiers>({});
   const [productNotes, setProductNotes] = useState('');
+  
+  // Branch change confirmation
+  const [pendingBranchChange, setPendingBranchChange] = useState<string | null>(null);
+  
+  // Dynamic modifiers hook
+  const { modifiers: productModifiers, loading: modifiersLoading } = useProductModifiers(
+    selectedProduct?.id || null,
+    branch?.id || null
+  );
   
   // Checkout
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -206,21 +224,25 @@ export default function PedirBranch() {
 
   const openProductCustomization = (product: ProductWithPrice) => {
     setSelectedProduct(product);
-    setSelectedExtras([]);
+    setModifierSelections({});
     setProductNotes('');
   };
 
   const addToCartWithExtras = () => {
     if (!selectedProduct) return;
     
-    const extrasTotal = selectedExtras.reduce((sum, extraId) => {
-      const extra = UPSELL_OPTIONS.find(o => o.id === extraId);
-      return sum + (extra?.price || 0);
-    }, 0);
+    // Validate required selections
+    const validation = validateSelections(productModifiers, modifierSelections);
+    if (!validation.valid) {
+      validation.errors.forEach(err => toast.error(err));
+      return;
+    }
+    
+    const modifiersTotal = calculateModifiersTotal(productModifiers, modifierSelections);
 
     const existingIndex = cart.findIndex(
       item => item.product.id === selectedProduct.id && 
-              JSON.stringify(item.extras) === JSON.stringify(selectedExtras)
+              JSON.stringify(item.modifiers) === JSON.stringify(modifierSelections)
     );
 
     if (existingIndex >= 0) {
@@ -229,9 +251,10 @@ export default function PedirBranch() {
       setCart(newCart);
     } else {
       setCart([...cart, { 
-        product: { ...selectedProduct, finalPrice: selectedProduct.finalPrice + extrasTotal },
+        product: selectedProduct,
         quantity: 1,
-        extras: selectedExtras,
+        modifiers: modifierSelections,
+        modifiersTotal,
         notes: productNotes
       }]);
     }
@@ -255,7 +278,7 @@ export default function PedirBranch() {
     setCart(newCart);
   };
 
-  const subtotal = cart.reduce((sum, item) => sum + item.product.finalPrice * item.quantity, 0);
+  const subtotal = cart.reduce((sum, item) => sum + (item.product.finalPrice + (item.modifiersTotal || 0)) * item.quantity, 0);
   const deliveryFee = orderType === 'delivery' ? 500 : 0;
   const total = subtotal + deliveryFee;
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -263,9 +286,22 @@ export default function PedirBranch() {
   const formatPrice = (price: number) => 
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(price);
 
-  const currentExtrasTotal = selectedExtras.reduce((sum, id) => 
-    sum + (UPSELL_OPTIONS.find(o => o.id === id)?.price || 0), 0
-  );
+  const currentModifiersTotal = calculateModifiersTotal(productModifiers, modifierSelections);
+  
+  // Helper to get modifier names for cart display
+  const getModifierNames = (item: CartItem): string[] => {
+    const names: string[] = [];
+    if (!item.modifiers) return names;
+    
+    productModifiers.forEach(group => {
+      const selectedIds = item.modifiers?.[group.id] || [];
+      selectedIds.forEach(optId => {
+        const opt = group.options.find(o => o.id === optId);
+        if (opt) names.push(opt.name);
+      });
+    });
+    return names;
+  };
 
   const handleCheckout = async () => {
     if (!branch || cart.length === 0) return;
@@ -311,13 +347,18 @@ export default function PedirBranch() {
 
       if (orderError) throw orderError;
 
-      const orderItems = cart.map(item => ({
-        order_id: order.id,
-        product_id: item.product.id,
-        quantity: item.quantity,
-        unit_price: item.product.finalPrice,
-        notes: item.extras?.length ? `Extras: ${item.extras.join(', ')}. ${item.notes || ''}` : item.notes || null,
-      }));
+      const orderItems = cart.map(item => {
+        const modifierNames = getModifierNames(item);
+        return {
+          order_id: order.id,
+          product_id: item.product.id,
+          quantity: item.quantity,
+          unit_price: item.product.finalPrice + (item.modifiersTotal || 0),
+          notes: modifierNames.length > 0 
+            ? `${modifierNames.join(', ')}${item.notes ? `. ${item.notes}` : ''}`
+            : item.notes || null,
+        };
+      });
 
       const { error: itemsError } = await supabase
         .from('order_items')
@@ -608,39 +649,22 @@ export default function PedirBranch() {
               )}
             </div>
 
-            {/* Upsell Options */}
-            <div className="space-y-2 mb-4">
-              <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">¿Querés hacerla más épica?</h4>
-              {UPSELL_OPTIONS.map(option => (
-                <div 
-                  key={option.id}
-                  className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                    selectedExtras.includes(option.id) 
-                      ? 'border-primary bg-primary/5 shadow-sm' 
-                      : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                  }`}
-                  onClick={() => {
-                    setSelectedExtras(prev => 
-                      prev.includes(option.id) 
-                        ? prev.filter(id => id !== option.id)
-                        : [...prev, option.id]
-                    );
-                  }}
-                >
-                  <Checkbox 
-                    checked={selectedExtras.includes(option.id)}
-                    onCheckedChange={() => {}}
-                    className="h-5 w-5"
-                  />
-                  <span className="text-xl">{option.emoji}</span>
-                  <span className="flex-1 font-medium text-sm">{option.label}</span>
-                  <span className="text-sm text-primary font-bold">+{formatPrice(option.price)}</span>
-                </div>
-              ))}
-            </div>
+            {/* Dynamic Modifiers */}
+            {modifiersLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : productModifiers.length > 0 ? (
+              <ProductModifierSelector
+                groups={productModifiers}
+                selections={modifierSelections}
+                onSelectionsChange={setModifierSelections}
+                formatPrice={formatPrice}
+              />
+            ) : null}
 
             {/* Notes */}
-            <div className="rounded-xl border p-3">
+            <div className="rounded-xl border p-3 mt-4">
               <Label htmlFor="notes" className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">¿Alguna indicación especial?</Label>
               <Textarea
                 id="notes"
@@ -658,9 +682,10 @@ export default function PedirBranch() {
             <Button 
               className="w-full h-12 text-base font-semibold"
               onClick={addToCartWithExtras}
+              disabled={modifiersLoading}
             >
               <Plus className="w-5 h-5 mr-2" />
-              Agregar {formatPrice((selectedProduct?.finalPrice || 0) + currentExtrasTotal)}
+              Agregar {formatPrice((selectedProduct?.finalPrice || 0) + currentModifiersTotal)}
             </Button>
           </div>
         </SheetContent>
@@ -678,26 +703,41 @@ export default function PedirBranch() {
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto py-4 space-y-3">
-            {cart.map((item, index) => (
-              <div key={index} className="flex items-center gap-3 bg-muted/50 rounded-lg p-3">
-                <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center overflow-hidden shrink-0">
-                  {item.product.image_url ? (
-                    <img src={item.product.image_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-xl">🍔</span>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm">{item.product.name}</p>
-                  {item.extras && item.extras.length > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      +{item.extras.map(id => UPSELL_OPTIONS.find(o => o.id === id)?.label).join(', ')}
+            {cart.map((item, index) => {
+              const itemModifierNames: string[] = [];
+              if (item.modifiers) {
+                productModifiers.forEach(group => {
+                  const selectedIds = item.modifiers?.[group.id] || [];
+                  selectedIds.forEach(optId => {
+                    const opt = group.options.find(o => o.id === optId);
+                    if (opt) itemModifierNames.push(opt.name);
+                  });
+                });
+              }
+              
+              return (
+                <div key={index} className="flex items-center gap-3 bg-muted/50 rounded-lg p-3">
+                  <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                    {item.product.image_url ? (
+                      <img src={item.product.image_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xl">🍔</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm">{item.product.name}</p>
+                    {itemModifierNames.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        +{itemModifierNames.join(', ')}
+                      </p>
+                    )}
+                    {item.modifiersTotal && item.modifiersTotal > 0 && (
+                      <p className="text-xs text-primary">+{formatPrice(item.modifiersTotal)}</p>
+                    )}
+                    <p className="text-sm text-primary font-bold mt-1">
+                      {formatPrice((item.product.finalPrice + (item.modifiersTotal || 0)) * item.quantity)}
                     </p>
-                  )}
-                  <p className="text-sm text-primary font-bold mt-1">
-                    {formatPrice(item.product.finalPrice * item.quantity)}
-                  </p>
-                </div>
+                  </div>
                 <div className="flex items-center gap-1">
                   <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(index, -1)}>
                     <Minus className="w-3 h-3" />
@@ -711,7 +751,8 @@ export default function PedirBranch() {
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Totals */}
