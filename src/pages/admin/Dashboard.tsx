@@ -27,7 +27,8 @@ import {
   ShieldCheck,
   Boxes,
   ShoppingCart,
-  AlertCircle
+  AlertCircle,
+  MessageSquare
 } from 'lucide-react';
 import {
   Sheet,
@@ -58,6 +59,7 @@ interface NavSection {
 const fixedItems: NavItem[] = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
   { to: '/admin/sucursales', icon: Store, label: 'Sucursales' },
+  { to: '/admin/mensajes', icon: MessageSquare, label: 'Mensajes' },
 ];
 
 // Sección Catálogo (lo que se vende)
