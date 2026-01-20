@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,6 +26,7 @@ import { Plus, MapPin, Clock, Users, Trash2, Circle, ChevronRight, ChevronDown, 
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import BranchEditPanel from '@/components/admin/BranchEditPanel';
+import BranchCreatePanel from '@/components/admin/BranchCreatePanel';
 
 type Branch = Tables<'branches'>;
 
@@ -44,6 +44,7 @@ export default function Branches() {
   
   // Expandable row state
   const [expandedBranchId, setExpandedBranchId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
 
   const fetchData = async () => {
     const { data: branchesData } = await supabase
@@ -132,17 +133,9 @@ export default function Branches() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Sucursales</h1>
-          <p className="text-muted-foreground">Gestión de sucursales Hoppiness Club</p>
-        </div>
-        <Link to="/admin/sucursales/nueva">
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            Nueva Sucursal
-          </Button>
-        </Link>
+      <div>
+        <h1 className="text-3xl font-bold">Sucursales</h1>
+        <p className="text-muted-foreground">Gestión de sucursales Hoppiness Club</p>
       </div>
 
       {/* Branches Table */}
@@ -259,7 +252,50 @@ export default function Branches() {
                     </>
                   );
                 })}
-                {branches.length === 0 && (
+
+                {/* Add New Branch Row */}
+                {!isCreating ? (
+                  <TableRow 
+                    onClick={() => {
+                      setExpandedBranchId(null);
+                      setIsCreating(true);
+                    }}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors border-dashed"
+                  >
+                    <TableCell colSpan={6}>
+                      <div className="flex items-center gap-2 py-2 text-muted-foreground">
+                        <Plus className="h-4 w-4" />
+                        <span>Nueva sucursal</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  <>
+                    <TableRow className="bg-muted/30 border-dashed">
+                      <TableCell colSpan={6}>
+                        <div className="flex items-center gap-2 py-2 font-medium">
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          <span>Nueva sucursal</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell colSpan={6} className="p-0">
+                        <div className="p-6 bg-muted/30 border-t">
+                          <BranchCreatePanel
+                            onCreated={() => {
+                              setIsCreating(false);
+                              fetchData();
+                            }}
+                            onCancel={() => setIsCreating(false)}
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  </>
+                )}
+
+                {branches.length === 0 && !isCreating && (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       No hay sucursales creadas
