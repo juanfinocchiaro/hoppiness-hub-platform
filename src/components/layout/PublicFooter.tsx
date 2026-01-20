@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom';
 import { Instagram } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import logoHoppiness from '@/assets/logo-hoppiness.png';
 
 export function PublicFooter() {
+  const { user } = useAuth();
+
   return (
     <footer className="bg-foreground text-background py-12 px-4">
       <div className="container mx-auto max-w-6xl">
@@ -17,9 +20,14 @@ export function PublicFooter() {
             <h4 className="font-bold mb-4 font-brand">ENLACES</h4>
             <div className="space-y-2">
               <Link to="/pedir" className="block text-background/70 hover:text-background">Pedir</Link>
-              <Link to="/menu" className="block text-background/70 hover:text-background">Nuestro Menú</Link>
+              <Link to="/nosotros" className="block text-background/70 hover:text-background">Nosotros</Link>
               <Link to="/franquicias" className="block text-background/70 hover:text-background">Franquicias</Link>
-              <Link to="/ingresar" className="block text-background/70 hover:text-background">Ingresar</Link>
+              <Link to="/contacto" className="block text-background/70 hover:text-background">Contacto</Link>
+              {user ? (
+                <Link to="/cuenta" className="block text-background/70 hover:text-background">Mi Cuenta</Link>
+              ) : (
+                <Link to="/ingresar" className="block text-background/70 hover:text-background">Ingresar</Link>
+              )}
             </div>
           </div>
           <div>

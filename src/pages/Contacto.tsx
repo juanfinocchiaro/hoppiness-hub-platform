@@ -71,6 +71,7 @@ export default function Contacto() {
     }
   };
 
+  // TODO: Estos son datos placeholder - actualizar con datos reales
   const contactInfo = [
     {
       icon: MapPin,
@@ -81,19 +82,19 @@ export default function Contacto() {
     {
       icon: Phone,
       title: 'Teléfono',
-      content: '+54 351 XXX-XXXX',
+      content: '+54 351 000-0000', // PLACEHOLDER
       subtext: 'Lunes a Domingo'
     },
     {
       icon: Mail,
       title: 'Email',
-      content: 'hola@hoppinessclub.com',
+      content: 'hola@hoppinessclub.com', // PLACEHOLDER
       subtext: 'Respondemos en 24hs'
     },
     {
       icon: Clock,
       title: 'Horario',
-      content: '12:00 - 00:00',
+      content: '12:00 - 00:00', // PLACEHOLDER
       subtext: 'Todos los días'
     }
   ];
