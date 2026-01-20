@@ -81,6 +81,9 @@ import IngredientSuppliers from "./pages/admin/IngredientSuppliers";
 import Channels from "./pages/admin/Channels";
 import Messages from "./pages/admin/Messages";
 import Conciliacion from "./pages/admin/Conciliacion";
+import BrandSettings from "./pages/admin/BrandSettings";
+import CentralTeam from "./pages/admin/CentralTeam";
+import BranchDetail from "./pages/admin/BranchDetail";
 
 // Local Stock & Inventory
 import LocalStock from "./pages/local/LocalStock";
@@ -238,15 +241,14 @@ const App = () => (
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>}>
               <Route index element={<AdminHome />} />
               
-              {/* ATENCIÓN */}
-              <Route path="mensajes" element={<Messages />} />
-              <Route path="clientes" element={<Customers />} />
+              {/* VISIÓN GENERAL */}
+              <Route path="resultados" element={<ProfitLossReport />} />
+              <Route path="comparativa" element={<BranchPerformance />} />
               
-              {/* SUCURSALES */}
+              {/* MIS LOCALES */}
+              <Route path="locales/:slug" element={<BranchDetail />} />
               <Route path="sucursales" element={<Branches />} />
               <Route path="sucursales/:branchId/productos" element={<BranchProducts />} />
-              <Route path="canales" element={<Channels />} />
-              <Route path="estado-sucursales" element={<BranchStatus />} />
               
               {/* CATÁLOGO */}
               <Route path="catalogo/productos" element={<Products />} />
@@ -256,41 +258,52 @@ const App = () => (
               <Route path="catalogo/ingredientes" element={<Ingredients />} />
               <Route path="catalogo/descuentos" element={<Discounts />} />
               
-              {/* PROVEEDORES */}
-              <Route path="proveedores" element={<Suppliers />} />
-              <Route path="proveedores/ingredientes" element={<IngredientSuppliers />} />
+              {/* ABASTECIMIENTO */}
+              <Route path="abastecimiento/proveedores" element={<Suppliers />} />
+              <Route path="abastecimiento/asignacion" element={<IngredientSuppliers />} />
               
-              {/* EQUIPO */}
-              <Route path="equipo/usuarios" element={<Users />} />
-              <Route path="equipo/plantillas" element={<RoleTemplates />} />
-              <Route path="overrides" element={<UserBranchOverrides />} />
+              {/* PERSONAS */}
+              <Route path="personas/equipo-central" element={<CentralTeam />} />
+              <Route path="personas/buscar" element={<Users />} />
+              <Route path="personas/roles" element={<RoleTemplates />} />
               
-              {/* REPORTES */}
-              <Route path="reportes/performance" element={<BranchPerformance />} />
-              <Route path="reportes/ventas" element={<SalesReports />} />
-              <Route path="reportes/pyl" element={<ProfitLossReport />} />
-              <Route path="reportes/finanzas" element={<BrandFinances />} />
+              {/* COMUNICACIÓN */}
+              <Route path="mensajes" element={<Messages />} />
+              
+              {/* CONFIGURACIÓN */}
+              <Route path="configuracion/marca" element={<BrandSettings />} />
+              <Route path="configuracion/canales" element={<Channels />} />
               
               {/* OTROS */}
+              <Route path="clientes" element={<Customers />} />
+              <Route path="estado-sucursales" element={<BranchStatus />} />
+              <Route path="canales" element={<Channels />} />
               <Route path="escaner-comprobantes" element={<InvoiceScanner />} />
+              <Route path="overrides" element={<UserBranchOverrides />} />
               
-              {/* LEGACY REDIRECTS - Rutas viejas redirigen a nuevas */}
+              {/* LEGACY REDIRECTS */}
               <Route path="productos" element={<AdminRedirect to="catalogo/productos" />} />
               <Route path="productos/nuevo" element={<AdminRedirect to="catalogo/productos/nuevo" />} />
               <Route path="productos/:productId" element={<AdminRedirect to="catalogo/productos" />} />
               <Route path="modificadores" element={<AdminRedirect to="catalogo/modificadores" />} />
               <Route path="ingredientes" element={<AdminRedirect to="catalogo/ingredientes" />} />
               <Route path="descuentos" element={<AdminRedirect to="catalogo/descuentos" />} />
-              <Route path="control-proveedores" element={<AdminRedirect to="proveedores/ingredientes" />} />
-              <Route path="equipo" element={<AdminRedirect to="equipo/usuarios" />} />
-              <Route path="plantillas" element={<AdminRedirect to="equipo/plantillas" />} />
-              <Route path="usuarios" element={<AdminRedirect to="equipo/usuarios" />} />
-              <Route path="accesos" element={<UserBranchOverrides />} />
-              <Route path="permisos" element={<UserBranchOverrides />} />
-              <Route path="performance" element={<AdminRedirect to="reportes/performance" />} />
-              <Route path="reportes" element={<AdminRedirect to="reportes/ventas" />} />
-              <Route path="estado-resultados" element={<AdminRedirect to="reportes/pyl" />} />
-              <Route path="finanzas-marca" element={<AdminRedirect to="reportes/finanzas" />} />
+              <Route path="proveedores" element={<AdminRedirect to="abastecimiento/proveedores" />} />
+              <Route path="proveedores/ingredientes" element={<AdminRedirect to="abastecimiento/asignacion" />} />
+              <Route path="control-proveedores" element={<AdminRedirect to="abastecimiento/asignacion" />} />
+              <Route path="equipo/usuarios" element={<AdminRedirect to="personas/buscar" />} />
+              <Route path="equipo/plantillas" element={<AdminRedirect to="personas/roles" />} />
+              <Route path="equipo" element={<AdminRedirect to="personas/buscar" />} />
+              <Route path="plantillas" element={<AdminRedirect to="personas/roles" />} />
+              <Route path="usuarios" element={<AdminRedirect to="personas/buscar" />} />
+              <Route path="reportes/performance" element={<AdminRedirect to="comparativa" />} />
+              <Route path="reportes/ventas" element={<SalesReports />} />
+              <Route path="reportes/pyl" element={<AdminRedirect to="resultados" />} />
+              <Route path="reportes/finanzas" element={<BrandFinances />} />
+              <Route path="performance" element={<AdminRedirect to="comparativa" />} />
+              <Route path="reportes" element={<SalesReports />} />
+              <Route path="estado-resultados" element={<AdminRedirect to="resultados" />} />
+              <Route path="finanzas-marca" element={<BrandFinances />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />

@@ -934,6 +934,54 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_settings: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          facebook: string | null
+          id: string
+          instagram: string | null
+          logo_url: string | null
+          name: string
+          phone: string | null
+          slogan: string | null
+          tiktok: string | null
+          twitter: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          facebook?: string | null
+          id?: string
+          instagram?: string | null
+          logo_url?: string | null
+          name?: string
+          phone?: string | null
+          slogan?: string | null
+          tiktok?: string | null
+          twitter?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          facebook?: string | null
+          id?: string
+          instagram?: string | null
+          logo_url?: string | null
+          name?: string
+          phone?: string | null
+          slogan?: string | null
+          tiktok?: string | null
+          twitter?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       brand_template_permissions: {
         Row: {
           created_at: string
