@@ -283,6 +283,67 @@ export type Database = {
           },
         ]
       }
+      branch_channels: {
+        Row: {
+          branch_id: string
+          channel_id: string
+          config: Json | null
+          created_at: string | null
+          custom_schedule: Json | null
+          delivery_fee_override: number | null
+          id: string
+          is_enabled: boolean | null
+          minimum_order_override: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id: string
+          channel_id: string
+          config?: Json | null
+          created_at?: string | null
+          custom_schedule?: Json | null
+          delivery_fee_override?: number | null
+          id?: string
+          is_enabled?: boolean | null
+          minimum_order_override?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: string
+          channel_id?: string
+          config?: Json | null
+          created_at?: string | null
+          custom_schedule?: Json | null
+          delivery_fee_override?: number | null
+          id?: string
+          is_enabled?: boolean | null
+          minimum_order_override?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_channels_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_channels_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "branch_channels_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branch_customer_accounts: {
         Row: {
           balance: number
@@ -490,6 +551,80 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "supplier_balances"
             referencedColumns: ["branch_id"]
+          },
+        ]
+      }
+      branch_product_channel_availability: {
+        Row: {
+          branch_id: string
+          channel_id: string
+          id: string
+          is_available: boolean | null
+          local_price_override: number | null
+          low_stock_threshold: number | null
+          product_id: string
+          stock_quantity: number | null
+          unavailable_note: string | null
+          unavailable_reason: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          branch_id: string
+          channel_id: string
+          id?: string
+          is_available?: boolean | null
+          local_price_override?: number | null
+          low_stock_threshold?: number | null
+          product_id: string
+          stock_quantity?: number | null
+          unavailable_note?: string | null
+          unavailable_reason?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          branch_id?: string
+          channel_id?: string
+          id?: string
+          is_available?: boolean | null
+          local_price_override?: number | null
+          low_stock_threshold?: number | null
+          product_id?: string
+          stock_quantity?: number | null
+          unavailable_note?: string | null
+          unavailable_reason?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_product_channel_availability_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_product_channel_availability_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "branch_product_channel_availability_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_product_channel_availability_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1035,6 +1170,63 @@ export type Database = {
             referencedColumns: ["branch_id"]
           },
         ]
+      }
+      channels: {
+        Row: {
+          allows_delivery: boolean | null
+          allows_dine_in: boolean | null
+          allows_takeaway: boolean | null
+          channel_type: string
+          color: string | null
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          icon: string | null
+          id: string
+          integration_type: string | null
+          is_active: boolean | null
+          name: string
+          requires_integration: boolean | null
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          allows_delivery?: boolean | null
+          allows_dine_in?: boolean | null
+          allows_takeaway?: boolean | null
+          channel_type: string
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          integration_type?: string | null
+          is_active?: boolean | null
+          name: string
+          requires_integration?: boolean | null
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          allows_delivery?: boolean | null
+          allows_dine_in?: boolean | null
+          allows_takeaway?: boolean | null
+          channel_type?: string
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          integration_type?: string | null
+          is_active?: boolean | null
+          name?: string
+          requires_integration?: boolean | null
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       coa_accounts: {
         Row: {
@@ -2942,6 +3134,7 @@ export type Database = {
           amount_paid: number | null
           branch_id: string
           caller_number: number | null
+          channel_id: string | null
           created_at: string
           customer_business_name: string | null
           customer_cuit: string | null
@@ -2976,6 +3169,7 @@ export type Database = {
           amount_paid?: number | null
           branch_id: string
           caller_number?: number | null
+          channel_id?: string | null
           created_at?: string
           customer_business_name?: string | null
           customer_cuit?: string | null
@@ -3010,6 +3204,7 @@ export type Database = {
           amount_paid?: number | null
           branch_id?: string
           caller_number?: number | null
+          channel_id?: string | null
           created_at?: string
           customer_business_name?: string | null
           customer_cuit?: string | null
@@ -3054,6 +3249,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "supplier_balances"
             referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "orders_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "orders_customer_id_fkey"
@@ -3643,6 +3845,91 @@ export type Database = {
           },
         ]
       }
+      product_allowed_channels: {
+        Row: {
+          channel_id: string
+          created_at: string | null
+          id: string
+          is_allowed: boolean | null
+          notes: string | null
+          price_override: number | null
+          product_id: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string | null
+          id?: string
+          is_allowed?: boolean | null
+          notes?: string | null
+          price_override?: number | null
+          product_id: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string | null
+          id?: string
+          is_allowed?: boolean | null
+          notes?: string | null
+          price_override?: number | null
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_allowed_channels_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_allowed_channels_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_branch_exclusions: {
+        Row: {
+          branch_id: string
+          created_at: string | null
+          product_id: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string | null
+          product_id: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string | null
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_branch_exclusions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_branch_exclusions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "product_branch_exclusions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_categories: {
         Row: {
           created_at: string
@@ -3840,6 +4127,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_available: boolean
+          is_available_all_branches: boolean | null
           is_enabled_by_brand: boolean
           is_featured: boolean | null
           name: string
@@ -3857,6 +4145,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_available?: boolean
+          is_available_all_branches?: boolean | null
           is_enabled_by_brand?: boolean
           is_featured?: boolean | null
           name: string
@@ -3874,6 +4163,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_available?: boolean
+          is_available_all_branches?: boolean | null
           is_enabled_by_brand?: boolean
           is_featured?: boolean | null
           name?: string
@@ -5017,6 +5307,38 @@ export type Database = {
           supplier_name: string
         }[]
       }
+      get_available_products_for_channel: {
+        Args: { p_branch_id: string; p_channel_slug: string }
+        Returns: {
+          base_price: number
+          category_id: string
+          category_name: string
+          final_price: number
+          image_url: string
+          is_available: boolean
+          product_description: string
+          product_id: string
+          product_name: string
+          stock_quantity: number
+          unavailable_reason: string
+        }[]
+      }
+      get_branch_active_channels: {
+        Args: { p_branch_id: string }
+        Returns: {
+          allows_delivery: boolean
+          allows_dine_in: boolean
+          allows_takeaway: boolean
+          channel_id: string
+          channel_name: string
+          channel_slug: string
+          channel_type: string
+          color: string
+          config: Json
+          icon: string
+          is_enabled: boolean
+        }[]
+      }
       get_branch_effective_state: {
         Args: { p_branch_id: string }
         Returns: string
@@ -5053,6 +5375,16 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_item_available_now: {
         Args: { p_category_id?: string; p_product_id?: string }
+        Returns: boolean
+      }
+      toggle_product_channel_availability: {
+        Args: {
+          p_branch_id: string
+          p_channel_id: string
+          p_is_available: boolean
+          p_product_id: string
+          p_reason?: string
+        }
         Returns: boolean
       }
       validate_supplier_for_ingredient: {
