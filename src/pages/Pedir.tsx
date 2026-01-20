@@ -17,7 +17,7 @@ import {
   Home
 } from 'lucide-react';
 import { toast } from 'sonner';
-import logoHoppiness from '@/assets/logo-hoppiness.png';
+import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
 import heroBurger from '@/assets/hero-burger.jpg';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -167,14 +167,14 @@ export default function Pedir() {
   const openBranches = branches.filter(b => b.is_open);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-b from-primary to-primary/95">
       {/* Hero Section */}
-      <div className="relative min-h-[50vh] flex items-center justify-center overflow-hidden">
+      <div className="relative min-h-[45vh] flex items-center justify-center overflow-hidden">
         <div 
-          className="absolute inset-0 bg-cover bg-center"
+          className="absolute inset-0 bg-cover bg-center opacity-30"
           style={{ backgroundImage: `url(${heroBurger})` }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/60 via-primary/80 to-primary" />
         
         {/* Home Button */}
         <Link 
@@ -185,19 +185,23 @@ export default function Pedir() {
         </Link>
         
         <div className="relative z-10 container mx-auto px-4 py-12 text-center">
-          <img src={logoHoppiness} alt="Hoppiness Club" className="w-24 h-24 mx-auto mb-6" />
+          <img 
+            src={logoOriginal} 
+            alt="Hoppiness Club" 
+            className="w-24 h-24 mx-auto mb-6 rounded-full shadow-2xl ring-4 ring-white/20" 
+          />
           <h1 className="text-4xl md:text-5xl font-black text-white mb-4 font-brand">
             ¿Dónde te llevamos tu Hoppiness?
           </h1>
-          <p className="text-xl text-white/80 max-w-lg mx-auto">
+          <p className="text-xl text-white/70 max-w-lg mx-auto">
             Ingresá tu dirección y te asignamos la sucursal más cercana
           </p>
         </div>
       </div>
 
       {/* Address Input Section */}
-      <div className="container mx-auto px-4 -mt-16 relative z-20">
-        <Card className="max-w-xl mx-auto shadow-elevated">
+      <div className="container mx-auto px-4 -mt-12 relative z-20 pb-12">
+        <Card className="max-w-xl mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
           <CardContent className="p-6 space-y-6">
             {/* Order Type Toggle */}
             <div className="flex bg-muted rounded-lg p-1">
@@ -372,23 +376,6 @@ export default function Pedir() {
         </Card>
       </div>
 
-      {/* Trust Badges */}
-      <div className="container mx-auto px-4 py-12">
-        <div className="flex flex-wrap justify-center gap-6 text-center text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🍔</span>
-            <span className="text-sm">+600 burgers/día</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">⭐</span>
-            <span className="text-sm">4.8 en Google</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🏆</span>
-            <span className="text-sm">Mejor Burger CBA 2023</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
