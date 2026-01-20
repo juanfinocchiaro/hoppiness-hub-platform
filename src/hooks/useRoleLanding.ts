@@ -114,6 +114,7 @@ export function useRoleLanding() {
     }
 
     // Socio ve reportes de marca (sin operar)
+    // Nota: si tiene sucursales asignadas, permitimos acceso a "Mi Local" en modo lectura.
     if (isSocio && !isAdmin) {
       return {
         type: 'partner',
@@ -125,7 +126,7 @@ export function useRoleLanding() {
         canViewBrandReports: true,
         canViewLocalReports: true,
         canAccessAdmin: true,
-        canAccessLocal: false,
+        canAccessLocal: accessibleBranches.length > 0,
       };
     }
 
