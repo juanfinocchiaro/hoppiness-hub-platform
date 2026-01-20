@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Loader2, LogIn, UserPlus, Beer } from 'lucide-react';
+import { ArrowLeft, Loader2, LogIn, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
+import logoWhite from '@/assets/logo-hoppiness-white.png';
+import logoBlue from '@/assets/logo-hoppiness-blue.png';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('Email inválido');
@@ -100,12 +102,7 @@ export default function Ingresar() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-primary/90 to-accent">
         <div className="animate-pulse flex flex-col items-center gap-4">
-          <div className="relative">
-            <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center">
-              <Beer className="w-10 h-10 text-white" />
-            </div>
-            <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-accent to-primary opacity-50 blur-lg -z-10" />
-          </div>
+          <img src={logoWhite} alt="Hoppiness Club" className="w-24 h-24 object-contain" />
           <p className="text-white/80 font-medium">Cargando...</p>
         </div>
       </div>
@@ -133,18 +130,9 @@ export default function Ingresar() {
 
       <div className="flex-1 flex items-center justify-center p-4 relative z-10">
         <div className="w-full max-w-md">
-          {/* Modern Logo Section */}
+          {/* Logo Section */}
           <div className="text-center mb-8">
-            <div className="inline-flex flex-col items-center">
-              <div className="relative mb-4">
-                <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-2xl">
-                  <Beer className="w-10 h-10 text-white" strokeWidth={1.5} />
-                </div>
-                <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-accent/40 to-primary/40 blur-xl -z-10" />
-              </div>
-              <h1 className="text-3xl font-bold text-white tracking-tight">HOPPINESS</h1>
-              <span className="text-white/60 text-sm tracking-[0.3em] mt-1">CLUB</span>
-            </div>
+            <img src={logoWhite} alt="Hoppiness Club" className="w-24 h-24 mx-auto" />
           </div>
 
           {/* Card */}
