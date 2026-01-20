@@ -29,6 +29,7 @@ import {
   Copy
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
+import BranchLocationMap from '@/components/maps/BranchLocationMap';
 
 type Branch = Tables<'branches'>;
 
@@ -415,18 +416,30 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
             </div>
           </div>
 
+          {/* Mapa de ubicación */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <MapPin className="h-4 w-4" />
-              Coordenadas
+              Ubicación en el mapa
             </Label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <BranchLocationMap
+              address={address}
+              city={city}
+              latitude={latitude}
+              longitude={longitude}
+              onLocationChange={(lat, lng) => {
+                setLatitude(lat);
+                setLongitude(lng);
+              }}
+            />
+            <div className="grid grid-cols-2 gap-4 mt-2">
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Latitud</Label>
                 <Input
                   value={latitude}
                   onChange={(e) => setLatitude(e.target.value)}
                   placeholder="-31.4234"
+                  className="text-sm"
                 />
               </div>
               <div className="space-y-1">
@@ -435,13 +448,8 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
                   value={longitude}
                   onChange={(e) => setLongitude(e.target.value)}
                   placeholder="-64.1234"
+                  className="text-sm"
                 />
-              </div>
-              <div className="flex items-end">
-                <Button variant="outline" size="sm" className="gap-1">
-                  <MapPin className="h-3 w-3" />
-                  Buscar en mapa
-                </Button>
               </div>
             </div>
           </div>
