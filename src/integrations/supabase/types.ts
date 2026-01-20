@@ -3253,6 +3253,7 @@ export type Database = {
           total: number
           tracking_token: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           amount_paid?: number | null
@@ -3288,6 +3289,7 @@ export type Database = {
           total: number
           tracking_token?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           amount_paid?: number | null
@@ -3323,6 +3325,7 @@ export type Database = {
           total?: number
           tracking_token?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -4281,18 +4284,25 @@ export type Database = {
           cbu: string | null
           created_at: string
           cuit: string | null
+          default_address: string | null
+          default_address_lat: number | null
+          default_address_lng: number | null
           dni: string | null
           dni_back_url: string | null
           dni_front_url: string | null
           email: string
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
+          favorite_branch_id: string | null
           full_name: string
           id: string
           invitation_token: string | null
           is_active: boolean
+          last_order_at: string | null
           phone: string | null
           pin_hash: string | null
+          total_orders: number | null
+          total_spent: number | null
           updated_at: string
           user_id: string
         }
@@ -4304,18 +4314,25 @@ export type Database = {
           cbu?: string | null
           created_at?: string
           cuit?: string | null
+          default_address?: string | null
+          default_address_lat?: number | null
+          default_address_lng?: number | null
           dni?: string | null
           dni_back_url?: string | null
           dni_front_url?: string | null
           email: string
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
+          favorite_branch_id?: string | null
           full_name: string
           id?: string
           invitation_token?: string | null
           is_active?: boolean
+          last_order_at?: string | null
           phone?: string | null
           pin_hash?: string | null
+          total_orders?: number | null
+          total_spent?: number | null
           updated_at?: string
           user_id: string
         }
@@ -4327,22 +4344,44 @@ export type Database = {
           cbu?: string | null
           created_at?: string
           cuit?: string | null
+          default_address?: string | null
+          default_address_lat?: number | null
+          default_address_lng?: number | null
           dni?: string | null
           dni_back_url?: string | null
           dni_front_url?: string | null
           email?: string
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
+          favorite_branch_id?: string | null
           full_name?: string
           id?: string
           invitation_token?: string | null
           is_active?: boolean
+          last_order_at?: string | null
           phone?: string | null
           pin_hash?: string | null
+          total_orders?: number | null
+          total_spent?: number | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_favorite_branch_id_fkey"
+            columns: ["favorite_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_favorite_branch_id_fkey"
+            columns: ["favorite_branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
       }
       role_default_permissions: {
         Row: {
@@ -5078,6 +5117,45 @@ export type Database = {
           },
         ]
       }
+      user_addresses: {
+        Row: {
+          address: string
+          address_lat: number | null
+          address_lng: number | null
+          created_at: string | null
+          floor_apt: string | null
+          id: string
+          instructions: string | null
+          is_default: boolean | null
+          label: string | null
+          user_id: string
+        }
+        Insert: {
+          address: string
+          address_lat?: number | null
+          address_lng?: number | null
+          created_at?: string | null
+          floor_apt?: string | null
+          id?: string
+          instructions?: string | null
+          is_default?: boolean | null
+          label?: string | null
+          user_id: string
+        }
+        Update: {
+          address?: string
+          address_lat?: number | null
+          address_lng?: number | null
+          created_at?: string | null
+          floor_apt?: string | null
+          id?: string
+          instructions?: string | null
+          is_default?: boolean | null
+          label?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_branch_access: {
         Row: {
           branch_id: string
@@ -5208,6 +5286,69 @@ export type Database = {
           },
         ]
       }
+      user_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          branch_id: string | null
+          created_at: string | null
+          email: string | null
+          expires_at: string
+          full_name: string | null
+          id: string
+          invited_by: string
+          phone: string | null
+          requires_attendance: boolean | null
+          role: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          branch_id?: string | null
+          created_at?: string | null
+          email?: string | null
+          expires_at?: string
+          full_name?: string | null
+          id?: string
+          invited_by: string
+          phone?: string | null
+          requires_attendance?: boolean | null
+          role: string
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          branch_id?: string | null
+          created_at?: string | null
+          email?: string | null
+          expires_at?: string
+          full_name?: string | null
+          id?: string
+          invited_by?: string
+          phone?: string | null
+          requires_attendance?: boolean | null
+          role?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_invitations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_invitations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       user_panel_access: {
         Row: {
           brand_access: boolean
@@ -5261,24 +5402,60 @@ export type Database = {
       }
       user_roles: {
         Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          attendance_pin: string | null
+          branch_id: string | null
           created_at: string
+          custom_permissions: Json | null
           id: string
+          is_active: boolean | null
+          requires_attendance: boolean | null
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          attendance_pin?: string | null
+          branch_id?: string | null
           created_at?: string
+          custom_permissions?: Json | null
           id?: string
+          is_active?: boolean | null
+          requires_attendance?: boolean | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          attendance_pin?: string | null
+          branch_id?: string | null
           created_at?: string
+          custom_permissions?: Json | null
           id?: string
+          is_active?: boolean | null
+          requires_attendance?: boolean | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
       }
     }
     Views: {
@@ -5380,7 +5557,9 @@ export type Database = {
         Returns: number
       }
       can_use_brand_panel: { Args: { _user_id: string }; Returns: boolean }
+      can_use_brand_panel_v2: { Args: { _user_id: string }; Returns: boolean }
       can_use_local_panel: { Args: { _user_id: string }; Returns: boolean }
+      can_use_local_panel_v2: { Args: { _user_id: string }; Returns: boolean }
       can_view_employee_private_details: {
         Args: { _employee_id: string; _user_id: string }
         Returns: boolean
@@ -5436,6 +5615,14 @@ export type Database = {
         Args: { p_branch_id: string }
         Returns: string
       }
+      get_user_branch_roles: {
+        Args: { _user_id: string }
+        Returns: {
+          branch_id: string
+          branch_name: string
+          roles: string[]
+        }[]
+      }
       grant_role_defaults: {
         Args: {
           _branch_id: string
@@ -5463,6 +5650,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      has_role_in_branch: {
+        Args: { _branch_id?: string; _role: string; _user_id: string }
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }

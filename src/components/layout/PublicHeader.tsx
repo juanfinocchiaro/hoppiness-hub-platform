@@ -1,8 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import { Button } from '@/components/ui/button';
-import { ShoppingBag, Menu as MenuIcon, LogOut, LayoutDashboard, Store } from 'lucide-react';
+import { ShoppingBag, Menu as MenuIcon, LogOut, LayoutDashboard, Store, User } from 'lucide-react';
 import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
 import {
   Sheet,
@@ -13,14 +13,11 @@ import { useState } from 'react';
 
 export function PublicHeader() {
   const { user, signOut } = useAuth();
-  const { isAdmin, roles, loading: roleLoading } = useUserRole();
+  const { canUseLocalPanel, canUseBrandPanel, canUseMiCuenta, loading: roleLoading } = useUserRoles();
   const location = useLocation();
   const [open, setOpen] = useState(false);
 
-  const isActive = (path: string) => location.pathname === path;
-
-  // Check if user has access to "Mi Local" (any role except just admin)
-  const hasLocalAccess = user && (isAdmin || roles.includes('gerente') || roles.includes('empleado') || roles.includes('franquiciado'));
+  const isActive = (path: string) => location.pathname.startsWith(path);
 
   const navLinks = [
     { href: '/pedir', label: 'Pedir', icon: ShoppingBag },
@@ -65,22 +62,54 @@ export function PublicHeader() {
           
           {user ? (
             <>
-              {hasLocalAccess && (
+              {/* Mi Cuenta - visible para todos los logueados */}
+              {canUseMiCuenta && (
+                <Link to="/cuenta">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className={`text-primary-foreground hover:bg-primary-foreground/10 ${
+                      isActive('/cuenta') ? 'bg-primary-foreground/20' : ''
+                    }`}
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Mi Cuenta
+                  </Button>
+                </Link>
+              )}
+              
+              {/* Mi Local - visible si tiene rol de sucursal */}
+              {canUseLocalPanel && (
                 <Link to="/local">
-                  <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className={`text-primary-foreground hover:bg-primary-foreground/10 ${
+                      isActive('/local') ? 'bg-primary-foreground/20' : ''
+                    }`}
+                  >
                     <Store className="w-4 h-4 mr-2" />
                     Mi Local
                   </Button>
                 </Link>
               )}
-              {isAdmin && (
+              
+              {/* Mi Marca - visible si tiene rol de marca */}
+              {canUseBrandPanel && (
                 <Link to="/admin">
-                  <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className={`text-primary-foreground hover:bg-primary-foreground/10 ${
+                      isActive('/admin') ? 'bg-primary-foreground/20' : ''
+                    }`}
+                  >
                     <LayoutDashboard className="w-4 h-4 mr-2" />
-                    Admin
+                    Mi Marca
                   </Button>
                 </Link>
               )}
+              
               <Button variant="ghost" size="sm" onClick={signOut} className="text-primary-foreground hover:bg-primary-foreground/10">
                 <LogOut className="w-4 h-4" />
               </Button>
@@ -124,22 +153,49 @@ export function PublicHeader() {
               
               {user ? (
                 <>
-                  {hasLocalAccess && (
+                  {/* Mi Cuenta - visible para todos */}
+                  {canUseMiCuenta && (
+                    <Link to="/cuenta" onClick={() => setOpen(false)}>
+                      <Button 
+                        variant="ghost" 
+                        className={`w-full justify-start text-primary-foreground hover:bg-primary-foreground/10 ${
+                          isActive('/cuenta') ? 'bg-primary-foreground/20' : ''
+                        }`}
+                      >
+                        <User className="w-4 h-4 mr-2" />
+                        Mi Cuenta
+                      </Button>
+                    </Link>
+                  )}
+                  
+                  {canUseLocalPanel && (
                     <Link to="/local" onClick={() => setOpen(false)}>
-                      <Button variant="ghost" className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10">
+                      <Button 
+                        variant="ghost" 
+                        className={`w-full justify-start text-primary-foreground hover:bg-primary-foreground/10 ${
+                          isActive('/local') ? 'bg-primary-foreground/20' : ''
+                        }`}
+                      >
                         <Store className="w-4 h-4 mr-2" />
                         Mi Local
                       </Button>
                     </Link>
                   )}
-                  {isAdmin && (
+                  
+                  {canUseBrandPanel && (
                     <Link to="/admin" onClick={() => setOpen(false)}>
-                      <Button variant="ghost" className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10">
+                      <Button 
+                        variant="ghost" 
+                        className={`w-full justify-start text-primary-foreground hover:bg-primary-foreground/10 ${
+                          isActive('/admin') ? 'bg-primary-foreground/20' : ''
+                        }`}
+                      >
                         <LayoutDashboard className="w-4 h-4 mr-2" />
-                        Admin
+                        Mi Marca
                       </Button>
                     </Link>
                   )}
+                  
                   <Button variant="ghost" onClick={() => { signOut(); setOpen(false); }} className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10">
                     <LogOut className="w-4 h-4 mr-2" />
                     Cerrar sesión

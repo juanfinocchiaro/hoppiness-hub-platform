@@ -84,7 +84,14 @@ import LocalChannelAvailability from "./pages/local/LocalChannelAvailability";
 // Public Menu
 import MenuPublic from "./pages/MenuPublic";
 
+// Mi Cuenta (authenticated user panel)
+import CuentaDashboard from "./pages/cuenta/CuentaDashboard";
+import CuentaPedidos from "./pages/cuenta/CuentaPedidos";
+import CuentaPerfil from "./pages/cuenta/CuentaPerfil";
+import CuentaDirecciones from "./pages/cuenta/CuentaDirecciones";
+
 import NotFound from "./pages/NotFound";
+import { RequireAuth } from "./components/guards/RequireAuth";
 
 const queryClient = new QueryClient();
 
@@ -109,6 +116,13 @@ const App = () => (
             <Route path="/franquicias" element={<Franquicias />} />
             <Route path="/clock-in" element={<ClockIn />} />
             <Route path="/registro-staff" element={<RegistroStaff />} />
+            
+            {/* Mi Cuenta Routes (authenticated) */}
+            <Route path="/cuenta" element={<RequireAuth><CuentaDashboard /></RequireAuth>} />
+            <Route path="/cuenta/pedidos" element={<RequireAuth><CuentaPedidos /></RequireAuth>} />
+            <Route path="/cuenta/pedidos/:orderId" element={<RequireAuth><CuentaPedidos /></RequireAuth>} />
+            <Route path="/cuenta/perfil" element={<RequireAuth><CuentaPerfil /></RequireAuth>} />
+            <Route path="/cuenta/direcciones" element={<RequireAuth><CuentaDirecciones /></RequireAuth>} />
             
             {/* Attendance Kiosk (requires auth) */}
             <Route path="/attendance-kiosk/:branchId" element={<LocalRoute><AttendanceKiosk /></LocalRoute>} />
