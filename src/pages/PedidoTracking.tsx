@@ -79,7 +79,7 @@ export default function PedidoTracking() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const fetchOrder = async (showRefresh = false) => {
+  const fetchOrder = async (showRefresh = false, isInitial = false) => {
     if (!trackingToken) return;
     
     if (showRefresh) setIsRefreshing(true);
@@ -100,8 +100,13 @@ export default function PedidoTracking() {
 
       const data: TrackingResponse = await response.json();
       setOrderData(data);
+      setError(null); // Clear any previous error on success
     } catch (err: unknown) {
-      setError('Pedido no encontrado');
+      // Only set error on initial load, not on polling failures
+      if (isInitial && !orderData) {
+        setError('Pedido no encontrado');
+      }
+      // Silently ignore polling failures if we already have data
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -109,7 +114,7 @@ export default function PedidoTracking() {
   };
 
   useEffect(() => {
-    fetchOrder();
+    fetchOrder(false, true);
   }, [trackingToken]);
 
   // Poll for updates every 30 seconds
