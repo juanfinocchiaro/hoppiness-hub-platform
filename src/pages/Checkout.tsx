@@ -106,27 +106,31 @@ export default function Checkout() {
   
   const handleSubmit = async () => {
     if (!branch || items.length === 0) return;
-    
+
     if (!isFormValid) {
       toast.error('Completá los campos requeridos');
       return;
     }
-    
+
     // Validate cash amount if paying with cash
     if (paymentMethod === 'efectivo' && cashAmountNum > 0 && cashAmountNum < total) {
       toast.error('El monto en efectivo debe ser mayor o igual al total');
       return;
     }
-    
+
     setIsProcessing(true);
-    
+
     try {
+      // Useful debug: know if we are anon or authenticated
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log('[checkout] session role', sessionData?.session ? 'authenticated' : 'anon');
+
       // Build notes with cash info if applicable
       let orderNotes = notes;
       if (paymentMethod === 'efectivo' && cashAmountNum > 0) {
         orderNotes = `${notes ? notes + ' | ' : ''}Paga con: ${formatPrice(cashAmountNum)}`;
       }
-      
+
       // Find or create customer by phone
       const { data: customerId, error: customerError } = await supabase
         .rpc('find_or_create_customer', {
@@ -134,12 +138,12 @@ export default function Checkout() {
           p_name: customerName.trim(),
           p_email: customerEmail.trim() || null,
         });
-      
+
       if (customerError) {
         console.error('Error finding/creating customer:', customerError);
         // Continue without customer_id - not a blocking error
       }
-      
+
       // Create order with customer_id
       const orderPayload: any = {
         branch_id: branch.id,
@@ -162,16 +166,18 @@ export default function Checkout() {
         customer_business_name: invoiceType === 'A' ? customerBusinessName.trim() : null,
       };
 
-      console.log('[checkout] inserting order payload', orderPayload);
+      console.log('ORDER PAYLOAD:', JSON.stringify(orderPayload, null, 2));
 
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert(orderPayload as any)
         .select()
         .single();
-      
+
+      console.log('INSERT RESULT:', { order, orderError });
+
       if (orderError) throw orderError;
-      
+
       // Create order items
       const orderItems = items.map(item => ({
         order_id: order.id,
@@ -184,11 +190,11 @@ export default function Checkout() {
           item.notes ? `"${item.notes}"` : null
         ].filter(Boolean).join(', ') || null,
       }));
-      
+
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
-      
+
       if (itemsError) throw itemsError;
       
       // Handle payment method
