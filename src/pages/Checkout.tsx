@@ -136,28 +136,32 @@ export default function Checkout() {
       }
       
       // Create order with customer_id
+      const orderPayload: any = {
+        branch_id: branch.id,
+        customer_id: customerId || null,
+        customer_name: customerName.trim(),
+        customer_phone: customerPhone.trim(),
+        customer_email: customerEmail.trim() || null,
+        order_type: orderMode as OrderType,
+        delivery_address: isDelivery ? deliveryAddress.trim() : null,
+        notes: orderNotes || null,
+        subtotal,
+        delivery_fee: deliveryFee,
+        total,
+        status: 'pending',
+        sales_channel: 'web_app',
+        order_area: isDelivery ? 'delivery' : 'mostrador',
+        payment_method: paymentMethod as PaymentMethod,
+        invoice_type: wantsInvoice ? (invoiceType === 'A' ? 'factura_a' : 'factura_b') : 'consumidor_final',
+        customer_cuit: invoiceType === 'A' ? customerCuit.trim() : null,
+        customer_business_name: invoiceType === 'A' ? customerBusinessName.trim() : null,
+      };
+
+      console.log('[checkout] inserting order payload', orderPayload);
+
       const { data: order, error: orderError } = await supabase
         .from('orders')
-        .insert({
-          branch_id: branch.id,
-          customer_id: customerId || null,
-          customer_name: customerName.trim(),
-          customer_phone: customerPhone.trim(),
-          customer_email: customerEmail.trim() || null,
-          order_type: orderMode as OrderType,
-          delivery_address: isDelivery ? deliveryAddress.trim() : null,
-          notes: orderNotes || null,
-          subtotal,
-          delivery_fee: deliveryFee,
-          total,
-          status: 'pending',
-          sales_channel: 'web_app',
-          order_area: isDelivery ? 'delivery' : 'mostrador',
-          payment_method: paymentMethod as PaymentMethod,
-          invoice_type: wantsInvoice ? (invoiceType === 'A' ? 'factura_a' : 'factura_b') : 'consumidor_final',
-          customer_cuit: invoiceType === 'A' ? customerCuit.trim() : null,
-          customer_business_name: invoiceType === 'A' ? customerBusinessName.trim() : null,
-        })
+        .insert(orderPayload as any)
         .select()
         .single();
       
@@ -196,7 +200,9 @@ export default function Checkout() {
       
     } catch (error: any) {
       console.error('Checkout error:', error);
-      toast.error('Error al procesar el pedido: ' + error.message);
+      const msg = error?.message || 'Error desconocido';
+      const details = error?.details || error?.hint || error?.code;
+      toast.error(`Error al procesar el pedido: ${msg}${details ? ` (${details})` : ''}`);
     } finally {
       setIsProcessing(false);
     }
