@@ -73,6 +73,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import LocalDashboard from '@/pages/local/LocalDashboard';
 import ClockInModal from '@/components/attendance/ClockInModal';
 import ActiveStaffWidget from '@/components/attendance/ActiveStaffWidget';
+import { OrderNotificationProvider } from '@/components/orders/OrderNotificationProvider';
 
 type Branch = Tables<'branches'>;
 
@@ -558,6 +559,7 @@ export default function LocalLayout() {
   };
 
   return (
+    <OrderNotificationProvider branchId={branchId || ''}>
     <div className="min-h-screen bg-background">
       {/* Mobile Header */}
       <header className="lg:hidden sticky top-0 z-50 bg-primary text-primary-foreground">
@@ -683,5 +685,6 @@ export default function LocalLayout() {
         />
       )}
     </div>
+    </OrderNotificationProvider>
   );
 }
