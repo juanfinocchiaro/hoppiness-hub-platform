@@ -165,7 +165,7 @@ export default function Pedir() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary to-primary/95">
+    <div className="min-h-screen bg-primary overflow-x-hidden overscroll-none">
       {/* Branch Change Modal */}
       <BranchChangeModal
         open={showBranchChangeModal}
@@ -178,7 +178,7 @@ export default function Pedir() {
       {/* Hero Section */}
       <div className="relative min-h-[45vh] flex items-center justify-center overflow-hidden">
         <div 
-          className="absolute inset-0 bg-cover bg-center opacity-30"
+          className="absolute inset-0 bg-cover bg-center bg-fixed opacity-30"
           style={{ backgroundImage: `url(${heroBurger})` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-primary/60 via-primary/80 to-primary" />

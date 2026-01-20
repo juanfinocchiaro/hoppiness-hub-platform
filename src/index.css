@@ -8,6 +8,19 @@
   -webkit-touch-callout: none;
 }
 
+/* Prevent iOS overscroll bounce on full-page views */
+html, body {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fix for background images during scroll */
+.fixed-bg {
+  background-attachment: fixed;
+  -webkit-background-size: cover;
+  background-size: cover;
+}
+
 /* =============================================
    HOPPINESS CLUB - Design System
    Brand Manual Colors: #00139b (azul), #ff521d (naranja), #ffd41f (amarillo)
