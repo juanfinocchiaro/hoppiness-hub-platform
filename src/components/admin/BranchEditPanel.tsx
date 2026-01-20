@@ -122,6 +122,9 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
   const [loadingTeam, setLoadingTeam] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('cajero');
+  
+  // Mapa (on-demand)
+  const [showMap, setShowMap] = useState(false);
   const [inviting, setInviting] = useState(false);
 
   useEffect(() => {
@@ -416,22 +419,67 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
             </div>
           </div>
 
-          {/* Mapa de ubicación */}
-          <div className="space-y-2">
+          {/* Coordenadas y Mapa */}
+          <div className="space-y-3">
             <Label className="flex items-center gap-2">
               <MapPin className="h-4 w-4" />
-              Ubicación en el mapa
+              Coordenadas
             </Label>
-            <BranchLocationMap
-              address={address}
-              city={city}
-              latitude={latitude}
-              longitude={longitude}
-              onLocationChange={(lat, lng) => {
-                setLatitude(lat);
-                setLongitude(lng);
-              }}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="latitude" className="text-xs text-muted-foreground">Latitud</Label>
+                <Input
+                  id="latitude"
+                  value={latitude}
+                  onChange={(e) => setLatitude(e.target.value)}
+                  placeholder="-31.4234"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="longitude" className="text-xs text-muted-foreground">Longitud</Label>
+                <Input
+                  id="longitude"
+                  value={longitude}
+                  onChange={(e) => setLongitude(e.target.value)}
+                  placeholder="-64.1234"
+                />
+              </div>
+            </div>
+
+            {!showMap ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowMap(true)}
+                className="gap-2"
+              >
+                <MapPin className="h-4 w-4" />
+                Ubicar en el mapa
+              </Button>
+            ) : (
+              <div className="space-y-2">
+                <BranchLocationMap
+                  address={address}
+                  city={city}
+                  latitude={latitude}
+                  longitude={longitude}
+                  onLocationChange={(lat, lng) => {
+                    setLatitude(lat);
+                    setLongitude(lng);
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowMap(false)}
+                  className="gap-1.5"
+                >
+                  <X className="h-3 w-3" />
+                  Cerrar mapa
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-3 py-2">
