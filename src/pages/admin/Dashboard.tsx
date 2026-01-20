@@ -89,8 +89,8 @@ const equipoSection: NavSection = {
   label: 'Equipo & Accesos',
   icon: Users,
   items: [
-    { to: '/admin/equipo', icon: Users, label: 'Equipo' },
-    { to: '/admin/accesos', icon: Shield, label: 'Accesos' },
+    { to: '/admin/equipo', icon: Users, label: 'Usuarios' },
+    { to: '/admin/plantillas', icon: Shield, label: 'Plantillas' },
   ]
 };
 

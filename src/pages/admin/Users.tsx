@@ -392,10 +392,10 @@ export default function Users() {
           <p className="text-muted-foreground">Identidad, roles y estado de los miembros del equipo</p>
         </div>
         <div className="flex gap-2">
-          <Link to="/admin/accesos">
+          <Link to="/admin/plantillas">
             <Button variant="outline">
               <Shield className="h-4 w-4 mr-2" />
-              Ver Accesos
+              Plantillas
             </Button>
           </Link>
           <Button variant="outline" onClick={fetchData} disabled={loading}>
@@ -642,7 +642,7 @@ export default function Users() {
                               Editar
                             </Button>
                             {isAdmin && user.branchAccess && user.branchAccess.length > 0 && (
-                              <Link to={`/admin/accesos?user=${user.user_id}`}>
+                              <Link to={`/admin/overrides?user=${user.user_id}`}>
                                 <Button variant="ghost" size="sm" title="Ver accesos">
                                   <ExternalLink className="w-4 h-4" />
                                 </Button>
@@ -764,7 +764,7 @@ export default function Users() {
               <p className="text-xs text-muted-foreground">
                 Solo si necesita excepciones a los permisos del rol.
               </p>
-              <Link to={`/admin/accesos?user=${editingUser?.user_id}`} onClick={() => setEditingUser(null)}>
+              <Link to={`/admin/overrides?user=${editingUser?.user_id}`} onClick={() => setEditingUser(null)}>
                 <Button variant="outline" className="w-full">
                   <Shield className="w-4 h-4 mr-2" />
                   Personalizar Accesos

@@ -61,6 +61,8 @@ import BranchPerformance from "./pages/admin/BranchPerformance";
 import BrandFinances from "./pages/admin/BrandFinances";
 import Users from "./pages/admin/Users";
 import Permissions from "./pages/admin/Permissions";
+import RoleTemplates from "./pages/admin/RoleTemplates";
+import UserBranchOverrides from "./pages/admin/UserBranchOverrides";
 import SalesReports from "./pages/admin/SalesReports";
 import Customers from "./pages/admin/Customers";
 import Ingredients from "./pages/admin/Ingredients";
@@ -170,9 +172,11 @@ const App = () => (
               <Route path="performance" element={<BranchPerformance />} />
               <Route path="finanzas-marca" element={<BrandFinances />} />
               <Route path="equipo" element={<Users />} />
-              <Route path="accesos" element={<Permissions />} />
+              <Route path="plantillas" element={<RoleTemplates />} />
+              <Route path="overrides" element={<UserBranchOverrides />} />
               {/* Legacy redirects */}
               <Route path="usuarios" element={<Users />} />
+              <Route path="accesos" element={<Permissions />} />
               <Route path="permisos" element={<Permissions />} />
               <Route path="reportes" element={<SalesReports />} />
               <Route path="escaner-comprobantes" element={<InvoiceScanner />} />
