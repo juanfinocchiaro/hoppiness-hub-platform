@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -165,7 +165,7 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
   const [showEffectivePermissions, setShowEffectivePermissions] = useState(false);
 
   // Fetch templates on mount
-  useState(() => {
+  useEffect(() => {
     const fetchTemplates = async () => {
       const [{ data: local }, { data: brand }] = await Promise.all([
         supabase.from('local_templates').select('id, name').eq('is_active', true),
@@ -175,10 +175,10 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
       setBrandTemplates(brand || []);
     };
     fetchTemplates();
-  });
+  }, []);
 
   // Sync state when user changes
-  useState(() => {
+  useEffect(() => {
     if (user) {
       setSelectedRole(user.role || '');
       setCanUseLocalPanel(user.panelAccess?.can_use_local_panel ?? false);
@@ -188,7 +188,7 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
       setBrandTemplateId(user.panelAccess?.brand_template_id || '');
       setSelectedBranches(user.allowedBranches?.map(b => b.id) || []);
     }
-  });
+  }, [user]);
 
   const fetchAuditLogs = async () => {
     if (!user) return;
