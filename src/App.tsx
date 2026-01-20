@@ -80,6 +80,7 @@ import InvoiceScanner from "./pages/admin/InvoiceScanner";
 import IngredientSuppliers from "./pages/admin/IngredientSuppliers";
 import Channels from "./pages/admin/Channels";
 import Messages from "./pages/admin/Messages";
+import Conciliacion from "./pages/admin/Conciliacion";
 
 // Local Stock & Inventory
 import LocalStock from "./pages/local/LocalStock";
@@ -229,6 +230,9 @@ const App = () => (
               <Route path="impresoras" element={<LocalRedirect to="config/impresoras" />} />
               <Route path="kds-config" element={<LocalRedirect to="config/kds" />} />
             </Route>
+            
+            {/* Conciliacion Panel (Admin only) */}
+            <Route path="/conciliacion" element={<AdminRoute><Conciliacion /></AdminRoute>} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>}>
