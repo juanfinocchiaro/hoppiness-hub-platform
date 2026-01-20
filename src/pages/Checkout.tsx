@@ -147,8 +147,12 @@ export default function Checkout() {
 
     try {
       const { data: sessionData } = await supabase.auth.getSession();
+      const session = sessionData?.session;
+      const userId = session?.user?.id || null;
+      
       traceLog('checkout', 'session_loaded', {
-        role: sessionData?.session ? 'authenticated' : 'anon',
+        role: session ? 'authenticated' : 'anon',
+        hasUserId: !!userId,
       });
 
       // Build notes with cash info if applicable
@@ -177,9 +181,11 @@ export default function Checkout() {
         traceLog('checkout', 'customer_rpc_ok', { hasCustomerId: !!customerId });
       }
 
+
       const orderPayload: any = {
         branch_id: branch.id,
         customer_id: customerId || null,
+        user_id: userId, // Link to auth user for order history in Mi Cuenta
         customer_name: customerName.trim(),
         customer_phone: customerPhone.trim(),
         customer_email: customerEmail.trim() || null,
@@ -215,8 +221,6 @@ export default function Checkout() {
         orderType: orderMode,
       });
 
-      const { data: sessionData2 } = await supabase.auth.getSession();
-      const session = sessionData2?.session;
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-web-order`,

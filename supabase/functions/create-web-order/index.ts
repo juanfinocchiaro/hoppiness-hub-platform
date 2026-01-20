@@ -5,6 +5,7 @@ type CreateWebOrderBody = {
   order: {
     branch_id: string;
     customer_id?: string | null;
+    user_id?: string | null; // Link to auth.users for order history
     customer_name: string;
     customer_phone: string;
     customer_email?: string | null;
@@ -66,6 +67,7 @@ serve(async (req) => {
       tracking_token: trackingToken,
       branch_id: body.order.branch_id,
       customer_id: body.order.customer_id ?? null,
+      user_id: body.order.user_id ?? null, // Link to authenticated user
       customer_name: body.order.customer_name.trim(),
       customer_phone: body.order.customer_phone.trim(),
       customer_email: body.order.customer_email ?? null,

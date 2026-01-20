@@ -10,7 +10,7 @@ import {
   X,
   ChevronRight
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 const BENEFITS = [
   { icon: History, text: 'Historial de pedidos' },
@@ -19,11 +19,17 @@ const BENEFITS = [
 ];
 
 export function RegisterBanner() {
+  const { user } = useAuth();
   const [isDismissed, setIsDismissed] = useState(false);
   
   // Check localStorage for dismissed state
   const storageKey = 'register_banner_dismissed';
   const wasDismissed = typeof window !== 'undefined' && localStorage.getItem(storageKey) === 'true';
+  
+  // Hide if user is logged in
+  if (user) {
+    return null;
+  }
   
   if (isDismissed || wasDismissed) {
     return null;
@@ -72,7 +78,7 @@ export function RegisterBanner() {
         </div>
         
         {/* CTA Button */}
-        <Link to="/mi-cuenta/registro" className="block">
+        <Link to="/ingresar" className="block">
           <Button className="w-full rounded-xl group">
             Crear cuenta gratis
             <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-0.5 transition-transform" />
@@ -82,7 +88,7 @@ export function RegisterBanner() {
         {/* Already have account */}
         <p className="text-center text-xs text-muted-foreground mt-3">
           ¿Ya tenés cuenta?{' '}
-          <Link to="/mi-cuenta" className="text-primary hover:underline font-medium">
+          <Link to="/ingresar" className="text-primary hover:underline font-medium">
             Iniciá sesión
           </Link>
         </p>
