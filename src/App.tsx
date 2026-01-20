@@ -51,6 +51,8 @@ import AttendanceKiosk from "./pages/local/AttendanceKiosk";
 import LocalPOS from "./pages/local/LocalPOS";
 import LocalKDS from "./pages/local/LocalKDS";
 import LocalCierre from "./pages/local/LocalCierre";
+import LocalStockFactura from "./pages/local/LocalStockFactura";
+import LocalStockPedir from "./pages/local/LocalStockPedir";
 
 // Attendance
 import ClockIn from "./pages/ClockIn";
@@ -171,6 +173,8 @@ const App = () => (
               
               {/* STOCK Y COMPRAS */}
               <Route path="stock" element={<LocalStock />} />
+              <Route path="stock/pedir" element={<LocalStockPedir />} />
+              <Route path="stock/factura" element={<LocalStockFactura />} />
               <Route path="stock/conteo" element={<LocalInventory />} />
               <Route path="stock/cmv" element={<LocalCMVReport />} />
               

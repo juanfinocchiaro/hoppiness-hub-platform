@@ -249,6 +249,8 @@ export default function LocalLayout() {
       show: canManageProducts,
       items: [
         { to: 'stock', label: 'Stock Actual', icon: Boxes, show: true },
+        { to: 'stock/pedir', label: 'Pedir a Proveedor', icon: Truck, show: true },
+        { to: 'stock/factura', label: 'Cargar Factura', icon: FileText, show: true },
         { to: 'stock/conteo', label: 'Conteo Inventario', icon: ClipboardCheck, show: true },
         { to: 'stock/cmv', label: 'Reporte CMV', icon: Calculator, show: canViewReports },
       ]
