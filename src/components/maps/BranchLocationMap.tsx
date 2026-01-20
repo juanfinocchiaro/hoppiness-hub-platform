@@ -222,19 +222,25 @@ function BranchLocationMapInner({
   );
 }
 
-// Wrapper that fetches API key
+// Wrapper that fetches API key with retry logic
 export default function BranchLocationMap(props: BranchLocationMapProps) {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [loadingKey, setLoadingKey] = useState(true);
+  const [error, setError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     const fetchApiKey = async () => {
+      setLoadingKey(true);
+      setError(false);
+      
       try {
         const { supabase } = await import('@/integrations/supabase/client');
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
           devWarn('No authenticated session for Google Maps API');
+          setError(true);
           setLoadingKey(false);
           return;
         }
@@ -251,15 +257,23 @@ export default function BranchLocationMap(props: BranchLocationMapProps) {
         const data = await response.json();
         if (data.apiKey) {
           setApiKey(data.apiKey);
+          setError(false);
+        } else {
+          setError(true);
         }
-      } catch (error) {
-        devWarn('Error fetching Google Maps API key:', error);
+      } catch (err) {
+        devWarn('Error fetching Google Maps API key:', err);
+        setError(true);
       } finally {
         setLoadingKey(false);
       }
     };
     fetchApiKey();
-  }, []);
+  }, [retryCount]);
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+  };
 
   if (loadingKey) {
     return (
@@ -269,12 +283,15 @@ export default function BranchLocationMap(props: BranchLocationMapProps) {
     );
   }
 
-  if (!apiKey) {
+  if (!apiKey || error) {
     return (
-      <div className="w-full h-[250px] bg-muted rounded-lg flex flex-col items-center justify-center gap-2 text-muted-foreground">
+      <div className="w-full h-[250px] bg-muted rounded-lg flex flex-col items-center justify-center gap-3 text-muted-foreground">
         <MapPin className="h-8 w-8 opacity-50" />
         <p className="text-sm">Mapa no disponible</p>
-        <p className="text-xs">Configurá la API key de Google Maps</p>
+        <Button variant="outline" size="sm" onClick={handleRetry} className="gap-1.5">
+          <RefreshCw className="h-3 w-3" />
+          Reintentar
+        </Button>
       </div>
     );
   }
