@@ -61,6 +61,17 @@ serve(async (req) => {
     const orderId = crypto.randomUUID();
     const trackingToken = crypto.randomUUID();
 
+    // Check integrator settings for auto-accept
+    const { data: integratorSettings } = await supabaseAdmin
+      .from("branch_integrator_settings")
+      .select("auto_accept_channels")
+      .eq("branch_id", body.order.branch_id)
+      .single();
+    
+    // Check if web channel should auto-accept
+    const autoAcceptChannels = integratorSettings?.auto_accept_channels as Record<string, boolean> | null;
+    const shouldAutoAccept = autoAcceptChannels?.web === true;
+
     // Enforce web constraints server-side
     const orderPayload = {
       id: orderId,
@@ -77,13 +88,16 @@ serve(async (req) => {
       subtotal: body.order.subtotal,
       delivery_fee: body.order.delivery_fee ?? 0,
       total: body.order.total,
-      status: "pending",
+      status: shouldAutoAccept ? "confirmed" : "pending",
       sales_channel: "web_app",
       order_area: body.order.order_type === "delivery" ? "delivery" : "mostrador",
       payment_method: body.order.payment_method ?? null,
       invoice_type: body.order.invoice_type,
       customer_cuit: body.order.customer_cuit ?? null,
       customer_business_name: body.order.customer_business_name ?? null,
+      // Integration status based on auto-accept setting
+      integration_status: shouldAutoAccept ? "auto_accepted" : "pending",
+      integration_accepted_at: shouldAutoAccept ? new Date().toISOString() : null,
     };
 
     const { error: orderError } = await supabaseAdmin.from("orders").insert(orderPayload as any);
