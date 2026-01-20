@@ -68,6 +68,7 @@ import Ingredients from "./pages/admin/Ingredients";
 import Discounts from "./pages/admin/Discounts";
 import InvoiceScanner from "./pages/admin/InvoiceScanner";
 import IngredientSuppliers from "./pages/admin/IngredientSuppliers";
+import Channels from "./pages/admin/Channels";
 
 // Local Stock & Inventory
 import LocalStock from "./pages/local/LocalStock";
@@ -75,6 +76,8 @@ import LocalInventory from "./pages/local/LocalInventory";
 import LocalCMVReport from "./pages/local/LocalCMVReport";
 import LocalCustomers from "./pages/local/LocalCustomers";
 import LocalKDSSettings from "./pages/local/LocalKDSSettings";
+import LocalChannels from "./pages/local/LocalChannels";
+import LocalChannelAvailability from "./pages/local/LocalChannelAvailability";
 
 // Public Menu
 import MenuPublic from "./pages/MenuPublic";
@@ -149,6 +152,8 @@ const App = () => (
               <Route path="integraciones" element={<LocalIntegraciones />} />
               <Route path="zonas-delivery" element={<LocalDeliveryZones />} />
               <Route path="impresoras" element={<LocalImpresoras />} />
+              <Route path="canales" element={<LocalChannels />} />
+              <Route path="disponibilidad-canales" element={<LocalChannelAvailability />} />
               <Route path="kds-config" element={<LocalKDSSettings />} />
             </Route>
             
@@ -179,6 +184,7 @@ const App = () => (
               <Route path="permisos" element={<UserBranchOverrides />} />
               <Route path="reportes" element={<SalesReports />} />
               <Route path="escaner-comprobantes" element={<InvoiceScanner />} />
+              <Route path="canales" element={<Channels />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />
