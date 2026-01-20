@@ -1,8 +1,8 @@
 import { Checkbox } from '@/components/ui/checkbox';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { Circle, CheckCircle2 } from 'lucide-react';
 import type { ModifierGroup } from '@/hooks/useProductModifiers';
 
 interface ProductModifierSelectorProps {
@@ -108,14 +108,17 @@ export function ProductModifierSelector({
                       }
                     }}
                   >
-                    {/* Checkbox/Radio */}
+                    {/* Radio Circle Visual */}
                     {group.selection_type === 'single' ? (
-                      <RadioGroupItem
-                        value={option.id}
-                        checked={isSelected}
-                        disabled={isDisabled}
-                        className="h-5 w-5"
-                      />
+                      <div className={cn(
+                        "h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0",
+                        isSelected ? "border-primary bg-primary" : "border-muted-foreground",
+                        isDisabled && "opacity-50"
+                      )}>
+                        {isSelected && (
+                          <div className="w-2 h-2 rounded-full bg-primary-foreground" />
+                        )}
+                      </div>
                     ) : (
                       <Checkbox
                         checked={isSelected}
