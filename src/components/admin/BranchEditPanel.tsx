@@ -432,26 +432,6 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
                 setLongitude(lng);
               }}
             />
-            <div className="grid grid-cols-2 gap-4 mt-2">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Latitud</Label>
-                <Input
-                  value={latitude}
-                  onChange={(e) => setLatitude(e.target.value)}
-                  placeholder="-31.4234"
-                  className="text-sm"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Longitud</Label>
-                <Input
-                  value={longitude}
-                  onChange={(e) => setLongitude(e.target.value)}
-                  placeholder="-64.1234"
-                  className="text-sm"
-                />
-              </div>
-            </div>
           </div>
 
           <div className="flex items-center gap-3 py-2">
