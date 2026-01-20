@@ -790,6 +790,62 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_template_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          permission_key: string
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permission_key: string
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permission_key?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_template_permissions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "brand_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cash_register_movements: {
         Row: {
           amount: number
@@ -2455,6 +2511,62 @@ export type Database = {
           },
         ]
       }
+      local_template_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          permission_key: string
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permission_key: string
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permission_key?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "local_template_permissions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "local_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      local_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       modifier_groups: {
         Row: {
           created_at: string
@@ -3438,6 +3550,7 @@ export type Database = {
           min_role: Database["public"]["Enums"]["app_role"]
           module: string
           name: string
+          scope: Database["public"]["Enums"]["permission_scope"]
         }
         Insert: {
           created_at?: string | null
@@ -3447,6 +3560,7 @@ export type Database = {
           min_role?: Database["public"]["Enums"]["app_role"]
           module: string
           name: string
+          scope?: Database["public"]["Enums"]["permission_scope"]
         }
         Update: {
           created_at?: string | null
@@ -3456,6 +3570,7 @@ export type Database = {
           min_role?: Database["public"]["Enums"]["app_role"]
           module?: string
           name?: string
+          scope?: Database["public"]["Enums"]["permission_scope"]
         }
         Relationships: []
       }
@@ -4717,32 +4832,53 @@ export type Database = {
       user_panel_access: {
         Row: {
           brand_access: boolean
+          brand_template_id: string | null
           can_use_brand_panel: boolean
           can_use_local_panel: boolean
           created_at: string
           id: string
+          local_template_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           brand_access?: boolean
+          brand_template_id?: string | null
           can_use_brand_panel?: boolean
           can_use_local_panel?: boolean
           created_at?: string
           id?: string
+          local_template_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           brand_access?: boolean
+          brand_template_id?: string | null
           can_use_brand_panel?: boolean
           can_use_local_panel?: boolean
           created_at?: string
           id?: string
+          local_template_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_panel_access_brand_template_id_fkey"
+            columns: ["brand_template_id"]
+            isOneToOne: false
+            referencedRelation: "brand_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_panel_access_local_template_id_fkey"
+            columns: ["local_template_id"]
+            isOneToOne: false
+            referencedRelation: "local_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -4956,6 +5092,7 @@ export type Database = {
         | "transferencia"
         | "vales"
       payment_origin: "cash" | "mercadopago" | "bank_transfer" | "credit_card"
+      permission_scope: "local" | "brand"
       receipt_type: "OFFICIAL" | "INTERNAL"
       sales_channel:
         | "atencion_presencial"
@@ -5138,6 +5275,7 @@ export const Constants = {
         "vales",
       ],
       payment_origin: ["cash", "mercadopago", "bank_transfer", "credit_card"],
+      permission_scope: ["local", "brand"],
       receipt_type: ["OFFICIAL", "INTERNAL"],
       sales_channel: [
         "atencion_presencial",

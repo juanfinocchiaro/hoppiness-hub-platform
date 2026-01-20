@@ -47,7 +47,8 @@ interface PermissionDefinition {
   name: string;
   description: string | null;
   module: string;
-  min_role: AppRole;
+  min_role: string;
+  scope: 'local' | 'brand';
 }
 
 // 3 estados: heredado (null), override ON (grant), override OFF (revoke)
@@ -100,9 +101,8 @@ const roleLabels: Record<AppRole, string> = {
   empleado: 'Cajero',
 };
 
-// Permisos globales (no por sucursal) - se excluyen de esta vista
-const GLOBAL_PERMISSIONS = ['users.create', 'users.delete', 'users.invite'];
-
+// Solo permisos locales se muestran en overrides por sucursal
+// Los permisos brand NO tienen overrides por sucursal
 const moduleOrder = ['pos', 'orders', 'kds', 'cash', 'inventory', 'finance', 'hr', 'suppliers', 'config', 'reports'];
 
 export default function UserBranchOverrides() {
@@ -137,16 +137,15 @@ export default function UserBranchOverrides() {
     setLoading(true);
     try {
       const [{ data: definitions }, { data: defaults }, { data: profiles }, { data: branchesData }, { data: allRoles }] = await Promise.all([
-        supabase.from('permission_definitions').select('*').order('module, key'),
+        supabase.from('permission_definitions').select('*').eq('scope', 'local').order('module, key'),
         supabase.from('role_default_permissions').select('role, permission_key'),
         supabase.from('profiles').select('*').eq('is_active', true).order('full_name'),
         supabase.from('branches').select('*').eq('is_active', true).order('name'),
         supabase.from('user_roles').select('user_id, role'),
       ]);
       
-      // Filter out global permissions
-      const branchPerms = (definitions || []).filter(d => !GLOBAL_PERMISSIONS.includes(d.key));
-      setPermissionDefinitions(branchPerms);
+      // Solo permisos scope='local' (ya filtrado en query)
+      setPermissionDefinitions((definitions || []) as PermissionDefinition[]);
       
       // Build role defaults map
       const defaultsMap = new Map<string, Set<string>>();
@@ -388,9 +387,9 @@ export default function UserBranchOverrides() {
           </div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Shield className="h-6 w-6" />
-            Permisos por Sucursal
+            Overrides por Sucursal
           </h1>
-          <p className="text-muted-foreground">Excepciones (overrides) a la plantilla del rol</p>
+          <p className="text-muted-foreground">Excepciones a la plantilla (solo permisos locales)</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={fetchData} disabled={loading}>
