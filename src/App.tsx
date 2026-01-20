@@ -17,6 +17,7 @@ import Checkout from "./pages/Checkout";
 import PedidoTracking from "./pages/PedidoTracking";
 import NuestroMenu from "./pages/NuestroMenu";
 import Franquicias from "./pages/Franquicias";
+import AceptarInvitacion from "./pages/AceptarInvitacion";
 
 // POS / Local
 import POS from "./pages/pos/POS";
@@ -117,6 +118,7 @@ const App = () => (
             <Route path="/franquicias" element={<Franquicias />} />
             <Route path="/clock-in" element={<ClockIn />} />
             <Route path="/registro-staff" element={<RegistroStaff />} />
+            <Route path="/invitacion/:token" element={<AceptarInvitacion />} />
             
             {/* Mi Cuenta Routes (authenticated) */}
             <Route path="/cuenta" element={<RequireAuth><CuentaDashboard /></RequireAuth>} />

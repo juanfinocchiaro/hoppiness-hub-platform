@@ -13,6 +13,7 @@ interface InvitationRequest {
   email: string;
   role: string;
   branch_id: string;
+  full_name?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -30,19 +31,20 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const userToken = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(userToken);
     
     if (authError || !user) {
       throw new Error("Unauthorized");
     }
 
-    const { email, role, branch_id }: InvitationRequest = await req.json();
+    const { email, role, branch_id, full_name }: InvitationRequest = await req.json();
 
     if (!email || !role || !branch_id) {
       throw new Error("Missing required fields: email, role, branch_id");
     }
 
+    // Check permissions
     const { data: hasPermission } = await supabase.rpc('has_branch_permission', {
       _branch_id: branch_id,
       _permission: 'hr.employees_manage',
@@ -57,6 +59,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("No tienes permiso para invitar colaboradores a esta sucursal");
     }
 
+    // Get branch info
     const { data: branch, error: branchError } = await supabase
       .from('branches')
       .select('name')
@@ -67,31 +70,43 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Sucursal no encontrada");
     }
 
+    // Get inviter name
     const { data: inviterProfile } = await supabase
       .from('profiles')
       .select('full_name')
       .eq('user_id', user.id)
       .single();
 
+    // Check for existing pending invitation
     const { data: existingInvitation } = await supabase
-      .from('staff_invitations')
+      .from('user_invitations')
       .select('id')
       .eq('email', email.toLowerCase().trim())
       .eq('branch_id', branch_id)
-      .eq('status', 'pending')
+      .is('accepted_at', null)
+      .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
     if (existingInvitation) {
       throw new Error("Ya existe una invitación pendiente para este email");
     }
 
+    // Generate unique token
+    const inviteToken = crypto.randomUUID();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+
+    // Create invitation in user_invitations table
     const { data: invitation, error: inviteError } = await supabase
-      .from('staff_invitations')
+      .from('user_invitations')
       .insert({
         email: email.toLowerCase().trim(),
-        branch_id,
+        full_name: full_name || null,
         role,
+        branch_id,
         invited_by: user.id,
+        token: inviteToken,
+        expires_at: expiresAt.toISOString(),
       })
       .select()
       .single();
@@ -101,13 +116,16 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Error al crear la invitación");
     }
 
-    const appUrl = "https://hoppiness-hub-platform.lovable.app";
-    const registrationUrl = `${appUrl}/registro-staff?token=${invitation.token}`;
+    const appUrl = Deno.env.get("APP_URL") || "https://hoppiness-hub-platform.lovable.app";
+    const registrationUrl = `${appUrl}/invitacion/${inviteToken}`;
 
     const roleLabels: Record<string, string> = {
       'encargado': 'Encargado',
       'cajero': 'Cajero',
       'kds': 'KDS',
+      'franquiciado': 'Franquiciado',
+      'marketing': 'Marketing',
+      'admin': 'Administrador',
     };
 
     const htmlContent = `
@@ -124,7 +142,7 @@ const handler = async (req: Request): Promise<Response> => {
               <h1 style="color: #f97316; margin: 0; font-size: 28px;">🍔 Hoppiness Club</h1>
             </div>
             
-            <h2 style="color: #18181b; margin: 0 0 20px;">¡Hola!</h2>
+            <h2 style="color: #18181b; margin: 0 0 20px;">¡Te invitaron al equipo!</h2>
             
             <p style="color: #52525b; font-size: 16px; line-height: 1.6;">
               <strong>${inviterProfile?.full_name || 'Un administrador'}</strong> te ha invitado a unirte al equipo de 
@@ -132,18 +150,18 @@ const handler = async (req: Request): Promise<Response> => {
             </p>
             
             <p style="color: #52525b; font-size: 16px; line-height: 1.6;">
-              Para completar tu registro, hacé clic en el siguiente botón:
+              Hacé clic en el siguiente botón para aceptar la invitación:
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${registrationUrl}" 
                  style="display: inline-block; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                Completar mi registro
+                Aceptar invitación
               </a>
             </div>
             
             <p style="color: #71717a; font-size: 14px; line-height: 1.6;">
-              📋 <strong>Importante:</strong> Tené a mano tu DNI (frente y dorso), ya que necesitarás subir las fotos durante el registro.
+              Si ya tenés una cuenta, podés iniciar sesión directamente. Si no, podrás crear una nueva.
             </p>
             
             <p style="color: #71717a; font-size: 14px; line-height: 1.6;">
