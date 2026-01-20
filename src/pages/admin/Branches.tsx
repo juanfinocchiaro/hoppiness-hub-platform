@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
-import { Plus, MapPin, Clock, Users, Trash2, Circle, ChevronRight, ChevronDown } from 'lucide-react';
+import { Plus, MapPin, Clock, Users, Trash2, Circle, ChevronRight, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import BranchEditPanel from '@/components/admin/BranchEditPanel';
@@ -192,7 +192,11 @@ export default function Branches() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-start gap-1.5 text-sm text-muted-foreground">
-                            <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                            {(branch as any).latitude && (branch as any).longitude ? (
+                              <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0 text-primary" />
+                            ) : (
+                              <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                            )}
                             <div>
                               <p className="line-clamp-1">{branch.address}</p>
                               <p className="text-xs">{branch.city}</p>
