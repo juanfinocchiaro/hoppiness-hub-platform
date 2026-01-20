@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
 import { 
   Clock, 
   CheckCircle, 
@@ -14,11 +14,17 @@ import {
   MapPin,
   Phone,
   ArrowLeft,
-  RefreshCw
+  RefreshCw,
+  ShoppingBag,
+  Timer,
+  XCircle,
+  Copy,
+  Check
 } from 'lucide-react';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import type { Enums } from '@/integrations/supabase/types';
+import { cn } from '@/lib/utils';
 
 type OrderStatus = Enums<'order_status'>;
 
@@ -56,23 +62,26 @@ interface TrackingResponse {
   branch: BranchData | null;
 }
 
-const STATUS_STEPS: { status: OrderStatus; label: string; icon: React.ReactNode }[] = [
-  { status: 'pending', label: 'Recibido', icon: <Clock className="w-5 h-5" /> },
-  { status: 'confirmed', label: 'Confirmado', icon: <CheckCircle className="w-5 h-5" /> },
-  { status: 'preparing', label: 'Preparando', icon: <ChefHat className="w-5 h-5" /> },
-  { status: 'ready', label: 'Listo', icon: <Package className="w-5 h-5" /> },
-  { status: 'delivered', label: 'Entregado', icon: <Truck className="w-5 h-5" /> },
+const STATUS_STEPS: { status: OrderStatus; label: string; description: string; icon: React.ReactNode }[] = [
+  { status: 'pending', label: 'Recibido', description: 'Tu pedido fue recibido', icon: <Clock className="w-5 h-5" /> },
+  { status: 'confirmed', label: 'Confirmado', description: 'El local confirmó tu pedido', icon: <CheckCircle className="w-5 h-5" /> },
+  { status: 'preparing', label: 'Preparando', description: 'Estamos preparando tu pedido', icon: <ChefHat className="w-5 h-5" /> },
+  { status: 'ready', label: 'Listo', description: 'Tu pedido está listo', icon: <Package className="w-5 h-5" /> },
+  { status: 'delivered', label: 'Entregado', description: '¡Disfrutá tu pedido!', icon: <Truck className="w-5 h-5" /> },
 ];
 
 export default function PedidoTracking() {
-  // Now uses tracking token instead of order ID
   const { trackingToken } = useParams();
   const [orderData, setOrderData] = useState<TrackingResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  const fetchOrder = async () => {
+  const fetchOrder = async (showRefresh = false) => {
     if (!trackingToken) return;
+    
+    if (showRefresh) setIsRefreshing(true);
     
     try {
       const response = await fetch(
@@ -90,10 +99,11 @@ export default function PedidoTracking() {
 
       const data: TrackingResponse = await response.json();
       setOrderData(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError('Pedido no encontrado');
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -101,11 +111,10 @@ export default function PedidoTracking() {
     fetchOrder();
   }, [trackingToken]);
 
-  // Poll for updates every 30 seconds (since realtime requires auth)
+  // Poll for updates every 30 seconds
   useEffect(() => {
     if (!trackingToken || error) return;
-
-    const interval = setInterval(fetchOrder, 30000);
+    const interval = setInterval(() => fetchOrder(false), 30000);
     return () => clearInterval(interval);
   }, [trackingToken, error]);
 
@@ -121,12 +130,34 @@ export default function PedidoTracking() {
   const formatTime = (dateString: string) => 
     new Date(dateString).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 
+  const formatDate = (dateString: string) => 
+    new Date(dateString).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'short' });
+
+  const copyOrderId = async () => {
+    if (!orderData?.order) return;
+    await navigator.clipboard.writeText(orderData.order.id.slice(0, 8).toUpperCase());
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const getEstimatedTimeRemaining = () => {
+    if (!orderData?.order?.estimated_time) return null;
+    const estimated = new Date(orderData.order.estimated_time);
+    const now = new Date();
+    const diffMs = estimated.getTime() - now.getTime();
+    if (diffMs <= 0) return 'Pronto';
+    const diffMins = Math.ceil(diffMs / 60000);
+    return `~${diffMins} min`;
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-muted/30">
         <PublicHeader />
-        <div className="container mx-auto px-4 py-12">
-          <Skeleton className="h-64 max-w-2xl mx-auto" />
+        <div className="container mx-auto px-4 py-8 max-w-lg">
+          <Skeleton className="h-8 w-48 mb-6" />
+          <Skeleton className="h-64 w-full rounded-2xl mb-4" />
+          <Skeleton className="h-40 w-full rounded-2xl" />
         </div>
       </div>
     );
@@ -134,14 +165,25 @@ export default function PedidoTracking() {
 
   if (error || !orderData) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className="min-h-screen bg-muted/30 flex flex-col">
         <PublicHeader />
-        <div className="flex-1 flex items-center justify-center">
-          <Card className="max-w-md mx-4">
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground mb-4">{error || 'Pedido no encontrado'}</p>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <Card className="max-w-sm w-full rounded-2xl shadow-lg">
+            <CardContent className="py-12 text-center space-y-4">
+              <div className="w-16 h-16 mx-auto rounded-full bg-destructive/10 flex items-center justify-center">
+                <XCircle className="w-8 h-8 text-destructive" />
+              </div>
+              <div>
+                <h2 className="font-bold text-lg">Pedido no encontrado</h2>
+                <p className="text-muted-foreground text-sm mt-1">
+                  El link de seguimiento no es válido o expiró
+                </p>
+              </div>
               <Link to="/pedir">
-                <Button>Hacer un nuevo pedido</Button>
+                <Button className="w-full rounded-xl">
+                  <ShoppingBag className="w-4 h-4 mr-2" />
+                  Hacer un nuevo pedido
+                </Button>
               </Link>
             </CardContent>
           </Card>
@@ -153,154 +195,230 @@ export default function PedidoTracking() {
 
   const { order, items, branch } = orderData;
   const currentStep = getCurrentStepIndex();
-  const progress = order.status === 'cancelled' ? 0 : ((currentStep + 1) / STATUS_STEPS.length) * 100;
+  const isCancelled = order.status === 'cancelled';
+  const isDelivered = order.status === 'delivered';
+  const estimatedTime = getEstimatedTimeRemaining();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-muted/30 flex flex-col">
       <PublicHeader />
 
-      <div className="container mx-auto px-4 py-8 flex-1">
-        <div className="max-w-2xl mx-auto space-y-6">
-          {/* Header */}
-          <div className="flex items-center gap-4">
+      <div className="container mx-auto px-4 py-6 flex-1 max-w-lg">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
             <Link to="/pedir">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="rounded-full">
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             </Link>
             <div>
-              <h1 className="text-2xl font-bold">Seguí tu pedido</h1>
-              <p className="text-muted-foreground text-sm">
-                Pedido #{order.id.slice(0, 8).toUpperCase()}
-              </p>
+              <h1 className="font-bold text-lg">Seguimiento</h1>
+              <button 
+                onClick={copyOrderId}
+                className="text-muted-foreground text-xs flex items-center gap-1 hover:text-foreground transition-colors"
+              >
+                #{order.id.slice(0, 8).toUpperCase()}
+                {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+              </button>
             </div>
-            <Button variant="ghost" size="icon" className="ml-auto" onClick={fetchOrder}>
-              <RefreshCw className="w-4 h-4" />
-            </Button>
           </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full"
+            onClick={() => fetchOrder(true)}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
+          </Button>
+        </div>
 
-          {/* Status Card */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle>Estado del pedido</CardTitle>
-                {order.status === 'cancelled' ? (
-                  <Badge variant="destructive">Cancelado</Badge>
-                ) : (
-                  <Badge className="bg-primary">{STATUS_STEPS[currentStep]?.label}</Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {order.status === 'cancelled' ? (
-                <p className="text-center text-muted-foreground py-4">
-                  Este pedido fue cancelado
-                </p>
+        <div className="space-y-4">
+          {/* Status Hero Card */}
+          <Card className={cn(
+            "rounded-2xl overflow-hidden border-0 shadow-lg",
+            isCancelled && "bg-destructive/5",
+            isDelivered && "bg-green-500/5"
+          )}>
+            <CardContent className="p-6">
+              {isCancelled ? (
+                <div className="text-center py-4">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+                    <XCircle className="w-8 h-8 text-destructive" />
+                  </div>
+                  <h2 className="font-bold text-lg text-destructive">Pedido cancelado</h2>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    Este pedido fue cancelado
+                  </p>
+                </div>
               ) : (
                 <>
-                  <Progress value={progress} className="mb-6" />
-                  
-                  <div className="flex justify-between">
-                    {STATUS_STEPS.map((step, index) => {
-                      const isCompleted = index <= currentStep;
-                      const isCurrent = index === currentStep;
-                      
-                      return (
-                        <div 
-                          key={step.status}
-                          className={`flex flex-col items-center text-center ${
-                            isCompleted ? 'text-primary' : 'text-muted-foreground'
-                          }`}
-                        >
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
-                            isCompleted ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                          } ${isCurrent ? 'ring-2 ring-primary ring-offset-2' : ''}`}>
-                            {step.icon}
+                  {/* Current Status Display */}
+                  <div className="text-center mb-6">
+                    <div className={cn(
+                      "w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 transition-all",
+                      isDelivered 
+                        ? "bg-green-500 text-white" 
+                        : "bg-primary text-primary-foreground animate-pulse"
+                    )}>
+                      {STATUS_STEPS[currentStep]?.icon}
+                    </div>
+                    <h2 className="font-bold text-xl">{STATUS_STEPS[currentStep]?.label}</h2>
+                    <p className="text-muted-foreground text-sm mt-1">
+                      {STATUS_STEPS[currentStep]?.description}
+                    </p>
+                    
+                    {/* Estimated Time */}
+                    {!isDelivered && estimatedTime && (
+                      <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-muted rounded-full">
+                        <Timer className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium">{estimatedTime}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Progress Steps */}
+                  <div className="relative">
+                    {/* Progress Line */}
+                    <div className="absolute top-5 left-0 right-0 h-0.5 bg-muted">
+                      <div 
+                        className="h-full bg-primary transition-all duration-500"
+                        style={{ width: `${(currentStep / (STATUS_STEPS.length - 1)) * 100}%` }}
+                      />
+                    </div>
+                    
+                    {/* Step Indicators */}
+                    <div className="relative flex justify-between">
+                      {STATUS_STEPS.map((step, index) => {
+                        const isCompleted = index <= currentStep;
+                        const isCurrent = index === currentStep;
+                        
+                        return (
+                          <div key={step.status} className="flex flex-col items-center">
+                            <div className={cn(
+                              "w-10 h-10 rounded-full flex items-center justify-center transition-all z-10",
+                              isCompleted 
+                                ? "bg-primary text-primary-foreground" 
+                                : "bg-muted text-muted-foreground",
+                              isCurrent && "ring-4 ring-primary/20 scale-110"
+                            )}>
+                              {step.icon}
+                            </div>
+                            <span className={cn(
+                              "text-[10px] mt-2 font-medium text-center",
+                              isCompleted ? "text-foreground" : "text-muted-foreground"
+                            )}>
+                              {step.label}
+                            </span>
                           </div>
-                          <span className="text-xs font-medium hidden sm:block">{step.label}</span>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 </>
               )}
             </CardContent>
           </Card>
 
-          {/* Order Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Detalle del pedido</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          {/* Order Details Card */}
+          <Card className="rounded-2xl border-0 shadow-md">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold">Tu pedido</h3>
+                <Badge variant="outline" className="rounded-full">
+                  {order.order_type === 'delivery' ? '🛵 Delivery' : '🏃 Retiro'}
+                </Badge>
+              </div>
+              
               {/* Items */}
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {items?.map(item => (
-                  <div key={item.id} className="flex justify-between text-sm">
-                    <span>{item.quantity}x {item.product?.name || 'Producto'}</span>
-                    <span className="text-muted-foreground">{formatPrice(item.quantity * item.unit_price)}</span>
+                  <div key={item.id} className="flex justify-between items-start">
+                    <div className="flex items-start gap-2">
+                      <span className="text-sm font-medium bg-muted px-2 py-0.5 rounded">
+                        {item.quantity}x
+                      </span>
+                      <span className="text-sm">{item.product?.name || 'Producto'}</span>
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      {formatPrice(item.quantity * item.unit_price)}
+                    </span>
                   </div>
                 ))}
               </div>
 
-              <div className="border-t pt-3 space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Subtotal</span>
+              <Separator className="my-4" />
+
+              {/* Totals */}
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Subtotal</span>
                   <span>{formatPrice(order.subtotal)}</span>
                 </div>
                 {(order.delivery_fee || 0) > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Envío</span>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Envío</span>
                     <span>{formatPrice(order.delivery_fee || 0)}</span>
                   </div>
                 )}
-                <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                <div className="flex justify-between font-bold text-base pt-2">
                   <span>Total</span>
                   <span className="text-primary">{formatPrice(order.total)}</span>
                 </div>
               </div>
-
-              {/* Order Info */}
-              <div className="border-t pt-4 text-sm space-y-2">
-                <p className="text-muted-foreground">
-                  Pedido realizado a las {formatTime(order.created_at)}
-                </p>
-                <p className="flex items-center gap-2">
-                  <Badge variant="outline">
-                    {order.order_type === 'delivery' ? 'Delivery' : 'Retiro en local'}
-                  </Badge>
-                </p>
-                {order.delivery_address && (
-                  <p className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-muted-foreground" />
-                    {order.delivery_address}
-                  </p>
-                )}
-              </div>
             </CardContent>
           </Card>
 
-          {/* Branch Info */}
-          {branch && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Sucursal</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm space-y-2">
-                <p className="font-medium">Hoppiness {branch.name}</p>
-                <p className="text-muted-foreground flex items-center gap-1">
-                  <MapPin className="w-3 h-3" />
-                  {branch.address}, {branch.city}
-                </p>
-                {branch.phone && (
-                  <p className="text-muted-foreground flex items-center gap-1">
-                    <Phone className="w-3 h-3" />
-                    {branch.phone}
-                  </p>
+          {/* Delivery/Pickup Info */}
+          {(order.delivery_address || branch) && (
+            <Card className="rounded-2xl border-0 shadow-md">
+              <CardContent className="p-5 space-y-4">
+                {order.delivery_address && (
+                  <div className="flex gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <MapPin className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Dirección de entrega</p>
+                      <p className="text-sm font-medium">{order.delivery_address}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {branch && (
+                  <div className="flex gap-3">
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                      <ShoppingBag className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground">
+                        {order.order_type === 'delivery' ? 'Preparado en' : 'Retirá en'}
+                      </p>
+                      <p className="text-sm font-medium">Hoppiness {branch.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {branch.address}, {branch.city}
+                      </p>
+                      {branch.phone && (
+                        <a 
+                          href={`tel:${branch.phone}`} 
+                          className="text-xs text-primary flex items-center gap-1 mt-1 hover:underline"
+                        >
+                          <Phone className="w-3 h-3" />
+                          {branch.phone}
+                        </a>
+                      )}
+                    </div>
+                  </div>
                 )}
               </CardContent>
             </Card>
           )}
+
+          {/* Order Time */}
+          <div className="text-center text-xs text-muted-foreground py-2">
+            Pedido realizado el {formatDate(order.created_at)} a las {formatTime(order.created_at)}
+          </div>
         </div>
       </div>
 
