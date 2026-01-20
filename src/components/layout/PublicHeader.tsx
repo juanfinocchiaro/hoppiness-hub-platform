@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { Button } from '@/components/ui/button';
-import { ShoppingBag, Menu as MenuIcon, LogOut, LayoutDashboard, Store, User, ChevronDown, Package, Phone, Users2 } from 'lucide-react';
+import { ShoppingBag, Menu as MenuIcon, LogOut, LayoutDashboard, Store, User, ChevronDown, Package, Phone, Users2, Columns } from 'lucide-react';
 import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
 import {
   Sheet,
@@ -137,6 +137,15 @@ export function PublicHeader() {
                   </DropdownMenuItem>
                 )}
                 
+                {canUseBrandPanel && canUseLocalPanel && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/conciliacion" className="cursor-pointer">
+                      <Columns className="w-4 h-4 mr-2" />
+                      Conciliación
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive focus:text-destructive">
                   <LogOut className="w-4 h-4 mr-2" />
@@ -253,6 +262,20 @@ export function PublicHeader() {
                         >
                           <LayoutDashboard className="w-4 h-4 mr-2" />
                           Mi Marca
+                        </Button>
+                      </Link>
+                    )}
+                    
+                    {canUseBrandPanel && canUseLocalPanel && (
+                      <Link to="/conciliacion" onClick={() => setOpen(false)}>
+                        <Button 
+                          variant="ghost" 
+                          className={`w-full justify-start text-primary-foreground hover:bg-primary-foreground/10 ${
+                            isActive('/conciliacion') ? 'bg-primary-foreground/20' : ''
+                          }`}
+                        >
+                          <Columns className="w-4 h-4 mr-2" />
+                          Conciliación
                         </Button>
                       </Link>
                     )}
