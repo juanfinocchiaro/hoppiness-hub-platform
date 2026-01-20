@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Home, ArrowRight } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Home, ArrowRight, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCart } from '@/contexts/CartContext';
 import { BranchCard, DeliveryModeToggle, AddressInput } from '@/components/store/BranchSelector';
@@ -288,15 +289,30 @@ export default function Pedir() {
                   )}
                 </div>
                 
-                <div className="space-y-3 max-h-[40vh] overflow-y-auto">
-                  {openBranches.map(branch => (
-                    <BranchCard
-                      key={branch.id}
-                      branch={branch}
-                      isRecommended={matchedBranch?.id === branch.id}
-                      onSelect={() => handleSelectBranch(branch)}
-                    />
-                  ))}
+                {/* Scrollable branch list with visible scrollbar */}
+                <div className="relative">
+                  <ScrollArea className="h-[40vh] pr-3">
+                    <div className="space-y-3">
+                      {openBranches.map(branch => (
+                        <BranchCard
+                          key={branch.id}
+                          branch={branch}
+                          isRecommended={matchedBranch?.id === branch.id}
+                          onSelect={() => handleSelectBranch(branch)}
+                        />
+                      ))}
+                    </div>
+                  </ScrollArea>
+                  
+                  {/* Scroll hint indicator */}
+                  {openBranches.length > 2 && (
+                    <div className="absolute bottom-0 left-0 right-3 h-12 bg-gradient-to-t from-card to-transparent pointer-events-none flex items-end justify-center pb-1">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground animate-[bounce_2s_ease-in-out_infinite]">
+                        <ChevronDown className="w-3 h-3" />
+                        <span>Deslizá para ver más</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {closedBranches.length > 0 && (
