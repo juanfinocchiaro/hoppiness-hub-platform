@@ -168,7 +168,7 @@ export default function PedirBranch() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-24 overflow-x-hidden">
       {/* Branch Change Confirmation Modal */}
       <BranchChangeModal
         open={showBranchChangeModal}
