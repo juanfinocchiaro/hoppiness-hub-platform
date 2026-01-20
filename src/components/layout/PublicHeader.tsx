@@ -17,13 +17,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export function PublicHeader() {
   const { user, signOut } = useAuth();
   const { canUseLocalPanel, canUseBrandPanel, canUseMiCuenta, loading: roleLoading } = useUserRoles();
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const [isInIframe, setIsInIframe] = useState(false);
+
+  // Detect if we're inside an iframe
+  useEffect(() => {
+    setIsInIframe(window.self !== window.top);
+  }, []);
 
   const isActive = (path: string) => location.pathname.startsWith(path);
 
@@ -137,7 +143,7 @@ export function PublicHeader() {
                   </DropdownMenuItem>
                 )}
                 
-                {canUseBrandPanel && canUseLocalPanel && (
+                {canUseBrandPanel && canUseLocalPanel && !isInIframe && (
                   <DropdownMenuItem asChild>
                     <Link to="/conciliacion" className="cursor-pointer">
                       <Columns className="w-4 h-4 mr-2" />
@@ -266,7 +272,7 @@ export function PublicHeader() {
                       </Link>
                     )}
                     
-                    {canUseBrandPanel && canUseLocalPanel && (
+                    {canUseBrandPanel && canUseLocalPanel && !isInIframe && (
                       <Link to="/conciliacion" onClick={() => setOpen(false)}>
                         <Button 
                           variant="ghost" 
