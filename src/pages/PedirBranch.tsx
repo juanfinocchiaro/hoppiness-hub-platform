@@ -558,59 +558,66 @@ export default function PedirBranch() {
         </div>
       )}
 
-      {/* Product Customization Sheet - Immersive Full Screen */}
+      {/* Product Customization Sheet - Clean Modal Design */}
       <Sheet open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
-        <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl p-0 flex flex-col">
-          {/* Compact Image Header */}
-          <div className="relative h-48 md:h-56 w-full shrink-0">
-            {selectedProduct?.image_url ? (
-              <img 
-                src={selectedProduct.image_url} 
-                alt={selectedProduct.name} 
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-                <span className="text-6xl">🍔</span>
-              </div>
-            )}
-            {/* Gradient overlay for close button visibility */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent" />
-            
-            {/* Close Button */}
-            <Button 
-              variant="ghost" 
-              size="icon"
-              className="absolute top-4 right-4 bg-black/30 hover:bg-black/50 text-white rounded-full h-10 w-10"
-              onClick={() => setSelectedProduct(null)}
-            >
-              <X className="w-5 h-5" />
-            </Button>
+        <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl p-0 flex flex-col bg-background">
+          {/* Handle bar */}
+          <div className="flex justify-center pt-3 pb-2">
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
           </div>
+          
+          {/* Close Button */}
+          <Button 
+            variant="ghost" 
+            size="icon"
+            className="absolute top-3 right-3 bg-muted hover:bg-muted/80 text-foreground rounded-full h-8 w-8 z-10"
+            onClick={() => setSelectedProduct(null)}
+          >
+            <X className="w-4 h-4" />
+          </Button>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          <div className="flex-1 overflow-y-auto px-5 pb-4">
+            {/* Product Image - Compact & Centered */}
+            <div className="flex justify-center mb-4">
+              <div className="relative w-40 h-40 rounded-2xl overflow-hidden shadow-lg">
+                {selectedProduct?.image_url ? (
+                  <img 
+                    src={selectedProduct.image_url} 
+                    alt={selectedProduct.name} 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center">
+                    <span className="text-5xl">🍔</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Title and Price */}
-            <div>
-              <h2 className="text-2xl font-bold">{selectedProduct?.name}</h2>
-              <p className="text-xl font-bold text-primary mt-1">
+            <div className="text-center mb-5">
+              <h2 className="text-xl font-bold">{selectedProduct?.name}</h2>
+              <p className="text-2xl font-bold text-primary mt-1">
                 {formatPrice(selectedProduct?.finalPrice || 0)}
               </p>
               {selectedProduct?.description && (
-                <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
+                <p className="text-muted-foreground mt-2 text-sm leading-relaxed max-w-md mx-auto">
                   {selectedProduct.description}
                 </p>
               )}
             </div>
 
             {/* Upsell Options */}
-            <div className="space-y-3">
-              <h4 className="font-bold">¿Querés hacerla más épica?</h4>
+            <div className="space-y-2 mb-4">
+              <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">¿Querés hacerla más épica?</h4>
               {UPSELL_OPTIONS.map(option => (
                 <div 
                   key={option.id}
-                  className={`flex items-center space-x-3 p-4 rounded-xl bg-muted/50 cursor-pointer hover:bg-muted transition-colors ${
-                    selectedExtras.includes(option.id) ? 'ring-2 ring-primary bg-primary/10' : ''
+                  className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                    selectedExtras.includes(option.id) 
+                      ? 'border-primary bg-primary/5 shadow-sm' 
+                      : 'border-border hover:border-primary/50 hover:bg-muted/50'
                   }`}
                   onClick={() => {
                     setSelectedExtras(prev => 
@@ -625,22 +632,22 @@ export default function PedirBranch() {
                     onCheckedChange={() => {}}
                     className="h-5 w-5"
                   />
-                  <span className="text-2xl">{option.emoji}</span>
-                  <span className="flex-1 font-medium">{option.label}</span>
+                  <span className="text-xl">{option.emoji}</span>
+                  <span className="flex-1 font-medium text-sm">{option.label}</span>
                   <span className="text-sm text-primary font-bold">+{formatPrice(option.price)}</span>
                 </div>
               ))}
             </div>
 
             {/* Notes */}
-            <div className="bg-muted/50 rounded-xl p-4">
-              <Label htmlFor="notes" className="font-bold">¿Alguna indicación especial?</Label>
+            <div className="rounded-xl border p-3">
+              <Label htmlFor="notes" className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">¿Alguna indicación especial?</Label>
               <Textarea
                 id="notes"
                 placeholder="Ej: Sin cebolla, punto de la carne..."
                 value={productNotes}
                 onChange={(e) => setProductNotes(e.target.value)}
-                className="mt-2 bg-background"
+                className="mt-2 bg-transparent border-0 p-0 focus-visible:ring-0 resize-none"
                 rows={2}
               />
             </div>
@@ -649,7 +656,7 @@ export default function PedirBranch() {
           {/* Sticky Footer */}
           <div className="shrink-0 p-4 border-t bg-background">
             <Button 
-              className="w-full h-14 text-lg"
+              className="w-full h-12 text-base font-semibold"
               onClick={addToCartWithExtras}
             >
               <Plus className="w-5 h-5 mr-2" />
