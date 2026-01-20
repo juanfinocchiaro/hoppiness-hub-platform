@@ -2004,6 +2004,7 @@ export type Database = {
         Row: {
           avg_daily_consumption: number | null
           category: string | null
+          category_id: string | null
           cost_category: string | null
           cost_per_unit: number | null
           cost_updated_at: string | null
@@ -2026,6 +2027,7 @@ export type Database = {
         Insert: {
           avg_daily_consumption?: number | null
           category?: string | null
+          category_id?: string | null
           cost_category?: string | null
           cost_per_unit?: number | null
           cost_updated_at?: string | null
@@ -2048,6 +2050,7 @@ export type Database = {
         Update: {
           avg_daily_consumption?: number | null
           category?: string | null
+          category_id?: string | null
           cost_category?: string | null
           cost_per_unit?: number | null
           cost_updated_at?: string | null
@@ -2067,7 +2070,15 @@ export type Database = {
           updated_at?: string
           usage_unit?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ingredients_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "ingredient_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       inventory_count_lines: {
         Row: {
