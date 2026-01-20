@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,6 +36,7 @@ import {
 import { toast } from 'sonner';
 import { useCart } from '@/contexts/CartContext';
 import { CartSummary } from '@/components/store/Cart';
+import { TracePanel } from '@/components/debug/TracePanel';
 import { traceLog } from '@/lib/trace';
 import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
 import type { Enums } from '@/integrations/supabase/types';
@@ -48,6 +49,8 @@ const CASH_PRESETS = [5000, 10000, 20000, 50000];
 
 export default function Checkout() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const debug = new URLSearchParams(location.search).has('debug');
   const {
     branch,
     orderMode,
@@ -100,10 +103,12 @@ export default function Checkout() {
   
   // Validation
   const isDelivery = orderMode === 'delivery';
+  const isCashOk = paymentMethod !== 'efectivo' ? true : cashAmountNum >= total && cashAmountNum > 0;
   const isFormValid = customerName.trim() && 
                       customerPhone.trim() && 
                       (!isDelivery || deliveryAddress.trim()) &&
-                      (!wantsInvoice || invoiceType === 'B' || (customerCuit.trim() && customerBusinessName.trim()));
+                      (!wantsInvoice || invoiceType === 'B' || (customerCuit.trim() && customerBusinessName.trim())) &&
+                      isCashOk;
   
   const handleSubmit = async () => {
     traceLog('checkout', 'submit_clicked', {
@@ -298,6 +303,7 @@ export default function Checkout() {
       
       <div className="container mx-auto px-4 py-6 max-w-2xl">
         <div className="space-y-6">
+          {debug && <TracePanel />}
           
           {/* Order Summary Card */}
           <Card>
@@ -491,9 +497,9 @@ export default function Checkout() {
               {/* Cash amount calculator */}
               {paymentMethod === 'efectivo' && (
                 <div className="space-y-3 pt-2">
-                  <Label>¿Con cuánto abonás? (opcional)</Label>
+                  <Label>¿Con cuánto abonás? *</Label>
                   <p className="text-xs text-muted-foreground">
-                    Si no lo completás, igual podés confirmar el pedido.
+                    Es obligatorio para calcular el vuelto.
                   </p>
                   <div className="flex gap-2 flex-wrap">
                     {CASH_PRESETS.map(amount => (
