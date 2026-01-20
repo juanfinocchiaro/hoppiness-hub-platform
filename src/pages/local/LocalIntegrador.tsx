@@ -181,13 +181,28 @@ export default function LocalIntegrador() {
   const { data: settings } = useQuery({
     queryKey: ['integrator-settings', branchId],
     queryFn: async (): Promise<IntegratorSettings | null> => {
-      const { data } = await db
+      const { data, error } = await db
         .from('branch_integrator_settings')
         .select('*')
         .eq('branch_id', branchId)
-        .single();
+        .maybeSingle();
       
-      return data;
+      if (error) throw error;
+      
+      // Return defaults if no settings exist
+      if (!data) {
+        return {
+          auto_accept_channels: { mostrador: true, pos: true },
+          max_wait_minutes: { web: 10, pedidosya: 5, rappi: 5, mp_delivery: 10 },
+          sound_enabled: true,
+          alert_after_minutes: 5,
+          prep_time_counter: 15,
+          prep_time_takeaway: 15,
+          prep_time_delivery: 35,
+        };
+      }
+      
+      return data as IntegratorSettings;
     },
     enabled: !!branchId,
   });
@@ -328,10 +343,33 @@ export default function LocalIntegrador() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-10 w-64" />
+        <div className="flex items-center gap-3">
+          <Inbox className="h-6 w-6 text-primary animate-pulse" />
+          <div>
+            <h1 className="text-2xl font-bold">Integrador de Pedidos</h1>
+            <p className="text-muted-foreground">Buscando pedidos pendientes...</p>
+          </div>
+        </div>
         <div className="space-y-4">
           {[1, 2, 3].map(i => (
-            <Skeleton key={i} className="h-48" />
+            <Card key={i} className="overflow-hidden">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <Skeleton className="h-6 w-6 rounded" />
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-5 w-20 ml-auto" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-4 w-64" />
+                  <Skeleton className="h-4 w-40" />
+                </div>
+                <div className="flex gap-3 mt-4">
+                  <Skeleton className="h-10 flex-1" />
+                  <Skeleton className="h-10 flex-1" />
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
