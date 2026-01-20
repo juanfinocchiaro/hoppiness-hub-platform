@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useRoleLanding } from '@/hooks/useRoleLanding';
+import { usePanelAccess } from '@/hooks/usePanelAccess';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +26,8 @@ import {
   Landmark,
   ShieldCheck,
   Boxes,
-  ShoppingCart
+  ShoppingCart,
+  AlertCircle
 } from 'lucide-react';
 import {
   Sheet,
@@ -110,10 +112,10 @@ const allSections: NavSection[] = [catalogoSection, insumosSection, equipoSectio
 
 export default function AdminDashboard() {
   const { user, signOut, loading } = useAuth();
-  const { avatarInfo, canOperate, canAccessLocal } = useRoleLanding();
+  const { avatarInfo, canAccessLocal } = useRoleLanding();
+  const { canUseBrandPanel, canUseLocalPanel, branchAccess, loading: panelLoading } = usePanelAccess();
   const navigate = useNavigate();
   const location = useLocation();
-  const [hasAssignedBranch, setHasAssignedBranch] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     catalogo: true,
     insumos: true,
@@ -145,57 +147,52 @@ export default function AdminDashboard() {
   }, [avatarInfo.type]);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !panelLoading && !user) {
       navigate('/ingresar');
-    }
-  }, [user, loading, navigate]);
-
-  // Check if admin has any branch to access (either explicitly assigned or any branch exists for admin)
-  useEffect(() => {
-    async function checkBranchAccess() {
-      if (!user) return;
-      
-      // First check if user has explicit branch permissions
-      const { data: permissions, error: permError } = await supabase
-        .from('branch_permissions')
-        .select('id')
-        .eq('user_id', user.id)
-        .limit(1);
-      
-      if (!permError && permissions && permissions.length > 0) {
-        setHasAssignedBranch(true);
-        return;
-      }
-      
-      // If admin, check if any branches exist (admins have access to all)
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .limit(1);
-      
-      if (roleData && roleData.length > 0) {
-        const { data: branches } = await supabase
-          .from('branches')
-          .select('id')
-          .limit(1);
-        
-        if (branches && branches.length > 0) {
-          setHasAssignedBranch(true);
-        }
-      }
+      return;
     }
     
-    checkBranchAccess();
-  }, [user]);
+    // Redirect if user doesn't have brand panel access
+    if (!loading && !panelLoading && user && !canUseBrandPanel) {
+      // If they have local panel access, redirect there
+      if (canUseLocalPanel && branchAccess.length > 0) {
+        navigate(`/local/${branchAccess[0].id}`);
+      } else {
+        navigate('/');
+      }
+    }
+  }, [user, loading, panelLoading, canUseBrandPanel, canUseLocalPanel, branchAccess, navigate]);
 
-  if (loading) {
+  // Check if user can access local panel (from new panel access system)
+  const hasLocalPanelAccess = canUseLocalPanel && branchAccess.length > 0;
+
+  if (loading || panelLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse flex flex-col items-center gap-4">
           <div className="w-16 h-16 rounded-2xl gradient-primary" />
           <p className="text-muted-foreground">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied if no brand panel access
+  if (!canUseBrandPanel) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <AlertCircle className="w-16 h-16 text-muted-foreground mx-auto" />
+          <h1 className="text-xl font-bold">Sin acceso al Panel Marca</h1>
+          <p className="text-muted-foreground">No tenés permisos para acceder a esta sección.</p>
+          {canUseLocalPanel && branchAccess.length > 0 && (
+            <Link to={`/local/${branchAccess[0].id}`}>
+              <Button>
+                <Building2 className="w-4 h-4 mr-2" />
+                Ir a Mi Local
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
     );
@@ -302,9 +299,9 @@ export default function AdminDashboard() {
                 <h2 className="text-lg font-bold">Panel Marca</h2>
               </div>
               <NavContent />
-              {hasAssignedBranch && canAccessLocal && (
+              {hasLocalPanelAccess && (
                 <div className="mt-4 pt-4 border-t">
-                  <Link to="/local">
+                  <Link to={`/local/${branchAccess[0].id}`}>
                     <Button variant="outline" className="w-full justify-start">
                       <Building2 className="w-4 h-4 mr-3" />
                       Panel Mi Local
@@ -341,9 +338,9 @@ export default function AdminDashboard() {
             <NavContent />
           </div>
 
-          {hasAssignedBranch && canAccessLocal && (
+          {hasLocalPanelAccess && (
             <div className="px-4 pb-2">
-              <Link to="/local">
+              <Link to={`/local/${branchAccess[0].id}`}>
                 <Button variant="outline" className="w-full justify-start">
                   <Building2 className="w-4 h-4 mr-3" />
                   Panel Mi Local
