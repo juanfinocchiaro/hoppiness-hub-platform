@@ -81,6 +81,11 @@ export default function Checkout() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // Redirect if no items
   useEffect(() => {
     if (items.length === 0) {
