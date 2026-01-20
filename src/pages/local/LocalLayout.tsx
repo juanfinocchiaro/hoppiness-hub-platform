@@ -6,6 +6,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useRoleLanding } from '@/hooks/useRoleLanding';
 import { usePanelAccess } from '@/hooks/usePanelAccess';
 import { useEmbedMode } from '@/hooks/useEmbedMode';
+import { useQuery } from '@tanstack/react-query';
 import { ExternalLink } from '@/components/ui/ExternalLink';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,9 +43,6 @@ import {
   ClipboardList,
   DollarSign,
   History,
-  QrCode,
-  ToggleLeft,
-  Plus,
   Calculator,
   FileText,
   Clock,
@@ -55,7 +53,14 @@ import {
   Boxes,
   ClipboardCheck,
   UserCircle,
-  AlertCircle
+  AlertCircle,
+  BarChart3,
+  TrendingUp,
+  ShoppingCart,
+  CreditCard,
+  Building2,
+  FileStack,
+  Layers,
 } from 'lucide-react';
 import {
   Sheet,
@@ -95,11 +100,69 @@ export default function LocalLayout() {
   const { branchId } = useParams();
   
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['operacion']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['vision', 'operacion']));
   const [showClockInModal, setShowClockInModal] = useState(false);
 
   // Use branchAccess from usePanelAccess instead of accessibleBranches from useUserRole
   const accessibleBranches = branchAccess;
+
+  // Check if user requires attendance - simplified check
+  const { data: requiresAttendance } = useQuery({
+    queryKey: ['user-requires-attendance', branchId, user?.id],
+    queryFn: async () => {
+      if (!branchId || !user?.id) return false;
+      
+      // Check if user has an employee record for this branch
+      const { data } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('branch_id', branchId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      return !!data;
+    },
+    enabled: !!branchId && !!user?.id,
+  });
+
+  // Check current attendance status
+  const { data: attendanceStatus } = useQuery({
+    queryKey: ['current-attendance-status', branchId, user?.id],
+    queryFn: async () => {
+      if (!branchId || !user?.id) return null;
+      
+      // Get employee for this user
+      const { data: employee } = await supabase
+        .from('employees')
+        .select('id, current_status')
+        .eq('branch_id', branchId)
+        .eq('user_id', user.id)
+        .single();
+      
+      if (!employee) return null;
+      
+      // Get last attendance log if working
+      if (employee.current_status === 'WORKING') {
+        const { data: lastLog } = await supabase
+          .from('attendance_logs')
+          .select('timestamp')
+          .eq('employee_id', employee.id)
+          .eq('log_type', 'IN')
+          .order('timestamp', { ascending: false })
+          .limit(1)
+          .single();
+        
+        return {
+          isWorking: true,
+          entryTime: lastLog?.timestamp ? new Date(lastLog.timestamp) : null,
+        };
+      }
+      
+      return { isWorking: false, entryTime: null };
+    },
+    enabled: !!branchId && !!user?.id && requiresAttendance === true,
+    refetchInterval: 60000, // Refresh every minute
+  });
 
   // Redirect if not authenticated or no access
   useEffect(() => {
@@ -209,64 +272,89 @@ export default function LocalLayout() {
   const canManageConfig = isAdmin || isGerente || currentPermissions?.can_manage_staff;
   const canViewReports = isAdmin || isGerente || currentPermissions?.can_view_reports;
   const isFranquiciado = roles.includes('franquiciado');
-  const canViewPL = isAdmin || isFranquiciado; // Solo admin o franquiciado pueden ver P&L
+  const canViewPL = isAdmin || isFranquiciado;
 
-  // Navigation structure - Nueva estructura reorganizada
+  // Format working time
+  const formatWorkingTime = (entryTime: Date | null): string => {
+    if (!entryTime) return '';
+    const now = new Date();
+    const diffMs = now.getTime() - entryTime.getTime();
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+  };
+
+  const formatTime = (date: Date | null): string => {
+    if (!date) return '';
+    return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Navigation structure - Nueva estructura reorganizada según spec
   const navSections: NavSection[] = [
     {
-      id: 'dashboard',
-      label: 'Escritorio',
-      icon: LayoutDashboard,
+      id: 'vision',
+      label: 'Visión General',
+      icon: BarChart3,
       show: true,
       items: [
-        { to: '', label: 'Resumen del Día', icon: LayoutDashboard, show: true },
+        { to: '', label: 'Dashboard', icon: LayoutDashboard, show: true },
+        { to: 'cierre', label: 'Cierre del Día', icon: ClipboardCheck, show: canManageConfig },
       ]
     },
     {
       id: 'operacion',
-      label: 'Operación Diaria',
+      label: 'Operación',
       icon: Zap,
       show: true,
       items: [
         { to: 'pos', label: 'Punto de Venta', icon: Monitor, show: true },
         { to: 'kds', label: 'Cocina (KDS)', icon: ChefHat, show: true },
         { to: 'pedidos', label: 'Pedidos Activos', icon: ClipboardList, show: true },
-        { to: 'historial', label: 'Historial', icon: History, show: true },
+        { to: 'historial', label: 'Historial de Pedidos', icon: History, show: true },
       ]
     },
     {
       id: 'caja',
-      label: 'Caja y Pagos',
+      label: 'Caja',
       icon: Wallet,
       show: canManageConfig,
       items: [
         { to: 'caja', label: 'Caja del Día', icon: Calculator, show: true },
-        { to: 'cuenta-corriente', label: 'Cuenta Corriente', icon: UserCircle, show: true },
-        { to: 'cierre', label: 'Cierre del Día', icon: ClipboardCheck, show: true },
+        { to: 'clientes', label: 'Cuenta Corriente Clientes', icon: UserCircle, show: true },
       ]
     },
     {
       id: 'stock',
-      label: 'Stock y Compras',
+      label: 'Stock',
       icon: Boxes,
       show: canManageProducts,
       items: [
         { to: 'stock', label: 'Stock Actual', icon: Boxes, show: true },
         { to: 'stock/pedir', label: 'Pedir a Proveedor', icon: Truck, show: true },
-        { to: 'stock/factura', label: 'Cargar Factura', icon: FileText, show: true },
-        { to: 'stock/historial', label: 'Historial Movimientos', icon: History, show: true },
         { to: 'stock/conteo', label: 'Conteo Inventario', icon: ClipboardCheck, show: true },
-        { to: 'stock/cmv', label: 'Reporte CMV', icon: Calculator, show: canViewReports },
+      ]
+    },
+    {
+      id: 'compras',
+      label: 'Compras',
+      icon: ShoppingCart,
+      show: canManageProducts,
+      items: [
+        { to: 'compras/factura', label: 'Cargar Factura', icon: FileText, show: true },
+        { to: 'compras/proveedores', label: 'Proveedores', icon: Building2, show: true },
+        { to: 'compras/cuentas', label: 'Cuentas Corrientes', icon: CreditCard, show: true },
+        { to: 'compras/historial', label: 'Historial de Compras', icon: FileStack, show: true },
       ]
     },
     {
       id: 'menu',
-      label: 'Menú del Local',
+      label: 'Menú',
       icon: Package,
       show: canManageProducts,
       items: [
         { to: 'menu/productos', label: 'Productos', icon: Package, show: true },
-        { to: 'menu/extras', label: 'Extras', icon: Plus, show: true },
+        { to: 'menu/combos', label: 'Combos', icon: Layers, show: true },
+        { to: 'menu/extras', label: 'Extras', icon: Receipt, show: true },
       ]
     },
     {
@@ -276,10 +364,21 @@ export default function LocalLayout() {
       show: canManageConfig,
       items: [
         { to: 'equipo', label: 'Mi Equipo', icon: Users, show: true },
-        { to: 'equipo/fichar', label: 'Fichar', icon: Timer, show: true },
         { to: 'equipo/horarios', label: 'Horarios', icon: Clock, show: true },
         { to: 'equipo/horas', label: 'Horas del Mes', icon: Calculator, show: canViewReports },
         { to: 'equipo/liquidacion', label: 'Liquidación', icon: Wallet, show: canViewReports },
+      ]
+    },
+    {
+      id: 'reportes',
+      label: 'Reportes',
+      icon: TrendingUp,
+      show: canViewReports,
+      items: [
+        { to: 'reportes/ventas', label: 'Ventas', icon: BarChart3, show: true },
+        { to: 'reportes/resultados', label: 'Resultados (P&L)', icon: TrendingUp, show: canViewPL },
+        { to: 'reportes/cmv', label: 'CMV', icon: Calculator, show: true },
+        { to: 'reportes/movimientos-stock', label: 'Movimientos de Stock', icon: History, show: true },
       ]
     },
     {
@@ -289,10 +388,8 @@ export default function LocalLayout() {
       show: canManageConfig,
       items: [
         { to: 'finanzas/movimientos', label: 'Movimientos', icon: Receipt, show: true },
-        { to: 'finanzas/proveedores', label: 'Proveedores', icon: Truck, show: true },
         { to: 'finanzas/facturas', label: 'Facturas Emitidas', icon: FileText, show: true },
         { to: 'finanzas/obligaciones', label: 'Obligaciones', icon: DollarSign, show: canViewReports },
-        { to: 'finanzas/reportes', label: 'Reportes', icon: FileText, show: canViewReports },
       ]
     },
     {
@@ -301,7 +398,7 @@ export default function LocalLayout() {
       icon: Settings,
       show: canManageConfig,
       items: [
-        { to: 'config/local', label: 'Datos del Local', icon: Store, show: true },
+        { to: 'config/datos', label: 'Datos del Local', icon: Store, show: true },
         { to: 'config/zonas', label: 'Zonas Delivery', icon: MapPin, show: true },
         { to: 'config/integraciones', label: 'Integraciones', icon: Link2, show: true },
         { to: 'config/impresoras', label: 'Impresoras', icon: Printer, show: true },
@@ -376,6 +473,39 @@ export default function LocalLayout() {
     // Match exact path or path that starts with the item's path
     const itemPath = `/local/${branchId}/${item.to}`;
     return location.pathname === itemPath || location.pathname.startsWith(`${itemPath}/`);
+  };
+
+  // Clock In Button Component
+  const ClockInButton = () => {
+    if (!requiresAttendance) return null;
+
+    const isWorking = attendanceStatus?.isWorking ?? false;
+    const entryTime = attendanceStatus?.entryTime;
+
+    return (
+      <Button 
+        variant={isWorking ? 'outline' : 'default'}
+        className={`w-full justify-start gap-3 h-auto py-3 ${
+          isWorking 
+            ? 'border-primary/30 bg-primary/5 hover:bg-primary/10' 
+            : ''
+        }`}
+        onClick={() => setShowClockInModal(true)}
+      >
+        <Timer className={`h-5 w-5 ${isWorking ? 'text-primary' : ''}`} />
+        <div className="text-left">
+          <div className="font-medium">
+            {isWorking ? 'Fichar Salida' : 'Fichar Entrada'}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {isWorking && entryTime
+              ? `Entrada: ${formatTime(entryTime)} · Trabajando hace ${formatWorkingTime(entryTime)}`
+              : 'Click para registrar entrada'
+            }
+          </div>
+        </div>
+      </Button>
+    );
   };
 
   const NavContent = () => (
@@ -473,24 +603,31 @@ export default function LocalLayout() {
                 <Menu className="w-5 h-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-4">
-              <div className="mb-6">
-                <h2 className="text-lg font-bold">Panel Mi Local</h2>
+            <SheetContent side="left" className="w-72 p-4">
+              <div className="mb-4">
+                <h2 className="text-lg font-bold">Mi Local</h2>
                 <p className="text-sm text-muted-foreground">{selectedBranch?.name}</p>
               </div>
+              
+              {/* Mobile Clock In Button */}
+              <div className="mb-4">
+                <ClockInButton />
+              </div>
+              
               <NavContent />
+              
               <div className="absolute bottom-4 left-4 right-4 space-y-2">
                 {canUseBrandPanel && !isEmbedded && (
                   <ExternalLink to="/admin">
                     <Button variant="outline" className="w-full" size="sm">
-                      <Home className="w-4 h-4 mr-2" />
-                      Ir a Panel Marca
+                      <Building2 className="w-4 h-4 mr-2" />
+                      Panel Marca
                     </Button>
                   </ExternalLink>
                 )}
                 <Button variant="outline" className="w-full" onClick={signOut}>
                   <LogOut className="w-4 h-4 mr-2" />
-                  Cerrar Sesión
+                  Salir
                 </Button>
               </div>
             </SheetContent>
@@ -527,28 +664,22 @@ export default function LocalLayout() {
               </SelectContent>
             </Select>
             {selectedBranch && (
-              <div className="mt-2 space-y-2">
+              <div className="mt-2">
                 <Badge 
                   variant={selectedBranch.is_open ? 'default' : 'secondary'} 
                 >
                   {selectedBranch.is_open ? '🟢 Abierto' : '🔴 Cerrado'}
                 </Badge>
-                <ActiveStaffWidget branchId={selectedBranch.id} compact />
               </div>
             )}
           </div>
           
-          {/* Clock In Button */}
-          <div className="px-3 py-2 border-b">
-            <Button 
-              variant="outline" 
-              className="w-full justify-start gap-2"
-              onClick={() => setShowClockInModal(true)}
-            >
-              <Timer className="h-4 w-4" />
-              Fichar Asistencia
-            </Button>
-          </div>
+          {/* Clock In Button - Fixed above nav */}
+          {requiresAttendance && (
+            <div className="px-3 py-3 border-b">
+              <ClockInButton />
+            </div>
+          )}
 
           <div className="flex-1 p-3 overflow-y-auto">
             <NavContent />
@@ -558,7 +689,7 @@ export default function LocalLayout() {
             {canUseBrandPanel && !isEmbedded && (
               <ExternalLink to="/admin">
                 <Button variant="ghost" className="w-full justify-start" size="sm">
-                  <Home className="w-4 h-4 mr-3" />
+                  <Building2 className="w-4 h-4 mr-3" />
                   Panel Marca
                 </Button>
               </ExternalLink>
