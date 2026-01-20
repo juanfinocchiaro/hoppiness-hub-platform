@@ -110,7 +110,6 @@ export default function Users() {
   // Dialog states
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
   const [selectedRole, setSelectedRole] = useState<AppRole | ''>('');
-  const [selectedBranches, setSelectedBranches] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
 
   const canManageUsers = isAdmin || isGerente || isFranquiciado;
@@ -217,20 +216,9 @@ export default function Users() {
   const openEditDialog = (user: UserWithRole) => {
     setEditingUser(user);
     setSelectedRole(user.role || '');
-    
-    // Initialize branch selection based on existing permissions
-    const branchSelection: Record<string, boolean> = {};
-    const availableBranches = isAdmin ? branches : accessibleBranches;
-    
-    availableBranches.forEach(branch => {
-      const hasAccess = user.branchAccess?.some(a => a.branch_id === branch.id);
-      branchSelection[branch.id] = !!hasAccess;
-    });
-    
-    setSelectedBranches(branchSelection);
   };
 
-  const saveUserPermissions = async () => {
+  const saveUserRole = async () => {
     if (!editingUser) return;
     
     setSaving(true);
@@ -252,32 +240,7 @@ export default function Users() {
         if (roleError) throw roleError;
       }
 
-      // Update branch access via grant_role_defaults
-      const availableBranches = isAdmin ? branches : accessibleBranches;
-      const userRole = (selectedRole || editingUser.role || 'empleado') as AppRole;
-      
-      for (const branch of availableBranches) {
-        const shouldHaveAccess = selectedBranches[branch.id];
-        const currentlyHasAccess = editingUser.branchAccess?.some(a => a.branch_id === branch.id);
-        
-        if (shouldHaveAccess && !currentlyHasAccess) {
-          // Grant default permissions for their role
-          await supabase.rpc('grant_role_defaults', {
-            _branch_id: branch.id,
-            _role: userRole,
-            _user_id: editingUser.user_id,
-          });
-        } else if (!shouldHaveAccess && currentlyHasAccess) {
-          // Remove all permissions for this branch
-          await supabase
-            .from('user_branch_permissions')
-            .delete()
-            .eq('user_id', editingUser.user_id)
-            .eq('branch_id', branch.id);
-        }
-      }
-
-      toast.success('Permisos actualizados. Usa el panel de Permisos para ajustes granulares.');
+      toast.success('Rol actualizado. Para gestionar permisos granulares, usa el panel de Permisos.');
       setEditingUser(null);
       fetchData();
     } catch (error: any) {
@@ -348,7 +311,7 @@ export default function Users() {
     }
   };
 
-  const availableBranchesForEdit = isAdmin ? branches : accessibleBranches;
+  
 
   return (
     <div className="space-y-6">
@@ -600,9 +563,9 @@ export default function Users() {
         </CardContent>
       </Card>
 
-      {/* Simplified Edit Dialog - Role + Branch Access */}
+      {/* Edit User Dialog - Role only, permisos en otro lugar */}
       <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Usuario</DialogTitle>
             <DialogDescription>
@@ -627,56 +590,55 @@ export default function Users() {
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  El rol define las capacidades base del usuario en la plataforma.
+                </p>
               </div>
             )}
 
-            {/* Branch Access (simplified - just checkboxes) */}
-            <div className="space-y-3">
-              <Label className="text-base font-semibold">Acceso a Sucursales</Label>
-              <p className="text-sm text-muted-foreground">
-                Al activar una sucursal, se asignan permisos por defecto según el rol.
-                Usa "Permisos Granulares" para ajustes detallados.
-              </p>
-              
-              {availableBranchesForEdit.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No hay sucursales disponibles</p>
-              ) : (
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {availableBranchesForEdit.map((branch) => (
-                    <div key={branch.id} className="flex items-center gap-3 p-2 rounded border">
-                      <Checkbox
-                        id={`branch-${branch.id}`}
-                        checked={selectedBranches[branch.id] || false}
-                        onCheckedChange={(checked) => {
-                          setSelectedBranches(prev => ({
-                            ...prev,
-                            [branch.id]: !!checked,
-                          }));
-                        }}
-                      />
-                      <Label htmlFor={`branch-${branch.id}`} className="flex-1 cursor-pointer">
-                        <span className="font-medium">{branch.name}</span>
-                        <span className="text-muted-foreground ml-2 text-sm">{branch.city}</span>
-                      </Label>
-                    </div>
+            {/* Summary of current branch access */}
+            <div className="space-y-2">
+              <Label>Acceso a sucursales</Label>
+              {editingUser?.branchAccess && editingUser.branchAccess.length > 0 ? (
+                <div className="flex flex-wrap gap-1">
+                  {editingUser.branchAccess.map((ba) => (
+                    <Badge key={ba.branch_id} variant="secondary" className="text-xs">
+                      <Store className="w-3 h-3 mr-1" />
+                      {ba.branch_name}
+                      <span className="ml-1 opacity-60">({ba.permissionCount})</span>
+                    </Badge>
                   ))}
                 </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Sin acceso a sucursales</p>
               )}
+              <p className="text-xs text-muted-foreground">
+                Para modificar permisos y acceso a sucursales, usa el panel de Permisos.
+              </p>
             </div>
+
+            {/* Link to permissions */}
+            <Link to={`/admin/permisos?user=${editingUser?.user_id}`} onClick={() => setEditingUser(null)}>
+              <Button variant="outline" className="w-full">
+                <Shield className="w-4 h-4 mr-2" />
+                Gestionar Permisos Granulares
+                <ExternalLink className="w-4 h-4 ml-auto" />
+              </Button>
+            </Link>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingUser(null)}>
               Cancelar
             </Button>
-            <Button onClick={saveUserPermissions} disabled={saving}>
+            <Button onClick={saveUserRole} disabled={saving || !isAdmin}>
               {saving ? (
                 <>
                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                   Guardando...
                 </>
               ) : (
-                'Guardar Cambios'
+                'Guardar Rol'
               )}
             </Button>
           </DialogFooter>
