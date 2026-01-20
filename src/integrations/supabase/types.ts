@@ -4663,6 +4663,7 @@ export type Database = {
           recorded_by: string | null
           reference_id: string | null
           reference_type: string | null
+          supplier_invoice_id: string | null
           type: Database["public"]["Enums"]["stock_movement_type"]
           unit_cost: number | null
         }
@@ -4677,6 +4678,7 @@ export type Database = {
           recorded_by?: string | null
           reference_id?: string | null
           reference_type?: string | null
+          supplier_invoice_id?: string | null
           type: Database["public"]["Enums"]["stock_movement_type"]
           unit_cost?: number | null
         }
@@ -4691,6 +4693,7 @@ export type Database = {
           recorded_by?: string | null
           reference_id?: string | null
           reference_type?: string | null
+          supplier_invoice_id?: string | null
           type?: Database["public"]["Enums"]["stock_movement_type"]
           unit_cost?: number | null
         }
@@ -4721,6 +4724,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_supplier_invoice_id_fkey"
+            columns: ["supplier_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_invoices"
             referencedColumns: ["id"]
           },
         ]

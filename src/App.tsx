@@ -53,6 +53,7 @@ import LocalKDS from "./pages/local/LocalKDS";
 import LocalCierre from "./pages/local/LocalCierre";
 import LocalStockFactura from "./pages/local/LocalStockFactura";
 import LocalStockPedir from "./pages/local/LocalStockPedir";
+import LocalStockHistorial from "./pages/local/LocalStockHistorial";
 
 // Attendance
 import ClockIn from "./pages/ClockIn";
@@ -175,6 +176,7 @@ const App = () => (
               <Route path="stock" element={<LocalStock />} />
               <Route path="stock/pedir" element={<LocalStockPedir />} />
               <Route path="stock/factura" element={<LocalStockFactura />} />
+              <Route path="stock/historial" element={<LocalStockHistorial />} />
               <Route path="stock/conteo" element={<LocalInventory />} />
               <Route path="stock/cmv" element={<LocalCMVReport />} />
               

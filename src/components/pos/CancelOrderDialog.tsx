@@ -115,6 +115,16 @@ export default function CancelOrderDialog({
     }
   }, [open, draftPayments]);
 
+  // Reset state when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setCancelReason('');
+      setCancelNotes('');
+      setSelectedPaymentsToRefund(new Set());
+      setRefundMethods({});
+    }
+  }, [open]);
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
@@ -159,6 +169,17 @@ export default function CancelOrderDialog({
 
         if (orderError) throw orderError;
 
+        // Build refund methods summary
+        const refundMethodsSummary = Array.from(selectedPaymentsToRefund)
+          .map(paymentId => {
+            const payment = draftPayments.find(p => p.id === paymentId);
+            if (!payment) return null;
+            const method = refundMethods[paymentId] || 'efectivo';
+            return `${formatPrice(payment.amount)} vía ${method}`;
+          })
+          .filter(Boolean)
+          .join('; ');
+
         // Create cancellation record
         const { error: cancelError } = await supabase
           .from('order_cancellations')
@@ -169,9 +190,7 @@ export default function CancelOrderDialog({
             cancel_reason: cancelReason,
             cancel_notes: cancelNotes || null,
             refund_amount: totalToRefund > 0 ? totalToRefund : null,
-            refund_method: totalToRefund > 0 
-              ? Object.values(refundMethods).join(', ') 
-              : null,
+            refund_method: totalToRefund > 0 ? refundMethodsSummary : null,
           });
 
         if (cancelError) throw cancelError;
@@ -225,7 +244,7 @@ export default function CancelOrderDialog({
           <DialogDescription>
             {hasPayments 
               ? 'Este pedido tiene pagos registrados. Configurá las devoluciones antes de cancelar.'
-              : 'El pedido será marcado como incompleto en los registros.'
+              : 'El pedido será marcado como cancelado en los registros.'
             }
           </DialogDescription>
         </DialogHeader>
