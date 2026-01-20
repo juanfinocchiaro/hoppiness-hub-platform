@@ -19,6 +19,7 @@ import OrdersHeatmap from '@/components/charts/OrdersHeatmap';
 import DashboardFilterBar from '@/components/dashboard/DashboardFilterBar';
 import RecentCompletedOrders from '@/components/dashboard/RecentCompletedOrders';
 import { RoleWelcomeCard } from '@/components/dashboard/RoleWelcomeCard';
+import { DashboardAlerts } from '@/components/dashboard/DashboardAlerts';
 import { DashboardFilterProvider, useDashboardFilters } from '@/contexts/DashboardFilterContext';
 import { useRoleLanding } from '@/hooks/useRoleLanding';
 import { useAuth } from '@/hooks/useAuth';
@@ -331,6 +332,9 @@ function DashboardContent({ branch }: { branch: Branch }) {
             );
           })}
         </div>
+
+        {/* Alerts */}
+        <DashboardAlerts branchId={branch.id} variant="local" />
 
         {loading ? (
           <div className="space-y-6">

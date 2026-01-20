@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Store, Package, MapPin, Clock, Settings, Truck, ShoppingBag, Users, Bike, DollarSign, Utensils, Receipt, BarChart3 } from 'lucide-react';
 import OrdersHeatmap from '@/components/charts/OrdersHeatmap';
 import { RoleWelcomeCard } from '@/components/dashboard/RoleWelcomeCard';
+import { BrandAlerts } from '@/components/dashboard/DashboardAlerts';
 import { useRoleLanding } from '@/hooks/useRoleLanding';
 import { useAuth } from '@/hooks/useAuth';
 import type { Tables } from '@/integrations/supabase/types';
@@ -253,6 +254,9 @@ export default function AdminHome() {
         <h1 className="text-3xl font-bold">Administración Central</h1>
         <p className="text-muted-foreground">Gestión de productos y sucursales de Hoppiness Club</p>
       </div>
+
+      {/* Alerts */}
+      <BrandAlerts branches={branches.map(b => ({ id: b.id, name: b.name }))} />
 
       {/* Global Monthly Stats */}
       <Card>
