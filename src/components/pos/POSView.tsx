@@ -367,11 +367,73 @@ export default function POSView({ branch }: POSViewProps) {
     return matchesSearch && matchesCategory;
   });
 
+  // Validate product availability in real-time before adding to cart
+  const checkProductAvailability = async (productId: string): Promise<{ available: boolean; reason?: string }> => {
+    try {
+      // Check product global availability
+      const { data: product, error: productError } = await supabase
+        .from('products')
+        .select('id, name, is_available')
+        .eq('id', productId)
+        .single();
+
+      if (productError || !product) {
+        return { available: false, reason: 'Producto no encontrado' };
+      }
+
+      if (!product.is_available) {
+        return { available: false, reason: 'Producto deshabilitado por la marca' };
+      }
+
+      // Check branch-specific availability
+      const { data: branchProduct } = await supabase
+        .from('branch_products')
+        .select('is_available, is_enabled_by_brand')
+        .eq('branch_id', branch.id)
+        .eq('product_id', productId)
+        .single();
+
+      if (branchProduct) {
+        if (!branchProduct.is_enabled_by_brand) {
+          return { available: false, reason: 'Producto no habilitado para esta sucursal' };
+        }
+        if (!branchProduct.is_available) {
+          return { available: false, reason: 'Producto pausado temporalmente' };
+        }
+      }
+
+      return { available: true };
+    } catch {
+      // On network error, allow the operation (will be validated by DB trigger)
+      return { available: true };
+    }
+  };
+
   // Handle product click - now order must be started first
   const handleProductClick = async (product: ProductWithAvailability) => {
     if (!orderStarted) {
       // Order not started - should not happen with new UI, but just in case
       setShowNewOrderDialog(true);
+      return;
+    }
+
+    // Real-time availability check
+    const { available, reason } = await checkProductAvailability(product.id);
+    if (!available) {
+      toast.error(reason || 'Producto no disponible');
+      // Refresh products list to sync UI
+      const { data: updatedBranchProduct } = await supabase
+        .from('branch_products')
+        .select('*')
+        .eq('branch_id', branch.id)
+        .eq('product_id', product.id)
+        .single();
+      
+      setProducts(prev => prev.map(p => 
+        p.id === product.id 
+          ? { ...p, branchProduct: updatedBranchProduct || null }
+          : p
+      ).filter(p => p.branchProduct?.is_available !== false));
       return;
     }
     
@@ -1030,30 +1092,55 @@ export default function POSView({ branch }: POSViewProps) {
                 const cartCount = cart.filter(item => item.product.id === product.id)
                   .reduce((sum, item) => sum + item.quantity, 0);
                 
+                // Check stock status for visual indicator
+                const stockQty = product.branchProduct?.stock_quantity;
+                const hasLowStock = stockQty !== null && stockQty !== undefined && stockQty > 0 && stockQty <= 5;
+                const isOutOfStock = stockQty !== null && stockQty !== undefined && stockQty <= 0;
+                const isFavorite = product.branchProduct?.is_favorite;
+                
                 return (
                   <Card 
                     key={product.id}
                     className={`relative transition-all ${
-                      !activeShift 
+                      !activeShift || isOutOfStock
                         ? 'opacity-50 cursor-not-allowed' 
                         : `cursor-pointer hover:shadow-md ${cartCount > 0 ? 'ring-2 ring-primary' : ''}`
                     }`}
-                    onClick={() => activeShift && handleProductClick(product)}
+                    onClick={() => activeShift && !isOutOfStock && handleProductClick(product)}
                   >
+                    {/* Cart count badge */}
                     {cartCount > 0 && (
-                      <Badge className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0 flex items-center justify-center">
+                      <Badge className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0 flex items-center justify-center z-10">
                         {cartCount}
                       </Badge>
                     )}
+                    
+                    {/* Status indicators */}
+                    {isOutOfStock && (
+                      <Badge variant="destructive" className="absolute top-1 left-1 text-xs z-10">
+                        Agotado
+                      </Badge>
+                    )}
+                    {hasLowStock && !isOutOfStock && (
+                      <Badge variant="outline" className="absolute top-1 left-1 text-xs bg-destructive/80 text-destructive-foreground z-10">
+                        Últimos {stockQty}
+                      </Badge>
+                    )}
+                    {isFavorite && !isOutOfStock && !hasLowStock && (
+                      <Badge variant="secondary" className="absolute top-1 left-1 text-xs z-10">
+                        ⭐
+                      </Badge>
+                    )}
+                    
                     <CardContent className="p-3">
-                      <div className="w-full h-16 rounded bg-muted flex items-center justify-center mb-2 overflow-hidden">
+                      <div className={`w-full h-16 rounded bg-muted flex items-center justify-center mb-2 overflow-hidden ${isOutOfStock ? 'grayscale' : ''}`}>
                         {product.image_url ? (
                           <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                         ) : (
                           <span className="text-2xl">🍔</span>
                         )}
                       </div>
-                      <p className="font-medium text-sm line-clamp-2">{product.name}</p>
+                      <p className={`font-medium text-sm line-clamp-2 ${isOutOfStock ? 'line-through text-muted-foreground' : ''}`}>{product.name}</p>
                       <p className="text-primary font-bold">{formatPrice(price)}</p>
                     </CardContent>
                   </Card>
