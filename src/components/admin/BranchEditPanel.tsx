@@ -389,13 +389,27 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="address">Dirección *</Label>
-              {latitude && longitude && (
-                <span className="flex items-center gap-1 text-xs text-primary">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  Ubicado en el mapa
-                </span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="address">Dirección *</Label>
+                {latitude && longitude && (
+                  <span className="flex items-center gap-1 text-xs text-primary">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Ubicado en el mapa
+                  </span>
+                )}
+              </div>
+              {!showMap && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowMap(true)}
+                  className="gap-1.5"
+                >
+                  <MapPin className="h-3.5 w-3.5" />
+                  Ubicar en el mapa
+                </Button>
               )}
             </div>
             <Input
@@ -404,69 +418,8 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Wilfredo Meioni 3778, Local 6, Ribera de Manantiales"
             />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="city">Ciudad / Zona</Label>
-              <Input
-                id="city"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="Córdoba"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="local@hoppiness.com"
-              />
-            </div>
-          </div>
-
-          {/* Coordenadas y Mapa */}
-          <div className="space-y-3">
-            <Label className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Coordenadas
-            </Label>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="latitude" className="text-xs text-muted-foreground">Latitud</Label>
-                <Input
-                  id="latitude"
-                  value={latitude}
-                  onChange={(e) => setLatitude(e.target.value)}
-                  placeholder="-31.4234"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="longitude" className="text-xs text-muted-foreground">Longitud</Label>
-                <Input
-                  id="longitude"
-                  value={longitude}
-                  onChange={(e) => setLongitude(e.target.value)}
-                  placeholder="-64.1234"
-                />
-              </div>
-            </div>
-
-            {!showMap ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowMap(true)}
-                className="gap-2"
-              >
-                <MapPin className="h-4 w-4" />
-                Ubicar en el mapa
-              </Button>
-            ) : (
-              <div className="space-y-2">
+            {showMap && (
+              <div className="space-y-2 mt-2">
                 <BranchLocationMap
                   address={address}
                   city={city}
@@ -489,6 +442,28 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
                 </Button>
               </div>
             )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="city">Ciudad / Zona</Label>
+              <Input
+                id="city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Córdoba"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="local@hoppiness.com"
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-3 py-2">
