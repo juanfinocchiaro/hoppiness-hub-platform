@@ -72,39 +72,117 @@ export function useUserRole(): UserRoleData {
           setAccessibleBranches(allBranches || []);
           setBranchPermissions([]);
         } else {
-          // Non-admin: fetch branch permissions
-          const { data: permsData } = await supabase
+          // Non-admin: derive branch access from granular permissions (user_branch_permissions)
+          // and fallback to legacy branch_permissions for backwards compatibility.
+
+          // 1) Granular permissions
+          const { data: granularData, error: granularError } = await supabase
+            .from('user_branch_permissions')
+            .select('branch_id, permission_key')
+            .eq('user_id', user.id);
+
+          if (granularError) throw granularError;
+
+          const permsByBranch = new Map<string, Set<string>>();
+          (granularData || []).forEach((row) => {
+            if (!permsByBranch.has(row.branch_id)) permsByBranch.set(row.branch_id, new Set());
+            permsByBranch.get(row.branch_id)!.add(row.permission_key);
+          });
+
+          // 2) Legacy permissions (optional fallback)
+          const { data: legacyData, error: legacyError } = await supabase
             .from('branch_permissions')
-            .select(`
+            .select(
+              `
               branch_id,
               can_manage_inventory,
               can_manage_orders,
               can_manage_products,
               can_manage_staff,
               can_view_reports
-            `)
+            `
+            )
             .eq('user_id', user.id);
 
-          const permissions = (permsData || []).map(p => ({
-            ...p,
-            can_manage_inventory: p.can_manage_inventory ?? false,
-            can_manage_orders: p.can_manage_orders ?? false,
-            can_manage_products: p.can_manage_products ?? false,
-            can_manage_staff: p.can_manage_staff ?? false,
-            can_view_reports: p.can_view_reports ?? false,
-          }));
+          if (legacyError) throw legacyError;
 
-          setBranchPermissions(permissions);
+          const legacyByBranch = new Map<string, {
+            can_manage_inventory: boolean;
+            can_manage_orders: boolean;
+            can_manage_products: boolean;
+            can_manage_staff: boolean;
+            can_view_reports: boolean;
+          }>();
+
+          (legacyData || []).forEach((p) => {
+            legacyByBranch.set(p.branch_id, {
+              can_manage_inventory: p.can_manage_inventory ?? false,
+              can_manage_orders: p.can_manage_orders ?? false,
+              can_manage_products: p.can_manage_products ?? false,
+              can_manage_staff: p.can_manage_staff ?? false,
+              can_view_reports: p.can_view_reports ?? false,
+            });
+          });
+
+          // Helper: map granular keys -> legacy-like booleans used in UI
+          const hasAny = (keys: Set<string> | undefined, prefixesOrKeys: string[]) => {
+            if (!keys) return false;
+            return prefixesOrKeys.some((k) =>
+              k.endsWith('.') ? Array.from(keys).some((x) => x.startsWith(k)) : keys.has(k)
+            );
+          };
+
+          const branchIds = Array.from(
+            new Set<string>([...permsByBranch.keys(), ...legacyByBranch.keys()])
+          );
+
+          const computed = branchIds.map((branch_id) => {
+            const keys = permsByBranch.get(branch_id);
+            const legacy = legacyByBranch.get(branch_id);
+
+            // Minimal mapping that matches current UI needs.
+            const can_manage_orders =
+              (legacy?.can_manage_orders ?? false) ||
+              hasAny(keys, ['orders.', 'pos.', 'cash.']);
+
+            const can_manage_products =
+              (legacy?.can_manage_products ?? false) ||
+              hasAny(keys, ['products.', 'inventory.']);
+
+            const can_manage_inventory =
+              (legacy?.can_manage_inventory ?? false) ||
+              hasAny(keys, ['inventory.']);
+
+            const can_manage_staff =
+              (legacy?.can_manage_staff ?? false) ||
+              hasAny(keys, ['hr.']);
+
+            const can_view_reports =
+              (legacy?.can_view_reports ?? false) ||
+              hasAny(keys, ['reports.', 'finance.']);
+
+            return {
+              branch_id,
+              can_manage_inventory,
+              can_manage_orders,
+              can_manage_products,
+              can_manage_staff,
+              can_view_reports,
+            };
+          });
+
+          setBranchPermissions(computed);
 
           // Fetch branches the user has access to
-          if (permissions.length > 0) {
-            const branchIds = permissions.map(p => p.branch_id);
-            const { data: branchesData } = await supabase
+          if (branchIds.length > 0) {
+            const { data: branchesData, error: branchesError } = await supabase
               .from('branches')
               .select('*')
               .in('id', branchIds)
               .order('name');
-            
+
+            if (branchesError) throw branchesError;
+
             setAccessibleBranches(branchesData || []);
           } else {
             setAccessibleBranches([]);
