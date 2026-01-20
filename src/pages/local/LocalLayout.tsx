@@ -3,6 +3,7 @@ import { Link, Outlet, useNavigate, useLocation, useParams } from 'react-router-
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useRoleLanding } from '@/hooks/useRoleLanding';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -86,6 +87,7 @@ interface NavItem {
 export default function LocalLayout() {
   const { user, signOut, loading: authLoading } = useAuth();
   const { isAdmin, isGerente, accessibleBranches, branchPermissions, roles, loading: roleLoading } = useUserRole();
+  const { avatarInfo } = useRoleLanding();
   const navigate = useNavigate();
   const location = useLocation();
   const { branchId } = useParams();
@@ -94,6 +96,7 @@ export default function LocalLayout() {
   const [activePOSView, setActivePOSView] = useState<ActivePOSView>('none');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['operacion']));
   const [showClockInModal, setShowClockInModal] = useState(false);
+  const [hasSetInitialView, setHasSetInitialView] = useState(false);
 
   // Redirect if not authenticated or no access
   useEffect(() => {
@@ -152,7 +155,30 @@ export default function LocalLayout() {
   // Reset POS view when changing branch
   useEffect(() => {
     setActivePOSView('none');
+    setHasSetInitialView(false);
   }, [branchId]);
+
+  // Auto-activate POS or KDS for cashier/kds roles on first load
+  useEffect(() => {
+    if (hasSetInitialView || !selectedBranch || !branchId) return;
+    
+    // Solo activar automáticamente si estamos en el dashboard (sin sub-ruta)
+    const isDashboard = location.pathname === `/local/${branchId}`;
+    if (!isDashboard) {
+      setHasSetInitialView(true);
+      return;
+    }
+
+    if (avatarInfo.directToPOS) {
+      setActivePOSView('pos');
+      setHasSetInitialView(true);
+    } else if (avatarInfo.directToKDS) {
+      setActivePOSView('kds');
+      setHasSetInitialView(true);
+    } else {
+      setHasSetInitialView(true);
+    }
+  }, [selectedBranch, branchId, avatarInfo.directToPOS, avatarInfo.directToKDS, hasSetInitialView, location.pathname]);
 
   const handleBranchChange = (newBranchId: string) => {
     setActivePOSView('none');
