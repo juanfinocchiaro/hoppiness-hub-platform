@@ -41,6 +41,8 @@ interface PanelAccess {
   can_use_local_panel: boolean;
   can_use_brand_panel: boolean;
   brand_access: boolean;
+  local_template_id: string | null;
+  brand_template_id: string | null;
 }
 
 interface UserWithRole extends Profile {
@@ -139,7 +141,7 @@ export default function Users() {
 
         const { data: allPanelAccess } = await supabase
           .from('user_panel_access')
-          .select('user_id, can_use_local_panel, can_use_brand_panel, brand_access');
+          .select('user_id, can_use_local_panel, can_use_brand_panel, brand_access, local_template_id, brand_template_id');
 
         const { data: allBranchAccess } = await supabase
           .from('user_branch_access')
@@ -179,6 +181,8 @@ export default function Users() {
             can_use_local_panel: panelAccessData?.can_use_local_panel ?? false,
             can_use_brand_panel: panelAccessData?.can_use_brand_panel ?? false,
             brand_access: panelAccessData?.brand_access ?? false,
+            local_template_id: panelAccessData?.local_template_id ?? null,
+            brand_template_id: panelAccessData?.brand_template_id ?? null,
           };
 
           const userBranchAccess = allBranchAccess?.filter(ba => ba.user_id === profile.user_id) || [];

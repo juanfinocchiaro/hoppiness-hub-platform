@@ -67,6 +67,8 @@ interface PanelAccess {
   can_use_local_panel: boolean;
   can_use_brand_panel: boolean;
   brand_access: boolean;
+  local_template_id: string | null;
+  brand_template_id: string | null;
 }
 
 interface UserData {
@@ -137,11 +139,17 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('identity');
   
+  // Templates
+  const [localTemplates, setLocalTemplates] = useState<{ id: string; name: string }[]>([]);
+  const [brandTemplates, setBrandTemplates] = useState<{ id: string; name: string }[]>([]);
+  
   // Editable state
   const [selectedRole, setSelectedRole] = useState<AppRole | ''>(user?.role || '');
   const [canUseLocalPanel, setCanUseLocalPanel] = useState(user?.panelAccess?.can_use_local_panel ?? false);
   const [canUseBrandPanel, setCanUseBrandPanel] = useState(user?.panelAccess?.can_use_brand_panel ?? false);
   const [brandAccess, setBrandAccess] = useState(user?.panelAccess?.brand_access ?? false);
+  const [localTemplateId, setLocalTemplateId] = useState<string>(user?.panelAccess?.local_template_id || '');
+  const [brandTemplateId, setBrandTemplateId] = useState<string>(user?.panelAccess?.brand_template_id || '');
   const [selectedBranches, setSelectedBranches] = useState<string[]>(
     user?.allowedBranches?.map(b => b.id) || []
   );
@@ -156,6 +164,19 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
   const [loadingPermissions, setLoadingPermissions] = useState(false);
   const [showEffectivePermissions, setShowEffectivePermissions] = useState(false);
 
+  // Fetch templates on mount
+  useState(() => {
+    const fetchTemplates = async () => {
+      const [{ data: local }, { data: brand }] = await Promise.all([
+        supabase.from('local_templates').select('id, name').eq('is_active', true),
+        supabase.from('brand_templates').select('id, name').eq('is_active', true),
+      ]);
+      setLocalTemplates(local || []);
+      setBrandTemplates(brand || []);
+    };
+    fetchTemplates();
+  });
+
   // Sync state when user changes
   useState(() => {
     if (user) {
@@ -163,6 +184,8 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
       setCanUseLocalPanel(user.panelAccess?.can_use_local_panel ?? false);
       setCanUseBrandPanel(user.panelAccess?.can_use_brand_panel ?? false);
       setBrandAccess(user.panelAccess?.brand_access ?? false);
+      setLocalTemplateId(user.panelAccess?.local_template_id || '');
+      setBrandTemplateId(user.panelAccess?.brand_template_id || '');
       setSelectedBranches(user.allowedBranches?.map(b => b.id) || []);
     }
   });
@@ -267,7 +290,7 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
           .insert({ user_id: user.user_id, role: validRole });
       }
 
-      // 2. Update panel access
+      // 2. Update panel access with templates
       const { error: panelError } = await supabase
         .from('user_panel_access')
         .upsert({
@@ -275,6 +298,8 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
           can_use_local_panel: canUseLocalPanel,
           can_use_brand_panel: canUseBrandPanel,
           brand_access: brandAccess,
+          local_template_id: canUseLocalPanel && localTemplateId ? localTemplateId : null,
+          brand_template_id: canUseBrandPanel && brandTemplateId ? brandTemplateId : null,
         }, { onConflict: 'user_id' });
 
       if (panelError) throw panelError;
@@ -307,6 +332,7 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
       setSaving(false);
     }
   };
+
 
   const toggleBranch = (branchId: string) => {
     setSelectedBranches(prev =>
@@ -388,35 +414,65 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
               </CardContent>
             </Card>
 
-            {/* D) Plantilla (Rol) */}
+            {/* D) Plantillas */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <Shield className="w-4 h-4" />
-                  Plantilla (Rol)
+                  Plantillas asignadas
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                {isAdmin ? (
-                  <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as AppRole)}>
+              <CardContent className="space-y-4">
+                {/* Local Template */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 text-sm">
+                    <Building2 className="w-4 h-4" />
+                    Plantilla Local
+                    {!canUseLocalPanel && <Badge variant="outline" className="text-xs">Panel deshabilitado</Badge>}
+                  </Label>
+                  <Select 
+                    value={localTemplateId} 
+                    onValueChange={setLocalTemplateId}
+                    disabled={!isAdmin || !canUseLocalPanel}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar plantilla" />
+                      <SelectValue placeholder="Sin plantilla local" />
                     </SelectTrigger>
                     <SelectContent>
-                      {ROLES_HIERARCHY.map((role) => (
-                        <SelectItem key={role} value={role}>
-                          {roleLabels[role]}
-                        </SelectItem>
+                      <SelectItem value="">Sin plantilla</SelectItem>
+                      {localTemplates.map(t => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                ) : (
-                  <Badge className={user.role ? roleColors[user.role] : ''}>
-                    {user.role ? roleLabels[user.role] : 'Sin plantilla'}
-                  </Badge>
-                )}
-                <p className="text-xs text-muted-foreground mt-2">
-                  La plantilla define los permisos base del usuario.
+                </div>
+
+                {/* Brand Template */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 text-sm">
+                    <Landmark className="w-4 h-4" />
+                    Plantilla Marca
+                    {!canUseBrandPanel && <Badge variant="outline" className="text-xs">Panel deshabilitado</Badge>}
+                  </Label>
+                  <Select 
+                    value={brandTemplateId} 
+                    onValueChange={setBrandTemplateId}
+                    disabled={!isAdmin || !canUseBrandPanel}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sin plantilla marca" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Sin plantilla</SelectItem>
+                      {brandTemplates.map(t => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  Las plantillas definen los permisos base del usuario en cada panel.
                 </p>
               </CardContent>
             </Card>
