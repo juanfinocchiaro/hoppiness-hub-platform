@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -66,15 +66,81 @@ interface CartContextValue {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
+const CART_STORAGE_KEY = 'hoppiness_cart';
+
+interface PersistedCart {
+  branchId: string | null;
+  orderMode: OrderMode;
+  deliveryAddress: string;
+  items: CartItem[];
+  savedAt: number;
+}
+
+// Load persisted cart from localStorage
+function loadPersistedCart(): PersistedCart | null {
+  try {
+    const stored = localStorage.getItem(CART_STORAGE_KEY);
+    if (!stored) return null;
+    
+    const parsed: PersistedCart = JSON.parse(stored);
+    
+    // Expire after 24 hours
+    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+    if (Date.now() - parsed.savedAt > ONE_DAY_MS) {
+      localStorage.removeItem(CART_STORAGE_KEY);
+      return null;
+    }
+    
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+// Save cart to localStorage
+function saveCart(cart: PersistedCart) {
+  try {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+  } catch {
+    // Storage full or unavailable - ignore
+  }
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [branch, setBranchState] = useState<Branch | null>(null);
-  const [orderMode, setOrderMode] = useState<OrderMode>('delivery');
-  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [orderMode, setOrderModeState] = useState<OrderMode>('delivery');
+  const [deliveryAddress, setDeliveryAddressState] = useState('');
   const [items, setItems] = useState<CartItem[]>([]);
+  const [isHydrated, setIsHydrated] = useState(false);
   
   // Branch change modal state
   const [pendingBranchChange, setPendingBranchChange] = useState<Branch | null>(null);
   const [showBranchChangeModal, setShowBranchChangeModal] = useState(false);
+  
+  // Hydrate from localStorage on mount
+  useEffect(() => {
+    const persisted = loadPersistedCart();
+    if (persisted) {
+      setOrderModeState(persisted.orderMode);
+      setDeliveryAddressState(persisted.deliveryAddress);
+      setItems(persisted.items);
+      // Note: branch will be set by the page component based on URL
+    }
+    setIsHydrated(true);
+  }, []);
+  
+  // Persist to localStorage whenever cart changes
+  useEffect(() => {
+    if (!isHydrated) return;
+    
+    saveCart({
+      branchId: branch?.id || null,
+      orderMode,
+      deliveryAddress,
+      items,
+      savedAt: Date.now(),
+    });
+  }, [branch, orderMode, deliveryAddress, items, isHydrated]);
   
   // Generate unique cart item ID
   const generateItemId = () => `cart-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -86,6 +152,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
       currency: 'ARS', 
       minimumFractionDigits: 0 
     }).format(price), []);
+  
+  // Setters that persist
+  const setOrderMode = useCallback((mode: OrderMode) => {
+    setOrderModeState(mode);
+  }, []);
+  
+  const setDeliveryAddress = useCallback((address: string) => {
+    setDeliveryAddressState(address);
+  }, []);
   
   // Set branch with cart clearing logic
   const setBranch = useCallback((newBranch: Branch | null) => {
@@ -155,6 +230,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // Clear cart
   const clearCart = useCallback(() => {
     setItems([]);
+    setDeliveryAddressState('');
+    localStorage.removeItem(CART_STORAGE_KEY);
   }, []);
   
   // Computed values
