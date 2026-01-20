@@ -839,6 +839,7 @@ export type Database = {
           status_message: string | null
           takeaway_enabled: boolean | null
           updated_at: string
+          webhook_api_key: string | null
         }
         Insert: {
           address: string
@@ -885,6 +886,7 @@ export type Database = {
           status_message?: string | null
           takeaway_enabled?: boolean | null
           updated_at?: string
+          webhook_api_key?: string | null
         }
         Update: {
           address?: string
@@ -931,6 +933,7 @@ export type Database = {
           status_message?: string | null
           takeaway_enabled?: boolean | null
           updated_at?: string
+          webhook_api_key?: string | null
         }
         Relationships: []
       }
@@ -4395,6 +4398,7 @@ export type Database = {
           category_id: string | null
           created_at: string
           description: string | null
+          external_id: string | null
           id: string
           image_url: string | null
           is_available: boolean
@@ -4413,6 +4417,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           description?: string | null
+          external_id?: string | null
           id?: string
           image_url?: string | null
           is_available?: boolean
@@ -4431,6 +4436,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           description?: string | null
+          external_id?: string | null
           id?: string
           image_url?: string | null
           is_available?: boolean
