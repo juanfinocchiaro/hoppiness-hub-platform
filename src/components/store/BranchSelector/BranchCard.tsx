@@ -61,19 +61,7 @@ export function BranchCard({ branch, isRecommended, onSelect }: BranchCardProps)
                 {branch.estimated_prep_time_min || 25}-{(branch.estimated_prep_time_min || 25) + 15} min
               </span>
             </div>
-          </div>
-          
-          {/* Action button */}
-          {isOpen && (
-            <Button 
-              variant="default" 
-              size="sm"
-              className="shrink-0 group-hover:bg-primary/90"
-            >
-              Pedir
-              <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
-          )}
+        </div>
         </div>
         
         {/* Closed message */}
