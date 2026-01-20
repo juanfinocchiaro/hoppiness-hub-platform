@@ -68,7 +68,7 @@ export default function Checkout() {
   const [notes, setNotes] = useState('');
   
   // Payment
-  const [paymentMethod, setPaymentMethod] = useState<'efectivo' | 'mercadopago'>('efectivo');
+  const [paymentMethod, setPaymentMethod] = useState<'efectivo' | 'mercadopago_link'>('efectivo');
   const [cashAmount, setCashAmount] = useState('');
   
   // Invoice
@@ -183,7 +183,7 @@ export default function Checkout() {
       if (itemsError) throw itemsError;
       
       // Handle payment method
-      if (paymentMethod === 'mercadopago') {
+      if (paymentMethod === 'mercadopago_link') {
         // TODO: Create MercadoPago preference and redirect
         toast.info('Redirigiendo a MercadoPago...');
         // For now, just show success
@@ -377,7 +377,7 @@ export default function Checkout() {
             <CardContent className="space-y-4">
               <RadioGroup 
                 value={paymentMethod} 
-                onValueChange={(v) => setPaymentMethod(v as 'efectivo' | 'mercadopago')}
+                onValueChange={(v) => setPaymentMethod(v as 'efectivo' | 'mercadopago_link')}
                 className="space-y-3"
               >
                 {/* Cash */}
@@ -390,7 +390,7 @@ export default function Checkout() {
                   onClick={() => setPaymentMethod('efectivo')}
                 >
                   <RadioGroupItem value="efectivo" id="efectivo" />
-                  <Banknote className="w-5 h-5 text-emerald-600" />
+                  <Banknote className="w-5 h-5 text-success" />
                   <Label htmlFor="efectivo" className="flex-1 cursor-pointer">
                     <span className="font-medium">Efectivo</span>
                     <span className="text-sm text-muted-foreground block">Pagás al recibir</span>
@@ -400,15 +400,15 @@ export default function Checkout() {
                 {/* MercadoPago */}
                 <div 
                   className={`flex items-center space-x-3 p-4 rounded-xl border cursor-pointer transition-all ${
-                    paymentMethod === 'mercadopago' 
+                    paymentMethod === 'mercadopago_link' 
                       ? 'border-primary bg-primary/5' 
                       : 'border-border hover:border-primary/50'
                   }`}
-                  onClick={() => setPaymentMethod('mercadopago')}
+                  onClick={() => setPaymentMethod('mercadopago_link')}
                 >
-                  <RadioGroupItem value="mercadopago" id="mercadopago" />
-                  <CreditCard className="w-5 h-5 text-blue-500" />
-                  <Label htmlFor="mercadopago" className="flex-1 cursor-pointer">
+                  <RadioGroupItem value="mercadopago_link" id="mercadopago_link" />
+                  <CreditCard className="w-5 h-5 text-primary" />
+                  <Label htmlFor="mercadopago_link" className="flex-1 cursor-pointer">
                     <span className="font-medium">MercadoPago</span>
                     <span className="text-sm text-muted-foreground block">Tarjeta, débito o cuenta MP</span>
                   </Label>
@@ -478,7 +478,7 @@ export default function Checkout() {
                       onCheckedChange={(checked) => setWantsInvoice(!!checked)}
                     />
                     <Label htmlFor="wantsInvoice" className="cursor-pointer">
-                      Necesito factura
+                      Necesito que me envíen factura por mail
                     </Label>
                   </div>
                   
@@ -551,7 +551,7 @@ export default function Checkout() {
               </>
             ) : (
               <>
-                {paymentMethod === 'mercadopago' ? 'Pagar con MercadoPago' : 'Confirmar Pedido'}
+                {paymentMethod === 'mercadopago_link' ? 'Pagar con MercadoPago' : 'Confirmar Pedido'}
                 {' • '}
                 {formatPrice(total)}
               </>
