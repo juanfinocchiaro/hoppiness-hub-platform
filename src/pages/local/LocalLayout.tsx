@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useRoleLanding } from '@/hooks/useRoleLanding';
+import { usePanelAccess } from '@/hooks/usePanelAccess';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -51,7 +52,8 @@ import {
   Timer,
   Boxes,
   ClipboardCheck,
-  UserCircle
+  UserCircle,
+  AlertCircle
 } from 'lucide-react';
 import {
   Sheet,
@@ -86,8 +88,9 @@ interface NavItem {
 
 export default function LocalLayout() {
   const { user, signOut, loading: authLoading } = useAuth();
-  const { isAdmin, isGerente, accessibleBranches, branchPermissions, roles, loading: roleLoading } = useUserRole();
+  const { isAdmin, isGerente, branchPermissions, roles, loading: roleLoading } = useUserRole();
   const { avatarInfo } = useRoleLanding();
+  const { canUseLocalPanel, canUseBrandPanel, branchAccess, loading: panelLoading } = usePanelAccess();
   const navigate = useNavigate();
   const location = useLocation();
   const { branchId } = useParams();
@@ -98,19 +101,31 @@ export default function LocalLayout() {
   const [showClockInModal, setShowClockInModal] = useState(false);
   const [hasSetInitialView, setHasSetInitialView] = useState(false);
 
+  // Use branchAccess from usePanelAccess instead of accessibleBranches from useUserRole
+  const accessibleBranches = branchAccess;
+
   // Redirect if not authenticated or no access
   useEffect(() => {
-    if (!authLoading && !roleLoading) {
+    if (!authLoading && !roleLoading && !panelLoading) {
       if (!user) {
         navigate('/ingresar');
         return;
       }
-      if (!isAdmin && !isGerente && accessibleBranches.length === 0) {
+      // Check panel access
+      if (!canUseLocalPanel) {
+        if (canUseBrandPanel) {
+          navigate('/admin');
+        } else {
+          navigate('/');
+        }
+        return;
+      }
+      if (accessibleBranches.length === 0) {
         navigate('/');
         return;
       }
     }
-  }, [user, authLoading, roleLoading, isAdmin, isGerente, accessibleBranches, navigate]);
+  }, [user, authLoading, roleLoading, panelLoading, canUseLocalPanel, canUseBrandPanel, accessibleBranches, navigate]);
 
   // Set selected branch from URL or default
   useEffect(() => {
@@ -314,10 +329,31 @@ export default function LocalLayout() {
     }
   ].filter(section => section.show);
 
-  if (authLoading || roleLoading) {
+  if (authLoading || roleLoading || panelLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Show access denied if no local panel access
+  if (!canUseLocalPanel) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <AlertCircle className="w-16 h-16 text-muted-foreground mx-auto" />
+          <h1 className="text-xl font-bold">Sin acceso al Panel Local</h1>
+          <p className="text-muted-foreground">No tenés permisos para acceder a esta sección.</p>
+          {canUseBrandPanel && (
+            <Link to="/admin">
+              <Button>
+                <Home className="w-4 h-4 mr-2" />
+                Ir a Panel Marca
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
     );
   }
@@ -492,11 +528,11 @@ export default function LocalLayout() {
               </div>
               <NavContent />
               <div className="absolute bottom-4 left-4 right-4 space-y-2">
-                {isAdmin && (
+                {canUseBrandPanel && (
                   <Link to="/admin">
                     <Button variant="outline" className="w-full" size="sm">
                       <Home className="w-4 h-4 mr-2" />
-                      Ir a Admin
+                      Ir a Panel Marca
                     </Button>
                   </Link>
                 )}
@@ -567,7 +603,7 @@ export default function LocalLayout() {
           </div>
           
           <div className="p-3 border-t space-y-1">
-            {isAdmin && (
+            {canUseBrandPanel && (
               <Link to="/admin">
                 <Button variant="ghost" className="w-full justify-start" size="sm">
                   <Home className="w-4 h-4 mr-3" />

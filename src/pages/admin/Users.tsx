@@ -39,7 +39,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Search, User, Shield, Settings, Store, RefreshCw, ArrowUpDown, Clock, CheckCircle2, XCircle, ExternalLink } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Search, User, Shield, Settings, Store, RefreshCw, ArrowUpDown, Clock, CheckCircle2, XCircle, ExternalLink, Building2, Landmark } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -49,6 +50,12 @@ import type { Tables, Enums } from '@/integrations/supabase/types';
 type Profile = Tables<'profiles'>;
 type AppRole = Enums<'app_role'>;
 type Branch = Tables<'branches'>;
+
+interface PanelAccess {
+  can_use_local_panel: boolean;
+  can_use_brand_panel: boolean;
+  brand_access: boolean;
+}
 
 interface UserWithRole extends Profile {
   role: AppRole | null;
@@ -60,6 +67,8 @@ interface UserWithRole extends Profile {
   }[];
   lastLogin?: string | null;
   overrideCount?: number;
+  panelAccess?: PanelAccess;
+  allowedBranches?: { id: string; name: string }[];
 }
 
 const roleLabels: Record<AppRole, string> = {
@@ -178,6 +187,16 @@ export default function Users() {
           .from('role_default_permissions')
           .select('role, permission_key');
 
+        // Fetch panel access data
+        const { data: allPanelAccess } = await supabase
+          .from('user_panel_access')
+          .select('user_id, can_use_local_panel, can_use_brand_panel, brand_access');
+
+        // Fetch branch access data
+        const { data: allBranchAccess } = await supabase
+          .from('user_branch_access')
+          .select('user_id, branch_id');
+
         const roleDefaultsMap = new Map<string, Set<string>>();
         roleDefaults?.forEach(rd => {
           if (!roleDefaultsMap.has(rd.role)) {
@@ -225,6 +244,21 @@ export default function Users() {
             overrideCount = userPerms.length;
           }
 
+          // Get panel access for this user
+          const panelAccessData = allPanelAccess?.find(pa => pa.user_id === profile.user_id);
+          const panelAccess: PanelAccess = {
+            can_use_local_panel: panelAccessData?.can_use_local_panel ?? false,
+            can_use_brand_panel: panelAccessData?.can_use_brand_panel ?? false,
+            brand_access: panelAccessData?.brand_access ?? false,
+          };
+
+          // Get allowed branches for this user
+          const userBranchAccess = allBranchAccess?.filter(ba => ba.user_id === profile.user_id) || [];
+          const allowedBranches = userBranchAccess.map(ba => {
+            const branch = branchesData?.find(b => b.id === ba.branch_id);
+            return { id: ba.branch_id, name: branch?.name || 'Desconocida' };
+          });
+
           return {
             ...profile,
             role: highestRole,
@@ -232,6 +266,8 @@ export default function Users() {
             branchAccess,
             lastLogin: profile.updated_at,
             overrideCount,
+            panelAccess,
+            allowedBranches,
           };
         });
 
@@ -603,9 +639,9 @@ export default function Users() {
         </CardContent>
       </Card>
 
-      {/* Edit User Dialog - Role only, permisos en otro lugar */}
+      {/* Edit User Dialog - Role + Panel Access + Scope */}
       <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Editar Usuario</DialogTitle>
             <DialogDescription>
@@ -614,10 +650,71 @@ export default function Users() {
           </DialogHeader>
 
           <div className="space-y-6 py-4">
-            {/* Role Selection - Only for admins */}
-            {isAdmin && (
-              <div className="space-y-2">
-                <Label>Rol del usuario</Label>
+            {/* A) Modos habilitados */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">A) Modos de Panel</Label>
+              <div className="space-y-3 pl-4 border-l-2 border-muted">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">Panel Mi Local</span>
+                  </div>
+                  <Badge variant={editingUser?.panelAccess?.can_use_local_panel ? 'default' : 'secondary'}>
+                    {editingUser?.panelAccess?.can_use_local_panel ? 'Habilitado' : 'Deshabilitado'}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Landmark className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">Panel Marca</span>
+                  </div>
+                  <Badge variant={editingUser?.panelAccess?.can_use_brand_panel ? 'default' : 'secondary'}>
+                    {editingUser?.panelAccess?.can_use_brand_panel ? 'Habilitado' : 'Deshabilitado'}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            {/* B) Alcance */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">B) Alcance (Scope)</Label>
+              <div className="space-y-3 pl-4 border-l-2 border-muted">
+                {/* Brand Access */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Landmark className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">Acceso global a marca</span>
+                  </div>
+                  <Badge variant={editingUser?.panelAccess?.brand_access ? 'default' : 'outline'}>
+                    {editingUser?.panelAccess?.brand_access ? 'Sí' : 'No'}
+                  </Badge>
+                </div>
+                
+                {/* Branch Access */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Store className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">Sucursales permitidas</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 pl-6">
+                    {editingUser?.allowedBranches && editingUser.allowedBranches.length > 0 ? (
+                      editingUser.allowedBranches.map((branch) => (
+                        <Badge key={branch.id} variant="secondary" className="text-xs">
+                          {branch.name}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Ninguna sucursal asignada</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* C) Rol / Plantilla */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">C) Plantilla (Rol)</Label>
+              {isAdmin ? (
                 <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as AppRole)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar rol" />
@@ -630,41 +727,35 @@ export default function Users() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
-                  El rol define las capacidades base del usuario en la plataforma.
-                </p>
-              </div>
-            )}
-
-            {/* Summary of current branch access */}
-            <div className="space-y-2">
-              <Label>Acceso a sucursales</Label>
-              {editingUser?.branchAccess && editingUser.branchAccess.length > 0 ? (
-                <div className="flex flex-wrap gap-1">
-                  {editingUser.branchAccess.map((ba) => (
-                    <Badge key={ba.branch_id} variant="secondary" className="text-xs">
-                      <Store className="w-3 h-3 mr-1" />
-                      {ba.branch_name}
-                      <span className="ml-1 opacity-60">({ba.permissionCount})</span>
-                    </Badge>
-                  ))}
-                </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Sin acceso a sucursales</p>
+                <Badge className={editingUser?.role ? roleColors[editingUser.role] : ''}>
+                  {editingUser?.role ? roleLabels[editingUser.role] : 'Sin rol'}
+                </Badge>
               )}
               <p className="text-xs text-muted-foreground">
-                Para modificar permisos y acceso a sucursales, usa el panel de Permisos.
+                El rol define los permisos base. Los overrides se gestionan en Accesos.
               </p>
             </div>
 
-            {/* Link to permissions */}
-            <Link to={`/admin/accesos?user=${editingUser?.user_id}`} onClick={() => setEditingUser(null)}>
-              <Button variant="outline" className="w-full">
-                <Shield className="w-4 h-4 mr-2" />
-                Personalizar Accesos
-                <ExternalLink className="w-4 h-4 ml-auto" />
-              </Button>
-            </Link>
+            {/* D) Link a Overrides */}
+            <div className="space-y-2">
+              <Label className="text-base font-semibold">D) Permisos por Sucursal (Overrides)</Label>
+              <p className="text-xs text-muted-foreground">
+                Solo si necesita excepciones a los permisos del rol.
+              </p>
+              <Link to={`/admin/accesos?user=${editingUser?.user_id}`} onClick={() => setEditingUser(null)}>
+                <Button variant="outline" className="w-full">
+                  <Shield className="w-4 h-4 mr-2" />
+                  Personalizar Accesos
+                  {editingUser?.overrideCount && editingUser.overrideCount > 0 && (
+                    <Badge variant="secondary" className="ml-2 text-xs">
+                      {editingUser.overrideCount} overrides
+                    </Badge>
+                  )}
+                  <ExternalLink className="w-4 h-4 ml-auto" />
+                </Button>
+              </Link>
+            </div>
           </div>
 
           <DialogFooter>

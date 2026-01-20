@@ -4584,6 +4584,42 @@ export type Database = {
           },
         ]
       }
+      user_branch_access: {
+        Row: {
+          branch_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_branch_access_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_branch_access_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       user_branch_permissions: {
         Row: {
           branch_id: string
@@ -4677,6 +4713,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_panel_access: {
+        Row: {
+          brand_access: boolean
+          can_use_brand_panel: boolean
+          can_use_local_panel: boolean
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand_access?: boolean
+          can_use_brand_panel?: boolean
+          can_use_local_panel?: boolean
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brand_access?: boolean
+          can_use_brand_panel?: boolean
+          can_use_local_panel?: boolean
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -4798,6 +4864,8 @@ export type Database = {
         Args: { p_product_id: string }
         Returns: number
       }
+      can_use_brand_panel: { Args: { _user_id: string }; Returns: boolean }
+      can_use_local_panel: { Args: { _user_id: string }; Returns: boolean }
       can_view_employee_private_details: {
         Args: { _employee_id: string; _user_id: string }
         Returns: boolean
@@ -4838,6 +4906,7 @@ export type Database = {
             Args: { _branch_id: string; _permission: string; _user_id: string }
             Returns: boolean
           }
+      has_brand_access: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
