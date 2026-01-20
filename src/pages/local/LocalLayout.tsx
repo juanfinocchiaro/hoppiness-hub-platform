@@ -61,14 +61,11 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import type { Tables } from '@/integrations/supabase/types';
-import POSView from '@/components/pos/POSView';
-import KDSView from '@/components/pos/KDSView';
 import LocalDashboard from '@/pages/local/LocalDashboard';
 import ClockInModal from '@/components/attendance/ClockInModal';
 import ActiveStaffWidget from '@/components/attendance/ActiveStaffWidget';
 
 type Branch = Tables<'branches'>;
-type ActivePOSView = 'none' | 'pos' | 'kds';
 
 interface NavSection {
   id: string;
@@ -79,10 +76,9 @@ interface NavSection {
 }
 
 interface NavItem {
-  to?: string;
+  to: string;
   label: string;
   icon: React.ElementType;
-  action?: 'pos' | 'kds';
   show: boolean;
 }
 
@@ -96,10 +92,8 @@ export default function LocalLayout() {
   const { branchId } = useParams();
   
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
-  const [activePOSView, setActivePOSView] = useState<ActivePOSView>('none');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['operacion']));
   const [showClockInModal, setShowClockInModal] = useState(false);
-  const [hasSetInitialView, setHasSetInitialView] = useState(false);
 
   // Use branchAccess from usePanelAccess instead of accessibleBranches from useUserRole
   const accessibleBranches = branchAccess;
@@ -167,51 +161,31 @@ export default function LocalLayout() {
     };
   }, [branchId]);
 
-  // Reset POS view when changing branch
+  // Auto-redirect to POS or KDS for specific roles on first load
   useEffect(() => {
-    setActivePOSView('none');
-    setHasSetInitialView(false);
-  }, [branchId]);
-
-  // Auto-activate POS or KDS for cashier/kds roles on first load
-  useEffect(() => {
-    if (hasSetInitialView || !selectedBranch || !branchId) return;
+    if (!selectedBranch || !branchId) return;
     
-    // Solo activar automáticamente si estamos en el dashboard (sin sub-ruta)
+    // Solo redirigir automáticamente si estamos en el dashboard (sin sub-ruta)
     const isDashboard = location.pathname === `/local/${branchId}`;
-    if (!isDashboard) {
-      setHasSetInitialView(true);
-      return;
-    }
+    if (!isDashboard) return;
 
     if (avatarInfo.directToPOS) {
-      setActivePOSView('pos');
-      setHasSetInitialView(true);
+      navigate(`/local/${branchId}/pos`);
     } else if (avatarInfo.directToKDS) {
-      setActivePOSView('kds');
-      setHasSetInitialView(true);
-    } else {
-      setHasSetInitialView(true);
+      navigate(`/local/${branchId}/kds`);
     }
-  }, [selectedBranch, branchId, avatarInfo.directToPOS, avatarInfo.directToKDS, hasSetInitialView, location.pathname]);
+  }, [selectedBranch, branchId, avatarInfo.directToPOS, avatarInfo.directToKDS, location.pathname, navigate]);
 
   const handleBranchChange = (newBranchId: string) => {
-    setActivePOSView('none');
-    
     // Extract the sub-path after /local/:branchId/
     const pathParts = location.pathname.split('/');
-    // pathParts: ['', 'local', 'branchId', ...subPath]
-    const subPath = pathParts.slice(3).join('/'); // Everything after branchId
+    const subPath = pathParts.slice(3).join('/');
     
     if (subPath) {
       navigate(`/local/${newBranchId}/${subPath}`);
     } else {
       navigate(`/local/${newBranchId}`);
     }
-  };
-
-  const handlePOSItemClick = (view: 'pos' | 'kds') => {
-    setActivePOSView(view);
   };
 
   const toggleSection = (sectionId: string) => {
@@ -234,7 +208,7 @@ export default function LocalLayout() {
   const isFranquiciado = roles.includes('franquiciado');
   const canViewPL = isAdmin || isFranquiciado; // Solo admin o franquiciado pueden ver P&L
 
-  // Navigation structure
+  // Navigation structure - Nueva estructura reorganizada
   const navSections: NavSection[] = [
     {
       id: 'dashboard',
@@ -247,71 +221,72 @@ export default function LocalLayout() {
     },
     {
       id: 'operacion',
-      label: 'Operación',
+      label: 'Operación Diaria',
       icon: Zap,
       show: true,
       items: [
-        { label: 'Tomar Pedidos', icon: Monitor, action: 'pos' as const, show: true },
-        { label: 'Cocina (KDS)', icon: ChefHat, action: 'kds' as const, show: true },
-        { to: 'pedidos', label: 'Gestor de Pedidos', icon: ClipboardList, show: true },
+        { to: 'pos', label: 'Punto de Venta', icon: Monitor, show: true },
+        { to: 'kds', label: 'Cocina (KDS)', icon: ChefHat, show: true },
+        { to: 'pedidos', label: 'Pedidos Activos', icon: ClipboardList, show: true },
         { to: 'historial', label: 'Historial', icon: History, show: true },
       ]
     },
     {
-      id: 'menu',
-      label: 'Menú Local',
-      icon: Package,
-      show: canManageProducts,
+      id: 'caja',
+      label: 'Caja y Pagos',
+      icon: Wallet,
+      show: canManageConfig,
       items: [
-        { to: 'productos', label: 'Productos', icon: Package, show: true },
-        { to: 'extras', label: 'Extras / Modificadores', icon: ChefHat, show: true },
+        { to: 'caja', label: 'Caja del Día', icon: Calculator, show: true },
+        { to: 'cuenta-corriente', label: 'Cuenta Corriente', icon: UserCircle, show: true },
+        { to: 'cierre', label: 'Cierre del Día', icon: ClipboardCheck, show: true },
       ]
     },
     {
       id: 'stock',
-      label: 'Stock & Inventario',
+      label: 'Stock y Compras',
       icon: Boxes,
       show: canManageProducts,
       items: [
-        { to: 'stock', label: 'Stock Ingredientes', icon: Boxes, show: true },
-        { to: 'inventario', label: 'Conteo Inventario', icon: ClipboardCheck, show: true },
-        { to: 'cmv', label: 'Reporte CMV', icon: Calculator, show: canViewReports },
+        { to: 'stock', label: 'Stock Actual', icon: Boxes, show: true },
+        { to: 'stock/conteo', label: 'Conteo Inventario', icon: ClipboardCheck, show: true },
+        { to: 'stock/cmv', label: 'Reporte CMV', icon: Calculator, show: canViewReports },
       ]
     },
     {
-      id: 'clientes',
-      label: 'Clientes',
-      icon: UserCircle,
+      id: 'menu',
+      label: 'Menú del Local',
+      icon: Package,
+      show: canManageProducts,
+      items: [
+        { to: 'menu/productos', label: 'Productos', icon: Package, show: true },
+        { to: 'menu/extras', label: 'Extras', icon: Plus, show: true },
+      ]
+    },
+    {
+      id: 'equipo',
+      label: 'Equipo',
+      icon: Users,
       show: canManageConfig,
       items: [
-        { to: 'clientes', label: 'Cuenta Corriente', icon: UserCircle, show: true },
+        { to: 'equipo', label: 'Mi Equipo', icon: Users, show: true },
+        { to: 'equipo/fichar', label: 'Fichar', icon: Timer, show: true },
+        { to: 'equipo/horarios', label: 'Horarios', icon: Clock, show: true },
+        { to: 'equipo/horas', label: 'Horas del Mes', icon: Calculator, show: canViewReports },
+        { to: 'equipo/liquidacion', label: 'Liquidación', icon: Wallet, show: canViewReports },
       ]
     },
     {
       id: 'finanzas',
       label: 'Finanzas',
-      icon: Wallet,
+      icon: DollarSign,
       show: canManageConfig,
       items: [
-        { to: 'transacciones', label: 'Ledger', icon: Receipt, show: true },
-        { to: 'caja', label: 'Caja', icon: Calculator, show: true },
-        { to: 'proveedores', label: 'Proveedores', icon: Truck, show: true },
-        { to: 'facturas', label: 'Facturas', icon: FileText, show: true },
-        { to: 'obligaciones', label: 'Obligaciones', icon: DollarSign, show: canViewReports },
-        { to: 'reportes', label: 'Reportes', icon: FileText, show: canViewReports },
-      ]
-    },
-    {
-      id: 'rrhh',
-      label: 'RRHH',
-      icon: Users,
-      show: canManageConfig,
-      items: [
-        { to: 'usuarios', label: 'Usuarios', icon: UserCircle, show: true },
-        { to: 'rrhh/fichajes', label: 'Fichajes', icon: Timer, show: true },
-        { to: 'rrhh/horarios', label: 'Horarios', icon: Clock, show: true },
-        { to: 'rrhh/horas', label: 'Horas del Mes', icon: Calculator, show: canViewReports },
-        { to: 'rrhh/liquidacion', label: 'Liquidación', icon: Wallet, show: canViewReports },
+        { to: 'finanzas/movimientos', label: 'Movimientos', icon: Receipt, show: true },
+        { to: 'finanzas/proveedores', label: 'Proveedores', icon: Truck, show: true },
+        { to: 'finanzas/facturas', label: 'Facturas Emitidas', icon: FileText, show: true },
+        { to: 'finanzas/obligaciones', label: 'Obligaciones', icon: DollarSign, show: canViewReports },
+        { to: 'finanzas/reportes', label: 'Reportes', icon: FileText, show: canViewReports },
       ]
     },
     {
@@ -320,11 +295,11 @@ export default function LocalLayout() {
       icon: Settings,
       show: canManageConfig,
       items: [
-        { to: 'config', label: 'Mi Sucursal', icon: Store, show: true },
-        { to: 'integraciones', label: 'Integraciones', icon: Link2, show: true },
-        { to: 'zonas-delivery', label: 'Zonas Delivery', icon: MapPin, show: true },
-        { to: 'impresoras', label: 'Impresoras', icon: Printer, show: true },
-        { to: 'kds-config', label: 'Configuración KDS', icon: ChefHat, show: true },
+        { to: 'config/local', label: 'Datos del Local', icon: Store, show: true },
+        { to: 'config/zonas', label: 'Zonas Delivery', icon: MapPin, show: true },
+        { to: 'config/integraciones', label: 'Integraciones', icon: Link2, show: true },
+        { to: 'config/impresoras', label: 'Impresoras', icon: Printer, show: true },
+        { to: 'config/kds', label: 'Config KDS', icon: ChefHat, show: true },
       ]
     }
   ].filter(section => section.show);
@@ -388,18 +363,13 @@ export default function LocalLayout() {
     );
   }
 
-  const handleNavItemClick = () => {
-    setActivePOSView('none');
-  };
-
   const isItemActive = (item: NavItem): boolean => {
-    if (item.action) {
-      return activePOSView === item.action;
-    }
     if (item.to === '') {
-      return location.pathname === `/local/${branchId}` && activePOSView === 'none';
+      return location.pathname === `/local/${branchId}`;
     }
-    return location.pathname.includes(`/${item.to}`) && activePOSView === 'none';
+    // Match exact path or path that starts with the item's path
+    const itemPath = `/local/${branchId}/${item.to}`;
+    return location.pathname === itemPath || location.pathname.startsWith(`${itemPath}/`);
   };
 
   const NavContent = () => (
@@ -413,7 +383,7 @@ export default function LocalLayout() {
           const item = section.items[0];
           const isActive = isItemActive(item);
           return (
-            <Link key={section.id} to={`/local/${branchId}`} onClick={handleNavItemClick}>
+            <Link key={section.id} to={`/local/${branchId}`}>
               <Button
                 variant={isActive ? 'secondary' : 'ghost'}
                 className={`w-full justify-start ${isActive ? 'bg-primary/10 text-primary' : ''}`}
@@ -449,27 +419,11 @@ export default function LocalLayout() {
             <CollapsibleContent className="pl-4 space-y-0.5 mt-1">
               {section.items.filter(item => item.show).map((item, idx) => {
                 const isActive = isItemActive(item);
-                
-                if (item.action) {
-                  return (
-                    <Button
-                      key={item.action}
-                      variant={isActive ? 'secondary' : 'ghost'}
-                      size="sm"
-                      className={`w-full justify-start ${isActive ? 'bg-primary/10 text-primary' : ''}`}
-                      onClick={() => handlePOSItemClick(item.action!)}
-                    >
-                      <item.icon className="w-4 h-4 mr-3" />
-                      {item.label}
-                    </Button>
-                  );
-                }
 
                 return (
                   <Link 
                     key={item.to || idx} 
                     to={item.to ? `/local/${branchId}/${item.to}` : `/local/${branchId}`}
-                    onClick={handleNavItemClick}
                   >
                     <Button
                       variant={isActive ? 'secondary' : 'ghost'}
@@ -489,17 +443,9 @@ export default function LocalLayout() {
     </nav>
   );
 
-  // Render content based on active view
+  // Render content based on route
   const renderContent = () => {
     if (!selectedBranch) return null;
-
-    if (activePOSView === 'pos') {
-      return <POSView branch={selectedBranch} />;
-    }
-    
-    if (activePOSView === 'kds') {
-      return <KDSView branch={selectedBranch} />;
-    }
 
     // Show dashboard on index route
     const isDashboard = location.pathname === `/local/${branchId}`;

@@ -58,9 +58,29 @@ interface NavSection {
 // Solo items fijos sin sección
 const fixedItems: NavItem[] = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-  { to: '/admin/sucursales', icon: Store, label: 'Sucursales' },
-  { to: '/admin/mensajes', icon: MessageSquare, label: 'Mensajes' },
 ];
+
+// Sección Atención
+const atencionSection: NavSection = {
+  id: 'atencion',
+  label: 'Atención',
+  icon: MessageSquare,
+  items: [
+    { to: '/admin/mensajes', icon: MessageSquare, label: 'Mensajes' },
+    { to: '/admin/clientes', icon: Users, label: 'Clientes' },
+  ]
+};
+
+// Sección Sucursales
+const sucursalesSection: NavSection = {
+  id: 'sucursales',
+  label: 'Sucursales',
+  icon: Store,
+  items: [
+    { to: '/admin/sucursales', icon: Store, label: 'Mis Sucursales' },
+    { to: '/admin/canales', icon: ShoppingCart, label: 'Canales de Venta' },
+  ]
+};
 
 // Sección Catálogo (lo que se vende)
 const catalogoSection: NavSection = {
@@ -68,31 +88,32 @@ const catalogoSection: NavSection = {
   label: 'Catálogo',
   icon: UtensilsCrossed,
   items: [
-    { to: '/admin/productos', icon: Package, label: 'Productos' },
-    { to: '/admin/modificadores', icon: ChefHat, label: 'Modificadores' },
+    { to: '/admin/catalogo/productos', icon: Package, label: 'Productos' },
+    { to: '/admin/catalogo/modificadores', icon: ChefHat, label: 'Modificadores' },
+    { to: '/admin/catalogo/ingredientes', icon: Boxes, label: 'Ingredientes' },
+    { to: '/admin/catalogo/descuentos', icon: ShieldCheck, label: 'Descuentos' },
   ]
 };
 
-// Sección Insumos & Compras (lo que se compra)
-const insumosSection: NavSection = {
-  id: 'insumos',
-  label: 'Insumos & Compras',
-  icon: ShoppingCart,
+// Sección Proveedores
+const proveedoresSection: NavSection = {
+  id: 'proveedores',
+  label: 'Proveedores',
+  icon: Truck,
   items: [
-    { to: '/admin/ingredientes', icon: Boxes, label: 'Ingredientes' },
     { to: '/admin/proveedores', icon: Truck, label: 'Proveedores' },
-    { to: '/admin/control-proveedores', icon: ShieldCheck, label: 'Control por Ingrediente' },
+    { to: '/admin/proveedores/ingredientes', icon: ShieldCheck, label: 'Control por Ingrediente' },
   ]
 };
 
-// Sección Equipo & Accesos (reestructurada)
+// Sección Equipo & Accesos
 const equipoSection: NavSection = {
   id: 'equipo',
-  label: 'Equipo & Accesos',
+  label: 'Equipo',
   icon: Users,
   items: [
-    { to: '/admin/equipo', icon: Users, label: 'Usuarios' },
-    { to: '/admin/plantillas', icon: Shield, label: 'Plantillas' },
+    { to: '/admin/equipo/usuarios', icon: Users, label: 'Usuarios' },
+    { to: '/admin/equipo/plantillas', icon: Shield, label: 'Plantillas de Roles' },
   ]
 };
 
@@ -102,15 +123,15 @@ const reportsSection: NavSection = {
   label: 'Reportes',
   icon: BarChart3,
   items: [
-    { to: '/admin/performance', icon: TrendingUp, label: 'Performance Locales' },
-    { to: '/admin/reportes', icon: BarChart3, label: 'Ventas' },
-    { to: '/admin/estado-resultados', icon: ClipboardList, label: 'P&L Locales' },
-    { to: '/admin/finanzas-marca', icon: Landmark, label: 'Finanzas Marca' },
+    { to: '/admin/reportes/performance', icon: TrendingUp, label: 'Performance Locales' },
+    { to: '/admin/reportes/ventas', icon: BarChart3, label: 'Ventas' },
+    { to: '/admin/reportes/pyl', icon: ClipboardList, label: 'P&L por Local' },
+    { to: '/admin/reportes/finanzas', icon: Landmark, label: 'Finanzas Marca' },
   ]
 };
 
 // Todas las secciones colapsables en orden
-const allSections: NavSection[] = [catalogoSection, insumosSection, equipoSection, reportsSection];
+const allSections: NavSection[] = [atencionSection, sucursalesSection, catalogoSection, proveedoresSection, equipoSection, reportsSection];
 
 export default function AdminDashboard() {
   const { user, signOut, loading } = useAuth();
@@ -119,8 +140,10 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    atencion: true,
+    sucursales: true,
     catalogo: true,
-    insumos: true,
+    proveedores: true,
     equipo: true,
     reportes: true,
   });
@@ -131,9 +154,9 @@ export default function AdminDashboard() {
     if (avatarInfo.type === 'partner') {
       return [reportsSection];
     }
-    // Coordinadores ven catálogo e insumos (sin equipo)
+    // Coordinadores ven catálogo y proveedores (sin equipo)
     if (avatarInfo.type === 'coordinator') {
-      return [catalogoSection, insumosSection, reportsSection];
+      return [catalogoSection, proveedoresSection, reportsSection];
     }
     // Admin ve todo
     return allSections;
