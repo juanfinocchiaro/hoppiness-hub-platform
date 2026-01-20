@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/contexts/CartContext";
 import { AdminRoute, LocalRoute } from "@/components/guards";
@@ -17,6 +17,8 @@ import Checkout from "./pages/Checkout";
 import PedidoTracking from "./pages/PedidoTracking";
 import NuestroMenu from "./pages/NuestroMenu";
 import Franquicias from "./pages/Franquicias";
+import Nosotros from "./pages/Nosotros";
+import Contacto from "./pages/Contacto";
 import AceptarInvitacion from "./pages/AceptarInvitacion";
 
 // POS / Local
@@ -113,9 +115,12 @@ const App = () => (
             <Route path="/pedir/:branchSlug" element={<PedirBranch />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/pedido/:trackingToken" element={<PedidoTracking />} />
-            <Route path="/menu" element={<NuestroMenu />} />
+            {/* Redirect /menu to /pedir */}
+            <Route path="/menu" element={<Navigate to="/pedir" replace />} />
             <Route path="/menu/:branchSlug" element={<MenuPublic />} />
             <Route path="/franquicias" element={<Franquicias />} />
+            <Route path="/nosotros" element={<Nosotros />} />
+            <Route path="/contacto" element={<Contacto />} />
             <Route path="/clock-in" element={<ClockIn />} />
             <Route path="/registro-staff" element={<RegistroStaff />} />
             <Route path="/invitacion/:token" element={<AceptarInvitacion />} />
