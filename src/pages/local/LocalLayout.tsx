@@ -74,6 +74,7 @@ import LocalDashboard from '@/pages/local/LocalDashboard';
 import ClockInModal from '@/components/attendance/ClockInModal';
 import ActiveStaffWidget from '@/components/attendance/ActiveStaffWidget';
 import { OrderNotificationProvider } from '@/components/orders/OrderNotificationProvider';
+import { NotificationBell } from '@/components/orders/NotificationBell';
 
 type Branch = Tables<'branches'>;
 
@@ -600,20 +601,21 @@ export default function LocalLayout() {
             </SheetContent>
           </Sheet>
           <h1 className="font-bold">{selectedBranch?.name || 'Mi Local'}</h1>
-          <div className="w-10" />
+          <NotificationBell branchId={branchId || ''} />
         </div>
       </header>
 
       <div className="flex">
         {/* Desktop Sidebar */}
         <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-card border-r">
-          <div className="p-6 border-b">
+          <div className="p-6 border-b flex items-center justify-between">
             <ExternalLink to="/" className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
                 <Store className="w-5 h-5 text-primary-foreground" />
               </div>
               <span className="text-lg font-bold">Mi Local</span>
             </ExternalLink>
+            <NotificationBell branchId={branchId || ''} />
           </div>
           
           {/* Branch Selector */}

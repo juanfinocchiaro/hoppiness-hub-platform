@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   ExternalLink, 
   Eye, 
@@ -19,7 +19,11 @@ import {
   CreditCard,
   Truck,
   Bike,
-  FileText
+  FileText,
+  Webhook,
+  Copy,
+  KeyRound,
+  Info
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
@@ -57,7 +61,7 @@ const INTEGRATIONS: IntegrationConfig[] = [
   },
   {
     key: 'mp_delivery',
-    name: 'MercadoPago Delivery',
+    name: 'MP Delivery',
     description: 'Envíos con la flota de MercadoPago',
     icon: <Truck className="h-6 w-6" />,
     docsUrl: 'https://www.mercadopago.com.ar/developers/es/docs/mp-delivery',
@@ -69,8 +73,8 @@ const INTEGRATIONS: IntegrationConfig[] = [
   {
     key: 'rappi',
     name: 'Rappi',
-    description: 'Recibí pedidos de Rappi directamente en tu sistema',
-    icon: <Bike className="h-6 w-6 text-orange-500" />,
+    description: 'Recibí pedidos de Rappi',
+    icon: <Bike className="h-6 w-6" />,
     docsUrl: 'https://www.rappi.com.ar/aliados',
     enabledKey: 'rappi_enabled',
     fields: [
@@ -81,8 +85,8 @@ const INTEGRATIONS: IntegrationConfig[] = [
   {
     key: 'pedidosya',
     name: 'PedidosYa',
-    description: 'Integración con PedidosYa para recibir pedidos',
-    icon: <Bike className="h-6 w-6 text-red-500" />,
+    description: 'Recibí pedidos de PedidosYa',
+    icon: <Bike className="h-6 w-6" />,
     docsUrl: 'https://www.pedidosya.com.ar/restaurantes',
     enabledKey: 'pedidosya_enabled',
     fields: [
@@ -93,8 +97,8 @@ const INTEGRATIONS: IntegrationConfig[] = [
   {
     key: 'facturante',
     name: 'Facturante',
-    description: 'Facturación electrónica AFIP - Facturas A, B y C',
-    icon: <FileText className="h-6 w-6 text-blue-600" />,
+    description: 'Facturación electrónica AFIP',
+    icon: <FileText className="h-6 w-6" />,
     docsUrl: 'https://www.facturante.com/api-factura-electronica.html',
     enabledKey: 'facturante_enabled',
     fields: [
@@ -103,7 +107,150 @@ const INTEGRATIONS: IntegrationConfig[] = [
       { key: 'facturante_punto_venta', label: 'Punto de Venta AFIP', type: 'text', placeholder: '1', required: true },
     ],
   },
+  {
+    key: 'webhook',
+    name: 'Webhook',
+    description: 'Recibí pedidos externos vía API',
+    icon: <Webhook className="h-6 w-6" />,
+    docsUrl: '',
+    enabledKey: 'webhook_api_key' as keyof Branch,
+    fields: [
+      { key: 'webhook_api_key', label: 'API Key del Webhook', type: 'password', placeholder: 'Se genera automáticamente', required: true },
+    ],
+  },
 ];
+
+// Webhook configuration component
+function WebhookIntegrationContent({ 
+  branchId, 
+  webhookApiKey, 
+  onApiKeyChange,
+  canEdit,
+  saving,
+  onSave,
+}: {
+  branchId: string;
+  webhookApiKey: string;
+  onApiKeyChange: (key: string) => void;
+  canEdit: boolean;
+  saving: boolean;
+  onSave: () => void;
+}) {
+  const webhookUrl = `https://diolgjqstduyvilmrtng.supabase.co/functions/v1/webhook-orders`;
+  
+  const generateApiKey = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let key = 'whk_';
+    for (let i = 0; i < 32; i++) {
+      key += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    onApiKeyChange(key);
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copiado al portapapeles`);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Webhook URL */}
+      <div className="space-y-2">
+        <Label>URL del Webhook</Label>
+        <div className="flex gap-2">
+          <Input value={webhookUrl} readOnly className="font-mono text-sm" />
+          <Button 
+            variant="outline" 
+            size="icon"
+            onClick={() => copyToClipboard(webhookUrl, 'URL')}
+          >
+            <Copy className="h-4 w-4" />
+          </Button>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Configurá esta URL en el panel de Rappi, PedidosYa o MP Delivery
+        </p>
+      </div>
+
+      {/* API Key */}
+      <div className="space-y-2">
+        <Label>API Key <span className="text-destructive">*</span></Label>
+        <div className="flex gap-2">
+          <Input 
+            value={webhookApiKey} 
+            readOnly 
+            placeholder="Generá una API Key"
+            className="font-mono text-sm"
+          />
+          {canEdit && (
+            <>
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => webhookApiKey && copyToClipboard(webhookApiKey, 'API Key')}
+                disabled={!webhookApiKey}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={generateApiKey}
+              >
+                <KeyRound className="h-4 w-4 mr-2" />
+                Generar
+              </Button>
+            </>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Usá esta key en el header <code className="bg-muted px-1 rounded">x-api-key</code> de los requests
+        </p>
+      </div>
+
+      {/* Instructions */}
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription className="space-y-3">
+          <p className="font-medium">Cómo configurar el webhook en plataformas externas:</p>
+          
+          <div className="space-y-2 text-sm">
+            <div>
+              <strong>Rappi:</strong> Panel de Aliados → Integraciones → Agregar Webhook → Pegar URL y API Key
+            </div>
+            <div>
+              <strong>PedidosYa:</strong> Portal de Restaurantes → Configuración → Webhooks → Nueva integración
+            </div>
+            <div>
+              <strong>MP Delivery:</strong> Panel de Desarrollador → Notificaciones → Configurar Webhook
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground mt-2">
+            Los pedidos entrantes aparecerán automáticamente en el Integrador para su aceptación.
+          </p>
+        </AlertDescription>
+      </Alert>
+
+      {/* Save Button */}
+      {canEdit && (
+        <Button 
+          onClick={onSave}
+          disabled={saving || !webhookApiKey}
+          className="w-full"
+        >
+          {saving ? (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              Guardando...
+            </>
+          ) : (
+            'Guardar Configuración'
+          )}
+        </Button>
+      )}
+    </div>
+  );
+}
 
 export default function LocalIntegraciones() {
   const { branchId } = useParams();
@@ -134,7 +281,6 @@ export default function LocalIntegraciones() {
       
       setBranch(data);
       
-      // Initialize form data
       const initialData: Record<string, string> = {};
       INTEGRATIONS.forEach(integration => {
         integration.fields.forEach(field => {
@@ -175,12 +321,11 @@ export default function LocalIntegraciones() {
         updateData[field.key as string] = formData[field.key as string] || null;
       });
 
-      // Check if should enable/disable the integration
       const hasRequiredFields = integration.fields
         .filter(f => f.required)
         .every(f => formData[f.key as string]?.trim());
       
-      if (integration.enabledKey !== 'mercadopago_access_token') {
+      if (integration.enabledKey !== 'mercadopago_access_token' && integration.enabledKey !== 'webhook_api_key') {
         updateData[integration.enabledKey as string] = hasRequiredFields;
       }
 
@@ -235,13 +380,13 @@ export default function LocalIntegraciones() {
       )}
 
       <Tabs defaultValue="mercadopago" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-5">
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
           {INTEGRATIONS.map(integration => (
-            <TabsTrigger key={integration.key} value={integration.key} className="gap-2">
+            <TabsTrigger key={integration.key} value={integration.key} className="gap-1 text-xs sm:text-sm">
               {integration.icon}
               <span className="hidden sm:inline">{integration.name}</span>
               {isIntegrationConfigured(integration) && (
-                <CheckCircle className="h-3 w-3 text-green-500" />
+                <CheckCircle className="h-3 w-3 text-primary" />
               )}
             </TabsTrigger>
           ))}
@@ -277,76 +422,92 @@ export default function LocalIntegraciones() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Documentation Link */}
-                <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                  <div>
-                    <p className="font-medium">¿Necesitás ayuda?</p>
-                    <p className="text-sm text-muted-foreground">
-                      Consultá la documentación oficial para obtener tus credenciales
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={integration.docsUrl} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Ver Docs
-                    </a>
-                  </Button>
-                </div>
-
-                {/* Fields */}
-                <div className="space-y-4">
-                  {integration.fields.map(field => (
-                    <div key={field.key as string} className="space-y-2">
-                      <Label htmlFor={field.key as string}>
-                        {field.label}
-                        {field.required && <span className="text-destructive ml-1">*</span>}
-                      </Label>
-                      <div className="relative">
-                        <Input
-                          id={field.key as string}
-                          type={field.type === 'password' && !showPasswords[field.key as string] ? 'password' : 'text'}
-                          placeholder={field.placeholder}
-                          value={formData[field.key as string] || ''}
-                          onChange={(e) => handleFieldChange(field.key as string, e.target.value)}
-                          disabled={!canEdit}
-                          className="pr-10"
-                        />
-                        {field.type === 'password' && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-0 top-0 h-full px-3"
-                            onClick={() => togglePassword(field.key as string)}
-                          >
-                            {showPasswords[field.key as string] ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </Button>
-                        )}
+                {/* Webhook specific content */}
+                {integration.key === 'webhook' ? (
+                  <WebhookIntegrationContent 
+                    branchId={branchId || ''} 
+                    webhookApiKey={formData.webhook_api_key || branch?.webhook_api_key || ''}
+                    onApiKeyChange={(key) => handleFieldChange('webhook_api_key', key)}
+                    canEdit={canEdit}
+                    saving={saving === 'webhook'}
+                    onSave={() => saveIntegration(integration)}
+                  />
+                ) : (
+                  <>
+                    {/* Documentation Link */}
+                    {integration.docsUrl && (
+                      <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                        <div>
+                          <p className="font-medium">¿Necesitás ayuda?</p>
+                          <p className="text-sm text-muted-foreground">
+                            Consultá la documentación oficial
+                          </p>
+                        </div>
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={integration.docsUrl} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Ver Docs
+                          </a>
+                        </Button>
                       </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Save Button */}
-                {canEdit && (
-                  <Button 
-                    onClick={() => saveIntegration(integration)}
-                    disabled={saving === integration.key}
-                    className="w-full"
-                  >
-                    {saving === integration.key ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        Guardando...
-                      </>
-                    ) : (
-                      'Guardar Configuración'
                     )}
-                  </Button>
+
+                    {/* Fields */}
+                    <div className="space-y-4">
+                      {integration.fields.map(field => (
+                        <div key={field.key as string} className="space-y-2">
+                          <Label htmlFor={field.key as string}>
+                            {field.label}
+                            {field.required && <span className="text-destructive ml-1">*</span>}
+                          </Label>
+                          <div className="relative">
+                            <Input
+                              id={field.key as string}
+                              type={field.type === 'password' && !showPasswords[field.key as string] ? 'password' : 'text'}
+                              placeholder={field.placeholder}
+                              value={formData[field.key as string] || ''}
+                              onChange={(e) => handleFieldChange(field.key as string, e.target.value)}
+                              disabled={!canEdit}
+                              className="pr-10"
+                            />
+                            {field.type === 'password' && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="absolute right-0 top-0 h-full px-3"
+                                onClick={() => togglePassword(field.key as string)}
+                              >
+                                {showPasswords[field.key as string] ? (
+                                  <EyeOff className="h-4 w-4" />
+                                ) : (
+                                  <Eye className="h-4 w-4" />
+                                )}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Save Button */}
+                    {canEdit && (
+                      <Button 
+                        onClick={() => saveIntegration(integration)}
+                        disabled={saving === integration.key}
+                        className="w-full"
+                      >
+                        {saving === integration.key ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            Guardando...
+                          </>
+                        ) : (
+                          'Guardar Configuración'
+                        )}
+                      </Button>
+                    )}
+                  </>
                 )}
               </CardContent>
             </Card>
