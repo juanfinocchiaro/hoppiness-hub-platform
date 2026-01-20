@@ -81,14 +81,14 @@ const insumosSection: NavSection = {
   ]
 };
 
-// Sección Equipo & Accesos
+// Sección Equipo & Accesos (reestructurada)
 const equipoSection: NavSection = {
   id: 'equipo',
   label: 'Equipo & Accesos',
   icon: Users,
   items: [
-    { to: '/admin/usuarios', icon: Users, label: 'Usuarios' },
-    { to: '/admin/permisos', icon: Shield, label: 'Permisos' },
+    { to: '/admin/equipo', icon: Users, label: 'Equipo' },
+    { to: '/admin/accesos', icon: Shield, label: 'Accesos' },
   ]
 };
 
