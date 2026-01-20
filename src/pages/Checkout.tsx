@@ -122,11 +122,25 @@ export default function Checkout() {
         orderNotes = `${notes ? notes + ' | ' : ''}Paga con: ${formatPrice(cashAmountNum)}`;
       }
       
-      // Create order
+      // Find or create customer by phone
+      const { data: customerId, error: customerError } = await supabase
+        .rpc('find_or_create_customer', {
+          p_phone: customerPhone.trim(),
+          p_name: customerName.trim(),
+          p_email: customerEmail.trim() || null,
+        });
+      
+      if (customerError) {
+        console.error('Error finding/creating customer:', customerError);
+        // Continue without customer_id - not a blocking error
+      }
+      
+      // Create order with customer_id
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
           branch_id: branch.id,
+          customer_id: customerId || null,
           customer_name: customerName.trim(),
           customer_phone: customerPhone.trim(),
           customer_email: customerEmail.trim() || null,
