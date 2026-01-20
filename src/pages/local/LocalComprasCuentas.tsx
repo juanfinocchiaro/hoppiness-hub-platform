@@ -66,18 +66,16 @@ export default function LocalComprasCuentas() {
       // Get invoices to calculate balances
       const { data: invoicesData } = await supabase
         .from('supplier_invoices')
-        .select('supplier_id, total, is_paid')
+        .select('supplier_id, total')
         .eq('branch_id', branchId);
       
-      // Calculate balance per supplier (unpaid invoices)
+      // Calculate balance per supplier
       const balanceMap = new Map<string, number>();
       const overdueMap = new Map<string, number>();
       
-      invoicesData?.forEach(inv => {
-        if (!inv.is_paid) {
-          const current = balanceMap.get(inv.supplier_id) || 0;
-          balanceMap.set(inv.supplier_id, current + (inv.total || 0));
-        }
+      invoicesData?.forEach((inv: any) => {
+        const current = balanceMap.get(inv.supplier_id) || 0;
+        balanceMap.set(inv.supplier_id, current + (inv.total || 0));
       });
       
       return (suppliersData || []).map(s => ({

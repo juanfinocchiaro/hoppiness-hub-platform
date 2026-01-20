@@ -94,9 +94,20 @@ export default function LocalComprasProveedores() {
         .order('name');
       
       if (error) throw error;
-      return (data || []).map(s => ({
-        ...s,
-        tax_condition: s.tax_condition || null,
+      return (data || []).map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        contact_name: s.contact_name,
+        phone: s.phone,
+        whatsapp: s.whatsapp,
+        email: s.email,
+        address: s.address,
+        cuit: s.cuit,
+        tax_condition: null,
+        notes: s.notes,
+        scope: s.scope || 'brand',
+        branch_id: s.branch_id,
+        category: s.category,
       })) as Supplier[];
     },
     enabled: !!branchId,

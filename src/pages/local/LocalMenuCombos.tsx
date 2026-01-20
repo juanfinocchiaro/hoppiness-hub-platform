@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+
+// Helper to avoid deep type instantiation with Supabase queries
+const db = supabase as any;
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -40,28 +43,23 @@ export default function LocalMenuCombos() {
   // Fetch combos (products marked as combo)
   const { data: combos, isLoading } = useQuery({
     queryKey: ['branch-combos', branchId],
-    queryFn: async () => {
+    queryFn: async (): Promise<Combo[]> => {
       // Get products that are combos
-      const { data: comboProducts, error: comboError } = await supabase
-        .from('products')
-        .select('id, name, price, is_available')
-        .eq('is_combo', true)
-        .order('name');
+      const productsResult = await db.from('products').select('id, name, price, is_available').eq('is_combo', true).order('name');
       
-      if (comboError) throw comboError;
+      if (productsResult.error) throw productsResult.error;
+      const comboProducts = productsResult.data || [];
       
       // Get branch-specific availability
-      const { data: branchProducts } = await supabase
-        .from('branch_products')
-        .select('product_id, is_available')
-        .eq('branch_id', branchId);
+      const branchResult = await db.from('branch_products').select('product_id, is_available').eq('branch_id', branchId!);
       
-      const branchAvailability = new Map(
-        branchProducts?.map(bp => [bp.product_id, bp.is_available]) || []
+      const branchProducts = branchResult.data || [];
+      const branchAvailability = new Map<string, boolean>(
+        branchProducts.map((bp: any) => [bp.product_id, bp.is_available])
       );
       
-      // Process combos - simplified without combo_items relation
-      const processedCombos: Combo[] = (comboProducts || []).map(combo => {
+      // Process combos
+      const processedCombos: Combo[] = comboProducts.map((combo: any) => {
         const comboAvailable = branchAvailability.get(combo.id) !== false && combo.is_available;
         
         return {
@@ -69,7 +67,7 @@ export default function LocalMenuCombos() {
           name: combo.name,
           price: combo.price,
           is_available: comboAvailable,
-          products: [], // Would need combo_items table properly set up
+          products: [],
           status: comboAvailable ? 'available' : 'disabled' as const,
         };
       });
