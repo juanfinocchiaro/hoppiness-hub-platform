@@ -127,9 +127,15 @@
     @apply border-border;
   }
 
+  html {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch; /* Better iOS scroll */
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+    overscroll-behavior-y: contain; /* Prevent pull-to-refresh conflict */
   }
 
   /* Typography - Space Mono for titles like brand manual suggests */
