@@ -5134,6 +5134,8 @@ export type Database = {
         Row: {
           address: string | null
           bank_account: string | null
+          branch_id: string | null
+          category: string | null
           category_id: string | null
           contact_name: string | null
           created_at: string
@@ -5148,12 +5150,15 @@ export type Database = {
           notes: string | null
           payment_terms_days: number | null
           phone: string | null
+          scope: string | null
           updated_at: string
           whatsapp: string | null
         }
         Insert: {
           address?: string | null
           bank_account?: string | null
+          branch_id?: string | null
+          category?: string | null
           category_id?: string | null
           contact_name?: string | null
           created_at?: string
@@ -5168,12 +5173,15 @@ export type Database = {
           notes?: string | null
           payment_terms_days?: number | null
           phone?: string | null
+          scope?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
         Update: {
           address?: string | null
           bank_account?: string | null
+          branch_id?: string | null
+          category?: string | null
           category_id?: string | null
           contact_name?: string | null
           created_at?: string
@@ -5188,10 +5196,25 @@ export type Database = {
           notes?: string | null
           payment_terms_days?: number | null
           phone?: string | null
+          scope?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "suppliers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suppliers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
           {
             foreignKeyName: "suppliers_category_id_fkey"
             columns: ["category_id"]
