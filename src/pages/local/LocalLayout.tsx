@@ -6,6 +6,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useRoleLanding } from '@/hooks/useRoleLanding';
 import { usePanelAccess } from '@/hooks/usePanelAccess';
 import { useEmbedMode } from '@/hooks/useEmbedMode';
+import { usePendingOrdersCount } from '@/hooks/usePendingOrdersCount';
 import { useQuery } from '@tanstack/react-query';
 import { ExternalLink } from '@/components/ui/ExternalLink';
 import { Button } from '@/components/ui/button';
@@ -61,6 +62,7 @@ import {
   Building2,
   FileStack,
   Layers,
+  Inbox,
 } from 'lucide-react';
 import {
   Sheet,
@@ -256,6 +258,7 @@ export default function LocalLayout() {
       icon: Zap,
       show: true,
       items: [
+        { to: 'integrador', label: 'Integrador', icon: Inbox, show: true },
         { to: 'pos', label: 'Punto de Venta', icon: Monitor, show: true },
         { to: 'kds', label: 'Cocina (KDS)', icon: ChefHat, show: true },
         { to: 'pedidos', label: 'Pedidos Activos', icon: ClipboardList, show: true },
