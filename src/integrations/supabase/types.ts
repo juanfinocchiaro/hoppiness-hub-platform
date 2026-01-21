@@ -3491,6 +3491,12 @@ export type Database = {
           estimated_time: string | null
           external_order_id: string | null
           id: string
+          integration_accepted_at: string | null
+          integration_accepted_by: string | null
+          integration_rejected_at: string | null
+          integration_rejected_by: string | null
+          integration_rejection_reason: string | null
+          integration_status: string | null
           invoice_type: string
           is_finalized: boolean | null
           notes: string | null
@@ -3528,6 +3534,12 @@ export type Database = {
           estimated_time?: string | null
           external_order_id?: string | null
           id?: string
+          integration_accepted_at?: string | null
+          integration_accepted_by?: string | null
+          integration_rejected_at?: string | null
+          integration_rejected_by?: string | null
+          integration_rejection_reason?: string | null
+          integration_status?: string | null
           invoice_type?: string
           is_finalized?: boolean | null
           notes?: string | null
@@ -3565,6 +3577,12 @@ export type Database = {
           estimated_time?: string | null
           external_order_id?: string | null
           id?: string
+          integration_accepted_at?: string | null
+          integration_accepted_by?: string | null
+          integration_rejected_at?: string | null
+          integration_rejected_by?: string | null
+          integration_rejection_reason?: string | null
+          integration_status?: string | null
           invoice_type?: string
           is_finalized?: boolean | null
           notes?: string | null
