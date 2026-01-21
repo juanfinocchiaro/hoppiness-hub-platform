@@ -51,27 +51,27 @@ interface DashboardStats {
   channelStats: ChannelStats[];
 }
 
-type BranchChannel = {
+type BranchFeature = {
   key: keyof Branch;
   label: string;
   icon: React.ReactNode;
 };
 
-// Tipos de servicio disponibles en sucursal
-const branchServiceTypes: BranchChannel[] = [
+// Tipos de servicio disponibles en sucursal (cómo se entrega el pedido)
+const serviceTypes: BranchFeature[] = [
   { key: 'delivery_enabled', label: 'Delivery', icon: <Truck className="w-3 h-3" /> },
-  { key: 'takeaway_enabled', label: 'TakeAway', icon: <ShoppingBag className="w-3 h-3" /> },
+  { key: 'takeaway_enabled', label: 'Take Away', icon: <ShoppingBag className="w-3 h-3" /> },
   { key: 'dine_in_enabled', label: 'Salón', icon: <Users className="w-3 h-3" /> },
 ];
 
-// Canales externos (Apps de Delivery)
-const branchExternalChannels: BranchChannel[] = [
+// Apps de Delivery externas (canales de venta externos)
+const externalApps: BranchFeature[] = [
   { key: 'rappi_enabled', label: 'Rappi', icon: <Bike className="w-3 h-3" /> },
   { key: 'pedidosya_enabled', label: 'PedidosYa', icon: <Bike className="w-3 h-3" /> },
   { key: 'mercadopago_delivery_enabled', label: 'MP Delivery', icon: <Truck className="w-3 h-3" /> },
 ];
 
-// Canales de venta: Mostrador, Web App, Rappi, PedidosYa, MP Delivery
+// Canales de venta para reportes: Mostrador, Web App, Rappi, PedidosYa, MP Delivery
 const channelLabels: Record<string, { label: string; icon: React.ReactNode }> = {
   mostrador: { label: 'Mostrador', icon: <Store className="w-4 h-4" /> },
   webapp: { label: 'Web App', icon: <Store className="w-4 h-4" /> },
@@ -311,43 +311,33 @@ function DashboardContent({ branch }: { branch: Branch }) {
           })()}
         </div>
 
-        {/* Active Service Types & Channels */}
+        {/* Service Types (how orders are delivered) & External Apps */}
         <div className="flex flex-wrap gap-2">
-          {/* Tipos de servicio */}
-          {branchServiceTypes.map(channel => {
-            const isForced = branch.admin_force_state && branch.admin_force_state !== 'none';
-            const effectiveOpen = isForced 
-              ? branch.admin_force_state === 'open'
-              : branch.local_open_state ?? false;
-            
-            const isEnabled = effectiveOpen && (branch[channel.key] as boolean ?? false);
+          {/* Tipos de servicio habilitados */}
+          {serviceTypes.map(feature => {
+            const isEnabled = branch[feature.key] as boolean ?? false;
             return (
               <Badge 
-                key={channel.key}
+                key={feature.key}
                 variant={isEnabled ? 'default' : 'outline'}
                 className={isEnabled ? 'bg-primary' : 'text-muted-foreground'}
               >
-                {channel.icon}
-                <span className="ml-1">{channel.label}</span>
+                {feature.icon}
+                <span className="ml-1">{feature.label}</span>
               </Badge>
             );
           })}
-          {/* Canales externos */}
-          {branchExternalChannels.map(channel => {
-            const isForced = branch.admin_force_state && branch.admin_force_state !== 'none';
-            const effectiveOpen = isForced 
-              ? branch.admin_force_state === 'open'
-              : branch.local_open_state ?? false;
-            
-            const isEnabled = effectiveOpen && (branch[channel.key] as boolean ?? false);
+          {/* Apps de delivery externas */}
+          {externalApps.map(feature => {
+            const isEnabled = branch[feature.key] as boolean ?? false;
             return (
               <Badge 
-                key={channel.key}
+                key={feature.key}
                 variant={isEnabled ? 'default' : 'outline'}
                 className={isEnabled ? 'bg-primary' : 'text-muted-foreground'}
               >
-                {channel.icon}
-                <span className="ml-1">{channel.label}</span>
+                {feature.icon}
+                <span className="ml-1">{feature.label}</span>
               </Badge>
             );
           })}
