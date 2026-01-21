@@ -103,6 +103,7 @@ export default function LocalCaja() {
   const [historyDialog, setHistoryDialog] = useState(false);
   const [registersConfigDialog, setRegistersConfigDialog] = useState(false);
   const [alivioDialog, setAlivioDialog] = useState(false);
+  const [alivioStep, setAlivioStep] = useState<'amount' | 'confirm'>('amount');
   
   // Alivio form
   const [alivioAmount, setAlivioAmount] = useState('');
@@ -424,6 +425,7 @@ export default function LocalCaja() {
 
       toast({ title: 'Alivio realizado', description: `Se transfirieron ${formatCurrency(amount)}` });
       setAlivioDialog(false);
+      setAlivioStep('amount');
       setAlivioAmount('');
       setAlivioNotes('');
       fetchData();
@@ -1042,82 +1044,194 @@ export default function LocalCaja() {
                           </Dialog>
 
                           {/* Hacer Alivio Button */}
-                          <Dialog open={alivioDialog} onOpenChange={setAlivioDialog}>
+                          <Dialog 
+                            open={alivioDialog} 
+                            onOpenChange={(open) => {
+                              setAlivioDialog(open);
+                              if (!open) {
+                                setAlivioStep('amount');
+                                setAlivioAmount('');
+                                setAlivioNotes('');
+                              }
+                            }}
+                          >
                             <DialogTrigger asChild>
                               <Button variant="secondary">
                                 <Wallet className="h-4 w-4 mr-2" />
                                 Hacer Alivio
                               </Button>
                             </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Hacer Alivio</DialogTitle>
-                                <DialogDescription>
-                                  Transferir efectivo de {registers.find(r => r.id === selectedTab)?.name || 'esta caja'} a Caja de Alivio
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <div className="p-4 bg-muted/50 rounded-lg">
-                                  <p className="text-sm text-muted-foreground">Efectivo disponible en caja</p>
-                                  <p className="text-2xl font-bold text-primary">
-                                    {formatCurrency(expectedCash)}
-                                  </p>
-                                </div>
-                                
-                                {/* Quick amount buttons */}
-                                <div>
-                                  <Label className="text-xs text-muted-foreground">Montos rápidos</Label>
-                                  <div className="flex flex-wrap gap-2 mt-2">
-                                    {[50000, 100000, 150000, 200000, 300000].map((amount) => (
-                                      <Button
-                                        key={amount}
-                                        type="button"
-                                        variant={alivioAmount === String(amount) ? "default" : "outline"}
-                                        size="sm"
-                                        onClick={() => setAlivioAmount(String(amount))}
-                                        disabled={amount > expectedCash}
-                                        className="flex-1 min-w-[70px]"
-                                      >
-                                        ${(amount / 1000).toFixed(0)}k
-                                      </Button>
-                                    ))}
-                                  </div>
-                                </div>
+                            <DialogContent className="max-w-md">
+                              {alivioStep === 'amount' ? (
+                                <>
+                                  <DialogHeader>
+                                    <DialogTitle>Hacer Alivio</DialogTitle>
+                                    <DialogDescription>
+                                      Transferir efectivo de {registers.find(r => r.id === selectedTab)?.name || 'esta caja'} a Caja de Alivio
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="space-y-4">
+                                    <div className="p-4 bg-muted/50 rounded-lg">
+                                      <p className="text-sm text-muted-foreground">Efectivo disponible en caja</p>
+                                      <p className="text-2xl font-bold text-primary">
+                                        {formatCurrency(expectedCash)}
+                                      </p>
+                                    </div>
+                                    
+                                    {/* Quick amount buttons */}
+                                    <div>
+                                      <Label className="text-xs text-muted-foreground">Montos rápidos</Label>
+                                      <div className="flex flex-wrap gap-2 mt-2">
+                                        {[50000, 100000, 150000, 200000, 300000].map((amount) => (
+                                          <Button
+                                            key={amount}
+                                            type="button"
+                                            variant={alivioAmount === String(amount) ? "default" : "outline"}
+                                            size="sm"
+                                            onClick={() => setAlivioAmount(String(amount))}
+                                            disabled={amount > expectedCash}
+                                            className="flex-1 min-w-[70px]"
+                                          >
+                                            ${(amount / 1000).toFixed(0)}k
+                                          </Button>
+                                        ))}
+                                      </div>
+                                    </div>
 
-                                <div>
-                                  <Label>Monto a transferir</Label>
-                                  <Input 
-                                    type="number" 
-                                    placeholder="0.00"
-                                    value={alivioAmount}
-                                    onChange={(e) => setAlivioAmount(e.target.value)}
-                                  />
-                                  {parseFloat(alivioAmount) > expectedCash && (
-                                    <p className="text-xs text-destructive mt-1">
-                                      El monto supera el efectivo disponible
-                                    </p>
-                                  )}
-                                </div>
-                                <div>
-                                  <Label>Notas (opcional)</Label>
-                                  <Input 
-                                    placeholder="Ej: Alivio de mediodía"
-                                    value={alivioNotes}
-                                    onChange={(e) => setAlivioNotes(e.target.value)}
-                                  />
-                                </div>
-                              </div>
-                              <DialogFooter>
-                                <Button variant="outline" onClick={() => setAlivioDialog(false)}>
-                                  Cancelar
-                                </Button>
-                                <Button 
-                                  onClick={handleHacerAlivio}
-                                  disabled={!alivioAmount || parseFloat(alivioAmount) <= 0}
-                                >
-                                  Confirmar Alivio
-                                </Button>
-                              </DialogFooter>
+                                    <div>
+                                      <Label>Monto a transferir</Label>
+                                      <Input 
+                                        type="number" 
+                                        placeholder="0.00"
+                                        value={alivioAmount}
+                                        onChange={(e) => setAlivioAmount(e.target.value)}
+                                      />
+                                      {parseFloat(alivioAmount) > expectedCash && (
+                                        <p className="text-xs text-destructive mt-1">
+                                          El monto supera el efectivo disponible
+                                        </p>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Live preview of remaining balance */}
+                                    {alivioAmount && parseFloat(alivioAmount) > 0 && parseFloat(alivioAmount) <= expectedCash && (
+                                      <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                                        <p className="text-xs text-muted-foreground">Saldo restante después del alivio</p>
+                                        <p className="text-lg font-bold text-amber-600">
+                                          {formatCurrency(expectedCash - parseFloat(alivioAmount))}
+                                        </p>
+                                      </div>
+                                    )}
+                                    
+                                    <div>
+                                      <Label>Notas (opcional)</Label>
+                                      <Input 
+                                        placeholder="Ej: Alivio de mediodía"
+                                        value={alivioNotes}
+                                        onChange={(e) => setAlivioNotes(e.target.value)}
+                                      />
+                                    </div>
+                                  </div>
+                                  <DialogFooter>
+                                    <Button variant="outline" onClick={() => setAlivioDialog(false)}>
+                                      Cancelar
+                                    </Button>
+                                    <Button 
+                                      onClick={() => setAlivioStep('confirm')}
+                                      disabled={!alivioAmount || parseFloat(alivioAmount) <= 0 || parseFloat(alivioAmount) > expectedCash}
+                                    >
+                                      Continuar
+                                    </Button>
+                                  </DialogFooter>
+                                </>
+                              ) : (
+                                <>
+                                  <DialogHeader>
+                                    <DialogTitle>Confirmar Alivio</DialogTitle>
+                                    <DialogDescription>
+                                      Revisá los datos antes de confirmar
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="space-y-4">
+                                    {/* Receipt preview */}
+                                    <div className="border rounded-lg p-4 bg-muted/30 space-y-3 font-mono text-sm">
+                                      <div className="text-center border-b pb-2">
+                                        <p className="font-bold">COMPROBANTE DE ALIVIO</p>
+                                      </div>
+                                      
+                                      <div className="space-y-1">
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">Sucursal:</span>
+                                          <span className="font-medium">{branch.name}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">Fecha:</span>
+                                          <span>{format(new Date(), "dd/MM/yyyy HH:mm", { locale: es })}</span>
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="border-t border-dashed pt-2 space-y-1">
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">Cajero:</span>
+                                          <span className="font-medium">{userName || user?.email || 'Usuario'}</span>
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="border-t border-dashed pt-2 space-y-1">
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">De:</span>
+                                          <span>{registers.find(r => r.id === selectedTab)?.name || 'Caja de Venta'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">A:</span>
+                                          <span>{registers.find(r => r.name.toLowerCase().includes('alivio'))?.name || 'Caja de Alivio'}</span>
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="border-t border-dashed pt-2 space-y-1">
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">Saldo antes:</span>
+                                          <span>{formatCurrency(expectedCash)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-lg font-bold text-primary">
+                                          <span>Monto alivio:</span>
+                                          <span>{formatCurrency(parseFloat(alivioAmount) || 0)}</span>
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="border-t border-double pt-2">
+                                        <div className="flex justify-between font-bold">
+                                          <span>Saldo restante:</span>
+                                          <span className="text-amber-600">{formatCurrency(expectedCash - (parseFloat(alivioAmount) || 0))}</span>
+                                        </div>
+                                      </div>
+                                      
+                                      {alivioNotes && (
+                                        <div className="border-t border-dashed pt-2 text-center text-xs italic text-muted-foreground">
+                                          Notas: {alivioNotes}
+                                        </div>
+                                      )}
+                                    </div>
+                                    
+                                    <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-center">
+                                      <p className="text-sm font-medium text-amber-700">
+                                        ¿Confirmar retiro de {formatCurrency(parseFloat(alivioAmount) || 0)}?
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <DialogFooter className="flex-col sm:flex-row gap-2">
+                                    <Button variant="outline" onClick={() => setAlivioStep('amount')} className="w-full sm:w-auto">
+                                      Volver
+                                    </Button>
+                                    <Button 
+                                      onClick={handleHacerAlivio}
+                                      className="w-full sm:w-auto"
+                                    >
+                                      Confirmar y Imprimir
+                                    </Button>
+                                  </DialogFooter>
+                                </>
+                              )}
                             </DialogContent>
                           </Dialog>
 
