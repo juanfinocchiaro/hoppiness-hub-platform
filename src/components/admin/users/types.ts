@@ -2,6 +2,7 @@ import type { BrandRole, LocalRole } from '@/hooks/usePermissionsV2';
 
 export interface UserWithStats {
   id: string;
+  user_id: string | null; // auth.users id - needed for user_roles_v2
   full_name: string;
   email: string;
   phone: string | null;

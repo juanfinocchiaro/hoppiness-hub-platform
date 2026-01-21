@@ -76,11 +76,14 @@ export function UserRoleModal({ user, branches, open, onOpenChange, onSuccess }:
         
         if (error) throw error;
       } else {
-        // Insert new role
+        // Insert new role - use user_id (auth.users id), not profile id
+        if (!user.user_id) {
+          throw new Error('El usuario no tiene cuenta vinculada');
+        }
         const { error } = await supabase
           .from('user_roles_v2')
           .insert({
-            user_id: user.id,
+            user_id: user.user_id,
             brand_role: finalBrandRole,
             local_role: finalLocalRole,
             branch_ids: finalBranchIds,
