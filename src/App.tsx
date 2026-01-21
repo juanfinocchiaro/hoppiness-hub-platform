@@ -40,6 +40,7 @@ import LocalRRHHHoras from "./pages/local/LocalRRHHHoras";
 import LocalRRHHSueldos from "./pages/local/LocalRRHHSueldos";
 import LocalRRHHLiquidacion from "./pages/local/LocalRRHHLiquidacion";
 import LocalUsuarios from "./pages/local/LocalUsuarios";
+import LocalTeam from "./pages/local/LocalTeam";
 import LocalFacturas from "./pages/local/LocalFacturas";
 import LocalObligaciones from "./pages/local/LocalObligaciones";
 import LocalFinanceReports from "./pages/local/LocalFinanceReports";
@@ -77,7 +78,7 @@ import ProfitLossReport from "./pages/admin/ProfitLossReport";
 import BranchPerformance from "./pages/admin/BranchPerformance";
 import BrandFinances from "./pages/admin/BrandFinances";
 import Users from "./pages/admin/Users";
-import UsersV2 from "./pages/admin/UsersV2";
+import UsersPage from "./pages/admin/UsersPage";
 import RoleTemplates from "./pages/admin/RoleTemplates";
 import UserBranchOverrides from "./pages/admin/UserBranchOverrides";
 
@@ -223,6 +224,7 @@ const App = () => (
               
               {/* EQUIPO */}
               <Route path="equipo" element={<LocalUsuarios />} />
+              <Route path="equipo/mi-equipo" element={<LocalTeam />} />
               <Route path="equipo/fichar" element={<LocalRRHHFichajes />} />
               <Route path="equipo/horarios" element={<LocalRRHHHorarios />} />
               <Route path="equipo/horas" element={<LocalRRHHHoras />} />
@@ -304,7 +306,7 @@ const App = () => (
               
               {/* PERSONAS */}
               <Route path="personas/equipo-central" element={<CentralTeam />} />
-              <Route path="personas/usuarios" element={<UsersV2 />} />
+              <Route path="personas/usuarios" element={<UsersPage />} />
               <Route path="personas/buscar" element={<Users />} />
               <Route path="personas/roles" element={<RoleTemplates />} />
               

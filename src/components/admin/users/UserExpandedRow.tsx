@@ -29,15 +29,15 @@ export function UserExpandedRow({ user, branches, onClose, onUserUpdated }: User
     queryFn: async () => {
       const { data } = await supabase
         .from('user_addresses')
-        .select('id, label, address_line1, city, postal_code')
+        .select('id, label, address')
         .eq('user_id', user.id)
         .limit(3);
       return (data || []).map(d => ({
         id: d.id,
         label: d.label,
-        street: d.address_line1 || '',
-        city: d.city || '',
-        postal_code: d.postal_code,
+        street: d.address || '',
+        city: '',
+        postal_code: null,
       })) as UserAddress[];
     },
     staleTime: 60 * 1000,
@@ -60,7 +60,7 @@ export function UserExpandedRow({ user, branches, onClose, onUserUpdated }: User
       const orderIds = orders.map(o => o.id);
       const { data: items } = await supabase
         .from('order_items')
-        .select('order_id, name, quantity')
+        .select('order_id, product_name_snapshot, quantity')
         .in('order_id', orderIds);
 
       return orders.map((o, idx) => ({
@@ -69,7 +69,7 @@ export function UserExpandedRow({ user, branches, onClose, onUserUpdated }: User
         total: o.total,
         created_at: o.created_at,
         items: items?.filter(i => i.order_id === o.id).map(i => ({
-          name: i.name || 'Producto',
+          name: i.product_name_snapshot || 'Producto',
           quantity: i.quantity,
         })) || [],
       })) as RecentOrder[];
@@ -90,7 +90,7 @@ export function UserExpandedRow({ user, branches, onClose, onUserUpdated }: User
       
       const { error } = await supabase
         .from('profiles')
-        .update({ internal_notes: updatedNotes as unknown as Record<string, unknown>[] })
+        .update({ internal_notes: updatedNotes })
         .eq('id', user.id);
       
       if (error) throw error;
