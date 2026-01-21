@@ -898,6 +898,7 @@ export type Database = {
           email: string | null
           enforce_labor_law: boolean
           estimated_prep_time_min: number | null
+          expense_pin_threshold: number | null
           facturante_api_key: string | null
           facturante_cuit: string | null
           facturante_enabled: boolean | null
@@ -942,6 +943,7 @@ export type Database = {
           email?: string | null
           enforce_labor_law?: boolean
           estimated_prep_time_min?: number | null
+          expense_pin_threshold?: number | null
           facturante_api_key?: string | null
           facturante_cuit?: string | null
           facturante_enabled?: boolean | null
@@ -986,6 +988,7 @@ export type Database = {
           email?: string | null
           enforce_labor_law?: boolean
           estimated_prep_time_min?: number | null
+          expense_pin_threshold?: number | null
           facturante_api_key?: string | null
           facturante_cuit?: string | null
           facturante_enabled?: boolean | null
@@ -1125,39 +1128,51 @@ export type Database = {
       cash_register_movements: {
         Row: {
           amount: number
+          authorized_by: string | null
           branch_id: string
           concept: string
           created_at: string
           id: string
+          operated_by: string | null
           order_id: string | null
           payment_method: string
           recorded_by: string | null
+          requires_authorization: boolean | null
+          salary_advance_id: string | null
           shift_id: string
           transaction_id: string | null
           type: string
         }
         Insert: {
           amount: number
+          authorized_by?: string | null
           branch_id: string
           concept: string
           created_at?: string
           id?: string
+          operated_by?: string | null
           order_id?: string | null
           payment_method: string
           recorded_by?: string | null
+          requires_authorization?: boolean | null
+          salary_advance_id?: string | null
           shift_id: string
           transaction_id?: string | null
           type: string
         }
         Update: {
           amount?: number
+          authorized_by?: string | null
           branch_id?: string
           concept?: string
           created_at?: string
           id?: string
+          operated_by?: string | null
           order_id?: string | null
           payment_method?: string
           recorded_by?: string | null
+          requires_authorization?: boolean | null
+          salary_advance_id?: string | null
           shift_id?: string
           transaction_id?: string | null
           type?: string
@@ -1182,6 +1197,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_movements_salary_advance_id_fkey"
+            columns: ["salary_advance_id"]
+            isOneToOne: false
+            referencedRelation: "salary_advances"
             referencedColumns: ["id"]
           },
           {
@@ -1309,6 +1331,83 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "supplier_balances"
             referencedColumns: ["branch_id"]
+          },
+        ]
+      }
+      cashier_discrepancy_history: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          actual_amount: number
+          branch_id: string
+          cash_register_id: string | null
+          created_at: string | null
+          discrepancy: number
+          expected_amount: number
+          id: string
+          notes: string | null
+          shift_date: string
+          shift_id: string
+          user_id: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          actual_amount: number
+          branch_id: string
+          cash_register_id?: string | null
+          created_at?: string | null
+          discrepancy: number
+          expected_amount: number
+          id?: string
+          notes?: string | null
+          shift_date: string
+          shift_id: string
+          user_id: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          actual_amount?: number
+          branch_id?: string
+          cash_register_id?: string | null
+          created_at?: string | null
+          discrepancy?: number
+          expected_amount?: number
+          id?: string
+          notes?: string | null
+          shift_date?: string
+          shift_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cashier_discrepancy_history_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashier_discrepancy_history_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "cashier_discrepancy_history_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashier_discrepancy_history_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: true
+            referencedRelation: "cash_register_shifts"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3205,6 +3304,57 @@ export type Database = {
           },
         ]
       }
+      operator_session_logs: {
+        Row: {
+          action_type: string
+          branch_id: string
+          created_at: string | null
+          current_user_id: string
+          id: string
+          ip_address: unknown
+          previous_user_id: string | null
+          triggered_by: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action_type: string
+          branch_id: string
+          created_at?: string | null
+          current_user_id: string
+          id?: string
+          ip_address?: unknown
+          previous_user_id?: string | null
+          triggered_by?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action_type?: string
+          branch_id?: string
+          created_at?: string | null
+          current_user_id?: string
+          id?: string
+          ip_address?: unknown
+          previous_user_id?: string | null
+          triggered_by?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operator_session_logs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operator_session_logs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       order_cancellations: {
         Row: {
           cancel_notes: string | null
@@ -4699,6 +4849,114 @@ export type Database = {
           },
         ]
       }
+      salary_advances: {
+        Row: {
+          amount: number
+          authorized_at: string | null
+          authorized_by: string | null
+          branch_id: string
+          created_at: string | null
+          created_by: string | null
+          deducted_at: string | null
+          deducted_in_payroll_id: string | null
+          employee_id: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          paid_by: string | null
+          payment_method: string
+          reason: string | null
+          shift_id: string | null
+          status: string
+          transfer_reference: string | null
+          transferred_at: string | null
+          transferred_by: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          authorized_at?: string | null
+          authorized_by?: string | null
+          branch_id: string
+          created_at?: string | null
+          created_by?: string | null
+          deducted_at?: string | null
+          deducted_in_payroll_id?: string | null
+          employee_id: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_method: string
+          reason?: string | null
+          shift_id?: string | null
+          status?: string
+          transfer_reference?: string | null
+          transferred_at?: string | null
+          transferred_by?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          authorized_at?: string | null
+          authorized_by?: string | null
+          branch_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          deducted_at?: string | null
+          deducted_in_payroll_id?: string | null
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_method?: string
+          reason?: string | null
+          shift_id?: string | null
+          status?: string
+          transfer_reference?: string | null
+          transferred_at?: string | null
+          transferred_by?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_advances_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_advances_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "salary_advances_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_advances_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_advances_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "cash_register_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scanned_documents: {
         Row: {
           branch_id: string | null
@@ -5615,6 +5873,10 @@ export type Database = {
           supplier_id: string | null
           tax_percentage: number | null
           transaction_date: string
+          transfer_executed_at: string | null
+          transfer_executed_by: string | null
+          transfer_reference: string | null
+          transfer_status: string | null
           turno_id: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string | null
@@ -5652,6 +5914,10 @@ export type Database = {
           supplier_id?: string | null
           tax_percentage?: number | null
           transaction_date?: string
+          transfer_executed_at?: string | null
+          transfer_executed_by?: string | null
+          transfer_reference?: string | null
+          transfer_status?: string | null
           turno_id?: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string | null
@@ -5689,6 +5955,10 @@ export type Database = {
           supplier_id?: string | null
           tax_percentage?: number | null
           transaction_date?: string
+          transfer_executed_at?: string | null
+          transfer_executed_by?: string | null
+          transfer_reference?: string | null
+          transfer_status?: string | null
           turno_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string | null
@@ -6263,6 +6533,40 @@ export type Database = {
         Args: { p_branch_id: string }
         Returns: string
       }
+      get_cashier_discrepancy_stats: {
+        Args: { _branch_id?: string; _user_id: string }
+        Returns: {
+          discrepancy_this_month: number
+          discrepancy_total: number
+          last_discrepancy_amount: number
+          last_discrepancy_date: string
+          perfect_shifts: number
+          precision_pct: number
+          total_shifts: number
+        }[]
+      }
+      get_shift_advances: {
+        Args: { _shift_id: string }
+        Returns: {
+          amount: number
+          authorized_by_name: string
+          employee_name: string
+          id: string
+          paid_at: string
+        }[]
+      }
+      get_shift_expenses: {
+        Args: { _shift_id: string }
+        Returns: {
+          amount: number
+          authorized_by_name: string
+          category_name: string
+          concept: string
+          created_at: string
+          id: string
+          recorded_by_name: string
+        }[]
+      }
       get_user_branch_roles: {
         Args: { _user_id: string }
         Returns: {
@@ -6318,6 +6622,14 @@ export type Database = {
           p_reason?: string
         }
         Returns: boolean
+      }
+      validate_supervisor_pin: {
+        Args: { _branch_id: string; _pin: string }
+        Returns: {
+          full_name: string
+          role: string
+          user_id: string
+        }[]
       }
       validate_supplier_for_ingredient: {
         Args: { p_ingredient_id: string; p_supplier_id: string }
