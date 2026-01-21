@@ -920,6 +920,27 @@ export default function LocalCaja() {
                                     {formatCurrency(expectedCash)}
                                   </p>
                                 </div>
+                                
+                                {/* Quick amount buttons */}
+                                <div>
+                                  <Label className="text-xs text-muted-foreground">Montos rápidos</Label>
+                                  <div className="flex flex-wrap gap-2 mt-2">
+                                    {[50000, 100000, 150000, 200000, 300000].map((amount) => (
+                                      <Button
+                                        key={amount}
+                                        type="button"
+                                        variant={alivioAmount === String(amount) ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={() => setAlivioAmount(String(amount))}
+                                        disabled={amount > expectedCash}
+                                        className="flex-1 min-w-[70px]"
+                                      >
+                                        ${(amount / 1000).toFixed(0)}k
+                                      </Button>
+                                    ))}
+                                  </div>
+                                </div>
+
                                 <div>
                                   <Label>Monto a transferir</Label>
                                   <Input 
@@ -928,6 +949,11 @@ export default function LocalCaja() {
                                     value={alivioAmount}
                                     onChange={(e) => setAlivioAmount(e.target.value)}
                                   />
+                                  {parseFloat(alivioAmount) > expectedCash && (
+                                    <p className="text-xs text-destructive mt-1">
+                                      El monto supera el efectivo disponible
+                                    </p>
+                                  )}
                                 </div>
                                 <div>
                                   <Label>Notas (opcional)</Label>
