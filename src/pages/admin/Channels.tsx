@@ -71,9 +71,6 @@ const DEFAULT_FORM: ChannelFormData = {
   slug: '',
   description: '',
   channel_type: 'direct',
-  allows_delivery: false,
-  allows_takeaway: false,
-  allows_dine_in: false,
   requires_integration: false,
   integration_type: '',
   icon: 'Globe',
@@ -107,9 +104,6 @@ export default function Channels() {
       slug: channel.slug,
       description: channel.description || '',
       channel_type: channel.channel_type,
-      allows_delivery: channel.allows_delivery,
-      allows_takeaway: channel.allows_takeaway,
-      allows_dine_in: channel.allows_dine_in,
       requires_integration: channel.requires_integration,
       integration_type: channel.integration_type || '',
       icon: channel.icon || 'Globe',
@@ -152,12 +146,9 @@ export default function Channels() {
     return CHANNEL_TYPES.find(t => t.value === type)?.label || type;
   };
 
-  const getDeliveryModes = (channel: Channel) => {
-    const modes: string[] = [];
-    if (channel.allows_delivery) modes.push('Delivery');
-    if (channel.allows_takeaway) modes.push('Take Away');
-    if (channel.allows_dine_in) modes.push('Salón');
-    return modes.length > 0 ? modes.join(', ') : 'Ninguno';
+  // Service types are now separate from channels
+  const getChannelDescription = (channel: Channel) => {
+    return channel.description || getTypeLabel(channel.channel_type);
   };
 
   if (isLoading) {
@@ -225,7 +216,7 @@ export default function Channels() {
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Tipo: {getTypeLabel(channel.channel_type)} • {getDeliveryModes(channel)}
+                      Tipo: {getTypeLabel(channel.channel_type)}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {channelStats?.enabled || 0} sucursales usando
@@ -332,38 +323,7 @@ export default function Channels() {
               </Select>
             </div>
             
-            <div className="grid gap-2">
-              <Label>Modos de Entrega Permitidos</Label>
-              <div className="flex flex-wrap gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox"
-                    checked={formData.allows_delivery}
-                    onChange={e => setFormData(prev => ({ ...prev, allows_delivery: e.target.checked }))}
-                    className="rounded"
-                  />
-                  <span className="text-sm">Delivery</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox"
-                    checked={formData.allows_takeaway}
-                    onChange={e => setFormData(prev => ({ ...prev, allows_takeaway: e.target.checked }))}
-                    className="rounded"
-                  />
-                  <span className="text-sm">Take Away</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox"
-                    checked={formData.allows_dine_in}
-                    onChange={e => setFormData(prev => ({ ...prev, allows_dine_in: e.target.checked }))}
-                    className="rounded"
-                  />
-                  <span className="text-sm">Comer en Local</span>
-                </label>
-              </div>
-            </div>
+            {/* Removed delivery modes section - service types are now separate from channels */}
             
             <div className="grid gap-2">
               <label className="flex items-center gap-2 cursor-pointer">

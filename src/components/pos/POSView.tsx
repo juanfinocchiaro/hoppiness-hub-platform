@@ -869,7 +869,7 @@ export default function POSView({ branch }: POSViewProps) {
 
       const { data: order, error: orderError } = await supabase
         .from('orders')
-        .insert({
+        .insert([{
           branch_id: branch.id,
           customer_name: customerName || `Llamador #${callerNumber}`,
           customer_phone: customerPhone || '',
@@ -878,8 +878,8 @@ export default function POSView({ branch }: POSViewProps) {
           table_number: null,
           caller_number: callerNumber ? parseInt(callerNumber) : null,
           order_type: mapOrderType(),
-          service_type: orderArea === 'apps' ? 'delivery' : serviceType, // New: service_type column
-          order_area: orderArea,
+          service_type: orderArea === 'apps' ? 'delivery' : serviceType,
+          order_area: orderArea === 'apps' ? 'delivery' : (serviceType === 'dine_in' ? 'salon' : orderArea),
           payment_method: orderArea === 'apps' && appPaymentMethod !== 'efectivo' ? null : actualPaymentMethod,
           sales_channel: getSalesChannel(),
           external_order_id: orderArea === 'apps' ? externalOrderId : null,
@@ -892,7 +892,7 @@ export default function POSView({ branch }: POSViewProps) {
           invoice_type: invoiceType,
           customer_cuit: invoiceType === 'factura_a' ? customerCuit : null,
           customer_business_name: invoiceType === 'factura_a' ? customerBusinessName : null,
-        })
+        }])
         .select()
         .single();
 
@@ -1889,7 +1889,7 @@ export default function POSView({ branch }: POSViewProps) {
         branch={branch}
         orderConfig={{
           orderArea,
-          counterSubType,
+          serviceType,
           appsChannel,
           callerNumber,
           customerName,
@@ -1961,28 +1961,37 @@ export default function POSView({ branch }: POSViewProps) {
             {orderArea === 'mostrador' && (
               <div className="space-y-4">
                 <div className="space-y-3">
-                  <Label>Tipo de pedido</Label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <Label>Tipo de servicio</Label>
+                  <div className="grid grid-cols-3 gap-3">
                     <Button
-                      variant={counterSubType === 'takeaway' ? 'default' : 'outline'}
-                      onClick={() => setCounterSubType('takeaway')}
+                      variant={serviceType === 'takeaway' ? 'default' : 'outline'}
+                      onClick={() => setServiceType('takeaway')}
                       className="flex-col h-auto py-4"
                     >
                       <Store className="w-6 h-6 mb-2" />
                       <span className="font-medium">Para llevar</span>
                     </Button>
                     <Button
-                      variant={counterSubType === 'dine_here' ? 'default' : 'outline'}
-                      onClick={() => setCounterSubType('dine_here')}
+                      variant={serviceType === 'dine_in' ? 'default' : 'outline'}
+                      onClick={() => setServiceType('dine_in')}
                       className="flex-col h-auto py-4"
                     >
                       <Utensils className="w-6 h-6 mb-2" />
                       <span className="font-medium">Comer acá</span>
                     </Button>
+                    <Button
+                      variant={serviceType === 'delivery' ? 'default' : 'outline'}
+                      onClick={() => setServiceType('delivery')}
+                      className="flex-col h-auto py-4"
+                    >
+                      <Bike className="w-6 h-6 mb-2" />
+                      <span className="font-medium">Delivery</span>
+                    </Button>
                   </div>
                 </div>
 
-                {/* Caller Number Grid - for both takeaway and dine_here */}
+                {/* Caller Number Grid - for takeaway and dine_in */}
+                {(serviceType === 'takeaway' || serviceType === 'dine_in') && (
                 <div className="space-y-3">
                   <Label className="text-base">Número de llamador</Label>
                   <div className="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto p-1">
@@ -2004,20 +2013,78 @@ export default function POSView({ branch }: POSViewProps) {
                     ))}
                   </div>
                 </div>
+                )}
 
-                {/* Optional Name */}
-                <div className="space-y-2">
-                  <Label className="text-sm text-muted-foreground">Nombre (opcional)</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Nombre del cliente"
-                      value={customerName.startsWith('Llamador #') ? '' : customerName}
-                      onChange={(e) => setCustomerName(e.target.value || (callerNumber ? `Llamador #${callerNumber}` : ''))}
-                      className="pl-10"
-                    />
+                {/* Delivery info for mostrador delivery */}
+                {serviceType === 'delivery' && (
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label>Nombre del cliente *</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Nombre"
+                          value={customerName}
+                          onChange={(e) => setCustomerName(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Teléfono *</Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Teléfono"
+                          value={customerPhone}
+                          onChange={(e) => setCustomerPhone(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Dirección de entrega *</Label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Dirección"
+                          value={deliveryAddress}
+                          onChange={(e) => setDeliveryAddress(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Costo de envío</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          value={customDeliveryFee}
+                          onChange={(e) => setCustomDeliveryFee(e.target.value)}
+                          className="pl-8"
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* Optional Name for takeaway/dine_in */}
+                {(serviceType === 'takeaway' || serviceType === 'dine_in') && (
+                  <div className="space-y-2">
+                    <Label className="text-sm text-muted-foreground">Nombre (opcional)</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Nombre del cliente"
+                        value={customerName.startsWith('Llamador #') ? '' : customerName}
+                        onChange={(e) => setCustomerName(e.target.value || (callerNumber ? `Llamador #${callerNumber}` : ''))}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <Separator />
 
@@ -2068,110 +2135,7 @@ export default function POSView({ branch }: POSViewProps) {
               </div>
             )}
 
-            {/* Delivery Options */}
-            {orderArea === 'delivery' && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Nombre del cliente *</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Nombre"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Teléfono *</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Teléfono"
-                      value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Dirección de entrega *</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Dirección"
-                      value={deliveryAddress}
-                      onChange={(e) => setDeliveryAddress(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Costo de envío</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={customDeliveryFee}
-                      onChange={(e) => setCustomDeliveryFee(e.target.value)}
-                      className="pl-8"
-                    />
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Invoice Type Selection for Delivery */}
-                <div className="space-y-3">
-                  <Label className="text-base">Tipo de Factura</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      variant={invoiceType === 'consumidor_final' ? 'default' : 'outline'}
-                      onClick={() => setInvoiceType('consumidor_final')}
-                      className="flex-col h-auto py-3"
-                    >
-                      <Receipt className="w-5 h-5 mb-1" />
-                      <span className="text-sm font-medium">Consumidor Final</span>
-                    </Button>
-                    <Button
-                      variant={invoiceType === 'factura_a' ? 'default' : 'outline'}
-                      onClick={() => setInvoiceType('factura_a')}
-                      className="flex-col h-auto py-3"
-                    >
-                      <FileText className="w-5 h-5 mb-1" />
-                      <span className="text-sm font-medium">Factura A</span>
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Factura A Fields */}
-                {invoiceType === 'factura_a' && (
-                  <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
-                    <div className="space-y-2">
-                      <Label>CUIT *</Label>
-                      <Input
-                        placeholder="XX-XXXXXXXX-X"
-                        value={customerCuit}
-                        onChange={(e) => setCustomerCuit(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Razón Social *</Label>
-                      <Input
-                        placeholder="Nombre de la empresa"
-                        value={customerBusinessName}
-                        onChange={(e) => setCustomerBusinessName(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Apps Options - delivery via third party apps */}
 
             {/* Apps Options */}
             {orderArea === 'apps' && (
@@ -2303,8 +2267,8 @@ export default function POSView({ branch }: POSViewProps) {
             <Button 
               onClick={handleStartOrder}
               disabled={
-                (orderArea === 'mostrador' && counterSubType === 'dine_here' && !callerNumber) ||
-                (orderArea === 'delivery' && (!customerName.trim() || !customerPhone.trim() || !deliveryAddress.trim())) ||
+                (orderArea === 'mostrador' && serviceType === 'dine_in' && !callerNumber) ||
+                (orderArea === 'mostrador' && serviceType === 'delivery' && (!customerName.trim() || !customerPhone.trim() || !deliveryAddress.trim())) ||
                 (orderArea === 'apps' && (!customerName.trim() || !deliveryAddress.trim()))
               }
             >

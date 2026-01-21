@@ -23,9 +23,6 @@ export interface Channel {
   slug: string;
   description?: string | null;
   channel_type: ChannelType;
-  allows_delivery: boolean;
-  allows_takeaway: boolean;
-  allows_dine_in: boolean;
   requires_integration: boolean;
   integration_type?: string | null;
   icon?: string | null;
@@ -98,9 +95,6 @@ export interface BranchActiveChannel {
   channel_name: string;
   channel_slug: string;
   channel_type: ChannelType;
-  allows_delivery: boolean;
-  allows_takeaway: boolean;
-  allows_dine_in: boolean;
   icon: string | null;
   color: string | null;
   config: Record<string, unknown> | null;
@@ -113,9 +107,6 @@ export interface ChannelFormData {
   slug: string;
   description?: string;
   channel_type: ChannelType;
-  allows_delivery: boolean;
-  allows_takeaway: boolean;
-  allows_dine_in: boolean;
   requires_integration: boolean;
   integration_type?: string;
   icon?: string;
@@ -123,6 +114,9 @@ export interface ChannelFormData {
   is_active: boolean;
   display_order: number;
 }
+
+// Service Type = How the order is delivered (separate from channel)
+export type ServiceType = 'delivery' | 'takeaway' | 'dine_in';
 
 export interface ToggleChannelAvailabilityParams {
   branchId: string;
