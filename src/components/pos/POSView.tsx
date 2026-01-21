@@ -57,6 +57,7 @@ import {
   Pencil,
   PlusCircle,
   Coffee,
+  Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -1735,11 +1736,14 @@ export default function POSView({ branch }: POSViewProps) {
               </Button>
               <Button className="flex-1" onClick={addToCartWithModifiers}>
                 {editingCartItemId ? (
-                  <>Guardar Cambios</>
+                  <>
+                    <Check className="w-4 h-4 mr-2" />
+                    Guardar cambios
+                  </>
                 ) : (
                   <>
                     <Plus className="w-4 h-4 mr-2" />
-                    Agregar {tempQuantity > 1 ? `(${tempQuantity})` : ''}
+                    Agregar al pedido {tempQuantity > 1 ? `(${tempQuantity})` : ''}
                   </>
                 )}
               </Button>
