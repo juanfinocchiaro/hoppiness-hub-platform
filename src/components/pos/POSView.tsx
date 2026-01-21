@@ -115,12 +115,7 @@ type CounterSubType = 'takeaway' | 'dine_here';
 // Order flow dialog type
 type OrderFlowDialogType = 'delivery_info' | 'counter_type' | 'apps_channel' | null;
 
-interface BranchTable {
-  id: string;
-  table_number: string;
-  area: string;
-  is_occupied: boolean;
-}
+// BranchTable removed - tables feature not used
 
 interface CartItem {
   id: string; // Unique cart item ID
@@ -233,8 +228,7 @@ export default function POSView({ branch }: POSViewProps) {
   // Additional POS state
   const [counterSubType, setCounterSubType] = useState<CounterSubType>('takeaway');
   const [callerNumber, setCallerNumber] = useState('');
-  const [selectedTableId, setSelectedTableId] = useState('');
-  const [tables, setTables] = useState<BranchTable[]>([]);
+  // Tables feature removed - not used in any branch
   
   // Apps delivery state
   const [appsChannel, setAppsChannel] = useState<AppsChannel>('pedidos_ya');
@@ -313,22 +307,7 @@ export default function POSView({ branch }: POSViewProps) {
     checkActiveShift();
   }, [selectedCashRegister]);
 
-  // Fetch tables for salon
-  useEffect(() => {
-    async function fetchTables() {
-      if (!branch.dine_in_enabled) return;
-      
-      const { data } = await supabase
-        .from('tables')
-        .select('id, table_number, area, is_occupied')
-        .eq('branch_id', branch.id)
-        .order('table_number');
-      
-      if (data) setTables(data);
-    }
-    
-    fetchTables();
-  }, [branch.id, branch.dine_in_enabled]);
+  // Tables feature removed - not used in any branch
 
   // Fetch products and categories
   useEffect(() => {
@@ -952,7 +931,7 @@ export default function POSView({ branch }: POSViewProps) {
       setCustomerEmail('');
       setDeliveryAddress('');
       setCallerNumber('');
-      setSelectedTableId('');
+      // selectedTableId removed - tables feature not used
       setExternalOrderId('');
       setCustomDeliveryFee('');
       setInvoiceType('consumidor_final');

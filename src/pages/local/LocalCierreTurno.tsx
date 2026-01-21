@@ -92,6 +92,73 @@ const CHANNEL_ICONS: Record<string, string> = {
   whatsapp: '💬',
 };
 
+// Helper to process attendance_logs into check_in/check_out pairs
+interface AttendanceLogRow {
+  id: string;
+  timestamp: string;
+  log_type: string;
+  employee_id: string;
+  employees: {
+    id: string;
+    full_name: string | null;
+  } | null;
+}
+
+interface StaffRecord {
+  check_in: string;
+  check_out: string | null;
+  name: string;
+}
+
+function processAttendanceLogs(logs: AttendanceLogRow[]): StaffRecord[] {
+  // Group logs by employee
+  const byEmployee = new Map<string, AttendanceLogRow[]>();
+  
+  for (const log of logs) {
+    const empId = log.employee_id;
+    if (!byEmployee.has(empId)) {
+      byEmployee.set(empId, []);
+    }
+    byEmployee.get(empId)!.push(log);
+  }
+  
+  const records: StaffRecord[] = [];
+  
+  for (const [, empLogs] of byEmployee) {
+    // Sort by timestamp
+    empLogs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    
+    // Pair IN/OUT entries
+    let inLog: AttendanceLogRow | null = null;
+    
+    for (const log of empLogs) {
+      if (log.log_type === 'IN' || log.log_type === 'clock_in') {
+        // Start a new pair
+        inLog = log;
+      } else if ((log.log_type === 'OUT' || log.log_type === 'clock_out') && inLog) {
+        // Complete the pair
+        records.push({
+          check_in: inLog.timestamp,
+          check_out: log.timestamp,
+          name: inLog.employees?.full_name || 'Sin nombre',
+        });
+        inLog = null;
+      }
+    }
+    
+    // If there's an unpaired IN, add it as still active
+    if (inLog) {
+      records.push({
+        check_in: inLog.timestamp,
+        check_out: null,
+        name: inLog.employees?.full_name || 'Sin nombre',
+      });
+    }
+  }
+  
+  return records;
+}
+
 export default function LocalCierreTurno() {
   const { branchId } = useParams<{ branchId: string }>();
   const { branch } = useOutletContext<LocalContext>();
@@ -214,16 +281,25 @@ export default function LocalCierreTurno() {
         .gte('opened_at', start)
         .lt('opened_at', end);
 
-      // Fetch staff attendance
-      const { data: staffData } = await supabase
-        .from('attendance_records')
+      // Fetch staff attendance from attendance_logs (consolidated table)
+      // Group by employee to calculate check-in/check-out pairs
+      const { data: attendanceLogsData } = await supabase
+        .from('attendance_logs')
         .select(`
-          id, check_in, check_out,
-          profiles:user_id (full_name)
+          id, timestamp, log_type, employee_id,
+          employees:employee_id (
+            id,
+            full_name
+          )
         `)
         .eq('branch_id', branchId)
-        .gte('check_in', start)
-        .lt('check_in', end);
+        .gte('timestamp', start)
+        .lt('timestamp', end)
+        .order('timestamp');
+
+      // Transform attendance_logs to the same format as before
+      // Group by employee_id and pair IN/OUT entries
+      const staffData = processAttendanceLogs((attendanceLogsData || []) as AttendanceLogRow[]);
 
       // Fetch shift notes
       const { data: notesData } = await supabase
@@ -281,7 +357,7 @@ export default function LocalCierreTurno() {
     const checkOut = r.check_out ? new Date(r.check_out) : null;
     const hours = checkOut ? (checkOut.getTime() - checkIn.getTime()) / 3600000 : 0;
     return {
-      name: (r.profiles as any)?.full_name || 'Sin nombre',
+      name: r.name || 'Sin nombre',
       checkIn: format(checkIn, 'HH:mm'),
       checkOut: checkOut ? format(checkOut, 'HH:mm') : 'Activo',
       hours: Math.round(hours * 10) / 10,

@@ -6,7 +6,6 @@ Documentación de tablas en la base de datos que no tienen interfaz de gestión 
 
 | Tabla | Descripción | Estado |
 |-------|-------------|--------|
-| `tables` | Gestión de mesas para servicio en salón | Futuro - sin UI |
 | `product_branch_exclusions` | Exclusiones de producto por sucursal | Manejado por código |
 | `kds_stations` | Estaciones de cocina/KDS | UI limitada en LocalKDSSettings |
 | `availability_schedules` | Horarios de disponibilidad de productos | Parcialmente implementado |
@@ -16,17 +15,30 @@ Documentación de tablas en la base de datos que no tienen interfaz de gestión 
 | Tabla | Descripción | Notas |
 |-------|-------------|-------|
 | `availability_logs` | Log de cambios de disponibilidad de productos | Solo lectura para auditoría |
-| `attendance_logs` | Logs de fichaje legacy | Ver `attendance_records` |
+| `attendance_logs` | Logs de fichaje (tabla principal) | Consolidado desde attendance_records |
 | `cash_register_movements` | Movimientos de caja | Visible en LocalCaja, no editable |
 | `stock_movements` | Historial de movimientos de stock | Solo lectura |
 
-## Legacy / A revisar
+## Legacy / Deprecado
 
-| Tabla | Descripción | Acción sugerida |
-|-------|-------------|-----------------|
-| `branch_permissions` | Sistema de permisos legacy (booleanos) | Migrar a `user_branch_permissions` |
-| `attendance_logs` vs `attendance_records` | 2 sistemas de asistencia coexisten | Consolidar en uno solo |
-| `product_branch_exclusions` vs `branch_products` | Posible redundancia | Revisar si se puede unificar |
+| Tabla | Descripción | Estado |
+|-------|-------------|--------|
+| `branch_permissions` | Sistema de permisos legacy (booleanos) | **DEPRECADO** - usar `user_branch_permissions` |
+| `attendance_records` | Registros de asistencia legacy | **DEPRECADO** - usar `attendance_logs` |
+
+## Tablas Eliminadas
+
+| Tabla | Motivo | Fecha |
+|-------|--------|-------|
+| `tables` | Gestión de mesas no usada en ningún local | 2026-01-21 |
+
+## Campos Eliminados de `branches`
+
+| Campo | Motivo | Fecha |
+|-------|--------|-------|
+| `allowed_ips` | Sin uso en código | 2026-01-21 |
+| `local_channels` | Sin uso en código | 2026-01-21 |
+| `status_message` | Sin uso en código | 2026-01-21 |
 
 ## Tablas intermedias/pivote (correctamente sin UI directa)
 

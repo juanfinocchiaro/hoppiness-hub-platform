@@ -265,21 +265,28 @@ export default function RegistroStaff() {
         devWarn('Role assignment error:', roleError);
       }
 
-      // 5. Assign branch permissions
-      const { error: permError } = await supabase
-        .from('branch_permissions')
-        .insert({
+      // 5. Assign granular branch permissions from role defaults
+      // NOTE: grant_role_defaults RPC already handles this below, 
+      // but we fetch and insert explicitly for clearer control
+      const { data: defaultPerms, error: permsQueryError } = await supabase
+        .from('role_default_permissions')
+        .select('permission_key')
+        .eq('role', invitation.role as 'encargado' | 'cajero' | 'kds');
+
+      if (!permsQueryError && defaultPerms && defaultPerms.length > 0) {
+        const permsToInsert = defaultPerms.map(p => ({
           user_id: userId,
           branch_id: invitation.branch_id,
-          can_manage_orders: true,
-          can_manage_products: invitation.role === 'encargado',
-          can_manage_inventory: invitation.role === 'encargado',
-          can_view_reports: invitation.role === 'encargado',
-          can_manage_staff: false,
-        });
+          permission_key: p.permission_key,
+        }));
+        
+        const { error: permError } = await supabase
+          .from('user_branch_permissions')
+          .insert(permsToInsert);
 
-      if (permError) {
-        devWarn('Permission assignment error:', permError);
+        if (permError) {
+          devWarn('Granular permission assignment error:', permError);
+        }
       }
 
       // 6. Grant role defaults
