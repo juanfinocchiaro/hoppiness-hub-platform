@@ -106,11 +106,14 @@ interface CashRegisterShift {
   status: string;
 }
 
-type OrderArea = 'mostrador' | 'delivery' | 'apps';
-type AppsChannel = 'rappi' | 'pedidos_ya' | 'mercadopago_delivery';
+// Service Type = How the order is delivered (separate from channel)
+type ServiceType = 'delivery' | 'takeaway' | 'dine_in';
+
+// OrderArea is now mainly for apps integration, POS always uses 'mostrador' channel
+type OrderArea = 'mostrador' | 'apps';
+type AppsChannel = 'rappi' | 'pedidos_ya' | 'mp_delivery';
 type PaymentMethod = 'efectivo' | 'tarjeta_debito' | 'tarjeta_credito' | 'mercadopago_qr' | 'mercadopago_link' | 'transferencia' | 'vales';
 type OrderType = Enums<'order_type'>;
-type CounterSubType = 'takeaway' | 'dine_here';
 
 // Order flow dialog type
 type OrderFlowDialogType = 'delivery_info' | 'counter_type' | 'apps_channel' | null;
@@ -135,16 +138,23 @@ interface POSViewProps {
   branch: Branch;
 }
 
+// Service types for POS (replaces old ORDER_AREAS for mostrador)
+const SERVICE_TYPES: { value: ServiceType; label: string; icon: React.ElementType }[] = [
+  { value: 'takeaway', label: 'Take Away', icon: ShoppingCart },
+  { value: 'dine_in', label: 'Comer Acá', icon: Utensils },
+  { value: 'delivery', label: 'Delivery', icon: Bike },
+];
+
+// Order areas (source of the order in POS)
 const ORDER_AREAS: { value: OrderArea; label: string; icon: React.ElementType }[] = [
   { value: 'mostrador', label: 'Mostrador', icon: Store },
-  { value: 'delivery', label: 'Delivery Propio', icon: Bike },
   { value: 'apps', label: 'Apps de Delivery', icon: Bike },
 ];
 
 const APPS_CHANNELS: { value: AppsChannel; label: string }[] = [
   { value: 'rappi', label: 'Rappi' },
   { value: 'pedidos_ya', label: 'Pedidos Ya' },
-  { value: 'mercadopago_delivery', label: 'MercadoPago Delivery' },
+  { value: 'mp_delivery', label: 'MercadoPago Delivery' },
 ];
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ElementType }[] = [
@@ -163,7 +173,7 @@ const getAppPaymentInfo = (channel: AppsChannel): { fixed: boolean; method?: App
   switch (channel) {
     case 'rappi':
       return { fixed: true, method: 'rappi' };
-    case 'mercadopago_delivery':
+    case 'mp_delivery':
       return { fixed: true, method: 'mercadopago_delivery' };
     case 'pedidos_ya':
       return { fixed: false, options: ['pedidos_ya', 'efectivo'] };
@@ -225,8 +235,8 @@ export default function POSView({ branch }: POSViewProps) {
   const [customerEmail, setCustomerEmail] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   
-  // Additional POS state
-  const [counterSubType, setCounterSubType] = useState<CounterSubType>('takeaway');
+  // Service type state - how the order is delivered
+  const [serviceType, setServiceType] = useState<ServiceType>('takeaway');
   const [callerNumber, setCallerNumber] = useState('');
   // Tables feature removed - not used in any branch
   
@@ -460,7 +470,7 @@ export default function POSView({ branch }: POSViewProps) {
     setExternalOrderId('');
     setCustomDeliveryFee('');
     setOrderArea('mostrador');
-    setCounterSubType('takeaway');
+    setServiceType('takeaway');
     setAppsChannel('pedidos_ya');
     setAppPaymentMethod('pedidos_ya');
     setDraftOrderId(null);
@@ -751,7 +761,7 @@ export default function POSView({ branch }: POSViewProps) {
   };
 
   const subtotal = cart.reduce((sum, item) => sum + getItemPrice(item) * item.quantity, 0);
-  const deliveryFee = (orderArea === 'delivery' || orderArea === 'apps') && customDeliveryFee 
+  const deliveryFee = (serviceType === 'delivery' || orderArea === 'apps') && customDeliveryFee 
     ? parseFloat(customDeliveryFee) 
     : 0;
   const total = subtotal + deliveryFee + tipAmount;
@@ -765,17 +775,24 @@ export default function POSView({ branch }: POSViewProps) {
   };
 
   const mapOrderType = (): OrderType => {
-    switch (orderArea) {
-      case 'delivery': return 'delivery';
-      case 'apps': return 'delivery';
-      case 'mostrador': 
-        return counterSubType === 'dine_here' ? 'dine_in' : 'takeaway';
-      default: return 'takeaway';
+    // serviceType directly maps to order_type
+    return serviceType;
+  };
+
+  // Get the channel slug for database
+  const getChannelSlug = (): string => {
+    if (orderArea === 'apps') {
+      return appsChannel; // 'rappi', 'pedidos_ya', 'mp_delivery'
     }
+    return 'mostrador'; // POS always uses 'mostrador' channel
   };
 
   const getSalesChannel = (): Enums<'sales_channel'> => {
-    if (orderArea === 'apps') return appsChannel;
+    // Map to legacy sales_channel enum for backwards compatibility
+    if (orderArea === 'apps') {
+      if (appsChannel === 'mp_delivery') return 'mercadopago_delivery';
+      return appsChannel === 'rappi' ? 'rappi' : 'pedidos_ya';
+    }
     return 'pos_local';
   };
 
@@ -786,17 +803,27 @@ export default function POSView({ branch }: POSViewProps) {
   const handleCheckout = async () => {
     if (cart.length === 0) return;
     
-    // Validation based on order area
+    // Validation based on order area and service type
     if (orderArea === 'mostrador') {
-      if (counterSubType === 'dine_here' && !callerNumber.trim()) {
+      if (serviceType === 'dine_in' && !callerNumber.trim()) {
         toast.error('Ingresá el número de llamador');
         return;
       }
-      if (counterSubType === 'takeaway' && !customerName.trim()) {
+      if (serviceType === 'takeaway' && !customerName.trim()) {
         toast.error('Ingresá el nombre o número de llamador');
         return;
       }
-    } else if (orderArea === 'delivery' || orderArea === 'apps') {
+      if (serviceType === 'delivery') {
+        if (!customerName.trim() || !customerPhone.trim()) {
+          toast.error('Nombre y teléfono son requeridos');
+          return;
+        }
+        if (!deliveryAddress.trim()) {
+          toast.error('Ingresá la dirección de entrega');
+          return;
+        }
+      }
+    } else if (orderArea === 'apps') {
       if (!customerName.trim() || !customerPhone.trim()) {
         toast.error('Nombre y teléfono son requeridos');
         return;
@@ -847,11 +874,12 @@ export default function POSView({ branch }: POSViewProps) {
           customer_name: customerName || `Llamador #${callerNumber}`,
           customer_phone: customerPhone || '',
           customer_email: customerEmail || null,
-          delivery_address: (orderArea === 'delivery' || orderArea === 'apps') ? deliveryAddress : null,
+          delivery_address: (serviceType === 'delivery' || orderArea === 'apps') ? deliveryAddress : null,
           table_number: null,
           caller_number: callerNumber ? parseInt(callerNumber) : null,
           order_type: mapOrderType(),
-          order_area: orderArea === 'apps' ? 'delivery' : orderArea,
+          service_type: orderArea === 'apps' ? 'delivery' : serviceType, // New: service_type column
+          order_area: orderArea,
           payment_method: orderArea === 'apps' && appPaymentMethod !== 'efectivo' ? null : actualPaymentMethod,
           sales_channel: getSalesChannel(),
           external_order_id: orderArea === 'apps' ? externalOrderId : null,
@@ -967,14 +995,13 @@ export default function POSView({ branch }: POSViewProps) {
             {orderStarted && (
               <Badge variant="outline" className="gap-1 py-1.5 px-3">
                 {orderArea === 'mostrador' && <Store className="w-4 h-4" />}
-                {orderArea === 'delivery' && <Bike className="w-4 h-4" />}
                 {orderArea === 'apps' && <Bike className="w-4 h-4" />}
                 <span className="ml-1">
                   {orderArea === 'apps' 
                     ? APPS_CHANNELS.find(c => c.value === appsChannel)?.label 
                     : ORDER_AREAS.find(a => a.value === orderArea)?.label
                   }
-                  {orderArea === 'mostrador' && ` - ${counterSubType === 'takeaway' ? 'Para llevar' : 'Comer acá'}`}
+                  {orderArea === 'mostrador' && ` - ${SERVICE_TYPES.find(s => s.value === serviceType)?.label}`}
                 </span>
               </Badge>
             )}
@@ -1159,7 +1186,7 @@ export default function POSView({ branch }: POSViewProps) {
                       <span>Llamador #{callerNumber}</span>
                     </div>
                   )}
-                  {orderArea === 'delivery' && deliveryAddress && (
+                  {serviceType === 'delivery' && deliveryAddress && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MapPin className="w-4 h-4" />
                       <span className="truncate">{deliveryAddress}</span>
@@ -1507,26 +1534,35 @@ export default function POSView({ branch }: POSViewProps) {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            {/* Service Type selector - 3 options now */}
+            <div className="grid grid-cols-3 gap-3">
               <Button
-                variant={counterSubType === 'takeaway' ? 'default' : 'outline'}
-                onClick={() => setCounterSubType('takeaway')}
+                variant={serviceType === 'takeaway' ? 'default' : 'outline'}
+                onClick={() => setServiceType('takeaway')}
                 className="flex-col h-auto py-6"
               >
-                <Store className="w-8 h-8 mb-2" />
-                <span className="text-base font-medium">Para llevar</span>
+                <ShoppingCart className="w-8 h-8 mb-2" />
+                <span className="text-base font-medium">Take Away</span>
               </Button>
               <Button
-                variant={counterSubType === 'dine_here' ? 'default' : 'outline'}
-                onClick={() => setCounterSubType('dine_here')}
+                variant={serviceType === 'dine_in' ? 'default' : 'outline'}
+                onClick={() => setServiceType('dine_in')}
                 className="flex-col h-auto py-6"
               >
                 <Utensils className="w-8 h-8 mb-2" />
-                <span className="text-base font-medium">Comer acá</span>
+                <span className="text-base font-medium">Comer Acá</span>
+              </Button>
+              <Button
+                variant={serviceType === 'delivery' ? 'default' : 'outline'}
+                onClick={() => setServiceType('delivery')}
+                className="flex-col h-auto py-6"
+              >
+                <Bike className="w-8 h-8 mb-2" />
+                <span className="text-base font-medium">Delivery</span>
               </Button>
             </div>
 
-            {counterSubType === 'dine_here' && (
+            {serviceType === 'dine_in' && (
               <div className="space-y-3">
                 <Label>Número de Llamador *</Label>
                 <div className="grid grid-cols-5 gap-2">
@@ -1548,7 +1584,7 @@ export default function POSView({ branch }: POSViewProps) {
               </div>
             )}
 
-            {counterSubType === 'takeaway' && (
+            {serviceType === 'takeaway' && (
               <div className="space-y-3">
                 <Label>Nombre del cliente o Número de Llamador</Label>
                 <div className="relative">
@@ -1581,6 +1617,35 @@ export default function POSView({ branch }: POSViewProps) {
                 </div>
               </div>
             )}
+
+            {serviceType === 'delivery' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Nombre del cliente *</Label>
+                  <Input
+                    placeholder="Nombre"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Teléfono *</Label>
+                  <Input
+                    placeholder="Teléfono"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Dirección *</Label>
+                  <Input
+                    placeholder="Dirección de entrega"
+                    value={deliveryAddress}
+                    onChange={(e) => setDeliveryAddress(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
@@ -1592,7 +1657,7 @@ export default function POSView({ branch }: POSViewProps) {
             </Button>
             <Button 
               onClick={handleOrderFlowComplete}
-              disabled={counterSubType === 'dine_here' && !callerNumber}
+              disabled={(serviceType === 'dine_in' && !callerNumber) || (serviceType === 'delivery' && (!customerName.trim() || !customerPhone.trim() || !deliveryAddress.trim()))}
             >
               Continuar
               <ArrowRight className="w-4 h-4 ml-2" />
