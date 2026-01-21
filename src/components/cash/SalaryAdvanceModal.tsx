@@ -64,7 +64,7 @@ export function SalaryAdvanceModal({
   });
   
   const isSupervisor = userRoles?.some(r => 
-    ['encargado', 'franquiciado', 'admin', 'coordinador'].includes(r)
+    ['encargado', 'franquiciado', 'admin', 'coordinador'].includes(r as string)
   );
   
   // Cargar empleados de la sucursal
@@ -245,7 +245,7 @@ export function SalaryAdvanceModal({
             </div>
             
             {!isSupervisor && (
-              <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+              <div className="p-3 rounded-lg bg-accent/50 border border-border text-foreground text-sm">
                 Se requerirá PIN de un encargado para autorizar
               </div>
             )}

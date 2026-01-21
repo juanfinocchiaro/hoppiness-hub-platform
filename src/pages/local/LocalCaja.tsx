@@ -16,7 +16,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { 
   Calculator, Clock, DollarSign, ArrowUpRight, ArrowDownRight, 
   Plus, Settings, CreditCard, Banknote, Play, Square, History,
-  Wallet, TrendingUp, TrendingDown, RefreshCw, Trash2, Edit2, Ban
+  Wallet, TrendingUp, TrendingDown, RefreshCw, Trash2, Edit2, Ban,
+  Receipt, Users, PiggyBank
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -43,7 +44,12 @@ import {
   type CashRegisterMovement,
   type PaymentMethod,
 } from '@/hooks/useCashRegister';
-
+import { QuickExpenseModal } from '@/components/cash/QuickExpenseModal';
+import { SalaryAdvanceModal } from '@/components/cash/SalaryAdvanceModal';
+import { ManualIncomeModal } from '@/components/cash/ManualIncomeModal';
+import { OperatorVerificationDialog } from '@/components/cash/OperatorVerificationDialog';
+import { CashierDiscrepancyStats } from '@/components/cash/CashierDiscrepancyStats';
+import { useOperatorVerification } from '@/hooks/useOperatorVerification';
 type Branch = Tables<'branches'>;
 
 interface LocalContext {
@@ -90,6 +96,11 @@ export default function LocalCaja() {
   const [registersConfigDialog, setRegistersConfigDialog] = useState(false);
   const [alivioDialog, setAlivioDialog] = useState(false);
   const [alivioStep, setAlivioStep] = useState<'amount' | 'confirm'>('amount');
+  
+  // New modals states
+  const [expenseModalOpen, setExpenseModalOpen] = useState(false);
+  const [advanceModalOpen, setAdvanceModalOpen] = useState(false);
+  const [incomeModalOpen, setIncomeModalOpen] = useState(false);
   
   // Alivio form
   const [alivioAmount, setAlivioAmount] = useState('');
@@ -838,78 +849,23 @@ export default function LocalCaja() {
                       <>
 
                         <div className="flex flex-wrap gap-2">
-                          <Dialog open={movementDialog} onOpenChange={setMovementDialog}>
-                            <DialogTrigger asChild>
-                              <Button>
-                                <Plus className="h-4 w-4 mr-2" />
-                                Agregar Movimiento
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Nuevo Movimiento</DialogTitle>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <div>
-                                  <Label>Tipo</Label>
-                                  <Select value={movementType} onValueChange={(v) => setMovementType(v as any)}>
-                                    <SelectTrigger>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="income">Ingreso</SelectItem>
-                                      <SelectItem value="expense">Gasto</SelectItem>
-                                      <SelectItem value="deposit">Depósito</SelectItem>
-                                      <SelectItem value="withdrawal">Retiro</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <div>
-                                  <Label>Medio de Pago</Label>
-                                  <Select value={movementPaymentMethod} onValueChange={setMovementPaymentMethod}>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Seleccionar..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {paymentMethods.filter(m => m.is_active).map((method) => (
-                                        <SelectItem key={method.id} value={method.code}>
-                                          {method.name}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <div>
-                                  <Label>Monto</Label>
-                                  <Input 
-                                    type="number" 
-                                    placeholder="0.00"
-                                    value={movementAmount}
-                                    onChange={(e) => setMovementAmount(e.target.value)}
-                                  />
-                                </div>
-                                <div>
-                                  <Label>Concepto</Label>
-                                  <Input 
-                                    placeholder="Descripción del movimiento"
-                                    value={movementConcept}
-                                    onChange={(e) => setMovementConcept(e.target.value)}
-                                  />
-                                </div>
-                              </div>
-                              <DialogFooter>
-                                <Button variant="outline" onClick={() => setMovementDialog(false)}>
-                                  Cancelar
-                                </Button>
-                                <Button 
-                                  onClick={handleAddMovement}
-                                  disabled={!movementAmount || !movementConcept || !movementPaymentMethod}
-                                >
-                                  Registrar
-                                </Button>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
+                          {/* Gasto Button */}
+                          <Button onClick={() => setExpenseModalOpen(true)} variant="outline">
+                            <Receipt className="h-4 w-4 mr-2" />
+                            Gasto
+                          </Button>
+                          
+                          {/* Adelanto Button */}
+                          <Button onClick={() => setAdvanceModalOpen(true)} variant="outline">
+                            <Users className="h-4 w-4 mr-2" />
+                            Adelanto
+                          </Button>
+                          
+                          {/* Ingreso Manual Button */}
+                          <Button onClick={() => setIncomeModalOpen(true)} variant="outline">
+                            <PiggyBank className="h-4 w-4 mr-2" />
+                            Ingreso
+                          </Button>
 
                           {/* Hacer Alivio Button */}
                           <Dialog 
@@ -1421,6 +1377,29 @@ export default function LocalCaja() {
           })}
         </Tabs>
       )}
+      
+      {/* Modales específicos */}
+      <QuickExpenseModal
+        open={expenseModalOpen}
+        onOpenChange={setExpenseModalOpen}
+        branchId={branch?.id || ''}
+        shiftId={shifts[selectedTab]?.id}
+        pinThreshold={branch?.expense_pin_threshold || 50000}
+      />
+      
+      <SalaryAdvanceModal
+        open={advanceModalOpen}
+        onOpenChange={setAdvanceModalOpen}
+        branchId={branch?.id || ''}
+        shiftId={shifts[selectedTab]?.id}
+      />
+      
+      <ManualIncomeModal
+        open={incomeModalOpen}
+        onOpenChange={setIncomeModalOpen}
+        branchId={branch?.id || ''}
+        shiftId={shifts[selectedTab]?.id}
+      />
     </div>
   );
 }

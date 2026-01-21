@@ -11,13 +11,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Loader2, Receipt, Banknote, CreditCard } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { SupervisorPinDialog } from './SupervisorPinDialog';
@@ -47,43 +40,26 @@ export function QuickExpenseModal({
   const [concept, setConcept] = useState('');
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer'>('cash');
-  const [categoryId, setCategoryId] = useState('');
   const [notes, setNotes] = useState('');
   const [showPinDialog, setShowPinDialog] = useState(false);
+  const [isSupervisor, setIsSupervisor] = useState(false);
   
   // Verificar si el usuario es encargado o superior
-  const { data: userRoles } = useQuery({
-    queryKey: ['user-roles', user?.id],
-    queryFn: async () => {
-      if (!user) return [];
+  useEffect(() => {
+    async function checkRole() {
+      if (!user) return;
       const { data } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
         .eq('is_active', true);
-      return data?.map(r => r.role) || [];
-    },
-    enabled: !!user,
-  });
-  
-  const isSupervisor = userRoles?.some(r => 
-    ['encargado', 'franquiciado', 'admin', 'coordinador'].includes(r)
-  );
-  
-  // Cargar categorías de gastos
-  const { data: categories = [] } = useQuery({
-    queryKey: ['expense-categories'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('transaction_categories')
-        .select('id, name')
-        .eq('type', 'expense')
-        .eq('is_active', true)
-        .order('name');
-      return data || [];
-    },
-    enabled: open,
-  });
+      const roles = data?.map(r => r.role) || [];
+      setIsSupervisor(roles.some(r => 
+        ['encargado', 'franquiciado', 'admin', 'coordinador'].includes(r as string)
+      ));
+    }
+    checkRole();
+  }, [user]);
   
   const createExpense = useMutation({
     mutationFn: async (authorizedBy?: string) => {
@@ -130,7 +106,6 @@ export function QuickExpenseModal({
       setConcept('');
       setAmount('');
       setPaymentMethod('cash');
-      setCategoryId('');
       setNotes('');
     }
   }, [open]);
@@ -216,22 +191,6 @@ export function QuickExpenseModal({
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="category">Categoría</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar categoría..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map(cat => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
               <Label>Método de pago</Label>
               <RadioGroup
                 value={paymentMethod}
@@ -281,7 +240,7 @@ export function QuickExpenseModal({
             </div>
             
             {needsPin && (
-              <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+              <div className="p-3 rounded-lg bg-accent/50 border border-border text-foreground text-sm">
                 Monto mayor a {formatCurrency(pinThreshold.toString())} requiere PIN de encargado
               </div>
             )}
