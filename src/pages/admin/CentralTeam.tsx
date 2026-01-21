@@ -14,71 +14,87 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { Users, Plus, UserMinus, Shield } from 'lucide-react';
+import { Users, Plus, UserMinus } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { BRAND_ROLE_LABELS, type BrandRole } from '@/hooks/usePermissionsV2';
 
 interface CentralTeamMember {
+  id: string;
   user_id: string;
   email: string;
   full_name: string | null;
-  role: string;
+  brand_role: BrandRole;
   created_at: string;
 }
 
 const BRAND_ROLES = [
-  { value: 'admin', label: 'Admin', description: 'Gestión completa' },
-  { value: 'coordinador', label: 'Coordinador', description: 'Catálogo, proveedores' },
-  { value: 'socio', label: 'Socio', description: 'Solo lectura de reportes' },
+  { value: 'superadmin', label: 'Superadmin', description: 'Gestión completa' },
+  { value: 'coordinador', label: 'Coordinador', description: 'Catálogo, marketing' },
+  { value: 'informes', label: 'Informes', description: 'Solo lectura de reportes' },
+  { value: 'contador_marca', label: 'Contador Marca', description: 'Finanzas de marca' },
 ] as const;
 
 export default function CentralTeam() {
   const queryClient = useQueryClient();
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState('admin');
+  const [inviteRole, setInviteRole] = useState<BrandRole>('coordinador');
 
+  // Query optimizada: user_roles_v2 + profiles en paralelo
   const { data: teamMembers, isLoading } = useQuery({
-    queryKey: ['central-team'],
+    queryKey: ['central-team-v2'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select(`
-          user_id,
-          role,
-          created_at,
-          profiles!inner(full_name, email)
-        `)
-        .is('branch_id', null)
-        .in('role', ['admin', 'coordinador', 'socio'])
+      // 1. Get users with brand roles
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles_v2')
+        .select('id, user_id, brand_role, created_at')
+        .not('brand_role', 'is', null)
         .eq('is_active', true)
         .order('created_at');
 
-      if (error) throw error;
+      if (rolesError) throw rolesError;
+      if (!roles || roles.length === 0) return [];
 
-      return (data || []).map((item: any) => ({
-        user_id: item.user_id,
-        email: item.profiles?.email || '',
-        full_name: item.profiles?.full_name || '',
-        role: item.role,
-        created_at: item.created_at,
-      })) as CentralTeamMember[];
+      // 2. Get profiles for those users
+      const userIds = roles.map(r => r.user_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email')
+        .in('user_id', userIds);
+
+      if (profilesError) throw profilesError;
+
+      // 3. Merge data
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      
+      return roles.map(role => {
+        const profile = profileMap.get(role.user_id);
+        return {
+          id: role.id,
+          user_id: role.user_id,
+          email: profile?.email || '',
+          full_name: profile?.full_name || null,
+          brand_role: role.brand_role as BrandRole,
+          created_at: role.created_at,
+        };
+      }) as CentralTeamMember[];
     },
+    staleTime: 30 * 1000, // Cache 30s
   });
 
   const removeMutation = useMutation({
     mutationFn: async (userId: string) => {
+      // Clear brand_role (keep local_role if any)
       const { error } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId)
-        .is('branch_id', null)
-        .in('role', ['admin', 'coordinador', 'socio']);
+        .from('user_roles_v2')
+        .update({ brand_role: null })
+        .eq('user_id', userId);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['central-team'] });
+      queryClient.invalidateQueries({ queryKey: ['central-team-v2'] });
+      queryClient.invalidateQueries({ queryKey: ['user-role-v2'] });
       toast.success('Usuario removido del equipo central');
     },
     onError: () => {
@@ -87,7 +103,7 @@ export default function CentralTeam() {
   });
 
   const inviteMutation = useMutation({
-    mutationFn: async ({ email, role }: { email: string; role: string }) => {
+    mutationFn: async ({ email, role }: { email: string; role: BrandRole }) => {
       // First find user by email
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -99,23 +115,34 @@ export default function CentralTeam() {
         throw new Error('Usuario no encontrado. Debe registrarse primero.');
       }
 
-      // Assign role - insert new record
-      const { error } = await supabase.from('user_roles').insert({
-        user_id: profile.user_id,
-        role: role as 'admin' | 'coordinador' | 'socio',
-        branch_id: null,
-        is_active: true,
-      });
+      // Check if user already has a role record
+      const { data: existing } = await supabase
+        .from('user_roles_v2')
+        .select('id')
+        .eq('user_id', profile.user_id)
+        .maybeSingle();
 
-      if (error) {
-        if (error.code === '23505') {
-          throw new Error('Este usuario ya tiene este rol asignado');
-        }
-        throw error;
+      if (existing) {
+        // Update existing record
+        const { error } = await supabase
+          .from('user_roles_v2')
+          .update({ brand_role: role })
+          .eq('user_id', profile.user_id);
+        if (error) throw error;
+      } else {
+        // Insert new record
+        const { error } = await supabase.from('user_roles_v2').insert({
+          user_id: profile.user_id,
+          brand_role: role,
+          local_role: null,
+          branch_ids: [],
+          is_active: true,
+        });
+        if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['central-team'] });
+      queryClient.invalidateQueries({ queryKey: ['central-team-v2'] });
       setInviteEmail('');
       toast.success('Usuario agregado al equipo central');
     },
@@ -144,13 +171,14 @@ export default function CentralTeam() {
     return email[0].toUpperCase();
   };
 
-  const getRoleLabel = (role: string) => {
-    return BRAND_ROLES.find((r) => r.value === role)?.label || role;
+  const getRoleLabel = (role: BrandRole) => {
+    if (!role) return 'Sin rol';
+    return BRAND_ROLE_LABELS[role] || role;
   };
 
-  const getRoleVariant = (role: string): 'default' | 'secondary' | 'outline' => {
+  const getRoleVariant = (role: BrandRole): 'default' | 'secondary' | 'outline' => {
     switch (role) {
-      case 'admin':
+      case 'superadmin':
         return 'default';
       case 'coordinador':
         return 'secondary';
@@ -211,8 +239,8 @@ export default function CentralTeam() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant={getRoleVariant(member.role)}>
-                  {getRoleLabel(member.role)}
+                <Badge variant={getRoleVariant(member.brand_role)}>
+                  {getRoleLabel(member.brand_role)}
                 </Badge>
                 <Button
                   variant="ghost"
@@ -259,7 +287,7 @@ export default function CentralTeam() {
             </div>
             <div className="w-full sm:w-48 space-y-2">
               <Label htmlFor="role">Rol</Label>
-              <Select value={inviteRole} onValueChange={setInviteRole}>
+              <Select value={inviteRole || ''} onValueChange={(v) => setInviteRole(v as BrandRole)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
