@@ -737,6 +737,96 @@ export type Database = {
           },
         ]
       }
+      branch_shift_settings: {
+        Row: {
+          branch_id: string
+          created_at: string | null
+          extended_shift_enabled: boolean | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string | null
+          extended_shift_enabled?: boolean | null
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string | null
+          extended_shift_enabled?: boolean | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_shift_settings_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_shift_settings_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
+      branch_shifts: {
+        Row: {
+          branch_id: string
+          created_at: string | null
+          end_time: string
+          id: string
+          is_active: boolean | null
+          name: string
+          sort_order: number | null
+          start_time: string
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string | null
+          end_time: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sort_order?: number | null
+          start_time: string
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string | null
+          end_time?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sort_order?: number | null
+          start_time?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_shifts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_shifts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       branch_suppliers: {
         Row: {
           branch_id: string
@@ -4650,6 +4740,145 @@ export type Database = {
           },
           {
             foreignKeyName: "scanned_documents_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
+      shift_closures: {
+        Row: {
+          average_ticket: number | null
+          branch_id: string
+          cancelled_amount: number | null
+          cancelled_orders: number | null
+          cash_registers_summary: Json | null
+          closure_date: string
+          created_at: string | null
+          created_by: string | null
+          end_time: string
+          id: string
+          notes: string[] | null
+          sales_by_channel: Json | null
+          sales_by_payment: Json | null
+          sales_by_product: Json | null
+          shift_id: string | null
+          shift_name: string
+          staff_summary: Json | null
+          start_time: string
+          total_orders: number
+          total_sales: number
+          total_staff_hours: number | null
+        }
+        Insert: {
+          average_ticket?: number | null
+          branch_id: string
+          cancelled_amount?: number | null
+          cancelled_orders?: number | null
+          cash_registers_summary?: Json | null
+          closure_date: string
+          created_at?: string | null
+          created_by?: string | null
+          end_time: string
+          id?: string
+          notes?: string[] | null
+          sales_by_channel?: Json | null
+          sales_by_payment?: Json | null
+          sales_by_product?: Json | null
+          shift_id?: string | null
+          shift_name: string
+          staff_summary?: Json | null
+          start_time: string
+          total_orders?: number
+          total_sales?: number
+          total_staff_hours?: number | null
+        }
+        Update: {
+          average_ticket?: number | null
+          branch_id?: string
+          cancelled_amount?: number | null
+          cancelled_orders?: number | null
+          cash_registers_summary?: Json | null
+          closure_date?: string
+          created_at?: string | null
+          created_by?: string | null
+          end_time?: string
+          id?: string
+          notes?: string[] | null
+          sales_by_channel?: Json | null
+          sales_by_payment?: Json | null
+          sales_by_product?: Json | null
+          shift_id?: string | null
+          shift_name?: string
+          staff_summary?: Json | null
+          start_time?: string
+          total_orders?: number
+          total_sales?: number
+          total_staff_hours?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_closures_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_closures_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "shift_closures_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "branch_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_notes: {
+        Row: {
+          branch_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          note: string
+          shift_date: string
+          shift_name: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          note: string
+          shift_date?: string
+          shift_name: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          note?: string
+          shift_date?: string
+          shift_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_notes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_notes_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "supplier_balances"
