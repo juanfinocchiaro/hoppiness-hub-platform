@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { handleError, devLog } from '@/lib/errorHandler';
+import { ShiftCashHeader } from '@/components/local/ShiftCashHeader';
 import type { Tables, Enums } from '@/integrations/supabase/types';
 import KDSStationsView from './KDSStationsView';
 
@@ -219,6 +220,9 @@ export default function KDSView({ branch }: KDSViewProps) {
 
   return (
     <div className="h-[calc(100vh-120px)] -m-6 bg-sidebar text-sidebar-foreground flex flex-col">
+      {/* Shift and Cash Header */}
+      <ShiftCashHeader branchId={branch.id} />
+      
       {/* Audio element for notifications */}
       <audio ref={audioRef} preload="auto">
         <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleVxTu+/11rpWLx9Ik8bZx31YVJ/p+uC9YUA7aL/v6K5jQQAQaKr12r9xXHCf6vfbpF5DIluX2+rXrl5Lb7T16MFpUEMxYKbt5bpmUV+C0fDhtmNJMS9mtPLkuGpWh8/v376+//7" type="audio/wav" />

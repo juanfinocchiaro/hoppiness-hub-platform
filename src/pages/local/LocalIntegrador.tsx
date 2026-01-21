@@ -3,6 +3,7 @@ import { useParams, useOutletContext } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useShiftStatus } from '@/hooks/useShiftStatus';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,8 +43,11 @@ import {
   Inbox,
   CreditCard,
   Timer,
+  Banknote,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ShiftCashHeader } from '@/components/local/ShiftCashHeader';
+import { OpenCashModal } from '@/components/local/OpenCashModal';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
@@ -107,6 +111,7 @@ export default function LocalIntegrador() {
   const { branch } = useOutletContext<{ branch: Branch }>();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const shiftStatus = useShiftStatus(branchId);
   
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
@@ -114,6 +119,10 @@ export default function LocalIntegrador() {
   const [selectedOrder, setSelectedOrder] = useState<PendingOrder | null>(null);
   const [rejectReason, setRejectReason] = useState('closed');
   const [rejectOtherText, setRejectOtherText] = useState('');
+  
+  // Open cash modal for cash orders
+  const [showOpenCashModal, setShowOpenCashModal] = useState(false);
+  const [pendingCashOrderId, setPendingCashOrderId] = useState<string | null>(null);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -306,6 +315,31 @@ export default function LocalIntegrador() {
     setShowRejectDialog(true);
   };
 
+  // Handle accepting order - check if cash payment needs open cash register
+  const handleAcceptOrder = (order: PendingOrder) => {
+    const isCashPayment = order.payment_method === 'efectivo' || 
+                          order.payment_method === 'cash' ||
+                          order.payment_status !== 'paid';
+    
+    if (isCashPayment && !shiftStatus.hasCashOpen) {
+      // Need to open cash first
+      setPendingCashOrderId(order.id);
+      setShowOpenCashModal(true);
+      return;
+    }
+    
+    // Accept directly
+    acceptMutation.mutate(order.id);
+  };
+
+  // After opening cash, accept the pending order
+  const handleCashOpenedForOrder = () => {
+    if (pendingCashOrderId) {
+      acceptMutation.mutate(pendingCashOrderId);
+      setPendingCashOrderId(null);
+    }
+  };
+
   const confirmReject = () => {
     if (!selectedOrder) return;
     
@@ -378,6 +412,9 @@ export default function LocalIntegrador() {
 
   return (
     <div className="space-y-6">
+      {/* Shift and Cash Header */}
+      <ShiftCashHeader branchId={branchId!} onCashOpened={() => shiftStatus.refetch()} />
+      
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -443,7 +480,7 @@ export default function LocalIntegrador() {
               key={order.id}
               order={order}
               isUrgent
-              onAccept={() => acceptMutation.mutate(order.id)}
+              onAccept={() => handleAcceptOrder(order)}
               onReject={() => handleReject(order)}
               formatCurrency={formatCurrency}
               formatTime={formatTime}
@@ -467,7 +504,7 @@ export default function LocalIntegrador() {
             <OrderCard
               key={order.id}
               order={order}
-              onAccept={() => acceptMutation.mutate(order.id)}
+              onAccept={() => handleAcceptOrder(order)}
               onReject={() => handleReject(order)}
               formatCurrency={formatCurrency}
               formatTime={formatTime}
@@ -552,6 +589,16 @@ export default function LocalIntegrador() {
         branchId={branchId!}
         settings={settings}
         getChannelInfo={getChannelInfo}
+      />
+
+      {/* Open Cash Modal for cash orders */}
+      <OpenCashModal
+        open={showOpenCashModal}
+        onOpenChange={setShowOpenCashModal}
+        branchId={branchId!}
+        onCashOpened={() => shiftStatus.refetch()}
+        pendingOrderMessage="💵 Este pedido se paga en efectivo. Necesitás abrir la caja para aceptarlo."
+        onCashOpenedWithOrder={handleCashOpenedForOrder}
       />
     </div>
   );
