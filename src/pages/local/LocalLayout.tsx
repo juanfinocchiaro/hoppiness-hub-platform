@@ -256,7 +256,7 @@ export default function LocalLayout() {
       show: true,
       items: [
         { to: '', label: 'Dashboard', icon: LayoutDashboard, show: true },
-        { to: 'cierre', label: 'Cierre del Día', icon: ClipboardCheck, show: canManageConfig },
+        { to: 'cierre', label: 'Cierre de Turno', icon: ClipboardCheck, show: canManageConfig },
       ]
     },
     {
@@ -358,6 +358,7 @@ export default function LocalLayout() {
       show: canManageConfig,
       items: [
         { to: 'config/datos', label: 'Datos del Local', icon: Store, show: true },
+        { to: 'config/turnos', label: 'Turnos', icon: Clock, show: true },
         { to: 'config/zonas', label: 'Zonas Delivery', icon: MapPin, show: true },
         { to: 'config/integraciones', label: 'Integraciones', icon: Link2, show: true },
         { to: 'config/impresoras', label: 'Impresoras', icon: Printer, show: true },

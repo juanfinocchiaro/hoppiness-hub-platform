@@ -50,7 +50,8 @@ import LocalImpresoras from "./pages/local/LocalImpresoras";
 import AttendanceKiosk from "./pages/local/AttendanceKiosk";
 import LocalPOS from "./pages/local/LocalPOS";
 import LocalKDS from "./pages/local/LocalKDS";
-import LocalCierre from "./pages/local/LocalCierre";
+import LocalCierreTurno from "./pages/local/LocalCierreTurno";
+import LocalShiftConfig from "./pages/local/LocalShiftConfig";
 import LocalStockFactura from "./pages/local/LocalStockFactura";
 import LocalStockPedir from "./pages/local/LocalStockPedir";
 import LocalStockHistorial from "./pages/local/LocalStockHistorial";
@@ -183,7 +184,7 @@ const App = () => (
               {/* CAJA Y PAGOS */}
               <Route path="caja" element={<LocalCaja />} />
               <Route path="cuenta-corriente" element={<LocalCustomers />} />
-              <Route path="cierre" element={<LocalCierre />} />
+              <Route path="cierre" element={<LocalCierreTurno />} />
               
               {/* STOCK Y COMPRAS */}
               <Route path="stock" element={<LocalStock />} />
@@ -235,6 +236,7 @@ const App = () => (
               <Route path="config/integraciones" element={<LocalIntegraciones />} />
               <Route path="config/impresoras" element={<LocalImpresoras />} />
               <Route path="config/kds" element={<LocalKDSSettings />} />
+              <Route path="config/turnos" element={<LocalShiftConfig />} />
               
               {/* LEGACY REDIRECTS - Rutas viejas redirigen a nuevas */}
               <Route path="productos" element={<LocalRedirect to="menu/productos" />} />
