@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import {
   Select,
   SelectContent,
@@ -164,14 +164,8 @@ export default function LocalReportesVentas() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-10 w-64" />
-        <div className="grid grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => (
-            <Skeleton key={i} className="h-24" />
-          ))}
-        </div>
-        <Skeleton className="h-64 w-full" />
+      <div className="flex items-center justify-center min-h-[400px]">
+        <HoppinessLoader size="md" text="Cargando ventas" />
       </div>
     );
   }

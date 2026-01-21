@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Skeleton } from '@/components/ui/skeleton';
+import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { toast } from 'sonner';
 import { Search, Package, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
@@ -148,13 +148,8 @@ export default function LocalMenuCombos() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-10 w-64" />
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => (
-            <Skeleton key={i} className="h-32 w-full" />
-          ))}
-        </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <HoppinessLoader size="md" text="Cargando combos" />
       </div>
     );
   }

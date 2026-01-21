@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { 
   DollarSign, 
   Utensils, 
@@ -357,11 +357,8 @@ function DashboardContent({ branch }: { branch: Branch }) {
         <DashboardAlerts branchId={branch.id} variant="local" />
 
         {loading ? (
-          <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32" />)}
-            </div>
-            <Skeleton className="h-48" />
+          <div className="flex items-center justify-center min-h-[400px]">
+            <HoppinessLoader size="md" text="Cargando dashboard" />
           </div>
         ) : (
           <>

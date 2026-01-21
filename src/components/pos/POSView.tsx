@@ -1041,13 +1041,13 @@ export default function POSView({ branch }: POSViewProps) {
           </div>
         </div>
         
-        {/* CASH CLOSED BLOCK - shown when no cash register is open */}
-        {!hasCashOpen && (
+        {/* CASH CLOSED BLOCK - shown when no cash register is open (only after we've checked) */}
+        {shiftStatus.hasChecked && !hasCashOpen && (
           <CashClosedBlock branchId={branch.id} onCashOpened={() => shiftStatus.refetch()} />
         )}
 
         {/* NEW ORDER SCREEN - shown when cash is open but no order started */}
-        {hasCashOpen && !orderStarted && (
+        {shiftStatus.hasChecked && hasCashOpen && !orderStarted && (
           <div className="flex-1 flex flex-col items-center justify-center">
             <div className="text-center space-y-6 max-w-md">
               <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto">

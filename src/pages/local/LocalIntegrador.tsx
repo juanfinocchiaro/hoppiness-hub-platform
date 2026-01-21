@@ -7,7 +7,7 @@ import { useShiftStatus } from '@/hooks/useShiftStatus';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -375,36 +375,8 @@ export default function LocalIntegrador() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <Inbox className="h-6 w-6 text-primary animate-pulse" />
-          <div>
-            <h1 className="text-2xl font-bold">Integrador de Pedidos</h1>
-            <p className="text-muted-foreground">Buscando pedidos pendientes...</p>
-          </div>
-        </div>
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => (
-            <Card key={i} className="overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4 mb-4">
-                  <Skeleton className="h-6 w-6 rounded" />
-                  <Skeleton className="h-6 w-32" />
-                  <Skeleton className="h-5 w-20 ml-auto" />
-                </div>
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-4 w-64" />
-                  <Skeleton className="h-4 w-40" />
-                </div>
-                <div className="flex gap-3 mt-4">
-                  <Skeleton className="h-10 flex-1" />
-                  <Skeleton className="h-10 flex-1" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <HoppinessLoader size="md" text="Buscando pedidos" />
       </div>
     );
   }
