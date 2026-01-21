@@ -55,6 +55,7 @@ import {
   AlertCircle,
   Star,
   Pencil,
+  PlusCircle,
   Coffee,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -1126,7 +1127,7 @@ export default function POSView({ branch }: POSViewProps) {
                       <span className="text-sm font-medium truncate max-w-24">{product.name}</span>
                       <span className="text-sm font-bold text-primary">{formatPrice(price)}</span>
                       {product.hasModifiers && (
-                        <Pencil className="w-3 h-3 text-muted-foreground" />
+                        <PlusCircle className="w-3.5 h-3.5 text-primary" />
                       )}
                     </button>
                   );
@@ -1228,7 +1229,7 @@ export default function POSView({ branch }: POSViewProps) {
                       
                       {/* Modifier indicator */}
                       {product.hasModifiers && !isOutOfStock && (
-                        <Pencil className="w-3 h-3 text-muted-foreground shrink-0" />
+                        <PlusCircle className="w-3.5 h-3.5 text-primary shrink-0" />
                       )}
                     </div>
                   );
@@ -1273,8 +1274,8 @@ export default function POSView({ branch }: POSViewProps) {
                     
                     {/* Modifier indicator - TOP RIGHT */}
                     {product.hasModifiers && !isOutOfStock && (
-                      <Badge variant="outline" className="absolute top-1 right-1 text-xs z-10 bg-background/80">
-                        <Pencil className="w-3 h-3" />
+                      <Badge variant="outline" className="absolute top-1 right-1 text-xs z-10 bg-background/80 border-primary/50">
+                        <PlusCircle className="w-3.5 h-3.5 text-primary" />
                       </Badge>
                     )}
                     
