@@ -33,7 +33,7 @@ import {
   ChevronDown,
   Store,
   Home,
-  RefreshCw,
+  RefreshCw, // keeping for other uses
   ChefHat,
   Monitor,
   Receipt,
@@ -75,6 +75,7 @@ import ClockInModal from '@/components/attendance/ClockInModal';
 import ActiveStaffWidget from '@/components/attendance/ActiveStaffWidget';
 import { OrderNotificationProvider } from '@/components/orders/OrderNotificationProvider';
 import { NotificationBell } from '@/components/orders/NotificationBell';
+import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 
 type Branch = Tables<'branches'>;
 
@@ -368,11 +369,7 @@ export default function LocalLayout() {
   ].filter(section => section.show);
 
   if (authLoading || roleLoading || panelLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <HoppinessLoader fullScreen size="lg" />;
   }
 
   // Show access denied if no local panel access

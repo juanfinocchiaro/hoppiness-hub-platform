@@ -3,9 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { 
   ChefHat,
   Timer,
@@ -203,16 +203,8 @@ export default function KDSView({ branch }: KDSViewProps) {
 
   if (loading) {
     return (
-      <div className="h-[calc(100vh-120px)] -m-6 p-4 bg-sidebar">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 h-full">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="space-y-3">
-              <Skeleton className="h-8 w-full bg-sidebar-accent" />
-              <Skeleton className="h-48 w-full bg-sidebar-accent" />
-              <Skeleton className="h-48 w-full bg-sidebar-accent" />
-            </div>
-          ))}
-        </div>
+      <div className="h-[calc(100vh-120px)] -m-6 p-4 bg-sidebar flex items-center justify-center">
+        <HoppinessLoader size="lg" text="Cargando pedidos" />
       </div>
     );
   }

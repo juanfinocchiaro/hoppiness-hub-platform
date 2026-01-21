@@ -16,7 +16,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { 
   Calculator, Clock, DollarSign, ArrowUpRight, ArrowDownRight, 
   Plus, Settings, CreditCard, Banknote, Play, Square, History,
-  Wallet, TrendingUp, TrendingDown, RefreshCw, Trash2, Edit2, Ban,
+  Wallet, TrendingUp, TrendingDown, Trash2, Edit2, Ban,
   Receipt, Users, PiggyBank
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -50,6 +50,7 @@ import { ManualIncomeModal } from '@/components/cash/ManualIncomeModal';
 import { OperatorVerificationDialog } from '@/components/cash/OperatorVerificationDialog';
 import { CashierDiscrepancyStats } from '@/components/cash/CashierDiscrepancyStats';
 import { useOperatorVerification } from '@/hooks/useOperatorVerification';
+import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 type Branch = Tables<'branches'>;
 
 interface LocalContext {
@@ -578,11 +579,7 @@ export default function LocalCaja() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <HoppinessLoader fullScreen size="lg" text="Cargando caja" />;
   }
 
   return (

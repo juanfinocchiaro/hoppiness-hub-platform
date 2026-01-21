@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
+import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import { useState, useEffect } from 'react';
@@ -91,7 +92,7 @@ export default function CuentaPerfil() {
           {isLoading ? (
             <Card>
               <CardContent className="p-8 flex justify-center">
-                <Loader2 className="w-6 h-6 animate-spin" />
+                <HoppinessLoader size="md" />
               </CardContent>
             </Card>
           ) : (

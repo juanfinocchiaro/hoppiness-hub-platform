@@ -6,6 +6,7 @@ import { usePanelAccess } from '@/hooks/usePanelAccess';
 import { useEmbedMode } from '@/hooks/useEmbedMode';
 import { ExternalLink } from '@/components/ui/ExternalLink';
 import { Button } from '@/components/ui/button';
+import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import {
   LogOut,
   Menu,
@@ -47,14 +48,7 @@ export default function AdminDashboard() {
   const hasLocalPanelAccess = canUseLocalPanel && branchAccess.length > 0;
 
   if (loading || panelLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl gradient-primary" />
-          <p className="text-muted-foreground">Cargando...</p>
-        </div>
-      </div>
-    );
+    return <HoppinessLoader fullScreen size="lg" />;
   }
 
   // Show access denied if no brand panel access
