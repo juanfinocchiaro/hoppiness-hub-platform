@@ -12,9 +12,10 @@ import {
   Package,
   DollarSign,
   Clock,
-  ClipboardList
+  ClipboardList,
+  Calculator
 } from 'lucide-react';
-import { AvatarType } from '@/hooks/useRoleLanding';
+import { AvatarType } from '@/hooks/useRoleLandingV2';
 
 interface QuickAction {
   label: string;
@@ -29,8 +30,9 @@ interface RoleConfig {
   quickActions: QuickAction[];
 }
 
+// Updated to match new AvatarType from useRoleLandingV2
 const roleConfigs: Record<AvatarType, RoleConfig> = {
-  brand_owner: {
+  superadmin: {
     icon: Crown,
     color: 'bg-amber-500',
     quickActions: [
@@ -39,52 +41,68 @@ const roleConfigs: Record<AvatarType, RoleConfig> = {
       { label: 'Finanzas Marca', to: '/admin/finanzas-marca', icon: DollarSign },
     ],
   },
-  partner: {
-    icon: Users,
-    color: 'bg-purple-500',
-    quickActions: [
-      { label: 'Reportes', to: '/admin/reportes', icon: BarChart3 },
-      { label: 'Performance', to: '/admin/performance', icon: BarChart3 },
-    ],
-  },
-  coordinator: {
+  coordinador: {
     icon: Package,
     color: 'bg-blue-500',
     quickActions: [
-      { label: 'Productos', to: '/admin/productos', icon: Package },
-      { label: 'Modificadores', to: '/admin/modificadores', icon: Package },
-      { label: 'Ingredientes', to: '/admin/ingredientes', icon: Package },
+      { label: 'Productos', to: '/admin/catalogo/productos', icon: Package },
+      { label: 'Modificadores', to: '/admin/catalogo/modificadores', icon: Package },
+      { label: 'Ingredientes', to: '/admin/catalogo/ingredientes', icon: Package },
     ],
   },
-  franchise_owner: {
+  informes: {
+    icon: BarChart3,
+    color: 'bg-purple-500',
+    quickActions: [
+      { label: 'Reportes', to: '/admin/resultados', icon: BarChart3 },
+      { label: 'Performance', to: '/admin/comparativa', icon: BarChart3 },
+    ],
+  },
+  contador_marca: {
+    icon: Calculator,
+    color: 'bg-teal-500',
+    quickActions: [
+      { label: 'Resultados', to: '/admin/resultados', icon: DollarSign },
+      { label: 'Finanzas', to: '/admin/reportes/finanzas', icon: DollarSign },
+    ],
+  },
+  franquiciado: {
     icon: Store,
     color: 'bg-green-500',
     quickActions: [
-      { label: 'Ver P&L', to: 'reportes', icon: DollarSign },
-      { label: 'Proveedores', to: 'proveedores', icon: ClipboardList },
-      { label: 'Colaboradores', to: 'rrhh/colaboradores', icon: Users },
+      { label: 'Ver P&L', to: 'reportes/resultados', icon: DollarSign },
+      { label: 'Proveedores', to: 'compras/proveedores', icon: ClipboardList },
+      { label: 'Mi Equipo', to: 'equipo/mi-equipo', icon: Users },
     ],
   },
-  manager: {
+  encargado: {
     icon: ClipboardList,
     color: 'bg-orange-500',
     quickActions: [
-      { label: 'Fichajes', to: 'rrhh/fichajes', icon: Clock },
-      { label: 'Horarios', to: 'rrhh/horarios', icon: Clock },
-      { label: 'Cargar Gasto', to: 'transacciones', icon: DollarSign },
+      { label: 'Fichajes', to: 'equipo/fichar', icon: Clock },
+      { label: 'Horarios', to: 'equipo/horarios', icon: Clock },
+      { label: 'Cargar Gasto', to: 'caja', icon: DollarSign },
     ],
   },
-  cashier: {
+  contador_local: {
+    icon: Calculator,
+    color: 'bg-teal-500',
+    quickActions: [
+      { label: 'Movimientos', to: 'finanzas/movimientos', icon: DollarSign },
+      { label: 'Facturas', to: 'finanzas/facturas', icon: DollarSign },
+    ],
+  },
+  cajero: {
     icon: Monitor,
     color: 'bg-primary',
     quickActions: [],
   },
-  kds: {
+  empleado: {
     icon: ChefHat,
     color: 'bg-rose-500',
     quickActions: [],
   },
-  employee: {
+  guest: {
     icon: Users,
     color: 'bg-gray-500',
     quickActions: [],
@@ -93,13 +111,13 @@ const roleConfigs: Record<AvatarType, RoleConfig> = {
 
 // Variante para panel de marca (admin)
 const brandRoleConfigs: Partial<Record<AvatarType, RoleConfig>> = {
-  partner: {
-    icon: Users,
+  informes: {
+    icon: BarChart3,
     color: 'bg-purple-500',
     quickActions: [
-      { label: 'Ventas', to: '/admin/reportes', icon: BarChart3 },
-      { label: 'Performance', to: '/admin/performance', icon: BarChart3 },
-      { label: 'Finanzas Marca', to: '/admin/finanzas-marca', icon: DollarSign },
+      { label: 'Ventas', to: '/admin/resultados', icon: BarChart3 },
+      { label: 'Performance', to: '/admin/comparativa', icon: BarChart3 },
+      { label: 'Finanzas Marca', to: '/admin/reportes/finanzas', icon: DollarSign },
     ],
   },
 };
@@ -125,8 +143,8 @@ export function RoleWelcomeCard({
     : roleConfigs[avatarType];
   const Icon = config.icon;
 
-  // Para roles operativos (cajero/kds) no mostramos tarjeta de bienvenida
-  if (avatarType === 'cashier' || avatarType === 'kds') {
+  // Para roles operativos (cajero/empleado) no mostramos tarjeta de bienvenida
+  if (avatarType === 'cajero' || avatarType === 'empleado') {
     return null;
   }
 

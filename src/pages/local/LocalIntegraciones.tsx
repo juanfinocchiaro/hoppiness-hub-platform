@@ -23,7 +23,8 @@ import {
   Webhook,
   Copy,
   KeyRound,
-  Info
+  Info,
+  Clock
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
@@ -46,7 +47,12 @@ interface IntegrationConfig {
   enabledKey: keyof Branch;
 }
 
-const INTEGRATIONS: IntegrationConfig[] = [
+// Flag for "coming soon" integrations
+interface IntegrationConfigExtended extends IntegrationConfig {
+  comingSoon?: boolean;
+}
+
+const INTEGRATIONS: IntegrationConfigExtended[] = [
   {
     key: 'mercadopago',
     name: 'MercadoPago',
@@ -66,6 +72,7 @@ const INTEGRATIONS: IntegrationConfig[] = [
     icon: <Truck className="h-6 w-6" />,
     docsUrl: 'https://www.mercadopago.com.ar/developers/es/docs/mp-delivery',
     enabledKey: 'mercadopago_delivery_enabled',
+    comingSoon: true, // PRÓXIMAMENTE
     fields: [
       { key: 'mp_delivery_store_id', label: 'Store ID', type: 'text', placeholder: 'ID de tu tienda', required: true },
     ],
@@ -77,6 +84,7 @@ const INTEGRATIONS: IntegrationConfig[] = [
     icon: <Bike className="h-6 w-6" />,
     docsUrl: 'https://www.rappi.com.ar/aliados',
     enabledKey: 'rappi_enabled',
+    comingSoon: true, // PRÓXIMAMENTE
     fields: [
       { key: 'rappi_store_id', label: 'Store ID', type: 'text', placeholder: 'ID de tienda Rappi', required: true },
       { key: 'rappi_api_key', label: 'API Key', type: 'password', placeholder: 'Tu API Key de Rappi', required: true },
@@ -89,6 +97,7 @@ const INTEGRATIONS: IntegrationConfig[] = [
     icon: <Bike className="h-6 w-6" />,
     docsUrl: 'https://www.pedidosya.com.ar/restaurantes',
     enabledKey: 'pedidosya_enabled',
+    comingSoon: true, // PRÓXIMAMENTE
     fields: [
       { key: 'pedidosya_restaurant_id', label: 'Restaurant ID', type: 'text', placeholder: 'ID de restaurante', required: true },
       { key: 'pedidosya_api_key', label: 'API Key', type: 'password', placeholder: 'Tu API Key de PedidosYa', required: true },
@@ -394,36 +403,56 @@ export default function LocalIntegraciones() {
 
         {INTEGRATIONS.map(integration => (
           <TabsContent key={integration.key} value={integration.key}>
-            <Card>
+            <Card className={integration.comingSoon ? 'opacity-70' : ''}>
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
+                    <div className={`p-2 rounded-lg ${integration.comingSoon ? 'bg-muted' : 'bg-primary/10'}`}>
                       {integration.icon}
                     </div>
                     <div>
-                      <CardTitle>{integration.name}</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <CardTitle>{integration.name}</CardTitle>
+                        {integration.comingSoon && (
+                          <Badge variant="outline" className="text-xs">Próximamente</Badge>
+                        )}
+                      </div>
                       <CardDescription>{integration.description}</CardDescription>
                     </div>
                   </div>
-                  <Badge variant={isIntegrationConfigured(integration) ? 'default' : 'secondary'}>
-                    {isIntegrationConfigured(integration) ? (
-                      <>
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Configurado
-                      </>
-                    ) : (
-                      <>
-                        <AlertCircle className="h-3 w-3 mr-1" />
-                        Pendiente
-                      </>
-                    )}
-                  </Badge>
+                  {integration.comingSoon ? (
+                    <Badge variant="outline" className="bg-muted">
+                      <Clock className="h-3 w-3 mr-1" />
+                      No disponible
+                    </Badge>
+                  ) : (
+                    <Badge variant={isIntegrationConfigured(integration) ? 'default' : 'secondary'}>
+                      {isIntegrationConfigured(integration) ? (
+                        <>
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Configurado
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          Pendiente
+                        </>
+                      )}
+                    </Badge>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Webhook specific content */}
-                {integration.key === 'webhook' ? (
+                {/* Coming Soon message */}
+                {integration.comingSoon ? (
+                  <div className="text-center py-12">
+                    <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="font-semibold text-lg mb-2">Próximamente</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto">
+                      Esta integración estará disponible pronto. Te avisaremos cuando esté lista para configurar.
+                    </p>
+                  </div>
+                ) : integration.key === 'webhook' ? (
                   <WebhookIntegrationContent 
                     branchId={branchId || ''} 
                     webhookApiKey={formData.webhook_api_key || branch?.webhook_api_key || ''}

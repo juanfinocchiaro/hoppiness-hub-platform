@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useRoleLanding } from '@/hooks/useRoleLanding';
+import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,7 +19,7 @@ export default function Ingresar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading, signIn, signUp } = useAuth();
-  const { avatarInfo, loading: roleLoading } = useRoleLanding();
+  const { avatarInfo, loading: roleLoading } = useRoleLandingV2();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
