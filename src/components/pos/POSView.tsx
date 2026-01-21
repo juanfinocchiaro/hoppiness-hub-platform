@@ -1283,14 +1283,16 @@ export default function POSView({ branch }: POSViewProps) {
                     <CardContent className="p-2">
                       {/* POS optimized image - 4:3 with padding */}
                       <div className={`w-full aspect-[4/3] rounded bg-muted flex items-center justify-center mb-1 overflow-hidden ${isOutOfStock ? 'grayscale' : ''}`}>
-                        {product.image_url ? (
+                        {(product.pos_thumb_url || product.image_url) ? (
                           <img 
-                            src={product.image_url.replace('/products/', '/products/pos/').replace(/\.(png|PNG)$/, '.jpg')} 
+                            src={product.pos_thumb_url || product.image_url?.replace('/products/', '/products/pos/').replace(/\.(png|PNG)$/, '.jpg') || ''} 
                             alt={product.name} 
                             className="w-full h-full object-cover"
                             onError={(e) => {
                               // Fallback to original image if POS thumb doesn't exist
-                              e.currentTarget.src = product.image_url || '';
+                              if (product.image_url && e.currentTarget.src !== product.image_url) {
+                                e.currentTarget.src = product.image_url;
+                              }
                             }}
                           />
                         ) : (

@@ -208,10 +208,33 @@ export default function ProductForm() {
 
       setImageUrl(urlData.publicUrl);
       toast.success('Imagen subida correctamente');
+      
+      // If editing, trigger POS thumbnail generation in background
+      if (isEditing && productId) {
+        generatePosThumbnail(productId, urlData.publicUrl);
+      }
     } catch (error) {
       handleError(error, { userMessage: 'Error al subir la imagen', context: 'ProductForm.handleImageUpload' });
     } finally {
       setUploading(false);
+    }
+  };
+  
+  // Generate POS thumbnail in background (non-blocking)
+  const generatePosThumbnail = async (prodId: string, imgUrl: string) => {
+    try {
+      const response = await supabase.functions.invoke('generate-pos-thumbnail', {
+        body: { product_id: prodId, image_url: imgUrl },
+      });
+      
+      if (response.error) {
+        console.error('POS thumbnail generation failed:', response.error);
+      } else {
+        console.log('POS thumbnail generated:', response.data?.pos_thumb_url);
+        toast.success('Miniatura POS generada');
+      }
+    } catch (err) {
+      console.error('Error calling generate-pos-thumbnail:', err);
     }
   };
 
@@ -334,6 +357,11 @@ export default function ProductForm() {
             .update({ is_enabled: false })
             .eq('product_id', savedProductId)
             .eq('modifier_group_id', groupId);
+        }
+        
+        // Generate POS thumbnail for new products or when image changed
+        if (imageUrl && savedProductId) {
+          generatePosThumbnail(savedProductId, imageUrl);
         }
       }
 
