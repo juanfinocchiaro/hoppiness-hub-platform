@@ -1328,7 +1328,7 @@ export default function POSView({ branch }: POSViewProps) {
                       {customerName || (callerNumber ? `Llamador #${callerNumber}` : 'Sin nombre')}
                     </span>
                   </div>
-                  {callerNumber && (
+                  {callerNumber && !customerName?.startsWith('Llamador #') && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Hash className="w-4 h-4" />
                       <span>Llamador #{callerNumber}</span>
