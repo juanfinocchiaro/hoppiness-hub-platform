@@ -298,24 +298,18 @@ export default function POSView({ branch }: POSViewProps) {
     fetchCashRegisters();
   }, [branch.id]);
 
-  // Check for active shift
+  // Sync activeShift from shiftStatus hook
   useEffect(() => {
-    async function checkActiveShift() {
-      if (!selectedCashRegister) return;
-      
-      const { data } = await supabase
-        .from('cash_register_shifts')
-        .select('id, cash_register_id, status')
-        .eq('cash_register_id', selectedCashRegister)
-        .eq('status', 'open')
-        .limit(1)
-        .single();
-      
-      setActiveShift(data as CashRegisterShift | null);
+    if (shiftStatus.activeCashShift) {
+      setActiveShift({
+        id: shiftStatus.activeCashShift.id,
+        cash_register_id: shiftStatus.activeCashShift.cash_register_id,
+        status: shiftStatus.activeCashShift.status,
+      });
+    } else {
+      setActiveShift(null);
     }
-    
-    checkActiveShift();
-  }, [selectedCashRegister]);
+  }, [shiftStatus.activeCashShift]);
 
   // Tables feature removed - not used in any branch
 
