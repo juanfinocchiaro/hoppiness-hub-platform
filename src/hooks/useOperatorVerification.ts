@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -140,20 +140,30 @@ export function useOperatorVerification(branchId: string | undefined) {
     isLoading: logConfirmIdentity.isPending || logOperatorChange.isPending,
   };
 }
-    mutationFn: async () => {
-      if (!user || !branchId) return false;
-      
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .in('role', ['encargado', 'franquiciado', 'admin', 'coordinador'])
-        .limit(1);
-      
-      return (data?.length || 0) > 0;
-    },
-  });
+
+// Hook para verificar si el usuario actual es supervisor
+export function useIsSupervisor(branchId: string | undefined) {
+  const { user } = useAuth();
+  const [isSupervisor, setIsSupervisor] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useCallback(async () => {
+    if (!user || !branchId) {
+      setIsLoading(false);
+      return;
+    }
+    
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .in('role', ['encargado', 'franquiciado', 'admin', 'coordinador'])
+      .limit(1);
+    
+    setIsSupervisor((data?.length || 0) > 0);
+    setIsLoading(false);
+  }, [user, branchId]);
   
   return { isSupervisor, isLoading };
 }
