@@ -62,9 +62,9 @@ interface PaymentRecord {
 }
 
 interface OrderConfig {
-  orderArea: 'mostrador' | 'delivery' | 'apps';
-  counterSubType: 'takeaway' | 'dine_here';
-  appsChannel: 'rappi' | 'pedidos_ya' | 'mercadopago_delivery';
+  orderArea: 'mostrador' | 'apps';
+  serviceType: 'delivery' | 'takeaway' | 'dine_in';
+  appsChannel: 'rappi' | 'pedidos_ya' | 'mp_delivery';
   callerNumber: string;
   customerName: string;
   customerPhone: string;
@@ -162,7 +162,7 @@ export default function CheckoutDialog({
   };
 
   const subtotal = cart.reduce((sum, item) => sum + getItemPrice(item), 0);
-  const deliveryFee = (orderConfig.orderArea === 'delivery' || orderConfig.orderArea === 'apps') && orderConfig.customDeliveryFee
+  const deliveryFee = (orderConfig.serviceType === 'delivery' || orderConfig.orderArea === 'apps') && orderConfig.customDeliveryFee
     ? parseFloat(orderConfig.customDeliveryFee)
     : 0;
   const total = subtotal + deliveryFee + tipAmount;
@@ -178,18 +178,16 @@ export default function CheckoutDialog({
   };
 
   const mapOrderType = (): Enums<'order_type'> => {
-    if (orderConfig.orderArea === 'delivery' || orderConfig.orderArea === 'apps') return 'delivery';
-    if (orderConfig.orderArea === 'mostrador') {
-      return orderConfig.counterSubType === 'dine_here' ? 'dine_in' : 'takeaway';
-    }
-    return 'takeaway';
+    if (orderConfig.orderArea === 'apps') return 'delivery';
+    // Map serviceType to order_type
+    return orderConfig.serviceType === 'dine_in' ? 'dine_in' : orderConfig.serviceType;
   };
 
   const getSalesChannel = (): Enums<'sales_channel'> => {
     if (orderConfig.orderArea === 'apps') {
       if (orderConfig.appsChannel === 'rappi') return 'rappi';
       if (orderConfig.appsChannel === 'pedidos_ya') return 'pedidos_ya';
-      if (orderConfig.appsChannel === 'mercadopago_delivery') return 'mercadopago_delivery';
+      if (orderConfig.appsChannel === 'mp_delivery') return 'mercadopago_delivery';
     }
     return 'pos_local';
   };
@@ -218,11 +216,11 @@ export default function CheckoutDialog({
         customer_name: orderConfig.customerName || `Llamador #${orderConfig.callerNumber}`,
         customer_phone: orderConfig.customerPhone || '-', // Placeholder for counter orders without phone
         customer_email: orderConfig.customerEmail || null,
-        delivery_address: (orderConfig.orderArea === 'delivery' || orderConfig.orderArea === 'apps') ? orderConfig.deliveryAddress : null,
-        table_number: null,
+        delivery_address: (orderConfig.serviceType === 'delivery' || orderConfig.orderArea === 'apps') ? orderConfig.deliveryAddress : null,
+        service_type: orderConfig.orderArea === 'apps' ? 'delivery' : orderConfig.serviceType,
         caller_number: orderConfig.callerNumber ? parseInt(orderConfig.callerNumber) : null,
         order_type: mapOrderType(),
-        order_area: orderConfig.orderArea === 'apps' ? 'delivery' : orderConfig.orderArea,
+        order_area: orderConfig.orderArea === 'apps' ? 'delivery' : (orderConfig.serviceType === 'dine_in' ? 'salon' : orderConfig.orderArea),
         sales_channel: getSalesChannel(),
         external_order_id: orderConfig.orderArea === 'apps' ? orderConfig.externalOrderId : null,
         subtotal,
@@ -486,7 +484,8 @@ export default function CheckoutDialog({
                     </span>
                     {orderConfig.orderArea === 'mostrador' && (
                       <Badge variant="secondary">
-                        {orderConfig.counterSubType === 'dine_here' ? 'Comer acá' : 'Para llevar'}
+                        {orderConfig.serviceType === 'dine_in' ? 'Comer acá' : 
+                         orderConfig.serviceType === 'delivery' ? 'Delivery' : 'Para llevar'}
                       </Badge>
                     )}
                   </div>
@@ -556,7 +555,7 @@ export default function CheckoutDialog({
               <Separator />
 
               {/* TIP (only for dine_in) */}
-              {orderConfig.orderArea === 'mostrador' && orderConfig.counterSubType === 'dine_here' && !isPaid && (
+              {orderConfig.orderArea === 'mostrador' && orderConfig.serviceType === 'dine_in' && !isPaid && (
                 <TipInput
                   subtotal={subtotal}
                   tipAmount={tipAmount}
