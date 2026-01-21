@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Clock, TrendingUp, AlertTriangle, Loader2 } from 'lucide-react';
+import { Clock, TrendingUp, AlertTriangle } from 'lucide-react';
+import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { format, startOfMonth, endOfMonth, differenceInMinutes, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { handleError } from '@/lib/errorHandler';
@@ -181,7 +182,7 @@ export default function MonthlyHoursStats({ branchId }: MonthlyHoursStatsProps) 
     return (
       <Card>
         <CardContent className="py-12 flex items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <HoppinessLoader size="md" />
         </CardContent>
       </Card>
     );

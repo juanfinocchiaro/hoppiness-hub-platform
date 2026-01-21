@@ -2,7 +2,7 @@ import { useParams, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import KDSView from '@/components/pos/KDSView';
-import { RefreshCw } from 'lucide-react';
+import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 
 export default function LocalKDS() {
   const { branchId } = useParams<{ branchId: string }>();
@@ -23,11 +23,7 @@ export default function LocalKDS() {
   });
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <HoppinessLoader fullScreen size="lg" text="Cargando cocina" />;
   }
 
   if (error || !branch) {

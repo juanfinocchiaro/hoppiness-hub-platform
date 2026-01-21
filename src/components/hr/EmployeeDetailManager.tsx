@@ -48,7 +48,7 @@ import {
   Trash2,
   Camera,
   Save,
-  Loader2,
+  Loader2, // kept for inline button loaders
   Calendar,
   Phone,
   Mail,
@@ -63,6 +63,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 
 interface Employee {
   id: string;
@@ -697,11 +698,7 @@ export default function EmployeeDetailManager({ branchId, canManage }: EmployeeD
   };
 
   if (loading || loadingPermissions) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <HoppinessLoader size="md" className="py-12" />;
   }
 
   return (

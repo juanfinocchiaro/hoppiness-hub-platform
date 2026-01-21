@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { Store, Package, MapPin, Clock, Settings, Truck, ShoppingBag, Users, Bike, DollarSign, Utensils, Receipt, BarChart3 } from 'lucide-react';
 import OrdersHeatmap from '@/components/charts/OrdersHeatmap';
 import { RoleWelcomeCard } from '@/components/dashboard/RoleWelcomeCard';

@@ -221,4 +221,29 @@ html, body {
   .text-hoppiness-orange {
     color: #ff521d;
   }
+
+  /* Hoppiness Loader Animations */
+  @keyframes hoppiness-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes hoppiness-pulse {
+    0%, 100% { 
+      transform: scale(1); 
+      opacity: 0.3; 
+    }
+    50% { 
+      transform: scale(1.15); 
+      opacity: 0; 
+    }
+  }
+
+  .animate-hoppiness-rotate {
+    animation: hoppiness-rotate 4s linear infinite;
+  }
+
+  .animate-hoppiness-pulse {
+    animation: hoppiness-pulse 2s ease-in-out infinite;
+  }
 }
