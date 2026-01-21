@@ -2262,6 +2262,7 @@ export default function POSView({ branch }: POSViewProps) {
               onClick={handleStartOrder}
               disabled={
                 (orderArea === 'mostrador' && serviceType === 'dine_in' && !callerNumber) ||
+                (orderArea === 'mostrador' && serviceType === 'takeaway' && !callerNumber && !customerName.trim()) ||
                 (orderArea === 'mostrador' && serviceType === 'delivery' && (!customerName.trim() || !customerPhone.trim() || !deliveryAddress.trim())) ||
                 (orderArea === 'apps' && (!customerName.trim() || !deliveryAddress.trim()))
               }
