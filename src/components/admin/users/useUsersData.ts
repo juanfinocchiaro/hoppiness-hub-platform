@@ -11,17 +11,20 @@ export function useUsersData() {
       // 1. Fetch all profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, full_name, email, phone, created_at, loyalty_points, internal_notes')
+        .select('id, user_id, full_name, email, phone, created_at, loyalty_points, internal_notes')
         .order('created_at', { ascending: false });
       
       if (profilesError) throw profilesError;
       if (!profiles?.length) return [];
 
-      // 2. Fetch roles for all users
+      // 2. Fetch roles for all users - need to get user_id from profiles to match
+      const profileUserIds = profiles.map(p => p.user_id).filter(Boolean);
+      
       const { data: roles } = await supabase
         .from('user_roles_v2')
         .select('id, user_id, brand_role, local_role, branch_ids, is_active')
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .in('user_id', profileUserIds);
 
       // 3. Fetch order aggregates (count and sum per customer)
       const { data: orderStats } = await supabase
@@ -46,9 +49,9 @@ export function useUsersData() {
       // Build roles map
       const rolesMap = new Map(roles?.map(r => [r.user_id, r]));
 
-      // Merge data
+      // Merge data - use user_id for role lookup, profile.id for orders
       return profiles.map(p => {
-        const role = rolesMap.get(p.id);
+        const role = rolesMap.get(p.user_id);
         const orders = orderAggregates[p.id] || { count: 0, total: 0, lastDate: null };
         
         return {
