@@ -1,15 +1,14 @@
 import React, { createContext, useContext, useState, useMemo, ReactNode } from 'react';
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays } from 'date-fns';
 
-// Canales de venta unificados: Delivery, TakeAway, Mostrador, Rappi, PedidosYa, MP Delivery
+// Canales de venta: Mostrador, Web App, y Apps de Delivery (Rappi, PedidosYa, MP Delivery)
 export type SalesChannelFilter = 
   | 'all' 
-  | 'delivery' 
-  | 'takeaway'
   | 'mostrador' 
+  | 'webapp'
   | 'rappi' 
-  | 'pedidos_ya' 
-  | 'mercadopago_delivery';
+  | 'pedidosya' 
+  | 'mp_delivery';
 
 export type PeriodPreset = 'today' | 'yesterday' | 'week' | 'month' | 'year' | 'custom';
 
@@ -37,12 +36,11 @@ export interface DashboardFilterContextValue {
 
 const channelLabels: Record<SalesChannelFilter, string> = {
   all: 'Todos los canales',
-  delivery: 'Delivery',
-  takeaway: 'Take Away',
   mostrador: 'Mostrador',
+  webapp: 'Web App',
   rappi: 'Rappi',
-  pedidos_ya: 'PedidosYa',
-  mercadopago_delivery: 'MP Delivery',
+  pedidosya: 'PedidosYa',
+  mp_delivery: 'MP Delivery',
 };
 
 const periodLabels: Record<PeriodPreset, string> = {

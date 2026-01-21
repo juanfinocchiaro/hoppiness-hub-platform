@@ -52,15 +52,13 @@ interface ExpandableOrderRowProps {
   statusConfig: Record<OrderStatus, { label: string; color: string }>;
 }
 
+// Canales de venta: Mostrador, Web App, Rappi, PedidosYa, MP Delivery
 const CHANNEL_CONFIG: Record<string, { label: string; icon: React.ReactNode }> = {
-  delivery: { label: 'Delivery', icon: <Truck className="w-3 h-3" /> },
-  takeaway: { label: 'Take Away', icon: <ShoppingBag className="w-3 h-3" /> },
   mostrador: { label: 'Mostrador', icon: <Store className="w-3 h-3" /> },
-  atencion_presencial: { label: 'Mostrador', icon: <Store className="w-3 h-3" /> },
+  webapp: { label: 'Web App', icon: <Store className="w-3 h-3" /> },
   rappi: { label: 'Rappi', icon: <Bike className="w-3 h-3" /> },
-  pedidos_ya: { label: 'PedidosYa', icon: <Bike className="w-3 h-3" /> },
-  mercadopago_delivery: { label: 'MP Delivery', icon: <Truck className="w-3 h-3" /> },
-  pos_local: { label: 'POS', icon: <Store className="w-3 h-3" /> },
+  pedidosya: { label: 'PedidosYa', icon: <Bike className="w-3 h-3" /> },
+  mp_delivery: { label: 'MP Delivery', icon: <Truck className="w-3 h-3" /> },
 };
 
 const PAYMENT_LABELS: Record<string, string> = {

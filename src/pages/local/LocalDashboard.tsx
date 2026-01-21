@@ -57,29 +57,30 @@ type BranchChannel = {
   icon: React.ReactNode;
 };
 
-const branchChannels: BranchChannel[] = [
+// Tipos de servicio disponibles en sucursal
+const branchServiceTypes: BranchChannel[] = [
   { key: 'delivery_enabled', label: 'Delivery', icon: <Truck className="w-3 h-3" /> },
   { key: 'takeaway_enabled', label: 'TakeAway', icon: <ShoppingBag className="w-3 h-3" /> },
-  { key: 'dine_in_enabled', label: 'Atención Presencial', icon: <Users className="w-3 h-3" /> },
+  { key: 'dine_in_enabled', label: 'Salón', icon: <Users className="w-3 h-3" /> },
+];
+
+// Canales externos (Apps de Delivery)
+const branchExternalChannels: BranchChannel[] = [
   { key: 'rappi_enabled', label: 'Rappi', icon: <Bike className="w-3 h-3" /> },
   { key: 'pedidosya_enabled', label: 'PedidosYa', icon: <Bike className="w-3 h-3" /> },
   { key: 'mercadopago_delivery_enabled', label: 'MP Delivery', icon: <Truck className="w-3 h-3" /> },
 ];
 
-// Canales de venta unificados: Delivery, TakeAway, Mostrador, Rappi, PedidosYa, MP Delivery
+// Canales de venta: Mostrador, Web App, Rappi, PedidosYa, MP Delivery
 const channelLabels: Record<string, { label: string; icon: React.ReactNode }> = {
-  delivery: { label: 'Delivery', icon: <Truck className="w-4 h-4" /> },
-  takeaway: { label: 'Take Away', icon: <ShoppingBag className="w-4 h-4" /> },
   mostrador: { label: 'Mostrador', icon: <Store className="w-4 h-4" /> },
+  webapp: { label: 'Web App', icon: <Store className="w-4 h-4" /> },
   rappi: { label: 'Rappi', icon: <Bike className="w-4 h-4" /> },
-  pedidos_ya: { label: 'PedidosYa', icon: <Bike className="w-4 h-4" /> },
-  mercadopago_delivery: { label: 'MP Delivery', icon: <Truck className="w-4 h-4" /> },
+  pedidosya: { label: 'PedidosYa', icon: <Bike className="w-4 h-4" /> },
+  mp_delivery: { label: 'MP Delivery', icon: <Truck className="w-4 h-4" /> },
   // Legacy mappings for existing data
-  atencion_presencial: { label: 'Mostrador', icon: <Store className="w-4 h-4" /> },
-  pos_local: { label: 'Mostrador', icon: <Store className="w-4 h-4" /> },
-  whatsapp: { label: 'Delivery', icon: <Truck className="w-4 h-4" /> },
-  mas_delivery: { label: 'Delivery', icon: <Truck className="w-4 h-4" /> },
-  web_app: { label: 'Delivery', icon: <Truck className="w-4 h-4" /> },
+  pos: { label: 'Mostrador', icon: <Store className="w-4 h-4" /> },
+  web: { label: 'Web App', icon: <Store className="w-4 h-4" /> },
 };
 
 interface HoursStats {
@@ -310,10 +311,29 @@ function DashboardContent({ branch }: { branch: Branch }) {
           })()}
         </div>
 
-        {/* Active Channels */}
+        {/* Active Service Types & Channels */}
         <div className="flex flex-wrap gap-2">
-          {branchChannels.map(channel => {
-            // Solo mostrar como activo si el local está efectivamente abierto
+          {/* Tipos de servicio */}
+          {branchServiceTypes.map(channel => {
+            const isForced = branch.admin_force_state && branch.admin_force_state !== 'none';
+            const effectiveOpen = isForced 
+              ? branch.admin_force_state === 'open'
+              : branch.local_open_state ?? false;
+            
+            const isEnabled = effectiveOpen && (branch[channel.key] as boolean ?? false);
+            return (
+              <Badge 
+                key={channel.key}
+                variant={isEnabled ? 'default' : 'outline'}
+                className={isEnabled ? 'bg-primary' : 'text-muted-foreground'}
+              >
+                {channel.icon}
+                <span className="ml-1">{channel.label}</span>
+              </Badge>
+            );
+          })}
+          {/* Canales externos */}
+          {branchExternalChannels.map(channel => {
             const isForced = branch.admin_force_state && branch.admin_force_state !== 'none';
             const effectiveOpen = isForced 
               ? branch.admin_force_state === 'open'

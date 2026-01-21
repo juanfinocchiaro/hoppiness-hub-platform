@@ -25,26 +25,21 @@ interface Props {
   branchId: string;
 }
 
+// Canales de venta: Mostrador, Web App, Rappi, PedidosYa, MP Delivery
 const channelIcons: Record<string, React.ReactNode> = {
-  atencion_presencial: <Users className="w-3 h-3" />,
-  pos_local: <Receipt className="w-3 h-3" />,
-  whatsapp: <MessageCircle className="w-3 h-3" />,
-  web_app: <Globe className="w-3 h-3" />,
-  pedidos_ya: <Bike className="w-3 h-3" />,
+  mostrador: <Receipt className="w-3 h-3" />,
+  webapp: <Globe className="w-3 h-3" />,
   rappi: <Bike className="w-3 h-3" />,
-  mercadopago_delivery: <Truck className="w-3 h-3" />,
-  mas_delivery: <Truck className="w-3 h-3" />,
+  pedidosya: <Bike className="w-3 h-3" />,
+  mp_delivery: <Truck className="w-3 h-3" />,
 };
 
 const channelLabels: Record<string, string> = {
-  atencion_presencial: 'Salón',
-  pos_local: 'POS',
-  whatsapp: 'WhatsApp',
-  web_app: 'Web',
-  pedidos_ya: 'PedidosYa',
+  mostrador: 'Mostrador',
+  webapp: 'Web App',
   rappi: 'Rappi',
-  mercadopago_delivery: 'MP',
-  mas_delivery: 'MásDelivery',
+  pedidosya: 'PedidosYa',
+  mp_delivery: 'MP Delivery',
 };
 
 export default function RecentCompletedOrders({ branchId }: Props) {

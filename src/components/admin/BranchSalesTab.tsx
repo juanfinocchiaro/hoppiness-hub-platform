@@ -98,15 +98,14 @@ export default function BranchSalesTab({ branchId, branchName }: BranchSalesTabP
     }))
     .sort((a, b) => b.amount - a.amount);
 
+  // Canales de venta: Mostrador, Web App, Rappi, PedidosYa, MP Delivery
   function getChannelLabel(channel: string) {
     const labels: Record<string, string> = {
       mostrador: 'Mostrador',
-      delivery: 'Delivery Propio',
-      takeaway: 'Takeaway',
+      webapp: 'Web App',
       rappi: 'Rappi',
       pedidosya: 'PedidosYa',
-      mp_delivery: 'MercadoPago Delivery',
-      salon: 'Salón',
+      mp_delivery: 'MP Delivery',
     };
     return labels[channel] || channel;
   }

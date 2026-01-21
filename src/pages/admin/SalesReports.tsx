@@ -19,13 +19,13 @@ import { toast } from 'sonner';
 import { format, subDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+// Canales de venta: Mostrador, Web App, Rappi, PedidosYa, MP Delivery
 const SALES_CHANNEL_LABELS: Record<string, string> = {
-  atencion_presencial: 'Presencial',
-  whatsapp: 'WhatsApp',
-  mas_delivery: '+Delivery',
-  pedidos_ya: 'PedidosYa',
+  mostrador: 'Mostrador',
+  webapp: 'Web App',
   rappi: 'Rappi',
-  mercadopago_delivery: 'MP Delivery',
+  pedidosya: 'PedidosYa',
+  mp_delivery: 'MP Delivery',
 };
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {

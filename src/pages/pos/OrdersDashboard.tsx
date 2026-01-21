@@ -42,13 +42,13 @@ const ORDER_AREA_LABELS: Record<string, string> = {
   delivery: 'Delivery',
 };
 
+// Canales de venta: Mostrador, Web App, Rappi, PedidosYa, MP Delivery
 const SALES_CHANNEL_LABELS: Record<string, string> = {
-  atencion_presencial: 'Presencial',
-  whatsapp: 'WhatsApp',
-  mas_delivery: '+Delivery',
-  pedidos_ya: 'PedidosYa',
+  mostrador: 'Mostrador',
+  webapp: 'Web App',
   rappi: 'Rappi',
-  mercadopago_delivery: 'MP Delivery',
+  pedidosya: 'PedidosYa',
+  mp_delivery: 'MP Delivery',
 };
 
 export default function OrdersDashboard() {

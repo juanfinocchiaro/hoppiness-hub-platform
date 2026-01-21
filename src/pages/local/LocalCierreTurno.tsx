@@ -81,15 +81,13 @@ interface ShiftData {
   notes: string[];
 }
 
+// Canales de venta: Mostrador, Web App, y Apps de Delivery
 const CHANNEL_ICONS: Record<string, string> = {
   mostrador: '🖥️',
-  pos: '🖥️',
-  web: '🌐',
-  delivery: '🚴',
-  pedidosya: '🟡',
+  webapp: '🌐',
   rappi: '🟠',
+  pedidosya: '🟡',
   mp_delivery: '🔵',
-  whatsapp: '💬',
 };
 
 // Helper to process attendance_logs into check_in/check_out pairs
