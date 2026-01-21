@@ -1,3 +1,20 @@
+/**
+ * useUserRole Hook
+ * 
+ * Provides user roles and granular branch permissions.
+ * 
+ * IMPORTANT: This hook uses `user_branch_permissions` (new granular system).
+ * 
+ * @deprecated branch_permissions table is DEPRECATED.
+ * The fallback to `branch_permissions` is kept for backwards compatibility
+ * but should be removed once all data is migrated.
+ * 
+ * Migration completed:
+ * - RegistroStaff.tsx (2026-01-21) - now writes to user_branch_permissions
+ * 
+ * Pending migration:
+ * - Historical data in branch_permissions table
+ */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';

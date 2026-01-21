@@ -889,7 +889,6 @@ export type Database = {
           admin_force_channels: Json | null
           admin_force_message: string | null
           admin_force_state: string | null
-          allowed_ips: string[] | null
           auto_invoice_integrations: boolean
           city: string
           closing_time: string | null
@@ -909,7 +908,6 @@ export type Database = {
           is_active: boolean
           is_open: boolean | null
           latitude: number | null
-          local_channels: Json | null
           local_open_state: boolean | null
           longitude: number | null
           mercadopago_access_token: string | null
@@ -926,7 +924,6 @@ export type Database = {
           rappi_enabled: boolean | null
           rappi_store_id: string | null
           slug: string | null
-          status_message: string | null
           takeaway_enabled: boolean | null
           updated_at: string
           webhook_api_key: string | null
@@ -936,7 +933,6 @@ export type Database = {
           admin_force_channels?: Json | null
           admin_force_message?: string | null
           admin_force_state?: string | null
-          allowed_ips?: string[] | null
           auto_invoice_integrations?: boolean
           city: string
           closing_time?: string | null
@@ -956,7 +952,6 @@ export type Database = {
           is_active?: boolean
           is_open?: boolean | null
           latitude?: number | null
-          local_channels?: Json | null
           local_open_state?: boolean | null
           longitude?: number | null
           mercadopago_access_token?: string | null
@@ -973,7 +968,6 @@ export type Database = {
           rappi_enabled?: boolean | null
           rappi_store_id?: string | null
           slug?: string | null
-          status_message?: string | null
           takeaway_enabled?: boolean | null
           updated_at?: string
           webhook_api_key?: string | null
@@ -983,7 +977,6 @@ export type Database = {
           admin_force_channels?: Json | null
           admin_force_message?: string | null
           admin_force_state?: string | null
-          allowed_ips?: string[] | null
           auto_invoice_integrations?: boolean
           city?: string
           closing_time?: string | null
@@ -1003,7 +996,6 @@ export type Database = {
           is_active?: boolean
           is_open?: boolean | null
           latitude?: number | null
-          local_channels?: Json | null
           local_open_state?: boolean | null
           longitude?: number | null
           mercadopago_access_token?: string | null
@@ -1020,7 +1012,6 @@ export type Database = {
           rappi_enabled?: boolean | null
           rappi_store_id?: string | null
           slug?: string | null
-          status_message?: string | null
           takeaway_enabled?: boolean | null
           updated_at?: string
           webhook_api_key?: string | null
@@ -5455,58 +5446,6 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "supplier_categories"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tables: {
-        Row: {
-          area: Database["public"]["Enums"]["order_area"]
-          branch_id: string
-          created_at: string
-          current_order_id: string | null
-          id: string
-          is_occupied: boolean
-          table_number: string
-        }
-        Insert: {
-          area?: Database["public"]["Enums"]["order_area"]
-          branch_id: string
-          created_at?: string
-          current_order_id?: string | null
-          id?: string
-          is_occupied?: boolean
-          table_number: string
-        }
-        Update: {
-          area?: Database["public"]["Enums"]["order_area"]
-          branch_id?: string
-          created_at?: string
-          current_order_id?: string | null
-          id?: string
-          is_occupied?: boolean
-          table_number?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tables_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tables_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "supplier_balances"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "tables_current_order_id_fkey"
-            columns: ["current_order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
