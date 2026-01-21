@@ -53,7 +53,6 @@ import {
   Receipt,
   FileText,
   AlertCircle,
-  Settings,
   Star,
   Pencil,
   Coffee,
@@ -1127,7 +1126,7 @@ export default function POSView({ branch }: POSViewProps) {
                       <span className="text-sm font-medium truncate max-w-24">{product.name}</span>
                       <span className="text-sm font-bold text-primary">{formatPrice(price)}</span>
                       {product.hasModifiers && (
-                        <Settings className="w-3 h-3 text-muted-foreground" />
+                        <Pencil className="w-3 h-3 text-muted-foreground" />
                       )}
                     </button>
                   );
@@ -1229,7 +1228,7 @@ export default function POSView({ branch }: POSViewProps) {
                       
                       {/* Modifier indicator */}
                       {product.hasModifiers && !isOutOfStock && (
-                        <Settings className="w-3 h-3 text-muted-foreground shrink-0" />
+                        <Pencil className="w-3 h-3 text-muted-foreground shrink-0" />
                       )}
                     </div>
                   );
@@ -1275,7 +1274,7 @@ export default function POSView({ branch }: POSViewProps) {
                     {/* Modifier indicator - TOP RIGHT */}
                     {product.hasModifiers && !isOutOfStock && (
                       <Badge variant="outline" className="absolute top-1 right-1 text-xs z-10 bg-background/80">
-                        <Settings className="w-3 h-3" />
+                        <Pencil className="w-3 h-3" />
                       </Badge>
                     )}
                     
