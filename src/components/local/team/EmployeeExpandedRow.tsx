@@ -1,0 +1,313 @@
+import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { 
+  Phone, MapPin, CreditCard, Calendar, AlertTriangle, 
+  ClipboardList, Clock, DollarSign, Plus, Pencil, UserX, Copy
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { useEmployeeDetails } from './useTeamData';
+import { WarningModal } from './WarningModal';
+import { EmployeeDataModal } from './EmployeeDataModal';
+import type { TeamMember, NoteEntry } from './types';
+import { WARNING_TYPE_LABELS, calculateAge } from './types';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+
+interface EmployeeExpandedRowProps {
+  member: TeamMember;
+  branchId: string;
+  onClose: () => void;
+  onMemberUpdated: () => void;
+}
+
+export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated }: EmployeeExpandedRowProps) {
+  const { user: currentUser } = useAuth();
+  const queryClient = useQueryClient();
+  const { employeeData, warnings } = useEmployeeDetails(member.user_id, branchId);
+  
+  const [newNote, setNewNote] = useState('');
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  // Add note mutation
+  const addNoteMutation = useMutation({
+    mutationFn: async (note: string) => {
+      const newNoteEntry = {
+        date: new Date().toISOString(),
+        note,
+        by: currentUser?.id || '',
+      };
+      
+      const currentNotes = (employeeData?.internal_notes || []) as NoteEntry[];
+      const updatedNotes = [...currentNotes, newNoteEntry] as unknown as Record<string, unknown>[];
+      
+      if (employeeData?.id) {
+        const { error } = await supabase
+          .from('employee_data')
+          .update({ internal_notes: updatedNotes })
+          .eq('id', employeeData.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('employee_data')
+          .insert([{
+            user_id: member.user_id,
+            branch_id: branchId,
+            internal_notes: updatedNotes,
+          }]);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success('Nota agregada');
+      setNewNote('');
+      queryClient.invalidateQueries({ queryKey: ['employee-data', member.user_id, branchId] });
+    },
+    onError: () => toast.error('Error al agregar nota'),
+  });
+
+  // Deactivate mutation
+  const deactivateMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('user_roles_v2')
+        .update({ 
+          local_role: null,
+          branch_ids: [],
+        })
+        .eq('id', member.role_id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Empleado desactivado');
+      onMemberUpdated();
+      onClose();
+    },
+    onError: () => toast.error('Error al desactivar'),
+  });
+
+  const handleAddNote = () => {
+    if (!newNote.trim()) return;
+    addNoteMutation.mutate(newNote.trim());
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copiado al portapapeles');
+  };
+
+  const age = calculateAge(employeeData?.birth_date || null);
+
+  return (
+    <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Column 1: Personal Data */}
+      <div className="space-y-4">
+        <h4 className="font-semibold text-sm uppercase text-muted-foreground">Datos personales</h4>
+        
+        <div className="space-y-2 text-sm">
+          {member.phone && (
+            <div className="flex items-center gap-2">
+              <Phone className="h-4 w-4 text-muted-foreground" />
+              <span>{member.phone}</span>
+            </div>
+          )}
+          
+          {employeeData?.dni && (
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
+              <span>DNI: {employeeData.dni}</span>
+            </div>
+          )}
+          
+          {employeeData?.personal_address && (
+            <div className="flex items-start gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+              <span>{employeeData.personal_address}</span>
+            </div>
+          )}
+          
+          {employeeData?.birth_date && (
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span>
+                {format(new Date(employeeData.birth_date), "dd/MM/yyyy", { locale: es })}
+                {age && <span className="text-muted-foreground"> ({age} años)</span>}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Warnings */}
+        {warnings.length > 0 && (
+          <div className="pt-2 border-t">
+            <h5 className="font-medium text-sm mb-2 flex items-center gap-1">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              Apercibimientos ({warnings.length})
+            </h5>
+            <div className="space-y-1 text-sm">
+              {warnings.slice(0, 3).map(w => (
+                <div key={w.id} className="text-muted-foreground">
+                  ⚠️ {format(new Date(w.warning_date), 'dd/MM', { locale: es })} - {WARNING_TYPE_LABELS[w.warning_type]}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Column 2: Banking + Notes */}
+      <div className="space-y-4">
+        <h4 className="font-semibold text-sm uppercase text-muted-foreground">Datos bancarios</h4>
+        
+        <div className="space-y-2 text-sm">
+          {employeeData?.bank_name && (
+            <div>🏦 {employeeData.bank_name}</div>
+          )}
+          
+          {employeeData?.cbu && (
+            <div className="flex items-center gap-2">
+              <span className="truncate">CBU: {employeeData.cbu.slice(0, 10)}...</span>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-5 w-5"
+                onClick={() => copyToClipboard(employeeData.cbu!)}
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
+          
+          {employeeData?.alias && (
+            <div className="flex items-center gap-2">
+              <span>Alias: {employeeData.alias}</span>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-5 w-5"
+                onClick={() => copyToClipboard(employeeData.alias!)}
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
+          
+          {employeeData?.cuil && (
+            <div>CUIL: {employeeData.cuil}</div>
+          )}
+        </div>
+
+        {/* Internal Notes */}
+        <div className="pt-2 border-t">
+          <h5 className="font-medium text-sm mb-2">Notas internas</h5>
+          <div className="space-y-1 text-sm mb-2">
+            {(employeeData?.internal_notes as NoteEntry[] || []).slice(-3).map((note, i) => (
+              <p key={i} className="text-muted-foreground italic">"{note.note}"</p>
+            ))}
+            {(!employeeData?.internal_notes || (employeeData.internal_notes as NoteEntry[]).length === 0) && (
+              <p className="text-muted-foreground text-xs">Sin notas</p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Input 
+              placeholder="Agregar nota..." 
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              className="h-8 text-sm"
+              onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
+            />
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={handleAddNote}
+              disabled={!newNote.trim() || addNoteMutation.isPending}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Column 3: Actions */}
+      <div className="space-y-4">
+        <h4 className="font-semibold text-sm uppercase text-muted-foreground">Acciones</h4>
+        
+        <div className="space-y-2">
+          <Button variant="outline" size="sm" className="w-full justify-start">
+            <ClipboardList className="h-4 w-4 mr-2" />
+            Ver fichajes
+          </Button>
+          <Button variant="outline" size="sm" className="w-full justify-start">
+            <Clock className="h-4 w-4 mr-2" />
+            Ver horarios
+          </Button>
+          <Button variant="outline" size="sm" className="w-full justify-start">
+            <DollarSign className="h-4 w-4 mr-2" />
+            Ver liquidación
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full justify-start text-amber-600"
+            onClick={() => setShowWarningModal(true)}
+          >
+            <AlertTriangle className="h-4 w-4 mr-2" />
+            Nuevo apercibimiento
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full justify-start"
+            onClick={() => setShowEditModal(true)}
+          >
+            <Pencil className="h-4 w-4 mr-2" />
+            Editar datos
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full justify-start text-destructive"
+            onClick={() => {
+              if (confirm('¿Desactivar a este empleado?')) {
+                deactivateMutation.mutate();
+              }
+            }}
+          >
+            <UserX className="h-4 w-4 mr-2" />
+            Desactivar empleado
+          </Button>
+        </div>
+      </div>
+
+      {showWarningModal && (
+        <WarningModal
+          userId={member.user_id}
+          branchId={branchId}
+          open={showWarningModal}
+          onOpenChange={setShowWarningModal}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['employee-warnings', member.user_id, branchId] });
+            queryClient.invalidateQueries({ queryKey: ['branch-team', branchId] });
+          }}
+        />
+      )}
+
+      {showEditModal && (
+        <EmployeeDataModal
+          userId={member.user_id}
+          branchId={branchId}
+          existingData={employeeData}
+          open={showEditModal}
+          onOpenChange={setShowEditModal}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['employee-data', member.user_id, branchId] });
+          }}
+        />
+      )}
+    </div>
+  );
+}

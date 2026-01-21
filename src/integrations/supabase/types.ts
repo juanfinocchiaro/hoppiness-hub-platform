@@ -2048,6 +2048,84 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_data: {
+        Row: {
+          alias: string | null
+          bank_name: string | null
+          birth_date: string | null
+          branch_id: string
+          cbu: string | null
+          created_at: string | null
+          cuil: string | null
+          dni: string | null
+          emergency_contact: string | null
+          emergency_phone: string | null
+          hire_date: string | null
+          hourly_rate: number | null
+          id: string
+          internal_notes: Json | null
+          monthly_hours_target: number | null
+          personal_address: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          alias?: string | null
+          bank_name?: string | null
+          birth_date?: string | null
+          branch_id: string
+          cbu?: string | null
+          created_at?: string | null
+          cuil?: string | null
+          dni?: string | null
+          emergency_contact?: string | null
+          emergency_phone?: string | null
+          hire_date?: string | null
+          hourly_rate?: number | null
+          id?: string
+          internal_notes?: Json | null
+          monthly_hours_target?: number | null
+          personal_address?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          alias?: string | null
+          bank_name?: string | null
+          birth_date?: string | null
+          branch_id?: string
+          cbu?: string | null
+          created_at?: string | null
+          cuil?: string | null
+          dni?: string | null
+          emergency_contact?: string | null
+          emergency_phone?: string | null
+          hire_date?: string | null
+          hourly_rate?: number | null
+          id?: string
+          internal_notes?: Json | null
+          monthly_hours_target?: number | null
+          personal_address?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_data_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_data_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       employee_documents: {
         Row: {
           created_at: string
@@ -4778,9 +4856,11 @@ export type Database = {
           favorite_branch_id: string | null
           full_name: string
           id: string
+          internal_notes: Json | null
           invitation_token: string | null
           is_active: boolean
           last_order_at: string | null
+          loyalty_points: number | null
           phone: string | null
           pin_hash: string | null
           total_orders: number | null
@@ -4808,9 +4888,11 @@ export type Database = {
           favorite_branch_id?: string | null
           full_name: string
           id?: string
+          internal_notes?: Json | null
           invitation_token?: string | null
           is_active?: boolean
           last_order_at?: string | null
+          loyalty_points?: number | null
           phone?: string | null
           pin_hash?: string | null
           total_orders?: number | null
@@ -4838,9 +4920,11 @@ export type Database = {
           favorite_branch_id?: string | null
           full_name?: string
           id?: string
+          internal_notes?: Json | null
           invitation_token?: string | null
           is_active?: boolean
           last_order_at?: string | null
+          loyalty_points?: number | null
           phone?: string | null
           pin_hash?: string | null
           total_orders?: number | null
@@ -6453,6 +6537,60 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      warnings: {
+        Row: {
+          acknowledged_at: string | null
+          branch_id: string
+          created_at: string | null
+          description: string
+          id: string
+          is_active: boolean | null
+          issued_by: string | null
+          user_id: string
+          warning_date: string
+          warning_type: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          branch_id: string
+          created_at?: string | null
+          description: string
+          id?: string
+          is_active?: boolean | null
+          issued_by?: string | null
+          user_id: string
+          warning_date?: string
+          warning_type: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          branch_id?: string
+          created_at?: string | null
+          description?: string
+          id?: string
+          is_active?: boolean | null
+          issued_by?: string | null
+          user_id?: string
+          warning_date?: string
+          warning_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warnings_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warnings_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
       }
     }
     Views: {
