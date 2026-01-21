@@ -279,13 +279,6 @@ function DashboardContent({ branch }: { branch: Branch }) {
 
       {/* Dashboard Content */}
       <div className="flex-1 p-6 space-y-6">
-        {/* Role Welcome Card */}
-        <RoleWelcomeCard 
-          avatarType={avatarInfo.type}
-          avatarLabel={avatarInfo.label}
-          branchId={branch.id}
-          userName={user?.user_metadata?.full_name?.split(' ')[0]}
-        />
 
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
