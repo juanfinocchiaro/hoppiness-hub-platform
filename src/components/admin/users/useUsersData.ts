@@ -56,6 +56,7 @@ export function useUsersData() {
         
         return {
           id: p.id,
+          user_id: p.user_id, // auth.users id for roles
           full_name: p.full_name || '',
           email: p.email || '',
           phone: p.phone,
