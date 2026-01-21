@@ -211,9 +211,7 @@ const App = () => (
               <Route path="reportes/cmv" element={<LocalCMVReport />} />
               <Route path="reportes/movimientos-stock" element={<LocalReportesMovimientosStock />} />
               
-              {/* MENÚ DEL LOCAL */}
-              <Route path="menu/productos" element={<LocalProductos />} />
-              <Route path="menu/extras" element={<LocalExtras />} />
+              {/* Redirect rutas duplicadas - REMOVED: menu/productos y menu/extras ya definidas arriba */}
               
               {/* EQUIPO */}
               <Route path="equipo" element={<LocalUsuarios />} />
@@ -260,8 +258,12 @@ const App = () => (
               <Route path="integraciones" element={<LocalRedirect to="config/integraciones" />} />
               <Route path="impresoras" element={<LocalRedirect to="config/impresoras" />} />
               <Route path="kds-config" element={<LocalRedirect to="config/kds" />} />
-              <Route path="stock/factura" element={<LocalRedirect to="compras/factura" />} />
               <Route path="config/datos" element={<LocalConfig />} />
+              
+              {/* Redirects consolidación - apuntan a ubicación canónica */}
+              <Route path="stock/cmv" element={<LocalRedirect to="reportes/cmv" />} />
+              <Route path="finanzas/reportes" element={<LocalRedirect to="reportes/resultados" />} />
+              <Route path="stock/factura" element={<LocalRedirect to="compras/factura" />} />
             </Route>
             
             {/* Conciliacion Panel (Admin only) */}

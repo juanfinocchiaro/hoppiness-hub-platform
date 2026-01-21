@@ -37,7 +37,6 @@ export default function LocalConfig() {
   const [isOpen, setIsOpen] = useState(true);
   const [deliveryEnabled, setDeliveryEnabled] = useState(true);
   const [takeawayEnabled, setTakeawayEnabled] = useState(true);
-  const [autoInvoiceIntegrations, setAutoInvoiceIntegrations] = useState(false);
   const [prepTimeMode, setPrepTimeMode] = useState<PrepTimeMode>('custom');
   const [customPrepTime, setCustomPrepTime] = useState(20);
   
@@ -66,7 +65,6 @@ export default function LocalConfig() {
       setIsOpen(data.is_open ?? true);
       setDeliveryEnabled(data.delivery_enabled ?? true);
       setTakeawayEnabled(data.takeaway_enabled ?? true);
-      setAutoInvoiceIntegrations(data.auto_invoice_integrations ?? false);
       
       
       const storedPrepTime = data.estimated_prep_time_min;
@@ -397,65 +395,22 @@ export default function LocalConfig() {
         </CardContent>
       </Card>
 
-
-      {/* Configuración de Facturación */}
-      <Card>
-        <CardContent className="pt-6 space-y-6">
+      {/* Link a Integraciones */}
+      <Card className="border-dashed">
+        <CardContent className="py-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label className="text-base font-medium">Auto-Factura para Integraciones</Label>
+              <p className="text-sm font-medium">Integraciones y Facturación</p>
               <p className="text-sm text-muted-foreground">
-                Generar factura automáticamente para pedidos de Rappi, PedidosYa y MP Delivery
+                MercadoPago, Rappi, PedidosYa, Facturante y otras configuraciones
               </p>
             </div>
-            <Switch
-              checked={autoInvoiceIntegrations}
-              onCheckedChange={async (checked) => {
-                setAutoInvoiceIntegrations(checked);
-                if (canEdit && branchId) {
-                  await supabase.from('branches').update({ auto_invoice_integrations: checked }).eq('id', branchId);
-                  toast.success(checked ? 'Auto-factura activada' : 'Auto-factura desactivada');
-                }
-              }}
-              disabled={!canEdit}
-            />
-          </div>
-
-          <div className="border-t pt-4">
-            <div className="space-y-2">
-              <Label className="text-base font-medium">Proveedor de Facturación</Label>
-              <p className="text-sm text-muted-foreground">
-                Sistema externo para emisión de facturas fiscales (próximamente)
-              </p>
-              <Select
-                value={branch?.invoice_provider || 'none'}
-                onValueChange={async (value) => {
-                  if (canEdit && branchId) {
-                    const provider = value === 'none' ? null : value;
-                    await supabase.from('branches').update({ invoice_provider: provider }).eq('id', branchId);
-                    fetchBranch();
-                    toast.success('Proveedor actualizado');
-                  }
-                }}
-                disabled={!canEdit}
-              >
-                <SelectTrigger className="w-full sm:w-64">
-                  <SelectValue placeholder="Seleccionar proveedor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sin integración</SelectItem>
-                  <SelectItem value="afip_facturante">AFIP Facturante</SelectItem>
-                  <SelectItem value="tango">Tango Gestión</SelectItem>
-                  <SelectItem value="bsale">Bsale</SelectItem>
-                  <SelectItem value="colppy">Colppy</SelectItem>
-                </SelectContent>
-              </Select>
-              {branch?.invoice_provider && (
-                <p className="text-xs text-amber-600 dark:text-amber-400">
-                  ⚠️ Integración pendiente de configuración
-                </p>
-              )}
-            </div>
+            <Button
+              variant="outline"
+              onClick={() => window.location.href = `/local/${branchId}/config/integraciones`}
+            >
+              Ir a Integraciones
+            </Button>
           </div>
         </CardContent>
       </Card>
