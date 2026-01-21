@@ -16,6 +16,7 @@ import {
   Menu,
   Building2,
   AlertCircle,
+  Home,
 } from 'lucide-react';
 import {
   Sheet,
@@ -108,7 +109,13 @@ export default function AdminDashboard() {
                   </ExternalLink>
                 </div>
               )}
-              <div className="absolute bottom-4 left-4 right-4">
+              <div className="absolute bottom-4 left-4 right-4 space-y-1">
+                <ExternalLink to="/">
+                  <Button variant="ghost" className="w-full justify-start">
+                    <Home className="w-4 h-4 mr-3" />
+                    Volver al Inicio
+                  </Button>
+                </ExternalLink>
                 <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={signOut}>
                   <LogOut className="w-4 h-4 mr-3" />
                   Salir
@@ -125,7 +132,7 @@ export default function AdminDashboard() {
         {/* Desktop Sidebar */}
         <aside className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 bg-card border-r">
           <div className="p-6 border-b">
-            <ExternalLink to="/" className="flex items-center gap-3">
+            <div className="flex items-center gap-3">
               <img 
                 src={logoHoppinessBlue} 
                 alt="Hoppiness" 
@@ -137,25 +144,28 @@ export default function AdminDashboard() {
                   {avatarInfo.label}
                 </Badge>
               </div>
-            </ExternalLink>
+            </div>
           </div>
           
           <div className="flex-1 p-4 overflow-y-auto">
             <AdminSidebar avatarInfo={avatarInfo} />
           </div>
 
-          {hasLocalPanelAccess && !isEmbedded && (
-            <div className="px-4 pb-2">
+          <div className="p-4 border-t space-y-1">
+            {hasLocalPanelAccess && !isEmbedded && (
               <ExternalLink to={`/local/${accessibleBranches[0].id}`}>
                 <Button variant="ghost" className="w-full justify-start">
                   <Building2 className="w-4 h-4 mr-3" />
                   Cambiar a Mi Local
                 </Button>
               </ExternalLink>
-            </div>
-          )}
-          
-          <div className="p-4 border-t">
+            )}
+            <ExternalLink to="/">
+              <Button variant="ghost" className="w-full justify-start">
+                <Home className="w-4 h-4 mr-3" />
+                Volver al Inicio
+              </Button>
+            </ExternalLink>
             <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={signOut}>
               <LogOut className="w-4 h-4 mr-3" />
               Salir
