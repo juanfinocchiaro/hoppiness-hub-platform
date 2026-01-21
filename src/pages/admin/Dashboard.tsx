@@ -88,7 +88,7 @@ export default function AdminDashboard() {
                 <img 
                   src={logoHoppinessBlue} 
                   alt="Hoppiness" 
-                  className="w-10 h-10 rounded-xl object-contain bg-white p-1"
+                  className="w-14 h-14 rounded-xl object-contain bg-white p-1"
                 />
                 <div>
                   <h2 className="text-lg font-bold">Mi Marca</h2>
@@ -101,7 +101,7 @@ export default function AdminDashboard() {
               {hasLocalPanelAccess && !isEmbedded && (
                 <div className="mt-4 pt-4 border-t">
                   <ExternalLink to={`/local/${accessibleBranches[0].id}`}>
-                    <Button variant="outline" className="w-full justify-start">
+                    <Button variant="ghost" className="w-full justify-start">
                       <Building2 className="w-4 h-4 mr-3" />
                       Cambiar a Mi Local
                     </Button>
@@ -109,9 +109,9 @@ export default function AdminDashboard() {
                 </div>
               )}
               <div className="absolute bottom-4 left-4 right-4">
-                <Button variant="outline" className="w-full" onClick={signOut}>
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Cerrar Sesión
+                <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={signOut}>
+                  <LogOut className="w-4 h-4 mr-3" />
+                  Salir
                 </Button>
               </div>
             </SheetContent>
@@ -129,7 +129,7 @@ export default function AdminDashboard() {
               <img 
                 src={logoHoppinessBlue} 
                 alt="Hoppiness" 
-                className="w-10 h-10 rounded-xl object-contain bg-white p-1"
+                className="w-14 h-14 rounded-xl object-contain bg-white p-1"
               />
               <div>
                 <span className="text-lg font-bold block">Mi Marca</span>
@@ -147,7 +147,7 @@ export default function AdminDashboard() {
           {hasLocalPanelAccess && !isEmbedded && (
             <div className="px-4 pb-2">
               <ExternalLink to={`/local/${accessibleBranches[0].id}`}>
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="ghost" className="w-full justify-start">
                   <Building2 className="w-4 h-4 mr-3" />
                   Cambiar a Mi Local
                 </Button>
@@ -156,9 +156,9 @@ export default function AdminDashboard() {
           )}
           
           <div className="p-4 border-t">
-            <Button variant="ghost" className="w-full justify-start" onClick={signOut}>
+            <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={signOut}>
               <LogOut className="w-4 h-4 mr-3" />
-              Cerrar Sesión
+              Salir
             </Button>
           </div>
         </aside>

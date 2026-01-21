@@ -503,7 +503,7 @@ export default function LocalLayout() {
                 <img 
                   src={logoHoppinessBlue} 
                   alt="Hoppiness" 
-                  className="w-10 h-10 rounded-xl object-contain bg-white p-1"
+                  className="w-14 h-14 rounded-xl object-contain bg-white p-1"
                 />
                 <div>
                   <h2 className="text-lg font-bold">Mi Local</h2>
@@ -516,17 +516,17 @@ export default function LocalLayout() {
               
               <NavContent />
               
-              <div className="absolute bottom-4 left-4 right-4 space-y-2">
+              <div className="absolute bottom-4 left-4 right-4 space-y-1">
                 {canAccessAdmin && !isEmbedded && (
                   <ExternalLink to="/admin">
-                    <Button variant="outline" className="w-full" size="sm">
-                      <Building2 className="w-4 h-4 mr-2" />
+                    <Button variant="ghost" className="w-full justify-start">
+                      <Building2 className="w-4 h-4 mr-3" />
                       Cambiar a Mi Marca
                     </Button>
                   </ExternalLink>
                 )}
-                <Button variant="outline" className="w-full" onClick={signOut}>
-                  <LogOut className="w-4 h-4 mr-2" />
+                <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={signOut}>
+                  <LogOut className="w-4 h-4 mr-3" />
                   Salir
                 </Button>
               </div>
@@ -545,7 +545,7 @@ export default function LocalLayout() {
               <img 
                 src={logoHoppinessBlue} 
                 alt="Hoppiness" 
-                className="w-10 h-10 rounded-xl object-contain bg-white p-1"
+                className="w-14 h-14 rounded-xl object-contain bg-white p-1"
               />
               <span className="text-lg font-bold">Mi Local</span>
             </ExternalLink>
