@@ -46,7 +46,6 @@ import {
   Banknote,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { ShiftCashHeader } from '@/components/local/ShiftCashHeader';
 import { OpenCashModal } from '@/components/local/OpenCashModal';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -412,9 +411,6 @@ export default function LocalIntegrador() {
 
   return (
     <div className="space-y-6">
-      {/* Shift and Cash Header */}
-      <ShiftCashHeader branchId={branchId!} onCashOpened={() => shiftStatus.refetch()} />
-      
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
