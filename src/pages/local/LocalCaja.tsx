@@ -93,6 +93,7 @@ export default function LocalCaja() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState<string>('');
+  const [userName, setUserName] = useState<string>('');
   
   // Dialog states
   const [openShiftDialog, setOpenShiftDialog] = useState(false);
@@ -123,6 +124,20 @@ export default function LocalCaja() {
   
   // Register editing
   const [editingRegisters, setEditingRegisters] = useState<CashRegister[]>([]);
+
+  // Fetch user profile name
+  useEffect(() => {
+    if (user?.id) {
+      supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single()
+        .then(({ data }) => {
+          if (data?.full_name) setUserName(data.full_name);
+        });
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     if (branch?.id) {
@@ -231,6 +246,104 @@ export default function LocalCaja() {
     }
   };
 
+  // Print alivio receipt
+  const printAlivioReceipt = (data: {
+    cajero: string;
+    fecha: Date;
+    origen: string;
+    destino: string;
+    saldoAntes: number;
+    monto: number;
+    saldoRestante: number;
+    notas?: string;
+    alivioNum: number;
+  }) => {
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    if (!printWindow) {
+      toast({ title: 'Error', description: 'No se pudo abrir ventana de impresión', variant: 'destructive' });
+      return;
+    }
+
+    const content = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Comprobante de Alivio</title>
+          <style>
+            @page { size: 80mm auto; margin: 0; }
+            body { 
+              font-family: 'Courier New', monospace; 
+              font-size: 12px; 
+              padding: 10px;
+              max-width: 280px;
+              margin: 0 auto;
+            }
+            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 8px; }
+            .title { font-size: 14px; font-weight: bold; }
+            .row { display: flex; justify-content: space-between; padding: 2px 0; }
+            .divider { border-top: 1px dashed #000; margin: 8px 0; }
+            .bold { font-weight: bold; }
+            .center { text-align: center; }
+            .amount { font-size: 14px; font-weight: bold; }
+            .signature { margin-top: 30px; border-top: 1px solid #000; padding-top: 5px; text-align: center; font-size: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="title">═══════════════════</div>
+            <div class="title">COMPROBANTE DE ALIVIO</div>
+            <div class="title">═══════════════════</div>
+          </div>
+          
+          <div class="row"><span>Sucursal:</span><span class="bold">${branch.name}</span></div>
+          <div class="row"><span>Fecha:</span><span>${format(data.fecha, "dd/MM/yyyy HH:mm", { locale: es })}</span></div>
+          <div class="row"><span>Alivio Nº:</span><span class="bold">${data.alivioNum}</span></div>
+          
+          <div class="divider"></div>
+          
+          <div class="row"><span>Cajero:</span><span class="bold">${data.cajero}</span></div>
+          
+          <div class="divider"></div>
+          
+          <div class="row"><span>De:</span><span>${data.origen}</span></div>
+          <div class="row"><span>A:</span><span>${data.destino}</span></div>
+          
+          <div class="divider"></div>
+          
+          <div class="row"><span>Saldo antes:</span><span>$${data.saldoAntes.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span></div>
+          <div class="row amount"><span>Monto alivio:</span><span>$${data.monto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span></div>
+          
+          <div class="divider"></div>
+          
+          <div class="row bold"><span>Saldo restante:</span><span>$${data.saldoRestante.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span></div>
+          
+          ${data.notas ? `<div class="divider"></div><div class="center"><em>Notas: ${data.notas}</em></div>` : ''}
+          
+          <div class="signature">
+            <br><br>
+            _____________________________<br>
+            Firma Cajero
+            <br><br><br>
+            _____________________________<br>
+            Firma Receptor (opcional)
+          </div>
+          
+          <div class="header" style="margin-top: 20px;">
+            <div class="title">═══════════════════</div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(content);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  };
+
   // Handle "Hacer Alivio" - transfer cash to relief register
   const handleHacerAlivio = async () => {
     const currentShift = shifts[selectedTab];
@@ -242,10 +355,27 @@ export default function LocalCaja() {
       return;
     }
     
+    const saldoAntes = calculateExpectedAmount(selectedTab);
+    const saldoRestante = saldoAntes - amount;
+    
     // Find relief register (Caja de Alivio)
     const reliefRegister = registers.find(r => r.name.toLowerCase().includes('alivio'));
+    const cajaOrigen = registers.find(r => r.id === selectedTab)?.name || 'Caja de Venta';
+    const cajaDestino = reliefRegister?.name || 'Caja de Alivio';
     
     try {
+      // Count today's alivios for this register
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const { count } = await supabase
+        .from('cash_register_movements')
+        .select('*', { count: 'exact', head: true })
+        .eq('shift_id', currentShift.id)
+        .eq('type', 'withdrawal')
+        .ilike('concept', '%alivio%');
+      
+      const alivioNum = (count || 0) + 1;
+
       // 1. Create withdrawal movement from current register
       const { error: withdrawalError } = await supabase
         .from('cash_register_movements')
@@ -255,7 +385,7 @@ export default function LocalCaja() {
           type: 'withdrawal',
           payment_method: 'efectivo',
           amount: amount,
-          concept: `Alivio a ${reliefRegister?.name || 'Caja de Alivio'}${alivioNotes ? ` - ${alivioNotes}` : ''}`,
+          concept: `Alivio a ${cajaDestino}${alivioNotes ? ` - ${alivioNotes}` : ''}`,
           recorded_by: user.id
         });
 
@@ -273,11 +403,24 @@ export default function LocalCaja() {
               type: 'deposit',
               payment_method: 'efectivo',
               amount: amount,
-              concept: `Alivio desde ${registers.find(r => r.id === selectedTab)?.name || 'Caja de Venta'}`,
+              concept: `Alivio desde ${cajaOrigen}`,
               recorded_by: user.id
             });
         }
       }
+
+      // 3. Print receipt
+      printAlivioReceipt({
+        cajero: userName || user.email || 'Usuario',
+        fecha: new Date(),
+        origen: cajaOrigen,
+        destino: cajaDestino,
+        saldoAntes,
+        monto: amount,
+        saldoRestante,
+        notas: alivioNotes || undefined,
+        alivioNum
+      });
 
       toast({ title: 'Alivio realizado', description: `Se transfirieron ${formatCurrency(amount)}` });
       setAlivioDialog(false);
