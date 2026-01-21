@@ -1314,9 +1314,6 @@ export type Database = {
       }
       channels: {
         Row: {
-          allows_delivery: boolean | null
-          allows_dine_in: boolean | null
-          allows_takeaway: boolean | null
           channel_type: string
           color: string | null
           created_at: string | null
@@ -1332,9 +1329,6 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          allows_delivery?: boolean | null
-          allows_dine_in?: boolean | null
-          allows_takeaway?: boolean | null
           channel_type: string
           color?: string | null
           created_at?: string | null
@@ -1350,9 +1344,6 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          allows_delivery?: boolean | null
-          allows_dine_in?: boolean | null
-          allows_takeaway?: boolean | null
           channel_type?: string
           color?: string | null
           created_at?: string | null
@@ -3508,6 +3499,7 @@ export type Database = {
           order_type: Database["public"]["Enums"]["order_type"]
           payment_method: Database["public"]["Enums"]["payment_method"] | null
           sales_channel: Database["public"]["Enums"]["sales_channel"] | null
+          service_type: string | null
           status: Database["public"]["Enums"]["order_status"]
           subtotal: number
           table_number: string | null
@@ -3544,6 +3536,7 @@ export type Database = {
           order_type: Database["public"]["Enums"]["order_type"]
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           sales_channel?: Database["public"]["Enums"]["sales_channel"] | null
+          service_type?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           subtotal: number
           table_number?: string | null
@@ -3580,6 +3573,7 @@ export type Database = {
           order_type?: Database["public"]["Enums"]["order_type"]
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           sales_channel?: Database["public"]["Enums"]["sales_channel"] | null
+          service_type?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number
           table_number?: string | null
