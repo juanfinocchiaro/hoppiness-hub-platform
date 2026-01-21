@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { useRoleLanding } from '@/hooks/useRoleLanding';
+import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
 import { RequireAuth } from './RequireAuth';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 
@@ -8,7 +8,7 @@ interface RequireAdminProps {
 }
 
 export function RequireAdmin({ children }: RequireAdminProps) {
-  const { avatarInfo, loading, canAccessAdmin } = useRoleLanding();
+  const { avatarInfo, loading, canAccessAdmin } = useRoleLandingV2();
 
   if (loading) {
     return <HoppinessLoader fullScreen size="lg" />;

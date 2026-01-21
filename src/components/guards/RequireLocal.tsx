@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { useRoleLanding } from '@/hooks/useRoleLanding';
+import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
 import { RequireAuth } from './RequireAuth';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 
@@ -8,7 +8,7 @@ interface RequireLocalProps {
 }
 
 export function RequireLocal({ children }: RequireLocalProps) {
-  const { avatarInfo, loading, canAccessLocal } = useRoleLanding();
+  const { avatarInfo, loading, canAccessLocal } = useRoleLandingV2();
 
   if (loading) {
     return <HoppinessLoader fullScreen size="lg" />;
@@ -16,7 +16,7 @@ export function RequireLocal({ children }: RequireLocalProps) {
 
   // Verificar si el usuario puede acceder al panel local
   if (!canAccessLocal) {
-    // Redirigir a su landing ideal (ej: socio va a reportes de marca)
+    // Redirigir a su landing ideal
     return <Navigate to={avatarInfo.landingPath} replace />;
   }
 
