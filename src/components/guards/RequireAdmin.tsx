@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useRoleLanding } from '@/hooks/useRoleLanding';
 import { RequireAuth } from './RequireAuth';
+import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 
 interface RequireAdminProps {
   children: React.ReactNode;
@@ -10,11 +11,7 @@ export function RequireAdmin({ children }: RequireAdminProps) {
   const { avatarInfo, loading, canAccessAdmin } = useRoleLanding();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <HoppinessLoader fullScreen size="lg" />;
   }
 
   // Verificar si el usuario puede acceder al panel de admin
