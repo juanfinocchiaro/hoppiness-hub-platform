@@ -515,7 +515,7 @@ export default function LocalCierreTurno() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {Object.entries(channelBreakdown)
+              {(Object.entries(channelBreakdown) as [string, number][])
                 .sort(([, a], [, b]) => b - a)
                 .map(([channel, amount]) => (
                   <div key={channel} className="space-y-2">
@@ -527,11 +527,11 @@ export default function LocalCierreTurno() {
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{formatCurrency(amount)}</span>
                         <Badge variant="secondary" className="text-xs">
-                          {((amount / totalSales) * 100).toFixed(0)}%
+                          {totalSales > 0 ? ((amount / totalSales) * 100).toFixed(0) : 0}%
                         </Badge>
                       </div>
                     </div>
-                    <Progress value={(amount / totalSales) * 100} className="h-2" />
+                    <Progress value={totalSales > 0 ? (amount / totalSales) * 100 : 0} className="h-2" />
                   </div>
                 ))}
               {Object.keys(channelBreakdown).length === 0 && (
@@ -551,7 +551,7 @@ export default function LocalCierreTurno() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {Object.entries(paymentBreakdown)
+              {(Object.entries(paymentBreakdown) as [string, number][])
                 .sort(([, a], [, b]) => b - a)
                 .map(([method, amount]) => (
                   <div key={method} className="space-y-2">
@@ -567,11 +567,11 @@ export default function LocalCierreTurno() {
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{formatCurrency(amount)}</span>
                         <Badge variant="secondary" className="text-xs">
-                          {((amount / totalSales) * 100).toFixed(0)}%
+                          {totalSales > 0 ? ((amount / totalSales) * 100).toFixed(0) : 0}%
                         </Badge>
                       </div>
                     </div>
-                    <Progress value={(amount / totalSales) * 100} className="h-2" />
+                    <Progress value={totalSales > 0 ? (amount / totalSales) * 100 : 0} className="h-2" />
                   </div>
                 ))}
               {Object.keys(paymentBreakdown).length === 0 && (
@@ -604,7 +604,7 @@ export default function LocalCierreTurno() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {Object.entries(productBreakdown)
+                      {(Object.entries(productBreakdown) as [string, { quantity: number; total: number }][])
                         .sort(([, a], [, b]) => b.total - a.total)
                         .map(([name, data]) => (
                           <TableRow key={name}>

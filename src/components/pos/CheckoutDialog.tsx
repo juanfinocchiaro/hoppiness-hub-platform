@@ -92,6 +92,9 @@ interface CheckoutDialogProps {
   existingPayments?: PaymentRecord[];
   // Lift draft state to parent so closing/reopening doesn't forget payments
   onDraftUpdated?: (draft: { orderId: string; payments: PaymentRecord[] }) => void;
+  // Cash register status
+  hasCashOpen?: boolean;
+  onOpenCash?: () => void;
 }
 
 // Use the same type as SplitPayment
@@ -131,6 +134,8 @@ export default function CheckoutDialog({
   existingOrderId,
   existingPayments = [],
   onDraftUpdated,
+  hasCashOpen = true,
+  onOpenCash,
 }: CheckoutDialogProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSplitPayment, setShowSplitPayment] = useState(false);
@@ -616,19 +621,41 @@ export default function CheckoutDialog({
               {!isPaid && (
                 <div className="space-y-3">
                   <p className="text-sm font-medium">Método de pago</p>
+                  
+                  {/* Warning if no cash register open */}
+                  {!hasCashOpen && (
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-sm">
+                      <p className="font-medium text-amber-700">💵 Caja cerrada</p>
+                      <p className="text-amber-600 text-xs mt-1">
+                        El pago en efectivo no está disponible.{' '}
+                        {onOpenCash && (
+                          <Button variant="link" size="sm" className="h-auto p-0 text-amber-700" onClick={onOpenCash}>
+                            Abrir caja
+                          </Button>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                  
                   <div className="grid grid-cols-3 gap-2">
-                    {PAYMENT_METHODS.map(method => (
-                      <Button
-                        key={method.value}
-                        variant={selectedPaymentMethod === method.value ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setSelectedPaymentMethod(method.value)}
-                        className="flex-col h-auto py-2"
-                      >
-                        <method.icon className="w-4 h-4 mb-1" />
-                        <span className="text-xs">{method.label}</span>
-                      </Button>
-                    ))}
+                    {PAYMENT_METHODS.map(method => {
+                      const isCash = method.value === 'efectivo';
+                      const isDisabled = isCash && !hasCashOpen;
+                      
+                      return (
+                        <Button
+                          key={method.value}
+                          variant={selectedPaymentMethod === method.value ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => !isDisabled && setSelectedPaymentMethod(method.value)}
+                          className={`flex-col h-auto py-2 ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          disabled={isDisabled}
+                        >
+                          <method.icon className="w-4 h-4 mb-1" />
+                          <span className="text-xs">{method.label}</span>
+                        </Button>
+                      );
+                    })}
                   </div>
                 </div>
               )}

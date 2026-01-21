@@ -52,10 +52,14 @@ import {
   Hash,
   Receipt,
   FileText,
+  AlertCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { handleError } from '@/lib/errorHandler';
+import { ShiftCashHeader } from '@/components/local/ShiftCashHeader';
+import { OpenCashModal } from '@/components/local/OpenCashModal';
+import { useShiftStatus } from '@/hooks/useShiftStatus';
 import type { Tables, Enums } from '@/integrations/supabase/types';
 
 type Product = Tables<'products'>;
@@ -183,6 +187,10 @@ const APP_PAYMENT_LABELS: Record<AppPaymentMethod, string> = {
 export default function POSView({ branch }: POSViewProps) {
   const { user } = useAuth();
   
+  // Shift and cash status
+  const shiftStatus = useShiftStatus(branch.id);
+  const [showOpenCashModal, setShowOpenCashModal] = useState(false);
+  
   const [products, setProducts] = useState<ProductWithAvailability[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [modifierGroups, setModifierGroups] = useState<Record<string, ModifierGroup[]>>({});
@@ -194,6 +202,10 @@ export default function POSView({ branch }: POSViewProps) {
   const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([]);
   const [selectedCashRegister, setSelectedCashRegister] = useState<string>('');
   const [activeShift, setActiveShift] = useState<CashRegisterShift | null>(null);
+  
+  // Helper: check if cash is required for a payment method
+  const isCashPayment = (method: PaymentMethod) => method === 'efectivo';
+  const hasCashOpen = shiftStatus.hasCashOpen;
   
   // Cart state
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -956,7 +968,14 @@ export default function POSView({ branch }: POSViewProps) {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)] -m-6">
+    <div className="flex flex-col h-[calc(100vh-120px)] -m-6">
+      {/* Shift and Cash Header */}
+      <ShiftCashHeader 
+        branchId={branch.id} 
+        onCashOpened={() => shiftStatus.refetch()} 
+      />
+      
+      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
       {/* Products Section */}
       <div className="flex-1 p-4 overflow-hidden flex flex-col bg-muted/30">
         {/* Header */}
@@ -1372,6 +1391,7 @@ export default function POSView({ branch }: POSViewProps) {
           })()}
         </div>
       </div>
+      </div> {/* End flex wrapper for Products + Cart */}
 
       {/* Product Modifier Dialog */}
       <Dialog open={!!selectedProduct && productModifiers.length > 0} onOpenChange={() => setSelectedProduct(null)}>
