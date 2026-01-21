@@ -21,7 +21,7 @@ import RecentCompletedOrders from '@/components/dashboard/RecentCompletedOrders'
 import { RoleWelcomeCard } from '@/components/dashboard/RoleWelcomeCard';
 import { DashboardAlerts } from '@/components/dashboard/DashboardAlerts';
 import { DashboardFilterProvider, useDashboardFilters } from '@/contexts/DashboardFilterContext';
-import { useRoleLanding } from '@/hooks/useRoleLanding';
+import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
 import { useAuth } from '@/hooks/useAuth';
 import type { Tables, Enums } from '@/integrations/supabase/types';
 
@@ -91,7 +91,7 @@ interface HoursStats {
 
 function DashboardContent({ branch }: { branch: Branch }) {
   const { filters, dateRange, periodLabel } = useDashboardFilters();
-  const { avatarInfo } = useRoleLanding();
+  const { avatarInfo } = useRoleLandingV2();
   const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     filteredRevenue: 0,

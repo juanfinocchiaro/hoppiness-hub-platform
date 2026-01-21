@@ -77,7 +77,6 @@ import Modifiers from "./pages/admin/Modifiers";
 import ProfitLossReport from "./pages/admin/ProfitLossReport";
 import BranchPerformance from "./pages/admin/BranchPerformance";
 import BrandFinances from "./pages/admin/BrandFinances";
-import Users from "./pages/admin/Users";
 import UsersPage from "./pages/admin/UsersPage";
 import RoleTemplates from "./pages/admin/RoleTemplates";
 import UserBranchOverrides from "./pages/admin/UserBranchOverrides";
@@ -129,7 +128,16 @@ function AdminRedirect({ to }: { to: string }) {
   return <Navigate to={`/admin/${to}`} replace />;
 }
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30000, // 30 segundos antes de considerar datos "viejos"
+      gcTime: 300000, // 5 minutos en cache
+      refetchOnWindowFocus: false, // No recargar al volver a la pestaña
+      retry: 1, // Solo 1 reintento en caso de error
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -307,7 +315,7 @@ const App = () => (
               {/* PERSONAS */}
               <Route path="personas/equipo-central" element={<CentralTeam />} />
               <Route path="personas/usuarios" element={<UsersPage />} />
-              <Route path="personas/buscar" element={<Users />} />
+              <Route path="personas/buscar" element={<UsersPage />} />
               <Route path="personas/roles" element={<RoleTemplates />} />
               
               {/* COMUNICACIÓN */}

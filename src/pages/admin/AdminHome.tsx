@@ -10,7 +10,7 @@ import { Store, Package, MapPin, Clock, Settings, Truck, ShoppingBag, Users, Bik
 import OrdersHeatmap from '@/components/charts/OrdersHeatmap';
 import { RoleWelcomeCard } from '@/components/dashboard/RoleWelcomeCard';
 import { BrandAlerts } from '@/components/dashboard/DashboardAlerts';
-import { useRoleLanding } from '@/hooks/useRoleLanding';
+import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
 import { useAuth } from '@/hooks/useAuth';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -71,7 +71,7 @@ const externalChannels: ExternalChannel[] = [
 ];
 
 export default function AdminHome() {
-  const { avatarInfo } = useRoleLanding();
+  const { avatarInfo } = useRoleLandingV2();
   const { user } = useAuth();
   const [stats, setStats] = useState<Stats>({ products: 0, categories: 0, globalRevenue: 0, globalItems: 0, globalOrders: 0, globalAvgTicket: 0, globalHours: 0, globalProductivity: 0 });
   const [branchStats, setBranchStats] = useState<Map<string, BranchStats>>(new Map());
