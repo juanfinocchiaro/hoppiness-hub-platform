@@ -109,15 +109,27 @@ export function OpenCashModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Banknote className="h-5 w-5" />
-            Abrir Caja
+            <Banknote className="h-5 w-5 text-primary" />
+            {pendingOrderMessage ? 'Aceptar Pedido' : 'Abrir Caja'}
           </DialogTitle>
-          <DialogDescription>
-            {pendingOrderMessage || 'Necesitás abrir la caja para poder operar.'}
-          </DialogDescription>
+          {pendingOrderMessage ? (
+            <div className="space-y-2 pt-2">
+              <p className="text-sm text-warning bg-warning/10 px-3 py-2 rounded-lg flex items-center gap-2">
+                <Banknote className="h-4 w-4 shrink-0" />
+                {pendingOrderMessage}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Para aceptarlo, primero abrí la caja:
+              </p>
+            </div>
+          ) : (
+            <DialogDescription>
+              Seleccioná la caja e ingresá el monto inicial de efectivo.
+            </DialogDescription>
+          )}
         </DialogHeader>
         
         {loading ? (

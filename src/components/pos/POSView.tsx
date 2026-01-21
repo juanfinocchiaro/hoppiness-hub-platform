@@ -57,8 +57,8 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { handleError } from '@/lib/errorHandler';
-import { ShiftCashHeader } from '@/components/local/ShiftCashHeader';
-import { OpenCashModal } from '@/components/local/OpenCashModal';
+import { CashStatusIndicator } from '@/components/local/CashStatusIndicator';
+import { CashClosedBlock } from '@/components/local/CashClosedBlock';
 import { useShiftStatus } from '@/hooks/useShiftStatus';
 import type { Tables, Enums } from '@/integrations/supabase/types';
 
@@ -969,11 +969,6 @@ export default function POSView({ branch }: POSViewProps) {
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)] -m-6">
-      {/* Shift and Cash Header */}
-      <ShiftCashHeader 
-        branchId={branch.id} 
-        onCashOpened={() => shiftStatus.refetch()} 
-      />
       
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
       {/* Products Section */}
@@ -986,21 +981,8 @@ export default function POSView({ branch }: POSViewProps) {
           </div>
           
           <div className="flex items-center gap-2 flex-wrap">
-            {cashRegisters.length > 0 && (
-              <Select value={selectedCashRegister} onValueChange={setSelectedCashRegister}>
-                <SelectTrigger className="w-36">
-                  <Wallet className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder="Caja" />
-                </SelectTrigger>
-                <SelectContent>
-                  {cashRegisters.map(register => (
-                    <SelectItem key={register.id} value={register.id}>
-                      {register.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            {/* Cash status indicator - only shows when open */}
+            <CashStatusIndicator branchId={branch.id} />
             
             {/* Show order info badge when order started */}
             {orderStarted && (
@@ -1020,17 +1002,13 @@ export default function POSView({ branch }: POSViewProps) {
           </div>
         </div>
         
-        {selectedCashRegister && !activeShift && (
-          <div className="mb-4 p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
-            <p className="font-semibold text-destructive">⚠️ Sin turno abierto</p>
-            <p className="text-sm text-destructive/80">
-              Debés abrir un turno en Caja antes de poder tomar pedidos.
-            </p>
-          </div>
+        {/* CASH CLOSED BLOCK - shown when no cash register is open */}
+        {!hasCashOpen && (
+          <CashClosedBlock branchId={branch.id} onCashOpened={() => shiftStatus.refetch()} />
         )}
 
-        {/* NEW ORDER SCREEN - shown when no order started */}
-        {!orderStarted && activeShift && (
+        {/* NEW ORDER SCREEN - shown when cash is open but no order started */}
+        {hasCashOpen && !orderStarted && (
           <div className="flex-1 flex flex-col items-center justify-center">
             <div className="text-center space-y-6 max-w-md">
               <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
