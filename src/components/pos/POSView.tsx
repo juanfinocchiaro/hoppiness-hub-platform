@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import TipInput from './TipInput';
 import CheckoutDialog from './CheckoutDialog';
@@ -53,6 +53,10 @@ import {
   Receipt,
   FileText,
   AlertCircle,
+  Settings,
+  Star,
+  Pencil,
+  Coffee,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -122,7 +126,7 @@ type OrderFlowDialogType = 'delivery_info' | 'counter_type' | 'apps_channel' | n
 
 interface CartItem {
   id: string; // Unique cart item ID
-  product: Product;
+  product: ProductWithAvailability; // Use extended type to include hasModifiers
   quantity: number;
   notes?: string;
   customPrice?: number;
@@ -132,11 +136,15 @@ interface CartItem {
 
 interface ProductWithAvailability extends Product {
   branchProduct: BranchProduct | null;
+  hasModifiers?: boolean; // Pre-computed flag for direct add vs modal
 }
 
 interface POSViewProps {
   branch: Branch;
 }
+
+// Beverages category slugs for compact mode
+const BEVERAGE_CATEGORY_NAMES = ['bebidas', 'drinks', 'beverages'];
 
 // Service types for POS (replaces old ORDER_AREAS for mostrador)
 const SERVICE_TYPES: { value: ServiceType; label: string; icon: React.ElementType }[] = [
@@ -275,9 +283,16 @@ export default function POSView({ branch }: POSViewProps) {
   const [productModifiers, setProductModifiers] = useState<ModifierGroup[]>([]);
   const [tempSelectedModifiers, setTempSelectedModifiers] = useState<Record<string, Record<string, number>>>({});
   const [tempNotes, setTempNotes] = useState('');
+  const [tempQuantity, setTempQuantity] = useState(1); // Quantity control in modal
   const [loadingModifiers, setLoadingModifiers] = useState(false);
   const [editingCartItemId, setEditingCartItemId] = useState<string | null>(null);
   const [branchModifierAvailability, setBranchModifierAvailability] = useState<Set<string>>(new Set());
+  
+  // UI optimization state
+  const [recentlyAddedProduct, setRecentlyAddedProduct] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const cartScrollRef = useRef<HTMLDivElement>(null);
+  const lastAddedItemRef = useRef<string | null>(null);
 
   // Fetch cash registers
   useEffect(() => {
@@ -313,17 +328,24 @@ export default function POSView({ branch }: POSViewProps) {
 
   // Tables feature removed - not used in any branch
 
-  // Fetch products and categories
+  // Fetch products and categories with modifier info pre-computed
   useEffect(() => {
     async function fetchProducts() {
       setLoading(true);
-      const [productsRes, categoriesRes, branchProductsRes] = await Promise.all([
+      const [productsRes, categoriesRes, branchProductsRes, modifierAssignmentsRes] = await Promise.all([
         supabase.from('products').select('*').eq('is_available', true),
         supabase.from('product_categories').select('*').eq('is_active', true).order('display_order'),
         supabase.from('branch_products').select('*').eq('branch_id', branch.id),
+        // Pre-fetch which products have modifiers
+        supabase.from('product_modifier_assignments').select('product_id').eq('is_enabled', true),
       ]);
 
       if (categoriesRes.data) setCategories(categoriesRes.data);
+
+      // Build set of products that have modifiers
+      const productsWithModifiers = new Set(
+        (modifierAssignmentsRes.data || []).map(a => a.product_id)
+      );
 
       if (productsRes.data && categoriesRes.data) {
         const branchProductsMap = new Map(
@@ -338,9 +360,15 @@ export default function POSView({ branch }: POSViewProps) {
           .map(p => ({
             ...p,
             branchProduct: branchProductsMap.get(p.id) || null,
+            hasModifiers: productsWithModifiers.has(p.id), // Pre-computed flag
           }))
           .filter(p => p.branchProduct?.is_available !== false)
           .sort((a, b) => {
+            // Favorites first within same category
+            const aFav = a.branchProduct?.is_favorite ? 0 : 1;
+            const bFav = b.branchProduct?.is_favorite ? 0 : 1;
+            if (aFav !== bFav) return aFav - bFav;
+            
             const catOrderA = categoryOrderMap.get(a.category_id || '') ?? 999;
             const catOrderB = categoryOrderMap.get(b.category_id || '') ?? 999;
             if (catOrderA !== catOrderB) return catOrderA - catOrderB;
@@ -404,34 +432,20 @@ export default function POSView({ branch }: POSViewProps) {
     }
   };
 
-  // Handle product click - now order must be started first
+  // Handle product click - optimized: direct add for products without modifiers
   const handleProductClick = async (product: ProductWithAvailability) => {
     if (!orderStarted) {
-      // Order not started - should not happen with new UI, but just in case
       setShowNewOrderDialog(true);
       return;
     }
 
-    // Real-time availability check
-    const { available, reason } = await checkProductAvailability(product.id);
-    if (!available) {
-      toast.error(reason || 'Producto no disponible');
-      // Refresh products list to sync UI
-      const { data: updatedBranchProduct } = await supabase
-        .from('branch_products')
-        .select('*')
-        .eq('branch_id', branch.id)
-        .eq('product_id', product.id)
-        .single();
-      
-      setProducts(prev => prev.map(p => 
-        p.id === product.id 
-          ? { ...p, branchProduct: updatedBranchProduct || null }
-          : p
-      ).filter(p => p.branchProduct?.is_available !== false));
+    // OPTIMIZATION: If product has NO modifiers, add directly without DB query
+    if (!product.hasModifiers) {
+      addToCartDirect(product);
       return;
     }
-    
+
+    // Product has modifiers - proceed with modal
     await proceedToAddProduct(product);
   };
 
@@ -439,6 +453,10 @@ export default function POSView({ branch }: POSViewProps) {
   const handleStartOrder = () => {
     setOrderStarted(true);
     setShowNewOrderDialog(false);
+    // Autofocus search after a short delay to allow render
+    setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 100);
   };
 
   // Cancel/Reset order - if there are payments, show cancel dialog
@@ -477,6 +495,7 @@ export default function POSView({ branch }: POSViewProps) {
     setSelectedProduct(product);
     setTempNotes('');
     setTempSelectedModifiers({});
+    setTempQuantity(1); // Reset quantity
     setLoadingModifiers(true);
 
     // Fetch modifier group assignments for this product
@@ -562,17 +581,26 @@ export default function POSView({ branch }: POSViewProps) {
   // Caller numbers for selection (1-20)
   const CALLER_NUMBERS = Array.from({ length: 20 }, (_, i) => i + 1);
 
-  const addToCartDirect = (product: ProductWithAvailability) => {
+  const addToCartDirect = (product: ProductWithAvailability, qty: number = 1) => {
     const price = product.branchProduct?.custom_price || product.price;
+    const newItemId = crypto.randomUUID();
     const newItem: CartItem = {
-      id: crypto.randomUUID(),
+      id: newItemId,
       product,
-      quantity: 1,
+      quantity: qty,
       customPrice: price !== product.price ? price : undefined,
       modifiers: [],
       modifiersTotal: 0,
     };
-    setCart([...cart, newItem]);
+    setCart(prev => [...prev, newItem]);
+    
+    // Flash animation for the product card
+    setRecentlyAddedProduct(product.id);
+    setTimeout(() => setRecentlyAddedProduct(null), 600);
+    
+    // Track for cart scroll
+    lastAddedItemRef.current = newItemId;
+    
     toast.success(`${product.name} agregado`);
   };
 
@@ -643,22 +671,32 @@ export default function POSView({ branch }: POSViewProps) {
       toast.success(`${selectedProduct.name} actualizado`);
       setEditingCartItemId(null);
     } else {
-      // Add new item
+      // Add new item with quantity from modal
+      const newItemId = crypto.randomUUID();
       const newItem: CartItem = {
-        id: crypto.randomUUID(),
+        id: newItemId,
         product: selectedProduct,
-        quantity: 1,
+        quantity: tempQuantity, // Use quantity from modal
         notes: tempNotes || undefined,
         customPrice: price !== selectedProduct.price ? price : undefined,
         modifiers: selectedModifiers,
         modifiersTotal,
       };
-      setCart([...cart, newItem]);
+      setCart(prev => [...prev, newItem]);
+      
+      // Flash animation for the product card
+      setRecentlyAddedProduct(selectedProduct.id);
+      setTimeout(() => setRecentlyAddedProduct(null), 600);
+      
+      // Track for cart scroll
+      lastAddedItemRef.current = newItemId;
+      
       toast.success(`${selectedProduct.name} agregado`);
     }
     
     setSelectedProduct(null);
     setEditingCartItemId(null);
+    setTempQuantity(1); // Reset quantity
   };
 
   const updateQuantity = (cartItemId: string, delta: number) => {
@@ -1040,7 +1078,8 @@ export default function POSView({ branch }: POSViewProps) {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar productos..."
+              ref={searchInputRef}
+              placeholder="Buscar productos... (escribe para filtrar)"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10"
@@ -1050,6 +1089,53 @@ export default function POSView({ branch }: POSViewProps) {
             <X className="w-4 h-4" />
           </Button>
         </div>
+
+        {/* FAVORITES STICKY BAR - Top sellers for quick access */}
+        {(() => {
+          const favoriteProducts = products.filter(p => p.branchProduct?.is_favorite && p.branchProduct?.is_available !== false);
+          if (favoriteProducts.length === 0) return null;
+          
+          return (
+            <div className="mb-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Star className="w-4 h-4 text-primary fill-primary" />
+                <span className="text-sm font-semibold text-primary">Favoritos</span>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {favoriteProducts.slice(0, 12).map(product => {
+                  const price = product.branchProduct?.custom_price || product.price;
+                  const cartCount = cart.filter(item => item.product.id === product.id)
+                    .reduce((sum, item) => sum + item.quantity, 0);
+                  
+                  return (
+                    <button
+                      key={product.id}
+                      onClick={() => activeShift && handleProductClick(product)}
+                      disabled={!activeShift}
+                      className={`
+                        shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg border transition-all
+                        ${cartCount > 0 ? 'border-primary bg-primary/10' : 'border-border bg-card hover:bg-muted'}
+                        ${recentlyAddedProduct === product.id ? 'animate-pulse bg-success/20 border-success' : ''}
+                        ${!activeShift ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                      `}
+                    >
+                      {cartCount > 0 && (
+                        <Badge className="w-5 h-5 rounded-full p-0 flex items-center justify-center text-xs">
+                          {cartCount}
+                        </Badge>
+                      )}
+                      <span className="text-sm font-medium truncate max-w-24">{product.name}</span>
+                      <span className="text-sm font-bold text-primary">{formatPrice(price)}</span>
+                      {product.hasModifiers && (
+                        <Settings className="w-3 h-3 text-muted-foreground" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Category Tabs */}
         <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
@@ -1095,6 +1181,61 @@ export default function POSView({ branch }: POSViewProps) {
                 const isOutOfStock = stockQty !== null && stockQty !== undefined && stockQty <= 0;
                 const isFavorite = product.branchProduct?.is_favorite;
                 
+                // Check if this is a beverage for compact mode
+                const productCategory = categories.find(c => c.id === product.category_id);
+                const isBeverage = productCategory && BEVERAGE_CATEGORY_NAMES.some(
+                  name => productCategory.name.toLowerCase().includes(name)
+                );
+                
+                // Flash animation when recently added
+                const isRecentlyAdded = recentlyAddedProduct === product.id;
+                
+                // COMPACT MODE for beverages
+                if (isBeverage) {
+                  return (
+                    <div
+                      key={product.id}
+                      onClick={() => activeShift && !isOutOfStock && handleProductClick(product)}
+                      className={`
+                        relative flex items-center gap-2 p-2 rounded-lg border transition-all
+                        ${!activeShift || isOutOfStock ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-muted'}
+                        ${cartCount > 0 ? 'border-primary bg-primary/5' : 'border-border'}
+                        ${isRecentlyAdded ? 'animate-pulse bg-success/20 border-success' : ''}
+                      `}
+                    >
+                      {/* Compact beverage icon */}
+                      <div className="w-8 h-8 rounded bg-muted flex items-center justify-center shrink-0">
+                        {product.image_url ? (
+                          <img src={product.image_url} alt="" className="w-full h-full object-cover rounded" />
+                        ) : (
+                          <Coffee className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      
+                      {/* Name and price - PRICE FIRST (bigger) */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-lg font-bold text-primary">{formatPrice(price)}</p>
+                        <p className={`text-xs truncate ${isOutOfStock ? 'line-through text-muted-foreground' : 'text-muted-foreground'}`}>
+                          {product.name}
+                        </p>
+                      </div>
+                      
+                      {/* Cart count */}
+                      {cartCount > 0 && (
+                        <Badge className="w-5 h-5 rounded-full p-0 flex items-center justify-center text-xs">
+                          {cartCount}
+                        </Badge>
+                      )}
+                      
+                      {/* Modifier indicator */}
+                      {product.hasModifiers && !isOutOfStock && (
+                        <Settings className="w-3 h-3 text-muted-foreground shrink-0" />
+                      )}
+                    </div>
+                  );
+                }
+                
+                // STANDARD CARD for non-beverages
                 return (
                   <Card 
                     key={product.id}
@@ -1102,7 +1243,7 @@ export default function POSView({ branch }: POSViewProps) {
                       !activeShift || isOutOfStock
                         ? 'opacity-50 cursor-not-allowed' 
                         : `cursor-pointer hover:shadow-md ${cartCount > 0 ? 'ring-2 ring-primary' : ''}`
-                    }`}
+                    } ${isRecentlyAdded ? 'animate-pulse ring-2 ring-success' : ''}`}
                     onClick={() => activeShift && !isOutOfStock && handleProductClick(product)}
                   >
                     {/* Cart count badge */}
@@ -1112,33 +1253,46 @@ export default function POSView({ branch }: POSViewProps) {
                       </Badge>
                     )}
                     
-                    {/* Status indicators */}
-                    {isOutOfStock && (
-                      <Badge variant="destructive" className="absolute top-1 left-1 text-xs z-10">
-                        Agotado
-                      </Badge>
-                    )}
-                    {hasLowStock && !isOutOfStock && (
-                      <Badge variant="outline" className="absolute top-1 left-1 text-xs bg-destructive/80 text-destructive-foreground z-10">
-                        Últimos {stockQty}
-                      </Badge>
-                    )}
-                    {isFavorite && !isOutOfStock && !hasLowStock && (
-                      <Badge variant="secondary" className="absolute top-1 left-1 text-xs z-10">
-                        ⭐
+                    {/* Status indicators - TOP LEFT */}
+                    <div className="absolute top-1 left-1 flex gap-1 z-10">
+                      {isOutOfStock && (
+                        <Badge variant="destructive" className="text-xs">
+                          Agotado
+                        </Badge>
+                      )}
+                      {hasLowStock && !isOutOfStock && (
+                        <Badge variant="outline" className="text-xs bg-destructive/80 text-destructive-foreground">
+                          Últimos {stockQty}
+                        </Badge>
+                      )}
+                      {isFavorite && !isOutOfStock && !hasLowStock && (
+                        <Badge variant="secondary" className="text-xs px-1">
+                          <Star className="w-3 h-3 fill-current" />
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    {/* Modifier indicator - TOP RIGHT */}
+                    {product.hasModifiers && !isOutOfStock && (
+                      <Badge variant="outline" className="absolute top-1 right-1 text-xs z-10 bg-background/80">
+                        <Settings className="w-3 h-3" />
                       </Badge>
                     )}
                     
-                    <CardContent className="p-3">
-                      <div className={`w-full h-16 rounded bg-muted flex items-center justify-center mb-2 overflow-hidden ${isOutOfStock ? 'grayscale' : ''}`}>
+                    <CardContent className="p-2">
+                      {/* Smaller image */}
+                      <div className={`w-full h-12 rounded bg-muted flex items-center justify-center mb-1 overflow-hidden ${isOutOfStock ? 'grayscale' : ''}`}>
                         {product.image_url ? (
                           <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                         ) : (
-                          <span className="text-2xl">🍔</span>
+                          <span className="text-xl">🍔</span>
                         )}
                       </div>
-                      <p className={`font-medium text-sm line-clamp-2 ${isOutOfStock ? 'line-through text-muted-foreground' : ''}`}>{product.name}</p>
-                      <p className="text-primary font-bold">{formatPrice(price)}</p>
+                      {/* PRICE FIRST (bigger), then name (smaller) */}
+                      <p className="text-lg font-bold text-primary">{formatPrice(price)}</p>
+                      <p className={`text-xs line-clamp-2 ${isOutOfStock ? 'line-through text-muted-foreground' : 'text-muted-foreground'}`}>
+                        {product.name}
+                      </p>
                     </CardContent>
                   </Card>
                 );
@@ -1217,16 +1371,26 @@ export default function POSView({ branch }: POSViewProps) {
               <p className="text-sm">Tocá productos para agregar</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3" ref={cartScrollRef}>
               {cart.map(item => (
                 <div 
-                  key={item.id} 
-                  className="bg-muted/50 rounded-lg p-3 cursor-pointer hover:bg-muted/70 transition-colors"
-                  onClick={() => handleEditCartItem(item)}
+                  key={item.id}
+                  data-cart-item-id={item.id}
+                  className={`
+                    bg-muted/50 rounded-lg p-3 transition-colors group
+                    ${item.product.hasModifiers ? 'cursor-pointer hover:bg-muted/70' : ''}
+                  `}
+                  onClick={() => item.product.hasModifiers && handleEditCartItem(item)}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">{item.product.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm">{item.product.name}</p>
+                        {/* Edit icon - only for products with modifiers */}
+                        {item.product.hasModifiers && (
+                          <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        )}
+                      </div>
                       {item.modifiers.length > 0 && (
                         <p className="text-xs text-muted-foreground mt-1">
                           {item.modifiers.map(m => 
@@ -1371,17 +1535,52 @@ export default function POSView({ branch }: POSViewProps) {
       </div>
       </div> {/* End flex wrapper for Products + Cart */}
 
-      {/* Product Modifier Dialog */}
-      <Dialog open={!!selectedProduct && productModifiers.length > 0} onOpenChange={() => setSelectedProduct(null)}>
-        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+      {/* Product Modifier Dialog - with keyboard shortcuts */}
+      <Dialog 
+        open={!!selectedProduct && productModifiers.length > 0} 
+        onOpenChange={() => {
+          setSelectedProduct(null);
+          setTempQuantity(1);
+        }}
+      >
+        <DialogContent 
+          className="sm:max-w-lg max-h-[80vh] overflow-hidden flex flex-col"
+          onKeyDown={(e) => {
+            // Keyboard shortcuts: Enter confirms, Esc cancels (Esc is default)
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              addToCartWithModifiers();
+            }
+          }}
+        >
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ChefHat className="w-5 h-5" />
-              {selectedProduct?.name}
-            </DialogTitle>
-            <DialogDescription>
-              {editingCartItemId ? 'Modificá los extras de tu pedido' : 'Personalizá tu pedido'}
-            </DialogDescription>
+            <div className="flex items-start gap-3">
+              {/* Product image thumbnail */}
+              {selectedProduct?.image_url && (
+                <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted shrink-0">
+                  <img 
+                    src={selectedProduct.image_url} 
+                    alt={selectedProduct.name} 
+                    className="w-full h-full object-cover" 
+                  />
+                </div>
+              )}
+              <div className="flex-1">
+                <DialogTitle className="flex items-center gap-2">
+                  <ChefHat className="w-5 h-5" />
+                  {selectedProduct?.name}
+                </DialogTitle>
+                <DialogDescription>
+                  {editingCartItemId ? 'Modificá los extras de tu pedido' : 'Personalizá tu pedido'}
+                </DialogDescription>
+                {/* Price display */}
+                {selectedProduct && (
+                  <p className="text-lg font-bold text-primary mt-1">
+                    {formatPrice(selectedProduct.branchProduct?.custom_price || selectedProduct.price)}
+                  </p>
+                )}
+              </div>
+            </div>
           </DialogHeader>
 
           <ScrollArea className="flex-1 pr-4">
@@ -1493,24 +1692,62 @@ export default function POSView({ branch }: POSViewProps) {
             )}
           </ScrollArea>
 
-          <DialogFooter className="border-t pt-4">
-            <Button variant="outline" onClick={() => {
-              setSelectedProduct(null);
-              setEditingCartItemId(null);
-            }}>
-              Cancelar
-            </Button>
-            <Button onClick={addToCartWithModifiers}>
-              {editingCartItemId ? (
-                <>Guardar Cambios</>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Agregar al Pedido
-                </>
-              )}
-            </Button>
-          </DialogFooter>
+          {/* STICKY FOOTER with quantity control */}
+          <div className="sticky bottom-0 bg-background border-t pt-4 space-y-3">
+            {/* Quantity control - only when adding new (not editing) */}
+            {!editingCartItemId && (
+              <div className="flex items-center justify-center gap-4 py-2">
+                <span className="text-sm text-muted-foreground">Cantidad:</span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setTempQuantity(Math.max(1, tempQuantity - 1))}
+                    disabled={tempQuantity <= 1}
+                  >
+                    <Minus className="w-4 h-4" />
+                  </Button>
+                  <span className="w-8 text-center text-lg font-bold">{tempQuantity}</span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setTempQuantity(tempQuantity + 1)}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+            
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => {
+                  setSelectedProduct(null);
+                  setEditingCartItemId(null);
+                  setTempQuantity(1);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button className="flex-1" onClick={addToCartWithModifiers}>
+                {editingCartItemId ? (
+                  <>Guardar Cambios</>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Agregar {tempQuantity > 1 ? `(${tempQuantity})` : ''}
+                  </>
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-center text-muted-foreground">
+              Enter para confirmar • Esc para cancelar
+            </p>
+          </div>
         </DialogContent>
       </Dialog>
 
