@@ -77,8 +77,12 @@ import ProfitLossReport from "./pages/admin/ProfitLossReport";
 import BranchPerformance from "./pages/admin/BranchPerformance";
 import BrandFinances from "./pages/admin/BrandFinances";
 import Users from "./pages/admin/Users";
+import UsersV2 from "./pages/admin/UsersV2";
 import RoleTemplates from "./pages/admin/RoleTemplates";
 import UserBranchOverrides from "./pages/admin/UserBranchOverrides";
+
+// KDS Public (no login required)
+import KDSPublic from "./pages/pos/KDSPublic";
 import SalesReports from "./pages/admin/SalesReports";
 import Customers from "./pages/admin/Customers";
 import Ingredients from "./pages/admin/Ingredients";
@@ -161,6 +165,10 @@ const App = () => (
             
             {/* Attendance Kiosk (requires auth) */}
             <Route path="/attendance-kiosk/:branchId" element={<LocalRoute><AttendanceKiosk /></LocalRoute>} />
+            
+            {/* KDS Public (no login - token based) */}
+            <Route path="/kds/public" element={<KDSPublic />} />
+            <Route path="/kds/public/:branchId" element={<KDSPublic />} />
             
             {/* POS Routes */}
             <Route path="/pos" element={<LocalRoute><POS /></LocalRoute>} />
@@ -296,6 +304,7 @@ const App = () => (
               
               {/* PERSONAS */}
               <Route path="personas/equipo-central" element={<CentralTeam />} />
+              <Route path="personas/usuarios" element={<UsersV2 />} />
               <Route path="personas/buscar" element={<Users />} />
               <Route path="personas/roles" element={<RoleTemplates />} />
               

@@ -163,7 +163,7 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
       ],
     });
 
-    // Personas (solo admins)
+    // Personas (solo superadmin ve todo)
     if (avatarInfo.type !== 'coordinator') {
       sections.push({
         id: 'personas',
@@ -171,8 +171,7 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
         icon: Users,
         items: [
           { type: 'navigation', to: '/admin/personas/equipo-central', icon: Building2, label: 'Equipo Central' },
-          { type: 'navigation', to: '/admin/personas/buscar', icon: Search, label: 'Buscar Usuario' },
-          { type: 'navigation', to: '/admin/personas/roles', icon: Shield, label: 'Roles y Permisos' },
+          { type: 'navigation', to: '/admin/personas/usuarios', icon: Search, label: 'Usuarios' },
         ],
       });
     }

@@ -3002,6 +3002,54 @@ export type Database = {
           },
         ]
       }
+      kds_tokens: {
+        Row: {
+          branch_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          last_used_at: string | null
+          name: string | null
+          token: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_used_at?: string | null
+          name?: string | null
+          token?: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_used_at?: string | null
+          name?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kds_tokens_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kds_tokens_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       loan_installments: {
         Row: {
           amount_capital: number
@@ -6370,6 +6418,42 @@ export type Database = {
           },
         ]
       }
+      user_roles_v2: {
+        Row: {
+          authorization_pin_hash: string | null
+          branch_ids: string[] | null
+          brand_role: Database["public"]["Enums"]["brand_role_type"] | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          local_role: Database["public"]["Enums"]["local_role_type"] | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          authorization_pin_hash?: string | null
+          branch_ids?: string[] | null
+          brand_role?: Database["public"]["Enums"]["brand_role_type"] | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          local_role?: Database["public"]["Enums"]["local_role_type"] | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          authorization_pin_hash?: string | null
+          branch_ids?: string[] | null
+          brand_role?: Database["public"]["Enums"]["brand_role_type"] | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          local_role?: Database["public"]["Enums"]["local_role_type"] | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       employees_basic: {
@@ -6533,6 +6617,10 @@ export type Database = {
         Args: { p_branch_id: string }
         Returns: string
       }
+      get_brand_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["brand_role_type"]
+      }
       get_cashier_discrepancy_stats: {
         Args: { _branch_id?: string; _user_id: string }
         Returns: {
@@ -6544,6 +6632,10 @@ export type Database = {
           precision_pct: number
           total_shifts: number
         }[]
+      }
+      get_local_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["local_role_type"]
       }
       get_shift_advances: {
         Args: { _shift_id: string }
@@ -6587,6 +6679,10 @@ export type Database = {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
       }
+      has_branch_access_v2: {
+        Args: { _branch_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_branch_permission:
         | {
             Args: { _branch_id: string; _permission: string; _user_id: string }
@@ -6613,6 +6709,7 @@ export type Database = {
         Args: { p_category_id?: string; p_product_id?: string }
         Returns: boolean
       }
+      is_superadmin: { Args: { _user_id: string }; Returns: boolean }
       toggle_product_channel_availability: {
         Args: {
           p_branch_id: string
@@ -6622,6 +6719,13 @@ export type Database = {
           p_reason?: string
         }
         Returns: boolean
+      }
+      validate_kds_token: {
+        Args: { _token: string }
+        Returns: {
+          branch_id: string
+          branch_name: string
+        }[]
       }
       validate_supervisor_pin: {
         Args: { _branch_id: string; _pin: string }
@@ -6635,6 +6739,14 @@ export type Database = {
         Args: { p_ingredient_id: string; p_supplier_id: string }
         Returns: boolean
       }
+      verify_authorization_pin: {
+        Args: { _branch_id: string; _pin: string }
+        Returns: {
+          full_name: string
+          local_role: Database["public"]["Enums"]["local_role_type"]
+          user_id: string
+        }[]
+      }
     }
     Enums: {
       app_role:
@@ -6647,6 +6759,17 @@ export type Database = {
         | "encargado"
         | "cajero"
         | "kds"
+      brand_role_type:
+        | "superadmin"
+        | "coordinador"
+        | "informes"
+        | "contador_marca"
+      local_role_type:
+        | "franquiciado"
+        | "encargado"
+        | "contador_local"
+        | "cajero"
+        | "empleado"
       order_area: "salon" | "mostrador" | "delivery"
       order_status:
         | "draft"
@@ -6827,6 +6950,19 @@ export const Constants = {
         "encargado",
         "cajero",
         "kds",
+      ],
+      brand_role_type: [
+        "superadmin",
+        "coordinador",
+        "informes",
+        "contador_marca",
+      ],
+      local_role_type: [
+        "franquiciado",
+        "encargado",
+        "contador_local",
+        "cajero",
+        "empleado",
       ],
       order_area: ["salon", "mostrador", "delivery"],
       order_status: [
