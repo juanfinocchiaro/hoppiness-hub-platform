@@ -75,7 +75,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import LocalDashboard from '@/pages/local/LocalDashboard';
 import ClockInModal from '@/components/attendance/ClockInModal';
 import { OrderNotificationProvider } from '@/components/orders/OrderNotificationProvider';
-import logoHoppiness from '@/assets/logo-hoppiness.png';
+import logoHoppinessBlue from '@/assets/logo-hoppiness-blue.png';
 import { NotificationBell } from '@/components/orders/NotificationBell';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 
@@ -501,9 +501,9 @@ export default function LocalLayout() {
             <SheetContent side="left" className="w-72 p-4">
               <div className="mb-4 flex items-center gap-3">
                 <img 
-                  src={logoHoppiness} 
+                  src={logoHoppinessBlue} 
                   alt="Hoppiness" 
-                  className="w-10 h-10 rounded-xl object-contain"
+                  className="w-10 h-10 rounded-xl object-contain bg-white p-1"
                 />
                 <div>
                   <h2 className="text-lg font-bold">Mi Local</h2>
@@ -539,13 +539,13 @@ export default function LocalLayout() {
 
       <div className="flex">
         {/* Desktop Sidebar */}
-        <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-card border-r">
+        <aside className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 bg-card border-r">
           <div className="p-6 border-b flex items-center justify-between">
             <ExternalLink to="/" className="flex items-center gap-3">
               <img 
-                src={logoHoppiness} 
+                src={logoHoppinessBlue} 
                 alt="Hoppiness" 
-                className="w-10 h-10 rounded-xl object-contain"
+                className="w-10 h-10 rounded-xl object-contain bg-white p-1"
               />
               <span className="text-lg font-bold">Mi Local</span>
             </ExternalLink>
@@ -599,7 +599,7 @@ export default function LocalLayout() {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 lg:ml-64">
+        <main className="flex-1 lg:ml-72">
           <div className="p-6">
             {renderContent()}
           </div>
