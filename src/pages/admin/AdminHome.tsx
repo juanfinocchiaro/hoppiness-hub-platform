@@ -259,13 +259,6 @@ export default function AdminHome() {
 
   return (
     <div className="space-y-6">
-      {/* Role Welcome Card for partners */}
-      <RoleWelcomeCard 
-        avatarType={avatarInfo.type}
-        avatarLabel={avatarInfo.label}
-        userName={user?.user_metadata?.full_name?.split(' ')[0]}
-        variant="brand"
-      />
 
       <div>
         <h1 className="text-3xl font-bold">Administración Central</h1>

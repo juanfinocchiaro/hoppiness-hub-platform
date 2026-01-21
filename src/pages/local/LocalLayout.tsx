@@ -546,19 +546,17 @@ export default function LocalLayout() {
       <div className="flex">
         {/* Desktop Sidebar */}
         <aside className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 bg-card border-r">
-          <div className="p-6 border-b flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img 
-                src={logoHoppinessBlue} 
-                alt="Hoppiness" 
-                className="w-14 h-14 rounded-xl object-contain bg-white p-1"
-              />
-              <span className="text-lg font-bold">Mi Local</span>
-            </div>
-            <NotificationBell branchId={branchId || ''} />
+          {/* Header - p-6, same as Mi Marca */}
+          <div className="p-6 border-b flex items-center gap-3">
+            <img 
+              src={logoHoppinessBlue} 
+              alt="Hoppiness" 
+              className="w-14 h-14 rounded-xl object-contain bg-white p-1"
+            />
+            <span className="text-lg font-bold">Mi Local</span>
           </div>
           
-          {/* Branch Selector + Role Badge */}
+          {/* Branch Selector + Role Badge - p-4 */}
           <div className="p-4 border-b">
             <Select value={branchId} onValueChange={handleBranchChange}>
               <SelectTrigger className="h-9">
@@ -584,26 +582,28 @@ export default function LocalLayout() {
             </div>
           </div>
 
-          <div className="flex-1 p-3 overflow-y-auto">
+          {/* Navigation - p-4 (unified with Mi Marca) */}
+          <div className="flex-1 p-4 overflow-y-auto">
             <NavContent />
           </div>
           
-          <div className="p-3 border-t space-y-1">
+          {/* Footer - p-4 border-t, unified button styles (no size="sm") */}
+          <div className="p-4 border-t space-y-1">
             {canAccessAdmin && !isEmbedded && (
               <ExternalLink to="/admin">
-                <Button variant="ghost" className="w-full justify-start" size="sm">
+                <Button variant="ghost" className="w-full justify-start">
                   <Building2 className="w-4 h-4 mr-3" />
                   Cambiar a Mi Marca
                 </Button>
               </ExternalLink>
             )}
             <ExternalLink to="/">
-              <Button variant="ghost" className="w-full justify-start" size="sm">
+              <Button variant="ghost" className="w-full justify-start">
                 <Home className="w-4 h-4 mr-3" />
                 Volver al Inicio
               </Button>
             </ExternalLink>
-            <Button variant="ghost" className="w-full justify-start text-muted-foreground" size="sm" onClick={signOut}>
+            <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={signOut}>
               <LogOut className="w-4 h-4 mr-3" />
               Salir
             </Button>
