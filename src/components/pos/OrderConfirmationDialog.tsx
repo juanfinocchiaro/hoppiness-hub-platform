@@ -274,26 +274,26 @@ export default function OrderConfirmationDialog({
           </div>
         </ScrollArea>
 
-        <DialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-4">
+        <DialogFooter className="flex-row gap-2 pt-4 border-t">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isProcessing}
-            className="w-full sm:w-auto"
+            className="flex-1"
           >
             Volver
           </Button>
           <Button
             onClick={handleConfirmOrder}
             disabled={isProcessing}
-            className="w-full sm:w-auto bg-success hover:bg-success/90"
+            className="flex-1 bg-success hover:bg-success/90"
           >
             {isProcessing ? (
               'Enviando...'
             ) : (
               <>
                 <Send className="w-4 h-4 mr-2" />
-                Enviar a cocina
+                Enviar a Cocina
               </>
             )}
           </Button>
