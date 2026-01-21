@@ -101,6 +101,11 @@ export default function LocalCaja() {
   const [paymentMethodsDialog, setPaymentMethodsDialog] = useState(false);
   const [historyDialog, setHistoryDialog] = useState(false);
   const [registersConfigDialog, setRegistersConfigDialog] = useState(false);
+  const [alivioDialog, setAlivioDialog] = useState(false);
+  
+  // Alivio form
+  const [alivioAmount, setAlivioAmount] = useState('');
+  const [alivioNotes, setAlivioNotes] = useState('');
   
   // Form states
   const [openingAmount, setOpeningAmount] = useState('');
@@ -217,9 +222,67 @@ export default function LocalCaja() {
 
       if (error) throw error;
 
-      toast({ title: 'Turno iniciado', description: 'El turno se abrió correctamente' });
+      toast({ title: 'Caja abierta', description: 'La caja se abrió correctamente' });
       setOpenShiftDialog(false);
       setOpeningAmount('');
+      fetchData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  // Handle "Hacer Alivio" - transfer cash to relief register
+  const handleHacerAlivio = async () => {
+    const currentShift = shifts[selectedTab];
+    if (!user || !currentShift) return;
+    
+    const amount = parseFloat(alivioAmount) || 0;
+    if (amount <= 0) {
+      toast({ title: 'Error', description: 'El monto debe ser mayor a 0', variant: 'destructive' });
+      return;
+    }
+    
+    // Find relief register (Caja de Alivio)
+    const reliefRegister = registers.find(r => r.name.toLowerCase().includes('alivio'));
+    
+    try {
+      // 1. Create withdrawal movement from current register
+      const { error: withdrawalError } = await supabase
+        .from('cash_register_movements')
+        .insert({
+          shift_id: currentShift.id,
+          branch_id: branch.id,
+          type: 'withdrawal',
+          payment_method: 'efectivo',
+          amount: amount,
+          concept: `Alivio a ${reliefRegister?.name || 'Caja de Alivio'}${alivioNotes ? ` - ${alivioNotes}` : ''}`,
+          recorded_by: user.id
+        });
+
+      if (withdrawalError) throw withdrawalError;
+
+      // 2. If relief register has an open shift, add deposit there
+      if (reliefRegister) {
+        const reliefShift = shifts[reliefRegister.id];
+        if (reliefShift) {
+          await supabase
+            .from('cash_register_movements')
+            .insert({
+              shift_id: reliefShift.id,
+              branch_id: branch.id,
+              type: 'deposit',
+              payment_method: 'efectivo',
+              amount: amount,
+              concept: `Alivio desde ${registers.find(r => r.id === selectedTab)?.name || 'Caja de Venta'}`,
+              recorded_by: user.id
+            });
+        }
+      }
+
+      toast({ title: 'Alivio realizado', description: `Se transfirieron ${formatCurrency(amount)}` });
+      setAlivioDialog(false);
+      setAlivioAmount('');
+      setAlivioNotes('');
       fetchData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -249,7 +312,7 @@ export default function LocalCaja() {
 
       if (error) throw error;
 
-      toast({ title: 'Turno cerrado', description: 'El arqueo se completó correctamente' });
+      toast({ title: 'Caja cerrada', description: 'El arqueo se completó correctamente' });
       setCloseShiftDialog(false);
       setClosingAmount('');
       setClosingNotes('');
@@ -503,7 +566,7 @@ export default function LocalCaja() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold">Caja</h1>
-          <p className="text-muted-foreground">Arqueos y cierres de turno</p>
+          <p className="text-muted-foreground">Apertura, movimientos y arqueo de caja</p>
         </div>
         <div className="flex gap-2">
           <Dialog open={registersConfigDialog} onOpenChange={setRegistersConfigDialog}>
@@ -685,7 +748,7 @@ export default function LocalCaja() {
                         {formatCurrency(expectedCash)}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {currentShift ? 'Turno actual' : 'Sin turno'}
+                        {currentShift ? 'Caja abierta' : 'Caja cerrada'}
                       </p>
                     </CardContent>
                   </Card>
@@ -719,22 +782,40 @@ export default function LocalCaja() {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">{registerMovements.length}</div>
-                      <p className="text-xs text-muted-foreground">En este turno</p>
+                      <p className="text-xs text-muted-foreground">En esta caja</p>
                     </CardContent>
                   </Card>
                 </div>
 
-                {/* Shift Control */}
+                {/* Cash Register Control */}
                 <Card>
-                  <CardHeader>
+                  <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-5 w-5" />
-                        <CardTitle>Turno Actual</CardTitle>
+                      <div className="flex items-center gap-3">
+                        {currentShift ? (
+                          <>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                              <div className="text-sm text-muted-foreground">
+                                <span className="font-medium">Monto de Apertura:</span>{' '}
+                                <span className="font-bold text-foreground">{formatCurrency(currentShift.opening_amount)}</span>
+                              </div>
+                              <span className="hidden sm:inline text-muted-foreground">•</span>
+                              <div className="text-sm text-muted-foreground">
+                                <span className="font-medium">Abierta desde:</span>{' '}
+                                <span className="font-bold text-foreground">
+                                  {format(new Date(currentShift.opened_at), "dd/MM HH:mm", { locale: es })}
+                                </span>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">Caja cerrada</span>
+                        )}
                       </div>
                       {currentShift && (
-                        <Badge variant="default" className="bg-green-500">
-                          Abierto desde {format(new Date(currentShift.opened_at), 'HH:mm', { locale: es })}
+                        <Badge variant="default" className="bg-green-500 shrink-0">
+                          <Clock className="h-3 w-3 mr-1" />
+                          Abierta
                         </Badge>
                       )}
                     </div>
@@ -742,18 +823,6 @@ export default function LocalCaja() {
                   <CardContent className="space-y-4">
                     {currentShift ? (
                       <>
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          <div className="p-4 bg-muted/50 rounded-lg">
-                            <p className="text-sm text-muted-foreground">Apertura</p>
-                            <p className="text-lg font-bold">{formatCurrency(currentShift.opening_amount)}</p>
-                          </div>
-                          <div className="p-4 bg-muted/50 rounded-lg">
-                            <p className="text-sm text-muted-foreground">Inicio</p>
-                            <p className="text-lg font-bold">
-                              {format(new Date(currentShift.opened_at), "dd/MM HH:mm", { locale: es })}
-                            </p>
-                          </div>
-                        </div>
 
                         <div className="flex flex-wrap gap-2">
                           <Dialog open={movementDialog} onOpenChange={setMovementDialog}>
@@ -829,45 +898,134 @@ export default function LocalCaja() {
                             </DialogContent>
                           </Dialog>
 
-                          <Dialog open={closeShiftDialog} onOpenChange={setCloseShiftDialog}>
+                          {/* Hacer Alivio Button */}
+                          <Dialog open={alivioDialog} onOpenChange={setAlivioDialog}>
                             <DialogTrigger asChild>
-                              <Button variant="destructive">
-                                <Square className="h-4 w-4 mr-2" />
-                                Cerrar Turno
+                              <Button variant="secondary">
+                                <Wallet className="h-4 w-4 mr-2" />
+                                Hacer Alivio
                               </Button>
                             </DialogTrigger>
                             <DialogContent>
                               <DialogHeader>
-                                <DialogTitle>Cerrar Turno - Arqueo</DialogTitle>
+                                <DialogTitle>Hacer Alivio</DialogTitle>
+                                <DialogDescription>
+                                  Transferir efectivo de {registers.find(r => r.id === selectedTab)?.name || 'esta caja'} a Caja de Alivio
+                                </DialogDescription>
                               </DialogHeader>
                               <div className="space-y-4">
                                 <div className="p-4 bg-muted/50 rounded-lg">
-                                  <p className="text-sm text-muted-foreground">Efectivo esperado en caja</p>
-                                  <p className="text-2xl font-bold text-green-600">
+                                  <p className="text-sm text-muted-foreground">Efectivo disponible en caja</p>
+                                  <p className="text-2xl font-bold text-primary">
                                     {formatCurrency(expectedCash)}
                                   </p>
                                 </div>
                                 <div>
-                                  <Label>Conteo real de efectivo</Label>
+                                  <Label>Monto a transferir</Label>
                                   <Input 
                                     type="number" 
                                     placeholder="0.00"
+                                    value={alivioAmount}
+                                    onChange={(e) => setAlivioAmount(e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Notas (opcional)</Label>
+                                  <Input 
+                                    placeholder="Ej: Alivio de mediodía"
+                                    value={alivioNotes}
+                                    onChange={(e) => setAlivioNotes(e.target.value)}
+                                  />
+                                </div>
+                              </div>
+                              <DialogFooter>
+                                <Button variant="outline" onClick={() => setAlivioDialog(false)}>
+                                  Cancelar
+                                </Button>
+                                <Button 
+                                  onClick={handleHacerAlivio}
+                                  disabled={!alivioAmount || parseFloat(alivioAmount) <= 0}
+                                >
+                                  Confirmar Alivio
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+
+                          {/* Cerrar Caja Button */}
+                          <Dialog open={closeShiftDialog} onOpenChange={setCloseShiftDialog}>
+                            <DialogTrigger asChild>
+                              <Button variant="destructive">
+                                <Square className="h-4 w-4 mr-2" />
+                                Cerrar Caja
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-md">
+                              <DialogHeader>
+                                <DialogTitle>Cerrar {registers.find(r => r.id === selectedTab)?.name || 'Caja'}</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4">
+                                {/* Period Summary */}
+                                <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+                                  <p className="text-sm font-medium">Resumen del período</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Abierta: {format(new Date(currentShift.opened_at), "dd/MM HH:mm", { locale: es })} → Ahora
+                                  </p>
+                                </div>
+
+                                {/* Amounts breakdown */}
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Monto de apertura:</span>
+                                    <span className="font-medium">{formatCurrency(currentShift.opening_amount)}</span>
+                                  </div>
+                                  <div className="flex justify-between text-green-600">
+                                    <span>+ Ingresos (ventas, depósitos):</span>
+                                    <span className="font-medium">+{formatCurrency(totals.income)}</span>
+                                  </div>
+                                  <div className="flex justify-between text-red-600">
+                                    <span>- Egresos (gastos, alivios):</span>
+                                    <span className="font-medium">-{formatCurrency(totals.expense)}</span>
+                                  </div>
+                                  <div className="border-t pt-2 flex justify-between font-bold">
+                                    <span>= Efectivo esperado:</span>
+                                    <span className="text-primary">{formatCurrency(expectedCash)}</span>
+                                  </div>
+                                </div>
+
+                                {/* Count input */}
+                                <div className="border-t pt-4">
+                                  <Label className="flex items-center gap-2">
+                                    <Banknote className="h-4 w-4" />
+                                    Efectivo declarado (contá la caja)
+                                  </Label>
+                                  <Input 
+                                    type="number" 
+                                    placeholder="0.00"
+                                    className="mt-2 text-lg"
                                     value={closingAmount}
                                     onChange={(e) => setClosingAmount(e.target.value)}
                                   />
                                 </div>
+
+                                {/* Difference */}
                                 {closingAmount && (
                                   <div className={`p-4 rounded-lg ${
                                     parseFloat(closingAmount) - expectedCash >= 0 
-                                      ? 'bg-green-500/10 text-green-700' 
-                                      : 'bg-red-500/10 text-red-700'
+                                      ? 'bg-green-500/10 border border-green-500/30' 
+                                      : 'bg-red-500/10 border border-red-500/30'
                                   }`}>
-                                    <p className="text-sm">Diferencia</p>
-                                    <p className="text-xl font-bold">
+                                    <p className="text-sm text-muted-foreground">Diferencia</p>
+                                    <p className={`text-xl font-bold ${
+                                      parseFloat(closingAmount) - expectedCash >= 0 
+                                        ? 'text-green-600' 
+                                        : 'text-red-600'
+                                    }`}>
                                       {formatCurrency(parseFloat(closingAmount) - expectedCash)}
                                     </p>
                                   </div>
                                 )}
+
                                 <div>
                                   <Label>Notas (opcional)</Label>
                                   <Textarea 
@@ -984,7 +1142,7 @@ export default function LocalCaja() {
                         <Dialog open={historyDialog} onOpenChange={setHistoryDialog}>
                           <DialogContent className="max-w-2xl max-h-[80vh]">
                             <DialogHeader>
-                              <DialogTitle>Movimientos del Turno</DialogTitle>
+                              <DialogTitle>Movimientos de la Caja</DialogTitle>
                               <DialogDescription>
                                 {registerMovements.length} movimientos desde {currentShift && format(new Date(currentShift.opened_at), "dd/MM HH:mm", { locale: es })}
                               </DialogDescription>
@@ -1069,18 +1227,18 @@ export default function LocalCaja() {
                     ) : (
                       <div className="text-center py-8">
                         <p className="text-muted-foreground mb-4">
-                          No hay un turno abierto. Iniciá un nuevo turno para comenzar a registrar movimientos.
+                          No hay una caja abierta. Abrí la caja para comenzar a registrar movimientos.
                         </p>
                         <Dialog open={openShiftDialog} onOpenChange={setOpenShiftDialog}>
                           <DialogTrigger asChild>
                             <Button>
                               <Play className="h-4 w-4 mr-2" />
-                              Iniciar Turno
+                              Abrir Caja
                             </Button>
                           </DialogTrigger>
                           <DialogContent>
                             <DialogHeader>
-                              <DialogTitle>Iniciar Nuevo Turno</DialogTitle>
+                              <DialogTitle>Abrir Caja</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-4">
                               <div>
@@ -1098,7 +1256,7 @@ export default function LocalCaja() {
                                 Cancelar
                               </Button>
                               <Button onClick={handleOpenShift}>
-                                Abrir Turno
+                                Abrir Caja
                               </Button>
                             </DialogFooter>
                           </DialogContent>
