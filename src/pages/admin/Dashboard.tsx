@@ -10,7 +10,7 @@ import { ExternalLink } from '@/components/ui/ExternalLink';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
-import logoHoppiness from '@/assets/logo-hoppiness.png';
+import logoHoppinessBlue from '@/assets/logo-hoppiness-blue.png';
 import {
   LogOut,
   Menu,
@@ -86,9 +86,9 @@ export default function AdminDashboard() {
             <SheetContent side="left" className="w-72 p-4">
               <div className="mb-6 flex items-center gap-3">
                 <img 
-                  src={logoHoppiness} 
+                  src={logoHoppinessBlue} 
                   alt="Hoppiness" 
-                  className="w-10 h-10 rounded-xl object-contain"
+                  className="w-10 h-10 rounded-xl object-contain bg-white p-1"
                 />
                 <div>
                   <h2 className="text-lg font-bold">Mi Marca</h2>
@@ -127,9 +127,9 @@ export default function AdminDashboard() {
           <div className="p-6 border-b">
             <ExternalLink to="/" className="flex items-center gap-3">
               <img 
-                src={logoHoppiness} 
+                src={logoHoppinessBlue} 
                 alt="Hoppiness" 
-                className="w-10 h-10 rounded-xl object-contain"
+                className="w-10 h-10 rounded-xl object-contain bg-white p-1"
               />
               <div>
                 <span className="text-lg font-bold block">Mi Marca</span>
