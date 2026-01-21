@@ -113,8 +113,8 @@ export default function OrdersHeatmap({
         query = query.in('branch_id', selectedBranches);
       }
 
-      // Filter by "canal propio" (own channels, not aggregators)
-      query = query.in('sales_channel', ['atencion_presencial', 'whatsapp', 'web_app', 'pos_local']);
+      // Filter by own channels (Mostrador and Web App) - using any for flexibility with channel values
+      query = query.in('sales_channel', ['mostrador', 'webapp'] as any);
 
       const { data: orders, error } = await query;
 

@@ -99,12 +99,13 @@ export default function LocalReportesVentas() {
         salesByChannel[channel] = (salesByChannel[channel] || 0) + order.total;
       });
       
+      // Canales de venta: Mostrador, Web App, y Apps de Delivery
       const channelLabels: { [key: string]: string } = {
         mostrador: 'Mostrador',
-        delivery: 'Delivery Propio',
+        webapp: 'Web App',
         rappi: 'Rappi',
         pedidosya: 'PedidosYa',
-        takeaway: 'Take Away',
+        mp_delivery: 'MP Delivery',
       };
       
       const channelData = Object.entries(salesByChannel)

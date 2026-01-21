@@ -42,17 +42,29 @@ interface BranchStats {
   averageTicket: number;
 }
 
-type SalesChannel = {
+// Tipos de servicio disponibles en cada sucursal
+type ServiceType = {
   key: keyof Branch;
   label: string;
   shortLabel: string;
   icon: React.ReactNode;
 };
 
-const salesChannels: SalesChannel[] = [
+const serviceTypes: ServiceType[] = [
   { key: 'delivery_enabled', label: 'Delivery', shortLabel: 'DEL', icon: <Truck className="w-3 h-3" /> },
   { key: 'takeaway_enabled', label: 'TakeAway', shortLabel: 'TA', icon: <ShoppingBag className="w-3 h-3" /> },
-  { key: 'dine_in_enabled', label: 'Atención Presencial', shortLabel: 'AP', icon: <Users className="w-3 h-3" /> },
+  { key: 'dine_in_enabled', label: 'Salón', shortLabel: 'SAL', icon: <Users className="w-3 h-3" /> },
+];
+
+// Canales de venta externos (Apps de Delivery)
+type ExternalChannel = {
+  key: keyof Branch;
+  label: string;
+  shortLabel: string;
+  icon: React.ReactNode;
+};
+
+const externalChannels: ExternalChannel[] = [
   { key: 'rappi_enabled', label: 'Rappi', shortLabel: 'RAP', icon: <Bike className="w-3 h-3" /> },
   { key: 'pedidosya_enabled', label: 'PedidosYa', shortLabel: 'PYA', icon: <Bike className="w-3 h-3" /> },
   { key: 'mercadopago_delivery_enabled', label: 'MP Delivery', shortLabel: 'MPD', icon: <Truck className="w-3 h-3" /> },
@@ -231,14 +243,18 @@ export default function AdminHome() {
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(value);
 
-  // Determina si una sucursal está "abierta" basándose en si tiene algún canal activo
+  // Determina si una sucursal está "abierta" basándose en si tiene algún tipo de servicio o canal externo activo
   const isBranchOperational = (branch: Branch): boolean => {
     if (!branch.is_active) return false;
-    return salesChannels.some(ch => branch[ch.key] as boolean);
+    const hasServiceType = serviceTypes.some(ch => branch[ch.key] as boolean);
+    const hasExternalChannel = externalChannels.some(ch => branch[ch.key] as boolean);
+    return hasServiceType || hasExternalChannel;
   };
 
   const getActiveChannelsCount = (branch: Branch): number => {
-    return salesChannels.filter(ch => branch[ch.key] as boolean).length;
+    const serviceCount = serviceTypes.filter(ch => branch[ch.key] as boolean).length;
+    const externalCount = externalChannels.filter(ch => branch[ch.key] as boolean).length;
+    return serviceCount + externalCount;
   };
 
   return (
@@ -464,7 +480,27 @@ export default function AdminHome() {
                     {/* Channels Status - Read Only */}
                     {branch.is_active && (
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {salesChannels.map(channel => {
+                        {/* Tipos de servicio */}
+                        {serviceTypes.map(channel => {
+                          const isEnabled = branch[channel.key] as boolean ?? false;
+                          
+                          return (
+                            <div 
+                              key={channel.key}
+                              className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${
+                                isEnabled 
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400' 
+                                  : 'bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400'
+                              }`}
+                              title={channel.label}
+                            >
+                              {channel.icon}
+                              <span>{channel.shortLabel}</span>
+                            </div>
+                          );
+                        })}
+                        {/* Canales externos (Apps) */}
+                        {externalChannels.map(channel => {
                           const isEnabled = branch[channel.key] as boolean ?? false;
                           
                           return (
