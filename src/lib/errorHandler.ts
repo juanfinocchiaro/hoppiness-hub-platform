@@ -53,8 +53,29 @@ export function handleError(
     critical = false,
   } = options;
 
-  // Extract error details
-  const errorMessage = error instanceof Error ? error.message : String(error);
+  // Extract error details (supports Supabase-style error objects)
+  const extractMessage = (err: unknown): string => {
+    if (err instanceof Error) return err.message;
+    if (typeof err === 'string') return err;
+    if (err && typeof err === 'object') {
+      const maybeAny = err as Record<string, unknown>;
+      const msg = maybeAny.message;
+      if (typeof msg === 'string' && msg.trim()) return msg;
+      const details = maybeAny.details;
+      if (typeof details === 'string' && details.trim()) return details;
+      const hint = maybeAny.hint;
+      if (typeof hint === 'string' && hint.trim()) return hint;
+      // Last resort: JSON stringify
+      try {
+        return JSON.stringify(maybeAny);
+      } catch {
+        return '[object Object]';
+      }
+    }
+    return String(err);
+  };
+
+  const errorMessage = extractMessage(error);
   const errorStack = error instanceof Error ? error.stack : undefined;
 
   // Development: log detailed information
