@@ -43,7 +43,7 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
       };
       
       const currentNotes = (employeeData?.internal_notes || []) as NoteEntry[];
-      const updatedNotes = [...currentNotes, newNoteEntry] as unknown as Record<string, unknown>[];
+      const updatedNotes = [...currentNotes, newNoteEntry];
       
       if (employeeData?.id) {
         const { error } = await supabase
@@ -54,11 +54,11 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
       } else {
         const { error } = await supabase
           .from('employee_data')
-          .insert([{
+          .insert({
             user_id: member.user_id,
             branch_id: branchId,
             internal_notes: updatedNotes,
-          }]);
+          });
         if (error) throw error;
       }
     },

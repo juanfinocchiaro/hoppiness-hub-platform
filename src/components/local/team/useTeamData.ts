@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { TeamMember, EmployeeData, Warning } from './types';
+import type { TeamMember, EmployeeData, Warning, NoteEntry } from './types';
 import type { LocalRole } from '@/hooks/usePermissionsV2';
 
 export function useTeamData(branchId: string | undefined) {

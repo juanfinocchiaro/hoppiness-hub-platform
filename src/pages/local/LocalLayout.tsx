@@ -287,7 +287,7 @@ export default function LocalLayout() {
       icon: Users,
       show: lp.canClockInOut || lp.canViewTeam,
       items: [
-        { to: 'equipo', label: 'Mi Equipo', icon: Users, show: lp.canViewTeam },
+        { to: 'equipo/mi-equipo', label: 'Mi Equipo', icon: Users, show: lp.canViewTeam },
         { to: 'equipo/fichar', label: 'Fichajes', icon: Clock, show: lp.canViewAllClockIns },
         { to: 'equipo/horarios', label: 'Horarios', icon: Clock, show: lp.canEditSchedules },
         { to: 'equipo/horas', label: 'Horas del Mes', icon: Calculator, show: lp.canViewMonthlyHours },
