@@ -335,11 +335,30 @@ export function ProductInlineEditor({
 
       setImageUrl(urlData.publicUrl);
       toast.success('Imagen subida correctamente');
+      
+      // Trigger POS thumbnail generation in background
+      if (productId) {
+        generatePosThumbnail(productId, urlData.publicUrl);
+      }
     } catch (error) {
       console.error('Error uploading image:', error);
       toast.error('Error al subir la imagen');
     } finally {
       setUploading(false);
+    }
+  };
+  
+  // Generate POS thumbnail in background (non-blocking)
+  const generatePosThumbnail = async (prodId: string, imgUrl: string) => {
+    try {
+      const response = await supabase.functions.invoke('generate-pos-thumbnail', {
+        body: { product_id: prodId, image_url: imgUrl },
+      });
+      if (!response.error) {
+        toast.success('Miniatura POS generada');
+      }
+    } catch (err) {
+      console.error('Error generating POS thumbnail:', err);
     }
   };
 

@@ -4493,12 +4493,14 @@ export type Database = {
           description: string | null
           external_id: string | null
           id: string
+          image_updated_at: string | null
           image_url: string | null
           is_available: boolean
           is_available_all_branches: boolean | null
           is_enabled_by_brand: boolean
           is_featured: boolean | null
           name: string
+          pos_thumb_url: string | null
           preparation_time: number | null
           price: number
           product_type: string
@@ -4512,12 +4514,14 @@ export type Database = {
           description?: string | null
           external_id?: string | null
           id?: string
+          image_updated_at?: string | null
           image_url?: string | null
           is_available?: boolean
           is_available_all_branches?: boolean | null
           is_enabled_by_brand?: boolean
           is_featured?: boolean | null
           name: string
+          pos_thumb_url?: string | null
           preparation_time?: number | null
           price: number
           product_type?: string
@@ -4531,12 +4535,14 @@ export type Database = {
           description?: string | null
           external_id?: string | null
           id?: string
+          image_updated_at?: string | null
           image_url?: string | null
           is_available?: boolean
           is_available_all_branches?: boolean | null
           is_enabled_by_brand?: boolean
           is_featured?: boolean | null
           name?: string
+          pos_thumb_url?: string | null
           preparation_time?: number | null
           price?: number
           product_type?: string
