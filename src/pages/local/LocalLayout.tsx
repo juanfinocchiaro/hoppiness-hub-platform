@@ -75,6 +75,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import LocalDashboard from '@/pages/local/LocalDashboard';
 import ClockInModal from '@/components/attendance/ClockInModal';
 import { OrderNotificationProvider } from '@/components/orders/OrderNotificationProvider';
+import logoHoppiness from '@/assets/logo-hoppiness.png';
 import { NotificationBell } from '@/components/orders/NotificationBell';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 
@@ -498,12 +499,19 @@ export default function LocalLayout() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-72 p-4">
-              <div className="mb-4">
-                <h2 className="text-lg font-bold">Mi Local</h2>
-                <p className="text-sm text-muted-foreground">{selectedBranch?.name}</p>
-                <Badge variant="outline" className="mt-1 text-xs">
-                  {avatarInfo.label}
-                </Badge>
+              <div className="mb-4 flex items-center gap-3">
+                <img 
+                  src={logoHoppiness} 
+                  alt="Hoppiness" 
+                  className="w-10 h-10 rounded-xl object-contain"
+                />
+                <div>
+                  <h2 className="text-lg font-bold">Mi Local</h2>
+                  <p className="text-sm text-muted-foreground">{selectedBranch?.name}</p>
+                  <Badge variant="outline" className="text-xs">
+                    {avatarInfo.label}
+                  </Badge>
+                </div>
               </div>
               
               <NavContent />
@@ -534,9 +542,11 @@ export default function LocalLayout() {
         <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-card border-r">
           <div className="p-6 border-b flex items-center justify-between">
             <ExternalLink to="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-                <Store className="w-5 h-5 text-primary-foreground" />
-              </div>
+              <img 
+                src={logoHoppiness} 
+                alt="Hoppiness" 
+                className="w-10 h-10 rounded-xl object-contain"
+              />
               <span className="text-lg font-bold">Mi Local</span>
             </ExternalLink>
             <NotificationBell branchId={branchId || ''} />

@@ -10,6 +10,7 @@ import { ExternalLink } from '@/components/ui/ExternalLink';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
+import logoHoppiness from '@/assets/logo-hoppiness.png';
 import {
   LogOut,
   Menu,
@@ -83,11 +84,18 @@ export default function AdminDashboard() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-72 p-4">
-              <div className="mb-6">
-                <h2 className="text-lg font-bold">Mi Marca</h2>
-                <Badge variant="outline" className="mt-1 text-xs">
-                  {avatarInfo.label}
-                </Badge>
+              <div className="mb-6 flex items-center gap-3">
+                <img 
+                  src={logoHoppiness} 
+                  alt="Hoppiness" 
+                  className="w-10 h-10 rounded-xl object-contain"
+                />
+                <div>
+                  <h2 className="text-lg font-bold">Mi Marca</h2>
+                  <Badge variant="outline" className="text-xs">
+                    {avatarInfo.label}
+                  </Badge>
+                </div>
               </div>
               <AdminSidebar avatarInfo={avatarInfo} />
               {hasLocalPanelAccess && !isEmbedded && (
@@ -118,9 +126,11 @@ export default function AdminDashboard() {
         <aside className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 bg-card border-r">
           <div className="p-6 border-b">
             <ExternalLink to="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold">HC</span>
-              </div>
+              <img 
+                src={logoHoppiness} 
+                alt="Hoppiness" 
+                className="w-10 h-10 rounded-xl object-contain"
+              />
               <div>
                 <span className="text-lg font-bold block">Mi Marca</span>
                 <Badge variant="outline" className="text-xs">
