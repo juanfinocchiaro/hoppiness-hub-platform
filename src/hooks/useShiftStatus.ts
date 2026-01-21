@@ -32,8 +32,10 @@ export interface ShiftStatus {
   activeCashShift: CashRegisterShift | null;
   hasCashOpen: boolean;
   
-  // Loading
+  // Loading - true only during initial load
   loading: boolean;
+  // Has checked - true after first fetch attempt, prevents showing "caja cerrada" prematurely
+  hasChecked: boolean;
   
   // Refetch
   refetch: () => Promise<void>;
@@ -42,10 +44,16 @@ export interface ShiftStatus {
 export function useShiftStatus(branchId: string | undefined): ShiftStatus {
   const [allShifts, setAllShifts] = useState<BranchShift[]>([]);
   const [activeCashShift, setActiveCashShift] = useState<CashRegisterShift | null>(null);
+  // Start with loading=true and don't show "caja cerrada" until we've actually checked
   const [loading, setLoading] = useState(true);
+  const [hasChecked, setHasChecked] = useState(false);
 
   const fetchData = useCallback(async () => {
-    if (!branchId) return;
+    if (!branchId) {
+      setLoading(false);
+      setHasChecked(true);
+      return;
+    }
     
     try {
       // Fetch branch shifts
@@ -122,6 +130,7 @@ export function useShiftStatus(branchId: string | undefined): ShiftStatus {
       console.error('Error fetching shift status:', error);
     } finally {
       setLoading(false);
+      setHasChecked(true);
     }
   }, [branchId]);
 
@@ -188,6 +197,7 @@ export function useShiftStatus(branchId: string | undefined): ShiftStatus {
     activeCashShift,
     hasCashOpen: activeCashShift !== null,
     loading,
+    hasChecked,
     refetch: fetchData,
   };
 }

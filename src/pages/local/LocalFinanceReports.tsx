@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
+import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import {
   Select,
   SelectContent,
@@ -269,12 +269,8 @@ export default function LocalFinanceReports() {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-10 w-64" />
-        <div className="grid gap-4 md:grid-cols-3">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="h-24" />)}
-        </div>
-        <Skeleton className="h-96" />
+      <div className="flex items-center justify-center min-h-[400px]">
+        <HoppinessLoader size="md" text="Cargando reportes" />
       </div>
     );
   }
