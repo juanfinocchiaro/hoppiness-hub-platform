@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +26,23 @@ import { handleError } from '@/lib/errorHandler';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Tables } from '@/integrations/supabase/types';
+import {
+  useCashRegisters,
+  useCashShifts,
+  useAllCashMovements,
+  usePaymentMethods,
+  useOpenShift,
+  useCloseShift,
+  useAddMovement,
+  useVoidMovement,
+  cashRegisterKeys,
+  calculateExpectedCash,
+  calculateTotals,
+  type CashRegister,
+  type CashRegisterShift,
+  type CashRegisterMovement,
+  type PaymentMethod,
+} from '@/hooks/useCashRegister';
 
 type Branch = Tables<'branches'>;
 
@@ -32,67 +50,35 @@ interface LocalContext {
   branch: Branch;
 }
 
-interface CashRegister {
-  id: string;
-  branch_id: string;
-  name: string;
-  display_order: number;
-  is_active: boolean;
-}
-
-interface CashRegisterShift {
-  id: string;
-  cash_register_id: string;
-  branch_id: string;
-  opened_by: string;
-  closed_by: string | null;
-  opened_at: string;
-  closed_at: string | null;
-  opening_amount: number;
-  closing_amount: number | null;
-  expected_amount: number | null;
-  difference: number | null;
-  notes: string | null;
-  status: 'open' | 'closed';
-}
-
-interface CashRegisterMovement {
-  id: string;
-  shift_id: string;
-  branch_id: string;
-  type: 'income' | 'expense' | 'withdrawal' | 'deposit';
-  payment_method: string;
-  amount: number;
-  concept: string;
-  order_id: string | null;
-  recorded_by: string | null;
-  created_at: string;
-}
-
-interface PaymentMethod {
-  id: string;
-  branch_id: string;
-  name: string;
-  code: string;
-  is_cash: boolean;
-  is_active: boolean;
-  display_order: number;
-}
-
 export default function LocalCaja() {
   const { branch } = useOutletContext<LocalContext>();
   const { user } = useAuth();
   const { isAdmin, isGerente } = useUserRole();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const canVoidMovements = isAdmin || isGerente;
 
-  const [registers, setRegisters] = useState<CashRegister[]>([]);
-  const [shifts, setShifts] = useState<Record<string, CashRegisterShift | null>>({});
-  const [movements, setMovements] = useState<Record<string, CashRegisterMovement[]>>({});
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [loading, setLoading] = useState(true);
+  // React Query hooks
+  const { data: registersData, isLoading: registersLoading } = useCashRegisters(branch?.id);
+  const registers = registersData?.active || [];
+  const allRegisters = registersData?.all || [];
+  
   const [selectedTab, setSelectedTab] = useState<string>('');
+  const registerIds = useMemo(() => registers.map(r => r.id), [registers]);
+  
+  const { data: shifts = {} } = useCashShifts(branch?.id, registerIds);
+  const { data: movements = {} } = useAllCashMovements(branch?.id, shifts);
+  const { data: paymentMethods = [] } = usePaymentMethods(branch?.id);
+  
+  // Mutations
+  const openShiftMutation = useOpenShift(branch?.id || '');
+  const closeShiftMutation = useCloseShift(branch?.id || '');
+  const addMovementMutation = useAddMovement(branch?.id || '');
+  const voidMovementMutation = useVoidMovement(branch?.id || '');
+  
+  const loading = registersLoading;
+  
   const [userName, setUserName] = useState<string>('');
   
   // Dialog states
@@ -123,8 +109,15 @@ export default function LocalCaja() {
   const [newMethodCode, setNewMethodCode] = useState('');
   const [newMethodIsCash, setNewMethodIsCash] = useState(false);
   
-  // Register editing
+  // Register editing - sync with allRegisters from query
   const [editingRegisters, setEditingRegisters] = useState<CashRegister[]>([]);
+  
+  // Sync editingRegisters when allRegisters changes
+  useEffect(() => {
+    if (allRegisters.length > 0) {
+      setEditingRegisters(allRegisters);
+    }
+  }, [allRegisters]);
 
   // Fetch user profile name
   useEffect(() => {
@@ -140,111 +133,26 @@ export default function LocalCaja() {
     }
   }, [user?.id]);
 
-  useEffect(() => {
-    if (branch?.id) {
-      fetchData();
-    }
-  }, [branch?.id]);
-
+  // Set initial selected tab
   useEffect(() => {
     if (registers.length > 0 && !selectedTab) {
       setSelectedTab(registers[0].id);
     }
-  }, [registers]);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      // Fetch ALL cash registers (including inactive for config)
-      const { data: allRegistersData } = await supabase
-        .from('cash_registers')
-        .select('*')
-        .eq('branch_id', branch.id)
-        .order('display_order');
-      
-      // Fetch active registers for operation
-      const activeRegisters = (allRegistersData || []).filter(r => r.is_active);
-
-      if (activeRegisters.length > 0) {
-        setRegisters(activeRegisters as CashRegister[]);
-        
-        // Fetch open shifts for each register
-        const shiftsMap: Record<string, CashRegisterShift | null> = {};
-        const movementsMap: Record<string, CashRegisterMovement[]> = {};
-        
-        for (const register of activeRegisters) {
-          const { data: shiftData } = await supabase
-            .from('cash_register_shifts')
-            .select('*')
-            .eq('cash_register_id', register.id)
-            .eq('status', 'open')
-            .limit(1)
-            .single();
-          
-          shiftsMap[register.id] = shiftData as CashRegisterShift | null;
-          
-          if (shiftData) {
-            const { data: movementsData } = await supabase
-              .from('cash_register_movements')
-              .select('*')
-              .eq('shift_id', shiftData.id)
-              .order('created_at', { ascending: false });
-            
-            movementsMap[register.id] = (movementsData || []) as CashRegisterMovement[];
-          } else {
-            movementsMap[register.id] = [];
-          }
-        }
-        
-        setShifts(shiftsMap);
-        setMovements(movementsMap);
-      } else {
-        setRegisters([]);
-      }
-      
-      // Store all registers for config
-      setEditingRegisters((allRegistersData || []) as CashRegister[]);
-
-      // Fetch payment methods
-      const { data: methodsData } = await supabase
-        .from('payment_methods')
-        .select('*')
-        .eq('branch_id', branch.id)
-        .order('display_order');
-
-      if (methodsData) {
-        setPaymentMethods(methodsData as PaymentMethod[]);
-      }
-    } catch (error) {
-      handleError(error, { showToast: false, context: 'LocalCaja.fetchData' });
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [registers, selectedTab]);
 
   const handleOpenShift = async () => {
     if (!user || !selectedTab) return;
     
-    try {
-      const { error } = await supabase
-        .from('cash_register_shifts')
-        .insert({
-          cash_register_id: selectedTab,
-          branch_id: branch.id,
-          opened_by: user.id,
-          opening_amount: parseFloat(openingAmount) || 0,
-          status: 'open'
-        });
-
-      if (error) throw error;
-
-      toast({ title: 'Caja abierta', description: 'La caja se abrió correctamente' });
-      setOpenShiftDialog(false);
-      setOpeningAmount('');
-      fetchData();
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
+    openShiftMutation.mutate({
+      registerId: selectedTab,
+      userId: user.id,
+      openingAmount: parseFloat(openingAmount) || 0,
+    }, {
+      onSuccess: () => {
+        setOpenShiftDialog(false);
+        setOpeningAmount('');
+      }
+    });
   };
 
   // Print alivio receipt
@@ -428,7 +336,8 @@ export default function LocalCaja() {
       setAlivioStep('amount');
       setAlivioAmount('');
       setAlivioNotes('');
-      fetchData();
+      // Invalidate movements to refresh
+      queryClient.invalidateQueries({ queryKey: cashRegisterKeys.all });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
@@ -441,30 +350,19 @@ export default function LocalCaja() {
     const closing = parseFloat(closingAmount) || 0;
     const expected = calculateExpectedAmount(selectedTab);
     
-    try {
-      const { error } = await supabase
-        .from('cash_register_shifts')
-        .update({
-          closed_by: user.id,
-          closed_at: new Date().toISOString(),
-          closing_amount: closing,
-          expected_amount: expected,
-          difference: closing - expected,
-          notes: closingNotes || null,
-          status: 'closed'
-        })
-        .eq('id', currentShift.id);
-
-      if (error) throw error;
-
-      toast({ title: 'Caja cerrada', description: 'El arqueo se completó correctamente' });
-      setCloseShiftDialog(false);
-      setClosingAmount('');
-      setClosingNotes('');
-      fetchData();
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
+    closeShiftMutation.mutate({
+      shiftId: currentShift.id,
+      userId: user.id,
+      closingAmount: closing,
+      expectedAmount: expected,
+      notes: closingNotes,
+    }, {
+      onSuccess: () => {
+        setCloseShiftDialog(false);
+        setClosingAmount('');
+        setClosingNotes('');
+      }
+    });
   };
 
   const handleAddMovement = async () => {
@@ -503,66 +401,36 @@ export default function LocalCaja() {
 
       if (txError) throw txError;
 
-      // 2. Create cash register movement linked to transaction
-      const { data, error } = await supabase
-        .from('cash_register_movements')
-        .insert({
-          shift_id: currentShift.id,
-          branch_id: branch.id,
-          type: movementType,
-          payment_method: movementPaymentMethod,
-          amount: amount,
-          concept: movementConcept,
-          recorded_by: user.id,
-          transaction_id: transactionData?.id
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Update state locally without refetching
-      if (data) {
-        setMovements(prev => ({
-          ...prev,
-          [selectedTab]: [data as CashRegisterMovement, ...(prev[selectedTab] || [])]
-        }));
-      }
-
-      toast({ title: 'Movimiento registrado' });
-      setMovementDialog(false);
-      setMovementAmount('');
-      setMovementConcept('');
-      setMovementPaymentMethod('');
+      // 2. Create cash register movement using mutation
+      addMovementMutation.mutate({
+        shiftId: currentShift.id,
+        type: movementType,
+        amount,
+        concept: movementConcept,
+        paymentMethod: movementPaymentMethod,
+        userId: user.id,
+        transactionId: transactionData?.id,
+      }, {
+        onSuccess: () => {
+          toast({ title: 'Movimiento registrado' });
+          setMovementDialog(false);
+          setMovementAmount('');
+          setMovementConcept('');
+          setMovementPaymentMethod('');
+        }
+      });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
 
-  const handleVoidMovement = async (movementId: string, registerId: string) => {
+  const handleVoidMovement = async (movementId: string) => {
     if (!canVoidMovements) {
       toast({ title: 'Sin permisos', description: 'No tenés permisos para anular movimientos', variant: 'destructive' });
       return;
     }
     
-    try {
-      const { error } = await supabase
-        .from('cash_register_movements')
-        .delete()
-        .eq('id', movementId);
-
-      if (error) throw error;
-
-      // Update state locally
-      setMovements(prev => ({
-        ...prev,
-        [registerId]: (prev[registerId] || []).filter(m => m.id !== movementId)
-      }));
-
-      toast({ title: 'Movimiento anulado', description: 'El movimiento fue eliminado correctamente' });
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
+    voidMovementMutation.mutate({ movementId });
   };
 
   const handleAddPaymentMethod = async () => {
@@ -583,7 +451,7 @@ export default function LocalCaja() {
       setNewMethodName('');
       setNewMethodCode('');
       setNewMethodIsCash(false);
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: cashRegisterKeys.paymentMethods(branch.id) });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
@@ -597,7 +465,7 @@ export default function LocalCaja() {
         .eq('id', id);
 
       if (error) throw error;
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: cashRegisterKeys.paymentMethods(branch.id) });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
@@ -612,7 +480,7 @@ export default function LocalCaja() {
 
       if (error) throw error;
       toast({ title: 'Medio de pago eliminado' });
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: cashRegisterKeys.paymentMethods(branch.id) });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
@@ -646,7 +514,7 @@ export default function LocalCaja() {
       
       toast({ title: 'Configuración guardada' });
       setRegistersConfigDialog(false);
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: cashRegisterKeys.registers(branch.id) });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
@@ -1396,7 +1264,7 @@ export default function LocalCaja() {
                                           <AlertDialogFooter>
                                             <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                             <AlertDialogAction 
-                                              onClick={() => handleVoidMovement(mov.id, register.id)}
+                                              onClick={() => handleVoidMovement(mov.id)}
                                               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                             >
                                               Anular
@@ -1489,7 +1357,7 @@ export default function LocalCaja() {
                                               <AlertDialogFooter>
                                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                                 <AlertDialogAction 
-                                                  onClick={() => handleVoidMovement(mov.id, register.id)}
+                                                  onClick={() => handleVoidMovement(mov.id)}
                                                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                                 >
                                                   Anular
