@@ -1354,14 +1354,14 @@ export default function POSView({ branch }: POSViewProps) {
                   <CreditCard className="w-4 h-4 ml-2" />
                 </Button>
 
-                {/* "Confirmar Pedido" - only enabled when fully paid */}
+                {/* "Enviar a Cocina" - only enabled when fully paid */}
                 <Button
                   className="w-full"
                   size="lg"
                   disabled={cart.length === 0 || !activeShift || !isFullyPaid}
                   onClick={() => setShowOrderConfirmation(true)}
                 >
-                  Confirmar Pedido
+                  Enviar a Cocina
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </div>
