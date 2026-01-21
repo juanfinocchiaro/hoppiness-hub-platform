@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 
 interface RequireAuthProps {
   children: React.ReactNode;
@@ -10,11 +11,7 @@ export function RequireAuth({ children }: RequireAuthProps) {
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <HoppinessLoader fullScreen size="lg" />;
   }
 
   if (!user) {

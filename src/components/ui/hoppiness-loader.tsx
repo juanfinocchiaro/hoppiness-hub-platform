@@ -36,28 +36,39 @@ export function HoppinessLoader({
     return () => clearInterval(interval);
   }, [size]);
 
-  const loader = (
+  return (
     <div className={cn(
       'flex flex-col items-center justify-center gap-4',
-      fullScreen && 'fixed inset-0 bg-background/95 backdrop-blur-sm z-50',
+      fullScreen && 'min-h-screen bg-background',
       className
     )}>
+      {/* Logo container with rotation animation */}
       <div className={cn(
-        'relative animate-hoppiness-rotate',
+        'relative',
         sizeMap[size]
       )}>
+        {/* Rotating logo */}
         <img 
           src={logoLoader} 
           alt="Cargando" 
-          className="w-full h-full object-contain rounded-full"
+          className="w-full h-full object-contain rounded-full animate-[spin_3s_linear_infinite]"
         />
-        {/* Pulse ring effect */}
+        
+        {/* Animated outer ring */}
         <div className={cn(
-          'absolute inset-0 rounded-full border-2 border-primary/30 animate-hoppiness-pulse',
-          size === 'sm' && 'border'
+          'absolute -inset-2 rounded-full border-2 border-primary/20',
+          'animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]',
+          size === 'sm' && '-inset-1 border'
+        )} />
+        
+        {/* Static inner glow */}
+        <div className={cn(
+          'absolute inset-0 rounded-full',
+          'bg-primary/5 animate-pulse'
         )} />
       </div>
       
+      {/* Loading text with animated dots */}
       {size !== 'sm' && text && (
         <p className={cn(
           'text-muted-foreground font-medium',
@@ -68,8 +79,6 @@ export function HoppinessLoader({
       )}
     </div>
   );
-
-  return loader;
 }
 
 export default HoppinessLoader;
