@@ -1352,7 +1352,7 @@ export default function POSView({ branch }: POSViewProps) {
                   onClick={() => setIsCheckoutOpen(true)}
                 >
                   {!activeShift 
-                    ? 'Abrí un turno para tomar pedidos' 
+                    ? 'Caja cerrada' 
                     : isFullyPaid
                       ? 'Pedido pagado'
                       : 'Cargar pago'
