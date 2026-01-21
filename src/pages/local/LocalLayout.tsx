@@ -349,7 +349,7 @@ export default function LocalLayout() {
             <Link to="/admin">
               <Button>
                 <Home className="w-4 h-4 mr-2" />
-                Ir a Panel Marca
+                Ir a Mi Marca
               </Button>
             </Link>
           )}
@@ -513,7 +513,7 @@ export default function LocalLayout() {
                   <ExternalLink to="/admin">
                     <Button variant="outline" className="w-full" size="sm">
                       <Building2 className="w-4 h-4 mr-2" />
-                      Panel Marca
+                      Cambiar a Mi Marca
                     </Button>
                   </ExternalLink>
                 )}
@@ -577,7 +577,7 @@ export default function LocalLayout() {
               <ExternalLink to="/admin">
                 <Button variant="ghost" className="w-full justify-start" size="sm">
                   <Building2 className="w-4 h-4 mr-3" />
-                  Panel Marca
+                  Cambiar a Mi Marca
                 </Button>
               </ExternalLink>
             )}

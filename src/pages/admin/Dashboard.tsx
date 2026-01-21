@@ -95,7 +95,7 @@ export default function AdminDashboard() {
                   <ExternalLink to={`/local/${accessibleBranches[0].id}`}>
                     <Button variant="outline" className="w-full justify-start">
                       <Building2 className="w-4 h-4 mr-3" />
-                      Panel Mi Local
+                      Cambiar a Mi Local
                     </Button>
                   </ExternalLink>
                 </div>
@@ -139,7 +139,7 @@ export default function AdminDashboard() {
               <ExternalLink to={`/local/${accessibleBranches[0].id}`}>
                 <Button variant="outline" className="w-full justify-start">
                   <Building2 className="w-4 h-4 mr-3" />
-                  Panel Mi Local
+                  Cambiar a Mi Local
                 </Button>
               </ExternalLink>
             </div>
