@@ -29,6 +29,9 @@ const TEST_USERS: TestUser[] = [
   
   // Mixed role (brand + local)
   { email: 'mixto@test.com', password: 'testtest', full_name: 'Usuario Mixto Test', brand_role: 'coordinador', local_role: 'encargado' },
+  
+  // Cliente (sin roles)
+  { email: 'cliente@test.com', password: 'testtest', full_name: 'Cliente Test', brand_role: null, local_role: null },
 ];
 
 Deno.serve(async (req) => {
