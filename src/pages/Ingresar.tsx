@@ -179,6 +179,14 @@ export default function Ingresar() {
                         required
                       />
                     </div>
+                    <div className="flex justify-end">
+                      <Link 
+                        to="/olvide-password" 
+                        className="text-sm text-primary hover:text-primary/80 hover:underline transition-colors"
+                      >
+                        ¿Olvidaste tu contraseña?
+                      </Link>
+                    </div>
                     <Button 
                       type="submit" 
                       className="w-full h-12 rounded-xl text-base font-semibold bg-primary hover:bg-primary/90 transition-all shadow-lg shadow-primary/25" 

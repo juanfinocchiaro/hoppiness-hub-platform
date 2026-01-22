@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
+import { SumateSection } from '@/components/landing';
 import heroBurger from '@/assets/hero-burger.jpg';
 import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
 import local1 from '@/assets/local-1.jpg';
@@ -85,6 +86,9 @@ export default function Index() {
           </div>
         </div>
       </section>
+
+      {/* Sumate Section */}
+      <SumateSection />
 
       {/* About Section */}
       <section className="py-20 px-4">

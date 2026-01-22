@@ -10,6 +10,8 @@ import { AdminRoute, LocalRoute } from "@/components/guards";
 // Public pages
 import Index from "./pages/Index";
 import Ingresar from "./pages/Ingresar";
+import OlvidePassword from "./pages/OlvidePassword";
+import ResetPassword from "./pages/ResetPassword";
 import RegistroStaff from "./pages/RegistroStaff";
 import Pedir from "./pages/Pedir";
 import PedirBranch from "./pages/PedirBranch";
@@ -148,9 +150,11 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
           <Routes>
-          {/* Public Routes */}
+{/* Public Routes */}
             <Route path="/" element={<Index />} />
             <Route path="/ingresar" element={<Ingresar />} />
+            <Route path="/olvide-password" element={<OlvidePassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/pedir" element={<Pedir />} />
             <Route path="/pedir/:branchSlug" element={<PedirBranch />} />
             <Route path="/checkout" element={<Checkout />} />
