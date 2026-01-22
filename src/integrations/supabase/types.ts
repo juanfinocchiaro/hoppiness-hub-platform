@@ -7363,6 +7363,8 @@ export type Database = {
             Returns: boolean
           }
       has_brand_access: { Args: { _user_id: string }; Returns: boolean }
+      has_financial_access: { Args: { p_branch_id: string }; Returns: boolean }
+      has_hr_access: { Args: { p_branch_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -7379,6 +7381,7 @@ export type Database = {
         Args: { p_category_id?: string; p_product_id?: string }
         Returns: boolean
       }
+      is_staff: { Args: never; Returns: boolean }
       is_superadmin: { Args: { _user_id: string }; Returns: boolean }
       toggle_product_channel_availability: {
         Args: {
@@ -7388,6 +7391,10 @@ export type Database = {
           p_product_id: string
           p_reason?: string
         }
+        Returns: boolean
+      }
+      user_has_branch_access: {
+        Args: { p_branch_id: string }
         Returns: boolean
       }
       validate_kds_token: {
