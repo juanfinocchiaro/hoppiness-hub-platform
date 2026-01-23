@@ -7685,6 +7685,9 @@ export type Database = {
         | "mercadopago_delivery"
         | "web_app"
         | "pos_local"
+        | "salon"
+        | "mostrador"
+        | "webapp"
       stock_movement_type:
         | "sale"
         | "purchase"
@@ -7881,6 +7884,9 @@ export const Constants = {
         "mercadopago_delivery",
         "web_app",
         "pos_local",
+        "salon",
+        "mostrador",
+        "webapp",
       ],
       stock_movement_type: [
         "sale",
