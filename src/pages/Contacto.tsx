@@ -28,13 +28,21 @@ import {
   Instagram,
   Facebook,
   CalendarIcon,
-  Rocket
+  MessageCircle,
+  Store,
+  Users,
+  ShoppingBag,
+  Handshake,
+  HelpCircle,
+  Upload,
+  FileText,
+  Loader2
 } from 'lucide-react';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import { cn } from '@/lib/utils';
 
-type SubjectType = 'consulta' | 'franquicia' | 'empleo' | 'pedidos' | 'otro';
+type SubjectType = 'consulta' | 'franquicia' | 'empleo' | 'pedidos' | 'proveedor';
 
 interface FormData {
   name: string;
@@ -56,6 +64,11 @@ interface FormData {
   order_number: string;
   order_date: Date | undefined;
   order_issue: string;
+  // Supplier fields
+  supplier_company: string;
+  supplier_category: string;
+  supplier_coverage: string;
+  supplier_website: string;
 }
 
 const initialFormData: FormData = {
@@ -75,13 +88,51 @@ const initialFormData: FormData = {
   order_number: '',
   order_date: undefined,
   order_issue: '',
+  supplier_company: '',
+  supplier_category: '',
+  supplier_coverage: '',
+  supplier_website: '',
 };
+
+const subjectOptions = [
+  { 
+    value: 'consulta' as SubjectType, 
+    label: 'Consulta general', 
+    icon: MessageCircle,
+    description: 'Preguntas, sugerencias o comentarios'
+  },
+  { 
+    value: 'franquicia' as SubjectType, 
+    label: 'Franquicias', 
+    icon: Store,
+    description: 'Quiero abrir mi propio Hoppiness'
+  },
+  { 
+    value: 'empleo' as SubjectType, 
+    label: 'Trabajá con nosotros', 
+    icon: Users,
+    description: 'Quiero ser parte del equipo'
+  },
+  { 
+    value: 'pedidos' as SubjectType, 
+    label: 'Problema con pedido', 
+    icon: ShoppingBag,
+    description: 'Reportar un inconveniente'
+  },
+  { 
+    value: 'proveedor' as SubjectType, 
+    label: 'Proveedores', 
+    icon: Handshake,
+    description: 'Quiero ser proveedor'
+  },
+];
 
 export default function Contacto() {
   const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [cvFile, setCvFile] = useState<File | null>(null);
   const { toast } = useToast();
 
   // Fetch branches for dropdowns
@@ -101,18 +152,10 @@ export default function Contacto() {
   // Detect URL params
   useEffect(() => {
     const asuntoParam = searchParams.get('asunto');
-    if (asuntoParam === 'franquicia') {
-      setFormData(prev => ({ ...prev, subject: 'franquicia' }));
+    if (asuntoParam && ['consulta', 'franquicia', 'empleo', 'pedidos', 'proveedor'].includes(asuntoParam)) {
+      setFormData(prev => ({ ...prev, subject: asuntoParam as SubjectType }));
     }
   }, [searchParams]);
-
-  const subjects = [
-    { value: 'consulta', label: 'Consulta general' },
-    { value: 'franquicia', label: 'Franquicias' },
-    { value: 'empleo', label: 'Empleo' },
-    { value: 'pedidos', label: 'Pedidos' },
-    { value: 'otro', label: 'Otro' }
-  ];
 
   const franchiseZoneOptions = [
     { value: 'tengo_ubicacion', label: 'Sí, ya tengo ubicación' },
@@ -161,6 +204,11 @@ export default function Contacto() {
           title: 'Lamentamos el inconveniente',
           description: 'Nuestro equipo revisará tu caso y te contactará a la brevedad para solucionarlo.'
         };
+      case 'proveedor':
+        return {
+          title: '¡Propuesta recibida!',
+          description: 'Nuestro equipo de compras evaluará tu propuesta y te contactará si hay interés.'
+        };
       default:
         return {
           title: '¡Mensaje enviado!',
@@ -169,13 +217,51 @@ export default function Contacto() {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!validTypes.includes(file.type)) {
+        toast({ title: 'Formato no válido', description: 'Solo se permiten archivos PDF, DOC o DOCX', variant: 'destructive' });
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast({ title: 'Archivo muy grande', description: 'El archivo no puede superar 5MB', variant: 'destructive' });
+        return;
+      }
+      setCvFile(file);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.subject) return;
+    if (!formData.subject) {
+      toast({ title: 'Seleccioná un tipo de consulta', variant: 'destructive' });
+      return;
+    }
     
     setLoading(true);
 
     try {
+      let cvUrl = '';
+      
+      // Upload CV if exists
+      if (cvFile && formData.subject === 'empleo') {
+        const fileExt = cvFile.name.split('.').pop();
+        const fileName = `${Date.now()}-${formData.email.replace('@', '_at_')}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('cv-uploads')
+          .upload(fileName, cvFile);
+
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage
+            .from('cv-uploads')
+            .getPublicUrl(fileName);
+          cvUrl = urlData?.publicUrl || fileName;
+        }
+      }
+
       const insertData: Record<string, unknown> = {
         name: formData.name,
         email: formData.email,
@@ -186,7 +272,6 @@ export default function Contacto() {
       // Add subject-specific fields
       switch (formData.subject) {
         case 'consulta':
-        case 'otro':
           insertData.message = formData.message;
           break;
         case 'franquicia':
@@ -198,7 +283,7 @@ export default function Contacto() {
         case 'empleo':
           insertData.employment_branch_id = formData.employment_branch_id || null;
           insertData.employment_position = formData.employment_position || null;
-          insertData.employment_cv_link = formData.employment_cv_link || null;
+          insertData.employment_cv_link = cvUrl || formData.employment_cv_link || null;
           insertData.employment_motivation = formData.employment_motivation || null;
           break;
         case 'pedidos':
@@ -206,6 +291,17 @@ export default function Contacto() {
           insertData.order_number = formData.order_number || null;
           insertData.order_date = formData.order_date ? format(formData.order_date, 'yyyy-MM-dd') : null;
           insertData.order_issue = formData.order_issue;
+          break;
+        case 'proveedor':
+          insertData.message = `
+Empresa: ${formData.supplier_company}
+Rubro: ${formData.supplier_category}
+Zona de cobertura: ${formData.supplier_coverage || 'No especificada'}
+Web: ${formData.supplier_website || 'No especificada'}
+
+Mensaje:
+${formData.message || 'Sin mensaje adicional'}
+          `.trim();
           break;
       }
 
@@ -245,9 +341,7 @@ export default function Contacto() {
     }
   };
 
-  const isFranchiseMode = formData.subject === 'franquicia';
-
-  // TODO: Estos son datos placeholder - actualizar con datos reales
+  // Contact info
   const contactInfo = [
     {
       icon: MapPin,
@@ -258,19 +352,19 @@ export default function Contacto() {
     {
       icon: Phone,
       title: 'Teléfono',
-      content: '+54 351 000-0000', // PLACEHOLDER
+      content: '+54 351 000-0000',
       subtext: 'Lunes a Domingo'
     },
     {
       icon: Mail,
       title: 'Email',
-      content: 'hola@hoppinessclub.com', // PLACEHOLDER
+      content: 'hola@hoppinessclub.com',
       subtext: 'Respondemos en 24hs'
     },
     {
       icon: Clock,
       title: 'Horario',
-      content: '12:00 - 00:00', // PLACEHOLDER
+      content: '12:00 - 00:00',
       subtext: 'Todos los días'
     }
   ];
@@ -283,8 +377,8 @@ export default function Contacto() {
         
         <section className="py-20 px-4">
           <div className="container mx-auto max-w-lg text-center">
-            <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-6">
-              <Send className="w-10 h-10 text-accent" />
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
+              <Send className="w-10 h-10 text-primary" />
             </div>
             <h1 className="text-3xl font-black mb-4 font-brand text-primary">
               {successMsg.title}
@@ -292,7 +386,7 @@ export default function Contacto() {
             <p className="text-lg text-muted-foreground mb-8">
               {successMsg.description}
             </p>
-            <Button onClick={() => { setFormData(initialFormData); setSubmitted(false); }}>
+            <Button onClick={() => { setFormData(initialFormData); setCvFile(null); setSubmitted(false); }}>
               Enviar otro mensaje
             </Button>
           </div>
@@ -308,34 +402,53 @@ export default function Contacto() {
       <PublicHeader />
       
       {/* Hero */}
-      <section className={cn(
-        "py-16",
-        isFranchiseMode ? "bg-gradient-to-br from-primary via-primary to-primary/90" : "bg-primary"
-      )}>
+      <section className="py-16 bg-primary">
         <div className="container mx-auto px-4 text-center">
-          {isFranchiseMode ? (
-            <>
-              <div className="inline-flex items-center gap-2 bg-accent/20 text-white px-4 py-2 rounded-full mb-4">
-                <Rocket className="w-4 h-4" />
-                <span className="text-sm font-medium">Franquicias</span>
-              </div>
-              <h1 className="text-4xl md:text-5xl font-black text-white mb-4 font-brand">
-                ¡Genial! Querés tu franquicia
-              </h1>
-              <p className="text-xl text-white/90 max-w-2xl mx-auto">
-                Completá tus datos y te contactamos en 48hs
-              </p>
-            </>
-          ) : (
-            <>
-              <h1 className="text-4xl md:text-5xl font-black text-white mb-4 font-brand">
-                CONTACTANOS
-              </h1>
-              <p className="text-xl text-white/90 max-w-2xl mx-auto">
-                Estamos para ayudarte. Escribinos y te respondemos lo antes posible.
-              </p>
-            </>
-          )}
+          <h1 className="text-4xl md:text-5xl font-black text-primary-foreground mb-4 font-brand">
+            CONTACTANOS
+          </h1>
+          <p className="text-xl text-primary-foreground/90 max-w-2xl mx-auto">
+            Estamos para ayudarte. Escribinos y te respondemos lo antes posible.
+          </p>
+        </div>
+      </section>
+
+      {/* Subject Selection - Visible Tabs */}
+      <section className="py-8 bg-secondary/30 border-b">
+        <div className="container mx-auto px-4">
+          <h2 className="text-center text-lg font-semibold mb-6">¿Sobre qué querés contactarnos?</h2>
+          <div className="flex flex-wrap justify-center gap-3 max-w-4xl mx-auto">
+            {subjectOptions.map((option) => {
+              const Icon = option.icon;
+              const isSelected = formData.subject === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, subject: option.value })}
+                  className={cn(
+                    "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all min-w-[140px]",
+                    isSelected
+                      ? "border-primary bg-primary/5 shadow-md"
+                      : "border-border bg-background hover:border-primary/50 hover:shadow-sm"
+                  )}
+                >
+                  <div className={cn(
+                    "w-12 h-12 rounded-full flex items-center justify-center transition-colors",
+                    isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                  )}>
+                    <Icon className="w-6 h-6" />
+                  </div>
+                  <span className={cn(
+                    "font-medium text-sm text-center",
+                    isSelected ? "text-primary" : "text-foreground"
+                  )}>
+                    {option.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </section>
 
@@ -390,299 +503,395 @@ export default function Contacto() {
             <div>
               <Card className="shadow-elevated">
                 <CardContent className="p-8">
-                  <h2 className="text-2xl font-bold mb-6">
-                    {isFranchiseMode ? 'Contanos sobre vos' : 'Envianos un mensaje'}
-                  </h2>
-                  
-                  <form onSubmit={handleSubmit} className="space-y-5">
-                    {/* Base fields */}
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Nombre *</Label>
-                        <Input
-                          id="name"
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          placeholder="Tu nombre"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email *</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          placeholder="tu@email.com"
-                          required
-                        />
-                      </div>
+                  {!formData.subject ? (
+                    <div className="text-center py-12">
+                      <HelpCircle className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">Seleccioná un tipo de consulta</h3>
+                      <p className="text-muted-foreground">
+                        Elegí una opción de arriba para ver el formulario correspondiente.
+                      </p>
                     </div>
-
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Teléfono *</Label>
-                        <Input
-                          id="phone"
-                          type="tel"
-                          value={formData.phone}
-                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          placeholder="+54 351..."
-                          required
-                        />
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-3 mb-6">
+                        {(() => {
+                          const selected = subjectOptions.find(o => o.value === formData.subject);
+                          const Icon = selected?.icon || MessageCircle;
+                          return (
+                            <>
+                              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                <Icon className="w-5 h-5 text-primary" />
+                              </div>
+                              <div>
+                                <h2 className="text-xl font-bold">{selected?.label}</h2>
+                                <p className="text-sm text-muted-foreground">{selected?.description}</p>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="subject">Asunto *</Label>
-                        <Select 
-                          value={formData.subject} 
-                          onValueChange={(value: SubjectType) => setFormData({ ...formData, subject: value })}
-                          required
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccioná un asunto" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {subjects.map((s) => (
-                              <SelectItem key={s.value} value={s.value}>
-                                {s.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {/* Conditional fields based on subject */}
-                    {(formData.subject === 'consulta' || formData.subject === 'otro') && (
-                      <div className="space-y-2">
-                        <Label htmlFor="message">Mensaje *</Label>
-                        <Textarea
-                          id="message"
-                          value={formData.message}
-                          onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                          placeholder="Contanos en qué podemos ayudarte..."
-                          rows={5}
-                          required
-                        />
-                      </div>
-                    )}
-
-                    {formData.subject === 'franquicia' && (
-                      <>
-                        <div className="space-y-2">
-                          <Label>¿Ya tenés una zona en mente?</Label>
-                          <Select 
-                            value={formData.franchise_has_zone} 
-                            onValueChange={(value) => setFormData({ ...formData, franchise_has_zone: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccioná una opción" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {franchiseZoneOptions.map((o) => (
-                                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>¿Ya tenés un local disponible?</Label>
-                          <Select 
-                            value={formData.franchise_has_location} 
-                            onValueChange={(value) => setFormData({ ...formData, franchise_has_location: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccioná una opción" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {franchiseLocationOptions.map((o) => (
-                                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>¿Qué capital tenés disponible para invertir?</Label>
-                          <Select 
-                            value={formData.franchise_investment_capital} 
-                            onValueChange={(value) => setFormData({ ...formData, franchise_investment_capital: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccioná una opción" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {franchiseCapitalOptions.map((o) => (
-                                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="franchise_message">¿Algo más que quieras contarnos? (opcional)</Label>
-                          <Textarea
-                            id="franchise_message"
-                            value={formData.message}
-                            onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                            placeholder="Experiencia previa, motivación, dudas..."
-                            rows={4}
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {formData.subject === 'empleo' && (
-                      <>
-                        <div className="space-y-2">
-                          <Label>¿En qué local te gustaría trabajar? *</Label>
-                          <Select 
-                            value={formData.employment_branch_id} 
-                            onValueChange={(value) => setFormData({ ...formData, employment_branch_id: value })}
-                            required
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccioná un local" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {branches?.map((b) => (
-                                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                              ))}
-                              <SelectItem value="cualquiera">Me da igual / Cualquiera</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>¿Qué puesto te interesa?</Label>
-                          <Select 
-                            value={formData.employment_position} 
-                            onValueChange={(value) => setFormData({ ...formData, employment_position: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccioná un puesto" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {employmentPositionOptions.map((o) => (
-                                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="cv_link">Link a CV o LinkedIn (opcional)</Label>
-                          <Input
-                            id="cv_link"
-                            type="url"
-                            value={formData.employment_cv_link}
-                            onChange={(e) => setFormData({ ...formData, employment_cv_link: e.target.value })}
-                            placeholder="https://..."
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="motivation">¿Por qué querés trabajar en Hoppiness?</Label>
-                          <Textarea
-                            id="motivation"
-                            value={formData.employment_motivation}
-                            onChange={(e) => setFormData({ ...formData, employment_motivation: e.target.value })}
-                            placeholder="Contanos sobre tu experiencia y motivación..."
-                            rows={4}
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {formData.subject === 'pedidos' && (
-                      <>
-                        <div className="space-y-2">
-                          <Label>¿En qué local hiciste el pedido? *</Label>
-                          <Select 
-                            value={formData.order_branch_id} 
-                            onValueChange={(value) => setFormData({ ...formData, order_branch_id: value })}
-                            required
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccioná el local" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {branches?.map((b) => (
-                                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
+                    
+                      <form onSubmit={handleSubmit} className="space-y-5">
+                        {/* Base fields */}
                         <div className="grid sm:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="order_number">Número de pedido (si lo tenés)</Label>
+                            <Label htmlFor="name">Nombre *</Label>
                             <Input
-                              id="order_number"
-                              value={formData.order_number}
-                              onChange={(e) => setFormData({ ...formData, order_number: e.target.value })}
-                              placeholder="#12345"
+                              id="name"
+                              value={formData.name}
+                              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                              placeholder="Tu nombre"
+                              required
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label>Fecha aproximada del pedido</Label>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !formData.order_date && "text-muted-foreground"
-                                  )}
-                                >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {formData.order_date ? format(formData.order_date, 'PPP', { locale: es }) : 'Seleccionar fecha'}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                  mode="single"
-                                  selected={formData.order_date}
-                                  onSelect={(date) => setFormData({ ...formData, order_date: date })}
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
+                            <Label htmlFor="email">Email *</Label>
+                            <Input
+                              id="email"
+                              type="email"
+                              value={formData.email}
+                              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                              placeholder="tu@email.com"
+                              required
+                            />
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="order_issue">Descripción del problema *</Label>
-                          <Textarea
-                            id="order_issue"
-                            value={formData.order_issue}
-                            onChange={(e) => setFormData({ ...formData, order_issue: e.target.value })}
-                            placeholder="Contanos qué pasó con tu pedido..."
-                            rows={4}
+                          <Label htmlFor="phone">Teléfono *</Label>
+                          <Input
+                            id="phone"
+                            type="tel"
+                            value={formData.phone}
+                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                            placeholder="+54 351..."
                             required
                           />
                         </div>
-                      </>
-                    )}
 
-                    <Button 
-                      type="submit" 
-                      size="lg" 
-                      className="w-full" 
-                      disabled={loading || !formData.subject}
-                    >
-                      {loading ? (
-                        'Enviando...'
-                      ) : (
-                        <>
-                          <Send className="w-4 h-4 mr-2" />
-                          {isFranchiseMode ? '¡Quiero mi franquicia!' : 'Enviar mensaje'}
-                        </>
-                      )}
-                    </Button>
-                  </form>
+                        {/* Conditional fields based on subject */}
+                        {formData.subject === 'consulta' && (
+                          <div className="space-y-2">
+                            <Label htmlFor="message">Mensaje *</Label>
+                            <Textarea
+                              id="message"
+                              value={formData.message}
+                              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                              placeholder="Contanos en qué podemos ayudarte..."
+                              rows={5}
+                              required
+                            />
+                          </div>
+                        )}
+
+                        {formData.subject === 'franquicia' && (
+                          <>
+                            <div className="space-y-2">
+                              <Label>¿Ya tenés una zona en mente?</Label>
+                              <Select 
+                                value={formData.franchise_has_zone} 
+                                onValueChange={(value) => setFormData({ ...formData, franchise_has_zone: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Seleccioná una opción" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {franchiseZoneOptions.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label>¿Tenés local disponible?</Label>
+                              <Select 
+                                value={formData.franchise_has_location} 
+                                onValueChange={(value) => setFormData({ ...formData, franchise_has_location: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Seleccioná una opción" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {franchiseLocationOptions.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label>¿Cuál es tu capital disponible para invertir?</Label>
+                              <Select 
+                                value={formData.franchise_investment_capital} 
+                                onValueChange={(value) => setFormData({ ...formData, franchise_investment_capital: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Seleccioná una opción" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {franchiseCapitalOptions.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="message">Comentarios adicionales (opcional)</Label>
+                              <Textarea
+                                id="message"
+                                value={formData.message}
+                                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                                placeholder="¿Algo más que quieras contarnos?"
+                                rows={3}
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        {formData.subject === 'empleo' && (
+                          <>
+                            <div className="space-y-2">
+                              <Label>¿En qué local te gustaría trabajar? *</Label>
+                              <Select 
+                                value={formData.employment_branch_id} 
+                                onValueChange={(value) => setFormData({ ...formData, employment_branch_id: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Seleccioná un local" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {branches?.map((branch) => (
+                                    <SelectItem key={branch.id} value={branch.id}>
+                                      Hoppiness {branch.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label>¿Qué puesto te interesa?</Label>
+                              <Select 
+                                value={formData.employment_position} 
+                                onValueChange={(value) => setFormData({ ...formData, employment_position: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Seleccioná un puesto" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {employmentPositionOptions.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label>Adjuntar CV * (PDF, DOC, DOCX - máx 5MB)</Label>
+                              <Input
+                                id="cv"
+                                type="file"
+                                accept=".pdf,.doc,.docx"
+                                onChange={handleFileChange}
+                                className="hidden"
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full justify-start"
+                                onClick={() => document.getElementById('cv')?.click()}
+                              >
+                                {cvFile ? (
+                                  <>
+                                    <FileText className="h-4 w-4 mr-2" />
+                                    {cvFile.name}
+                                  </>
+                                ) : (
+                                  <>
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    Seleccionar archivo
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="linkedin">LinkedIn (opcional)</Label>
+                              <Input
+                                id="linkedin"
+                                type="url"
+                                value={formData.employment_cv_link}
+                                onChange={(e) => setFormData({ ...formData, employment_cv_link: e.target.value })}
+                                placeholder="https://linkedin.com/in/..."
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="motivation">¿Por qué querés trabajar en Hoppiness?</Label>
+                              <Textarea
+                                id="motivation"
+                                value={formData.employment_motivation}
+                                onChange={(e) => setFormData({ ...formData, employment_motivation: e.target.value })}
+                                placeholder="Contanos un poco sobre vos..."
+                                rows={3}
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        {formData.subject === 'pedidos' && (
+                          <>
+                            <div className="space-y-2">
+                              <Label>¿En qué local hiciste el pedido?</Label>
+                              <Select 
+                                value={formData.order_branch_id} 
+                                onValueChange={(value) => setFormData({ ...formData, order_branch_id: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Seleccioná un local" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {branches?.map((branch) => (
+                                    <SelectItem key={branch.id} value={branch.id}>
+                                      Hoppiness {branch.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="grid sm:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="orderNumber">Número de pedido</Label>
+                                <Input
+                                  id="orderNumber"
+                                  value={formData.order_number}
+                                  onChange={(e) => setFormData({ ...formData, order_number: e.target.value })}
+                                  placeholder="#12345"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Fecha del pedido</Label>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      className={cn(
+                                        "w-full justify-start text-left font-normal",
+                                        !formData.order_date && "text-muted-foreground"
+                                      )}
+                                    >
+                                      <CalendarIcon className="mr-2 h-4 w-4" />
+                                      {formData.order_date ? (
+                                        format(formData.order_date, "PPP", { locale: es })
+                                      ) : (
+                                        <span>Seleccioná fecha</span>
+                                      )}
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0">
+                                    <Calendar
+                                      mode="single"
+                                      selected={formData.order_date}
+                                      onSelect={(date) => setFormData({ ...formData, order_date: date })}
+                                      initialFocus
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="orderIssue">¿Cuál fue el problema? *</Label>
+                              <Textarea
+                                id="orderIssue"
+                                value={formData.order_issue}
+                                onChange={(e) => setFormData({ ...formData, order_issue: e.target.value })}
+                                placeholder="Describí el inconveniente lo más detallado posible..."
+                                rows={4}
+                                required
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        {formData.subject === 'proveedor' && (
+                          <>
+                            <div className="space-y-2">
+                              <Label htmlFor="company">Nombre de la empresa *</Label>
+                              <Input
+                                id="company"
+                                value={formData.supplier_company}
+                                onChange={(e) => setFormData({ ...formData, supplier_company: e.target.value })}
+                                placeholder="Tu empresa"
+                                required
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="category">Rubro / Productos que ofrecen *</Label>
+                              <Input
+                                id="category"
+                                value={formData.supplier_category}
+                                onChange={(e) => setFormData({ ...formData, supplier_category: e.target.value })}
+                                placeholder="Ej: Carnes, Bebidas, Insumos..."
+                                required
+                              />
+                            </div>
+
+                            <div className="grid sm:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="coverage">Zona de cobertura</Label>
+                                <Input
+                                  id="coverage"
+                                  value={formData.supplier_coverage}
+                                  onChange={(e) => setFormData({ ...formData, supplier_coverage: e.target.value })}
+                                  placeholder="Ej: Córdoba Capital"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="website">Sitio web</Label>
+                                <Input
+                                  id="website"
+                                  type="url"
+                                  value={formData.supplier_website}
+                                  onChange={(e) => setFormData({ ...formData, supplier_website: e.target.value })}
+                                  placeholder="https://..."
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="message">Propuesta comercial</Label>
+                              <Textarea
+                                id="message"
+                                value={formData.message}
+                                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                                placeholder="Contanos sobre tu empresa, productos, precios..."
+                                rows={4}
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                          {loading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Enviando...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="h-4 w-4 mr-2" />
+                              Enviar mensaje
+                            </>
+                          )}
+                        </Button>
+                      </form>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>
