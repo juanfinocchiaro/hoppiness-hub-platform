@@ -123,7 +123,7 @@ Auditoría formal de las tareas principales de cada rol y su ruta en el sistema.
 | # | Tarea | Ruta | Estado |
 |---|-------|------|--------|
 | 1 | Fichar entrada/salida | `/fichar` | ✅ |
-| 2 | Ver horario asignado | (limitado) | ⚠️ Pendiente |
+| 2 | Ver horario asignado | `/cuenta` → MyScheduleCard | ✅ |
 | 3 | Consultar información básica | Dashboard (muy limitado) | ✅ |
 
 ---
@@ -132,7 +132,7 @@ Auditoría formal de las tareas principales de cada rol y su ruta en el sistema.
 
 | Gap | Avatar Afectado | Prioridad | Estado |
 |-----|-----------------|-----------|--------|
-| Vista de "Mi horario" para empleados | `employee` | Media | 🔲 Pendiente |
+| Vista de "Mi horario" para empleados | `employee` | Media | ✅ Completado |
 | Checklist diario de apertura/cierre | `manager` | Baja | 🔲 Futuro |
 | Notificaciones push de alertas | Todos | Media | 🔲 Futuro |
 
