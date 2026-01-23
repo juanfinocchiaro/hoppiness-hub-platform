@@ -592,12 +592,12 @@ export default function MandatoryProducts() {
               <div>
                 <Label>Ingrediente del Sistema (opcional)</Label>
                 <Select 
-                  value={productForm.ingredient_id}
-                  onValueChange={(v) => setProductForm(f => ({ ...f, ingredient_id: v }))}
+                  value={productForm.ingredient_id || '__none__'}
+                  onValueChange={(v) => setProductForm(f => ({ ...f, ingredient_id: v === '__none__' ? '' : v }))}
                 >
                   <SelectTrigger><SelectValue placeholder="Vincular a ingrediente" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Sin vincular</SelectItem>
+                    <SelectItem value="__none__">Sin vincular</SelectItem>
                     {ingredients.map((i) => (
                       <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>
                     ))}
@@ -648,12 +648,12 @@ export default function MandatoryProducts() {
                 <div>
                   <Label>Proveedor Backup</Label>
                   <Select 
-                    value={productForm.backup_supplier_id}
-                    onValueChange={(v) => setProductForm(f => ({ ...f, backup_supplier_id: v }))}
+                    value={productForm.backup_supplier_id || '__none__'}
+                    onValueChange={(v) => setProductForm(f => ({ ...f, backup_supplier_id: v === '__none__' ? '' : v }))}
                   >
                     <SelectTrigger><SelectValue placeholder="Sin backup" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Sin backup</SelectItem>
+                      <SelectItem value="__none__">Sin backup</SelectItem>
                       {suppliers.filter(s => s.id !== productForm.primary_supplier_id).map((s) => (
                         <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                       ))}
