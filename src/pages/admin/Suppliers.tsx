@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -23,7 +24,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Plus, Search, Edit, Phone, Mail, Store, Loader2, Calendar, Clock, MessageCircle } from 'lucide-react';
+import { Plus, Search, Edit, Phone, Mail, Store, Loader2, Calendar, Clock, MessageCircle, ArrowRight, Trash2, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -31,6 +32,14 @@ type Supplier = Tables<'suppliers'>;
 
 interface SupplierWithBranches extends Supplier {
   branchCount: number;
+}
+
+interface OrderRule {
+  id?: string;
+  order_shift_day: number;
+  delivery_day: number;
+  delivery_time: string;
+  is_active: boolean;
 }
 
 interface SupplierFormData {
@@ -42,9 +51,7 @@ interface SupplierFormData {
   address: string;
   notes: string;
   is_active: boolean;
-  order_days: number[];
-  delivery_days: number[];
-  lead_time_hours: number;
+  order_rules: OrderRule[];
 }
 
 const defaultFormData: SupplierFormData = {
@@ -56,19 +63,22 @@ const defaultFormData: SupplierFormData = {
   address: '',
   notes: '',
   is_active: true,
-  order_days: [],
-  delivery_days: [],
-  lead_time_hours: 24,
+  order_rules: [],
 };
 
 const DAY_OPTIONS = [
-  { value: 0, label: 'Dom' },
-  { value: 1, label: 'Lun' },
-  { value: 2, label: 'Mar' },
-  { value: 3, label: 'Mié' },
-  { value: 4, label: 'Jue' },
-  { value: 5, label: 'Vie' },
-  { value: 6, label: 'Sáb' },
+  { value: 0, label: 'Domingo', short: 'Dom' },
+  { value: 1, label: 'Lunes', short: 'Lun' },
+  { value: 2, label: 'Martes', short: 'Mar' },
+  { value: 3, label: 'Miércoles', short: 'Mié' },
+  { value: 4, label: 'Jueves', short: 'Jue' },
+  { value: 5, label: 'Viernes', short: 'Vie' },
+  { value: 6, label: 'Sábado', short: 'Sáb' },
+];
+
+const TIME_OPTIONS = [
+  '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00',
+  '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00',
 ];
 
 export default function Suppliers() {
@@ -122,10 +132,9 @@ export default function Suppliers() {
         address: data.address || null,
         notes: data.notes || null,
         is_active: data.is_active,
-        order_days: data.order_days,
-        delivery_days: data.delivery_days,
-        lead_time_hours: data.lead_time_hours,
       };
+      
+      let supplierId: string;
       
       if (editingSupplier) {
         const { error } = await supabase
@@ -133,11 +142,37 @@ export default function Suppliers() {
           .update(payload)
           .eq('id', editingSupplier.id);
         if (error) throw error;
+        supplierId = editingSupplier.id;
+        
+        // Delete existing rules and recreate
+        await supabase
+          .from('supplier_order_rules')
+          .delete()
+          .eq('supplier_id', supplierId);
       } else {
-        const { error } = await supabase
+        const { data: newSupplier, error } = await supabase
           .from('suppliers')
-          .insert(payload);
+          .insert(payload)
+          .select('id')
+          .single();
         if (error) throw error;
+        supplierId = newSupplier.id;
+      }
+      
+      // Insert order rules
+      if (data.order_rules.length > 0) {
+        const rules = data.order_rules.map(rule => ({
+          supplier_id: supplierId,
+          order_shift_day: rule.order_shift_day,
+          delivery_day: rule.delivery_day,
+          delivery_time: rule.delivery_time,
+          is_active: true,
+        }));
+        
+        const { error: rulesError } = await supabase
+          .from('supplier_order_rules')
+          .insert(rules);
+        if (rulesError) throw rulesError;
       }
     },
     onSuccess: () => {
@@ -149,6 +184,33 @@ export default function Suppliers() {
       toast.error(error.message || 'Error al guardar proveedor');
     },
   });
+
+  // Load order rules when editing
+  useEffect(() => {
+    async function loadRules() {
+      if (!editingSupplier) return;
+      
+      const { data } = await supabase
+        .from('supplier_order_rules')
+        .select('*')
+        .eq('supplier_id', editingSupplier.id)
+        .order('order_shift_day');
+      
+      if (data) {
+        setFormData(prev => ({
+          ...prev,
+          order_rules: data.map(r => ({
+            id: r.id,
+            order_shift_day: r.order_shift_day,
+            delivery_day: r.delivery_day,
+            delivery_time: r.delivery_time || '12:00',
+            is_active: r.is_active,
+          })),
+        }));
+      }
+    }
+    loadRules();
+  }, [editingSupplier]);
 
   const handleOpenCreate = () => {
     setEditingSupplier(null);
@@ -167,9 +229,7 @@ export default function Suppliers() {
       address: supplier.address || '',
       notes: supplier.notes || '',
       is_active: supplier.is_active,
-      order_days: (supplier.order_days as number[]) || [],
-      delivery_days: (supplier.delivery_days as number[]) || [],
-      lead_time_hours: supplier.lead_time_hours || 24,
+      order_rules: [], // Will be loaded by useEffect
     });
     setIsDialogOpen(true);
   };
@@ -187,6 +247,36 @@ export default function Suppliers() {
       return;
     }
     saveMutation.mutate(formData);
+  };
+  
+  const addOrderRule = () => {
+    // Find next available shift day
+    const usedDays = formData.order_rules.map(r => r.order_shift_day);
+    const nextDay = DAY_OPTIONS.find(d => !usedDays.includes(d.value))?.value ?? 0;
+    const deliveryDay = (nextDay + 1) % 7; // Default to next day
+    
+    setFormData({
+      ...formData,
+      order_rules: [...formData.order_rules, {
+        order_shift_day: nextDay,
+        delivery_day: deliveryDay,
+        delivery_time: '12:00',
+        is_active: true,
+      }],
+    });
+  };
+  
+  const removeOrderRule = (index: number) => {
+    setFormData({
+      ...formData,
+      order_rules: formData.order_rules.filter((_, i) => i !== index),
+    });
+  };
+  
+  const updateOrderRule = (index: number, field: keyof OrderRule, value: number | string) => {
+    const newRules = [...formData.order_rules];
+    newRules[index] = { ...newRules[index], [field]: value };
+    setFormData({ ...formData, order_rules: newRules });
   };
 
   const filteredSuppliers = suppliers.filter((supplier) =>
@@ -377,73 +467,115 @@ export default function Suppliers() {
               </div>
             </div>
 
-            {/* Scheduling section */}
+            {/* Shift-based Order Rules */}
             <div className="border-t pt-4 mt-4 space-y-4">
-              <h4 className="font-medium flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Configuración de Pedidos
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Reglas de Pedido
+                </h4>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={addOrderRule}
+                  disabled={formData.order_rules.length >= 7}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Agregar Regla
+                </Button>
+              </div>
               
-              <div className="space-y-2">
-                <Label>Días para pedir (se puede pedir estos días)</Label>
-                <div className="flex flex-wrap gap-2">
-                  {DAY_OPTIONS.map(day => (
-                    <Button
-                      key={day.value}
-                      type="button"
-                      variant={formData.order_days.includes(day.value) ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        const newDays = formData.order_days.includes(day.value)
-                          ? formData.order_days.filter(d => d !== day.value)
-                          : [...formData.order_days, day.value].sort();
-                        setFormData({ ...formData, order_days: newDays });
-                      }}
-                    >
-                      {day.label}
-                    </Button>
+              <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg text-sm">
+                <Info className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                <p className="text-muted-foreground">
+                  El "día de turno" considera turnos que cruzan medianoche. Si el local abre a las 11:00 y es Lunes 02:00 AM, 
+                  todavía se considera turno del <strong>Domingo</strong>.
+                </p>
+              </div>
+              
+              {formData.order_rules.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Sin reglas configuradas. Se podrá pedir cualquier día.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {formData.order_rules.map((rule, index) => (
+                    <div key={index} className="flex items-center gap-2 p-3 border rounded-lg">
+                      <div className="flex-1 grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Pedido al cierre del turno</Label>
+                          <Select
+                            value={String(rule.order_shift_day)}
+                            onValueChange={(v) => updateOrderRule(index, 'order_shift_day', parseInt(v))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {DAY_OPTIONS.map(day => (
+                                <SelectItem key={day.value} value={String(day.value)}>
+                                  {day.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <ArrowRight className="h-4 w-4 text-muted-foreground mt-5" />
+                        
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Entrega el</Label>
+                          <Select
+                            value={String(rule.delivery_day)}
+                            onValueChange={(v) => updateOrderRule(index, 'delivery_day', parseInt(v))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {DAY_OPTIONS.map(day => (
+                                <SelectItem key={day.value} value={String(day.value)}>
+                                  {day.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Hora</Label>
+                          <Select
+                            value={rule.delivery_time}
+                            onValueChange={(v) => updateOrderRule(index, 'delivery_time', v)}
+                          >
+                            <SelectTrigger className="w-24">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {TIME_OPTIONS.map(time => (
+                                <SelectItem key={time} value={time}>
+                                  {time}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeOrderRule(index)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   ))}
                 </div>
-                <p className="text-xs text-muted-foreground">Si no seleccionás ninguno, se puede pedir cualquier día</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Días de entrega (el proveedor entrega estos días)</Label>
-                <div className="flex flex-wrap gap-2">
-                  {DAY_OPTIONS.map(day => (
-                    <Button
-                      key={day.value}
-                      type="button"
-                      variant={formData.delivery_days.includes(day.value) ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        const newDays = formData.delivery_days.includes(day.value)
-                          ? formData.delivery_days.filter(d => d !== day.value)
-                          : [...formData.delivery_days, day.value].sort();
-                        setFormData({ ...formData, delivery_days: newDays });
-                      }}
-                    >
-                      {day.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="lead_time" className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Anticipación mínima (horas)
-                </Label>
-                <Input
-                  id="lead_time"
-                  type="number"
-                  min="0"
-                  value={formData.lead_time_hours}
-                  onChange={(e) => setFormData({ ...formData, lead_time_hours: parseInt(e.target.value) || 24 })}
-                  className="w-32"
-                />
-                <p className="text-xs text-muted-foreground">Horas de anticipación requeridas para hacer un pedido</p>
-              </div>
+              )}
             </div>
 
             <div className="space-y-2">

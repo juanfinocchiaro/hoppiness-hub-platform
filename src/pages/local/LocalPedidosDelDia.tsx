@@ -28,10 +28,12 @@ import {
   Package,
   CheckCircle2,
 } from 'lucide-react';
-import { useTodayOrders, formatDaysList } from '@/hooks/useSmartPurchasing';
+import { useTodayOrders, formatDaysList, getCurrentShiftDay } from '@/hooks/useSmartPurchasing';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
+
+const DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
 interface OrderItem {
   ingredient_id: string;
@@ -45,7 +47,9 @@ interface OrderItem {
 
 export default function LocalPedidosDelDia() {
   const { branch } = useOutletContext<{ branch: Branch }>();
-  const { data: todayOrders, isLoading } = useTodayOrders(branch.id);
+  const openingTime = branch.opening_time || '11:00';
+  const currentShiftDay = getCurrentShiftDay(openingTime);
+  const { data: todayOrders, isLoading } = useTodayOrders(branch.id, openingTime);
   
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<(typeof todayOrders)[number] | null>(null);
@@ -185,6 +189,9 @@ export default function LocalPedidosDelDia() {
           </h1>
           <p className="text-muted-foreground">
             {new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            <span className="ml-2 text-xs bg-muted px-2 py-0.5 rounded">
+              Turno: {DAY_NAMES[currentShiftDay]}
+            </span>
           </p>
         </div>
         <Link to={`/local/${branch.id}/stock/pedir`}>
@@ -249,7 +256,7 @@ export default function LocalPedidosDelDia() {
                       )}
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        Entrega: {order.delivery_date}
+                        Entrega: {order.delivery_date} {order.delivery_time && `a las ${order.delivery_time}`}
                       </span>
                     </CardDescription>
                   </div>

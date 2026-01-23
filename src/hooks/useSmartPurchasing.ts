@@ -13,6 +13,15 @@ interface SupplierWithSchedule {
   category: string | null;
 }
 
+interface SupplierOrderRule {
+  id: string;
+  supplier_id: string;
+  order_shift_day: number;
+  delivery_day: number;
+  delivery_time: string | null;
+  is_active: boolean;
+}
+
 interface IngredientStock {
   id: string;
   name: string;
@@ -31,47 +40,74 @@ interface TodayOrder {
   ingredients: IngredientStock[];
   urgency: 'critical' | 'warning' | 'normal';
   delivery_date: string;
+  delivery_time: string;
+  rule: SupplierOrderRule;
 }
 
 const DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
 /**
- * Calculate the next delivery date for a supplier based on today
+ * Get the current "shift day" based on branch opening time.
+ * If current time is before opening time, we're still in yesterday's shift.
+ * 
+ * Example: 
+ * - Branch opens at 11:00
+ * - It's Monday 02:00 AM → Still Sunday's shift (returns 0)
+ * - It's Monday 14:00 PM → Monday's shift (returns 1)
  */
-function getNextDeliveryDate(supplier: SupplierWithSchedule, fromDate: Date = new Date()): Date | null {
-  if (!supplier.delivery_days?.length) return null;
+export function getCurrentShiftDay(openingTime: string = '11:00'): number {
+  const now = new Date();
+  const [openHour, openMin] = openingTime.split(':').map(Number);
   
-  const today = fromDate.getDay();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const openingMinutes = openHour * 60 + openMin;
   
-  // Find the next delivery day
-  for (let i = 1; i <= 7; i++) {
-    const checkDay = (today + i) % 7;
-    if (supplier.delivery_days.includes(checkDay)) {
-      const nextDate = new Date(fromDate);
-      nextDate.setDate(nextDate.getDate() + i);
-      return nextDate;
-    }
+  // If we're before opening time, we belong to yesterday's shift
+  if (currentMinutes < openingMinutes) {
+    const yesterday = now.getDay() - 1;
+    return yesterday < 0 ? 6 : yesterday; // Sunday is 0, so -1 becomes 6 (Saturday)
   }
   
-  return null;
+  return now.getDay();
 }
 
 /**
- * Check if today is an order day for a supplier
+ * Get delivery date based on rule's delivery_day, from the shift day
  */
-function isTodayOrderDay(supplier: SupplierWithSchedule): boolean {
-  if (!supplier.order_days?.length) return true; // If no specific days, any day is OK
-  const today = new Date().getDay();
-  return supplier.order_days.includes(today);
+function getDeliveryDateFromRule(rule: SupplierOrderRule, shiftDay: number): Date {
+  const today = new Date();
+  const currentCalendarDay = today.getDay();
+  
+  // Calculate days until delivery
+  let daysUntilDelivery = rule.delivery_day - shiftDay;
+  if (daysUntilDelivery <= 0) daysUntilDelivery += 7;
+  
+  // Adjust for calendar day vs shift day
+  const shiftOffset = currentCalendarDay - shiftDay;
+  
+  const deliveryDate = new Date(today);
+  deliveryDate.setDate(today.getDate() + daysUntilDelivery + (shiftOffset < 0 ? 1 : 0));
+  
+  return deliveryDate;
 }
 
 /**
- * Get suppliers that need to be ordered from today
+ * Check if the current shift matches a supplier's order rule
  */
-export function useTodayOrders(branchId: string) {
+function findMatchingRule(rules: SupplierOrderRule[], shiftDay: number): SupplierOrderRule | null {
+  return rules.find(r => r.order_shift_day === shiftDay && r.is_active) || null;
+}
+
+/**
+ * Get suppliers that need to be ordered from today based on SHIFT day (not calendar day)
+ */
+export function useTodayOrders(branchId: string, openingTime: string = '11:00') {
   return useQuery({
-    queryKey: ['today-orders', branchId],
+    queryKey: ['today-orders', branchId, openingTime],
     queryFn: async (): Promise<TodayOrder[]> => {
+      // 0. Get current shift day (accounts for late-night shifts)
+      const shiftDay = getCurrentShiftDay(openingTime);
+      
       // 1. Get all active suppliers with schedule info
       const { data: suppliers, error: suppliersError } = await supabase
         .from('suppliers')
@@ -88,7 +124,20 @@ export function useTodayOrders(branchId: string) {
         lead_time_hours: s.lead_time_hours || 24,
       }));
       
-      // 2. Get ingredient-supplier assignments
+      // 2. Get supplier order rules (new shift-based system)
+      const { data: orderRules } = await supabase
+        .from('supplier_order_rules')
+        .select('*')
+        .eq('is_active', true);
+      
+      const rulesBySupplier = new Map<string, SupplierOrderRule[]>();
+      (orderRules || []).forEach(rule => {
+        const existing = rulesBySupplier.get(rule.supplier_id) || [];
+        existing.push(rule);
+        rulesBySupplier.set(rule.supplier_id, existing);
+      });
+      
+      // 3. Get ingredient-supplier assignments
       const { data: ingredientSuppliers } = await supabase
         .from('ingredient_suppliers')
         .select('ingredient_id, supplier_id, is_primary')
@@ -99,7 +148,7 @@ export function useTodayOrders(branchId: string) {
         supplierByIngredient.set(is.ingredient_id, is.supplier_id);
       });
       
-      // 3. Get all ingredients with branch stock
+      // 4. Get all ingredients with branch stock
       const { data: ingredients } = await supabase
         .from('ingredients')
         .select('id, name, unit, min_stock')
@@ -112,46 +161,25 @@ export function useTodayOrders(branchId: string) {
       
       const stockMap = new Map((branchStock || []).map(bs => [bs.ingredient_id, bs]));
       
-      // 4. Calculate daily consumption from recent sales (last 7 days)
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      
-      const { data: recentOrders } = await supabase
-        .from('orders')
-        .select('id, created_at')
-        .eq('branch_id', branchId)
-        .gte('created_at', sevenDaysAgo.toISOString())
-        .in('status', ['delivered', 'ready']);
-      
-      const orderIds = (recentOrders || []).map(o => o.id);
-      
-      // Get order items
-      const { data: orderItems } = await supabase
-        .from('order_items')
-        .select('quantity, product_id')
-        .in('order_id', orderIds.length > 0 ? orderIds : ['00000000-0000-0000-0000-000000000000']);
-      
-      // For consumption estimation, use min_stock as a proxy for weekly consumption
+      // 5. For consumption estimation, use min_stock as proxy
       const consumption = new Map<string, number>();
       (ingredients || []).forEach(ing => {
         const bs = stockMap.get(ing.id);
         const minStock = bs?.min_stock_override ?? ing.min_stock ?? 0;
-        // Assume min_stock represents roughly 1 week of consumption
         consumption.set(ing.id, minStock);
       });
       
-      // 5. Build ingredient stock list with consumption data
+      // 6. Build ingredient stock list
       const ingredientStocks: IngredientStock[] = (ingredients || []).map(ing => {
         const bs = stockMap.get(ing.id);
         const currentStock = bs?.current_stock || 0;
         const minStock = bs?.min_stock_override ?? ing.min_stock ?? 0;
         const totalConsumed = consumption.get(ing.id) || 0;
-        const avgDaily = totalConsumed / 7; // 7 days
+        const avgDaily = totalConsumed / 7;
         const daysUntilStockout = avgDaily > 0 ? Math.floor(currentStock / avgDaily) : 999;
         const supplierId = supplierByIngredient.get(ing.id) || null;
         const supplier = typedSuppliers.find(s => s.id === supplierId);
         
-        // Calculate suggested quantity: reach 2 weeks of stock
         const targetStock = Math.max(minStock, avgDaily * 14);
         const suggested = Math.max(0, Math.ceil(targetStock - currentStock));
         
@@ -169,11 +197,18 @@ export function useTodayOrders(branchId: string) {
         };
       });
       
-      // 6. Group by supplier and filter for today's orders
+      // 7. Group by supplier and filter by shift-based rules
       const todayOrders: TodayOrder[] = [];
       
       typedSuppliers.forEach(supplier => {
-        if (!isTodayOrderDay(supplier)) return;
+        const rules = rulesBySupplier.get(supplier.id) || [];
+        const matchingRule = findMatchingRule(rules, shiftDay);
+        
+        // If no rules defined, fall back to legacy order_days check
+        const canOrderToday = matchingRule !== null || 
+          (rules.length === 0 && (supplier.order_days.length === 0 || supplier.order_days.includes(shiftDay)));
+        
+        if (!canOrderToday) return;
         
         const supplierIngredients = ingredientStocks.filter(ing => 
           ing.supplier_id === supplier.id && 
@@ -182,15 +217,38 @@ export function useTodayOrders(branchId: string) {
         
         if (supplierIngredients.length === 0) return;
         
-        const nextDelivery = getNextDeliveryDate(supplier);
         const hasCritical = supplierIngredients.some(ing => ing.days_until_stockout <= 2);
         const hasWarning = supplierIngredients.some(ing => ing.days_until_stockout <= 5);
+        
+        // Calculate delivery date
+        let deliveryDate: Date;
+        let deliveryTime = '12:00';
+        
+        if (matchingRule) {
+          deliveryDate = getDeliveryDateFromRule(matchingRule, shiftDay);
+          deliveryTime = matchingRule.delivery_time || '12:00';
+        } else {
+          // Fallback to next delivery day from legacy system
+          const nextDay = supplier.delivery_days.find(d => d > shiftDay) ?? supplier.delivery_days[0];
+          deliveryDate = new Date();
+          const daysUntil = nextDay !== undefined ? (nextDay - shiftDay + 7) % 7 || 7 : 1;
+          deliveryDate.setDate(deliveryDate.getDate() + daysUntil);
+        }
         
         todayOrders.push({
           supplier,
           ingredients: supplierIngredients,
           urgency: hasCritical ? 'critical' : hasWarning ? 'warning' : 'normal',
-          delivery_date: nextDelivery?.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'short' }) || 'Sin fecha',
+          delivery_date: deliveryDate.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'short' }),
+          delivery_time: deliveryTime,
+          rule: matchingRule || {
+            id: '',
+            supplier_id: supplier.id,
+            order_shift_day: shiftDay,
+            delivery_day: deliveryDate.getDay(),
+            delivery_time: '12:00',
+            is_active: true,
+          },
         });
       });
       
@@ -200,8 +258,28 @@ export function useTodayOrders(branchId: string) {
         return urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
       });
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
     enabled: !!branchId,
+  });
+}
+
+/**
+ * Get supplier order rules for configuration
+ */
+export function useSupplierOrderRules(supplierId: string) {
+  return useQuery({
+    queryKey: ['supplier-order-rules', supplierId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('supplier_order_rules')
+        .select('*')
+        .eq('supplier_id', supplierId)
+        .order('order_shift_day');
+      
+      if (error) throw error;
+      return data as SupplierOrderRule[];
+    },
+    enabled: !!supplierId,
   });
 }
 
