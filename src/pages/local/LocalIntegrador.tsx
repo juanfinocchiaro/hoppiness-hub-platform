@@ -164,8 +164,7 @@ export default function LocalIntegrador() {
             id,
             product_name_snapshot,
             quantity,
-            unit_price,
-            subtotal
+            unit_price
           )
         `)
         .eq('branch_id', branchId)

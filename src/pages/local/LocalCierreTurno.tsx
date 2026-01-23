@@ -250,7 +250,7 @@ export default function LocalCierreTurno() {
         .from('orders')
         .select(`
           id, created_at, total, payment_method, sales_channel, status,
-          order_items (id, product_name_snapshot, quantity, unit_price, subtotal)
+          order_items (id, product_name_snapshot, quantity, unit_price)
         `)
         .eq('branch_id', branchId)
         .gte('created_at', start)
