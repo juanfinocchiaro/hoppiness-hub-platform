@@ -52,11 +52,12 @@ export function useOperatorVerification(branchId: string | undefined) {
     },
   });
   
-  // Validar PIN de supervisor
+  // Validar PIN de supervisor usando user_roles_v2
   const validateSupervisorPin = useCallback(async (pin: string): Promise<OperatorInfo | null> => {
     if (!branchId) return null;
     
-    const { data, error } = await supabase.rpc('validate_supervisor_pin', {
+    // Usar función verify_authorization_pin que usa user_roles_v2
+    const { data, error } = await supabase.rpc('verify_authorization_pin', {
       _branch_id: branchId,
       _pin: pin,
     });
@@ -71,7 +72,7 @@ export function useOperatorVerification(branchId: string | undefined) {
       return {
         userId: supervisor.user_id,
         fullName: supervisor.full_name,
-        role: supervisor.role,
+        role: supervisor.local_role || 'supervisor',
       };
     }
     
@@ -141,28 +142,42 @@ export function useOperatorVerification(branchId: string | undefined) {
   };
 }
 
-// Hook para verificar si el usuario actual es supervisor
+// Hook para verificar si el usuario actual es supervisor (usa user_roles_v2)
 export function useIsSupervisor(branchId: string | undefined) {
   const { user } = useAuth();
   const [isSupervisor, setIsSupervisor] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
-  useCallback(async () => {
-    if (!user || !branchId) {
+  useEffect(() => {
+    const checkSupervisor = async () => {
+      if (!user || !branchId) {
+        setIsLoading(false);
+        return;
+      }
+      
+      // Usar user_roles_v2 para verificar rol de supervisor
+      const { data } = await supabase
+        .from('user_roles_v2')
+        .select('local_role, brand_role, branch_ids')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .single();
+      
+      if (data) {
+        // Es supervisor si tiene rol de marca (superadmin/coordinador) o rol local alto
+        const isBrandSupervisor = ['superadmin', 'coordinador'].includes(data.brand_role || '');
+        const isLocalSupervisor = ['franquiciado', 'encargado'].includes(data.local_role || '');
+        const hasBranchAccess = isBrandSupervisor || (data.branch_ids && data.branch_ids.includes(branchId));
+        
+        setIsSupervisor((isBrandSupervisor || isLocalSupervisor) && hasBranchAccess);
+      } else {
+        setIsSupervisor(false);
+      }
+      
       setIsLoading(false);
-      return;
-    }
+    };
     
-    const { data } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .in('role', ['encargado', 'franquiciado', 'admin', 'coordinador'])
-      .limit(1);
-    
-    setIsSupervisor((data?.length || 0) > 0);
-    setIsLoading(false);
+    checkSupervisor();
   }, [user, branchId]);
   
   return { isSupervisor, isLoading };

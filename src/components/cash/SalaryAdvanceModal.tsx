@@ -48,24 +48,26 @@ export function SalaryAdvanceModal({
   
   const createAdvance = useCreateAdvance();
   
-  // Verificar si el usuario es encargado o superior
-  const { data: userRoles } = useQuery({
-    queryKey: ['user-roles', user?.id],
+  // Verificar si el usuario es encargado o superior usando user_roles_v2
+  const { data: userRoleV2 } = useQuery({
+    queryKey: ['user-roles-v2', user?.id],
     queryFn: async () => {
-      if (!user) return [];
+      if (!user) return null;
       const { data } = await supabase
-        .from('user_roles')
-        .select('role')
+        .from('user_roles_v2')
+        .select('brand_role, local_role')
         .eq('user_id', user.id)
-        .eq('is_active', true);
-      return data?.map(r => r.role) || [];
+        .eq('is_active', true)
+        .maybeSingle();
+      return data;
     },
     enabled: !!user,
   });
   
-  const isSupervisor = userRoles?.some(r => 
-    ['encargado', 'franquiciado', 'admin', 'coordinador'].includes(r as string)
-  );
+  const isSupervisor = userRoleV2 
+    ? ['superadmin', 'coordinador'].includes(userRoleV2.brand_role || '') 
+      || ['franquiciado', 'encargado'].includes(userRoleV2.local_role || '')
+    : false;
   
   // Cargar empleados de la sucursal
   const { data: employees = [] } = useQuery({

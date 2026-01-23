@@ -44,19 +44,22 @@ export function QuickExpenseModal({
   const [showPinDialog, setShowPinDialog] = useState(false);
   const [isSupervisor, setIsSupervisor] = useState(false);
   
-  // Verificar si el usuario es encargado o superior
+  // Verificar si el usuario es encargado o superior usando user_roles_v2
   useEffect(() => {
     async function checkRole() {
       if (!user) return;
       const { data } = await supabase
-        .from('user_roles')
-        .select('role')
+        .from('user_roles_v2')
+        .select('brand_role, local_role')
         .eq('user_id', user.id)
-        .eq('is_active', true);
-      const roles = data?.map(r => r.role) || [];
-      setIsSupervisor(roles.some(r => 
-        ['encargado', 'franquiciado', 'admin', 'coordinador'].includes(r as string)
-      ));
+        .eq('is_active', true)
+        .maybeSingle();
+      
+      if (data) {
+        const isBrandSupervisor = ['superadmin', 'coordinador'].includes(data.brand_role || '');
+        const isLocalSupervisor = ['franquiciado', 'encargado'].includes(data.local_role || '');
+        setIsSupervisor(isBrandSupervisor || isLocalSupervisor);
+      }
     }
     checkRole();
   }, [user]);

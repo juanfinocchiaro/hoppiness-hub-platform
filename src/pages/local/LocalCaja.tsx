@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { useToast } from '@/hooks/use-toast';
 import { handleError } from '@/lib/errorHandler';
 import { format } from 'date-fns';
@@ -60,11 +60,12 @@ interface LocalContext {
 export default function LocalCaja() {
   const { branch } = useOutletContext<LocalContext>();
   const { user } = useAuth();
-  const { isAdmin, isGerente } = useUserRole();
+  const { localRole, canAccessBrandPanel } = usePermissionsV2();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const canVoidMovements = isAdmin || isGerente;
+  // Permisos basados en rol V2
+  const canVoidMovements = canAccessBrandPanel || ['franquiciado', 'encargado'].includes(localRole || '');
 
   // React Query hooks
   const { data: registersData, isLoading: registersLoading } = useCashRegisters(branch?.id);
