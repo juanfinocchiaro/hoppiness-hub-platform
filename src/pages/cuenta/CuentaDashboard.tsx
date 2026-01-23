@@ -2,18 +2,25 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Package, MapPin, User, Clock, Store, ArrowRight, Repeat } from 'lucide-react';
+import { Package, MapPin, User, Clock, Store, ArrowRight, Repeat, Loader2 } from 'lucide-react';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useCart } from '@/contexts/CartContext';
+import { toast } from 'sonner';
+import { useState } from 'react';
+import MyScheduleCard from '@/components/cuenta/MyScheduleCard';
 
 export default function CuentaDashboard() {
   const { user, signOut } = useAuth();
   const { branchRoles, canUseLocalPanel, loading: rolesLoading } = useUserRoles();
+  const navigate = useNavigate();
+  const { addItem, clearCart, setBranch } = useCart();
+  const [isRepeating, setIsRepeating] = useState(false);
 
   // Fetch profile data
   const { data: profile } = useQuery({
@@ -31,7 +38,7 @@ export default function CuentaDashboard() {
     enabled: !!user,
   });
 
-  // Fetch user's orders
+  // Fetch user's orders with items for repeat functionality
   const { data: orders, isLoading: ordersLoading } = useQuery({
     queryKey: ['user-orders', user?.id],
     queryFn: async () => {
@@ -45,7 +52,8 @@ export default function CuentaDashboard() {
           created_at,
           order_type,
           tracking_token,
-          branches:branch_id (name)
+          branch_id,
+          branches:branch_id (id, name, address, is_open)
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
@@ -99,16 +107,113 @@ export default function CuentaDashboard() {
     return labels[status] || status;
   };
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      confirmed: 'bg-blue-100 text-blue-800',
-      preparing: 'bg-orange-100 text-orange-800',
-      ready: 'bg-green-100 text-green-800',
-      delivered: 'bg-gray-100 text-gray-800',
-      cancelled: 'bg-red-100 text-red-800',
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+  const handleRepeatOrder = async () => {
+    if (!lastOrder) return;
+    
+    setIsRepeating(true);
+    try {
+      // Fetch order items with product details
+      const { data: orderItems, error: itemsError } = await supabase
+        .from('order_items')
+        .select(`
+          id,
+          product_id,
+          quantity,
+          unit_price,
+          notes,
+          products:product_id (
+            id, name, price, description, image_url, is_active
+          )
+        `)
+        .eq('order_id', lastOrder.id);
+
+      if (itemsError) throw itemsError;
+
+      if (!orderItems?.length) {
+        toast.error('No se encontraron productos en el pedido');
+        return;
+      }
+
+      // Fetch the branch
+      const { data: branch, error: branchError } = await supabase
+        .from('branches')
+        .select('*')
+        .eq('id', lastOrder.branch_id)
+        .single();
+
+      if (branchError || !branch) {
+        toast.error('La sucursal ya no está disponible');
+        return;
+      }
+
+      // Check branch is open
+      if (!branch.is_open) {
+        toast.error('La sucursal está cerrada en este momento');
+        return;
+      }
+
+      // Clear current cart and set branch
+      clearCart();
+      setBranch(branch);
+
+      // Fetch modifiers for each item
+      const itemsWithModifiers = await Promise.all(
+        orderItems.map(async (item) => {
+          const { data: modifiers } = await supabase
+            .from('order_item_modifiers')
+            .select('modifier_option_id, option_name, price_adjustment')
+            .eq('order_item_id', item.id);
+
+          return { ...item, modifiers: modifiers || [] };
+        })
+      );
+
+      // Add items to cart
+      let addedCount = 0;
+      for (const item of itemsWithModifiers) {
+        if (!item.products || !(item.products as any).is_active) continue;
+
+        const product = item.products as any;
+        
+        // Build modifiers object
+        const modifiersObj: Record<string, string[]> = {};
+        const modifierNames: string[] = [];
+        let modifiersTotal = 0;
+
+        for (const mod of item.modifiers) {
+          if (mod.modifier_option_id) {
+            // Group by some key (we'll use option name for display)
+            modifierNames.push(mod.option_name);
+            modifiersTotal += Number(mod.price_adjustment) || 0;
+          }
+        }
+
+        addItem({
+          product: {
+            ...product,
+            finalPrice: product.price,
+          },
+          quantity: item.quantity,
+          modifiers: modifiersObj,
+          modifiersTotal,
+          modifierNames,
+          notes: item.notes || undefined,
+        });
+        addedCount++;
+      }
+
+      if (addedCount > 0) {
+        toast.success(`${addedCount} producto(s) agregados al carrito`);
+        navigate(`/pedir/${branch.slug}`);
+      } else {
+        toast.error('No se pudieron agregar productos al carrito');
+      }
+    } catch (error) {
+      console.error('Error repeating order:', error);
+      toast.error('Error al repetir el pedido');
+    } finally {
+      setIsRepeating(false);
+    }
   };
 
   return (
@@ -222,12 +327,28 @@ export default function CuentaDashboard() {
                     <Link to={`/cuenta/pedidos/${lastOrder.id}`}>
                       <Button variant="outline" size="sm">Ver detalle</Button>
                     </Link>
-                    <Button size="sm" disabled>Repetir pedido</Button>
+                    <Button 
+                      size="sm" 
+                      onClick={handleRepeatOrder}
+                      disabled={isRepeating}
+                    >
+                      {isRepeating ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Agregando...
+                        </>
+                      ) : (
+                        'Repetir pedido'
+                      )}
+                    </Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
           )}
+
+          {/* My Schedule - For employees */}
+          <MyScheduleCard />
 
           {/* Work Section - Only if user has branch roles */}
           {canUseLocalPanel && branchRoles.length > 0 && (
