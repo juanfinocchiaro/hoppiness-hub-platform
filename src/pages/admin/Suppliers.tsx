@@ -23,7 +23,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Plus, Search, Edit, Phone, Mail, Store, Loader2 } from 'lucide-react';
+import { Plus, Search, Edit, Phone, Mail, Store, Loader2, Calendar, Clock, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -37,21 +37,39 @@ interface SupplierFormData {
   name: string;
   contact_name: string;
   phone: string;
+  whatsapp: string;
   email: string;
   address: string;
   notes: string;
   is_active: boolean;
+  order_days: number[];
+  delivery_days: number[];
+  lead_time_hours: number;
 }
 
 const defaultFormData: SupplierFormData = {
   name: '',
   contact_name: '',
   phone: '',
+  whatsapp: '',
   email: '',
   address: '',
   notes: '',
   is_active: true,
+  order_days: [],
+  delivery_days: [],
+  lead_time_hours: 24,
 };
+
+const DAY_OPTIONS = [
+  { value: 0, label: 'Dom' },
+  { value: 1, label: 'Lun' },
+  { value: 2, label: 'Mar' },
+  { value: 3, label: 'Mié' },
+  { value: 4, label: 'Jue' },
+  { value: 5, label: 'Vie' },
+  { value: 6, label: 'Sáb' },
+];
 
 export default function Suppliers() {
   const [search, setSearch] = useState('');
@@ -95,32 +113,30 @@ export default function Suppliers() {
   // Create/Update mutation
   const saveMutation = useMutation({
     mutationFn: async (data: SupplierFormData) => {
+      const payload = {
+        name: data.name,
+        contact_name: data.contact_name || null,
+        phone: data.phone || null,
+        whatsapp: data.whatsapp || null,
+        email: data.email || null,
+        address: data.address || null,
+        notes: data.notes || null,
+        is_active: data.is_active,
+        order_days: data.order_days,
+        delivery_days: data.delivery_days,
+        lead_time_hours: data.lead_time_hours,
+      };
+      
       if (editingSupplier) {
         const { error } = await supabase
           .from('suppliers')
-          .update({
-            name: data.name,
-            contact_name: data.contact_name || null,
-            phone: data.phone || null,
-            email: data.email || null,
-            address: data.address || null,
-            notes: data.notes || null,
-            is_active: data.is_active,
-          })
+          .update(payload)
           .eq('id', editingSupplier.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('suppliers')
-          .insert({
-            name: data.name,
-            contact_name: data.contact_name || null,
-            phone: data.phone || null,
-            email: data.email || null,
-            address: data.address || null,
-            notes: data.notes || null,
-            is_active: data.is_active,
-          });
+          .insert(payload);
         if (error) throw error;
       }
     },
@@ -146,10 +162,14 @@ export default function Suppliers() {
       name: supplier.name,
       contact_name: supplier.contact_name || '',
       phone: supplier.phone || '',
+      whatsapp: supplier.whatsapp || '',
       email: supplier.email || '',
       address: supplier.address || '',
       notes: supplier.notes || '',
       is_active: supplier.is_active,
+      order_days: (supplier.order_days as number[]) || [],
+      delivery_days: (supplier.delivery_days as number[]) || [],
+      lead_time_hours: supplier.lead_time_hours || 24,
     });
     setIsDialogOpen(true);
   };
@@ -332,15 +352,98 @@ export default function Suppliers() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="email@proveedor.com"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="whatsapp" className="flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4" />
+                  WhatsApp
+                </Label>
+                <Input
+                  id="whatsapp"
+                  value={formData.whatsapp}
+                  onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                  placeholder="+54 9 351 1234567"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="email@proveedor.com"
+                />
+              </div>
+            </div>
+
+            {/* Scheduling section */}
+            <div className="border-t pt-4 mt-4 space-y-4">
+              <h4 className="font-medium flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Configuración de Pedidos
+              </h4>
+              
+              <div className="space-y-2">
+                <Label>Días para pedir (se puede pedir estos días)</Label>
+                <div className="flex flex-wrap gap-2">
+                  {DAY_OPTIONS.map(day => (
+                    <Button
+                      key={day.value}
+                      type="button"
+                      variant={formData.order_days.includes(day.value) ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        const newDays = formData.order_days.includes(day.value)
+                          ? formData.order_days.filter(d => d !== day.value)
+                          : [...formData.order_days, day.value].sort();
+                        setFormData({ ...formData, order_days: newDays });
+                      }}
+                    >
+                      {day.label}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">Si no seleccionás ninguno, se puede pedir cualquier día</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Días de entrega (el proveedor entrega estos días)</Label>
+                <div className="flex flex-wrap gap-2">
+                  {DAY_OPTIONS.map(day => (
+                    <Button
+                      key={day.value}
+                      type="button"
+                      variant={formData.delivery_days.includes(day.value) ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        const newDays = formData.delivery_days.includes(day.value)
+                          ? formData.delivery_days.filter(d => d !== day.value)
+                          : [...formData.delivery_days, day.value].sort();
+                        setFormData({ ...formData, delivery_days: newDays });
+                      }}
+                    >
+                      {day.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="lead_time" className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Anticipación mínima (horas)
+                </Label>
+                <Input
+                  id="lead_time"
+                  type="number"
+                  min="0"
+                  value={formData.lead_time_hours}
+                  onChange={(e) => setFormData({ ...formData, lead_time_hours: parseInt(e.target.value) || 24 })}
+                  className="w-32"
+                />
+                <p className="text-xs text-muted-foreground">Horas de anticipación requeridas para hacer un pedido</p>
+              </div>
             </div>
 
             <div className="space-y-2">

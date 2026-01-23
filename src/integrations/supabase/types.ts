@@ -3043,6 +3043,64 @@ export type Database = {
         }
         Relationships: []
       }
+      ingredient_suppliers: {
+        Row: {
+          created_at: string
+          id: string
+          ingredient_id: string
+          is_primary: boolean | null
+          min_order_quantity: number | null
+          notes: string | null
+          price_per_unit: number | null
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ingredient_id: string
+          is_primary?: boolean | null
+          min_order_quantity?: number | null
+          notes?: string | null
+          price_per_unit?: number | null
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ingredient_id?: string
+          is_primary?: boolean | null
+          min_order_quantity?: number | null
+          notes?: string | null
+          price_per_unit?: number | null
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_suppliers_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_suppliers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "ingredient_suppliers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingredient_unit_conversions: {
         Row: {
           conversion_factor: number
@@ -6253,14 +6311,18 @@ export type Database = {
           cuit: string | null
           default_doc_status: string | null
           default_payment_origin: string | null
+          delivery_days: number[] | null
           email: string | null
           id: string
           is_active: boolean
           is_brand_supplier: boolean
+          lead_time_hours: number | null
           name: string
           notes: string | null
+          order_days: number[] | null
           payment_terms_days: number | null
           phone: string | null
+          preferred_order_time: string | null
           scope: string | null
           updated_at: string
           whatsapp: string | null
@@ -6276,14 +6338,18 @@ export type Database = {
           cuit?: string | null
           default_doc_status?: string | null
           default_payment_origin?: string | null
+          delivery_days?: number[] | null
           email?: string | null
           id?: string
           is_active?: boolean
           is_brand_supplier?: boolean
+          lead_time_hours?: number | null
           name: string
           notes?: string | null
+          order_days?: number[] | null
           payment_terms_days?: number | null
           phone?: string | null
+          preferred_order_time?: string | null
           scope?: string | null
           updated_at?: string
           whatsapp?: string | null
@@ -6299,14 +6365,18 @@ export type Database = {
           cuit?: string | null
           default_doc_status?: string | null
           default_payment_origin?: string | null
+          delivery_days?: number[] | null
           email?: string | null
           id?: string
           is_active?: boolean
           is_brand_supplier?: boolean
+          lead_time_hours?: number | null
           name?: string
           notes?: string | null
+          order_days?: number[] | null
           payment_terms_days?: number | null
           phone?: string | null
+          preferred_order_time?: string | null
           scope?: string | null
           updated_at?: string
           whatsapp?: string | null

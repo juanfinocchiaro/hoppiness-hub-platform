@@ -58,6 +58,7 @@ import LocalShiftConfig from "./pages/local/LocalShiftConfig";
 import LocalStockFactura from "./pages/local/LocalStockFactura";
 import LocalStockPedir from "./pages/local/LocalStockPedir";
 import LocalStockHistorial from "./pages/local/LocalStockHistorial";
+import LocalPedidosDelDia from "./pages/local/LocalPedidosDelDia";
 import LocalIntegrador from "./pages/local/LocalIntegrador";
 import LocalComprasProveedores from "./pages/local/LocalComprasProveedores";
 import LocalComprasCuentas from "./pages/local/LocalComprasCuentas";
@@ -220,6 +221,7 @@ const App = () => (
               <Route path="stock/cmv" element={<LocalCMVReport />} />
               
               {/* COMPRAS */}
+              <Route path="compras/pedidos-del-dia" element={<LocalPedidosDelDia />} />
               <Route path="compras/factura" element={<LocalStockFactura />} />
               <Route path="compras/proveedores" element={<LocalComprasProveedores />} />
               <Route path="compras/cuentas" element={<LocalComprasCuentas />} />
