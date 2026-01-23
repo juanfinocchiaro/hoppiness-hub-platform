@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import {
   Table,
   TableBody,
@@ -13,7 +16,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, Search, Edit, Phone, Mail, Store } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Plus, Search, Edit, Phone, Mail, Store, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Supplier = Tables<'suppliers'>;
@@ -22,39 +33,141 @@ interface SupplierWithBranches extends Supplier {
   branchCount: number;
 }
 
-export default function Suppliers() {
-  const [suppliers, setSuppliers] = useState<SupplierWithBranches[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+interface SupplierFormData {
+  name: string;
+  contact_name: string;
+  phone: string;
+  email: string;
+  address: string;
+  notes: string;
+  is_active: boolean;
+}
 
-  useEffect(() => {
-    async function fetchData() {
-      const { data: suppliersData } = await supabase
+const defaultFormData: SupplierFormData = {
+  name: '',
+  contact_name: '',
+  phone: '',
+  email: '',
+  address: '',
+  notes: '',
+  is_active: true,
+};
+
+export default function Suppliers() {
+  const [search, setSearch] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [formData, setFormData] = useState<SupplierFormData>(defaultFormData);
+  
+  const queryClient = useQueryClient();
+
+  // Fetch suppliers with branch count
+  const { data: suppliers = [], isLoading } = useQuery({
+    queryKey: ['admin-suppliers'],
+    queryFn: async () => {
+      const { data: suppliersData, error } = await supabase
         .from('suppliers')
         .select('*')
         .order('name');
 
-      if (suppliersData) {
-        const suppliersWithBranches = await Promise.all(
-          suppliersData.map(async (supplier) => {
-            const { count } = await supabase
-              .from('branch_suppliers')
-              .select('id', { count: 'exact', head: true })
-              .eq('supplier_id', supplier.id);
+      if (error) throw error;
+      if (!suppliersData) return [];
 
-            return {
-              ...supplier,
-              branchCount: count || 0,
-            };
+      // Get branch counts
+      const suppliersWithBranches = await Promise.all(
+        suppliersData.map(async (supplier) => {
+          const { count } = await supabase
+            .from('branch_suppliers')
+            .select('id', { count: 'exact', head: true })
+            .eq('supplier_id', supplier.id);
+
+          return {
+            ...supplier,
+            branchCount: count || 0,
+          } as SupplierWithBranches;
+        })
+      );
+
+      return suppliersWithBranches;
+    },
+  });
+
+  // Create/Update mutation
+  const saveMutation = useMutation({
+    mutationFn: async (data: SupplierFormData) => {
+      if (editingSupplier) {
+        const { error } = await supabase
+          .from('suppliers')
+          .update({
+            name: data.name,
+            contact_name: data.contact_name || null,
+            phone: data.phone || null,
+            email: data.email || null,
+            address: data.address || null,
+            notes: data.notes || null,
+            is_active: data.is_active,
           })
-        );
-
-        setSuppliers(suppliersWithBranches);
+          .eq('id', editingSupplier.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('suppliers')
+          .insert({
+            name: data.name,
+            contact_name: data.contact_name || null,
+            phone: data.phone || null,
+            email: data.email || null,
+            address: data.address || null,
+            notes: data.notes || null,
+            is_active: data.is_active,
+          });
+        if (error) throw error;
       }
-      setLoading(false);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-suppliers'] });
+      toast.success(editingSupplier ? 'Proveedor actualizado' : 'Proveedor creado');
+      handleCloseDialog();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Error al guardar proveedor');
+    },
+  });
+
+  const handleOpenCreate = () => {
+    setEditingSupplier(null);
+    setFormData(defaultFormData);
+    setIsDialogOpen(true);
+  };
+
+  const handleOpenEdit = (supplier: Supplier) => {
+    setEditingSupplier(supplier);
+    setFormData({
+      name: supplier.name,
+      contact_name: supplier.contact_name || '',
+      phone: supplier.phone || '',
+      email: supplier.email || '',
+      address: supplier.address || '',
+      notes: supplier.notes || '',
+      is_active: supplier.is_active,
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setEditingSupplier(null);
+    setFormData(defaultFormData);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim()) {
+      toast.error('El nombre es obligatorio');
+      return;
     }
-    fetchData();
-  }, []);
+    saveMutation.mutate(formData);
+  };
 
   const filteredSuppliers = suppliers.filter((supplier) =>
     supplier.name.toLowerCase().includes(search.toLowerCase())
@@ -65,14 +178,12 @@ export default function Suppliers() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Proveedores</h1>
-          <p className="text-muted-foreground">Gestión de proveedores por sucursal</p>
+          <p className="text-muted-foreground">Gestión de proveedores de la marca</p>
         </div>
-        <Link to="/admin/proveedores/nuevo">
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            Nuevo Proveedor
-          </Button>
-        </Link>
+        <Button onClick={handleOpenCreate}>
+          <Plus className="w-4 h-4 mr-2" />
+          Nuevo Proveedor
+        </Button>
       </div>
 
       {/* Search */}
@@ -98,7 +209,7 @@ export default function Suppliers() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {isLoading ? (
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="h-16 bg-muted rounded animate-pulse" />
@@ -107,12 +218,10 @@ export default function Suppliers() {
           ) : filteredSuppliers.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground mb-4">No hay proveedores registrados</p>
-              <Link to="/admin/proveedores/nuevo">
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Agregar Proveedor
-                </Button>
-              </Link>
+              <Button onClick={handleOpenCreate}>
+                <Plus className="w-4 h-4 mr-2" />
+                Agregar Proveedor
+              </Button>
             </div>
           ) : (
             <Table>
@@ -166,11 +275,13 @@ export default function Suppliers() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Link to={`/admin/proveedores/${supplier.id}`}>
-                        <Button variant="ghost" size="icon">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      </Link>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleOpenEdit(supplier)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -179,6 +290,101 @@ export default function Suppliers() {
           )}
         </CardContent>
       </Card>
+
+      {/* Create/Edit Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editingSupplier ? 'Editar Proveedor' : 'Nuevo Proveedor'}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nombre *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Nombre del proveedor"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="contact_name">Contacto</Label>
+                <Input
+                  id="contact_name"
+                  value={formData.contact_name}
+                  onChange={(e) => setFormData({ ...formData, contact_name: e.target.value })}
+                  placeholder="Nombre del contacto"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Teléfono</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="+54 11 1234-5678"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="email@proveedor.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="address">Dirección</Label>
+              <Input
+                id="address"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                placeholder="Dirección del proveedor"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notas</Label>
+              <Textarea
+                id="notes"
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Notas adicionales..."
+                rows={3}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="is_active">Activo</Label>
+              <Switch
+                id="is_active"
+                checked={formData.is_active}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={saveMutation.isPending}>
+                {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {editingSupplier ? 'Guardar Cambios' : 'Crear Proveedor'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
