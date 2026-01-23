@@ -265,6 +265,7 @@ export default function LocalLayout() {
       icon: ShoppingCart,
       show: lp.canUploadInvoice || lp.canViewSuppliers,
       items: [
+        { to: 'compras/pedidos-del-dia', label: 'Pedidos del Día', icon: Truck, show: lp.canUploadInvoice || lp.canViewSuppliers },
         { to: 'compras/factura', label: 'Cargar Factura', icon: FileText, show: lp.canUploadInvoice },
         { to: 'compras/proveedores', label: 'Proveedores', icon: Building2, show: lp.canViewSuppliers },
         { to: 'compras/cuentas', label: 'Cuentas Corrientes', icon: CreditCard, show: lp.canViewSupplierAccounts },
