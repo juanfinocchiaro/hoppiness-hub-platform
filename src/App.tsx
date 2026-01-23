@@ -96,6 +96,7 @@ import ChartOfAccounts from "./pages/admin/ChartOfAccounts";
 import Discounts from "./pages/admin/Discounts";
 import InvoiceScanner from "./pages/admin/InvoiceScanner";
 import IngredientSuppliers from "./pages/admin/IngredientSuppliers";
+import IngredientSupplierAssignment from "./pages/admin/IngredientSupplierAssignment";
 import Channels from "./pages/admin/Channels";
 import Messages from "./pages/admin/Messages";
 import Conciliacion from "./pages/admin/Conciliacion";
@@ -111,6 +112,7 @@ import LocalInventory from "./pages/local/LocalInventory";
 import LocalCMVReport from "./pages/local/LocalCMVReport";
 import LocalCustomers from "./pages/local/LocalCustomers";
 import LocalKDSSettings from "./pages/local/LocalKDSSettings";
+import LocalPedidosRecepcion from "./pages/local/LocalPedidosRecepcion";
 
 // Public Menu
 import MenuPublic from "./pages/MenuPublic";
@@ -222,6 +224,7 @@ const App = () => (
               
               {/* COMPRAS */}
               <Route path="compras/pedidos-del-dia" element={<LocalPedidosDelDia />} />
+              <Route path="compras/recepcion" element={<LocalPedidosRecepcion />} />
               <Route path="compras/factura" element={<LocalStockFactura />} />
               <Route path="compras/proveedores" element={<LocalComprasProveedores />} />
               <Route path="compras/cuentas" element={<LocalComprasCuentas />} />
@@ -323,7 +326,8 @@ const App = () => (
               
               {/* ABASTECIMIENTO */}
               <Route path="abastecimiento/proveedores" element={<Suppliers />} />
-              <Route path="abastecimiento/asignacion" element={<IngredientSuppliers />} />
+              <Route path="abastecimiento/asignacion" element={<IngredientSupplierAssignment />} />
+              <Route path="abastecimiento/control" element={<IngredientSuppliers />} />
               
               {/* PERSONAS */}
               <Route path="personas/equipo-central" element={<CentralTeam />} />
