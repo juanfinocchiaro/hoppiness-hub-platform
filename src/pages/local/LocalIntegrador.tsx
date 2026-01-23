@@ -56,7 +56,7 @@ interface PendingOrder {
   created_at: string;
   customer_name: string;
   customer_phone: string | null;
-  customer_address: string | null;
+  delivery_address: string | null;
   order_type: string | null;
   sales_channel: string | null;
   payment_method: string | null;
@@ -151,7 +151,7 @@ export default function LocalIntegrador() {
           created_at,
           customer_name,
           customer_phone,
-          customer_address,
+          delivery_address,
           order_type,
           sales_channel,
           payment_method,
@@ -636,8 +636,8 @@ function OrderCard({
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-muted-foreground" />
               <span className="capitalize">{order.order_type}</span>
-              {order.customer_address && (
-                <span className="text-muted-foreground">· {order.customer_address}</span>
+              {order.delivery_address && (
+                <span className="text-muted-foreground">· {order.delivery_address}</span>
               )}
             </div>
           )}
