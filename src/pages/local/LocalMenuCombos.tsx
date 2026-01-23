@@ -1,37 +1,18 @@
 import { useState } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-
-// Helper to avoid deep type instantiation with Supabase queries
-const db = supabase as any;
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useBranchCombos } from '@/hooks/useCombos';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { toast } from 'sonner';
-import { Search, Package, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { Search, Package, CheckCircle, AlertTriangle, XCircle, Percent } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
-
-interface ComboProduct {
-  product_id: string;
-  product_name: string;
-  quantity: number;
-  is_available: boolean;
-}
-
-interface Combo {
-  id: string;
-  name: string;
-  price: number;
-  is_available: boolean;
-  products: ComboProduct[];
-  status: 'available' | 'incomplete' | 'disabled';
-}
 
 export default function LocalMenuCombos() {
   const { branchId } = useParams();
@@ -40,64 +21,19 @@ export default function LocalMenuCombos() {
   
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Fetch combos (products marked as combo)
-  const { data: combos, isLoading } = useQuery({
-    queryKey: ['branch-combos', branchId],
-    queryFn: async (): Promise<Combo[]> => {
-      // Get products that are combos
-      const productsResult = await db.from('products').select('id, name, price, is_available').eq('is_combo', true).order('name');
-      
-      if (productsResult.error) throw productsResult.error;
-      const comboProducts = productsResult.data || [];
-      
-      // Get branch-specific availability
-      const branchResult = await db.from('branch_products').select('product_id, is_available').eq('branch_id', branchId!);
-      
-      const branchProducts = branchResult.data || [];
-      const branchAvailability = new Map<string, boolean>(
-        branchProducts.map((bp: any) => [bp.product_id, bp.is_available])
-      );
-      
-      // Process combos
-      const processedCombos: Combo[] = comboProducts.map((combo: any) => {
-        const comboAvailable = branchAvailability.get(combo.id) !== false && combo.is_available;
-        
-        return {
-          id: combo.id,
-          name: combo.name,
-          price: combo.price,
-          is_available: comboAvailable,
-          products: [],
-          status: comboAvailable ? 'available' : 'disabled' as const,
-        };
-      });
-      
-      return processedCombos;
-    },
-    enabled: !!branchId,
-  });
+  // Fetch combos using the new hook
+  const { data: combos, isLoading } = useBranchCombos(branchId || null);
 
-  // Toggle combo availability
+  // Toggle combo availability (we'll store in a branch_combos table or use a different approach)
+  // For now, since combos are global, we'll just show the status
   const toggleMutation = useMutation({
     mutationFn: async ({ comboId, isAvailable }: { comboId: string; isAvailable: boolean }) => {
-      const { error } = await supabase
-        .from('branch_products')
-        .upsert({
-          branch_id: branchId,
-          product_id: comboId,
-          is_available: isAvailable,
-        }, {
-          onConflict: 'branch_id,product_id',
-        });
-      
-      if (error) throw error;
+      // For future: implement branch_combos table for per-branch availability
+      // For now, just show a message
+      toast.info('La disponibilidad de combos se controla desde Mi Marca');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['branch-combos'] });
-      toast.success('Disponibilidad actualizada');
-    },
-    onError: () => {
-      toast.error('Error al actualizar');
     },
   });
 
@@ -109,7 +45,7 @@ export default function LocalMenuCombos() {
     }).format(amount);
   };
 
-  const getStatusBadge = (status: Combo['status']) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case 'available':
         return (
@@ -125,7 +61,7 @@ export default function LocalMenuCombos() {
             Incompleto
           </Badge>
         );
-      case 'disabled':
+      default:
         return (
           <Badge variant="secondary">
             <XCircle className="h-3 w-3 mr-1" />
@@ -144,7 +80,6 @@ export default function LocalMenuCombos() {
   // Stats
   const availableCount = combos?.filter(c => c.status === 'available').length || 0;
   const incompleteCount = combos?.filter(c => c.status === 'incomplete').length || 0;
-  const disabledCount = combos?.filter(c => c.status === 'disabled').length || 0;
 
   if (isLoading) {
     return (
@@ -158,7 +93,7 @@ export default function LocalMenuCombos() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold">Disponibilidad de Combos</h1>
+        <h1 className="text-2xl font-bold">Combos Disponibles</h1>
         <p className="text-muted-foreground">{branch?.name}</p>
       </div>
 
@@ -180,6 +115,7 @@ export default function LocalMenuCombos() {
             <CardContent className="py-12 text-center text-muted-foreground">
               <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No hay combos configurados</p>
+              <p className="text-sm mt-2">Los combos se crean desde Mi Marca → Combos</p>
             </CardContent>
           </Card>
         ) : (
@@ -194,22 +130,28 @@ export default function LocalMenuCombos() {
                       {getStatusBadge(combo.status)}
                     </div>
                     
+                    {combo.description && (
+                      <p className="text-sm text-muted-foreground ml-8 mb-3">
+                        {combo.description}
+                      </p>
+                    )}
+                    
                     <div className="ml-8 space-y-1 mb-3">
                       <p className="text-sm text-muted-foreground mb-2">Incluye:</p>
-                      {combo.products.map((product, idx) => (
+                      {combo.items.map((item, idx) => (
                         <div key={idx} className="flex items-center gap-2 text-sm">
-                          {product.is_available ? (
+                          {item.is_available ? (
                             <CheckCircle className="h-4 w-4 text-primary" />
                           ) : (
                             <XCircle className="h-4 w-4 text-destructive" />
                           )}
-                          <span className={!product.is_available ? 'line-through text-muted-foreground' : ''}>
-                            {product.quantity > 1 && `${product.quantity}x `}
-                            {product.product_name}
+                          <span className={!item.is_available ? 'line-through text-muted-foreground' : ''}>
+                            {item.quantity > 1 && `${item.quantity}x `}
+                            {item.product_name}
                           </span>
-                          {!product.is_available && (
+                          {!item.is_available && (
                             <Badge variant="destructive" className="text-xs">
-                              SIN STOCK
+                              NO DISPONIBLE
                             </Badge>
                           )}
                         </div>
@@ -217,48 +159,24 @@ export default function LocalMenuCombos() {
                     </div>
                     
                     <div className="ml-8">
-                      <p className="text-sm font-medium">
-                        Precio: {formatCurrency(combo.price)}
+                      <p className="text-lg font-bold text-primary">
+                        {formatCurrency(combo.base_price)}
                       </p>
                     </div>
                     
                     {combo.status === 'incomplete' && (
                       <div className="ml-8 mt-3 p-3 rounded-lg bg-warning/10 text-warning text-sm">
                         <AlertTriangle className="h-4 w-4 inline mr-2" />
-                        Este combo tiene productos no disponibles
-                      </div>
-                    )}
-                    
-                    {combo.status === 'disabled' && (
-                      <div className="ml-8 mt-3 p-3 rounded-lg bg-muted text-muted-foreground text-sm">
-                        <XCircle className="h-4 w-4 inline mr-2" />
-                        Desactivado manualmente
+                        Este combo tiene productos no disponibles en tu sucursal
                       </div>
                     )}
                   </div>
                   
-                  <div className="flex flex-col items-end gap-3">
-                    <Switch
-                      checked={combo.is_available}
-                      onCheckedChange={(checked) => 
-                        toggleMutation.mutate({ comboId: combo.id, isAvailable: checked })
-                      }
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {combo.is_available ? 'Activo' : 'Inactivo'}
-                    </span>
-                    
-                    {combo.status === 'incomplete' && combo.is_available && (
-                      <div className="flex gap-2 mt-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => toggleMutation.mutate({ comboId: combo.id, isAvailable: false })}
-                        >
-                          Desactivar
-                        </Button>
-                      </div>
-                    )}
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge variant="outline">
+                      <Percent className="h-3 w-3 mr-1" />
+                      Combo
+                    </Badge>
                   </div>
                 </div>
               </CardContent>
@@ -269,7 +187,7 @@ export default function LocalMenuCombos() {
 
       {/* Summary */}
       <div className="p-4 border rounded-lg bg-muted/30 text-sm text-muted-foreground">
-        Resumen: {combos?.length || 0} combos · {availableCount} disponibles · {incompleteCount} incompletos · {disabledCount} desactivados
+        Resumen: {combos?.length || 0} combos · {availableCount} disponibles · {incompleteCount} con productos faltantes
       </div>
     </div>
   );
