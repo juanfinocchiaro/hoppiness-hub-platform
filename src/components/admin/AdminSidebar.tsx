@@ -33,6 +33,7 @@ import {
   Search,
   Bell,
   Link as LinkIcon,
+  Layers,
 } from 'lucide-react';
 import NewBranchModal from './NewBranchModal';
 
@@ -146,6 +147,7 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
       icon: UtensilsCrossed,
       items: [
         { type: 'navigation', to: '/admin/catalogo/productos', icon: Package, label: 'Productos' },
+        { type: 'navigation', to: '/admin/catalogo/combos', icon: Layers, label: 'Combos' },
         { type: 'navigation', to: '/admin/catalogo/modificadores', icon: ChefHat, label: 'Modificadores' },
         { type: 'navigation', to: '/admin/catalogo/ingredientes', icon: Boxes, label: 'Ingredientes' },
         { type: 'navigation', to: '/admin/catalogo/descuentos', icon: Percent, label: 'Promociones y Descuentos' },
