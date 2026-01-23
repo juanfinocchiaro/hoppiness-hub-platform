@@ -63,6 +63,8 @@ import LocalComprasProveedores from "./pages/local/LocalComprasProveedores";
 import LocalComprasCuentas from "./pages/local/LocalComprasCuentas";
 import LocalComprasHistorial from "./pages/local/LocalComprasHistorial";
 import LocalMenuCombos from "./pages/local/LocalMenuCombos";
+import LocalAdelantos from "./pages/local/LocalAdelantos";
+import LocalApercibimientos from "./pages/local/LocalApercibimientos";
 import LocalReportesVentas from "./pages/local/LocalReportesVentas";
 import LocalReportesMovimientosStock from "./pages/local/LocalReportesMovimientosStock";
 // Attendance
@@ -88,6 +90,7 @@ import KDSPublic from "./pages/pos/KDSPublic";
 import SalesReports from "./pages/admin/SalesReports";
 import Customers from "./pages/admin/Customers";
 import Ingredients from "./pages/admin/Ingredients";
+import ChartOfAccounts from "./pages/admin/ChartOfAccounts";
 import Discounts from "./pages/admin/Discounts";
 import InvoiceScanner from "./pages/admin/InvoiceScanner";
 import IngredientSuppliers from "./pages/admin/IngredientSuppliers";
@@ -242,6 +245,8 @@ const App = () => (
               <Route path="equipo/horas" element={<LocalRRHHHoras />} />
               <Route path="equipo/liquidacion" element={<LocalRRHHLiquidacion />} />
               <Route path="equipo/sueldos" element={<LocalRRHHSueldos />} />
+              <Route path="equipo/adelantos" element={<LocalAdelantos />} />
+              <Route path="equipo/apercibimientos" element={<LocalApercibimientos />} />
               
               {/* FINANZAS */}
               <Route path="finanzas/movimientos" element={<LocalTransactions />} />
@@ -332,6 +337,7 @@ const App = () => (
               <Route path="configuracion/notificaciones" element={<Notifications />} />
               
               {/* OTROS */}
+              <Route path="finanzas/plan-cuentas" element={<ChartOfAccounts />} />
               <Route path="clientes" element={<Customers />} />
               <Route path="estado-sucursales" element={<BranchStatus />} />
               <Route path="canales" element={<Channels />} />
