@@ -42,6 +42,11 @@ interface ExpenseCategory {
   category_group: string;
 }
 
+interface CashRegister {
+  id: string;
+  name: string;
+}
+
 // Grupos de gastos (excluimos INGRESOS)
 const EXPENSE_GROUPS = [
   { value: 'GASTOS_OPERATIVOS', label: 'Gastos Operativos' },
@@ -75,6 +80,9 @@ export function QuickExpenseModal({
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryGroup, setNewCategoryGroup] = useState('GASTOS_OPERATIVOS');
   
+  // Cash register selection
+  const [selectedCashRegisterId, setSelectedCashRegisterId] = useState<string>('');
+  
   // Fetch expense categories
   const { data: categories = [] } = useQuery({
     queryKey: ['expense-categories'],
@@ -91,6 +99,23 @@ export function QuickExpenseModal({
       return data || [];
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+  
+  // Fetch cash registers for the branch
+  const { data: cashRegisters = [] } = useQuery({
+    queryKey: ['cash-registers-list', branchId],
+    queryFn: async (): Promise<CashRegister[]> => {
+      const { data, error } = await supabase
+        .from('cash_registers')
+        .select('id, name')
+        .eq('branch_id', branchId)
+        .eq('is_active', true)
+        .order('display_order');
+      
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 1000 * 60 * 5,
   });
   
   // Group categories for the selector
@@ -208,8 +233,12 @@ export function QuickExpenseModal({
       setSelectedCategoryId('');
       setShowNewCategory(false);
       setNewCategoryName('');
+      // Default to first cash register (usually "Caja de Venta")
+      if (cashRegisters.length > 0) {
+        setSelectedCashRegisterId(cashRegisters[0].id);
+      }
     }
-  }, [open]);
+  }, [open, cashRegisters]);
   
   const handleSubmit = () => {
     if (!concept || !amount) return;
@@ -419,6 +448,25 @@ export function QuickExpenseModal({
                 </div>
               </RadioGroup>
             </div>
+            
+            {/* Cash register selector - only when cash is selected */}
+            {paymentMethod === 'cash' && cashRegisters.length > 1 && (
+              <div className="space-y-2">
+                <Label>¿De qué caja sale?</Label>
+                <Select value={selectedCashRegisterId} onValueChange={setSelectedCashRegisterId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar caja..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cashRegisters.map(register => (
+                      <SelectItem key={register.id} value={register.id}>
+                        {register.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             
             <div className="space-y-2">
               <Label htmlFor="notes">Notas (opcional)</Label>

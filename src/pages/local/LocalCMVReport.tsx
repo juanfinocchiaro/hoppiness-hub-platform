@@ -55,7 +55,8 @@ interface CMVLineItem {
   ingredientId: string;
   ingredientName: string;
   unit: string;
-  costCategory: string;
+  categoryId: string | null;
+  categoryName: string;
   stockInicial: number;
   compras: number;
   comprasCosto: number;
@@ -66,27 +67,17 @@ interface CMVLineItem {
 }
 
 interface CategorySummary {
-  category: string;
-  label: string;
+  categoryId: string;
+  categoryName: string;
   totalConsumo: number;
   items: CMVLineItem[];
 }
 
-const COST_CATEGORIES: { value: string; label: string }[] = [
-  { value: 'alimentos', label: 'CMV Alimentos' },
-  { value: 'bebidas_alcohol', label: 'Bebidas con Alcohol' },
-  { value: 'bebidas_sin_alcohol', label: 'Bebidas sin Alcohol' },
-  { value: 'descartable_cocina', label: 'Descartable Cocina' },
-  { value: 'descartable_delivery', label: 'Descartable Delivery' },
-  { value: 'descartable_salon', label: 'Descartable Salón' },
-  { value: 'libreria', label: 'Librería' },
-  { value: 'limpieza', label: 'Limpieza' },
-  { value: 'insumo_clientes', label: 'Insumo Clientes' },
-  { value: 'insumo_personal', label: 'Insumo Personal' },
-];
-
-const getCategoryLabel = (value: string) => 
-  COST_CATEGORIES.find(c => c.value === value)?.label || value;
+interface IngredientCategory {
+  id: string;
+  name: string;
+  display_order: number;
+}
 
 export default function LocalCMVReport() {
   const { branch } = useOutletContext<ContextType>();
@@ -125,7 +116,18 @@ export default function LocalCMVReport() {
     const prevMonthEnd = endOfMonth(subMonths(monthStart, 1));
 
     try {
-      // 1. Get all ingredients
+      // 1. Get all ingredient categories
+      const { data: ingredientCategories } = await supabase
+        .from('ingredient_categories')
+        .select('id, name, display_order')
+        .eq('is_active', true)
+        .order('display_order');
+      
+      const categoriesMap = new Map<string, string>(
+        ingredientCategories?.map(c => [c.id, c.name]) || []
+      );
+
+      // 2. Get all ingredients with their category
       const { data: ingredients } = await supabase
         .from('ingredients')
         .select('*')
@@ -232,12 +234,16 @@ export default function LocalCMVReport() {
         // CMV Formula: Stock Inicial + Compras - Stock Final = Consumo
         const consumo = stockInicial + purchaseData.qty - stockFinal;
         const costoConsumo = consumo * unitCost;
+        
+        const categoryId = (ing as any).category_id || null;
+        const categoryName = categoryId ? (categoriesMap.get(categoryId) || 'Sin Categoría') : 'Sin Categoría';
 
         return {
           ingredientId: ing.id,
           ingredientName: ing.name,
           unit: ing.unit,
-          costCategory: (ing as any).cost_category || 'alimentos',
+          categoryId,
+          categoryName,
           stockInicial,
           compras: purchaseData.qty,
           comprasCosto: purchaseData.cost,
@@ -261,17 +267,17 @@ export default function LocalCMVReport() {
     const grouped = new Map<string, CMVLineItem[]>();
     
     cmvData.forEach(item => {
-      const cat = item.costCategory;
-      if (!grouped.has(cat)) {
-        grouped.set(cat, []);
+      const catKey = item.categoryId || 'sin-categoria';
+      if (!grouped.has(catKey)) {
+        grouped.set(catKey, []);
       }
-      grouped.get(cat)!.push(item);
+      grouped.get(catKey)!.push(item);
     });
 
     return Array.from(grouped.entries())
-      .map(([category, items]) => ({
-        category,
-        label: getCategoryLabel(category),
+      .map(([categoryId, items]) => ({
+        categoryId,
+        categoryName: items[0]?.categoryName || 'Sin Categoría',
         totalConsumo: items.reduce((sum, i) => sum + i.costoConsumo, 0),
         items: items.sort((a, b) => b.costoConsumo - a.costoConsumo),
       }))
@@ -301,7 +307,7 @@ export default function LocalCMVReport() {
   const handleExport = () => {
     const exportRows = categorySummaries.flatMap(cat => [
       // Category header row
-      { Categoría: cat.label, Ingrediente: '', Unidad: '', 'Stock Inicial': '', Compras: '', 'Stock Final': '', Consumo: '', 'Costo Unit.': '', 'Costo Total': formatPrice(cat.totalConsumo) },
+      { Categoría: cat.categoryName, Ingrediente: '', Unidad: '', 'Stock Inicial': '', Compras: '', 'Stock Final': '', Consumo: '', 'Costo Unit.': '', 'Costo Total': formatPrice(cat.totalConsumo) },
       // Item rows
       ...cat.items.map(item => ({
         Categoría: '',
@@ -391,11 +397,11 @@ export default function LocalCMVReport() {
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
-              <Package className="w-5 h-5 text-amber-600" />
+              <Package className="w-5 h-5 text-primary" />
               <div>
                 <p className="text-sm text-muted-foreground">CMV Alimentos</p>
                 <p className="text-2xl font-bold">
-                  {formatPrice(categorySummaries.find(c => c.category === 'alimentos')?.totalConsumo || 0)}
+                  {formatPrice(categorySummaries.find(c => c.categoryName.toLowerCase().includes('alimento'))?.totalConsumo || 0)}
                 </p>
               </div>
             </div>
@@ -404,13 +410,14 @@ export default function LocalCMVReport() {
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5 text-blue-600" />
+              <ShoppingCart className="w-5 h-5 text-primary" />
               <div>
                 <p className="text-sm text-muted-foreground">Bebidas</p>
                 <p className="text-2xl font-bold">
                   {formatPrice(
-                    (categorySummaries.find(c => c.category === 'bebidas_alcohol')?.totalConsumo || 0) +
-                    (categorySummaries.find(c => c.category === 'bebidas_sin_alcohol')?.totalConsumo || 0)
+                    categorySummaries
+                      .filter(c => c.categoryName.toLowerCase().includes('bebida'))
+                      .reduce((sum, c) => sum + c.totalConsumo, 0)
                   )}
                 </p>
               </div>
@@ -420,7 +427,7 @@ export default function LocalCMVReport() {
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
-              <ClipboardCheck className="w-5 h-5 text-green-600" />
+              <ClipboardCheck className="w-5 h-5 text-primary" />
               <div>
                 <p className="text-sm text-muted-foreground">Categorías</p>
                 <p className="text-2xl font-bold">{categorySummaries.length}</p>
@@ -450,15 +457,15 @@ export default function LocalCMVReport() {
             </div>
           ) : (
             categorySummaries.map(cat => {
-              const isExpanded = expandedCategories.has(cat.category);
+              const isExpanded = expandedCategories.has(cat.categoryId);
               const percentage = totalCMV > 0 ? (cat.totalConsumo / totalCMV) * 100 : 0;
 
               return (
-                <Collapsible key={cat.category} open={isExpanded}>
+                <Collapsible key={cat.categoryId} open={isExpanded}>
                   <CollapsibleTrigger asChild>
                     <div 
                       className="flex items-center justify-between p-4 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors"
-                      onClick={() => toggleCategory(cat.category)}
+                      onClick={() => toggleCategory(cat.categoryId)}
                     >
                       <div className="flex items-center gap-3">
                         {isExpanded ? (
@@ -467,7 +474,7 @@ export default function LocalCMVReport() {
                           <ChevronRight className="w-4 h-4" />
                         )}
                         <div>
-                          <p className="font-medium">{cat.label}</p>
+                          <p className="font-medium">{cat.categoryName}</p>
                           <p className="text-sm text-muted-foreground">
                             {cat.items.length} ingredientes
                           </p>
@@ -511,7 +518,7 @@ export default function LocalCMVReport() {
                             <TableCell className="text-right font-mono">
                               {formatNumber(item.stockInicial)}
                             </TableCell>
-                            <TableCell className="text-right font-mono text-green-600">
+                            <TableCell className="text-right font-mono text-emerald-600 dark:text-emerald-400">
                               +{formatNumber(item.compras)}
                             </TableCell>
                             <TableCell className="text-right font-mono">
