@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useUserRoles } from '@/hooks/useUserRoles';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Button } from '@/components/ui/button';
 import { ShoppingBag, Menu as MenuIcon, LogOut, LayoutDashboard, Store, User, ChevronDown, Package, Phone, Users2, Columns } from 'lucide-react';
 import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
@@ -21,7 +21,8 @@ import { useState, useMemo } from 'react';
 
 export function PublicHeader() {
   const { user, signOut } = useAuth();
-  const { canUseLocalPanel, canUseBrandPanel, canUseMiCuenta, loading: roleLoading } = useUserRoles();
+  const { canAccessLocalPanel, canAccessBrandPanel, loading: roleLoading } = usePermissionsV2();
+  const canUseMiCuenta = !!user; // Everyone logged in can use Mi Cuenta
   const location = useLocation();
   const [open, setOpen] = useState(false);
 
@@ -125,7 +126,7 @@ export function PublicHeader() {
                   </DropdownMenuItem>
                 )}
                 
-                {canUseLocalPanel && (
+                {canAccessLocalPanel && (
                   <DropdownMenuItem asChild>
                     <Link to="/local" className="cursor-pointer">
                       <Store className="w-4 h-4 mr-2" />
@@ -134,7 +135,7 @@ export function PublicHeader() {
                   </DropdownMenuItem>
                 )}
                 
-                {canUseBrandPanel && (
+                {canAccessBrandPanel && (
                   <DropdownMenuItem asChild>
                     <Link to="/admin" className="cursor-pointer">
                       <LayoutDashboard className="w-4 h-4 mr-2" />
@@ -143,7 +144,7 @@ export function PublicHeader() {
                   </DropdownMenuItem>
                 )}
                 
-                {canUseBrandPanel && canUseLocalPanel && (
+                {canAccessBrandPanel && canAccessLocalPanel && (
                   <DropdownMenuItem asChild>
                     {isConciliacionEmbed ? (
                       <a href="/conciliacion" target="_parent" className="cursor-pointer">
@@ -251,7 +252,7 @@ export function PublicHeader() {
                       </Link>
                     )}
                     
-                    {canUseLocalPanel && (
+                    {canAccessLocalPanel && (
                       <Link to="/local" onClick={() => setOpen(false)}>
                         <Button 
                           variant="ghost" 
@@ -265,7 +266,7 @@ export function PublicHeader() {
                       </Link>
                     )}
                     
-                    {canUseBrandPanel && (
+                    {canAccessBrandPanel && (
                       <Link to="/admin" onClick={() => setOpen(false)}>
                         <Button 
                           variant="ghost" 
@@ -279,7 +280,7 @@ export function PublicHeader() {
                       </Link>
                     )}
                     
-                    {canUseBrandPanel && canUseLocalPanel && (
+                    {canAccessBrandPanel && canAccessLocalPanel && (
                       <Button
                         asChild
                         variant="ghost"
