@@ -6123,6 +6123,51 @@ export type Database = {
           },
         ]
       }
+      supplier_order_rules: {
+        Row: {
+          created_at: string | null
+          delivery_day: number
+          delivery_time: string | null
+          id: string
+          is_active: boolean | null
+          order_shift_day: number
+          supplier_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          delivery_day: number
+          delivery_time?: string | null
+          id?: string
+          is_active?: boolean | null
+          order_shift_day: number
+          supplier_id: string
+        }
+        Update: {
+          created_at?: string | null
+          delivery_day?: number
+          delivery_time?: string | null
+          id?: string
+          is_active?: boolean | null
+          order_shift_day?: number
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_order_rules_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "supplier_order_rules_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_orders: {
         Row: {
           branch_id: string
