@@ -105,6 +105,8 @@ import CentralTeam from "./pages/admin/CentralTeam";
 import BranchDetail from "./pages/admin/BranchDetail";
 import Integrations from "./pages/admin/Integrations";
 import Notifications from "./pages/admin/Notifications";
+import MandatoryProducts from "./pages/admin/MandatoryProducts";
+import PurchaseAlerts from "./pages/admin/PurchaseAlerts";
 
 // Local Stock & Inventory
 import LocalStock from "./pages/local/LocalStock";
@@ -326,6 +328,9 @@ const App = () => (
               
               {/* ABASTECIMIENTO */}
               <Route path="abastecimiento/proveedores" element={<Suppliers />} />
+              <Route path="abastecimiento/obligatorios" element={<MandatoryProducts />} />
+              <Route path="abastecimiento/alertas" element={<PurchaseAlerts />} />
+              {/* Legacy routes */}
               <Route path="abastecimiento/asignacion" element={<IngredientSupplierAssignment />} />
               <Route path="abastecimiento/control" element={<IngredientSuppliers />} />
               
