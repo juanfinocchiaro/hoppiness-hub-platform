@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -52,7 +53,10 @@ import {
   Edit,
   Trash2,
   AlertTriangle,
-  FolderPlus
+  FolderPlus,
+  Settings,
+  Phone,
+  Mail,
 } from 'lucide-react';
 
 interface Category {
@@ -86,6 +90,12 @@ interface MandatoryProduct {
 interface Supplier {
   id: string;
   name: string;
+  phone?: string | null;
+  whatsapp?: string | null;
+  email?: string | null;
+  address?: string | null;
+  cuit?: string | null;
+  notes?: string | null;
 }
 
 interface Ingredient {
@@ -107,6 +117,9 @@ export default function MandatoryProducts() {
   const [categoryDialog, setCategoryDialog] = useState(false);
   const [productDialog, setProductDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{ type: 'category' | 'product'; id: string } | null>(null);
+  const [suppliersModal, setSuppliersModal] = useState(false);
+  const [newSupplierDialog, setNewSupplierDialog] = useState(false);
+  const [editingSupplierInline, setEditingSupplierInline] = useState<Supplier | null>(null);
   
   // Form state
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -144,6 +157,17 @@ export default function MandatoryProducts() {
     notes: '',
   });
 
+  // New supplier form
+  const [newSupplierForm, setNewSupplierForm] = useState({
+    name: '',
+    phone: '',
+    whatsapp: '',
+    email: '',
+    address: '',
+    cuit: '',
+    notes: '',
+  });
+
   // Queries
   const { data: categories = [], isLoading: loadingCategories } = useQuery({
     queryKey: ['mandatory-categories'],
@@ -173,12 +197,13 @@ export default function MandatoryProducts() {
     },
   });
 
-  const { data: suppliers = [] } = useQuery({
-    queryKey: ['suppliers-list'],
+  const { data: suppliers = [], refetch: refetchSuppliers } = useQuery({
+    queryKey: ['brand-suppliers'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('suppliers')
-        .select('id, name')
+        .select('id, name, phone, whatsapp, email, address, cuit, notes')
+        .eq('scope', 'brand')
         .eq('is_active', true)
         .order('name');
       if (error) throw error;
@@ -281,6 +306,66 @@ export default function MandatoryProducts() {
     onError: () => toast.error('Error al eliminar'),
   });
 
+  // Create new supplier mutation
+  const createSupplierMutation = useMutation({
+    mutationFn: async (data: typeof newSupplierForm) => {
+      const { data: newSupplier, error } = await supabase
+        .from('suppliers')
+        .insert({
+          name: data.name,
+          phone: data.phone || null,
+          whatsapp: data.whatsapp || null,
+          email: data.email || null,
+          address: data.address || null,
+          cuit: data.cuit || null,
+          notes: data.notes || null,
+          scope: 'brand',
+          is_active: true,
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+      return newSupplier;
+    },
+    onSuccess: (newSupplier) => {
+      refetchSuppliers();
+      queryClient.invalidateQueries({ queryKey: ['brand-suppliers'] });
+      setNewSupplierDialog(false);
+      setNewSupplierForm({ name: '', phone: '', whatsapp: '', email: '', address: '', cuit: '', notes: '' });
+      // Auto-select the new supplier
+      setProductForm(f => ({ ...f, primary_supplier_id: newSupplier.id }));
+      toast.success('Proveedor creado');
+    },
+    onError: () => toast.error('Error al crear proveedor'),
+  });
+
+  // Update supplier mutation
+  const updateSupplierMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<typeof newSupplierForm> }) => {
+      const { error } = await supabase
+        .from('suppliers')
+        .update({
+          name: data.name,
+          phone: data.phone || null,
+          whatsapp: data.whatsapp || null,
+          email: data.email || null,
+          address: data.address || null,
+          cuit: data.cuit || null,
+          notes: data.notes || null,
+        })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchSuppliers();
+      queryClient.invalidateQueries({ queryKey: ['brand-suppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['mandatory-products'] });
+      setEditingSupplierInline(null);
+      toast.success('Proveedor actualizado');
+    },
+    onError: () => toast.error('Error al actualizar proveedor'),
+  });
+
   // Helpers
   const toggleCategory = (id: string) => {
     const next = new Set(expandedCategories);
@@ -345,6 +430,14 @@ export default function MandatoryProducts() {
   const getProductsByCategory = (categoryId: string) => 
     products.filter(p => p.category_id === categoryId);
 
+  // Get suppliers that are used in mandatory products
+  const usedSupplierIds = new Set([
+    ...products.map(p => p.primary_supplier_id),
+    ...products.filter(p => p.backup_supplier_id).map(p => p.backup_supplier_id!),
+  ]);
+
+  const suppliersInUse = suppliers.filter(s => usedSupplierIds.has(s.id));
+
   if (loadingCategories || loadingProducts) {
     return <div className="p-6">Cargando...</div>;
   }
@@ -359,6 +452,10 @@ export default function MandatoryProducts() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setSuppliersModal(true)}>
+            <Settings className="w-4 h-4 mr-2" />
+            Gestionar Proveedores
+          </Button>
           <Button variant="outline" onClick={() => { setEditingCategory(null); setCategoryForm({ name: '', description: '' }); setCategoryDialog(true); }}>
             <FolderPlus className="w-4 h-4 mr-2" />
             Nueva Categoría
@@ -372,17 +469,16 @@ export default function MandatoryProducts() {
 
       <PageHelp
         id="mandatory-products"
-        description="Acá definís qué productos deben comprar TODOS los locales a proveedores específicos. El sistema va a bloquear cualquier intento de cargar stock de estos productos si la factura no es del proveedor correcto."
+        description="Acá definís qué productos deben comprar TODOS los locales a proveedores específicos. Si necesitás agregar un proveedor nuevo, podés hacerlo al crear un producto."
         features={[
-          "Crear categorías de productos (Carnes, Panes, Salsas, etc.)",
-          "Definir qué proveedor es obligatorio para cada producto",
-          "Configurar proveedores de backup para emergencias",
-          "Establecer presentaciones (cajas de 72, múltiplos de 20, etc.)",
-          "Definir precios sugeridos para toda la red",
+          "Crear categorías y productos obligatorios",
+          "Asignar proveedor principal y backup",
+          "Gestionar datos de contacto de proveedores",
+          "Establecer presentaciones y precios sugeridos",
         ]}
         tips={[
-          "Si un producto tiene backup, podés elegir si el local puede usarlo siempre o solo en emergencias de stock",
-          "Cuando un local usa un proveedor backup, vas a recibir una alerta automática",
+          "Hacé clic en ⚙️ Gestionar Proveedores para editar teléfonos o emails",
+          "Los proveedores se crean automáticamente al agregar un producto nuevo",
           "Los locales NO pueden comprar estos productos a otros proveedores",
         ]}
         defaultCollapsed
@@ -471,17 +567,22 @@ export default function MandatoryProducts() {
                                 </div>
                                 {prod.backup_supplier && (
                                   <div className="flex items-center gap-2 mt-2">
-                                    <AlertTriangle className="w-3 h-3 text-amber-500" />
-                                    <span className="text-xs text-amber-600">
-                                      Backup: {prod.backup_supplier.name} ({prod.backup_product_name})
-                                    </span>
-                                    <Badge variant={BACKUP_CONDITIONS[prod.backup_allowed_condition].color as any} className="text-xs">
-                                      {BACKUP_CONDITIONS[prod.backup_allowed_condition].label}
+                                    <Badge 
+                                      variant={
+                                        prod.backup_allowed_condition === 'never' ? 'destructive' :
+                                        prod.backup_allowed_condition === 'stock_emergency' ? 'secondary' : 'outline'
+                                      }
+                                      className="text-xs"
+                                    >
+                                      Backup: {prod.backup_supplier.name}
                                     </Badge>
+                                    <span className="text-xs text-muted-foreground">
+                                      ({BACKUP_CONDITIONS[prod.backup_allowed_condition].label})
+                                    </span>
                                   </div>
                                 )}
                               </div>
-                              <div className="flex gap-1">
+                              <div className="flex items-center gap-1">
                                 <Button variant="ghost" size="icon" onClick={() => openEditProduct(prod)}>
                                   <Edit className="w-4 h-4" />
                                 </Button>
@@ -518,12 +619,12 @@ export default function MandatoryProducts() {
               <Input 
                 value={categoryForm.name}
                 onChange={(e) => setCategoryForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="Ej: Carnes, Panes, Salsas..."
+                placeholder="Ej: Carnes"
               />
             </div>
             <div>
               <Label>Descripción (opcional)</Label>
-              <Input 
+              <Textarea 
                 value={categoryForm.description}
                 onChange={(e) => setCategoryForm(f => ({ ...f, description: e.target.value }))}
                 placeholder="Descripción de la categoría"
@@ -546,7 +647,7 @@ export default function MandatoryProducts() {
       <Dialog open={productDialog} onOpenChange={setProductDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingProduct ? 'Editar Producto Obligatorio' : 'Nuevo Producto Obligatorio'}</DialogTitle>
+            <DialogTitle>{editingProduct ? 'Editar Producto' : 'Nuevo Producto Obligatorio'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -576,16 +677,28 @@ export default function MandatoryProducts() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Proveedor Principal *</Label>
+                <Label>Proveedor Obligatorio *</Label>
                 <Select 
                   value={productForm.primary_supplier_id}
-                  onValueChange={(v) => setProductForm(f => ({ ...f, primary_supplier_id: v }))}
+                  onValueChange={(v) => {
+                    if (v === '__create_new__') {
+                      setNewSupplierDialog(true);
+                    } else {
+                      setProductForm(f => ({ ...f, primary_supplier_id: v }));
+                    }
+                  }}
                 >
                   <SelectTrigger><SelectValue placeholder="Seleccionar proveedor" /></SelectTrigger>
                   <SelectContent>
                     {suppliers.map((s) => (
                       <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                     ))}
+                    <SelectItem value="__create_new__" className="text-primary font-medium">
+                      <span className="flex items-center gap-2">
+                        <Plus className="w-4 h-4" />
+                        Crear proveedor nuevo
+                      </span>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -609,41 +722,56 @@ export default function MandatoryProducts() {
             <div className="grid grid-cols-4 gap-4">
               <div>
                 <Label>Unidad</Label>
-                <Input 
+                <Select 
                   value={productForm.unit_name}
-                  onChange={(e) => setProductForm(f => ({ ...f, unit_name: e.target.value }))}
-                  placeholder="unidad, caja, kg..."
-                />
+                  onValueChange={(v) => setProductForm(f => ({ ...f, unit_name: v }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unidad">Unidad</SelectItem>
+                    <SelectItem value="caja">Caja</SelectItem>
+                    <SelectItem value="docena">Docena</SelectItem>
+                    <SelectItem value="kg">Kg</SelectItem>
+                    <SelectItem value="litro">Litro</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <Label>Unidades/Paquete</Label>
+                <Label>Unidades por paquete</Label>
                 <Input 
                   type="number"
+                  min={1}
                   value={productForm.units_per_package}
                   onChange={(e) => setProductForm(f => ({ ...f, units_per_package: parseInt(e.target.value) || 1 }))}
                 />
               </div>
               <div>
-                <Label>Múltiplos de</Label>
+                <Label>Múltiplos de compra</Label>
                 <Input 
                   type="number"
+                  min={1}
                   value={productForm.purchase_multiple}
                   onChange={(e) => setProductForm(f => ({ ...f, purchase_multiple: parseInt(e.target.value) || 1 }))}
                 />
               </div>
               <div>
-                <Label>Precio Sugerido</Label>
+                <Label>Precio sugerido</Label>
                 <Input 
                   type="number"
+                  min={0}
+                  step="0.01"
                   value={productForm.suggested_price}
                   onChange={(e) => setProductForm(f => ({ ...f, suggested_price: e.target.value }))}
-                  placeholder="$"
+                  placeholder="$0.00"
                 />
               </div>
             </div>
 
             <div className="border-t pt-4">
-              <h4 className="font-medium mb-3">Proveedor Backup (opcional)</h4>
+              <h4 className="font-medium mb-3 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-warning" />
+                Proveedor Backup (opcional)
+              </h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Proveedor Backup</Label>
@@ -663,39 +791,31 @@ export default function MandatoryProducts() {
                 {productForm.backup_supplier_id && (
                   <>
                     <div>
-                      <Label>Nombre del Producto Backup</Label>
+                      <Label>Nombre del producto backup</Label>
                       <Input 
                         value={productForm.backup_product_name}
                         onChange={(e) => setProductForm(f => ({ ...f, backup_product_name: e.target.value }))}
-                        placeholder="Nombre alternativo"
+                        placeholder="Ej: Pan Golden Armando"
                       />
                     </div>
                     <div>
-                      <Label>Unidades/Paquete Backup</Label>
-                      <Input 
-                        type="number"
-                        value={productForm.backup_units_per_package}
-                        onChange={(e) => setProductForm(f => ({ ...f, backup_units_per_package: parseInt(e.target.value) || 1 }))}
-                      />
-                    </div>
-                    <div>
-                      <Label>¿Cuándo se puede usar?</Label>
+                      <Label>Condición de uso</Label>
                       <Select 
                         value={productForm.backup_allowed_condition}
-                        onValueChange={(v: any) => setProductForm(f => ({ ...f, backup_allowed_condition: v }))}
+                        onValueChange={(v) => setProductForm(f => ({ ...f, backup_allowed_condition: v as any }))}
                       >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="never">Nunca (solo con autorización)</SelectItem>
+                          <SelectItem value="never">Nunca permitido</SelectItem>
                           <SelectItem value="stock_emergency">Solo emergencia de stock</SelectItem>
                           <SelectItem value="always">Siempre permitido</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="col-span-2 flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                       <Switch 
                         checked={productForm.alert_brand_on_backup}
-                        onCheckedChange={(v) => setProductForm(f => ({ ...f, alert_brand_on_backup: v }))}
+                        onCheckedChange={(c) => setProductForm(f => ({ ...f, alert_brand_on_backup: c }))}
                       />
                       <Label>Alertar a la marca cuando se use backup</Label>
                     </div>
@@ -705,11 +825,11 @@ export default function MandatoryProducts() {
             </div>
 
             <div>
-              <Label>Notas</Label>
+              <Label>Notas (opcional)</Label>
               <Textarea 
                 value={productForm.notes}
                 onChange={(e) => setProductForm(f => ({ ...f, notes: e.target.value }))}
-                placeholder="Notas adicionales..."
+                placeholder="Notas adicionales sobre el producto"
               />
             </div>
           </div>
@@ -725,6 +845,198 @@ export default function MandatoryProducts() {
         </DialogContent>
       </Dialog>
 
+      {/* New Supplier Dialog (inline from product form) */}
+      <Dialog open={newSupplierDialog} onOpenChange={setNewSupplierDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nuevo Proveedor</DialogTitle>
+            <DialogDescription>
+              Creá un nuevo proveedor de marca. Quedará disponible para todos los productos obligatorios.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Nombre *</Label>
+              <Input 
+                value={newSupplierForm.name}
+                onChange={(e) => setNewSupplierForm(f => ({ ...f, name: e.target.value }))}
+                placeholder="Ej: La 40 Congelados"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>CUIT</Label>
+                <Input 
+                  value={newSupplierForm.cuit}
+                  onChange={(e) => setNewSupplierForm(f => ({ ...f, cuit: e.target.value }))}
+                  placeholder="XX-XXXXXXXX-X"
+                />
+              </div>
+              <div>
+                <Label>Teléfono</Label>
+                <Input 
+                  value={newSupplierForm.phone}
+                  onChange={(e) => setNewSupplierForm(f => ({ ...f, phone: e.target.value }))}
+                  placeholder="351-5551234"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>WhatsApp</Label>
+                <Input 
+                  value={newSupplierForm.whatsapp}
+                  onChange={(e) => setNewSupplierForm(f => ({ ...f, whatsapp: e.target.value }))}
+                  placeholder="351-5551234"
+                />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <Input 
+                  value={newSupplierForm.email}
+                  onChange={(e) => setNewSupplierForm(f => ({ ...f, email: e.target.value }))}
+                  placeholder="proveedor@email.com"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Dirección</Label>
+              <Input 
+                value={newSupplierForm.address}
+                onChange={(e) => setNewSupplierForm(f => ({ ...f, address: e.target.value }))}
+                placeholder="Dirección del proveedor"
+              />
+            </div>
+            <div>
+              <Label>Notas</Label>
+              <Textarea 
+                value={newSupplierForm.notes}
+                onChange={(e) => setNewSupplierForm(f => ({ ...f, notes: e.target.value }))}
+                placeholder="Notas adicionales"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewSupplierDialog(false)}>Cancelar</Button>
+            <Button 
+              onClick={() => createSupplierMutation.mutate(newSupplierForm)}
+              disabled={!newSupplierForm.name || createSupplierMutation.isPending}
+            >
+              {createSupplierMutation.isPending ? 'Creando...' : 'Crear Proveedor'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Suppliers Management Modal */}
+      <Dialog open={suppliersModal} onOpenChange={setSuppliersModal}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Gestionar Proveedores de Marca</DialogTitle>
+            <DialogDescription>
+              Proveedores asignados a productos obligatorios. Editá sus datos de contacto.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {suppliersInUse.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                No hay proveedores asignados a productos obligatorios todavía
+              </p>
+            ) : (
+              suppliersInUse.map((supplier) => (
+                <div key={supplier.id} className="p-4 border rounded-lg">
+                  {editingSupplierInline?.id === supplier.id ? (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label>Nombre</Label>
+                          <Input 
+                            value={editingSupplierInline.name}
+                            onChange={(e) => setEditingSupplierInline(s => s ? { ...s, name: e.target.value } : null)}
+                          />
+                        </div>
+                        <div>
+                          <Label>CUIT</Label>
+                          <Input 
+                            value={editingSupplierInline.cuit || ''}
+                            onChange={(e) => setEditingSupplierInline(s => s ? { ...s, cuit: e.target.value } : null)}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label>Teléfono</Label>
+                          <Input 
+                            value={editingSupplierInline.phone || ''}
+                            onChange={(e) => setEditingSupplierInline(s => s ? { ...s, phone: e.target.value } : null)}
+                          />
+                        </div>
+                        <div>
+                          <Label>WhatsApp</Label>
+                          <Input 
+                            value={editingSupplierInline.whatsapp || ''}
+                            onChange={(e) => setEditingSupplierInline(s => s ? { ...s, whatsapp: e.target.value } : null)}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Email</Label>
+                        <Input 
+                          value={editingSupplierInline.email || ''}
+                          onChange={(e) => setEditingSupplierInline(s => s ? { ...s, email: e.target.value } : null)}
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setEditingSupplierInline(null)}>
+                          Cancelar
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          onClick={() => updateSupplierMutation.mutate({ 
+                            id: editingSupplierInline.id, 
+                            data: editingSupplierInline 
+                          })}
+                          disabled={updateSupplierMutation.isPending}
+                        >
+                          Guardar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">{supplier.name}</div>
+                        <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                          {supplier.phone && (
+                            <span className="flex items-center gap-1">
+                              <Phone className="w-3 h-3" />
+                              {supplier.phone}
+                            </span>
+                          )}
+                          {supplier.email && (
+                            <span className="flex items-center gap-1">
+                              <Mail className="w-3 h-3" />
+                              {supplier.email}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => setEditingSupplierInline(supplier)}>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Editar
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setSuppliersModal(false)}>Cerrar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteDialog} onOpenChange={() => setDeleteDialog(null)}>
         <AlertDialogContent>
@@ -732,13 +1044,13 @@ export default function MandatoryProducts() {
             <AlertDialogTitle>¿Eliminar {deleteDialog?.type === 'category' ? 'categoría' : 'producto'}?</AlertDialogTitle>
             <AlertDialogDescription>
               {deleteDialog?.type === 'category' 
-                ? 'Esto eliminará la categoría y todos sus productos asociados.'
+                ? 'Se eliminarán también todos los productos de esta categoría.'
                 : 'Esta acción no se puede deshacer.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => deleteDialog && deleteMutation.mutate(deleteDialog)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

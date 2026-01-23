@@ -77,7 +77,6 @@ import Products from "./pages/admin/Products";
 import ProductForm from "./pages/admin/ProductForm";
 import Branches from "./pages/admin/Branches";
 import BranchProducts from "./pages/admin/BranchProducts";
-import Suppliers from "./pages/admin/Suppliers";
 import Modifiers from "./pages/admin/Modifiers";
 import Combos from "./pages/admin/Combos";
 import ProfitLossReport from "./pages/admin/ProfitLossReport";
@@ -95,8 +94,6 @@ import Ingredients from "./pages/admin/Ingredients";
 import ChartOfAccounts from "./pages/admin/ChartOfAccounts";
 import Discounts from "./pages/admin/Discounts";
 import InvoiceScanner from "./pages/admin/InvoiceScanner";
-import IngredientSuppliers from "./pages/admin/IngredientSuppliers";
-import IngredientSupplierAssignment from "./pages/admin/IngredientSupplierAssignment";
 import Channels from "./pages/admin/Channels";
 import Messages from "./pages/admin/Messages";
 import Conciliacion from "./pages/admin/Conciliacion";
@@ -326,13 +323,13 @@ const App = () => (
               <Route path="catalogo/descuentos" element={<Discounts />} />
               <Route path="catalogo/combos" element={<Combos />} />
               
-              {/* ABASTECIMIENTO */}
-              <Route path="abastecimiento/proveedores" element={<Suppliers />} />
+              {/* ABASTECIMIENTO - Simplificado */}
               <Route path="abastecimiento/obligatorios" element={<MandatoryProducts />} />
               <Route path="abastecimiento/alertas" element={<PurchaseAlerts />} />
-              {/* Legacy routes */}
-              <Route path="abastecimiento/asignacion" element={<IngredientSupplierAssignment />} />
-              <Route path="abastecimiento/control" element={<IngredientSuppliers />} />
+              {/* Legacy redirects - proveedores ahora se gestionan desde Productos Obligatorios */}
+              <Route path="abastecimiento/proveedores" element={<Navigate to="/admin/abastecimiento/obligatorios" replace />} />
+              <Route path="abastecimiento/asignacion" element={<Navigate to="/admin/abastecimiento/obligatorios" replace />} />
+              <Route path="abastecimiento/control" element={<Navigate to="/admin/abastecimiento/obligatorios" replace />} />
               
               {/* PERSONAS */}
               <Route path="personas/equipo-central" element={<CentralTeam />} />
@@ -364,9 +361,9 @@ const App = () => (
               <Route path="modificadores" element={<AdminRedirect to="catalogo/modificadores" />} />
               <Route path="ingredientes" element={<AdminRedirect to="catalogo/ingredientes" />} />
               <Route path="descuentos" element={<AdminRedirect to="catalogo/descuentos" />} />
-              <Route path="proveedores" element={<AdminRedirect to="abastecimiento/proveedores" />} />
-              <Route path="proveedores/ingredientes" element={<AdminRedirect to="abastecimiento/asignacion" />} />
-              <Route path="control-proveedores" element={<AdminRedirect to="abastecimiento/asignacion" />} />
+              <Route path="proveedores" element={<Navigate to="/admin/abastecimiento/obligatorios" replace />} />
+              <Route path="proveedores/ingredientes" element={<Navigate to="/admin/abastecimiento/obligatorios" replace />} />
+              <Route path="control-proveedores" element={<Navigate to="/admin/abastecimiento/obligatorios" replace />} />
               <Route path="equipo/usuarios" element={<AdminRedirect to="personas/buscar" />} />
               <Route path="equipo/plantillas" element={<AdminRedirect to="personas/roles" />} />
               <Route path="equipo" element={<AdminRedirect to="personas/buscar" />} />

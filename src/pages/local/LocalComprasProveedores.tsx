@@ -24,8 +24,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { PageHelp } from '@/components/shared/PageHelp';
 import { toast } from 'sonner';
-import { Plus, Building2, Store, Search, Phone, Pencil, Trash2, DollarSign, ChevronRight } from 'lucide-react';
+import { Plus, Building2, Store, Search, Phone, Pencil, Trash2, Lock, MessageCircle } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
@@ -39,19 +40,19 @@ interface Supplier {
   email: string | null;
   address: string | null;
   cuit: string | null;
-  tax_condition: string | null;
   notes: string | null;
   scope: string;
   branch_id: string | null;
   category: string | null;
 }
 
-interface SupplierBalance {
-  supplier_id: string;
-  balance: number;
+interface BrandSupplierWithProducts extends Supplier {
+  products: string[];
 }
 
 const SUPPLIER_CATEGORIES = [
+  'Bebidas y gaseosas',
+  'Verduras y frutas',
   'Artículos de limpieza',
   'Descartables',
   'Mantenimiento',
@@ -78,18 +79,84 @@ export default function LocalComprasProveedores() {
     email: '',
     address: '',
     cuit: '',
-    tax_condition: '',
     notes: '',
   });
 
-  // Fetch suppliers
-  const { data: suppliers, isLoading: loadingSuppliers } = useQuery({
+  // Fetch brand suppliers (from mandatory products)
+  const { data: brandSuppliersData = [], isLoading: loadingBrand } = useQuery({
+    queryKey: ['brand-suppliers-with-products'],
+    queryFn: async () => {
+      // Get all mandatory products with their suppliers
+      const { data: mandatoryProducts, error: mpError } = await supabase
+        .from('brand_mandatory_products')
+        .select(`
+          product_name,
+          primary_supplier:suppliers!brand_mandatory_products_primary_supplier_id_fkey(id, name, phone, whatsapp, email, address, cuit, notes),
+          backup_supplier:suppliers!brand_mandatory_products_backup_supplier_id_fkey(id, name, phone, whatsapp, email, address, cuit, notes),
+          category:brand_mandatory_categories(name)
+        `)
+        .eq('is_active', true);
+      
+      if (mpError) throw mpError;
+
+      // Group products by supplier
+      const supplierMap = new Map<string, BrandSupplierWithProducts>();
+      
+      mandatoryProducts?.forEach((mp: any) => {
+        // Primary supplier
+        if (mp.primary_supplier) {
+          const existing = supplierMap.get(mp.primary_supplier.id);
+          if (existing) {
+            existing.products.push(mp.category?.name || mp.product_name);
+          } else {
+            supplierMap.set(mp.primary_supplier.id, {
+              ...mp.primary_supplier,
+              scope: 'brand',
+              branch_id: null,
+              contact_name: null,
+              category: null,
+              products: [mp.category?.name || mp.product_name],
+            });
+          }
+        }
+        // Backup supplier
+        if (mp.backup_supplier) {
+          const existing = supplierMap.get(mp.backup_supplier.id);
+          if (existing) {
+            if (!existing.products.includes('(backup)')) {
+              existing.products.push('(backup)');
+            }
+          } else {
+            supplierMap.set(mp.backup_supplier.id, {
+              ...mp.backup_supplier,
+              scope: 'brand',
+              branch_id: null,
+              contact_name: null,
+              category: null,
+              products: [`${mp.category?.name || mp.product_name} (backup)`],
+            });
+          }
+        }
+      });
+
+      // Remove duplicates from products array
+      supplierMap.forEach((supplier) => {
+        supplier.products = [...new Set(supplier.products)];
+      });
+
+      return Array.from(supplierMap.values());
+    },
+  });
+
+  // Fetch local suppliers
+  const { data: localSuppliers = [], isLoading: loadingLocal } = useQuery({
     queryKey: ['local-suppliers', branchId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('suppliers')
         .select('*')
-        .or(`scope.eq.brand,and(scope.eq.local,branch_id.eq.${branchId})`)
+        .eq('scope', 'local')
+        .eq('branch_id', branchId)
         .eq('is_active', true)
         .order('name');
       
@@ -103,18 +170,14 @@ export default function LocalComprasProveedores() {
         email: s.email,
         address: s.address,
         cuit: s.cuit,
-        tax_condition: null,
         notes: s.notes,
-        scope: s.scope || 'brand',
+        scope: 'local',
         branch_id: s.branch_id,
         category: s.category,
       })) as Supplier[];
     },
     enabled: !!branchId,
   });
-
-  // Balances - simplified since table may not exist
-  const balances: SupplierBalance[] = [];
 
   // Create supplier
   const createMutation = useMutation({
@@ -126,7 +189,6 @@ export default function LocalComprasProveedores() {
         email: data.email || null,
         address: data.address || null,
         cuit: data.cuit || null,
-        tax_condition: data.tax_condition || null,
         notes: data.notes || null,
         category: data.category || null,
         scope: 'local',
@@ -155,7 +217,6 @@ export default function LocalComprasProveedores() {
         email: data.email || null,
         address: data.address || null,
         cuit: data.cuit || null,
-        tax_condition: data.tax_condition || null,
         notes: data.notes || null,
         category: data.category || null,
       }).eq('id', id);
@@ -198,7 +259,6 @@ export default function LocalComprasProveedores() {
       email: '',
       address: '',
       cuit: '',
-      tax_condition: '',
       notes: '',
     });
   };
@@ -213,7 +273,6 @@ export default function LocalComprasProveedores() {
       email: supplier.email || '',
       address: supplier.address || '',
       cuit: supplier.cuit || '',
-      tax_condition: supplier.tax_condition || '',
       notes: supplier.notes || '',
     });
   };
@@ -231,24 +290,24 @@ export default function LocalComprasProveedores() {
     }
   };
 
-  const getBalance = (supplierId: string): number => {
-    return balances?.find(b => b.supplier_id === supplierId)?.balance || 0;
+  const openWhatsApp = (phone: string | null) => {
+    if (!phone) return;
+    const cleanPhone = phone.replace(/\D/g, '');
+    const fullPhone = cleanPhone.startsWith('54') ? cleanPhone : `54${cleanPhone}`;
+    window.open(`https://wa.me/${fullPhone}`, '_blank');
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  // Split suppliers by scope
-  const brandSuppliers = suppliers?.filter(s => s.scope === 'brand') || [];
-  const localSuppliers = suppliers?.filter(s => s.scope === 'local') || [];
-  
   // Apply search filter
-  const filterSuppliers = (list: Supplier[]) => {
+  const filterBrandSuppliers = (list: BrandSupplierWithProducts[]) => {
+    if (!searchQuery) return list;
+    const q = searchQuery.toLowerCase();
+    return list.filter(s => 
+      s.name.toLowerCase().includes(q) ||
+      s.products?.some(p => p.toLowerCase().includes(q))
+    );
+  };
+
+  const filterLocalSuppliers = (list: Supplier[]) => {
     if (!searchQuery) return list;
     const q = searchQuery.toLowerCase();
     return list.filter(s => 
@@ -257,9 +316,9 @@ export default function LocalComprasProveedores() {
     );
   };
 
-  const totalDebt = suppliers?.reduce((sum, s) => sum + getBalance(s.id), 0) || 0;
+  const isLoading = loadingBrand || loadingLocal;
 
-  if (loadingSuppliers) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-64" />
@@ -282,9 +341,25 @@ export default function LocalComprasProveedores() {
         </div>
         <Button onClick={() => setShowNewDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Nuevo Proveedor
+          Agregar Proveedor
         </Button>
       </div>
+
+      <PageHelp
+        id="local-suppliers"
+        description="Acá ves todos los proveedores con los que trabajás. Los de marca son obligatorios y no se pueden modificar. Los tuyos los podés agregar, editar o eliminar."
+        features={[
+          "Ver proveedores obligatorios de marca con su contacto",
+          "Agregar proveedores propios para productos libres",
+          "Contactar rápido por WhatsApp",
+        ]}
+        tips={[
+          "Los proveedores de marca los define la central de Hoppiness",
+          "Para productos como gaseosas, verduras o limpieza, agregá tus propios proveedores",
+          "No podés cargar facturas de productos obligatorios si el proveedor no coincide",
+        ]}
+        defaultCollapsed
+      />
 
       {/* Search */}
       <div className="relative max-w-md">
@@ -302,67 +377,90 @@ export default function LocalComprasProveedores() {
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Building2 className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Proveedores de Ingredientes</CardTitle>
+            <CardTitle className="text-lg">Proveedores de Marca</CardTitle>
           </div>
-          <CardDescription>Definidos por la marca · Solo lectura</CardDescription>
+          <CardDescription>
+            Estos proveedores son obligatorios para productos de marca. No podés modificarlos.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
-          {filterSuppliers(brandSuppliers).length === 0 ? (
+          {filterBrandSuppliers(brandSuppliersData).length === 0 ? (
             <p className="text-muted-foreground text-sm py-4 text-center">
-              No hay proveedores de marca
+              No hay proveedores de marca configurados
             </p>
           ) : (
-            filterSuppliers(brandSuppliers).map(supplier => (
+            filterBrandSuppliers(brandSuppliersData).map((supplier) => (
               <div 
                 key={supplier.id}
-                className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                className="flex items-center justify-between p-4 rounded-lg border bg-muted/30"
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    <Lock className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">{supplier.name}</span>
-                    {supplier.category && (
-                      <Badge variant="secondary" className="text-xs">
-                        {supplier.category}
-                      </Badge>
-                    )}
                   </div>
-                  <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    {supplier.products.map((product, idx) => (
+                      <Badge key={idx} variant="secondary" className="text-xs">
+                        {product}
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                     {supplier.phone && (
                       <span className="flex items-center gap-1">
                         <Phone className="h-3 w-3" />
                         {supplier.phone}
                       </span>
                     )}
-                    <span className="flex items-center gap-1">
-                      <DollarSign className="h-3 w-3" />
-                      Saldo: {formatCurrency(getBalance(supplier.id))}
-                    </span>
                   </div>
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                {supplier.whatsapp && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => openWhatsApp(supplier.whatsapp)}
+                    className="shrink-0"
+                  >
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    WhatsApp
+                  </Button>
+                )}
               </div>
             ))
           )}
+          <p className="text-xs text-muted-foreground text-center pt-2">
+            ⓘ No podés editar ni eliminar estos proveedores. Son definidos por la marca.
+          </p>
         </CardContent>
       </Card>
 
       {/* Local Suppliers Section */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <Store className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Proveedores del Local</CardTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Store className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Mis Proveedores</CardTitle>
+            </div>
+            <Button size="sm" onClick={() => setShowNewDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Agregar
+            </Button>
           </div>
-          <CardDescription>Agregados por este local · Editables</CardDescription>
+          <CardDescription>Proveedores que agregaste para tu local</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
-          {filterSuppliers(localSuppliers).length === 0 ? (
-            <p className="text-muted-foreground text-sm py-4 text-center">
-              No hay proveedores locales
-            </p>
+          {filterLocalSuppliers(localSuppliers).length === 0 ? (
+            <div className="text-center py-8">
+              <Store className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+              <p className="text-muted-foreground">No tenés proveedores locales todavía</p>
+              <Button variant="link" onClick={() => setShowNewDialog(true)}>
+                Agregar tu primer proveedor
+              </Button>
+            </div>
           ) : (
-            filterSuppliers(localSuppliers).map(supplier => (
+            filterLocalSuppliers(localSuppliers).map(supplier => (
               <div 
                 key={supplier.id}
                 className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
@@ -384,13 +482,18 @@ export default function LocalComprasProveedores() {
                         {supplier.phone}
                       </span>
                     )}
-                    <span className="flex items-center gap-1">
-                      <DollarSign className="h-3 w-3" />
-                      Saldo: {formatCurrency(getBalance(supplier.id))}
-                    </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {supplier.whatsapp && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => openWhatsApp(supplier.whatsapp)}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button 
                     variant="ghost" 
                     size="icon"
@@ -405,21 +508,12 @@ export default function LocalComprasProveedores() {
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 </div>
               </div>
             ))
           )}
         </CardContent>
       </Card>
-
-      {/* Summary */}
-      <div className="p-4 border rounded-lg bg-muted/30">
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Total a pagar:</span>
-          <span className="text-xl font-bold">{formatCurrency(totalDebt)}</span>
-        </div>
-      </div>
 
       {/* New/Edit Supplier Dialog */}
       <Dialog 
@@ -440,8 +534,8 @@ export default function LocalComprasProveedores() {
             <DialogDescription>
               {!editingSupplier && (
                 <>
-                  Este proveedor será exclusivo de este local.
-                  Para proveedores de ingredientes, contactá a la marca.
+                  Este proveedor será exclusivo de tu local.
+                  Para productos obligatorios (carne, pan, salsas), usá los proveedores de marca.
                 </>
               )}
             </DialogDescription>
@@ -454,20 +548,21 @@ export default function LocalComprasProveedores() {
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ej: Limpieza Total"
+                placeholder="Ej: Distribuidora Norte"
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="category">Rubro / Categoría</Label>
               <Select
-                value={formData.category}
-                onValueChange={(value) => setFormData({ ...formData, category: value })}
+                value={formData.category || '__none__'}
+                onValueChange={(value) => setFormData({ ...formData, category: value === '__none__' ? '' : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar categoría" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__none__">Sin categoría</SelectItem>
                   {SUPPLIER_CATEGORIES.map(cat => (
                     <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                   ))}
@@ -508,41 +603,23 @@ export default function LocalComprasProveedores() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="cuit">CUIT</Label>
+              <Input
+                id="cuit"
+                value={formData.cuit}
+                onChange={(e) => setFormData({ ...formData, cuit: e.target.value })}
+                placeholder="XX-XXXXXXXX-X"
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="address">Dirección</Label>
               <Input
                 id="address"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                placeholder="Dirección del proveedor"
               />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="cuit">CUIT</Label>
-                <Input
-                  id="cuit"
-                  value={formData.cuit}
-                  onChange={(e) => setFormData({ ...formData, cuit: e.target.value })}
-                  placeholder="XX-XXXXXXXX-X"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tax_condition">Condición IVA</Label>
-                <Select
-                  value={formData.tax_condition}
-                  onValueChange={(value) => setFormData({ ...formData, tax_condition: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="responsable_inscripto">Resp. Inscripto</SelectItem>
-                    <SelectItem value="monotributista">Monotributista</SelectItem>
-                    <SelectItem value="exento">Exento</SelectItem>
-                    <SelectItem value="consumidor_final">Consumidor Final</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
 
             <div className="space-y-2">
@@ -552,7 +629,7 @@ export default function LocalComprasProveedores() {
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 placeholder="Notas adicionales..."
-                rows={2}
+                rows={3}
               />
             </div>
           </div>
@@ -572,7 +649,7 @@ export default function LocalComprasProveedores() {
               onClick={handleSubmit}
               disabled={createMutation.isPending || updateMutation.isPending}
             >
-              {editingSupplier ? 'Guardar Cambios' : 'Crear Proveedor'}
+              {(createMutation.isPending || updateMutation.isPending) ? 'Guardando...' : 'Guardar'}
             </Button>
           </DialogFooter>
         </DialogContent>

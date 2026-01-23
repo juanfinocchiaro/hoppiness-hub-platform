@@ -154,13 +154,12 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
       ],
     });
 
-    // Abastecimiento (Coordinadores también ven)
+    // Abastecimiento (Coordinadores también ven) - Simplificado
     sections.push({
       id: 'abastecimiento',
       label: 'Abastecimiento',
       icon: Truck,
       items: [
-        { type: 'navigation', to: '/admin/abastecimiento/proveedores', icon: Truck, label: 'Proveedores' },
         { type: 'navigation', to: '/admin/abastecimiento/obligatorios', icon: Shield, label: 'Productos Obligatorios' },
         { type: 'navigation', to: '/admin/abastecimiento/alertas', icon: Bell, label: 'Alertas de Compras' },
       ],
