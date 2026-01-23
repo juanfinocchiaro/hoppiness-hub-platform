@@ -11,7 +11,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, Receipt, Banknote, CreditCard } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Loader2, Receipt, Banknote, CreditCard, Plus, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { SupervisorPinDialog } from './SupervisorPinDialog';
 import { OperatorInfo } from '@/hooks/useOperatorVerification';
@@ -26,6 +35,21 @@ interface QuickExpenseModalProps {
   shiftId?: string;
   pinThreshold?: number;
 }
+
+interface ExpenseCategory {
+  id: string;
+  name: string;
+  category_group: string;
+}
+
+// Grupos de gastos (excluimos INGRESOS)
+const EXPENSE_GROUPS = [
+  { value: 'GASTOS_OPERATIVOS', label: 'Gastos Operativos' },
+  { value: 'ESTRUCTURA', label: 'Estructura' },
+  { value: 'CMV', label: 'CMV (Costo de Mercadería)' },
+  { value: 'RRHH', label: 'Recursos Humanos' },
+  { value: 'IMPUESTOS', label: 'Impuestos y Financieros' },
+];
 
 export function QuickExpenseModal({
   open,
@@ -43,6 +67,40 @@ export function QuickExpenseModal({
   const [notes, setNotes] = useState('');
   const [showPinDialog, setShowPinDialog] = useState(false);
   const [isSupervisor, setIsSupervisor] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  
+  // Category selection
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryGroup, setNewCategoryGroup] = useState('GASTOS_OPERATIVOS');
+  
+  // Fetch expense categories
+  const { data: categories = [] } = useQuery({
+    queryKey: ['expense-categories'],
+    queryFn: async (): Promise<ExpenseCategory[]> => {
+      const { data, error } = await supabase
+        .from('transaction_categories')
+        .select('id, name, category_group')
+        .eq('is_active', true)
+        .neq('category_group', 'INGRESOS')
+        .order('category_group')
+        .order('name');
+      
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+  
+  // Group categories for the selector
+  const categoriesByGroup = categories.reduce((acc, cat) => {
+    if (!acc[cat.category_group]) {
+      acc[cat.category_group] = [];
+    }
+    acc[cat.category_group].push(cat);
+    return acc;
+  }, {} as Record<string, ExpenseCategory[]>);
   
   // Verificar si el usuario es encargado o superior usando user_roles_v2
   useEffect(() => {
@@ -59,10 +117,42 @@ export function QuickExpenseModal({
         const isBrandSupervisor = ['superadmin', 'coordinador'].includes(data.brand_role || '');
         const isLocalSupervisor = ['franquiciado', 'encargado'].includes(data.local_role || '');
         setIsSupervisor(isBrandSupervisor || isLocalSupervisor);
+        setIsAdmin(data.brand_role === 'superadmin' || data.local_role === 'franquiciado');
       }
     }
     checkRole();
   }, [user]);
+  
+  // Create new category mutation
+  const createCategory = useMutation({
+    mutationFn: async () => {
+      if (!newCategoryName.trim()) throw new Error('Nombre requerido');
+      
+      const { data, error } = await supabase
+        .from('transaction_categories')
+        .insert({
+          name: newCategoryName.trim(),
+          category_group: newCategoryGroup,
+          is_active: true,
+        })
+        .select('id, name, category_group')
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (newCat) => {
+      queryClient.invalidateQueries({ queryKey: ['expense-categories'] });
+      setSelectedCategoryId(newCat.id);
+      setShowNewCategory(false);
+      setNewCategoryName('');
+      toast.success(`Categoría "${newCat.name}" creada`);
+    },
+    onError: (error) => {
+      console.error('Error creating category:', error);
+      toast.error('Error al crear la categoría');
+    },
+  });
   
   const createExpense = useMutation({
     mutationFn: async (authorizedBy?: string) => {
@@ -73,6 +163,11 @@ export function QuickExpenseModal({
       
       // Si es efectivo, crear movimiento de caja directamente
       if (isCash && shiftId) {
+        const selectedCategory = categories.find(c => c.id === selectedCategoryId);
+        const conceptWithCategory = selectedCategory 
+          ? `[${selectedCategory.name}] ${concept}`
+          : concept;
+        
         const { error: movError } = await supabase
           .from('cash_register_movements')
           .insert({
@@ -80,7 +175,7 @@ export function QuickExpenseModal({
             shift_id: shiftId,
             type: 'egreso',
             amount: amountNum,
-            concept,
+            concept: conceptWithCategory,
             payment_method: 'efectivo',
             recorded_by: user.id,
             operated_by: user.id,
@@ -110,6 +205,9 @@ export function QuickExpenseModal({
       setAmount('');
       setPaymentMethod('cash');
       setNotes('');
+      setSelectedCategoryId('');
+      setShowNewCategory(false);
+      setNewCategoryName('');
     }
   }, [open]);
   
@@ -141,6 +239,10 @@ export function QuickExpenseModal({
     }).format(num);
   };
   
+  const getGroupLabel = (groupValue: string) => {
+    return EXPENSE_GROUPS.find(g => g.value === groupValue)?.label || groupValue;
+  };
+  
   const amountNum = parseFloat(amount) || 0;
   const needsPin = !isSupervisor && amountNum >= pinThreshold;
   
@@ -161,6 +263,93 @@ export function QuickExpenseModal({
           </DialogHeader>
           
           <div className="space-y-4 py-4">
+            {/* Category selector */}
+            <div className="space-y-2">
+              <Label>Tipo de gasto</Label>
+              {!showNewCategory ? (
+                <div className="flex gap-2">
+                  <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Seleccionar categoría..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EXPENSE_GROUPS.map(group => {
+                        const groupCats = categoriesByGroup[group.value];
+                        if (!groupCats || groupCats.length === 0) return null;
+                        return (
+                          <SelectGroup key={group.value}>
+                            <SelectLabel>{group.label}</SelectLabel>
+                            {groupCats.map(cat => (
+                              <SelectItem key={cat.id} value={cat.id}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  {isAdmin && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setShowNewCategory(true)}
+                      title="Crear nuevo tipo de gasto"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2 p-3 border rounded-lg bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">Nueva categoría</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowNewCategory(false)}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                  <Input
+                    placeholder="Nombre del tipo de gasto"
+                    value={newCategoryName}
+                    onChange={e => setNewCategoryName(e.target.value)}
+                    autoFocus
+                  />
+                  <Select value={newCategoryGroup} onValueChange={setNewCategoryGroup}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EXPENSE_GROUPS.map(group => (
+                        <SelectItem key={group.value} value={group.value}>
+                          {group.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => createCategory.mutate()}
+                    disabled={!newCategoryName.trim() || createCategory.isPending}
+                  >
+                    {createCategory.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4 mr-2" />
+                    )}
+                    Crear y seleccionar
+                  </Button>
+                </div>
+              )}
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="concept">Concepto</Label>
               <Input
