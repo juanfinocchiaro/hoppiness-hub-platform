@@ -160,9 +160,9 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
       label: 'Abastecimiento',
       icon: Truck,
       items: [
-        { type: 'navigation', to: '/admin/abastecimiento/proveedores', icon: Truck, label: 'Proveedores Autorizados' },
-        { type: 'navigation', to: '/admin/abastecimiento/asignacion', icon: Boxes, label: 'Asignar a Ingredientes' },
-        { type: 'navigation', to: '/admin/abastecimiento/control', icon: Shield, label: 'Control de Compras' },
+        { type: 'navigation', to: '/admin/abastecimiento/proveedores', icon: Truck, label: 'Proveedores' },
+        { type: 'navigation', to: '/admin/abastecimiento/obligatorios', icon: Shield, label: 'Productos Obligatorios' },
+        { type: 'navigation', to: '/admin/abastecimiento/alertas', icon: Bell, label: 'Alertas de Compras' },
       ],
     });
 

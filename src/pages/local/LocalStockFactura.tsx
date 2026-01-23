@@ -9,10 +9,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { FileText, Upload, Plus, Trash2, ArrowLeft } from 'lucide-react';
+import { FileText, Upload, Plus, Trash2, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Tables } from '@/integrations/supabase/types';
+import { useMandatoryProducts, validateSupplierForIngredient, createPurchaseAlert } from '@/hooks/useMandatoryProducts';
 
 type Branch = Tables<'branches'>;
 
@@ -38,11 +48,15 @@ interface Ingredient {
 
 export default function LocalStockFactura() {
   const { branch } = useOutletContext<{ branch: Branch }>();
+  const { data: mandatoryProducts = [] } = useMandatoryProducts();
   
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  
+  // Validation state
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Form state
   const [supplierId, setSupplierId] = useState('');
@@ -133,6 +147,44 @@ export default function LocalStockFactura() {
     if (!supplierId || !total) {
       toast.error('Proveedor y total son requeridos');
       return;
+    }
+
+    // Validate mandatory products if items are included
+    if (includeItems && items.length > 0 && mandatoryProducts.length > 0) {
+      const validItems = items.filter(item => item.ingredient_id && item.quantity > 0);
+      const alertsToCreate: Array<{ mandatoryProductId: string; details?: Record<string, any> }> = [];
+      
+      for (const item of validItems) {
+        const validation = await validateSupplierForIngredient(
+          item.ingredient_id,
+          supplierId,
+          branch.id,
+          mandatoryProducts
+        );
+        
+        if (!validation.isValid) {
+          setValidationError(validation.blockReason || 'Proveedor no autorizado para este producto');
+          return;
+        }
+        
+        if (validation.requiresAlert && validation.mandatoryProduct) {
+          alertsToCreate.push({
+            mandatoryProductId: validation.mandatoryProduct.id,
+            details: { ingredient_name: item.ingredient_name, quantity: item.quantity }
+          });
+        }
+      }
+      
+      // Create alerts for backup usage
+      for (const alert of alertsToCreate) {
+        await createPurchaseAlert(
+          branch.id,
+          'backup_used',
+          alert.mandatoryProductId,
+          supplierId,
+          alert.details
+        );
+      }
     }
 
     setSaving(true);
@@ -528,6 +580,26 @@ export default function LocalStockFactura() {
           </Button>
         </div>
       </form>
+
+      {/* Validation Error Dialog */}
+      <AlertDialog open={!!validationError} onOpenChange={() => setValidationError(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              No se puede guardar
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-left whitespace-pre-line">
+              {validationError}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setValidationError(null)}>
+              Entendido
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

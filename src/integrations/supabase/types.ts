@@ -1162,6 +1162,215 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_mandatory_categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          sort_order: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          sort_order?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
+      brand_mandatory_products: {
+        Row: {
+          alert_brand_on_backup: boolean | null
+          backup_allowed_condition: string | null
+          backup_product_name: string | null
+          backup_supplier_id: string | null
+          backup_units_per_package: number | null
+          category_id: string | null
+          created_at: string | null
+          id: string
+          ingredient_id: string | null
+          is_active: boolean | null
+          notes: string | null
+          primary_supplier_id: string
+          product_name: string
+          purchase_multiple: number | null
+          suggested_price: number | null
+          unit_name: string
+          units_per_package: number
+          updated_at: string | null
+        }
+        Insert: {
+          alert_brand_on_backup?: boolean | null
+          backup_allowed_condition?: string | null
+          backup_product_name?: string | null
+          backup_supplier_id?: string | null
+          backup_units_per_package?: number | null
+          category_id?: string | null
+          created_at?: string | null
+          id?: string
+          ingredient_id?: string | null
+          is_active?: boolean | null
+          notes?: string | null
+          primary_supplier_id: string
+          product_name: string
+          purchase_multiple?: number | null
+          suggested_price?: number | null
+          unit_name?: string
+          units_per_package?: number
+          updated_at?: string | null
+        }
+        Update: {
+          alert_brand_on_backup?: boolean | null
+          backup_allowed_condition?: string | null
+          backup_product_name?: string | null
+          backup_supplier_id?: string | null
+          backup_units_per_package?: number | null
+          category_id?: string | null
+          created_at?: string | null
+          id?: string
+          ingredient_id?: string | null
+          is_active?: boolean | null
+          notes?: string | null
+          primary_supplier_id?: string
+          product_name?: string
+          purchase_multiple?: number | null
+          suggested_price?: number | null
+          unit_name?: string
+          units_per_package?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_mandatory_products_backup_supplier_id_fkey"
+            columns: ["backup_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "brand_mandatory_products_backup_supplier_id_fkey"
+            columns: ["backup_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_mandatory_products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "brand_mandatory_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_mandatory_products_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_mandatory_products_primary_supplier_id_fkey"
+            columns: ["primary_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "brand_mandatory_products_primary_supplier_id_fkey"
+            columns: ["primary_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_purchase_alerts: {
+        Row: {
+          alert_type: string
+          branch_id: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          mandatory_product_id: string | null
+          seen_at: string | null
+          seen_by: string | null
+          supplier_used_id: string | null
+        }
+        Insert: {
+          alert_type: string
+          branch_id: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          mandatory_product_id?: string | null
+          seen_at?: string | null
+          seen_by?: string | null
+          supplier_used_id?: string | null
+        }
+        Update: {
+          alert_type?: string
+          branch_id?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          mandatory_product_id?: string | null
+          seen_at?: string | null
+          seen_by?: string | null
+          supplier_used_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_purchase_alerts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_purchase_alerts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_purchase_alerts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "brand_purchase_alerts_mandatory_product_id_fkey"
+            columns: ["mandatory_product_id"]
+            isOneToOne: false
+            referencedRelation: "brand_mandatory_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_purchase_alerts_supplier_used_id_fkey"
+            columns: ["supplier_used_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "brand_purchase_alerts_supplier_used_id_fkey"
+            columns: ["supplier_used_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_settings: {
         Row: {
           created_at: string | null
