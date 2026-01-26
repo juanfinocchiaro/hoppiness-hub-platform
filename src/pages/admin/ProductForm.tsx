@@ -257,8 +257,6 @@ export default function ProductForm() {
         is_active: isActive, // Campo renombrado de is_available a is_active
         is_featured: isFeatured,
         preparation_time: preparationTime ? parseInt(preparationTime) : null,
-        product_type: productType,
-        contains_alcohol: containsAlcohol,
       };
 
       let savedProductId = productId;
