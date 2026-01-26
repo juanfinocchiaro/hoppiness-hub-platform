@@ -1,13 +1,13 @@
 import { useParams } from 'react-router-dom';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import OperationalStaffManager from '@/components/hr/OperationalStaffManager';
 import EmployeeDetailManager from '@/components/hr/EmployeeDetailManager';
 
 export default function LocalRRHHFichajes() {
   const { branchId } = useParams<{ branchId: string }>();
-  const { isAdmin, isFranquiciado, isGerente } = useUserRole();
+  const { isSuperadmin, local } = usePermissionsV2();
   
-  const canManageStaff = isAdmin || isFranquiciado || isGerente;
+  const canManageStaff = isSuperadmin || local.canViewTeam;
 
   if (!branchId) return null;
 

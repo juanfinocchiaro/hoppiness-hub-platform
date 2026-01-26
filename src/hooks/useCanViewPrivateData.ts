@@ -1,22 +1,20 @@
-import { useUserRole } from './useUserRole';
+import { usePermissionsV2 } from './usePermissionsV2';
 
 /**
  * Hook to determine if the current user can view sensitive employee data
- * Only admins and users with can_manage_staff permission for a branch can see private data
+ * Only superadmins and users with canManageTeam permission can see private data
  */
 export function useCanViewPrivateData(branchId?: string) {
-  const { isAdmin, branchPermissions, loading } = useUserRole();
+  const { isSuperadmin, local, loading } = usePermissionsV2();
   
-  // Admins always can view private data
-  if (isAdmin) {
+  // Superadmins always can view private data
+  if (isSuperadmin) {
     return { canViewPrivateData: true, loading };
   }
   
-  // Check if user has can_manage_staff permission for this branch
-  if (branchId) {
-    const branchPerm = branchPermissions.find(p => p.branch_id === branchId);
-    const canManageStaff = branchPerm?.can_manage_staff ?? false;
-    return { canViewPrivateData: canManageStaff, loading };
+  // Local users with team view permission can view private data
+  if (local.canViewTeam) {
+    return { canViewPrivateData: true, loading };
   }
   
   return { canViewPrivateData: false, loading };

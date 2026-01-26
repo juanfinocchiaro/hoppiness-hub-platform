@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -125,7 +125,7 @@ interface GroupTotal {
 }
 
 export default function ProfitLossReport() {
-  const { isAdmin, isFranquiciado, accessibleBranches, loading: roleLoading } = useUserRole();
+  const { isSuperadmin, isFranquiciado, accessibleBranches, loading: roleLoading } = usePermissionsV2();
   
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
   const [period, setPeriod] = useState<PeriodType>('current');
@@ -134,8 +134,8 @@ export default function ProfitLossReport() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['INGRESOS', 'CMV']));
   const [plData, setPlData] = useState<GroupTotal[]>([]);
 
-  // Admins and Franchisees can toggle between modes
-  const canToggleMode = isAdmin || isFranquiciado;
+  // Superadmins and Franchisees can toggle between modes
+  const canToggleMode = isSuperadmin || isFranquiciado;
 
   const getPeriodDates = (p: PeriodType): { start: Date; end: Date } => {
     const now = new Date();

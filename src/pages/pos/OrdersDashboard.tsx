@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -54,7 +54,7 @@ const SALES_CHANNEL_LABELS: Record<string, string> = {
 export default function OrdersDashboard() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { isAdmin, accessibleBranches, loading: roleLoading } = useUserRole();
+  const { isSuperadmin, accessibleBranches, loading: roleLoading } = usePermissionsV2();
   
   const [selectedBranch, setSelectedBranch] = useState<string>('');
   const [orders, setOrders] = useState<Order[]>([]);

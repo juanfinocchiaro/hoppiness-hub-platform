@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -73,7 +73,7 @@ interface ReportData {
 }
 
 export default function SalesReports() {
-  const { accessibleBranches, loading: roleLoading } = useUserRole();
+  const { accessibleBranches, loading: roleLoading } = usePermissionsV2();
   const { exportToExcel } = useExportToExcel();
   
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
