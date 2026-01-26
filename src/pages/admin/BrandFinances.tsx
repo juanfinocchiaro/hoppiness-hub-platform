@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -57,7 +57,7 @@ interface BranchCanon {
 }
 
 export default function BrandFinances() {
-  const { isAdmin, isFranquiciado, accessibleBranches, loading: roleLoading } = useUserRole();
+  const { isSuperadmin, isFranquiciado, accessibleBranches, loading: roleLoading } = usePermissionsV2();
   const [period, setPeriod] = useState<PeriodType>('current');
   const [loading, setLoading] = useState(true);
   const [managerialMode, setManagerialMode] = useState(true);
@@ -72,7 +72,7 @@ export default function BrandFinances() {
     notes: ''
   });
 
-  const canToggleMode = isAdmin || isFranquiciado;
+  const canToggleMode = isSuperadmin || isFranquiciado;
 
   const getPeriodDates = (p: PeriodType): { start: Date; end: Date } => {
     const now = new Date();
@@ -401,7 +401,7 @@ export default function BrandFinances() {
             <CardTitle>Gastos de Marca Central</CardTitle>
             <CardDescription>Gastos operativos a nivel de franquicia/marca</CardDescription>
           </div>
-          {isAdmin && (
+          {isSuperadmin && (
             <Button onClick={() => setShowNewExpenseDialog(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Registrar Gasto

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -264,7 +264,7 @@ function WebhookIntegrationContent({
 export default function LocalIntegraciones() {
   const { branchId } = useParams();
   const { branch: contextBranch } = useOutletContext<{ branch: Branch | null }>();
-  const { isAdmin, isGerente, branchPermissions } = useUserRole();
+  const { isSuperadmin, isFranquiciado, local } = usePermissionsV2(branchId);
   
   const [branch, setBranch] = useState<Branch | null>(null);
   const [loading, setLoading] = useState(true);
@@ -272,8 +272,7 @@ export default function LocalIntegraciones() {
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [formData, setFormData] = useState<Record<string, string>>({});
 
-  const currentPermissions = branchPermissions.find(p => p.branch_id === branchId);
-  const canEdit = isAdmin || isGerente || currentPermissions?.can_manage_staff;
+  const canEdit = isSuperadmin || isFranquiciado || local.canConfigIntegrations;
 
   const fetchBranch = async () => {
     if (!branchId) return;

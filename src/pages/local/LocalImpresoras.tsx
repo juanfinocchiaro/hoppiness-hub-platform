@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -89,7 +89,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 export default function LocalImpresoras() {
   const { branchId } = useParams<{ branchId: string }>();
-  const { isAdmin, isGerente } = useUserRole();
+  const { isSuperadmin, isEncargado, isFranquiciado, local } = usePermissionsV2(branchId);
   
   const [loading, setLoading] = useState(true);
   const [printers, setPrinters] = useState<PrinterConfig[]>([]);
@@ -321,7 +321,7 @@ export default function LocalImpresoras() {
     }
   };
 
-  const canManage = isAdmin || isGerente;
+  const canManage = isSuperadmin || isFranquiciado || isEncargado || local.canConfigPrinters;
 
   if (loading) {
     return (

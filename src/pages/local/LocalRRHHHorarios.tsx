@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import EmployeeScheduleEditor from '@/components/hr/EmployeeScheduleEditor';
 import MonthlyScheduleCalendar from '@/components/hr/MonthlyScheduleCalendar';
@@ -7,9 +7,9 @@ import { CalendarDays, Clock } from 'lucide-react';
 
 export default function LocalRRHHHorarios() {
   const { branchId } = useParams<{ branchId: string }>();
-  const { isAdmin, isFranquiciado, isGerente } = useUserRole();
+  const { isSuperadmin, isFranquiciado, isEncargado, local } = usePermissionsV2(branchId);
   
-  const canManageStaff = isAdmin || isFranquiciado || isGerente;
+  const canManageStaff = isSuperadmin || isFranquiciado || isEncargado || local.canEditSchedules;
 
   if (!branchId) return null;
 
