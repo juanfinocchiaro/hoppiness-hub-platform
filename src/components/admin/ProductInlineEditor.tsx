@@ -106,10 +106,9 @@ export function ProductInlineEditor({
     price: string;
     categoryId: string;
     imageUrl: string;
-    isAvailable: boolean;
+    isActive: boolean;
     isFeatured: boolean;
     preparationTime: string;
-    isEnabledByBrand: boolean;
     recipeLines: RecipeLine[];
   } | null>(null);
 
@@ -119,10 +118,9 @@ export function ProductInlineEditor({
   const [price, setPrice] = useState('');
   const [categoryId, setCategoryId] = useState<string>('');
   const [imageUrl, setImageUrl] = useState('');
-  const [isAvailable, setIsAvailable] = useState(true);
+  const [isActive, setIsActive] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
   const [preparationTime, setPreparationTime] = useState('');
-  const [isEnabledByBrand, setIsEnabledByBrand] = useState(true);
 
   // Calculate total recipe cost and margins
   const totalRecipeCost = recipeLines.reduce((sum, line) => sum + line.line_cost, 0);
@@ -148,13 +146,12 @@ export function ProductInlineEditor({
       price !== originalData.price ||
       categoryId !== originalData.categoryId ||
       imageUrl !== originalData.imageUrl ||
-      isAvailable !== originalData.isAvailable ||
+      isActive !== originalData.isActive ||
       isFeatured !== originalData.isFeatured ||
       preparationTime !== originalData.preparationTime ||
-      isEnabledByBrand !== originalData.isEnabledByBrand ||
       recipeLinesChanged
     );
-  }, [name, description, price, categoryId, imageUrl, isAvailable, isFeatured, preparationTime, isEnabledByBrand, recipeLines, originalData]);
+  }, [name, description, price, categoryId, imageUrl, isActive, isFeatured, preparationTime, recipeLines, originalData]);
 
   useEffect(() => {
     async function fetchData() {
@@ -173,10 +170,9 @@ export function ProductInlineEditor({
         setPrice(product.price.toString());
         setCategoryId(product.category_id || '');
         setImageUrl(product.image_url || '');
-        setIsAvailable(product.is_active);
+        setIsActive(product.is_active);
         setIsFeatured(product.is_featured || false);
         setPreparationTime(product.preparation_time?.toString() || '');
-        setIsEnabledByBrand(product.is_enabled_by_brand ?? true);
       }
 
       if (ingredientsRes.data) {
@@ -212,10 +208,9 @@ export function ProductInlineEditor({
           price: product.price.toString(),
           categoryId: product.category_id || '',
           imageUrl: product.image_url || '',
-          isAvailable: product.is_active,
+          isActive: product.is_active,
           isFeatured: product.is_featured || false,
           preparationTime: product.preparation_time?.toString() || '',
-          isEnabledByBrand: product.is_enabled_by_brand ?? true,
           recipeLines: lines,
         });
       }
@@ -288,10 +283,10 @@ export function ProductInlineEditor({
   };
 
   // Toggle handlers with feedback
-  const handleToggleEnabled = (checked: boolean) => {
-    setIsEnabledByBrand(checked);
-    toast(checked ? 'Producto habilitado en menú' : 'Producto deshabilitado del menú', {
-      icon: checked ? '✅' : '⛔',
+  const handleToggleActive = (checked: boolean) => {
+    setIsActive(checked);
+    toast(checked ? 'Producto activado en catálogo' : 'Producto archivado', {
+      icon: checked ? '✅' : '📦',
     });
   };
 
@@ -385,10 +380,9 @@ export function ProductInlineEditor({
           price: parseFloat(price),
           category_id: categoryId || null,
           image_url: imageUrl || null,
-          is_available: isAvailable,
+          is_active: isActive,
           is_featured: isFeatured,
           preparation_time: preparationTime ? parseInt(preparationTime) : null,
-          is_enabled_by_brand: isEnabledByBrand,
         })
         .eq('id', productId);
 
@@ -577,11 +571,11 @@ export function ProductInlineEditor({
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Switch 
-                checked={isEnabledByBrand} 
-                onCheckedChange={handleToggleEnabled} 
+                checked={isActive} 
+                onCheckedChange={handleToggleActive} 
                 className="scale-90" 
               />
-              <span className="text-xs">Habilitado</span>
+              <span className="text-xs">Activo</span>
             </div>
             <div className="flex items-center gap-2">
               <Switch 
