@@ -68,7 +68,7 @@ import LocalAdelantos from "./pages/local/LocalAdelantos";
 import LocalApercibimientos from "./pages/local/LocalApercibimientos";
 import LocalReportesVentas from "./pages/local/LocalReportesVentas";
 import LocalReportesMovimientosStock from "./pages/local/LocalReportesMovimientosStock";
-// Attendance
+import LocalConversionHistory from "./pages/local/LocalConversionHistory";
 import ClockIn from "./pages/ClockIn";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminHome from "./pages/admin/AdminHome";
@@ -239,6 +239,7 @@ const App = () => (
               <Route path="reportes/resultados" element={<LocalFinanceReports />} />
               <Route path="reportes/cmv" element={<LocalCMVReport />} />
               <Route path="reportes/movimientos-stock" element={<LocalReportesMovimientosStock />} />
+              <Route path="reportes/conversiones" element={<LocalConversionHistory />} />
               
               {/* Redirect rutas duplicadas - REMOVED: menu/productos y menu/extras ya definidas arriba */}
               
