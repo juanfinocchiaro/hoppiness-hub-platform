@@ -124,18 +124,18 @@ export default function Products() {
         .eq('id', categoryId);
       if (error) throw error;
 
-      // If disabling category, also disable all products in it
+      // If disabling category, also archive all products in it
       if (!newValue) {
         const productsInCategory = products.filter(p => p.category_id === categoryId);
         if (productsInCategory.length > 0) {
           const productIds = productsInCategory.map(p => p.id);
           await supabase
             .from('products')
-            .update({ is_enabled_by_brand: false })
+            .update({ is_active: false })
             .in('id', productIds);
           
           setProducts(prev => prev.map(p => 
-            p.category_id === categoryId ? { ...p, is_enabled_by_brand: false } : p
+            p.category_id === categoryId ? { ...p, is_active: false } : p
           ));
         }
       }
@@ -143,20 +143,20 @@ export default function Products() {
       setCategories(prev => prev.map(c => 
         c.id === categoryId ? { ...c, is_active: newValue } : c
       ));
-      toast.success(newValue ? 'Categoría activada' : 'Categoría y sus productos desactivados');
+      toast.success(newValue ? 'Categoría activada' : 'Categoría y sus productos archivados');
     } catch (error) {
       handleError(error, { userMessage: 'Error al actualizar categoría', context: 'Products.toggleCategoryActive' });
     }
   };
 
-  // Check if category has disabled products
+  // Check if category has archived products
   const getCategoryStatus = (categoryId: string) => {
     const categoryProducts = products.filter(p => p.category_id === categoryId);
-    const disabledCount = categoryProducts.filter(p => !p.is_enabled_by_brand).length;
+    const archivedCount = categoryProducts.filter(p => !p.is_active).length;
     const totalCount = categoryProducts.length;
     
-    if (disabledCount === 0) return 'complete';
-    if (disabledCount === totalCount) return 'disabled';
+    if (archivedCount === 0) return 'complete';
+    if (archivedCount === totalCount) return 'disabled';
     return 'incomplete';
   };
 
@@ -186,34 +186,34 @@ export default function Products() {
       || (filterCategory === 'uncategorized' && !product.category_id)
       || product.category_id === filterCategory;
     
-    // Status filter
+    // Status filter - is_active = archived/active at catalog level
     const matchesStatus = filterStatus === 'all'
-      || (filterStatus === 'enabled' && product.is_enabled_by_brand)
-      || (filterStatus === 'disabled' && !product.is_enabled_by_brand)
+      || (filterStatus === 'enabled' && product.is_active)
+      || (filterStatus === 'disabled' && !product.is_active)
       || (filterStatus === 'featured' && product.is_featured);
     
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  // Helper to get products for a category (active + optionally inactive at the end)
+  // Helper to get products for a category (active + optionally archived at the end)
   const getProductsForCategory = (categoryId: string | null) => {
     const categoryProducts = searchFilteredProducts.filter(p => 
       categoryId === 'uncategorized' ? !p.category_id : p.category_id === categoryId
     );
-    const activeProducts = categoryProducts.filter(p => p.is_enabled_by_brand);
-    const inactiveProducts = categoryProducts.filter(p => !p.is_enabled_by_brand);
-    const showInactive = showDisabledInCategory.has(categoryId || 'uncategorized');
+    const activeProducts = categoryProducts.filter(p => p.is_active);
+    const archivedProducts = categoryProducts.filter(p => !p.is_active);
+    const showArchived = showDisabledInCategory.has(categoryId || 'uncategorized');
     
-    // Active products first, then inactive at the end (if showing)
-    const visibleProducts = showInactive 
-      ? [...activeProducts, ...inactiveProducts]
+    // Active products first, then archived at the end (if showing)
+    const visibleProducts = showArchived 
+      ? [...activeProducts, ...archivedProducts]
       : activeProducts;
     
     return {
       visibleProducts,
       activeCount: activeProducts.length,
-      inactiveCount: inactiveProducts.length,
-      showingInactive: showInactive,
+      inactiveCount: archivedProducts.length,
+      showingInactive: showArchived,
     };
   };
 
@@ -246,19 +246,19 @@ export default function Products() {
     return branches.filter(b => getBranchAvailability(productId, b.id)).length;
   };
 
-  const handleBrandToggle = (product: Product) => {
-    const newValue = !product.is_enabled_by_brand;
+  const handleArchiveToggle = (product: Product) => {
+    const newValue = !product.is_active;
     if (!newValue) {
       setDisableDialog({
         open: true,
         productId: product.id,
         productName: product.name,
         branchId: '',
-        branchName: 'todas las sucursales',
+        branchName: 'el catálogo',
         isBrandLevel: true,
       });
     } else {
-      executeBrandToggle(product.id, true);
+      executeArchiveToggle(product.id, true);
     }
   };
 
@@ -285,21 +285,21 @@ export default function Products() {
     }
   };
 
-  const executeBrandToggle = async (productId: string, newValue: boolean) => {
+  const executeArchiveToggle = async (productId: string, newValue: boolean) => {
     setUpdating(productId);
     try {
       const { error } = await supabase
         .from('products')
-        .update({ is_enabled_by_brand: newValue })
+        .update({ is_active: newValue })
         .eq('id', productId);
       if (error) throw error;
 
       setProducts(prev => prev.map(p => 
-        p.id === productId ? { ...p, is_enabled_by_brand: newValue } : p
+        p.id === productId ? { ...p, is_active: newValue } : p
       ));
-      toast.success(newValue ? 'Producto habilitado' : 'Producto deshabilitado');
+      toast.success(newValue ? 'Producto restaurado' : 'Producto archivado');
     } catch (error) {
-      handleError(error, { userMessage: 'Error al actualizar disponibilidad', context: 'Products.executeBrandToggle' });
+      handleError(error, { userMessage: 'Error al actualizar producto', context: 'Products.executeArchiveToggle' });
     } finally {
       setUpdating(null);
     }
@@ -343,7 +343,7 @@ export default function Products() {
   const handleConfirmDisable = () => {
     if (!disableDialog) return;
     if (disableDialog.isBrandLevel) {
-      executeBrandToggle(disableDialog.productId, false);
+      executeArchiveToggle(disableDialog.productId, false);
     } else {
       executeBranchToggle(disableDialog.productId, disableDialog.branchId, false);
     }
@@ -391,7 +391,7 @@ export default function Products() {
     });
   }
 
-  const totalDisabled = products.filter(p => !p.is_enabled_by_brand).length;
+  const totalArchived = products.filter(p => !p.is_active).length;
 
   if (loading) {
     return (
@@ -421,10 +421,10 @@ export default function Products() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {totalDisabled > 0 && (
-            <Badge variant="secondary" className="bg-destructive/10 text-destructive border-0">
+          {totalArchived > 0 && (
+            <Badge variant="secondary" className="bg-muted text-muted-foreground border-0">
               <Power className="h-3 w-3 mr-1" />
-              {totalDisabled} deshabilitados
+              {totalArchived} archivados
             </Badge>
           )}
           <Button variant="outline" size="sm" onClick={() => setCategoryManagerOpen(true)}>
@@ -476,13 +476,13 @@ export default function Products() {
             <SelectItem value="enabled">
               <span className="flex items-center gap-2">
                 <Check className="w-3 h-3 text-emerald-500" />
-                Habilitados
+                Activos
               </span>
             </SelectItem>
             <SelectItem value="disabled">
               <span className="flex items-center gap-2">
-                <X className="w-3 h-3 text-destructive" />
-                Deshabilitados
+                <X className="w-3 h-3 text-muted-foreground" />
+                Archivados
               </span>
             </SelectItem>
             <SelectItem value="featured">
@@ -591,7 +591,7 @@ export default function Products() {
             {expandedCategories.has(category.id) && (
               <div className="grid gap-3 pl-2">
                 {visibleProducts.map((product) => {
-                  const isDisabledByBrand = !product.is_enabled_by_brand;
+                  const isArchived = !product.is_active;
                   const availableCount = getAvailableBranchesCount(product.id);
                   
                     return (
@@ -601,7 +601,7 @@ export default function Products() {
                           className={`
                             group flex items-center gap-4 p-4 rounded-xl transition-all cursor-pointer
                             ${expandedProductId === product.id ? 'rounded-b-none border-b-0' : ''}
-                            ${isDisabledByBrand 
+                            ${isArchived 
                               ? 'bg-muted/40 border border-dashed border-border' 
                               : 'bg-card hover:bg-accent/30 border border-border shadow-sm hover:shadow-md'
                             }
@@ -626,9 +626,14 @@ export default function Products() {
                             {product.is_featured && (
                               <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
                             )}
-                            <span className={`font-medium truncate text-sm ${isDisabledByBrand ? 'line-through' : ''}`}>
+                            <span className={`font-medium truncate text-sm ${isArchived ? 'line-through text-muted-foreground' : ''}`}>
                               {product.name}
                             </span>
+                            {isArchived && (
+                              <Badge variant="outline" className="text-[9px] border-muted-foreground/30 text-muted-foreground">
+                                Archivado
+                              </Badge>
+                            )}
                           </div>
                           <span className="text-xs text-muted-foreground">
                             {formatPrice(product.price)}
@@ -636,61 +641,58 @@ export default function Products() {
                         </div>
                       </div>
 
-                      {/* Branch Availability with Abbreviations */}
-                      <div className="flex items-center gap-1.5">
-                        {branches.map((branch) => {
-                          const isAvailable = getBranchAvailability(product.id, branch.id);
-                          const isUpdating = updating === `${product.id}-${branch.id}`;
-                          const isActive = isAvailable && !isDisabledByBrand;
-                          
-                          return (
-                            <TooltipProvider key={branch.id}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleBranchToggle(product, branch.id);
-                                    }}
-                                    disabled={isDisabledByBrand || isUpdating}
-                                    className={`
-                                      flex flex-col items-center gap-0.5 transition-all
-                                      ${isDisabledByBrand ? 'opacity-30 cursor-not-allowed' : 'hover:scale-105'}
-                                      disabled:hover:scale-100
-                                    `}
-                                  >
-                                    <span className="text-[9px] font-semibold text-muted-foreground">
-                                      {getBranchAbbreviation(branch.name)}
-                                    </span>
-                                    <div className={`
-                                      w-6 h-6 rounded-full flex items-center justify-center transition-all
-                                      ${isActive 
-                                        ? 'bg-emerald-500 text-white' 
-                                        : 'bg-muted text-muted-foreground/40'
-                                      }
-                                    `}>
-                                      {isActive ? (
-                                        <Check className="w-3.5 h-3.5" />
-                                      ) : (
-                                        <X className="w-3.5 h-3.5" />
-                                      )}
-                                    </div>
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="font-medium">{branch.name}</p>
-                                  <p className="text-xs opacity-70">
-                                    {isActive ? 'Click para desactivar' : 'Click para activar'}
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          );
-                        })}
-                      </div>
+                      {/* Branch Availability with Abbreviations - only show for non-archived */}
+                      {!isArchived && (
+                        <div className="flex items-center gap-1.5">
+                          {branches.map((branch) => {
+                            const isAvailable = getBranchAvailability(product.id, branch.id);
+                            const isUpdating = updating === `${product.id}-${branch.id}`;
+                            
+                            return (
+                              <TooltipProvider key={branch.id}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleBranchToggle(product, branch.id);
+                                      }}
+                                      disabled={isUpdating}
+                                      className="flex flex-col items-center gap-0.5 transition-all hover:scale-105 disabled:hover:scale-100"
+                                    >
+                                      <span className="text-[9px] font-semibold text-muted-foreground">
+                                        {getBranchAbbreviation(branch.name)}
+                                      </span>
+                                      <div className={`
+                                        w-6 h-6 rounded-full flex items-center justify-center transition-all
+                                        ${isAvailable 
+                                          ? 'bg-emerald-500 text-white' 
+                                          : 'bg-muted text-muted-foreground/40'
+                                        }
+                                      `}>
+                                        {isAvailable ? (
+                                          <Check className="w-3.5 h-3.5" />
+                                        ) : (
+                                          <X className="w-3.5 h-3.5" />
+                                        )}
+                                      </div>
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="font-medium">{branch.name}</p>
+                                    <p className="text-xs opacity-70">
+                                      {isAvailable ? 'Click para desactivar' : 'Click para activar'}
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            );
+                          })}
+                        </div>
+                      )}
 
-                      {/* Availability Count */}
-                      {!isDisabledByBrand && (
+                      {/* Availability Count - only show for non-archived */}
+                      {!isArchived && (
                         <Badge 
                           variant="secondary" 
                           className={`
@@ -709,7 +711,7 @@ export default function Products() {
 
                       {/* Action Buttons */}
                       <div className="flex items-center gap-1">
-                        {/* Toggle Active Button */}
+                        {/* Toggle Archive Button */}
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -717,18 +719,18 @@ export default function Products() {
                                 variant="ghost" 
                                 size="icon" 
                                 className={`h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity ${
-                                  isDisabledByBrand ? 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10' : 'text-destructive hover:text-destructive hover:bg-destructive/10'
+                                  isArchived ? 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10' : 'text-muted-foreground hover:text-muted-foreground hover:bg-muted'
                                 }`}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleBrandToggle(product);
+                                  handleArchiveToggle(product);
                                 }}
                               >
-                                {isDisabledByBrand ? <Power className="w-3.5 h-3.5" /> : <PowerOff className="w-3.5 h-3.5" />}
+                                {isArchived ? <Power className="w-3.5 h-3.5" /> : <PowerOff className="w-3.5 h-3.5" />}
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              {isDisabledByBrand ? 'Activar producto' : 'Desactivar producto'}
+                              {isArchived ? 'Restaurar producto' : 'Archivar producto'}
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -824,21 +826,27 @@ export default function Products() {
         )}
       </div>
 
-      {/* Disable Confirmation Dialog */}
+      {/* Archive/Disable Confirmation Dialog */}
       <AlertDialog open={disableDialog?.open} onOpenChange={(open) => !open && setDisableDialog(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <Power className="h-5 w-5 text-destructive" />
-              Desactivar Producto
+              <PowerOff className="h-5 w-5 text-muted-foreground" />
+              {disableDialog?.isBrandLevel ? 'Archivar Producto' : 'Desactivar en Sucursal'}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Estás seguro de que deseas desactivar <strong>{disableDialog?.productName}</strong> en{' '}
-              <strong>{disableDialog?.branchName}</strong>?
-              {disableDialog?.isBrandLevel && (
-                <span className="block mt-2 text-destructive">
-                  Esto desactivará el producto en todas las sucursales.
-                </span>
+              {disableDialog?.isBrandLevel ? (
+                <>
+                  ¿Estás seguro de que deseas archivar <strong>{disableDialog?.productName}</strong>?
+                  <span className="block mt-2 text-muted-foreground">
+                    El producto desaparecerá del catálogo y de todas las sucursales. Podrás restaurarlo en cualquier momento.
+                  </span>
+                </>
+              ) : (
+                <>
+                  ¿Estás seguro de que deseas desactivar <strong>{disableDialog?.productName}</strong> en{' '}
+                  <strong>{disableDialog?.branchName}</strong>?
+                </>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -846,9 +854,9 @@ export default function Products() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDisable}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className={disableDialog?.isBrandLevel ? 'bg-muted text-muted-foreground hover:bg-muted/80' : 'bg-destructive text-destructive-foreground hover:bg-destructive/90'}
             >
-              Desactivar
+              {disableDialog?.isBrandLevel ? 'Archivar' : 'Desactivar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

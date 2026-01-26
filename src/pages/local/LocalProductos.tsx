@@ -274,7 +274,7 @@ export default function LocalProductos() {
           <p className="text-muted-foreground">Gestión de disponibilidad de productos</p>
         </div>
         {pausedCount > 0 && (
-          <Badge variant="secondary" className="flex items-center gap-1">
+          <Badge variant="outline" className="flex items-center gap-1 border-muted-foreground/30 text-muted-foreground">
             <Package className="h-3 w-3" />
             {pausedCount} pausado{pausedCount > 1 ? 's' : ''}
           </Badge>
@@ -311,7 +311,7 @@ export default function LocalProductos() {
                 </Badge>
               </div>
               {categoryProducts.some(p => !p.is_available) && (
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="outline" className="text-xs border-muted-foreground/30 text-muted-foreground">
                   {categoryProducts.filter(p => !p.is_available).length} pausado{categoryProducts.filter(p => !p.is_available).length > 1 ? 's' : ''}
                 </Badge>
               )}
@@ -345,7 +345,7 @@ export default function LocalProductos() {
                         {!item.is_available && item.lastLog && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Badge variant="outline" className="text-xs cursor-help gap-1">
+                              <Badge variant="outline" className="text-xs cursor-help gap-1 border-muted-foreground/30 text-muted-foreground">
                                 <Info className="h-3 w-3" />
                                 {getReasonLabel(item.lastLog.reason)}
                               </Badge>

@@ -68,7 +68,6 @@ export function ProductEditDrawer({
   const [isFeatured, setIsFeatured] = useState(false);
   const [preparationTime, setPreparationTime] = useState('');
   const [productType, setProductType] = useState<'final' | 'composite'>('final');
-  const [isEnabledByBrand, setIsEnabledByBrand] = useState(true);
   const [containsAlcohol, setContainsAlcohol] = useState(false);
 
   useEffect(() => {
@@ -83,7 +82,6 @@ export function ProductEditDrawer({
       setIsFeatured(false);
       setPreparationTime('');
       setProductType('final');
-      setIsEnabledByBrand(true);
       setContainsAlcohol(false);
       setSelectedModifiers([]);
       return;
@@ -110,7 +108,6 @@ export function ProductEditDrawer({
         setIsFeatured(product.is_featured || false);
         setPreparationTime(product.preparation_time?.toString() || '');
         setProductType((product as any).product_type || 'final');
-        setIsEnabledByBrand(product.is_enabled_by_brand ?? true);
         setContainsAlcohol((product as any).contains_alcohol || false);
       }
 
@@ -207,11 +204,10 @@ export function ProductEditDrawer({
         price: parseFloat(price),
         category_id: categoryId || null,
         image_url: imageUrl || null,
-        is_available: isAvailable,
+        is_active: isAvailable,
         is_featured: isFeatured,
         preparation_time: preparationTime ? parseInt(preparationTime) : null,
         product_type: productType,
-        is_enabled_by_brand: isEnabledByBrand,
       };
 
       const { error } = await supabase
@@ -461,15 +457,6 @@ export function ProductEditDrawer({
                     <Switch
                       checked={isFeatured}
                       onCheckedChange={setIsFeatured}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between py-3 border-t">
-                    <span className="text-sm font-medium">Habilitado para venta</span>
-                    <Switch
-                      checked={isEnabledByBrand}
-                      onCheckedChange={setIsEnabledByBrand}
-                      className="data-[state=checked]:bg-emerald-500"
                     />
                   </div>
                 </div>
