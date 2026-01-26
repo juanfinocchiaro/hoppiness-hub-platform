@@ -56,7 +56,7 @@ interface ProductAvailability {
     category_id: string | null;
     price: number;
     image_url: string | null;
-    is_enabled_by_brand: boolean;
+    is_active: boolean;
   };
   lastLog?: AvailabilityLog;
 }
@@ -105,10 +105,10 @@ export default function LocalProductos() {
           product_id,
           is_available,
           is_enabled_by_brand,
-          product:products(id, name, category_id, price, image_url, is_enabled_by_brand)
+          product:products(id, name, category_id, price, image_url, is_active)
         `)
         .eq('branch_id', branchId!)
-        .eq('is_enabled_by_brand', true), // Solo productos habilitados por la marca
+        .eq('is_enabled_by_brand', true), // Solo productos autorizados por la marca
         supabase
           .from('product_categories')
           .select('id, name, display_order')
@@ -134,9 +134,9 @@ export default function LocalProductos() {
         }
       });
       
-      // Productos ya filtrados por is_enabled_by_brand en la query
+      // Productos autorizados por la marca y activos en el catálogo
       const validProducts = (productsRes.data || [])
-        .filter(p => p.product !== null)
+        .filter(p => p.product !== null && p.product.is_active)
         .map(p => ({
           ...p,
           lastLog: logsMap.get(`product-${p.product_id}`)
@@ -256,7 +256,7 @@ export default function LocalProductos() {
     });
   }
 
-  const unavailableCount = products.filter(p => !p.is_available).length;
+  const pausedCount = products.filter(p => !p.is_available).length;
 
   if (loading) {
     return (
@@ -273,10 +273,10 @@ export default function LocalProductos() {
           <h1 className="text-2xl font-bold">Productos</h1>
           <p className="text-muted-foreground">Gestión de disponibilidad de productos</p>
         </div>
-        {unavailableCount > 0 && (
-          <Badge variant="destructive" className="flex items-center gap-1">
+        {pausedCount > 0 && (
+          <Badge variant="secondary" className="flex items-center gap-1">
             <Package className="h-3 w-3" />
-            {unavailableCount} sin stock
+            {pausedCount} pausado{pausedCount > 1 ? 's' : ''}
           </Badge>
         )}
       </div>
@@ -311,8 +311,8 @@ export default function LocalProductos() {
                 </Badge>
               </div>
               {categoryProducts.some(p => !p.is_available) && (
-                <Badge variant="destructive" className="text-xs">
-                  {categoryProducts.filter(p => !p.is_available).length} sin stock
+                <Badge variant="secondary" className="text-xs">
+                  {categoryProducts.filter(p => !p.is_available).length} pausado{categoryProducts.filter(p => !p.is_available).length > 1 ? 's' : ''}
                 </Badge>
               )}
             </CollapsibleTrigger>
@@ -361,7 +361,7 @@ export default function LocalProductos() {
                           </Tooltip>
                         )}
                         {!item.is_available && !item.lastLog && (
-                          <Badge variant="destructive" className="text-xs">Sin stock</Badge>
+                          <Badge variant="secondary" className="text-xs">Pausado</Badge>
                         )}
                         <Switch
                           checked={item.is_available}

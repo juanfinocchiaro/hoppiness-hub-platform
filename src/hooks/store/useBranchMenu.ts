@@ -60,7 +60,7 @@ export function useBranchMenu(branchSlug: string | undefined) {
       
       // Transform to MenuProduct
       const allProducts: MenuProduct[] = (branchProducts || [])
-        .filter(bp => bp.product && (bp.product as any).is_available)
+        .filter(bp => bp.product && (bp.product as any).is_active)
         .map(bp => {
           const prod = bp.product as Product & { category?: Category };
           return {

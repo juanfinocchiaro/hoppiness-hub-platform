@@ -135,67 +135,65 @@ export function useUpdateProductChannelPrice() {
 }
 
 // =====================================================
-// HOOK: useProductBranchExclusions - Sucursales excluidas
+// HOOK: useProductBranchAuthorization - Sucursales autorizadas por marca
+// Reemplaza el sistema de exclusiones con branch_products.is_enabled_by_brand
 // =====================================================
 
-export function useProductBranchExclusions(productId: string | undefined) {
+export function useProductBranchAuthorization(productId: string | undefined) {
   return useQuery({
-    queryKey: ['product-branch-exclusions', productId],
+    queryKey: ['product-branch-authorization', productId],
     queryFn: async () => {
       if (!productId) return [];
       
       const { data, error } = await supabase
-        .from('product_branch_exclusions')
-        .select('branch_id')
+        .from('branch_products')
+        .select('branch_id, is_enabled_by_brand')
         .eq('product_id', productId);
       
       if (error) throw error;
-      return data.map(d => d.branch_id);
+      return data || [];
     },
     enabled: !!productId,
   });
 }
 
-export function useUpdateProductBranchExclusions() {
+export function useUpdateProductBranchAuthorization() {
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: async ({ 
       productId, 
-      excludedBranchIds,
+      branchAuthorizations,
     }: { 
       productId: string; 
-      excludedBranchIds: string[];
+      branchAuthorizations: { branchId: string; isEnabled: boolean }[];
     }) => {
-      // Delete all existing exclusions
-      const { error: deleteError } = await supabase
-        .from('product_branch_exclusions')
-        .delete()
-        .eq('product_id', productId);
-      
-      if (deleteError) throw deleteError;
-      
-      // Insert new exclusions
-      if (excludedBranchIds.length > 0) {
-        const { error: insertError } = await supabase
-          .from('product_branch_exclusions')
-          .insert(
-            excludedBranchIds.map(branchId => ({
-              product_id: productId,
-              branch_id: branchId,
-            }))
-          );
+      // Upsert each branch authorization
+      for (const auth of branchAuthorizations) {
+        const { error } = await supabase
+          .from('branch_products')
+          .upsert({
+            product_id: productId,
+            branch_id: auth.branchId,
+            is_enabled_by_brand: auth.isEnabled,
+            // Default is_available to false when creating new records
+            is_available: false,
+          }, {
+            onConflict: 'product_id,branch_id',
+            ignoreDuplicates: false,
+          });
         
-        if (insertError) throw insertError;
+        if (error) throw error;
       }
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['product-branch-exclusions', variables.productId] });
-      toast.success('Exclusiones de sucursales actualizadas');
+      queryClient.invalidateQueries({ queryKey: ['product-branch-authorization', variables.productId] });
+      queryClient.invalidateQueries({ queryKey: ['branch-products'] });
+      toast.success('Autorización de sucursales actualizada');
     },
     onError: (error) => {
-      console.error('Error updating branch exclusions:', error);
-      toast.error('Error al actualizar exclusiones');
+      console.error('Error updating branch authorization:', error);
+      toast.error('Error al actualizar autorización');
     },
   });
 }

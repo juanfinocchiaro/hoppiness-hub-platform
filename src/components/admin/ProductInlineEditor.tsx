@@ -173,7 +173,7 @@ export function ProductInlineEditor({
         setPrice(product.price.toString());
         setCategoryId(product.category_id || '');
         setImageUrl(product.image_url || '');
-        setIsAvailable(product.is_available);
+        setIsAvailable(product.is_active);
         setIsFeatured(product.is_featured || false);
         setPreparationTime(product.preparation_time?.toString() || '');
         setIsEnabledByBrand(product.is_enabled_by_brand ?? true);
@@ -212,7 +212,7 @@ export function ProductInlineEditor({
           price: product.price.toString(),
           categoryId: product.category_id || '',
           imageUrl: product.image_url || '',
-          isAvailable: product.is_available,
+          isAvailable: product.is_active,
           isFeatured: product.is_featured || false,
           preparationTime: product.preparation_time?.toString() || '',
           isEnabledByBrand: product.is_enabled_by_brand ?? true,

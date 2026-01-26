@@ -42,7 +42,7 @@ export default function MarginAnalysis({ branchId }: MarginAnalysisProps) {
     const { data: productsData } = await supabase
       .from('products')
       .select('id, name, price')
-      .eq('is_available', true)
+      .eq('is_active', true)
       .order('name');
 
     if (!productsData) {
