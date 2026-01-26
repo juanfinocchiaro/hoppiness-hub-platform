@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import {
   Sheet,
   SheetContent,
@@ -101,15 +101,15 @@ export default function UserDetailSheet({
   branchId,
   onUpdate,
 }: UserDetailSheetProps) {
-  const { isAdmin, isFranquiciado, isGerente } = useUserRole();
+  const { isSuperadmin, isFranquiciado, isEncargado, local } = usePermissionsV2();
   const [selectedRole, setSelectedRole] = useState(user.highestRole || 'cajero');
   const [saving, setSaving] = useState(false);
 
-  const canManageStaff = isAdmin || isFranquiciado || isGerente;
+  const canManageStaff = isSuperadmin || local.canViewTeam;
   const canAssignRole = (role: string) => {
-    if (isAdmin) return true;
+    if (isSuperadmin) return true;
     if (isFranquiciado) return ['kds', 'cajero', 'encargado'].includes(role);
-    if (isGerente) return ['kds', 'cajero'].includes(role);
+    if (isEncargado) return ['kds', 'cajero'].includes(role);
     return false;
   };
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertCircle, Maximize2, Minimize2, RefreshCw, LogOut } from 'lucide-react';
@@ -14,7 +14,7 @@ interface Branch {
 
 export default function Conciliacion() {
   const { user, signOut, loading: authLoading } = useAuth();
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isSuperadmin, loading: roleLoading } = usePermissionsV2();
   const navigate = useNavigate();
   
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -37,10 +37,10 @@ export default function Conciliacion() {
       }
     };
 
-    if (user && isAdmin) {
+    if (user && isSuperadmin) {
       fetchBranches();
     }
-  }, [user, isAdmin]);
+  }, [user, isSuperadmin]);
 
   // Redirect if not authorized
   useEffect(() => {
@@ -49,11 +49,11 @@ export default function Conciliacion() {
         navigate('/ingresar');
         return;
       }
-      if (!isAdmin) {
+      if (!isSuperadmin) {
         navigate('/admin');
       }
     }
-  }, [user, authLoading, roleLoading, isAdmin, navigate]);
+  }, [user, authLoading, roleLoading, isSuperadmin, navigate]);
 
   if (authLoading || roleLoading) {
     return (
@@ -66,7 +66,7 @@ export default function Conciliacion() {
     );
   }
 
-  if (!isAdmin) {
+  if (!isSuperadmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">

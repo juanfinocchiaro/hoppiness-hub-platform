@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,7 +59,7 @@ const parsePolygonCoords = (data: any): ZoneShape | null => {
 export default function LocalDeliveryZones() {
   const { branchId } = useParams<{ branchId: string }>();
   const { branch } = useOutletContext<{ branch: Branch | null }>();
-  const { isAdmin, isGerente, branchPermissions } = useUserRole();
+  const { isSuperadmin, local } = usePermissionsV2();
 
   const [zones, setZones] = useState<DeliveryZone[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,8 +88,7 @@ export default function LocalDeliveryZones() {
     max_distance_km: null as number | null,
   });
 
-  const currentPermissions = branchPermissions.find(p => p.branch_id === branchId);
-  const canEdit = isAdmin || isGerente || currentPermissions?.can_manage_staff;
+  const canEdit = isSuperadmin || local.canConfigDeliveryZones;
 
   const fetchZones = async () => {
     if (!branchId) return;

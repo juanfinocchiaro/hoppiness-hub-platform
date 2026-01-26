@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -66,7 +66,7 @@ const ORDER_AREA_ICONS = {
 export default function KDS() {
   const { branchId } = useParams();
   const navigate = useNavigate();
-  const { accessibleBranches, loading: roleLoading } = useUserRole();
+  const { accessibleBranches, loading: roleLoading } = usePermissionsV2();
   
   const [branch, setBranch] = useState<Branch | null>(null);
   const [orders, setOrders] = useState<OrderWithItems[]>([]);

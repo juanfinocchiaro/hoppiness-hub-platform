@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -95,7 +95,7 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.Elemen
 
 export default function POS() {
   const navigate = useNavigate();
-  const { isAdmin, accessibleBranches, loading: roleLoading } = useUserRole();
+  const { isSuperadmin, accessibleBranches, loading: roleLoading } = usePermissionsV2();
   
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
   const [products, setProducts] = useState<ProductWithAvailability[]>([]);
