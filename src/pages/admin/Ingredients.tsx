@@ -91,6 +91,8 @@ interface Ingredient {
   category_id: string | null;
   is_active: boolean;
   notes: string | null;
+  alternative_ingredient_id: string | null;
+  notify_on_alternative_use: boolean;
 }
 
 interface UnitConversion {

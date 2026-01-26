@@ -3252,6 +3252,108 @@ export type Database = {
         }
         Relationships: []
       }
+      ingredient_conversions: {
+        Row: {
+          branch_id: string
+          cost_difference: number | null
+          created_at: string | null
+          from_ingredient_cost: number | null
+          from_ingredient_id: string
+          id: string
+          performed_by: string | null
+          quantity: number
+          reason: string | null
+          to_ingredient_cost: number | null
+          to_ingredient_id: string
+          triggered_by_product_id: string | null
+        }
+        Insert: {
+          branch_id: string
+          cost_difference?: number | null
+          created_at?: string | null
+          from_ingredient_cost?: number | null
+          from_ingredient_id: string
+          id?: string
+          performed_by?: string | null
+          quantity: number
+          reason?: string | null
+          to_ingredient_cost?: number | null
+          to_ingredient_id: string
+          triggered_by_product_id?: string | null
+        }
+        Update: {
+          branch_id?: string
+          cost_difference?: number | null
+          created_at?: string | null
+          from_ingredient_cost?: number | null
+          from_ingredient_id?: string
+          id?: string
+          performed_by?: string | null
+          quantity?: number
+          reason?: string | null
+          to_ingredient_cost?: number | null
+          to_ingredient_id?: string
+          triggered_by_product_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_conversions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_conversions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_conversions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "ingredient_conversions_from_ingredient_id_fkey"
+            columns: ["from_ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_conversions_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "ingredient_conversions_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "ingredient_conversions_to_ingredient_id_fkey"
+            columns: ["to_ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_conversions_triggered_by_product_id_fkey"
+            columns: ["triggered_by_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingredient_suppliers: {
         Row: {
           created_at: string
@@ -3353,6 +3455,7 @@ export type Database = {
       }
       ingredients: {
         Row: {
+          alternative_ingredient_id: string | null
           avg_daily_consumption: number | null
           category: string | null
           category_id: string | null
@@ -3366,6 +3469,7 @@ export type Database = {
           min_stock: number | null
           name: string
           notes: string | null
+          notify_on_alternative_use: boolean | null
           purchase_unit: string | null
           purchase_unit_qty: number | null
           safety_stock_days: number | null
@@ -3376,6 +3480,7 @@ export type Database = {
           usage_unit: string | null
         }
         Insert: {
+          alternative_ingredient_id?: string | null
           avg_daily_consumption?: number | null
           category?: string | null
           category_id?: string | null
@@ -3389,6 +3494,7 @@ export type Database = {
           min_stock?: number | null
           name: string
           notes?: string | null
+          notify_on_alternative_use?: boolean | null
           purchase_unit?: string | null
           purchase_unit_qty?: number | null
           safety_stock_days?: number | null
@@ -3399,6 +3505,7 @@ export type Database = {
           usage_unit?: string | null
         }
         Update: {
+          alternative_ingredient_id?: string | null
           avg_daily_consumption?: number | null
           category?: string | null
           category_id?: string | null
@@ -3412,6 +3519,7 @@ export type Database = {
           min_stock?: number | null
           name?: string
           notes?: string | null
+          notify_on_alternative_use?: boolean | null
           purchase_unit?: string | null
           purchase_unit_qty?: number | null
           safety_stock_days?: number | null
@@ -3422,6 +3530,13 @@ export type Database = {
           usage_unit?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "ingredients_alternative_ingredient_id_fkey"
+            columns: ["alternative_ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ingredients_category_id_fkey"
             columns: ["category_id"]
@@ -7648,6 +7763,17 @@ export type Database = {
         Returns: boolean
       }
       cleanup_expired_tokens: { Args: never; Returns: undefined }
+      execute_ingredient_conversion: {
+        Args: {
+          p_branch_id: string
+          p_from_ingredient_id: string
+          p_quantity: number
+          p_reason?: string
+          p_to_ingredient_id: string
+          p_triggered_by_product_id?: string
+        }
+        Returns: string
+      }
       find_or_create_customer: {
         Args: { p_email?: string; p_name: string; p_phone: string }
         Returns: string
