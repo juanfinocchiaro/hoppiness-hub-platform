@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -135,7 +135,7 @@ const roleColors: Record<AppRole, string> = {
 const ROLES_HIERARCHY: AppRole[] = ['admin', 'coordinador', 'socio', 'franquiciado', 'encargado', 'cajero', 'kds'];
 
 export function UserCard({ user, open, onClose, branches, onSave }: UserCardProps) {
-  const { isAdmin } = useUserRole();
+  const { isSuperadmin } = usePermissionsV2();
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('identity');
   
@@ -273,7 +273,7 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
   };
 
   const handleSave = async () => {
-    if (!user || !isAdmin) return;
+    if (!user || !isSuperadmin) return;
     setSaving(true);
     
     try {
@@ -433,7 +433,7 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
                   <Select 
                     value={localTemplateId || 'none'} 
                     onValueChange={(v) => setLocalTemplateId(v === 'none' ? '' : v)}
-                    disabled={!isAdmin || !canUseLocalPanel}
+                    disabled={!isSuperadmin || !canUseLocalPanel}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Sin plantilla local" />
@@ -457,7 +457,7 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
                   <Select 
                     value={brandTemplateId || 'none'} 
                     onValueChange={(v) => setBrandTemplateId(v === 'none' ? '' : v)}
-                    disabled={!isAdmin || !canUseBrandPanel}
+                    disabled={!isSuperadmin || !canUseBrandPanel}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Sin plantilla marca" />
@@ -495,7 +495,7 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
                     id="local-panel"
                     checked={canUseLocalPanel}
                     onCheckedChange={setCanUseLocalPanel}
-                    disabled={!isAdmin}
+                    disabled={!isSuperadmin}
                   />
                 </div>
                 <div className="flex items-center justify-between">
@@ -507,7 +507,7 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
                     id="brand-panel"
                     checked={canUseBrandPanel}
                     onCheckedChange={setCanUseBrandPanel}
-                    disabled={!isAdmin}
+                    disabled={!isSuperadmin}
                   />
                 </div>
               </CardContent>
@@ -529,7 +529,7 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
                     id="brand-access"
                     checked={brandAccess}
                     onCheckedChange={setBrandAccess}
-                    disabled={!isAdmin}
+                    disabled={!isSuperadmin}
                   />
                 </div>
 
@@ -558,12 +558,12 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
                       <div
                         key={branch.id}
                         className="flex items-center space-x-2 py-2 px-1 hover:bg-muted rounded cursor-pointer"
-                        onClick={() => isAdmin && toggleBranch(branch.id)}
+                        onClick={() => isSuperadmin && toggleBranch(branch.id)}
                       >
                         <Checkbox
                           id={`branch-${branch.id}`}
                           checked={selectedBranches.includes(branch.id)}
-                          disabled={!isAdmin}
+                          disabled={!isSuperadmin}
                         />
                         <label
                           htmlFor={`branch-${branch.id}`}
@@ -600,7 +600,7 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
                   Permisos que difieren de la plantilla asignada.
                 </p>
                 
-                {isAdmin && (
+                {isSuperadmin && (
                   <div className="flex gap-2">
                     <Link to={`/admin/overrides?user=${user.user_id}`} className="flex-1">
                       <Button variant="outline" className="w-full" onClick={onClose}>
@@ -731,7 +731,7 @@ export function UserCard({ user, open, onClose, branches, onSave }: UserCardProp
           <Button variant="outline" onClick={onClose} className="flex-1">
             Cancelar
           </Button>
-          {isAdmin && (
+          {isSuperadmin && (
             <Button onClick={handleSave} disabled={saving} className="flex-1">
               {saving ? (
                 <>

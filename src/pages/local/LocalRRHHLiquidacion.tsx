@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -130,10 +130,9 @@ type AdjustmentType = 'advance' | 'consumption' | 'extra';
 export default function LocalRRHHLiquidacion() {
   const { branch } = useOutletContext<LocalContext>();
   const { user } = useAuth();
-  const { isAdmin, roles } = useUserRole();
+  const { isSuperadmin, isFranquiciado, local } = usePermissionsV2(branch?.id);
   
-  const isFranquiciado = roles.includes('franquiciado');
-  const canViewSensitive = isAdmin || isFranquiciado;
+  const canViewSensitive = isSuperadmin || isFranquiciado || local.canViewPayroll;
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

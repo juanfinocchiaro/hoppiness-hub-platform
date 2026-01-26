@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { useAuth } from '@/hooks/useAuth';
 import { useExportToExcel } from '@/hooks/useExportToExcel';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -79,7 +79,7 @@ interface LocalPedidosProps {
 export default function LocalPedidos({ defaultTab = 'active' }: LocalPedidosProps) {
   const { branchId } = useParams();
   const { branch } = useOutletContext<{ branch: Tables<'branches'> | null }>();
-  const { isAdmin, isGerente, branchPermissions } = useUserRole();
+  const { isSuperadmin, isEncargado, isFranquiciado, local } = usePermissionsV2(branchId);
   const { user } = useAuth();
   const { exportToExcel } = useExportToExcel();
   
@@ -93,8 +93,7 @@ export default function LocalPedidos({ defaultTab = 'active' }: LocalPedidosProp
   const [cancelReason, setCancelReason] = useState('');
   const [cancelNotes, setCancelNotes] = useState('');
 
-  const currentPermissions = branchPermissions.find(p => p.branch_id === branchId);
-  const canManageOrders = isAdmin || isGerente || currentPermissions?.can_manage_orders;
+  const canManageOrders = isSuperadmin || isFranquiciado || isEncargado || local.canManageOrders;
 
   const fetchOrders = async () => {
     if (!branchId) return;

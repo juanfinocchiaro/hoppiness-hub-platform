@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +27,7 @@ type PrepTimeMode = 'dynamic' | 'custom';
 export default function LocalConfig() {
   const { branchId } = useParams();
   const { branch: contextBranch } = useOutletContext<{ branch: Branch | null }>();
-  const { isAdmin, isGerente, branchPermissions } = useUserRole();
+  const { isSuperadmin, isEncargado, isFranquiciado, local } = usePermissionsV2(branchId);
   
   const [branch, setBranch] = useState<Branch | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,9 +44,7 @@ export default function LocalConfig() {
   const [dynamicPrepTime, setDynamicPrepTime] = useState<number | null>(null);
   const [loadingDynamic, setLoadingDynamic] = useState(false);
 
-
-  const currentPermissions = branchPermissions.find(p => p.branch_id === branchId);
-  const canEdit = isAdmin || isGerente || currentPermissions?.can_manage_staff;
+  const canEdit = isSuperadmin || isFranquiciado || isEncargado || local.canEditLocalConfig;
 
   const fetchBranch = async () => {
     if (!branchId) return;

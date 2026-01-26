@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -88,7 +88,7 @@ const moduleLabels: Record<string, string> = {
 const moduleOrder = ['pos', 'orders', 'kds', 'cash', 'inventory', 'finance', 'hr', 'suppliers', 'config', 'reports', 'users'];
 
 export default function RoleTemplates() {
-  const { isAdmin } = useUserRole();
+  const { isSuperadmin } = usePermissionsV2();
   
   const [permissionDefinitions, setPermissionDefinitions] = useState<PermissionDefinition[]>([]);
   const [loading, setLoading] = useState(true);
@@ -276,7 +276,7 @@ export default function RoleTemplates() {
   };
 
   const saveLocalTemplate = async () => {
-    if (!isAdmin || !selectedLocalTemplate) return;
+    if (!isSuperadmin || !selectedLocalTemplate) return;
     
     setSaving(true);
     try {
@@ -311,7 +311,7 @@ export default function RoleTemplates() {
   };
 
   const saveBrandTemplate = async () => {
-    if (!isAdmin || !selectedBrandTemplate) return;
+    if (!isSuperadmin || !selectedBrandTemplate) return;
     
     setSaving(true);
     try {
@@ -356,7 +356,7 @@ export default function RoleTemplates() {
   const selectedLocalTemplateName = localTemplates.find(t => t.id === selectedLocalTemplate)?.name || '';
   const selectedBrandTemplateName = brandTemplates.find(t => t.id === selectedBrandTemplate)?.name || '';
 
-  if (!isAdmin) {
+  if (!isSuperadmin) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <div className="text-center space-y-4">

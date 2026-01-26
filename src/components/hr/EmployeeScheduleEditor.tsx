@@ -30,7 +30,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { handleError } from '@/lib/errorHandler';
 import { Calendar, Clock, Save, Loader2, Edit2, Plus, Trash2, AlertTriangle, Info, ChevronLeft, ChevronRight, Scale, DollarSign, Moon, Settings } from 'lucide-react';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 
 // Shift cost types for CCT 329/00
 type CostType = 'standard' | 'night' | 'overtime_50' | 'overtime_100';
@@ -125,7 +125,7 @@ const COST_MULTIPLIERS = {
 };
 
 export default function EmployeeScheduleEditor({ branchId, canManage }: EmployeeScheduleEditorProps) {
-  const { isAdmin, isFranquiciado } = useUserRole();
+  const { isSuperadmin, isFranquiciado } = usePermissionsV2(branchId);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [schedules, setSchedules] = useState<Record<string, DaySchedule[]>>({});
   const [loading, setLoading] = useState(true);
@@ -702,7 +702,7 @@ export default function EmployeeScheduleEditor({ branchId, canManage }: Employee
 
   const hasErrors = violations.some(v => v.severity === 'error');
   const hasWarnings = violations.some(v => v.severity === 'warning');
-  const canDisableLaborLaw = isAdmin || isFranquiciado;
+  const canDisableLaborLaw = isSuperadmin || isFranquiciado;
 
   if (loading) {
     return (

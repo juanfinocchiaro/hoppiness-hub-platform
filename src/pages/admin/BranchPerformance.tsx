@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,7 @@ interface BranchKPI {
 }
 
 export default function BranchPerformance() {
-  const { accessibleBranches, loading: roleLoading } = useUserRole();
+  const { accessibleBranches, loading: roleLoading } = usePermissionsV2();
   const [period, setPeriod] = useState<PeriodType>('current');
   const [loading, setLoading] = useState(true);
   const [branchKPIs, setBranchKPIs] = useState<BranchKPI[]>([]);

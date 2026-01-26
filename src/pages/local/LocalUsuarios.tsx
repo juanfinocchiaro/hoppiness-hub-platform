@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -77,7 +77,7 @@ const ROLE_PRIORITY: Record<string, number> = {
 
 export default function LocalUsuarios() {
   const { branchId } = useParams<{ branchId: string }>();
-  const { isAdmin, isFranquiciado, isGerente } = useUserRole();
+  const { isSuperadmin, isFranquiciado, isEncargado, local } = usePermissionsV2(branchId);
   
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<CombinedUser[]>([]);
@@ -87,7 +87,7 @@ export default function LocalUsuarios() {
   const [selectedUser, setSelectedUser] = useState<CombinedUser | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  const canInvite = isAdmin || isFranquiciado || isGerente;
+  const canInvite = isSuperadmin || isFranquiciado || isEncargado || local.canInviteEmployees;
 
   useEffect(() => {
     if (branchId) {

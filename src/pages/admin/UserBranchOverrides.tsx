@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -107,7 +107,7 @@ const moduleOrder = ['pos', 'orders', 'kds', 'cash', 'inventory', 'finance', 'hr
 
 export default function UserBranchOverrides() {
   const { user: currentUser } = useAuth();
-  const { isAdmin } = useUserRole();
+  const { isSuperadmin } = usePermissionsV2();
   const [searchParams] = useSearchParams();
   
   const preselectedUserId = searchParams.get('user');
@@ -508,7 +508,7 @@ export default function UserBranchOverrides() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-4">
-                {isAdmin && (
+                {isSuperadmin && (
                   <div className="flex items-center gap-2">
                     <Switch 
                       id="advanced" 
@@ -543,7 +543,7 @@ export default function UserBranchOverrides() {
                 <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No hay overrides configurados</p>
                 <p className="text-sm mt-1">Este usuario hereda todos los permisos de su plantilla.</p>
-                {isAdmin && (
+                {isSuperadmin && (
                   <Button variant="outline" size="sm" className="mt-4" onClick={() => setShowAdvanced(true)}>
                     Ver todos los permisos
                   </Button>
