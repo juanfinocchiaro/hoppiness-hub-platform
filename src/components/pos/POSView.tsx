@@ -334,7 +334,7 @@ export default function POSView({ branch }: POSViewProps) {
     async function fetchProducts() {
       setLoading(true);
       const [productsRes, categoriesRes, branchProductsRes, modifierAssignmentsRes] = await Promise.all([
-        supabase.from('products').select('*').eq('is_available', true),
+        supabase.from('products').select('*').eq('is_active', true),
         supabase.from('product_categories').select('*').eq('is_active', true).order('display_order'),
         supabase.from('branch_products').select('*').eq('branch_id', branch.id),
         // Pre-fetch which products have modifiers
@@ -397,7 +397,7 @@ export default function POSView({ branch }: POSViewProps) {
       // Check product global availability
       const { data: product, error: productError } = await supabase
         .from('products')
-        .select('id, name, is_available')
+        .select('id, name, is_active')
         .eq('id', productId)
         .single();
 
@@ -405,8 +405,8 @@ export default function POSView({ branch }: POSViewProps) {
         return { available: false, reason: 'Producto no encontrado' };
       }
 
-      if (!product.is_available) {
-        return { available: false, reason: 'Producto deshabilitado por la marca' };
+      if (!product.is_active) {
+        return { available: false, reason: 'Producto archivado' };
       }
 
       // Check branch-specific availability

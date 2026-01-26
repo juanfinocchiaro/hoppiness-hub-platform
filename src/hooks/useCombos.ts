@@ -235,7 +235,7 @@ export function useBranchCombos(branchId: string | null) {
         .map(i => i.product_id as string);
 
       const { data: products } = productIds.length > 0
-        ? await supabase.from('products').select('id, name, price, is_available').in('id', productIds)
+        ? await supabase.from('products').select('id, name, price, is_active').in('id', productIds)
         : { data: [] };
 
       const { data: branchProducts } = productIds.length > 0
@@ -261,7 +261,7 @@ export function useBranchCombos(branchId: string | null) {
             const branchAvail = item.product_id ? branchAvailability.get(item.product_id) : null;
             
             const isProductAvailable = product 
-              ? product.is_available && (branchAvail !== false)
+              ? product.is_active && (branchAvail !== false)
               : true;
 
             return {

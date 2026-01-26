@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useProductBranchExclusions, useUpdateProductBranchExclusions } from '@/hooks/useProductChannels';
+import { useProductBranchAuthorization, useUpdateProductBranchAuthorization } from '@/hooks/useProductChannels';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import {
   Table,
@@ -16,24 +15,23 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Check, X, Store, AlertCircle } from 'lucide-react';
+import { Check, X, Store } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ProductBranchTabProps {
   productId: string;
-  isAvailableAllBranches: boolean;
-  onUpdateAllBranches: (value: boolean) => void;
+  isAvailableAllBranches?: boolean;
+  onUpdateAllBranches?: (value: boolean) => void;
 }
 
 export function ProductBranchTab({ 
-  productId, 
-  isAvailableAllBranches,
-  onUpdateAllBranches,
+  productId,
 }: ProductBranchTabProps) {
-  const { data: exclusions, isLoading: exclusionsLoading } = useProductBranchExclusions(productId);
-  const updateExclusions = useUpdateProductBranchExclusions();
+  const { data: authorizations, isLoading: authLoading } = useProductBranchAuthorization(productId);
+  const updateAuthorization = useUpdateProductBranchAuthorization();
   
-  const [localExclusions, setLocalExclusions] = useState<Set<string>>(new Set());
+  // Map of branchId -> isEnabled
+  const [localAuth, setLocalAuth] = useState<Map<string, boolean>>(new Map());
   const [hasChanges, setHasChanges] = useState(false);
 
   // Get all active branches
@@ -50,44 +48,77 @@ export function ProductBranchTab({
     },
   });
 
-  // Sync local state with fetched exclusions
+  // Sync local state with fetched authorizations
   useEffect(() => {
-    if (exclusions) {
-      setLocalExclusions(new Set(exclusions));
+    if (authorizations && branches) {
+      const authMap = new Map<string, boolean>();
+      
+      // Initialize all branches as enabled (for new products)
+      branches.forEach(b => authMap.set(b.id, true));
+      
+      // Override with actual values from DB
+      authorizations.forEach(a => {
+        authMap.set(a.branch_id, a.is_enabled_by_brand);
+      });
+      
+      setLocalAuth(authMap);
       setHasChanges(false);
     }
-  }, [exclusions]);
+  }, [authorizations, branches]);
 
   const handleToggleBranch = (branchId: string) => {
-    setLocalExclusions(prev => {
-      const next = new Set(prev);
-      if (next.has(branchId)) {
-        next.delete(branchId);
-      } else {
-        next.add(branchId);
-      }
+    setLocalAuth(prev => {
+      const next = new Map(prev);
+      next.set(branchId, !prev.get(branchId));
+      return next;
+    });
+    setHasChanges(true);
+  };
+
+  const handleSelectAll = () => {
+    setLocalAuth(prev => {
+      const next = new Map(prev);
+      branches?.forEach(b => next.set(b.id, true));
+      return next;
+    });
+    setHasChanges(true);
+  };
+
+  const handleSelectNone = () => {
+    setLocalAuth(prev => {
+      const next = new Map(prev);
+      branches?.forEach(b => next.set(b.id, false));
       return next;
     });
     setHasChanges(true);
   };
 
   const handleSave = async () => {
-    await updateExclusions.mutateAsync({
+    const branchAuthorizations = Array.from(localAuth.entries()).map(([branchId, isEnabled]) => ({
+      branchId,
+      isEnabled,
+    }));
+    
+    await updateAuthorization.mutateAsync({
       productId,
-      excludedBranchIds: Array.from(localExclusions),
+      branchAuthorizations,
     });
     setHasChanges(false);
-    toast.success('Exclusiones guardadas');
   };
 
   const handleReset = () => {
-    if (exclusions) {
-      setLocalExclusions(new Set(exclusions));
+    if (authorizations && branches) {
+      const authMap = new Map<string, boolean>();
+      branches.forEach(b => authMap.set(b.id, true));
+      authorizations.forEach(a => {
+        authMap.set(a.branch_id, a.is_enabled_by_brand);
+      });
+      setLocalAuth(authMap);
       setHasChanges(false);
     }
   };
 
-  const isLoading = exclusionsLoading || branchesLoading;
+  const isLoading = authLoading || branchesLoading;
 
   if (isLoading) {
     return (
@@ -99,131 +130,89 @@ export function ProductBranchTab({
     );
   }
 
-  // Determine which branches are enabled based on mode
-  const getIsEnabledForBranch = (branchId: string) => {
-    if (isAvailableAllBranches) {
-      // All branches except those in exclusions
-      return !localExclusions.has(branchId);
-    } else {
-      // Only branches in exclusions (inverted logic)
-      return localExclusions.has(branchId);
-    }
-  };
-
-  const enabledCount = branches?.filter(b => getIsEnabledForBranch(b.id)).length || 0;
+  const enabledCount = Array.from(localAuth.values()).filter(Boolean).length;
   const totalCount = branches?.length || 0;
 
   return (
     <div className="space-y-6">
-      {/* Mode Selection */}
-      <div className="space-y-4">
-        <Label className="text-base font-medium">Disponibilidad por Sucursal</Label>
-        
-        <RadioGroup 
-          value={isAvailableAllBranches ? 'all' : 'selected'}
-          onValueChange={(v) => onUpdateAllBranches(v === 'all')}
-          className="space-y-3"
-        >
-          <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
-            <RadioGroupItem value="all" id="all" />
-            <Label htmlFor="all" className="flex-1 cursor-pointer">
-              <div className="font-medium">Disponible en TODAS las sucursales</div>
-              <div className="text-sm text-muted-foreground">
-                Exceptuando las que marques abajo
-              </div>
-            </Label>
-          </div>
-          
-          <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
-            <RadioGroupItem value="selected" id="selected" />
-            <Label htmlFor="selected" className="flex-1 cursor-pointer">
-              <div className="font-medium">Solo en sucursales seleccionadas</div>
-              <div className="text-sm text-muted-foreground">
-                Solo disponible en las que marques abajo
-              </div>
-            </Label>
-          </div>
-        </RadioGroup>
+      {/* Header with Quick Actions */}
+      <div className="flex items-center justify-between">
+        <div>
+          <Label className="text-base font-medium">Autorización por Sucursal</Label>
+          <p className="text-sm text-muted-foreground">
+            Seleccioná en qué sucursales estará disponible este producto
+          </p>
+        </div>
+        <Badge variant="secondary">
+          {enabledCount} de {totalCount} sucursales
+        </Badge>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" onClick={handleSelectAll}>
+          Seleccionar todas
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleSelectNone}>
+          Deseleccionar todas
+        </Button>
       </div>
 
       {/* Branch List */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <Label className="text-base font-medium">
-            {isAvailableAllBranches ? 'Excluir de:' : 'Incluir en:'}
-          </Label>
-          <Badge variant="secondary">
-            {enabledCount} de {totalCount} sucursales
-          </Badge>
-        </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Sucursal</TableHead>
+            <TableHead>Ciudad</TableHead>
+            <TableHead className="text-center w-[100px]">Autorizado</TableHead>
+            <TableHead className="text-center w-[100px]">Estado</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {branches?.map(branch => {
+            const isEnabled = localAuth.get(branch.id) ?? true;
+            
+            return (
+              <TableRow key={branch.id}>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Store className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-medium">{branch.name}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {branch.city}
+                </TableCell>
+                <TableCell className="text-center">
+                  <Switch 
+                    checked={isEnabled}
+                    onCheckedChange={() => handleToggleBranch(branch.id)}
+                  />
+                </TableCell>
+                <TableCell className="text-center">
+                  {isEnabled ? (
+                    <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600">
+                      <Check className="w-3 h-3 mr-1" />
+                      Autorizado
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                      <X className="w-3 h-3 mr-1" />
+                      No disponible
+                    </Badge>
+                  )}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Sucursal</TableHead>
-              <TableHead>Ciudad</TableHead>
-              <TableHead className="text-center w-[100px]">
-                {isAvailableAllBranches ? 'Excluir' : 'Incluir'}
-              </TableHead>
-              <TableHead className="text-center w-[100px]">Estado</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {branches?.map(branch => {
-              const isExcluded = localExclusions.has(branch.id);
-              const isEnabled = getIsEnabledForBranch(branch.id);
-              
-              return (
-                <TableRow key={branch.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Store className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-medium">{branch.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {branch.city}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Switch 
-                      checked={isExcluded}
-                      onCheckedChange={() => handleToggleBranch(branch.id)}
-                    />
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {isEnabled ? (
-                      <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600">
-                        <Check className="w-3 h-3 mr-1" />
-                        Activo
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="bg-destructive/10 text-destructive">
-                        <X className="w-3 h-3 mr-1" />
-                        Excluido
-                      </Badge>
-                    )}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Warning */}
-      {localExclusions.size > 0 && (
-        <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800">
-          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-          <div className="text-sm">
-            <strong>
-              {isAvailableAllBranches 
-                ? `Este producto NO estará disponible en ${localExclusions.size} sucursal(es).`
-                : `Este producto SOLO estará disponible en ${localExclusions.size} sucursal(es).`
-              }
-            </strong>
-            <br />
-            Los locales no podrán activarlo en las sucursales excluidas.
-          </div>
+      {/* Info */}
+      {enabledCount < totalCount && (
+        <div className="text-sm text-muted-foreground p-3 bg-muted rounded-lg">
+          <strong>Nota:</strong> Los locales no autorizados no verán este producto en su panel.
+          Para que un producto esté a la venta, el local además debe activarlo manualmente.
         </div>
       )}
 
@@ -235,7 +224,7 @@ export function ProductBranchTab({
           </Button>
           <Button 
             onClick={handleSave}
-            disabled={updateExclusions.isPending}
+            disabled={updateAuthorization.isPending}
           >
             Guardar Cambios
           </Button>

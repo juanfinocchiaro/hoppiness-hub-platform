@@ -5315,53 +5315,6 @@ export type Database = {
           },
         ]
       }
-      product_branch_exclusions: {
-        Row: {
-          branch_id: string
-          created_at: string | null
-          product_id: string
-        }
-        Insert: {
-          branch_id: string
-          created_at?: string | null
-          product_id: string
-        }
-        Update: {
-          branch_id?: string
-          created_at?: string | null
-          product_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "product_branch_exclusions_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "product_branch_exclusions_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "product_branch_exclusions_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "supplier_balances"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "product_branch_exclusions_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       product_categories: {
         Row: {
           created_at: string
@@ -5560,7 +5513,7 @@ export type Database = {
           id: string
           image_updated_at: string | null
           image_url: string | null
-          is_available: boolean
+          is_active: boolean
           is_available_all_branches: boolean | null
           is_enabled_by_brand: boolean
           is_featured: boolean | null
@@ -5581,7 +5534,7 @@ export type Database = {
           id?: string
           image_updated_at?: string | null
           image_url?: string | null
-          is_available?: boolean
+          is_active?: boolean
           is_available_all_branches?: boolean | null
           is_enabled_by_brand?: boolean
           is_featured?: boolean | null
@@ -5602,7 +5555,7 @@ export type Database = {
           id?: string
           image_updated_at?: string | null
           image_url?: string | null
-          is_available?: boolean
+          is_active?: boolean
           is_available_all_branches?: boolean | null
           is_enabled_by_brand?: boolean
           is_featured?: boolean | null

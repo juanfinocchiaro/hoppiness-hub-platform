@@ -267,7 +267,7 @@ export async function getProductsMissingStock(branchId: string): Promise<Product
       product_id,
       ingredient_id,
       quantity_required,
-      product:products(id, name, is_available),
+      product:products(id, name, is_active),
       ingredient:ingredients(id, name, unit, alternative_ingredient_id)
     `)
     .gt('quantity_required', 0);

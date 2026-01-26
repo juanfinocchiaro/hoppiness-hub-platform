@@ -112,7 +112,7 @@ export default function ProductForm() {
           setPrice(product.price.toString());
           setCategoryId(product.category_id || '');
           setImageUrl(product.image_url || '');
-          setIsAvailable(product.is_available);
+          setIsAvailable(product.is_active);
           setIsFeatured(product.is_featured || false);
           setPreparationTime(product.preparation_time?.toString() || '');
           // @ts-ignore - product_type may not be in types yet

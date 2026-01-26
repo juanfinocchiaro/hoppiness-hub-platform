@@ -53,7 +53,7 @@ export default function Combos() {
     const { data } = await supabase
       .from('products')
       .select('id, name, price')
-      .eq('is_available', true)
+      .eq('is_active', true)
       .order('name');
     setProducts(data || []);
   };

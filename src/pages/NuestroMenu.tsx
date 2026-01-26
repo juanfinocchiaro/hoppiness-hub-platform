@@ -45,7 +45,7 @@ export default function NuestroMenu() {
 
   const fetchData = async () => {
     const [productsRes, branchesRes, branchProductsRes, categoriesRes] = await Promise.all([
-      supabase.from('products').select('*, category:product_categories(*)').eq('is_available', true).order('name'),
+      supabase.from('products').select('*, category:product_categories(*)').eq('is_active', true).order('name'),
       supabase.from('branches').select('*').eq('is_active', true).order('name'),
       supabase.from('branch_products').select('branch_id, product_id, is_available'),
       supabase.from('product_categories').select('*').eq('is_active', true).order('display_order'),

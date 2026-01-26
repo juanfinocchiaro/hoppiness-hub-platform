@@ -140,7 +140,7 @@ export default function POS() {
     async function fetchProducts() {
       setLoading(true);
       const [productsRes, categoriesRes, branchProductsRes] = await Promise.all([
-        supabase.from('products').select('*').eq('is_available', true).order('name'),
+        supabase.from('products').select('*').eq('is_active', true).order('name'),
         supabase.from('product_categories').select('*').eq('is_active', true).order('display_order'),
         supabase.from('branch_products').select('*').eq('branch_id', selectedBranch!.id),
       ]);
