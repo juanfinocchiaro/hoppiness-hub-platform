@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserRole } from '@/hooks/useUserRole';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -36,7 +36,7 @@ interface CategoryWithProducts {
 
 export default function BranchProducts() {
   const { branchId } = useParams<{ branchId: string }>();
-  const { isAdmin, branchPermissions, loading: roleLoading } = useUserRole();
+  const { isSuperadmin, isCoordinador, brand, loading: roleLoading } = usePermissionsV2(branchId);
   
   const [branch, setBranch] = useState<Branch | null>(null);
   const [categoriesWithProducts, setCategoriesWithProducts] = useState<CategoryWithProducts[]>([]);
@@ -45,9 +45,7 @@ export default function BranchProducts() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [updating, setUpdating] = useState<string | null>(null);
 
-  const canManageProducts = isAdmin || branchPermissions.some(
-    p => p.branch_id === branchId && p.can_manage_products
-  );
+  const canManageProducts = isSuperadmin || isCoordinador || brand.canEditProducts;
 
   useEffect(() => {
     async function fetchData() {
@@ -421,7 +419,7 @@ export default function BranchProducts() {
                         />
 
                         {/* Edit button (only for admin - goes to master catalog) */}
-                        {isAdmin && (
+                        {(isSuperadmin || isCoordinador) && (
                           <Link to={`/admin/productos/${product.id}`}>
                             <Button variant="ghost" size="icon" className="shrink-0">
                               <Pencil className="w-4 h-4 text-muted-foreground" />
