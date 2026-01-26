@@ -62,8 +62,6 @@ export default function ProductForm() {
   const [isActive, setIsActive] = useState(true); // is_active = estado del catálogo
   const [isFeatured, setIsFeatured] = useState(false);
   const [preparationTime, setPreparationTime] = useState('');
-  const [productType, setProductType] = useState<'final' | 'composite'>('final');
-  const [containsAlcohol, setContainsAlcohol] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -114,10 +112,6 @@ export default function ProductForm() {
           setIsActive(product.is_active);
           setIsFeatured(product.is_featured || false);
           setPreparationTime(product.preparation_time?.toString() || '');
-          // @ts-ignore - product_type may not be in types yet
-          setProductType(product.product_type || 'final');
-          // @ts-ignore
-          setContainsAlcohol(product.contains_alcohol || false);
         }
 
         // Obtener sucursales donde está AUTORIZADO por marca (is_enabled_by_brand = true)
@@ -491,29 +485,6 @@ export default function ProductForm() {
                     onChange={(e) => setPreparationTime(e.target.value)}
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label>Tipo de Producto</Label>
-                  <Select value={productType} onValueChange={(v) => setProductType(v as 'final' | 'composite')}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="final">
-                        <div className="flex items-center gap-2">
-                          <Package className="h-4 w-4" />
-                          Producto Final
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="composite">
-                        <div className="flex items-center gap-2">
-                          <Utensils className="h-4 w-4" />
-                          Con Ingredientes
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
 
               {/* Image Upload */}
@@ -606,18 +577,6 @@ export default function ProductForm() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t">
-                  <div>
-                    <Label>Contiene alcohol</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Marcar si el producto contiene bebidas alcohólicas
-                    </p>
-                  </div>
-                  <Switch
-                    checked={containsAlcohol}
-                    onCheckedChange={setContainsAlcohol}
-                  />
-                </div>
               </CardContent>
             </Card>
 
