@@ -98,16 +98,17 @@ export default function LocalProductos() {
   const fetchData = async () => {
     try {
       const [productsRes, categoriesRes, logsRes] = await Promise.all([
-        supabase
-          .from('branch_products')
-          .select(`
-            id,
-            product_id,
-            is_available,
-            is_enabled_by_brand,
-            product:products(id, name, category_id, price, image_url, is_enabled_by_brand)
-          `)
-          .eq('branch_id', branchId!),
+      supabase
+        .from('branch_products')
+        .select(`
+          id,
+          product_id,
+          is_available,
+          is_enabled_by_brand,
+          product:products(id, name, category_id, price, image_url, is_enabled_by_brand)
+        `)
+        .eq('branch_id', branchId!)
+        .eq('is_enabled_by_brand', true), // Solo productos habilitados por la marca
         supabase
           .from('product_categories')
           .select('id, name, display_order')
@@ -133,12 +134,11 @@ export default function LocalProductos() {
         }
       });
       
-      // Filter only products enabled by brand
+      // Productos ya filtrados por is_enabled_by_brand en la query
       const validProducts = (productsRes.data || [])
-        .filter(p => p.product !== null && p.product.is_enabled_by_brand)
+        .filter(p => p.product !== null)
         .map(p => ({
           ...p,
-          is_enabled_by_brand: p.is_enabled_by_brand,
           lastLog: logsMap.get(`product-${p.product_id}`)
         })) as ProductAvailability[];
       setProducts(validProducts);
