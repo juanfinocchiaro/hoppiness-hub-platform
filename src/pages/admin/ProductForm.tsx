@@ -59,12 +59,11 @@ export default function ProductForm() {
   const [price, setPrice] = useState('');
   const [categoryId, setCategoryId] = useState<string>('');
   const [imageUrl, setImageUrl] = useState('');
-  const [isAvailable, setIsAvailable] = useState(true);
+  const [isActive, setIsActive] = useState(true); // is_active = estado del catálogo
   const [isFeatured, setIsFeatured] = useState(false);
   const [preparationTime, setPreparationTime] = useState('');
   const [productType, setProductType] = useState<'final' | 'composite'>('final');
   const [containsAlcohol, setContainsAlcohol] = useState(false);
-  const [isEnabledByBrand, setIsEnabledByBrand] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
@@ -112,21 +111,21 @@ export default function ProductForm() {
           setPrice(product.price.toString());
           setCategoryId(product.category_id || '');
           setImageUrl(product.image_url || '');
-          setIsAvailable(product.is_active);
+          setIsActive(product.is_active);
           setIsFeatured(product.is_featured || false);
           setPreparationTime(product.preparation_time?.toString() || '');
           // @ts-ignore - product_type may not be in types yet
           setProductType(product.product_type || 'final');
           // @ts-ignore
           setContainsAlcohol(product.contains_alcohol || false);
-          setIsEnabledByBrand(product.is_enabled_by_brand ?? true);
         }
 
-        // Obtener sucursales donde está el producto
+        // Obtener sucursales donde está AUTORIZADO por marca (is_enabled_by_brand = true)
         const { data: branchProducts } = await supabase
           .from('branch_products')
-          .select('branch_id')
-          .eq('product_id', productId);
+          .select('branch_id, is_enabled_by_brand')
+          .eq('product_id', productId)
+          .eq('is_enabled_by_brand', true);
 
         if (branchProducts) {
           setSelectedBranches(branchProducts.map(bp => bp.branch_id));
@@ -247,18 +246,19 @@ export default function ProductForm() {
     setSaving(true);
 
     try {
+      // Nota: is_active es el estado de catálogo (archivado/activo)
+      // Por defecto los productos nuevos están activos en el catálogo
       const productData = {
         name,
         description: description || null,
         price: parseFloat(price),
         category_id: categoryId || null,
         image_url: imageUrl || null,
-        is_available: isAvailable,
+        is_active: isActive, // Campo renombrado de is_available a is_active
         is_featured: isFeatured,
         preparation_time: preparationTime ? parseInt(preparationTime) : null,
         product_type: productType,
         contains_alcohol: containsAlcohol,
-        is_enabled_by_brand: isEnabledByBrand,
       };
 
       let savedProductId = productId;
@@ -281,18 +281,32 @@ export default function ProductForm() {
         savedProductId = data.id;
       }
 
-      // Manejar branch_products
+      // Manejar branch_products según nuevo modelo de 3 capas
+      // - is_enabled_by_brand = true para locales seleccionados (autorizado por marca)
+      // - is_enabled_by_brand = false para locales no seleccionados
+      // - is_available = false siempre (el local debe activarlo manualmente)
       if (savedProductId) {
         const { data: currentBranchProducts } = await supabase
           .from('branch_products')
-          .select('branch_id')
+          .select('branch_id, is_enabled_by_brand')
           .eq('product_id', savedProductId);
 
         const currentBranchIds = (currentBranchProducts || []).map(bp => bp.branch_id);
 
+        // Locales nuevos a agregar (no tienen registro)
         const toAdd = selectedBranches.filter(id => !currentBranchIds.includes(id));
-        const toRemove = currentBranchIds.filter(id => !selectedBranches.includes(id));
+        // Locales a habilitar (tienen registro pero is_enabled_by_brand = false)
+        const toEnable = selectedBranches.filter(id => {
+          const bp = currentBranchProducts?.find(b => b.branch_id === id);
+          return bp && !bp.is_enabled_by_brand;
+        });
+        // Locales a deshabilitar (tienen registro y is_enabled_by_brand = true pero no están seleccionados)
+        const toDisable = currentBranchIds.filter(id => {
+          const bp = currentBranchProducts?.find(b => b.branch_id === id);
+          return bp?.is_enabled_by_brand && !selectedBranches.includes(id);
+        });
 
+        // Agregar nuevos registros con is_enabled_by_brand = true, is_available = false
         if (toAdd.length > 0) {
           const { error: insertError } = await supabase
             .from('branch_products')
@@ -300,21 +314,34 @@ export default function ProductForm() {
               toAdd.map(branchId => ({
                 branch_id: branchId,
                 product_id: savedProductId,
-                is_available: true,
+                is_enabled_by_brand: true,
+                is_available: false, // Pausado por defecto
               }))
             );
 
           if (insertError) throw insertError;
         }
 
-        if (toRemove.length > 0) {
-          const { error: deleteError } = await supabase
+        // Habilitar locales que ya tenían registro
+        if (toEnable.length > 0) {
+          const { error: enableError } = await supabase
             .from('branch_products')
-            .delete()
+            .update({ is_enabled_by_brand: true })
             .eq('product_id', savedProductId)
-            .in('branch_id', toRemove);
+            .in('branch_id', toEnable);
 
-          if (deleteError) throw deleteError;
+          if (enableError) throw enableError;
+        }
+
+        // Deshabilitar locales no seleccionados
+        if (toDisable.length > 0) {
+          const { error: disableError } = await supabase
+            .from('branch_products')
+            .update({ is_enabled_by_brand: false })
+            .eq('product_id', savedProductId)
+            .in('branch_id', toDisable);
+
+          if (disableError) throw disableError;
         }
 
         // Manejar modifier assignments
@@ -552,19 +579,19 @@ export default function ProductForm() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Estado</CardTitle>
+                <CardTitle>Estado del Catálogo</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label>Disponible globalmente</Label>
+                    <Label>Activo en catálogo</Label>
                     <p className="text-sm text-muted-foreground">
-                      Si está apagado, no aparecerá en ninguna sucursal
+                      Si está apagado, el producto está archivado y no aparece en ningún lado
                     </p>
                   </div>
                   <Switch
-                    checked={isAvailable}
-                    onCheckedChange={setIsAvailable}
+                    checked={isActive}
+                    onCheckedChange={setIsActive}
                   />
                 </div>
 
@@ -591,20 +618,6 @@ export default function ProductForm() {
                   <Switch
                     checked={containsAlcohol}
                     onCheckedChange={setContainsAlcohol}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t">
-                  <div>
-                    <Label>Habilitado para venta</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Si está apagado, no se podrá vender en ninguna sucursal
-                    </p>
-                  </div>
-                  <Switch
-                    checked={isEnabledByBrand}
-                    onCheckedChange={setIsEnabledByBrand}
-                    className="data-[state=checked]:bg-emerald-500"
                   />
                 </div>
               </CardContent>

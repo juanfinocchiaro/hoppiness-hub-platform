@@ -320,7 +320,7 @@ export default function LocalProductos() {
               {categoryProducts.map((item) => (
                 <Card 
                   key={item.id} 
-                  className={`transition-colors ${!item.is_available ? 'bg-destructive/5 border-destructive/20' : ''}`}
+                  className={`transition-colors ${!item.is_available ? 'bg-muted/50 border-muted' : ''}`}
                 >
                   <CardContent className="py-3 px-4">
                     <div className="flex items-center justify-between">
@@ -329,11 +329,11 @@ export default function LocalProductos() {
                           <img 
                             src={item.product.image_url} 
                             alt={item.product.name}
-                            className="w-10 h-10 rounded object-cover"
+                            className={`w-10 h-10 rounded object-cover ${!item.is_available ? 'opacity-50' : ''}`}
                           />
                         )}
                         <div>
-                          <p className={`font-medium ${!item.is_available ? 'text-muted-foreground line-through' : ''}`}>
+                          <p className={`font-medium ${!item.is_available ? 'text-muted-foreground' : ''}`}>
                             {item.product.name}
                           </p>
                           <p className="text-sm text-muted-foreground">
@@ -342,7 +342,12 @@ export default function LocalProductos() {
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        {!item.is_available && item.lastLog && (
+                        {/* Estado visual del producto */}
+                        {item.is_available ? (
+                          <Badge variant="outline" className="text-xs border-primary/50 text-primary bg-primary/10">
+                            Activo
+                          </Badge>
+                        ) : item.lastLog ? (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Badge variant="outline" className="text-xs cursor-help gap-1 border-muted-foreground/30 text-muted-foreground">
@@ -359,8 +364,7 @@ export default function LocalProductos() {
                               </p>
                             </TooltipContent>
                           </Tooltip>
-                        )}
-                        {!item.is_available && !item.lastLog && (
+                        ) : (
                           <Badge variant="secondary" className="text-xs">Pausado</Badge>
                         )}
                         <Switch

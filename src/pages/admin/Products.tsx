@@ -263,8 +263,9 @@ export default function Products() {
   };
 
   const handleBranchToggle = (product: Product, branchId: string) => {
-    if (!product.is_enabled_by_brand) {
-      toast.error('El producto está deshabilitado a nivel marca');
+    // Solo verificar que el producto esté activo en el catálogo
+    if (!product.is_active) {
+      toast.error('El producto está archivado');
       return;
     }
     
