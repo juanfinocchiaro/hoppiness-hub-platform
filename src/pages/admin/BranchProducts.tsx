@@ -55,7 +55,7 @@ export default function BranchProducts() {
 
       const [branchRes, productsRes, categoriesRes, branchProductsRes] = await Promise.all([
         supabase.from('branches').select('*').eq('id', branchId).single(),
-        supabase.from('products').select('*').order('name'),
+        supabase.from('products').select('*').eq('is_active', true).order('name'), // Solo productos activos en el catálogo
         supabase.from('product_categories').select('*').order('display_order'),
         supabase.from('branch_products').select('*').eq('branch_id', branchId),
       ]);
@@ -70,36 +70,45 @@ export default function BranchProducts() {
         const grouped: CategoryWithProducts[] = categoriesRes.data.map(category => {
           const categoryProducts = productsRes.data
             .filter(p => p.category_id === category.id)
+            // Solo mostrar productos autorizados (is_enabled_by_brand = true)
+            .filter(p => {
+              const bp = branchProductsMap.get(p.id);
+              return bp?.is_enabled_by_brand !== false;
+            })
             .map(p => ({
               ...p,
               branchProduct: branchProductsMap.get(p.id) || null,
             }));
 
-          const availableCount = categoryProducts.filter(p => p.branchProduct?.is_available !== false).length;
+          const availableCount = categoryProducts.filter(p => p.branchProduct?.is_available === true).length;
 
           return {
             category,
             products: categoryProducts,
             availableCount,
-            allActive: availableCount === categoryProducts.length,
+            allActive: availableCount === categoryProducts.length && categoryProducts.length > 0,
           };
         });
 
         // Add uncategorized products
         const uncategorizedProducts = productsRes.data
           .filter(p => !p.category_id)
+          .filter(p => {
+            const bp = branchProductsMap.get(p.id);
+            return bp?.is_enabled_by_brand !== false;
+          })
           .map(p => ({
             ...p,
             branchProduct: branchProductsMap.get(p.id) || null,
           }));
 
         if (uncategorizedProducts.length > 0) {
-          const availableCount = uncategorizedProducts.filter(p => p.branchProduct?.is_available !== false).length;
+          const availableCount = uncategorizedProducts.filter(p => p.branchProduct?.is_available === true).length;
           grouped.push({
             category: { id: 'uncategorized', name: 'Sin Categoría', is_active: true, created_at: '', display_order: 999, description: null, image_url: null },
             products: uncategorizedProducts,
             availableCount,
-            allActive: availableCount === uncategorizedProducts.length,
+            allActive: availableCount === uncategorizedProducts.length && uncategorizedProducts.length > 0,
           });
         }
 
@@ -329,9 +338,18 @@ export default function BranchProducts() {
                 </CollapsibleTrigger>
                 
                 <div className="flex items-center gap-4">
-                  <span className="text-sm text-muted-foreground">
-                    {allActive ? 'Activa' : availableCount > 0 ? 'Parcial' : 'Inactiva'}
-                  </span>
+                  <Badge 
+                    variant="outline" 
+                    className={`text-xs ${
+                      allActive 
+                        ? 'border-emerald-500/50 text-emerald-600 bg-emerald-500/10' 
+                        : availableCount > 0 
+                          ? 'border-amber-500/50 text-amber-600 bg-amber-500/10' 
+                          : 'border-muted-foreground/30 text-muted-foreground'
+                    }`}
+                  >
+                    {allActive ? 'Todos activos' : availableCount > 0 ? `${availableCount} activo${availableCount > 1 ? 's' : ''}` : 'Todos pausados'}
+                  </Badge>
                   <Switch
                     checked={allActive}
                     onCheckedChange={(checked) => toggleCategoryProducts(category.id, checked)}
@@ -344,14 +362,14 @@ export default function BranchProducts() {
               <CollapsibleContent>
                 <div className="divide-y">
                   {products.map((product) => {
-                    const isAvailable = product.branchProduct?.is_available !== false;
+                    const isAvailable = product.branchProduct?.is_available === true;
                     const customPrice = product.branchProduct?.custom_price;
                     const displayPrice = customPrice || product.price;
                     
                     return (
                       <div 
                         key={product.id}
-                        className={`flex items-center gap-4 p-4 transition-opacity ${!isAvailable ? 'opacity-50 bg-muted/20' : ''}`}
+                        className={`flex items-center gap-4 p-4 transition-colors ${!isAvailable ? 'bg-muted/20' : ''}`}
                       >
                         {/* Product Image Placeholder */}
                         <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
@@ -368,7 +386,14 @@ export default function BranchProducts() {
 
                         {/* Product Info */}
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-base">{product.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className={`font-medium text-base ${!isAvailable ? 'text-muted-foreground' : ''}`}>{product.name}</p>
+                            {!isAvailable && (
+                              <Badge variant="outline" className="text-[10px] border-muted-foreground/30 text-muted-foreground">
+                                Pausado
+                              </Badge>
+                            )}
+                          </div>
                           {product.description && (
                             <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
                               {product.description}
