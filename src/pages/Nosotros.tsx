@@ -20,7 +20,7 @@ import team3 from '@/assets/team-3.jpg';
 import team4 from '@/assets/team-4.jpg';
 import team5 from '@/assets/team-5.jpg';
 import team6 from '@/assets/team-6.jpg';
-import logoHoppiness from '@/assets/logo-white-transparent.png';
+import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 
 export default function Nosotros() {
   const valores = [
