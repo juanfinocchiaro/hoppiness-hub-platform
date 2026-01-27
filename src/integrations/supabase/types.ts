@@ -2410,6 +2410,82 @@ export type Database = {
           },
         ]
       }
+      daily_sales: {
+        Row: {
+          branch_id: string
+          created_at: string | null
+          created_by: string
+          id: string
+          notes: string | null
+          sale_date: string
+          sales_counter: number | null
+          sales_mp_delivery: number | null
+          sales_other: number | null
+          sales_pedidosya: number | null
+          sales_rappi: number | null
+          sales_total: number | null
+          shift: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string | null
+          created_by: string
+          id?: string
+          notes?: string | null
+          sale_date: string
+          sales_counter?: number | null
+          sales_mp_delivery?: number | null
+          sales_other?: number | null
+          sales_pedidosya?: number | null
+          sales_rappi?: number | null
+          sales_total?: number | null
+          shift: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          notes?: string | null
+          sale_date?: string
+          sales_counter?: number | null
+          sales_mp_delivery?: number | null
+          sales_other?: number | null
+          sales_pedidosya?: number | null
+          sales_rappi?: number | null
+          sales_total?: number | null
+          shift?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_sales_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_sales_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_sales_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       delivery_zones: {
         Row: {
           base_fee: number | null

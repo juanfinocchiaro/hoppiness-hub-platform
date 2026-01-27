@@ -213,39 +213,17 @@ export default function LocalLayout() {
     });
   };
 
-  // ===== NAVEGACIÓN BASADA EN PERMISOS V2 =====
+  // ===== NAVEGACIÓN SIMPLIFICADA - REESTRUCTURACIÓN =====
+  // Eliminados: Operación (POS, KDS, Pedidos), Caja, Menú, Finanzas
+  // Config reducida: solo Turnos e Impresoras
   const navSections: NavSection[] = [
     {
-      id: 'vision',
-      label: 'Visión General',
-      icon: BarChart3,
-      show: lp.canViewDashboard || lp.canViewCierreTurno,
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: LayoutDashboard,
+      show: lp.canViewDashboard,
       items: [
         { to: '', label: 'Dashboard', icon: LayoutDashboard, show: lp.canViewDashboard },
-        { to: 'cierre', label: 'Cierre de Turno', icon: ClipboardCheck, show: lp.canViewCierreTurno },
-      ]
-    },
-    {
-      id: 'operacion',
-      label: 'Operación',
-      icon: Zap,
-      show: lp.canViewIntegrador || lp.canOperatePOS || lp.canViewKDS,
-      items: [
-        { to: 'integrador', label: 'Integrador', icon: Inbox, show: lp.canViewIntegrador, badge: pendingOrdersCount > 0 ? pendingOrdersCount : undefined, badgeVariant: 'destructive' as const },
-        { to: 'pos', label: 'Punto de Venta', icon: Monitor, show: lp.canOperatePOS },
-        { to: 'kds', label: 'Cocina (KDS)', icon: ChefHat, show: lp.canViewKDS },
-        { to: 'pedidos', label: 'Pedidos Activos', icon: ClipboardList, show: lp.canViewPedidosActivos },
-        { to: 'historial', label: 'Historial de Pedidos', icon: History, show: lp.canViewHistorial },
-      ]
-    },
-    {
-      id: 'caja',
-      label: 'Caja',
-      icon: Wallet,
-      show: lp.canViewCajaVenta || lp.canViewCuentaCorriente,
-      items: [
-        { to: 'caja', label: 'Caja del Día', icon: Calculator, show: lp.canViewCajaVenta },
-        { to: 'cuenta-corriente', label: 'Cuenta Corriente Clientes', icon: UserCircle, show: lp.canViewCuentaCorriente },
       ]
     },
     {
@@ -255,8 +233,8 @@ export default function LocalLayout() {
       show: lp.canViewStock,
       items: [
         { to: 'stock', label: 'Stock Actual', icon: Boxes, show: lp.canViewStock },
+        { to: 'stock/conteo', label: 'Conteo de Inventario', icon: ClipboardCheck, show: lp.canDoInventoryCount },
         { to: 'stock/pedir', label: 'Pedir a Proveedor', icon: Truck, show: lp.canOrderFromSupplier },
-        { to: 'stock/conteo', label: 'Conteo Inventario', icon: ClipboardCheck, show: lp.canDoInventoryCount },
       ]
     },
     {
@@ -265,73 +243,42 @@ export default function LocalLayout() {
       icon: ShoppingCart,
       show: lp.canUploadInvoice || lp.canViewSuppliers,
       items: [
-        { to: 'compras/pedidos-del-dia', label: 'Pedidos del Día', icon: Truck, show: lp.canUploadInvoice || lp.canViewSuppliers },
-        { to: 'compras/recepcion', label: 'Recepción', icon: Package, show: lp.canUploadInvoice || lp.canViewSuppliers },
-        { to: 'compras/factura', label: 'Cargar Factura', icon: FileText, show: lp.canUploadInvoice },
         { to: 'compras/proveedores', label: 'Proveedores', icon: Building2, show: lp.canViewSuppliers },
+        { to: 'compras/factura', label: 'Cargar Factura', icon: FileText, show: lp.canUploadInvoice },
+        { to: 'compras/recepcion', label: 'Recepción', icon: Package, show: lp.canUploadInvoice || lp.canViewSuppliers },
         { to: 'compras/cuentas', label: 'Cuentas Corrientes', icon: CreditCard, show: lp.canViewSupplierAccounts },
-        { to: 'compras/historial', label: 'Historial de Compras', icon: FileStack, show: lp.canViewPurchaseHistory },
-      ]
-    },
-    {
-      id: 'menu',
-      label: 'Menú',
-      icon: Package,
-      show: lp.canViewMenu,
-      items: [
-        { to: 'menu/productos', label: 'Productos', icon: Package, show: lp.canViewMenu },
-        { to: 'menu/combos', label: 'Combos', icon: Layers, show: lp.canViewMenu },
-        { to: 'menu/extras', label: 'Extras', icon: Receipt, show: lp.canViewMenu },
+        { to: 'compras/historial', label: 'Historial de Compras', icon: History, show: lp.canViewPurchaseHistory },
       ]
     },
     {
       id: 'equipo',
       label: 'Equipo',
       icon: Users,
-      show: lp.canClockInOut || lp.canViewTeam,
+      show: lp.canViewTeam || lp.canViewAllClockIns,
       items: [
         { to: 'equipo/mi-equipo', label: 'Mi Equipo', icon: Users, show: lp.canViewTeam },
-        { to: 'equipo/fichar', label: 'Fichajes', icon: Clock, show: lp.canViewAllClockIns },
         { to: 'equipo/horarios', label: 'Horarios', icon: Clock, show: lp.canEditSchedules },
-        { to: 'equipo/horas', label: 'Horas del Mes', icon: Calculator, show: lp.canViewMonthlyHours },
-        { to: 'equipo/liquidacion', label: 'Liquidación', icon: Wallet, show: lp.canViewPayroll },
+        { to: 'equipo/fichar', label: 'Fichajes', icon: Clock, show: lp.canViewAllClockIns },
       ]
     },
     {
       id: 'reportes',
       label: 'Reportes',
       icon: TrendingUp,
-      show: lp.canViewSalesReports || lp.canViewLocalPnL || lp.canViewCMV,
+      show: lp.canViewSalesReports || lp.canViewStockMovements,
       items: [
-        { to: 'reportes/ventas', label: 'Ventas', icon: BarChart3, show: lp.canViewSalesReports },
-        { to: 'reportes/resultados', label: 'Resultados (P&L)', icon: TrendingUp, show: lp.canViewLocalPnL },
-        { to: 'reportes/cmv', label: 'CMV', icon: Calculator, show: lp.canViewCMV },
+        { to: 'reportes/ventas', label: 'Ventas (de carga manual)', icon: BarChart3, show: lp.canViewSalesReports },
         { to: 'reportes/movimientos-stock', label: 'Movimientos de Stock', icon: History, show: lp.canViewStockMovements },
-      ]
-    },
-    {
-      id: 'finanzas',
-      label: 'Finanzas',
-      icon: DollarSign,
-      show: lp.canViewFinanceMovements || lp.canViewInvoices,
-      items: [
-        { to: 'finanzas/movimientos', label: 'Movimientos', icon: Receipt, show: lp.canViewFinanceMovements },
-        { to: 'finanzas/facturas', label: 'Facturas Emitidas', icon: FileText, show: lp.canViewInvoices },
-        { to: 'finanzas/obligaciones', label: 'Obligaciones', icon: DollarSign, show: lp.canViewObligaciones },
       ]
     },
     {
       id: 'config',
       label: 'Configuración',
       icon: Settings,
-      show: lp.canEditLocalConfig || lp.canConfigPrinters || lp.canConfigKDS,
+      show: lp.canConfigShifts || lp.canConfigPrinters,
       items: [
-        { to: 'config/datos', label: 'Datos del Local', icon: Store, show: lp.canEditLocalConfig },
         { to: 'config/turnos', label: 'Turnos', icon: Clock, show: lp.canConfigShifts },
-        { to: 'config/zonas', label: 'Zonas Delivery', icon: MapPin, show: lp.canConfigDeliveryZones },
-        { to: 'config/integraciones', label: 'Integraciones', icon: Link2, show: lp.canConfigIntegrations },
         { to: 'config/impresoras', label: 'Impresoras', icon: Printer, show: lp.canConfigPrinters },
-        { to: 'config/kds', label: 'Config KDS', icon: ChefHat, show: lp.canConfigKDS },
       ]
     }
   ].filter(section => section.show);
