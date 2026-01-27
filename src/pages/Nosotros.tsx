@@ -210,14 +210,14 @@ export default function Nosotros() {
             Sumate al culto al sabor como cliente o como franquiciado
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/pedir">
+            <a href="https://hoppinessclub.masdelivery.com.ar" target="_blank" rel="noopener noreferrer">
               <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
                 <ShoppingBag className="w-5 h-5 mr-2" />
                 Pedir Ahora
               </Button>
-            </Link>
+            </a>
             <Link to="/franquicias">
-              <Button size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10">
+              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
                 <Users className="w-5 h-5 mr-2" />
                 Franquicias
               </Button>
