@@ -20,7 +20,7 @@ import team3 from '@/assets/team-3.jpg';
 import team4 from '@/assets/team-4.jpg';
 import team5 from '@/assets/team-5.jpg';
 import team6 from '@/assets/team-6.jpg';
-import logoHoppiness from '@/assets/logo-hoppiness.png';
+import logoHoppiness from '@/assets/logo-hoppiness-white.png';
 
 export default function Nosotros() {
   const valores = [
@@ -201,7 +201,7 @@ export default function Nosotros() {
           <img 
             src={logoHoppiness} 
             alt="Hoppiness Club" 
-            className="w-20 h-20 mx-auto mb-6 invert"
+            className="w-20 h-20 mx-auto mb-6"
           />
           <h2 className="text-4xl font-black mb-4 font-brand">
             ¿QUERÉS SER PARTE?

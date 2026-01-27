@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Instagram } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import logoHoppiness from '@/assets/logo-hoppiness.png';
+import logoHoppiness from '@/assets/logo-hoppiness-white.png';
 
 // TikTok icon (not available in lucide-react)
 function TikTokIcon({ className }: { className?: string }) {
@@ -21,7 +21,7 @@ export function PublicFooter() {
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           {/* Logo y descripción */}
           <div>
-            <img src={logoHoppiness} alt="Hoppiness Club" className="w-16 h-16 mb-4 invert" />
+            <img src={logoHoppiness} alt="Hoppiness Club" className="w-16 h-16 mb-4" />
             <p className="text-background/70 text-sm">
               Club de hamburguesas 100% cordobés. Culto al sabor desde 2018.
             </p>

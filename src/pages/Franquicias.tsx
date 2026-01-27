@@ -30,7 +30,7 @@ import { PublicFooter } from '@/components/layout/PublicFooter';
 import { FranchiseFormSection } from '@/components/landing';
 import heroBurger from '@/assets/hero-burger.jpg';
 import local1 from '@/assets/local-1.jpg';
-import logoHoppiness from '@/assets/logo-hoppiness.png';
+import logoHoppiness from '@/assets/logo-hoppiness-white.png';
 
 export default function Franquicias() {
   const stats = [
@@ -347,7 +347,7 @@ export default function Franquicias() {
           <img 
             src={logoHoppiness} 
             alt="Hoppiness Club" 
-            className="w-20 h-20 mx-auto mb-6 invert"
+            className="w-20 h-20 mx-auto mb-6"
           />
           <h2 className="text-4xl md:text-5xl font-black text-white mb-4 font-brand">
             ¿Listo para ser parte del<br />
