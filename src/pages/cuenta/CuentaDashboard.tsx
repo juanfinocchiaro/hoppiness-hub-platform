@@ -19,6 +19,7 @@ import MySalaryAdvancesCard from '@/components/cuenta/MySalaryAdvancesCard';
 import MyWarningsCard from '@/components/cuenta/MyWarningsCard';
 import MyCashClosingsCard from '@/components/cuenta/MyCashClosingsCard';
 import MyCommunicationsCard from '@/components/cuenta/MyCommunicationsCard';
+import MissingPinBanner from '@/components/cuenta/MissingPinBanner';
 
 export default function CuentaDashboard() {
   const { user, signOut } = useAuth();
@@ -30,13 +31,12 @@ export default function CuentaDashboard() {
   // Check if user is an employee (has local role)
   const isEmployee = !!localRole;
 
-  // Fetch profile data
+  // Fetch profile data including clock_pin
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user) return null;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await (supabase as any)
+      const result = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
@@ -47,13 +47,15 @@ export default function CuentaDashboard() {
     enabled: !!user,
   });
 
+  // Check if employee needs to set up PIN
+  const needsPinSetup = isEmployee && profile && !profile.clock_pin;
+
   // Fetch user's orders with items for repeat functionality
   const { data: orders, isLoading: ordersLoading } = useQuery({
     queryKey: ['user-orders', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await (supabase as any)
+      const result = await supabase
         .from('orders')
         .select(`
           id,
@@ -94,8 +96,7 @@ export default function CuentaDashboard() {
     queryKey: ['employee-branches', branchIds],
     queryFn: async () => {
       if (!branchIds || branchIds.length === 0) return [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await (supabase as any)
+      const result = await supabase
         .from('branches')
         .select('id, name')
         .in('id', branchIds);
@@ -139,8 +140,7 @@ export default function CuentaDashboard() {
     setIsRepeating(true);
     try {
       // Fetch order items with product details
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const itemsResult = await (supabase as any)
+      const itemsResult = await supabase
         .from('order_items')
         .select(`
           id,
@@ -163,8 +163,7 @@ export default function CuentaDashboard() {
       }
 
       // Fetch the branch
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const branchResult = await (supabase as any)
+      const branchResult = await supabase
         .from('branches')
         .select('*')
         .eq('id', lastOrder.branch_id)
@@ -189,8 +188,7 @@ export default function CuentaDashboard() {
       // Fetch modifiers for each item
       const itemsWithModifiers = await Promise.all(
         orderItems.map(async (item: any) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const modResult = await (supabase as any)
+          const modResult = await supabase
             .from('order_item_modifiers')
             .select('modifier_option_id, option_name, price_adjustment')
             .eq('order_item_id', item.id);
@@ -322,6 +320,13 @@ export default function CuentaDashboard() {
                     </span>
                   )}
                 </div>
+                
+                {/* Missing PIN Banner */}
+                {needsPinSetup && (
+                  <div className="mb-4">
+                    <MissingPinBanner employeeName={profile?.full_name} />
+                  </div>
+                )}
               </div>
 
               {/* Branch Cards */}
