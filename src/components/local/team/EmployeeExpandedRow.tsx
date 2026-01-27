@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { 
   Phone, MapPin, CreditCard, Calendar, AlertTriangle, 
-  ClipboardList, Clock, DollarSign, Plus, Pencil, UserX, Copy
+  ClipboardList, Clock, DollarSign, Plus, Pencil, UserX, Copy, KeyRound
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useEmployeeDetails } from './useTeamData';
@@ -32,6 +33,22 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
   const [newNote, setNewNote] = useState('');
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+
+  // Check if user has clock PIN configured
+  const { data: profileData } = useQuery({
+    queryKey: ['profile-clock-pin', member.user_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('clock_pin')
+        .eq('user_id', member.user_id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const hasClockPin = !!profileData?.clock_pin;
 
   // Add note mutation
   const addNoteMutation = useMutation({
@@ -108,6 +125,20 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
       <div className="space-y-4">
         <h4 className="font-semibold text-sm uppercase text-muted-foreground">Datos personales</h4>
         
+        {/* Clock PIN Status */}
+        <div className="flex items-center gap-2">
+          <KeyRound className="h-4 w-4" />
+          {hasClockPin ? (
+            <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+              PIN configurado
+            </Badge>
+          ) : (
+            <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+              Sin PIN de fichaje
+            </Badge>
+          )}
+        </div>
+
         <div className="space-y-2 text-sm">
           {member.phone && (
             <div className="flex items-center gap-2">
