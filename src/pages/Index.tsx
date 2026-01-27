@@ -3,16 +3,23 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
   ShoppingBag, 
-  MapPin, 
   Star,
   Users,
-  Award,
-  Clock,
+  Trophy,
   ArrowRight
 } from 'lucide-react';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
-import { SumateSection } from '@/components/landing';
+import { 
+  SumateSection, 
+  AwardsSection, 
+  MediaSection, 
+  FranchiseHero, 
+  WhyHoppinessSection,
+  TimelineSection,
+  FranchiseFormSection,
+  LocationsSection
+} from '@/components/landing';
 import heroBurger from '@/assets/hero-burger.jpg';
 import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
 import local1 from '@/assets/local-1.jpg';
@@ -24,7 +31,7 @@ export default function Index() {
     <div className="min-h-screen bg-background">
       <PublicHeader />
 
-      {/* Hero Section */}
+      {/* Hero Section - Nueva orientación a franquicias */}
       <section className="relative h-[90vh] min-h-[600px] flex items-center">
         <div 
           className="absolute inset-0 bg-cover bg-center"
@@ -39,25 +46,31 @@ export default function Index() {
               <img src={logoOriginal} alt="Hoppiness Club" className="w-28 h-28 object-contain rounded-full shadow-2xl" />
             </div>
             
-            <h1 className="text-5xl md:text-7xl font-black text-white mb-6 font-brand tracking-tight">
-              CULTO AL<br />SABOR
+            <div className="flex items-center gap-2 mb-4">
+              <Trophy className="w-6 h-6 text-accent" />
+              <span className="text-accent font-bold">4 VECES CAMPEONES</span>
+            </div>
+            
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-white mb-6 font-brand tracking-tight leading-tight">
+              LA HAMBURGUESA<br />
+              MÁS PREMIADA<br />
+              <span className="text-accent">DE CÓRDOBA</span>
             </h1>
             <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-lg">
-              Un club de hamburguesas que se distingue por un producto de sabor y calidad inigualable.
+              De un pequeño club en Cofico a la hamburguesería más reconocida de la provincia.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link to="/pedir">
-                <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8">
-                  <ShoppingBag className="w-5 h-5 mr-2" />
-                  Pedir Ahora
-                </Button>
-              </Link>
               <Link to="/franquicias">
-                <Button size="lg" variant="outline" className="border-2 border-white/80 text-white bg-white/5 hover:bg-white/15 backdrop-blur-sm text-lg px-8">
+                <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8">
                   <Users className="w-5 h-5 mr-2" />
-                  Franquicias
+                  Abrí tu Franquicia
                 </Button>
               </Link>
+              <a href="#clubes">
+                <Button size="lg" variant="outline" className="border-2 border-white/80 text-white bg-white/5 hover:bg-white/15 backdrop-blur-sm text-lg px-8">
+                  Conocé nuestros Clubes
+                </Button>
+              </a>
             </div>
           </div>
         </div>
@@ -72,8 +85,8 @@ export default function Index() {
               <p className="text-sm opacity-90">Hamburguesas / día</p>
             </div>
             <div>
-              <p className="text-4xl font-black font-brand">5+1</p>
-              <p className="text-sm opacity-90">Sucursales</p>
+              <p className="text-4xl font-black font-brand">6</p>
+              <p className="text-sm opacity-90">Clubes</p>
             </div>
             <div>
               <p className="text-4xl font-black font-brand">16+</p>
@@ -87,68 +100,31 @@ export default function Index() {
         </div>
       </section>
 
+      {/* Premios */}
+      <AwardsSection />
+
+      {/* Medios */}
+      <MediaSection />
+
+      {/* Propuesta de Franquicia */}
+      <FranchiseHero />
+
+      {/* Por qué Hoppiness */}
+      <WhyHoppinessSection />
+
+      {/* Timeline */}
+      <TimelineSection />
+
+      {/* Nuestros Clubes */}
+      <section id="clubes">
+        <LocationsSection />
+      </section>
+
       {/* Sumate Section */}
       <SumateSection />
 
-      {/* About Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-4xl font-black mb-6 font-brand text-primary">
-                LA MEJOR HAMBURGUESA DE CÓRDOBA
-              </h2>
-              <p className="text-lg text-muted-foreground mb-6">
-                Seleccionamos las mejores materias primas del mercado, priorizando la calidad antes que el costo. 
-                La obsesión que tenemos por el producto nos empujó a perfeccionar nuestros procesos de elaboración y recetas.
-              </p>
-              <div className="flex flex-wrap gap-4 mb-8">
-                <div className="flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-full">
-                  <Award className="w-5 h-5 text-primary" />
-                  <span className="font-medium">Receta RMA Registrada</span>
-                </div>
-                <div className="flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-full">
-                  <Star className="w-5 h-5 text-primary" />
-                  <span className="font-medium">Código Alimentario</span>
-                </div>
-              </div>
-              <Link to="/menu">
-                <Button size="lg" className="group">
-                  Ver Menú Completo
-                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <img src={local1} alt="Interior Hoppiness" className="rounded-2xl shadow-elevated w-full h-48 object-cover" />
-              <img src={local2} alt="Ambiente Hoppiness" className="rounded-2xl shadow-elevated w-full h-48 object-cover mt-8" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Design Section */}
-      <section className="py-20 px-4 bg-primary text-primary-foreground">
-        <div className="container mx-auto max-w-6xl">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="order-2 md:order-1">
-              <img src={designAmbiente} alt="Diseño Hoppiness" className="rounded-2xl shadow-elevated w-full" />
-            </div>
-            <div className="order-1 md:order-2">
-              <h2 className="text-4xl font-black mb-6 font-brand">
-                DISEÑO & PERSONALIDAD DE MARCA
-              </h2>
-              <p className="text-lg text-primary-foreground/80 mb-6">
-                Somos una marca de diseño, desde la concepción del menú, hasta el más mínimo detalle de nuestra comunicación. 
-                Esto nos otorga una fuerte personalidad de marca.
-              </p>
-              <p className="text-lg text-primary-foreground/80">
-                Nuestros espacios están diseñados con muchísima onda, creando un estilo de servicio club descontracturado.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Formulario de Franquicias */}
+      <FranchiseFormSection />
 
       {/* Reviews Section */}
       <section className="py-20 px-4 bg-secondary/50">
@@ -195,72 +171,35 @@ export default function Index() {
         </div>
       </section>
 
-      {/* Locations Section */}
+      {/* About Section - Simplificado */}
       <section className="py-20 px-4">
         <div className="container mx-auto max-w-6xl">
-          <h2 className="text-4xl font-black mb-4 font-brand text-center text-primary">
-            NUESTROS CLUBES
-          </h2>
-          <p className="text-center text-muted-foreground mb-12 text-lg">
-            5 sucursales + 1 próximamente
-          </p>
-          
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { name: "General Paz", address: "25 de mayo 971, 475" },
-              { name: "Manantiales", address: "Wilfredo Meloni 3778, Local 6" },
-              { name: "Nueva Córdoba", address: "Estrada 97" },
-              { name: "Villa Allende", address: "Río de Janeiro 191" },
-              { name: "Villa Carlos Paz", address: "9 de julio 0, Nivel 1" },
-            ].map((branch, i) => (
-              <Card key={i} className="shadow-card hover:shadow-elevated transition-shadow cursor-pointer group">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-bold text-lg mb-1 group-hover:text-primary transition-colors">
-                        Hoppiness {branch.name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        {branch.address}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Clock className="w-4 h-4" />
-                      12-23:30
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-4xl font-black mb-6 font-brand text-primary">
+                CULTO AL SABOR
+              </h2>
+              <p className="text-lg text-muted-foreground mb-6">
+                Seleccionamos las mejores materias primas del mercado, priorizando la calidad antes que el costo. 
+                La obsesión que tenemos por el producto nos empujó a perfeccionar nuestros procesos de elaboración y recetas.
+              </p>
+              <p className="text-lg text-muted-foreground mb-8">
+                Nuestros espacios están diseñados con muchísima onda, creando un estilo de servicio club descontracturado.
+              </p>
+              <Link to="/pedir">
+                <Button size="lg" className="group">
+                  <ShoppingBag className="w-5 h-5 mr-2" />
+                  Pedir Ahora
+                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <img src={local1} alt="Interior Hoppiness" className="rounded-2xl shadow-elevated w-full h-48 object-cover" />
+              <img src={local2} alt="Ambiente Hoppiness" className="rounded-2xl shadow-elevated w-full h-48 object-cover mt-8" />
+              <img src={designAmbiente} alt="Diseño Hoppiness" className="rounded-2xl shadow-elevated w-full h-48 object-cover col-span-2" />
+            </div>
           </div>
-
-          <div className="text-center mt-12">
-            <Link to="/pedir">
-              <Button size="lg">
-                <ShoppingBag className="w-5 h-5 mr-2" />
-                Pedir Ahora
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Franchise */}
-      <section className="py-20 px-4 bg-gradient-to-r from-primary via-primary to-accent">
-        <div className="container mx-auto max-w-4xl text-center text-white">
-          <h2 className="text-4xl md:text-5xl font-black mb-6 font-brand">
-            NUNCA FUE TAN SIMPLE TENER TU PROPIO NEGOCIO GASTRONÓMICO
-          </h2>
-          <p className="text-xl mb-8 text-white/90">
-            Sumate a la familia Hoppiness y formá parte de nuestro club.
-          </p>
-          <Link to="/franquicias">
-            <Button size="lg" className="bg-white text-primary hover:bg-white/90 text-lg px-8">
-              <Users className="w-5 h-5 mr-2" />
-              Conocé las Franquicias
-            </Button>
-          </Link>
         </div>
       </section>
 

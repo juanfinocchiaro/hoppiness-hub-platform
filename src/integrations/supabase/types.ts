@@ -2122,6 +2122,7 @@ export type Database = {
           franchise_has_zone: string | null
           franchise_investment_capital: string | null
           id: string
+          investment_range: string | null
           message: string | null
           name: string
           notes: string | null
@@ -2152,6 +2153,7 @@ export type Database = {
           franchise_has_zone?: string | null
           franchise_investment_capital?: string | null
           id?: string
+          investment_range?: string | null
           message?: string | null
           name: string
           notes?: string | null
@@ -2182,6 +2184,7 @@ export type Database = {
           franchise_has_zone?: string | null
           franchise_investment_capital?: string | null
           id?: string
+          investment_range?: string | null
           message?: string | null
           name?: string
           notes?: string | null

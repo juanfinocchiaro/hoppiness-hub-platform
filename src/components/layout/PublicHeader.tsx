@@ -74,10 +74,9 @@ export function PublicHeader() {
           </Link>
           <Link to="/franquicias">
             <Button 
-              variant="ghost" 
               size="sm" 
-              className={`text-primary-foreground hover:bg-primary-foreground/10 ${
-                isActive('/franquicias') ? 'bg-primary-foreground/20' : ''
+              className={`bg-accent hover:bg-accent/90 text-accent-foreground ${
+                isActive('/franquicias') ? 'ring-2 ring-white/50' : ''
               }`}
             >
               Franquicias
