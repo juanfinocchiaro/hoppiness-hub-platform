@@ -116,6 +116,7 @@ import LocalCMVReport from "./pages/local/LocalCMVReport";
 import LocalCustomers from "./pages/local/LocalCustomers";
 import LocalKDSSettings from "./pages/local/LocalKDSSettings";
 import LocalPedidosRecepcion from "./pages/local/LocalPedidosRecepcion";
+import LocalSalesImport from "./pages/local/LocalSalesImport";
 
 // Public Menu
 import MenuPublic from "./pages/MenuPublic";
@@ -240,6 +241,9 @@ const App = () => (
               <Route path="menu/productos" element={<LocalProductos />} />
               <Route path="menu/combos" element={<LocalMenuCombos />} />
               <Route path="menu/extras" element={<LocalExtras />} />
+              
+              {/* VENTAS - Importación desde Núcleo Check */}
+              <Route path="ventas/importar" element={<LocalSalesImport />} />
               
               {/* REPORTES */}
               <Route path="reportes/ventas" element={<LocalReportesVentas />} />

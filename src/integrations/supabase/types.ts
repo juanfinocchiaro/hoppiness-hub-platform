@@ -1051,6 +1051,7 @@ export type Database = {
           invoice_provider: string | null
           is_active: boolean
           is_open: boolean | null
+          kitchen_type: string | null
           latitude: number | null
           local_open_state: boolean | null
           longitude: number | null
@@ -1098,6 +1099,7 @@ export type Database = {
           invoice_provider?: string | null
           is_active?: boolean
           is_open?: boolean | null
+          kitchen_type?: string | null
           latitude?: number | null
           local_open_state?: boolean | null
           longitude?: number | null
@@ -1145,6 +1147,7 @@ export type Database = {
           invoice_provider?: string | null
           is_active?: boolean
           is_open?: boolean | null
+          kitchen_type?: string | null
           latitude?: number | null
           local_open_state?: boolean | null
           longitude?: number | null
@@ -3684,6 +3687,7 @@ export type Database = {
           name: string
           notes: string | null
           notify_on_alternative_use: boolean | null
+          nucleo_code: string | null
           purchase_unit: string | null
           purchase_unit_qty: number | null
           safety_stock_days: number | null
@@ -3692,6 +3696,7 @@ export type Database = {
           unit: string
           updated_at: string
           usage_unit: string | null
+          weight_grams: number | null
         }
         Insert: {
           alternative_ingredient_id?: string | null
@@ -3709,6 +3714,7 @@ export type Database = {
           name: string
           notes?: string | null
           notify_on_alternative_use?: boolean | null
+          nucleo_code?: string | null
           purchase_unit?: string | null
           purchase_unit_qty?: number | null
           safety_stock_days?: number | null
@@ -3717,6 +3723,7 @@ export type Database = {
           unit?: string
           updated_at?: string
           usage_unit?: string | null
+          weight_grams?: number | null
         }
         Update: {
           alternative_ingredient_id?: string | null
@@ -3734,6 +3741,7 @@ export type Database = {
           name?: string
           notes?: string | null
           notify_on_alternative_use?: boolean | null
+          nucleo_code?: string | null
           purchase_unit?: string | null
           purchase_unit_qty?: number | null
           safety_stock_days?: number | null
@@ -3742,6 +3750,7 @@ export type Database = {
           unit?: string
           updated_at?: string
           usage_unit?: string | null
+          weight_grams?: number | null
         }
         Relationships: [
           {
@@ -4376,6 +4385,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      nucleo_product_mappings: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          nucleo_code: string
+          parrilla_medallones_110: number | null
+          parrilla_panes: number | null
+          parrilla_papas: number | null
+          product_name: string
+          product_type: string | null
+          smash_bolitas_45: number | null
+          smash_bolitas_90: number | null
+          smash_panes: number | null
+          smash_papas: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          nucleo_code: string
+          parrilla_medallones_110?: number | null
+          parrilla_panes?: number | null
+          parrilla_papas?: number | null
+          product_name: string
+          product_type?: string | null
+          smash_bolitas_45?: number | null
+          smash_bolitas_90?: number | null
+          smash_panes?: number | null
+          smash_papas?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          nucleo_code?: string
+          parrilla_medallones_110?: number | null
+          parrilla_panes?: number | null
+          parrilla_papas?: number | null
+          product_name?: string
+          product_type?: string | null
+          smash_bolitas_45?: number | null
+          smash_bolitas_90?: number | null
+          smash_panes?: number | null
+          smash_papas?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       operator_session_logs: {
         Row: {
@@ -6059,6 +6119,182 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "cash_register_shifts"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_import_details: {
+        Row: {
+          calc_bolitas_45: number | null
+          calc_bolitas_90: number | null
+          calc_medallones_110: number | null
+          calc_panes: number | null
+          calc_papas: number | null
+          cantidad: number | null
+          codigo: string | null
+          created_at: string | null
+          fecha: string | null
+          id: string
+          import_id: string
+          n_pedido: string | null
+          nombre: string | null
+          rubro: string | null
+          sector: string | null
+          subrubro: string | null
+          tipo_pedido: string | null
+          total: number | null
+        }
+        Insert: {
+          calc_bolitas_45?: number | null
+          calc_bolitas_90?: number | null
+          calc_medallones_110?: number | null
+          calc_panes?: number | null
+          calc_papas?: number | null
+          cantidad?: number | null
+          codigo?: string | null
+          created_at?: string | null
+          fecha?: string | null
+          id?: string
+          import_id: string
+          n_pedido?: string | null
+          nombre?: string | null
+          rubro?: string | null
+          sector?: string | null
+          subrubro?: string | null
+          tipo_pedido?: string | null
+          total?: number | null
+        }
+        Update: {
+          calc_bolitas_45?: number | null
+          calc_bolitas_90?: number | null
+          calc_medallones_110?: number | null
+          calc_panes?: number | null
+          calc_papas?: number | null
+          cantidad?: number | null
+          codigo?: string | null
+          created_at?: string | null
+          fecha?: string | null
+          id?: string
+          import_id?: string
+          n_pedido?: string | null
+          nombre?: string | null
+          rubro?: string | null
+          sector?: string | null
+          subrubro?: string | null
+          tipo_pedido?: string | null
+          total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_import_details_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "sales_imports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_imports: {
+        Row: {
+          branch_id: string
+          consumed_bolitas_45: number | null
+          consumed_bolitas_90: number | null
+          consumed_carne_kg: number | null
+          consumed_medallones_110: number | null
+          consumed_panes: number | null
+          consumed_papas: number | null
+          created_at: string | null
+          date_from: string
+          date_to: string
+          file_name: string | null
+          id: string
+          imported_by: string | null
+          records_count: number | null
+          sales_delivery: number | null
+          sales_mostrador: number | null
+          sales_salon: number | null
+          total_orders: number | null
+          total_sales: number | null
+          unknown_products: Json | null
+        }
+        Insert: {
+          branch_id: string
+          consumed_bolitas_45?: number | null
+          consumed_bolitas_90?: number | null
+          consumed_carne_kg?: number | null
+          consumed_medallones_110?: number | null
+          consumed_panes?: number | null
+          consumed_papas?: number | null
+          created_at?: string | null
+          date_from: string
+          date_to: string
+          file_name?: string | null
+          id?: string
+          imported_by?: string | null
+          records_count?: number | null
+          sales_delivery?: number | null
+          sales_mostrador?: number | null
+          sales_salon?: number | null
+          total_orders?: number | null
+          total_sales?: number | null
+          unknown_products?: Json | null
+        }
+        Update: {
+          branch_id?: string
+          consumed_bolitas_45?: number | null
+          consumed_bolitas_90?: number | null
+          consumed_carne_kg?: number | null
+          consumed_medallones_110?: number | null
+          consumed_panes?: number | null
+          consumed_papas?: number | null
+          created_at?: string | null
+          date_from?: string
+          date_to?: string
+          file_name?: string | null
+          id?: string
+          imported_by?: string | null
+          records_count?: number | null
+          sales_delivery?: number | null
+          sales_mostrador?: number | null
+          sales_salon?: number | null
+          total_orders?: number | null
+          total_sales?: number | null
+          unknown_products?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_imports_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_imports_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_imports_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "sales_imports_imported_by_fkey"
+            columns: ["imported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "sales_imports_imported_by_fkey"
+            columns: ["imported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["user_id"]
           },
         ]
       }
