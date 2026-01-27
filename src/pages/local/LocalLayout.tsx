@@ -15,7 +15,6 @@ import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
 import { useEmbedMode } from '@/hooks/useEmbedMode';
 import { ExternalLink } from '@/components/ui/ExternalLink';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -370,11 +369,8 @@ export default function LocalLayout() {
                   className="w-14 h-14 rounded-xl object-contain bg-white p-1"
                 />
                 <div>
-                  <h2 className="text-lg font-bold">Mi Local</h2>
+                  <span className="text-lg font-bold">Mi Local</span>
                   <p className="text-sm text-muted-foreground">{selectedBranch?.name}</p>
-                  <Badge variant="outline" className="text-xs">
-                    {avatarInfo.label}
-                  </Badge>
                 </div>
               </div>
               
@@ -408,7 +404,6 @@ export default function LocalLayout() {
       </header>
 
       <div className="flex">
-        {/* Desktop Sidebar */}
         <aside className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 bg-card border-r">
           <div className="p-6 border-b flex items-center gap-3">
             <img 
@@ -416,12 +411,7 @@ export default function LocalLayout() {
               alt="Hoppiness" 
               className="w-14 h-14 rounded-xl object-contain bg-white p-1"
             />
-            <div>
-              <h2 className="text-lg font-bold">Mi Local</h2>
-              <Badge variant="outline" className="text-xs">
-                {avatarInfo.label}
-              </Badge>
-            </div>
+            <span className="text-lg font-bold">Mi Local</span>
           </div>
 
           {/* Navigation */}
