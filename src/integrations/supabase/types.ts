@@ -1972,6 +1972,80 @@ export type Database = {
         }
         Relationships: []
       }
+      communication_reads: {
+        Row: {
+          communication_id: string
+          id: string
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          communication_id: string
+          id?: string
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          communication_id?: string
+          id?: string
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_reads_communication_id_fkey"
+            columns: ["communication_id"]
+            isOneToOne: false
+            referencedRelation: "communications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communications: {
+        Row: {
+          body: string
+          created_at: string | null
+          created_by: string
+          expires_at: string | null
+          id: string
+          is_published: boolean | null
+          published_at: string | null
+          target_branch_ids: string[] | null
+          target_roles: string[] | null
+          title: string
+          type: Database["public"]["Enums"]["communication_type"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          is_published?: boolean | null
+          published_at?: string | null
+          target_branch_ids?: string[] | null
+          target_roles?: string[] | null
+          title: string
+          type?: Database["public"]["Enums"]["communication_type"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          is_published?: boolean | null
+          published_at?: string | null
+          target_branch_ids?: string[] | null
+          target_roles?: string[] | null
+          title?: string
+          type?: Database["public"]["Enums"]["communication_type"] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       contact_messages: {
         Row: {
           assigned_to: string | null
@@ -8011,6 +8085,7 @@ export type Database = {
         | "coordinador"
         | "informes"
         | "contador_marca"
+      communication_type: "info" | "warning" | "urgent" | "celebration"
       local_role_type:
         | "franquiciado"
         | "encargado"
@@ -8207,6 +8282,7 @@ export const Constants = {
         "informes",
         "contador_marca",
       ],
+      communication_type: ["info", "warning", "urgent", "celebration"],
       local_role_type: [
         "franquiciado",
         "encargado",
