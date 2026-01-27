@@ -424,9 +424,15 @@ export default function LocalLayout() {
             </div>
           </div>
 
-          {/* Branch Selector */}
-          {accessibleBranches.length > 1 && (
-            <div className="p-4 border-b">
+          {/* Navigation */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <NavContent />
+          </div>
+
+          {/* Footer */}
+          <div className="p-4 border-t space-y-3">
+            {/* Branch Selector */}
+            {accessibleBranches.length > 1 && (
               <Select value={branchId} onValueChange={handleBranchChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar local" />
@@ -439,48 +445,40 @@ export default function LocalLayout() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          )}
+            )}
 
-          {/* Single branch display */}
-          {accessibleBranches.length === 1 && selectedBranch && (
-            <div className="p-4 border-b">
-              <div className="flex items-center gap-2 text-sm">
+            {/* Single branch display */}
+            {accessibleBranches.length === 1 && selectedBranch && (
+              <div className="flex items-center gap-2 text-sm py-2">
                 <Store className="w-4 h-4 text-primary" />
                 <span className="font-medium">{selectedBranch.name}</span>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Navigation */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <NavContent />
-          </div>
-
-          {/* Footer */}
-          <div className="p-4 border-t space-y-1">
-            {canAccessAdmin && !isEmbedded && (
-              <ExternalLink to="/mimarca">
+            <div className="space-y-1">
+              {canAccessAdmin && !isEmbedded && (
+                <ExternalLink to="/mimarca">
+                  <Button variant="ghost" className="w-full justify-start">
+                    <Building2 className="w-4 h-4 mr-3" />
+                    Cambiar a Mi Marca
+                  </Button>
+                </ExternalLink>
+              )}
+              <ExternalLink to="/">
                 <Button variant="ghost" className="w-full justify-start">
-                  <Building2 className="w-4 h-4 mr-3" />
-                  Cambiar a Mi Marca
+                  <Home className="w-4 h-4 mr-3" />
+                  Volver al Inicio
                 </Button>
               </ExternalLink>
-            )}
-            <ExternalLink to="/">
-              <Button variant="ghost" className="w-full justify-start">
-                <Home className="w-4 h-4 mr-3" />
-                Volver al Inicio
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start text-muted-foreground" 
+                onClick={signOut}
+              >
+                <LogOut className="w-4 h-4 mr-3" />
+                Salir
               </Button>
-            </ExternalLink>
-            <Button 
-              variant="ghost" 
-              className="w-full justify-start text-muted-foreground" 
-              onClick={signOut}
-            >
-              <LogOut className="w-4 h-4 mr-3" />
-              Salir
-            </Button>
+            </div>
           </div>
         </aside>
 
