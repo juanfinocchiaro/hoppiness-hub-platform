@@ -153,12 +153,12 @@ export default function Index() {
                 </Button>
               </a>
             </div>
-            <div className="grid grid-cols-3 gap-4 h-[400px]">
-              <div className="col-span-2 grid grid-rows-2 gap-4 h-full">
-                <div className="overflow-hidden rounded-2xl shadow-elevated">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="col-span-2 grid grid-rows-2 gap-4">
+                <div className="aspect-[16/10] overflow-hidden rounded-2xl shadow-elevated">
                   <img src={burgerCheese} alt="Hamburguesa con queso derretido" className="w-full h-full object-cover" />
                 </div>
-                <div className="overflow-hidden rounded-2xl shadow-elevated">
+                <div className="aspect-[16/10] overflow-hidden rounded-2xl shadow-elevated">
                   <img src={burgerSmash} alt="Smash burger artesanal" className="w-full h-full object-cover" />
                 </div>
               </div>
