@@ -1030,8 +1030,10 @@ export type Database = {
           admin_force_channels: Json | null
           admin_force_message: string | null
           admin_force_state: string | null
+          allowed_ips: string[] | null
           auto_invoice_integrations: boolean
           city: string
+          clock_code: string | null
           closing_time: string | null
           created_at: string
           delivery_enabled: boolean | null
@@ -1075,8 +1077,10 @@ export type Database = {
           admin_force_channels?: Json | null
           admin_force_message?: string | null
           admin_force_state?: string | null
+          allowed_ips?: string[] | null
           auto_invoice_integrations?: boolean
           city: string
+          clock_code?: string | null
           closing_time?: string | null
           created_at?: string
           delivery_enabled?: boolean | null
@@ -1120,8 +1124,10 @@ export type Database = {
           admin_force_channels?: Json | null
           admin_force_message?: string | null
           admin_force_state?: string | null
+          allowed_ips?: string[] | null
           auto_invoice_integrations?: boolean
           city?: string
+          clock_code?: string | null
           closing_time?: string | null
           created_at?: string
           delivery_enabled?: boolean | null
@@ -1836,6 +1842,61 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      clock_entries: {
+        Row: {
+          branch_id: string
+          created_at: string | null
+          entry_type: string
+          id: string
+          ip_address: unknown
+          photo_url: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string | null
+          entry_type: string
+          id?: string
+          ip_address?: unknown
+          photo_url?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string | null
+          entry_type?: string
+          id?: string
+          ip_address?: unknown
+          photo_url?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clock_entries_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clock_entries_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clock_entries_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
       }
       coa_accounts: {
         Row: {
@@ -5734,6 +5795,7 @@ export type Database = {
           avatar_url: string | null
           birth_date: string | null
           cbu: string | null
+          clock_pin: string | null
           created_at: string
           cuit: string | null
           default_address: string | null
@@ -5766,6 +5828,7 @@ export type Database = {
           avatar_url?: string | null
           birth_date?: string | null
           cbu?: string | null
+          clock_pin?: string | null
           created_at?: string
           cuit?: string | null
           default_address?: string | null
@@ -5798,6 +5861,7 @@ export type Database = {
           avatar_url?: string | null
           birth_date?: string | null
           cbu?: string | null
+          clock_pin?: string | null
           created_at?: string
           cuit?: string | null
           default_address?: string | null
@@ -8040,6 +8104,15 @@ export type Database = {
       user_has_branch_access: {
         Args: { p_branch_id: string }
         Returns: boolean
+      }
+      validate_clock_pin: {
+        Args: { _branch_code: string; _pin: string }
+        Returns: {
+          branch_id: string
+          branch_name: string
+          full_name: string
+          user_id: string
+        }[]
       }
       validate_kds_token: {
         Args: { _token: string }

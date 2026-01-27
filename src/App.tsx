@@ -22,6 +22,7 @@ import Franquicias from "./pages/Franquicias";
 import Nosotros from "./pages/Nosotros";
 import Contacto from "./pages/Contacto";
 import AceptarInvitacion from "./pages/AceptarInvitacion";
+import FichajePublic from "./pages/FichajePublic";
 
 // POS / Local
 import POS from "./pages/pos/POS";
@@ -176,6 +177,9 @@ const App = () => (
             <Route path="/clock-in" element={<ClockIn />} />
             <Route path="/registro-staff" element={<RegistroStaff />} />
             <Route path="/invitacion/:token" element={<AceptarInvitacion />} />
+            
+            {/* Fichaje público (QR-based) */}
+            <Route path="/fichaje/:branchCode" element={<FichajePublic />} />
             
             {/* Mi Cuenta Routes (authenticated) */}
             <Route path="/cuenta" element={<RequireAuth><CuentaDashboard /></RequireAuth>} />
