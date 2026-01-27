@@ -107,6 +107,7 @@ import MandatoryProducts from "./pages/admin/MandatoryProducts";
 import CommunicationSend from "./pages/admin/CommunicationSend";
 import CommunicationHistory from "./pages/admin/CommunicationHistory";
 import PurchaseAlerts from "./pages/admin/PurchaseAlerts";
+import ContactMessages from "./pages/admin/ContactMessages";
 
 // Local Stock & Inventory
 import LocalStock from "./pages/local/LocalStock";
@@ -347,7 +348,7 @@ const App = () => (
               {/* COMUNICACIÓN */}
               <Route path="comunicacion/enviar" element={<CommunicationSend />} />
               <Route path="comunicacion/historial" element={<CommunicationHistory />} />
-              <Route path="mensajes" element={<Messages />} />
+              <Route path="mensajes" element={<ContactMessages />} />
               
               {/* CONFIGURACIÓN */}
               <Route path="configuracion/marca" element={<BrandSettings />} />
