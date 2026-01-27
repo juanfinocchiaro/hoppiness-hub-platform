@@ -127,17 +127,26 @@ export function useBrandDailySalesSummary() {
 
 export function getShiftLabel(shift: string): string {
   switch (shift) {
+    case 'midday': return 'Mediodía';
+    case 'night': return 'Noche';
+    // Legacy support
     case 'morning': return 'Mañana';
     case 'afternoon': return 'Tarde';
-    case 'night': return 'Noche';
     default: return shift;
   }
 }
 
 export function getMissingShifts(todaySales: DailySale[]): string[] {
-  const allShifts = ['morning', 'afternoon', 'night'];
+  const allShifts = ['midday', 'night'];
   const loadedShifts = todaySales.map(s => s.shift);
-  return allShifts.filter(s => !loadedShifts.includes(s as 'morning' | 'afternoon' | 'night'));
+  return allShifts.filter(s => !loadedShifts.includes(s as any));
+}
+
+export function getAllShifts(): Array<{ value: string; label: string }> {
+  return [
+    { value: 'midday', label: 'Mediodía' },
+    { value: 'night', label: 'Noche' },
+  ];
 }
 
 export type { DailySale };
