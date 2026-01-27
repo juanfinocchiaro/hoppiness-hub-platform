@@ -176,19 +176,15 @@ export default function LocalLayout() {
     };
   }, [branchId]);
 
-  // Auto-redirect to POS or KDS for specific roles
+  // Auto-redirect para roles sin acceso a gestión
   useEffect(() => {
     if (!selectedBranch || !branchId) return;
     
-    const isDashboard = location.pathname === `/local/${branchId}`;
-    if (!isDashboard) return;
-
-    if (avatarInfo.directToPOS) {
-      navigate(`/local/${branchId}/pos`);
-    } else if (avatarInfo.directToKDS) {
-      navigate(`/local/${branchId}/kds`);
+    // Si el usuario es cajero o empleado, redirigir a Mi Cuenta
+    if (permissions.isCajero || permissions.isEmpleado) {
+      navigate('/cuenta');
     }
-  }, [selectedBranch, branchId, avatarInfo.directToPOS, avatarInfo.directToKDS, location.pathname, navigate]);
+  }, [selectedBranch, branchId, permissions.isCajero, permissions.isEmpleado, navigate]);
 
   const handleBranchChange = (newBranchId: string) => {
     const pathParts = location.pathname.split('/');

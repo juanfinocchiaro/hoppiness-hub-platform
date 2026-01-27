@@ -110,30 +110,29 @@ export function useRoleLandingV2() {
       return {
         type: 'contador_local',
         label: 'Contador Local',
-        landingPath: firstBranch ? `/local/${firstBranch}/finanzas/movimientos` : '/local',
+        landingPath: firstBranch ? `/local/${firstBranch}/compras/factura` : '/cuenta',
         description: 'Finanzas del local',
       };
     }
 
+    // Cajeros y Empleados: sin POS/KDS, solo Mi Cuenta
     if (isCajero) {
-      const firstBranch = accessibleBranches[0]?.id;
       return {
         type: 'cajero',
         label: 'Cajero',
-        landingPath: firstBranch ? `/local/${firstBranch}/pos` : '/local',
-        description: 'Punto de venta',
-        directToPOS: true,
+        landingPath: '/cuenta',
+        description: 'Mi Cuenta',
+        directToPOS: false,
       };
     }
 
     if (isEmpleado) {
-      const firstBranch = accessibleBranches[0]?.id;
       return {
         type: 'empleado',
         label: 'Empleado',
-        landingPath: firstBranch ? `/local/${firstBranch}/kds` : '/cuenta',
-        description: 'Cocina / Mi Cuenta',
-        directToKDS: true,
+        landingPath: '/cuenta',
+        description: 'Mi Cuenta',
+        directToKDS: false,
       };
     }
 
