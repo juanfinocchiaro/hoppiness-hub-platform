@@ -13,19 +13,12 @@ import {
   LayoutDashboard,
   Store,
   Users,
-  Truck,
   ChevronRight,
   ChevronDown,
-  BarChart3,
-  TrendingUp,
-  MessageSquare,
-  Settings,
   MapPin,
   Plus,
   Building2,
   Search,
-  Send,
-  History,
 } from 'lucide-react';
 import NewBranchModal from './NewBranchModal';
 
@@ -50,15 +43,12 @@ interface AdminSidebarProps {
 }
 
 /**
- * AdminSidebar - Panel "Mi Marca" simplificado
+ * AdminSidebar - Panel "Mi Marca" ULTRA SIMPLIFICADO
  * 
- * Estructura según reestructuración:
- * - Dashboard (resumen consolidado)
- * - Mis Locales (lista dinámica)
- * - Reportes (Ventas, Comparativa, Movimientos Stock)
- * - Personas (Equipo Central, Usuarios)
- * - Comunicación (Enviar, Historial, Mensajes Contacto)
- * - Configuración
+ * Solo contiene:
+ * - Dashboard (ventas consolidadas por local)
+ * - Mis Locales (lista dinámica + crear)
+ * - Usuarios (gestión de usuarios y permisos)
  */
 export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
   const location = useLocation();
@@ -66,10 +56,7 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     vision: true,
     locales: true,
-    reportes: false,
-    personas: false,
-    comunicacion: false,
-    configuracion: false,
+    personas: true,
   });
 
   // Fetch branches for dynamic menu
@@ -89,37 +76,15 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
     setExpandedSections((prev) => ({ ...prev, [sectionId]: !prev[sectionId] }));
   };
 
-  // Build sections based on new simplified structure
+  // Build sections - ULTRA SIMPLIFICADO
   const buildSections = (): NavSection[] => {
     const sections: NavSection[] = [];
-
-    // Socios solo ven Dashboard y Reportes
-    if (avatarInfo.type === 'partner') {
-      sections.push({
-        id: 'vision',
-        label: 'Visión General',
-        icon: BarChart3,
-        items: [
-          { type: 'navigation', to: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-        ],
-      });
-      sections.push({
-        id: 'reportes',
-        label: 'Reportes',
-        icon: TrendingUp,
-        items: [
-          { type: 'navigation', to: '/admin/reportes/ventas', icon: BarChart3, label: 'Ventas (consolidado)' },
-          { type: 'navigation', to: '/admin/comparativa', icon: TrendingUp, label: 'Comparativa de Locales' },
-        ],
-      });
-      return sections;
-    }
 
     // Dashboard
     sections.push({
       id: 'vision',
       label: 'Visión General',
-      icon: BarChart3,
+      icon: LayoutDashboard,
       items: [
         { type: 'navigation', to: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
       ],
@@ -147,50 +112,14 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
       items: localesItems,
     });
 
-    // Reportes
+    // Personas/Usuarios
     sections.push({
-      id: 'reportes',
-      label: 'Reportes',
-      icon: TrendingUp,
+      id: 'personas',
+      label: 'Usuarios',
+      icon: Users,
       items: [
-        { type: 'navigation', to: '/admin/reportes/ventas', icon: BarChart3, label: 'Ventas (consolidado)' },
-        { type: 'navigation', to: '/admin/comparativa', icon: TrendingUp, label: 'Comparativa de Locales' },
-        { type: 'navigation', to: '/admin/reportes/movimientos-stock', icon: Truck, label: 'Movimientos de Stock' },
-      ],
-    });
-
-    // Personas (solo superadmin ve todo)
-    if (avatarInfo.type !== 'coordinator') {
-      sections.push({
-        id: 'personas',
-        label: 'Personas',
-        icon: Users,
-        items: [
-          { type: 'navigation', to: '/admin/personas/equipo-central', icon: Building2, label: 'Equipo Central' },
-          { type: 'navigation', to: '/admin/personas/usuarios', icon: Search, label: 'Usuarios' },
-        ],
-      });
-    }
-
-    // Comunicación
-    sections.push({
-      id: 'comunicacion',
-      label: 'Comunicación',
-      icon: MessageSquare,
-      items: [
-        { type: 'navigation', to: '/admin/comunicacion/enviar', icon: Send, label: 'Enviar Comunicado' },
-        { type: 'navigation', to: '/admin/comunicacion/historial', icon: History, label: 'Historial de Comunicados' },
-        { type: 'navigation', to: '/admin/mensajes', icon: MessageSquare, label: 'Mensajes de Contacto' },
-      ],
-    });
-
-    // Configuración
-    sections.push({
-      id: 'configuracion',
-      label: 'Configuración',
-      icon: Settings,
-      items: [
-        { type: 'navigation', to: '/admin/configuracion/marca', icon: Building2, label: 'Datos de la Marca' },
+        { type: 'navigation', to: '/admin/personas/equipo-central', icon: Building2, label: 'Equipo Central' },
+        { type: 'navigation', to: '/admin/personas/usuarios', icon: Search, label: 'Todos los Usuarios' },
       ],
     });
 

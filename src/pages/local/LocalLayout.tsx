@@ -1,7 +1,10 @@
 /**
- * LocalLayout - Panel "Mi Local" con sistema de permisos V2
+ * LocalLayout - Panel "Mi Local" SIMPLIFICADO
  * 
- * Menú dinámico basado en roles fijos (franquiciado, encargado, contador_local, cajero, empleado)
+ * Solo contiene:
+ * - Dashboard (con carga de ventas por turno)
+ * - Equipo (Mi equipo, Horarios, Fichajes)
+ * - Configuración (solo Impresoras)
  */
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useNavigate, useLocation, useParams } from 'react-router-dom';
@@ -10,7 +13,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
 import { useEmbedMode } from '@/hooks/useEmbedMode';
-import { usePendingOrdersCount } from '@/hooks/usePendingOrdersCount';
 import { ExternalLink } from '@/components/ui/ExternalLink';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +30,6 @@ import {
 } from '@/components/ui/collapsible';
 import {
   LayoutDashboard,
-  Package,
   Settings,
   LogOut,
   Menu,
@@ -36,35 +37,11 @@ import {
   ChevronDown,
   Store,
   Home,
-  ChefHat,
-  Monitor,
-  Receipt,
-  Zap,
-  Wallet,
   Users,
-  Truck,
-  ClipboardList,
-  DollarSign,
-  History,
-  Calculator,
-  FileText,
   Clock,
-  Link2,
-  MapPin,
   Printer,
-  Timer,
-  Boxes,
-  ClipboardCheck,
-  UserCircle,
   AlertCircle,
-  BarChart3,
-  TrendingUp,
-  ShoppingCart,
-  CreditCard,
   Building2,
-  FileStack,
-  Layers,
-  Inbox,
 } from 'lucide-react';
 import {
   Sheet,
@@ -73,10 +50,7 @@ import {
 } from '@/components/ui/sheet';
 import type { Tables } from '@/integrations/supabase/types';
 import LocalDashboard from '@/pages/local/LocalDashboard';
-import ClockInModal from '@/components/attendance/ClockInModal';
-import { OrderNotificationProvider } from '@/components/orders/OrderNotificationProvider';
 import logoHoppinessBlue from '@/assets/logo-hoppiness-blue.png';
-import { NotificationBell } from '@/components/orders/NotificationBell';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 
 type Branch = Tables<'branches'>;
@@ -94,27 +68,20 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   show: boolean;
-  badge?: number;
-  badgeVariant?: 'default' | 'destructive';
 }
 
 export default function LocalLayout() {
   const { user, signOut, loading: authLoading } = useAuth();
   const { branchId } = useParams();
   
-  // Nuevo sistema de permisos V2
   const permissions = usePermissionsV2(branchId);
   const { avatarInfo, canAccessLocal, canAccessAdmin } = useRoleLandingV2();
   const { isEmbedded } = useEmbedMode();
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Pending orders badge
-  const pendingOrdersCount = usePendingOrdersCount(branchId);
-  
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['vision', 'operacion']));
-  const [showClockInModal, setShowClockInModal] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['equipo']));
 
   const { accessibleBranches, loading: permLoading, local: lp } = permissions;
 
@@ -176,11 +143,10 @@ export default function LocalLayout() {
     };
   }, [branchId]);
 
-  // Auto-redirect para roles sin acceso a gestión
+  // Redirect cajeros/empleados a Mi Cuenta
   useEffect(() => {
     if (!selectedBranch || !branchId) return;
     
-    // Si el usuario es cajero o empleado, redirigir a Mi Cuenta
     if (permissions.isCajero || permissions.isEmpleado) {
       navigate('/cuenta');
     }
@@ -209,9 +175,8 @@ export default function LocalLayout() {
     });
   };
 
-  // ===== NAVEGACIÓN SIMPLIFICADA - REESTRUCTURACIÓN =====
-  // Eliminados: Operación (POS, KDS, Pedidos), Caja, Menú, Finanzas
-  // Config reducida: solo Turnos e Impresoras
+  // ===== NAVEGACIÓN ULTRA SIMPLIFICADA =====
+  // Solo: Dashboard, Equipo, Configuración (impresoras)
   const navSections: NavSection[] = [
     {
       id: 'dashboard',
@@ -220,30 +185,6 @@ export default function LocalLayout() {
       show: lp.canViewDashboard,
       items: [
         { to: '', label: 'Dashboard', icon: LayoutDashboard, show: lp.canViewDashboard },
-      ]
-    },
-    {
-      id: 'stock',
-      label: 'Stock',
-      icon: Boxes,
-      show: lp.canViewStock,
-      items: [
-        { to: 'stock', label: 'Stock Actual', icon: Boxes, show: lp.canViewStock },
-        { to: 'stock/conteo', label: 'Conteo de Inventario', icon: ClipboardCheck, show: lp.canDoInventoryCount },
-        { to: 'stock/pedir', label: 'Pedir a Proveedor', icon: Truck, show: lp.canOrderFromSupplier },
-      ]
-    },
-    {
-      id: 'compras',
-      label: 'Compras',
-      icon: ShoppingCart,
-      show: lp.canUploadInvoice || lp.canViewSuppliers,
-      items: [
-        { to: 'compras/proveedores', label: 'Proveedores', icon: Building2, show: lp.canViewSuppliers },
-        { to: 'compras/factura', label: 'Cargar Factura', icon: FileText, show: lp.canUploadInvoice },
-        { to: 'compras/recepcion', label: 'Recepción', icon: Package, show: lp.canUploadInvoice || lp.canViewSuppliers },
-        { to: 'compras/cuentas', label: 'Cuentas Corrientes', icon: CreditCard, show: lp.canViewSupplierAccounts },
-        { to: 'compras/historial', label: 'Historial de Compras', icon: History, show: lp.canViewPurchaseHistory },
       ]
     },
     {
@@ -258,23 +199,11 @@ export default function LocalLayout() {
       ]
     },
     {
-      id: 'reportes',
-      label: 'Reportes',
-      icon: TrendingUp,
-      show: lp.canViewSalesReports || lp.canViewStockMovements,
-      items: [
-        { to: 'reportes/ventas', label: 'Ventas (de carga manual)', icon: BarChart3, show: lp.canViewSalesReports },
-        { to: 'ventas/importar', label: 'Importar Núcleo Check', icon: FileStack, show: lp.canViewSalesReports },
-        { to: 'reportes/movimientos-stock', label: 'Movimientos de Stock', icon: History, show: lp.canViewStockMovements },
-      ]
-    },
-    {
       id: 'config',
       label: 'Configuración',
       icon: Settings,
-      show: lp.canConfigShifts || lp.canConfigPrinters,
+      show: lp.canConfigPrinters,
       items: [
-        { to: 'config/turnos', label: 'Turnos', icon: Clock, show: lp.canConfigShifts },
         { to: 'config/impresoras', label: 'Impresoras', icon: Printer, show: lp.canConfigPrinters },
       ]
     }
@@ -284,7 +213,6 @@ export default function LocalLayout() {
     return <HoppinessLoader fullScreen size="lg" />;
   }
 
-  // Show access denied if no local panel access
   if (!canAccessLocal) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -402,14 +330,6 @@ export default function LocalLayout() {
                     >
                       <item.icon className="w-4 h-4 mr-3" />
                       {item.label}
-                      {item.badge !== undefined && item.badge > 0 && (
-                        <Badge 
-                          variant={item.badgeVariant || 'default'} 
-                          className="ml-auto text-xs px-1.5 py-0.5 min-w-[1.25rem] flex items-center justify-center"
-                        >
-                          {item.badge}
-                        </Badge>
-                      )}
                     </Button>
                   </Link>
                 );
@@ -433,7 +353,6 @@ export default function LocalLayout() {
   };
 
   return (
-    <OrderNotificationProvider branchId={branchId || ''}>
     <div className="min-h-screen bg-background">
       {/* Mobile Header */}
       <header className="lg:hidden sticky top-0 z-50 bg-primary text-primary-foreground">
@@ -485,55 +404,61 @@ export default function LocalLayout() {
             </SheetContent>
           </Sheet>
           <h1 className="font-bold">{selectedBranch?.name || 'Mi Local'}</h1>
-          <NotificationBell branchId={branchId || ''} />
+          <div className="w-10" /> {/* Spacer */}
         </div>
       </header>
 
       <div className="flex">
         {/* Desktop Sidebar */}
         <aside className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 bg-card border-r">
-          {/* Header - p-6, same as Mi Marca */}
           <div className="p-6 border-b flex items-center gap-3">
             <img 
               src={logoHoppinessBlue} 
               alt="Hoppiness" 
               className="w-14 h-14 rounded-xl object-contain bg-white p-1"
             />
-            <span className="text-lg font-bold">Mi Local</span>
-          </div>
-          
-          {/* Branch Selector + Role Badge - p-4 */}
-          <div className="p-4 border-b">
-            <Select value={branchId} onValueChange={handleBranchChange}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Sucursal" />
-              </SelectTrigger>
-              <SelectContent>
-                {accessibleBranches.map(branch => (
-                  <SelectItem key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="flex items-center gap-2 mt-2">
-              {selectedBranch && (
-                <Badge variant={selectedBranch.is_open ? 'default' : 'secondary'}>
-                  {selectedBranch.is_open ? '🟢 Abierto' : '🔴 Cerrado'}
-                </Badge>
-              )}
+            <div>
+              <h2 className="text-lg font-bold">Mi Local</h2>
               <Badge variant="outline" className="text-xs">
                 {avatarInfo.label}
               </Badge>
             </div>
           </div>
 
-          {/* Navigation - p-4 (unified with Mi Marca) */}
-          <div className="flex-1 p-4 overflow-y-auto">
+          {/* Branch Selector */}
+          {accessibleBranches.length > 1 && (
+            <div className="p-4 border-b">
+              <Select value={branchId} onValueChange={handleBranchChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar local" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accessibleBranches.map(branch => (
+                    <SelectItem key={branch.id} value={branch.id}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Single branch display */}
+          {accessibleBranches.length === 1 && selectedBranch && (
+            <div className="p-4 border-b">
+              <div className="flex items-center gap-2 text-sm">
+                <Store className="w-4 h-4 text-primary" />
+                <span className="font-medium">{selectedBranch.name}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation */}
+          <div className="flex-1 overflow-y-auto p-4">
             <NavContent />
           </div>
-          
-          {/* Footer - p-4 border-t, unified button styles (no size="sm") */}
+
+          {/* Footer */}
           <div className="p-4 border-t space-y-1">
             {canAccessAdmin && !isEmbedded && (
               <ExternalLink to="/admin">
@@ -549,30 +474,24 @@ export default function LocalLayout() {
                 Volver al Inicio
               </Button>
             </ExternalLink>
-            <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={signOut}>
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start text-muted-foreground" 
+              onClick={signOut}
+            >
               <LogOut className="w-4 h-4 mr-3" />
               Salir
             </Button>
           </div>
         </aside>
 
-        {/* Main Content */}
+        {/* Main content */}
         <main className="flex-1 lg:ml-72">
-          <div className="p-6">
+          <div className="p-4 md:p-6 lg:p-8">
             {renderContent()}
           </div>
         </main>
       </div>
-
-      {/* Clock In Modal */}
-      {branchId && (
-        <ClockInModal
-          open={showClockInModal}
-          onOpenChange={setShowClockInModal}
-          branchId={branchId}
-        />
-      )}
     </div>
-    </OrderNotificationProvider>
   );
 }
