@@ -11,7 +11,7 @@ import { ArrowLeft, MapPin, Store, ChevronDown, Zap } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { DeliveryModeToggle } from '../BranchSelector/DeliveryModeToggle';
 import type { OrderMode } from '@/contexts/CartContext';
-import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
+import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 import heroBurger from '@/assets/hero-burger.jpg';
 
 interface MenuHeaderProps {
@@ -49,7 +49,7 @@ export function MenuHeader({
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             </Link>
-            <img src={logoOriginal} alt="Hoppiness" className="h-8 w-8 rounded-full" />
+            <img src={logoHoppiness} alt="Hoppiness" className="h-8 w-8 rounded-full" />
             <div className="w-9" />
           </div>
         </div>

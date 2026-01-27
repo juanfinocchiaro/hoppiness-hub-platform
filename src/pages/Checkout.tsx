@@ -38,7 +38,7 @@ import { useCart } from '@/contexts/CartContext';
 import { CartSummary } from '@/components/store/Cart';
 import { TracePanel } from '@/components/debug/TracePanel';
 import { traceLog } from '@/lib/trace';
-import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
+import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 import type { Enums } from '@/integrations/supabase/types';
 
 type PaymentMethod = Enums<'payment_method'>;
@@ -290,7 +290,7 @@ export default function Checkout() {
             </Button>
           </Link>
           <div className="flex items-center gap-2 flex-1">
-            <img src={logoOriginal} alt="Hoppiness" className="h-8 w-8 rounded-full" />
+            <img src={logoHoppiness} alt="Hoppiness" className="h-8 w-8 rounded-full" />
             <span className="font-bold">Checkout</span>
           </div>
         </div>

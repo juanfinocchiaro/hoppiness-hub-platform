@@ -34,7 +34,7 @@ import { DeliveryModeToggle } from '@/components/store/BranchSelector';
 import { BranchChangeModal } from '@/components/store/common';
 import { PullToRefreshIndicator } from '@/components/store/PullToRefreshIndicator';
 import { ScrollIndicator } from '@/components/store/ScrollIndicator';
-import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
+import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 import heroBurger from '@/assets/hero-burger.jpg';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -222,7 +222,7 @@ export default function PedirBranch() {
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             </Link>
-            <img src={logoOriginal} alt="Hoppiness" className="h-8 w-8 rounded-full" />
+            <img src={logoHoppiness} alt="Hoppiness" className="h-8 w-8 rounded-full" />
             <div className="w-9" />
           </div>
         </div>
