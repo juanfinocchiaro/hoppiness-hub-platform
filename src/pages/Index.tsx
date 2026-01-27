@@ -186,13 +186,13 @@ export default function Index() {
               <p className="text-lg text-muted-foreground mb-8">
                 Nuestros espacios están diseñados con muchísima onda, creando un estilo de servicio club descontracturado.
               </p>
-              <Link to="/pedir">
+              <a href="https://pedidos.masdelivery.com/hoppiness" target="_blank" rel="noopener noreferrer">
                 <Button size="lg" className="group">
                   <ShoppingBag className="w-5 h-5 mr-2" />
                   Pedir Ahora
                   <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
-              </Link>
+              </a>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <img src={local1} alt="Interior Hoppiness" className="rounded-2xl shadow-elevated w-full h-48 object-cover" />
