@@ -299,7 +299,21 @@ export default function FichajePublic() {
                 </div>
               )}
 
-              <p className="text-primary font-medium">¡Buen turno!</p>
+              {entryType === 'clock_in' ? (
+                <div className="space-y-2">
+                  <p className="text-primary font-medium">¡Buen turno!</p>
+                  <p className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
+                    📵 Recordá que está prohibido el uso de teléfono a partir de este momento.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-primary font-medium">¡Gracias por tu trabajo hoy!</p>
+                  <p className="text-sm text-muted-foreground">
+                    🌟 Descansá bien, nos vemos pronto.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
