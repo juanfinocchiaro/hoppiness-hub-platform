@@ -1,5 +1,5 @@
 /**
- * LocalApercibimientos - Gestión de advertencias/apercibimientos de empleados
+ * WarningsPage - Gestión de advertencias/apercibimientos de empleados
  */
 import { useState } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
@@ -57,7 +57,7 @@ const WARNING_TYPES = [
   { value: 'other', label: 'Otro', icon: AlertTriangle, color: 'bg-gray-100 text-gray-800' },
 ];
 
-export default function LocalApercibimientos() {
+export default function WarningsPage() {
   const { branchId } = useParams();
   const { branch } = useOutletContext<{ branch: Branch }>();
   const { user } = useAuth();

@@ -1,5 +1,5 @@
 /**
- * LocalRRHHFichajes - Fichajes del personal con QR
+ * ClockInsPage - Fichajes del personal con QR
  * 
  * Muestra:
  * - Link/QR para fichar en este local
@@ -29,7 +29,7 @@ import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { QRCodeSVG } from 'qrcode.react';
 
-export default function LocalRRHHFichajes() {
+export default function ClockInsPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const { isSuperadmin, local } = usePermissionsV2();
   const [showQRModal, setShowQRModal] = useState(false);

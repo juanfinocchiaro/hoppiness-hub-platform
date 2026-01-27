@@ -21,12 +21,12 @@ import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
 
-interface LocalDashboardProps {
+interface BranchHomeProps {
   branch: Branch;
 }
 
 /**
- * LocalDashboard - Dashboard simplificado con carga manual de ventas
+ * BranchHome - Dashboard simplificado con carga manual de ventas
  * 
  * Funcionalidades:
  * - Ver ventas de hoy por turno
@@ -34,7 +34,7 @@ interface LocalDashboardProps {
  * - Ver resumen semanal
  * - Ver últimas cargas
  */
-export default function LocalDashboard({ branch }: LocalDashboardProps) {
+export default function BranchHome({ branch }: BranchHomeProps) {
   const { branchId } = useParams();
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [selectedShift, setSelectedShift] = useState<string>('night');

@@ -1,5 +1,5 @@
 /**
- * LocalAdelantos - Gestión de adelantos de sueldo
+ * AdvancesPage - Gestión de adelantos de sueldo
  */
 import { useState } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
@@ -37,7 +37,7 @@ import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
 
-export default function LocalAdelantos() {
+export default function AdvancesPage() {
   const { branchId } = useParams();
   const { branch } = useOutletContext<{ branch: Branch }>();
   

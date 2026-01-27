@@ -21,18 +21,18 @@ import FichajePublic from "./pages/FichajePublic";
 import ClockIn from "./pages/ClockIn";
 
 // Mi Local
-import LocalLayout from "./pages/local/LocalLayout";
-import LocalTeam from "./pages/local/LocalTeam";
-import LocalRRHHFichajes from "./pages/local/LocalRRHHFichajes";
-import LocalRRHHHorarios from "./pages/local/LocalRRHHHorarios";
-import LocalImpresoras from "./pages/local/LocalImpresoras";
-import LocalAdelantos from "./pages/local/LocalAdelantos";
-import LocalApercibimientos from "./pages/local/LocalApercibimientos";
+import BranchLayout from "./pages/local/BranchLayout";
+import TeamPage from "./pages/local/TeamPage";
+import ClockInsPage from "./pages/local/ClockInsPage";
+import SchedulesPage from "./pages/local/SchedulesPage";
+import PrintersPage from "./pages/local/PrintersPage";
+import AdvancesPage from "./pages/local/AdvancesPage";
+import WarningsPage from "./pages/local/WarningsPage";
 import AttendanceKiosk from "./pages/local/AttendanceKiosk";
 
 // Mi Marca
-import AdminDashboard from "./pages/admin/Dashboard";
-import AdminHome from "./pages/admin/AdminHome";
+import BrandLayout from "./pages/admin/BrandLayout";
+import BrandHome from "./pages/admin/BrandHome";
 import BranchDetail from "./pages/admin/BranchDetail";
 import UsersPage from "./pages/admin/UsersPage";
 import CentralTeam from "./pages/admin/CentralTeam";
@@ -85,26 +85,26 @@ const App = () => (
             <Route path="/kiosk/:branchId" element={<LocalRoute><AttendanceKiosk /></LocalRoute>} />
             
             {/* Mi Local - /milocal */}
-            <Route path="/milocal" element={<LocalRoute><LocalLayout /></LocalRoute>}>
+            <Route path="/milocal" element={<LocalRoute><BranchLayout /></LocalRoute>}>
               <Route index element={<div />} />
             </Route>
-            <Route path="/milocal/:branchId" element={<LocalRoute><LocalLayout /></LocalRoute>}>
+            <Route path="/milocal/:branchId" element={<LocalRoute><BranchLayout /></LocalRoute>}>
               <Route index element={null} />
               
               {/* Equipo */}
-              <Route path="equipo" element={<LocalTeam />} />
-              <Route path="equipo/fichajes" element={<LocalRRHHFichajes />} />
-              <Route path="equipo/horarios" element={<LocalRRHHHorarios />} />
-              <Route path="equipo/adelantos" element={<LocalAdelantos />} />
-              <Route path="equipo/apercibimientos" element={<LocalApercibimientos />} />
+              <Route path="equipo" element={<TeamPage />} />
+              <Route path="equipo/fichajes" element={<ClockInsPage />} />
+              <Route path="equipo/horarios" element={<SchedulesPage />} />
+              <Route path="equipo/adelantos" element={<AdvancesPage />} />
+              <Route path="equipo/apercibimientos" element={<WarningsPage />} />
               
               {/* Configuración */}
-              <Route path="config/impresoras" element={<LocalImpresoras />} />
+              <Route path="config/impresoras" element={<PrintersPage />} />
             </Route>
             
             {/* Mi Marca - /mimarca */}
-            <Route path="/mimarca" element={<AdminRoute><AdminDashboard /></AdminRoute>}>
-              <Route index element={<AdminHome />} />
+            <Route path="/mimarca" element={<AdminRoute><BrandLayout /></AdminRoute>}>
+              <Route index element={<BrandHome />} />
               
               {/* Locales */}
               <Route path="locales/:slug" element={<BranchDetail />} />

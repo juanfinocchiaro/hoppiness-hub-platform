@@ -20,7 +20,7 @@ interface Stats {
   globalProductivity: number;
 }
 
-export default function AdminHome() {
+export default function BrandHome() {
   const { avatarInfo } = useRoleLandingV2();
   const [stats, setStats] = useState<Stats>({ 
     globalRevenue: 0, 

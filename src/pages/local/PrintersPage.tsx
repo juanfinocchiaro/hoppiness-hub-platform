@@ -87,7 +87,7 @@ const TYPE_LABELS: Record<string, string> = {
   cloud: 'Cloud',
 };
 
-export default function LocalImpresoras() {
+export default function PrintersPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const { isSuperadmin, isEncargado, isFranquiciado, local } = usePermissionsV2(branchId);
   
@@ -127,7 +127,7 @@ export default function LocalImpresoras() {
         if (error) throw error;
         setPrinters((data || []) as PrinterConfig[]);
       } catch (error) {
-        handleError(error, { userMessage: 'Error al cargar impresoras', context: 'LocalImpresoras.fetchPrinters' });
+        handleError(error, { userMessage: 'Error al cargar impresoras', context: 'PrintersPage.fetchPrinters' });
       } finally {
         setLoading(false);
       }
@@ -231,7 +231,7 @@ export default function LocalImpresoras() {
       setShowDialog(false);
       resetForm();
     } catch (error) {
-      handleError(error, { userMessage: 'Error al guardar impresora', context: 'LocalImpresoras.handleSave' });
+      handleError(error, { userMessage: 'Error al guardar impresora', context: 'PrintersPage.handleSave' });
     }
   };
 
@@ -251,7 +251,7 @@ export default function LocalImpresoras() {
       setShowDeleteDialog(false);
       setPrinterToDelete(null);
     } catch (error) {
-      handleError(error, { userMessage: 'Error al eliminar impresora', context: 'LocalImpresoras.handleDelete' });
+      handleError(error, { userMessage: 'Error al eliminar impresora', context: 'PrintersPage.handleDelete' });
     }
   };
 
@@ -268,7 +268,7 @@ export default function LocalImpresoras() {
         p.id === printer.id ? { ...p, is_active: !printer.is_active } : p
       ));
     } catch (error) {
-      handleError(error, { userMessage: 'Error al cambiar estado', context: 'LocalImpresoras.handleToggleActive' });
+      handleError(error, { userMessage: 'Error al cambiar estado', context: 'PrintersPage.handleToggleActive' });
     }
   };
 
