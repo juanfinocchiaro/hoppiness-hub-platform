@@ -1,5 +1,5 @@
 /**
- * LocalLayout - Panel "Mi Local" SIMPLIFICADO
+ * BranchLayout - Panel "Mi Local" SIMPLIFICADO
  * 
  * Solo contiene:
  * - Dashboard (con carga de ventas por turno)
@@ -48,7 +48,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import type { Tables } from '@/integrations/supabase/types';
-import LocalDashboard from '@/pages/local/LocalDashboard';
+import BranchHome from '@/pages/local/BranchHome';
 import logoHoppinessBlue from '@/assets/logo-hoppiness-blue.png';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 
@@ -69,7 +69,7 @@ interface NavItem {
   show: boolean;
 }
 
-export default function LocalLayout() {
+export default function BranchLayout() {
   const { user, signOut, loading: authLoading } = useAuth();
   const { branchId } = useParams();
   
@@ -344,7 +344,7 @@ export default function LocalLayout() {
 
     const isDashboard = location.pathname === `/milocal/${branchId}`;
     if (isDashboard) {
-      return <LocalDashboard branch={selectedBranch} />;
+      return <BranchHome branch={selectedBranch} />;
     }
 
     return <Outlet context={{ branch: selectedBranch, permissions: lp }} />;

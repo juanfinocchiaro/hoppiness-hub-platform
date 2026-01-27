@@ -12,7 +12,7 @@ interface OutletContext {
   branch: Tables<'branches'>;
 }
 
-export default function LocalTeam() {
+export default function TeamPage() {
   const { branch } = useOutletContext<OutletContext>();
   const { team, loading, refetch } = useTeamData(branch?.id);
   

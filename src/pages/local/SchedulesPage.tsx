@@ -6,7 +6,7 @@ import MonthlyScheduleCalendar from '@/components/hr/MonthlyScheduleCalendar';
 import PendingScheduleRequests from '@/components/hr/PendingScheduleRequests';
 import { CalendarDays, Clock } from 'lucide-react';
 
-export default function LocalRRHHHorarios() {
+export default function SchedulesPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const { isSuperadmin, isFranquiciado, isEncargado, local } = usePermissionsV2(branchId);
   
