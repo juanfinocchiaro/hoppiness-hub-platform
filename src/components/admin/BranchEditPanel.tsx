@@ -86,7 +86,6 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
   const [email, setEmail] = useState(branch.email || '');
   const [latitude, setLatitude] = useState((branch as any).latitude?.toString() || '');
   const [longitude, setLongitude] = useState((branch as any).longitude?.toString() || '');
-  const [isActive, setIsActive] = useState(branch.is_active);
   
   // Datos fiscales
   const [fiscalData, setFiscalData] = useState<FiscalData>((branch as any).fiscal_data || {});
@@ -135,7 +134,6 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
           email: email || null,
           latitude: latitude ? parseFloat(latitude) : null,
           longitude: longitude ? parseFloat(longitude) : null,
-          is_active: isActive,
           fiscal_data: fiscalData,
         } as any)
         .eq('id', branch.id);
@@ -306,11 +304,6 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
                 placeholder="local@hoppiness.com"
               />
             </div>
-          </div>
-
-          <div className="flex items-center gap-3 py-2">
-            <Switch checked={isActive} onCheckedChange={setIsActive} />
-            <Label>Sucursal activa</Label>
           </div>
         </TabsContent>
 
