@@ -14,7 +14,12 @@ import { PublicFooter } from '@/components/layout/PublicFooter';
 import heroBurger from '@/assets/hero-burger.jpg';
 import juanHoppiness from '@/assets/juan-hoppiness.jpg';
 import aperturaLocal from '@/assets/apertura-local.jpg';
-import teamPhoto from '@/assets/team-photo.jpg';
+import team1 from '@/assets/team-1.jpg';
+import team2 from '@/assets/team-2.jpg';
+import team3 from '@/assets/team-3.jpg';
+import team4 from '@/assets/team-4.jpg';
+import team5 from '@/assets/team-5.jpg';
+import team6 from '@/assets/team-6.jpg';
 import logoHoppiness from '@/assets/logo-hoppiness.png';
 
 export default function Nosotros() {
@@ -132,36 +137,63 @@ export default function Nosotros() {
       {/* El Equipo */}
       <section className="py-20 px-4">
         <div className="container mx-auto max-w-6xl">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <img 
-                src={teamPhoto} 
-                alt="Equipo Hoppiness" 
-                className="rounded-2xl shadow-elevated w-full"
-              />
-            </div>
-            <div>
-              <h2 className="text-4xl font-black mb-6 font-brand text-primary">
-                NUESTRO EQUIPO
-              </h2>
-              <p className="text-lg text-muted-foreground mb-6">
-                Detrás de cada hamburguesa hay un equipo apasionado. Desde los fundadores hasta 
-                cada uno de nuestros colaboradores, todos compartimos la misma visión: ofrecer 
-                la mejor experiencia gastronómica.
-              </p>
-              <p className="text-lg text-muted-foreground mb-6">
-                Creemos en el trabajo en equipo, la capacitación constante y en crear un ambiente 
-                laboral donde todos puedan crecer. Nuestro equipo es nuestra familia, y eso se 
-                nota en cada detalle.
-              </p>
-              <div className="flex items-center gap-4 p-4 bg-accent/10 rounded-xl">
-                <Users2 className="w-12 h-12 text-accent" />
-                <div>
-                  <p className="font-bold text-lg">+50 colaboradores</p>
-                  <p className="text-sm text-muted-foreground">En todas nuestras sucursales</p>
-                </div>
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-black mb-4 font-brand text-primary">
+              NUESTRO EQUIPO
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Detrás de cada hamburguesa hay un equipo apasionado. Desde los fundadores hasta 
+              cada uno de nuestros colaboradores, todos compartimos la misma visión: ofrecer 
+              la mejor experiencia gastronómica.
+            </p>
+          </div>
+
+          {/* Galería de fotos del equipo - Masonry style */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-12">
+            <img 
+              src={team1} 
+              alt="Equipo Hoppiness celebrando" 
+              className="rounded-2xl shadow-card hover:shadow-elevated transition-all w-full h-64 object-cover"
+            />
+            <img 
+              src={team2} 
+              alt="Equipo en cocina" 
+              className="rounded-2xl shadow-card hover:shadow-elevated transition-all w-full h-64 object-cover md:translate-y-8"
+            />
+            <img 
+              src={team3} 
+              alt="Celebración de cumpleaños del equipo" 
+              className="rounded-2xl shadow-card hover:shadow-elevated transition-all w-full h-64 object-cover"
+            />
+            <img 
+              src={team4} 
+              alt="Equipo de cocina" 
+              className="rounded-2xl shadow-card hover:shadow-elevated transition-all w-full h-64 object-cover md:-translate-y-4"
+            />
+            <img 
+              src={team5} 
+              alt="Equipo tomando selfie" 
+              className="rounded-2xl shadow-card hover:shadow-elevated transition-all w-full h-64 object-cover md:translate-y-4"
+            />
+            <img 
+              src={team6} 
+              alt="Equipo en local" 
+              className="rounded-2xl shadow-card hover:shadow-elevated transition-all w-full h-64 object-cover md:-translate-y-8"
+            />
+          </div>
+
+          <div className="flex flex-col md:flex-row items-center justify-center gap-6">
+            <div className="flex items-center gap-4 p-4 bg-accent/10 rounded-xl">
+              <Users2 className="w-12 h-12 text-accent" />
+              <div>
+                <p className="font-bold text-lg">+50 colaboradores</p>
+                <p className="text-sm text-muted-foreground">En todas nuestras sucursales</p>
               </div>
             </div>
+            <p className="text-muted-foreground text-center max-w-md">
+              Creemos en el trabajo en equipo, la capacitación constante y en crear un ambiente 
+              laboral donde todos puedan crecer. Nuestro equipo es nuestra familia.
+            </p>
           </div>
         </div>
       </section>
