@@ -10,9 +10,9 @@ interface HoppinessLoaderProps {
 }
 
 const sizeMap = {
-  sm: 'w-6 h-6',
+  sm: 'w-8 h-8',
   md: 'w-16 h-16 md:w-20 md:h-20',
-  lg: 'w-28 h-28 md:w-40 md:h-40',
+  lg: 'w-24 h-24 md:w-32 md:h-32',
 };
 
 export function HoppinessLoader({ 
@@ -42,30 +42,33 @@ export function HoppinessLoader({
       fullScreen && 'min-h-screen bg-background',
       className
     )}>
-      {/* Logo container with rotation animation */}
+      {/* Logo container with pulse animation */}
       <div className={cn(
         'relative',
         sizeMap[size]
       )}>
-        {/* Rotating logo */}
+        {/* Pulsing background rings */}
+        <div className={cn(
+          'absolute inset-0 rounded-full bg-primary/10',
+          'animate-ping'
+        )} 
+        style={{ animationDuration: '2s' }}
+        />
+        <div className={cn(
+          'absolute -inset-2 rounded-full bg-primary/5',
+          'animate-pulse'
+        )} />
+        
+        {/* Main logo with subtle scale animation */}
         <img 
           src={logoLoader} 
           alt="Cargando" 
-          className="w-full h-full object-contain rounded-full animate-[spin_3s_linear_infinite]"
+          className={cn(
+            'w-full h-full object-contain relative z-10',
+            'animate-pulse'
+          )}
+          style={{ animationDuration: '1.5s' }}
         />
-        
-        {/* Animated outer ring */}
-        <div className={cn(
-          'absolute -inset-2 rounded-full border-2 border-primary/20',
-          'animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]',
-          size === 'sm' && '-inset-1 border'
-        )} />
-        
-        {/* Static inner glow */}
-        <div className={cn(
-          'absolute inset-0 rounded-full',
-          'bg-primary/5 animate-pulse'
-        )} />
       </div>
       
       {/* Loading text with animated dots */}
