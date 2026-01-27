@@ -68,7 +68,6 @@ export default function Nosotros() {
         </div>
       </section>
 
-      {/* Quiénes Somos */}
       <section className="py-20 px-4">
         <div className="container mx-auto max-w-6xl">
           <div className="grid md:grid-cols-2 gap-12 items-center">
@@ -77,25 +76,28 @@ export default function Nosotros() {
                 QUIÉNES SOMOS
               </h2>
               <p className="text-lg text-muted-foreground mb-6">
-                Hoppiness Club nació en 2018 en la ciudad de Córdoba con un sueño simple pero ambicioso: 
-                crear las mejores hamburguesas de la ciudad. Un grupo de amigos apasionados por la buena 
-                comida decidió revolucionar el concepto de hamburgueserías tradicionales.
+                Hoppiness Club nació en Córdoba en 2018, fundado por Juan Finocchiaro, como un club de cerveza y encuentro.
+                Desde el inicio la idea fue crear una marca con identidad, producto cuidado y una experiencia simple, bien hecha.
               </p>
               <p className="text-lg text-muted-foreground mb-6">
-                Lo que empezó como un pequeño local en Nueva Córdoba, hoy se ha convertido en un referente 
-                gastronómico con múltiples sucursales en toda la provincia. Nuestro secreto: nunca 
-                comprometer la calidad por el costo.
+                En 2019 dimos el primer salto con un nuevo punto en Nueva Córdoba. Y cuando llegó la pandemia, tomamos una decisión que marcó el rumbo: nos enfocamos 100% en hamburguesas y empezamos a construir un modelo basado en calidad, consistencia y operación.
               </p>
-              <p className="text-lg text-muted-foreground">
-                Seleccionamos personalmente cada ingrediente, desarrollamos nuestras propias recetas de 
-                salsas y panes, y capacitamos a nuestro equipo para que cada hamburguesa que sale de 
-                nuestra cocina sea perfecta.
+              <p className="text-lg text-muted-foreground mb-6">
+                Ese cambio fue una evolución natural: pasamos de ser un lugar de encuentro a ser una hamburguesería especializada, con recetas estandarizadas, procesos claros y un equipo entrenado para sostener el mismo nivel en cada servicio.
               </p>
+              <p className="text-lg text-muted-foreground mb-6">
+                Hoy Hoppiness Club es una marca cordobesa en expansión, con múltiples sucursales y una comunidad fiel. Y seguimos sosteniendo lo de siempre: producto fuerte, identidad clara y una forma de trabajar que permite crecer sin perder calidad.
+              </p>
+              <div className="border-t pt-6 mt-6">
+                <p className="text-lg font-medium text-foreground italic">
+                  Una marca con historia real, producto probado y estándares listos para escalar.
+                </p>
+              </div>
             </div>
             <div className="flex justify-center">
               <img 
                 src={juanHoppiness} 
-                alt="Juan, socio de Hoppiness" 
+                alt="Juan Finocchiaro, fundador de Hoppiness Club" 
                 className="rounded-2xl shadow-elevated w-full max-w-sm aspect-[9/16] object-cover object-top"
               />
             </div>
