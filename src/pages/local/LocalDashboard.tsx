@@ -40,7 +40,7 @@ export default function LocalDashboard({ branch }: LocalDashboardProps) {
   const { data: todaySales, isLoading: loadingToday } = useTodaySales(branch.id);
   const { data: weekSales, isLoading: loadingWeek } = useDailySales(branch.id);
   
-  const missingShifts = todaySales ? getMissingShifts(todaySales) : ['morning', 'afternoon', 'night'];
+  const missingShifts = todaySales ? getMissingShifts(todaySales) : ['midday', 'night'];
   const todayTotal = todaySales?.reduce((sum, s) => sum + Number(s.sales_total || 0), 0) || 0;
   
   // Calculate week totals by day
@@ -98,15 +98,15 @@ export default function LocalDashboard({ branch }: LocalDashboardProps) {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="grid grid-cols-3 gap-4">
-              {[1, 2, 3].map(i => (
+            <div className="grid grid-cols-2 gap-4">
+              {[1, 2].map(i => (
                 <Skeleton key={i} className="h-24 rounded-lg" />
               ))}
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                {['morning', 'afternoon', 'night'].map(shift => {
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                {['midday', 'night'].map(shift => {
                   const shiftSale = todaySales?.find(s => s.shift === shift);
                   const isLoaded = !!shiftSale;
                   
@@ -161,7 +161,7 @@ export default function LocalDashboard({ branch }: LocalDashboardProps) {
                 <div className="flex items-center gap-2 mt-4 p-3 rounded-lg bg-warning/10 text-warning-foreground">
                   <AlertCircle className="w-4 h-4 text-warning" />
                   <span className="text-sm">
-                    {missingShifts.length === 3 
+                    {missingShifts.length === 2 
                       ? 'Ningún turno cargado aún' 
                       : `Faltan cargar: ${missingShifts.map(s => getShiftLabel(s)).join(', ')}`}
                   </span>

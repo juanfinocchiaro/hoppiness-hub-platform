@@ -37,8 +37,7 @@ interface SalesEntryModalProps {
 }
 
 const SHIFTS = [
-  { value: 'morning', label: 'Mañana' },
-  { value: 'afternoon', label: 'Tarde' },
+  { value: 'midday', label: 'Mediodía' },
   { value: 'night', label: 'Noche' },
 ];
 
