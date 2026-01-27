@@ -341,31 +341,13 @@ ${formData.message || 'Sin mensaje adicional'}
     }
   };
 
-  // Contact info
+  // Contact info - Solo ubicación
   const contactInfo = [
     {
       icon: MapPin,
       title: 'Ubicación',
       content: 'Múltiples sucursales en Córdoba',
       subtext: 'Nueva Córdoba, Cerro, General Paz y más'
-    },
-    {
-      icon: Phone,
-      title: 'Teléfono',
-      content: '+54 351 000-0000',
-      subtext: 'Lunes a Domingo'
-    },
-    {
-      icon: Mail,
-      title: 'Email',
-      content: 'hola@hoppinessclub.com',
-      subtext: 'Respondemos en 24hs'
-    },
-    {
-      icon: Clock,
-      title: 'Horario',
-      content: '12:00 - 00:00',
-      subtext: 'Todos los días'
     }
   ];
 
