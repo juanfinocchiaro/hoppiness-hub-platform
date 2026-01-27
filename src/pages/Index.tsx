@@ -154,9 +154,9 @@ export default function Index() {
               </a>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <img src={local1} alt="Interior Hoppiness" className="rounded-2xl shadow-elevated w-full h-48 object-cover" />
-              <img src={local2} alt="Ambiente Hoppiness" className="rounded-2xl shadow-elevated w-full h-48 object-cover mt-8" />
-              <img src={designAmbiente} alt="Diseño Hoppiness" className="rounded-2xl shadow-elevated w-full h-48 object-cover col-span-2" />
+              <img src={burgerCheese} alt="Hamburguesa con queso derretido" className="rounded-2xl shadow-elevated w-full h-48 object-cover" />
+              <img src={burgerSmash} alt="Smash burger artesanal" className="rounded-2xl shadow-elevated w-full h-48 object-cover mt-8" />
+              <img src={burgerProvoleta} alt="Hamburguesa con provoleta" className="rounded-2xl shadow-elevated w-full h-48 object-cover col-span-2" />
             </div>
           </div>
         </div>
