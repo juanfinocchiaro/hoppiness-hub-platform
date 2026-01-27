@@ -49,12 +49,12 @@ export function FranchiseHero() {
         </div>
 
         <div className="text-center mb-12">
-          <Link to="/franquicias">
-            <Button size="lg" className="bg-white text-primary hover:bg-white/90 text-lg px-8 shadow-lg">
+          <Button asChild size="lg" className="bg-white text-primary hover:bg-white/90 text-lg px-8 shadow-lg">
+            <Link to="/franquicias">
               Quiero información de franquicias
               <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
 
         {/* Quote */}
