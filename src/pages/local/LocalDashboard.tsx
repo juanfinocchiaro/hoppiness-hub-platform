@@ -76,15 +76,9 @@ export default function LocalDashboard({ branch }: LocalDashboardProps) {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">{branch.name}</h1>
-          <p className="text-muted-foreground">{branch.address}, {branch.city}</p>
-        </div>
-        <Button onClick={() => handleOpenEntry()} size="lg">
-          <Plus className="w-4 h-4 mr-2" />
-          Cargar Ventas
-        </Button>
+      <div>
+        <h1 className="text-3xl font-bold">{branch.name}</h1>
+        <p className="text-muted-foreground">{branch.address}, {branch.city}</p>
       </div>
 
       {/* Today's Sales */}
