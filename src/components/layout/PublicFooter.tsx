@@ -31,13 +31,20 @@ export function PublicFooter() {
           <div>
             <h4 className="font-bold mb-4 font-brand">ENLACES</h4>
             <div className="space-y-2 text-sm">
+              <a 
+                href="https://pedidos.masdelivery.com/hoppiness" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block text-background/70 hover:text-background"
+              >
+                Pedir
+              </a>
               <Link to="/nosotros" className="block text-background/70 hover:text-background">Nosotros</Link>
               <Link to="/franquicias" className="block text-background/70 hover:text-background">Franquicias</Link>
               <a href="/#clubes" className="block text-background/70 hover:text-background">Nuestros Clubes</a>
               <Link to="/contacto" className="block text-background/70 hover:text-background">Contacto</Link>
             </div>
           </div>
-
           {/* Sumate */}
           <div>
             <h4 className="font-bold mb-4 font-brand">SUMATE</h4>

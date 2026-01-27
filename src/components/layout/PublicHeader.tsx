@@ -50,17 +50,15 @@ export function PublicHeader() {
         
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-1">
-          <Link to="/pedir">
+          <a href="https://pedidos.masdelivery.com/hoppiness" target="_blank" rel="noopener noreferrer">
             <Button 
               variant="ghost" 
               size="sm" 
-              className={`text-primary-foreground hover:bg-primary-foreground/10 ${
-                isActive('/pedir') ? 'bg-primary-foreground/20' : ''
-              }`}
+              className="text-primary-foreground hover:bg-primary-foreground/10"
             >
               Pedir
             </Button>
-          </Link>
+          </a>
           <Link to="/nosotros">
             <Button 
               variant="ghost" 
@@ -177,12 +175,12 @@ export function PublicHeader() {
 
         {/* Mobile Nav */}
         <div className="flex md:hidden items-center gap-2">
-          {/* Botón rápido a Pedir */}
-          <Link to="/pedir">
+          {/* Botón rápido a Pedir - abre en nueva pestaña */}
+          <a href="https://pedidos.masdelivery.com/hoppiness" target="_blank" rel="noopener noreferrer">
             <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10">
               <ShoppingBag className="w-5 h-5" />
             </Button>
-          </Link>
+          </a>
           
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
@@ -192,17 +190,15 @@ export function PublicHeader() {
             </SheetTrigger>
             <SheetContent side="right" className="bg-primary text-primary-foreground border-primary-foreground/20">
               <nav className="flex flex-col gap-2 mt-8">
-                <Link to="/pedir" onClick={() => setOpen(false)}>
+                <a href="https://pedidos.masdelivery.com/hoppiness" target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>
                   <Button 
                     variant="ghost" 
-                    className={`w-full justify-start text-primary-foreground hover:bg-primary-foreground/10 ${
-                      isActive('/pedir') ? 'bg-primary-foreground/20' : ''
-                    }`}
+                    className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10"
                   >
                     <ShoppingBag className="w-4 h-4 mr-2" />
                     Pedir
                   </Button>
-                </Link>
+                </a>
                 <Link to="/nosotros" onClick={() => setOpen(false)}>
                   <Button 
                     variant="ghost" 
