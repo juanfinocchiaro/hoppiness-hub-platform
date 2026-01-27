@@ -8,7 +8,6 @@ import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
 import { useEmbedMode } from '@/hooks/useEmbedMode';
 import { ExternalLink } from '@/components/ui/ExternalLink';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import logoHoppinessBlue from '@/assets/logo-hoppiness-blue.png';
 import {
@@ -91,12 +90,7 @@ export default function AdminDashboard() {
                   alt="Hoppiness" 
                   className="w-14 h-14 rounded-xl object-contain bg-white p-1"
                 />
-                <div>
-                  <h2 className="text-lg font-bold">Mi Marca</h2>
-                  <Badge variant="outline" className="text-xs">
-                    {avatarInfo.label}
-                  </Badge>
-                </div>
+                <span className="text-lg font-bold">Mi Marca</span>
               </div>
               <AdminSidebar avatarInfo={avatarInfo} />
               {hasLocalPanelAccess && !isEmbedded && (
@@ -138,12 +132,7 @@ export default function AdminDashboard() {
                 alt="Hoppiness" 
                 className="w-14 h-14 rounded-xl object-contain bg-white p-1"
               />
-              <div>
-                <span className="text-lg font-bold block">Mi Marca</span>
-                <Badge variant="outline" className="text-xs">
-                  {avatarInfo.label}
-                </Badge>
-              </div>
+              <span className="text-lg font-bold">Mi Marca</span>
             </div>
           </div>
           
