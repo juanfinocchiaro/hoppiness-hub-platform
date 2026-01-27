@@ -36,17 +36,18 @@ export function useTeamData(branchId: string | undefined) {
         .eq('branch_id', branchId)
         .in('user_id', userIds);
 
-      // 4. Get attendance records for this month
+      // 4. Get clock entries for this month (new system)
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
-      const { data: attendance } = await supabase
-        .from('attendance_records')
-        .select('user_id, check_in, check_out')
+      const { data: clockEntries } = await supabase
+        .from('clock_entries')
+        .select('user_id, entry_type, created_at')
         .eq('branch_id', branchId)
         .in('user_id', userIds)
-        .gte('check_in', startOfMonth.toISOString());
+        .gte('created_at', startOfMonth.toISOString())
+        .order('created_at', { ascending: true });
 
       // 5. Get active warnings count
       const { data: warnings } = await supabase
@@ -60,25 +61,50 @@ export function useTeamData(branchId: string | undefined) {
       const profilesMap = new Map(profiles?.map(p => [p.id, p]));
       const employeeDataMap = new Map(employeeData?.map(e => [e.user_id, e]));
       
-      // Calculate hours per user
+      // Calculate hours per user from clock_entries (clock_in/clock_out pairs)
       const hoursMap = new Map<string, number>();
-      attendance?.forEach(a => {
-        if (a.check_in && a.check_out) {
-          const hours = (new Date(a.check_out).getTime() - new Date(a.check_in).getTime()) / (1000 * 60 * 60);
-          hoursMap.set(a.user_id, (hoursMap.get(a.user_id) || 0) + hours);
+      const userEntriesMap = new Map<string, Array<{ type: string; time: Date }>>();
+      
+      // Group entries by user
+      clockEntries?.forEach(e => {
+        const existing = userEntriesMap.get(e.user_id) || [];
+        existing.push({ type: e.entry_type, time: new Date(e.created_at) });
+        userEntriesMap.set(e.user_id, existing);
+      });
+      
+      // Calculate hours for each user
+      userEntriesMap.forEach((entries, userId) => {
+        let totalHours = 0;
+        let lastClockIn: Date | null = null;
+        
+        entries.sort((a, b) => a.time.getTime() - b.time.getTime());
+        
+        for (const entry of entries) {
+          if (entry.type === 'clock_in') {
+            lastClockIn = entry.time;
+          } else if (entry.type === 'clock_out' && lastClockIn) {
+            totalHours += (entry.time.getTime() - lastClockIn.getTime()) / (1000 * 60 * 60);
+            lastClockIn = null;
+          }
         }
+        
+        hoursMap.set(userId, totalHours);
       });
 
       // Get last clock in and check if working
       const lastClockInMap = new Map<string, { time: string; isWorking: boolean }>();
-      const sortedAttendance = [...(attendance || [])].sort((a, b) => 
-        new Date(b.check_in).getTime() - new Date(a.check_in).getTime()
+      const sortedEntries = [...(clockEntries || [])].sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
-      sortedAttendance.forEach(a => {
-        if (!lastClockInMap.has(a.user_id)) {
-          lastClockInMap.set(a.user_id, {
-            time: a.check_in,
-            isWorking: !a.check_out,
+      
+      // For each user, check their most recent entry
+      const processedUsers = new Set<string>();
+      sortedEntries.forEach(e => {
+        if (!processedUsers.has(e.user_id)) {
+          processedUsers.add(e.user_id);
+          lastClockInMap.set(e.user_id, {
+            time: e.created_at,
+            isWorking: e.entry_type === 'clock_in',
           });
         }
       });
