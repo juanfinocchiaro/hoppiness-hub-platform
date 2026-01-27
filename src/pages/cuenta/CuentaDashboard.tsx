@@ -20,6 +20,7 @@ import MyWarningsCard from '@/components/cuenta/MyWarningsCard';
 import MyCashClosingsCard from '@/components/cuenta/MyCashClosingsCard';
 import MyCommunicationsCard from '@/components/cuenta/MyCommunicationsCard';
 import MissingPinBanner from '@/components/cuenta/MissingPinBanner';
+import MyRequestsCard from '@/components/cuenta/MyRequestsCard';
 
 export default function CuentaDashboard() {
   const { user, signOut } = useAuth();
@@ -353,10 +354,11 @@ export default function CuentaDashboard() {
                 </div>
               )}
 
-              {/* Employee Cards - Communications, Schedule, Clock-ins, Advances, Warnings, Cash Closings */}
+              {/* Employee Cards - Communications, Schedule, Requests, Clock-ins, Advances, Warnings, Cash Closings */}
               <div className="grid gap-4">
                 <MyCommunicationsCard />
                 <MyScheduleCard />
+                <MyRequestsCard />
                 <MyClockInsCard />
                 <MySalaryAdvancesCard />
                 <MyWarningsCard />

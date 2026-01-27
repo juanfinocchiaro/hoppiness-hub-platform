@@ -3,6 +3,7 @@ import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import EmployeeScheduleEditor from '@/components/hr/EmployeeScheduleEditor';
 import MonthlyScheduleCalendar from '@/components/hr/MonthlyScheduleCalendar';
+import PendingScheduleRequests from '@/components/hr/PendingScheduleRequests';
 import { CalendarDays, Clock } from 'lucide-react';
 
 export default function LocalRRHHHorarios() {
@@ -19,6 +20,9 @@ export default function LocalRRHHHorarios() {
         <h1 className="text-2xl font-bold">Horarios</h1>
         <p className="text-muted-foreground">Programación mensual del personal</p>
       </div>
+
+      {/* Pending Requests - Show at top if any */}
+      {canManageStaff && <PendingScheduleRequests branchId={branchId} />}
 
       <Tabs defaultValue="calendar" className="space-y-4">
         <TabsList>

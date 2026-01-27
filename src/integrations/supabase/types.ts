@@ -6123,6 +6123,70 @@ export type Database = {
           },
         ]
       }
+      schedule_requests: {
+        Row: {
+          branch_id: string
+          created_at: string | null
+          id: string
+          reason: string | null
+          request_date: string
+          request_type: string
+          responded_at: string | null
+          responded_by: string | null
+          response_note: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string | null
+          id?: string
+          reason?: string | null
+          request_date: string
+          request_type: string
+          responded_at?: string | null
+          responded_by?: string | null
+          response_note?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string | null
+          id?: string
+          reason?: string | null
+          request_date?: string
+          request_type?: string
+          responded_at?: string | null
+          responded_by?: string | null
+          response_note?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       shift_closures: {
         Row: {
           average_ticket: number | null
@@ -6269,6 +6333,61 @@ export type Database = {
           },
           {
             foreignKeyName: "shift_notes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
+      special_days: {
+        Row: {
+          branch_id: string | null
+          created_at: string | null
+          created_by: string | null
+          day_date: string
+          day_type: string
+          description: string
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          day_date: string
+          day_type: string
+          description: string
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          day_date?: string
+          day_type?: string
+          description?: string
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "special_days_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "special_days_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "special_days_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "supplier_balances"
