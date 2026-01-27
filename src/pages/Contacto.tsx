@@ -15,25 +15,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
-  MapPin, 
-  Phone, 
-  Mail, 
-  Clock,
   Send,
-  Instagram,
-  Facebook,
   CalendarIcon,
   MessageCircle,
   Store,
   Users,
   ShoppingBag,
   Handshake,
-  HelpCircle,
   Upload,
   FileText,
   Loader2
@@ -133,6 +132,7 @@ export default function Contacto() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [cvFile, setCvFile] = useState<File | null>(null);
+  const [openAccordion, setOpenAccordion] = useState<string | undefined>(undefined);
   const { toast } = useToast();
 
   // Fetch branches for dropdowns
@@ -154,6 +154,7 @@ export default function Contacto() {
     const asuntoParam = searchParams.get('asunto');
     if (asuntoParam && ['consulta', 'franquicia', 'empleo', 'pedidos', 'proveedor'].includes(asuntoParam)) {
       setFormData(prev => ({ ...prev, subject: asuntoParam as SubjectType }));
+      setOpenAccordion(asuntoParam);
     }
   }, [searchParams]);
 
@@ -231,6 +232,16 @@ export default function Contacto() {
       }
       setCvFile(file);
     }
+  };
+
+  const handleAccordionChange = (value: string | undefined) => {
+    setOpenAccordion(value);
+    if (value) {
+      setFormData({ ...initialFormData, subject: value as SubjectType });
+    } else {
+      setFormData(initialFormData);
+    }
+    setCvFile(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -341,15 +352,370 @@ ${formData.message || 'Sin mensaje adicional'}
     }
   };
 
-  // Contact info - Solo ubicación
-  const contactInfo = [
-    {
-      icon: MapPin,
-      title: 'Ubicación',
-      content: 'Múltiples sucursales en Córdoba',
-      subtext: 'Nueva Córdoba, Cerro, General Paz y más'
-    }
-  ];
+  // Render form fields based on subject
+  const renderFormFields = (subject: SubjectType) => {
+    return (
+      <form onSubmit={handleSubmit} className="space-y-5 pt-4">
+        {/* Base fields */}
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor={`name-${subject}`}>Nombre *</Label>
+            <Input
+              id={`name-${subject}`}
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Tu nombre"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`email-${subject}`}>Email *</Label>
+            <Input
+              id={`email-${subject}`}
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="tu@email.com"
+              required
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor={`phone-${subject}`}>Teléfono *</Label>
+          <Input
+            id={`phone-${subject}`}
+            type="tel"
+            value={formData.phone}
+            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            placeholder="+54 351..."
+            required
+          />
+        </div>
+
+        {/* Conditional fields based on subject */}
+        {subject === 'consulta' && (
+          <div className="space-y-2">
+            <Label htmlFor="message">Mensaje *</Label>
+            <Textarea
+              id="message"
+              value={formData.message}
+              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+              placeholder="Contanos en qué podemos ayudarte..."
+              rows={5}
+              required
+            />
+          </div>
+        )}
+
+        {subject === 'franquicia' && (
+          <>
+            <div className="space-y-2">
+              <Label>¿Ya tenés una zona en mente?</Label>
+              <Select 
+                value={formData.franchise_has_zone} 
+                onValueChange={(value) => setFormData({ ...formData, franchise_has_zone: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccioná una opción" />
+                </SelectTrigger>
+                <SelectContent>
+                  {franchiseZoneOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>¿Tenés local disponible?</Label>
+              <Select 
+                value={formData.franchise_has_location} 
+                onValueChange={(value) => setFormData({ ...formData, franchise_has_location: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccioná una opción" />
+                </SelectTrigger>
+                <SelectContent>
+                  {franchiseLocationOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>¿Cuál es tu capital disponible para invertir?</Label>
+              <Select 
+                value={formData.franchise_investment_capital} 
+                onValueChange={(value) => setFormData({ ...formData, franchise_investment_capital: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccioná una opción" />
+                </SelectTrigger>
+                <SelectContent>
+                  {franchiseCapitalOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="message-franchise">Comentarios adicionales (opcional)</Label>
+              <Textarea
+                id="message-franchise"
+                value={formData.message}
+                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                placeholder="¿Algo más que quieras contarnos?"
+                rows={3}
+              />
+            </div>
+          </>
+        )}
+
+        {subject === 'empleo' && (
+          <>
+            <div className="space-y-2">
+              <Label>¿En qué local te gustaría trabajar? *</Label>
+              <Select 
+                value={formData.employment_branch_id} 
+                onValueChange={(value) => setFormData({ ...formData, employment_branch_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccioná un local" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches?.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id}>
+                      Hoppiness {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>¿Qué puesto te interesa?</Label>
+              <Select 
+                value={formData.employment_position} 
+                onValueChange={(value) => setFormData({ ...formData, employment_position: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccioná un puesto" />
+                </SelectTrigger>
+                <SelectContent>
+                  {employmentPositionOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Adjuntar CV * (PDF, DOC, DOCX - máx 5MB)</Label>
+              <Input
+                id={`cv-${subject}`}
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => document.getElementById(`cv-${subject}`)?.click()}
+              >
+                {cvFile ? (
+                  <>
+                    <FileText className="h-4 w-4 mr-2" />
+                    {cvFile.name}
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Seleccionar archivo
+                  </>
+                )}
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="linkedin">LinkedIn (opcional)</Label>
+              <Input
+                id="linkedin"
+                type="url"
+                value={formData.employment_cv_link}
+                onChange={(e) => setFormData({ ...formData, employment_cv_link: e.target.value })}
+                placeholder="https://linkedin.com/in/..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="motivation">¿Por qué querés trabajar en Hoppiness?</Label>
+              <Textarea
+                id="motivation"
+                value={formData.employment_motivation}
+                onChange={(e) => setFormData({ ...formData, employment_motivation: e.target.value })}
+                placeholder="Contanos un poco sobre vos..."
+                rows={3}
+              />
+            </div>
+          </>
+        )}
+
+        {subject === 'pedidos' && (
+          <>
+            <div className="space-y-2">
+              <Label>¿En qué local hiciste el pedido?</Label>
+              <Select 
+                value={formData.order_branch_id} 
+                onValueChange={(value) => setFormData({ ...formData, order_branch_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccioná un local" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches?.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id}>
+                      Hoppiness {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="orderNumber">Número de pedido</Label>
+                <Input
+                  id="orderNumber"
+                  value={formData.order_number}
+                  onChange={(e) => setFormData({ ...formData, order_number: e.target.value })}
+                  placeholder="#12345"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Fecha del pedido</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !formData.order_date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.order_date ? (
+                        format(formData.order_date, "PPP", { locale: es })
+                      ) : (
+                        <span>Seleccioná fecha</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={formData.order_date}
+                      onSelect={(date) => setFormData({ ...formData, order_date: date })}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="orderIssue">¿Cuál fue el problema? *</Label>
+              <Textarea
+                id="orderIssue"
+                value={formData.order_issue}
+                onChange={(e) => setFormData({ ...formData, order_issue: e.target.value })}
+                placeholder="Describí el inconveniente lo más detallado posible..."
+                rows={4}
+                required
+              />
+            </div>
+          </>
+        )}
+
+        {subject === 'proveedor' && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="company">Nombre de la empresa *</Label>
+              <Input
+                id="company"
+                value={formData.supplier_company}
+                onChange={(e) => setFormData({ ...formData, supplier_company: e.target.value })}
+                placeholder="Tu empresa"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="category">Rubro / Productos que ofrecen *</Label>
+              <Input
+                id="category"
+                value={formData.supplier_category}
+                onChange={(e) => setFormData({ ...formData, supplier_category: e.target.value })}
+                placeholder="Ej: Carnes, Bebidas, Insumos..."
+                required
+              />
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="coverage">Zona de cobertura</Label>
+                <Input
+                  id="coverage"
+                  value={formData.supplier_coverage}
+                  onChange={(e) => setFormData({ ...formData, supplier_coverage: e.target.value })}
+                  placeholder="Ej: Córdoba Capital"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="website">Sitio web</Label>
+                <Input
+                  id="website"
+                  type="url"
+                  value={formData.supplier_website}
+                  onChange={(e) => setFormData({ ...formData, supplier_website: e.target.value })}
+                  placeholder="https://..."
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="proposal">Propuesta comercial</Label>
+              <Textarea
+                id="proposal"
+                value={formData.message}
+                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                placeholder="Contanos sobre tu empresa, productos, precios..."
+                rows={4}
+              />
+            </div>
+          </>
+        )}
+
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Enviando...
+            </>
+          ) : (
+            <>
+              <Send className="mr-2 h-4 w-4" />
+              Enviar mensaje
+            </>
+          )}
+        </Button>
+      </form>
+    );
+  };
 
   if (submitted) {
     const successMsg = getSuccessMessage(formData.subject as SubjectType);
@@ -368,7 +734,7 @@ ${formData.message || 'Sin mensaje adicional'}
             <p className="text-lg text-muted-foreground mb-8">
               {successMsg.description}
             </p>
-            <Button onClick={() => { setFormData(initialFormData); setCvFile(null); setSubmitted(false); }}>
+            <Button onClick={() => { setFormData(initialFormData); setCvFile(null); setSubmitted(false); setOpenAccordion(undefined); }}>
               Enviar otro mensaje
             </Button>
           </div>
@@ -395,485 +761,64 @@ ${formData.message || 'Sin mensaje adicional'}
         </div>
       </section>
 
-      {/* Subject Selection - Visible Tabs */}
-      <section className="py-8 bg-secondary/30 border-b">
-        <div className="container mx-auto px-4">
-          <h2 className="text-center text-lg font-semibold mb-6">¿Sobre qué querés contactarnos?</h2>
-          <div className="flex flex-wrap justify-center gap-3 max-w-4xl mx-auto">
-            {subjectOptions.map((option) => {
-              const Icon = option.icon;
-              const isSelected = formData.subject === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, subject: option.value })}
-                  className={cn(
-                    "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all min-w-[140px]",
-                    isSelected
-                      ? "border-primary bg-primary/5 shadow-md"
-                      : "border-border bg-background hover:border-primary/50 hover:shadow-sm"
-                  )}
-                >
-                  <div className={cn(
-                    "w-12 h-12 rounded-full flex items-center justify-center transition-colors",
-                    isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                  )}>
-                    <Icon className="w-6 h-6" />
-                  </div>
-                  <span className={cn(
-                    "font-medium text-sm text-center",
-                    isSelected ? "text-primary" : "text-foreground"
-                  )}>
-                    {option.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Content */}
+      {/* Main Content - Title left, Accordion right */}
       <section className="py-16 px-4">
         <div className="container mx-auto max-w-6xl">
-          <div className="grid lg:grid-cols-2 gap-12">
-            {/* Info Column */}
-            <div>
-              <h2 className="text-2xl font-bold mb-6">Información de contacto</h2>
-              
-              <div className="space-y-6 mb-8">
-                {contactInfo.map((item, i) => (
-                  <div key={i} className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                      <item.icon className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-semibold">{item.title}</p>
-                      <p className="text-foreground">{item.content}</p>
-                      <p className="text-sm text-muted-foreground">{item.subtext}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Redes sociales */}
-              <div>
-                <h3 className="font-semibold mb-4">Seguinos en redes</h3>
-                <div className="flex gap-3">
-                  <a 
-                    href="https://instagram.com/hoppinessclub" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 flex items-center justify-center text-white hover:scale-105 transition-transform"
-                  >
-                    <Instagram className="w-6 h-6" />
-                  </a>
-                  <a 
-                    href="https://facebook.com/hoppinessclub" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="w-12 h-12 rounded-xl bg-[#1877F2] flex items-center justify-center text-white hover:scale-105 transition-transform"
-                  >
-                    <Facebook className="w-6 h-6" />
-                  </a>
-                </div>
-              </div>
+          <div className="grid lg:grid-cols-[300px_1fr] gap-12 items-start">
+            {/* Title Column */}
+            <div className="lg:sticky lg:top-8">
+              <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
+                ¿Sobre qué querés contactarnos?
+              </h2>
+              <p className="text-muted-foreground">
+                Seleccioná una opción y completá el formulario correspondiente.
+              </p>
             </div>
 
-            {/* Form Column */}
+            {/* Accordion Column */}
             <div>
               <Card className="shadow-elevated">
-                <CardContent className="p-8">
-                  {!formData.subject ? (
-                    <div className="text-center py-12">
-                      <HelpCircle className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">Seleccioná un tipo de consulta</h3>
-                      <p className="text-muted-foreground">
-                        Elegí una opción de arriba para ver el formulario correspondiente.
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-3 mb-6">
-                        {(() => {
-                          const selected = subjectOptions.find(o => o.value === formData.subject);
-                          const Icon = selected?.icon || MessageCircle;
-                          return (
-                            <>
-                              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                <Icon className="w-5 h-5 text-primary" />
+                <CardContent className="p-6">
+                  <Accordion 
+                    type="single" 
+                    collapsible 
+                    value={openAccordion}
+                    onValueChange={handleAccordionChange}
+                  >
+                    {subjectOptions.map((option) => {
+                      const Icon = option.icon;
+                      return (
+                        <AccordionItem key={option.value} value={option.value} className="border-b last:border-0">
+                          <AccordionTrigger className="hover:no-underline py-4">
+                            <div className="flex items-center gap-4">
+                              <div className={cn(
+                                "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
+                                openAccordion === option.value 
+                                  ? "bg-primary text-primary-foreground" 
+                                  : "bg-muted text-muted-foreground"
+                              )}>
+                                <Icon className="w-5 h-5" />
                               </div>
-                              <div>
-                                <h2 className="text-xl font-bold">{selected?.label}</h2>
-                                <p className="text-sm text-muted-foreground">{selected?.description}</p>
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    
-                      <form onSubmit={handleSubmit} className="space-y-5">
-                        {/* Base fields */}
-                        <div className="grid sm:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="name">Nombre *</Label>
-                            <Input
-                              id="name"
-                              value={formData.name}
-                              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                              placeholder="Tu nombre"
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="email">Email *</Label>
-                            <Input
-                              id="email"
-                              type="email"
-                              value={formData.email}
-                              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                              placeholder="tu@email.com"
-                              required
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="phone">Teléfono *</Label>
-                          <Input
-                            id="phone"
-                            type="tel"
-                            value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            placeholder="+54 351..."
-                            required
-                          />
-                        </div>
-
-                        {/* Conditional fields based on subject */}
-                        {formData.subject === 'consulta' && (
-                          <div className="space-y-2">
-                            <Label htmlFor="message">Mensaje *</Label>
-                            <Textarea
-                              id="message"
-                              value={formData.message}
-                              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                              placeholder="Contanos en qué podemos ayudarte..."
-                              rows={5}
-                              required
-                            />
-                          </div>
-                        )}
-
-                        {formData.subject === 'franquicia' && (
-                          <>
-                            <div className="space-y-2">
-                              <Label>¿Ya tenés una zona en mente?</Label>
-                              <Select 
-                                value={formData.franchise_has_zone} 
-                                onValueChange={(value) => setFormData({ ...formData, franchise_has_zone: value })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Seleccioná una opción" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {franchiseZoneOptions.map((opt) => (
-                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label>¿Tenés local disponible?</Label>
-                              <Select 
-                                value={formData.franchise_has_location} 
-                                onValueChange={(value) => setFormData({ ...formData, franchise_has_location: value })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Seleccioná una opción" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {franchiseLocationOptions.map((opt) => (
-                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label>¿Cuál es tu capital disponible para invertir?</Label>
-                              <Select 
-                                value={formData.franchise_investment_capital} 
-                                onValueChange={(value) => setFormData({ ...formData, franchise_investment_capital: value })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Seleccioná una opción" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {franchiseCapitalOptions.map((opt) => (
-                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="message">Comentarios adicionales (opcional)</Label>
-                              <Textarea
-                                id="message"
-                                value={formData.message}
-                                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                                placeholder="¿Algo más que quieras contarnos?"
-                                rows={3}
-                              />
-                            </div>
-                          </>
-                        )}
-
-                        {formData.subject === 'empleo' && (
-                          <>
-                            <div className="space-y-2">
-                              <Label>¿En qué local te gustaría trabajar? *</Label>
-                              <Select 
-                                value={formData.employment_branch_id} 
-                                onValueChange={(value) => setFormData({ ...formData, employment_branch_id: value })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Seleccioná un local" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {branches?.map((branch) => (
-                                    <SelectItem key={branch.id} value={branch.id}>
-                                      Hoppiness {branch.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label>¿Qué puesto te interesa?</Label>
-                              <Select 
-                                value={formData.employment_position} 
-                                onValueChange={(value) => setFormData({ ...formData, employment_position: value })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Seleccioná un puesto" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {employmentPositionOptions.map((opt) => (
-                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label>Adjuntar CV * (PDF, DOC, DOCX - máx 5MB)</Label>
-                              <Input
-                                id="cv"
-                                type="file"
-                                accept=".pdf,.doc,.docx"
-                                onChange={handleFileChange}
-                                className="hidden"
-                              />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className="w-full justify-start"
-                                onClick={() => document.getElementById('cv')?.click()}
-                              >
-                                {cvFile ? (
-                                  <>
-                                    <FileText className="h-4 w-4 mr-2" />
-                                    {cvFile.name}
-                                  </>
-                                ) : (
-                                  <>
-                                    <Upload className="h-4 w-4 mr-2" />
-                                    Seleccionar archivo
-                                  </>
-                                )}
-                              </Button>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="linkedin">LinkedIn (opcional)</Label>
-                              <Input
-                                id="linkedin"
-                                type="url"
-                                value={formData.employment_cv_link}
-                                onChange={(e) => setFormData({ ...formData, employment_cv_link: e.target.value })}
-                                placeholder="https://linkedin.com/in/..."
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="motivation">¿Por qué querés trabajar en Hoppiness?</Label>
-                              <Textarea
-                                id="motivation"
-                                value={formData.employment_motivation}
-                                onChange={(e) => setFormData({ ...formData, employment_motivation: e.target.value })}
-                                placeholder="Contanos un poco sobre vos..."
-                                rows={3}
-                              />
-                            </div>
-                          </>
-                        )}
-
-                        {formData.subject === 'pedidos' && (
-                          <>
-                            <div className="space-y-2">
-                              <Label>¿En qué local hiciste el pedido?</Label>
-                              <Select 
-                                value={formData.order_branch_id} 
-                                onValueChange={(value) => setFormData({ ...formData, order_branch_id: value })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Seleccioná un local" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {branches?.map((branch) => (
-                                    <SelectItem key={branch.id} value={branch.id}>
-                                      Hoppiness {branch.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="grid sm:grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="orderNumber">Número de pedido</Label>
-                                <Input
-                                  id="orderNumber"
-                                  value={formData.order_number}
-                                  onChange={(e) => setFormData({ ...formData, order_number: e.target.value })}
-                                  placeholder="#12345"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label>Fecha del pedido</Label>
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      className={cn(
-                                        "w-full justify-start text-left font-normal",
-                                        !formData.order_date && "text-muted-foreground"
-                                      )}
-                                    >
-                                      <CalendarIcon className="mr-2 h-4 w-4" />
-                                      {formData.order_date ? (
-                                        format(formData.order_date, "PPP", { locale: es })
-                                      ) : (
-                                        <span>Seleccioná fecha</span>
-                                      )}
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-auto p-0">
-                                    <Calendar
-                                      mode="single"
-                                      selected={formData.order_date}
-                                      onSelect={(date) => setFormData({ ...formData, order_date: date })}
-                                      initialFocus
-                                    />
-                                  </PopoverContent>
-                                </Popover>
+                              <div className="text-left">
+                                <p className={cn(
+                                  "font-semibold",
+                                  openAccordion === option.value ? "text-primary" : "text-foreground"
+                                )}>
+                                  {option.label}
+                                </p>
+                                <p className="text-sm text-muted-foreground font-normal">
+                                  {option.description}
+                                </p>
                               </div>
                             </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="orderIssue">¿Cuál fue el problema? *</Label>
-                              <Textarea
-                                id="orderIssue"
-                                value={formData.order_issue}
-                                onChange={(e) => setFormData({ ...formData, order_issue: e.target.value })}
-                                placeholder="Describí el inconveniente lo más detallado posible..."
-                                rows={4}
-                                required
-                              />
-                            </div>
-                          </>
-                        )}
-
-                        {formData.subject === 'proveedor' && (
-                          <>
-                            <div className="space-y-2">
-                              <Label htmlFor="company">Nombre de la empresa *</Label>
-                              <Input
-                                id="company"
-                                value={formData.supplier_company}
-                                onChange={(e) => setFormData({ ...formData, supplier_company: e.target.value })}
-                                placeholder="Tu empresa"
-                                required
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="category">Rubro / Productos que ofrecen *</Label>
-                              <Input
-                                id="category"
-                                value={formData.supplier_category}
-                                onChange={(e) => setFormData({ ...formData, supplier_category: e.target.value })}
-                                placeholder="Ej: Carnes, Bebidas, Insumos..."
-                                required
-                              />
-                            </div>
-
-                            <div className="grid sm:grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="coverage">Zona de cobertura</Label>
-                                <Input
-                                  id="coverage"
-                                  value={formData.supplier_coverage}
-                                  onChange={(e) => setFormData({ ...formData, supplier_coverage: e.target.value })}
-                                  placeholder="Ej: Córdoba Capital"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="website">Sitio web</Label>
-                                <Input
-                                  id="website"
-                                  type="url"
-                                  value={formData.supplier_website}
-                                  onChange={(e) => setFormData({ ...formData, supplier_website: e.target.value })}
-                                  placeholder="https://..."
-                                />
-                              </div>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="message">Propuesta comercial</Label>
-                              <Textarea
-                                id="message"
-                                value={formData.message}
-                                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                                placeholder="Contanos sobre tu empresa, productos, precios..."
-                                rows={4}
-                              />
-                            </div>
-                          </>
-                        )}
-
-                        <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                          {loading ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Enviando...
-                            </>
-                          ) : (
-                            <>
-                              <Send className="h-4 w-4 mr-2" />
-                              Enviar mensaje
-                            </>
-                          )}
-                        </Button>
-                      </form>
-                    </>
-                  )}
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-6">
+                            {renderFormFields(option.value)}
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
                 </CardContent>
               </Card>
             </div>
