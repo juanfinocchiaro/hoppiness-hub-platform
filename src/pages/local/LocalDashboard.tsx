@@ -74,8 +74,8 @@ export default function LocalDashboard({ branch }: LocalDashboardProps) {
   const isLoading = loadingToday || loadingWeek;
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
+    <div className="space-y-6">
+      {/* Header - unified with Mi Marca */}
       <div>
         <h1 className="text-3xl font-bold">{branch.name}</h1>
         <p className="text-muted-foreground">{branch.address}, {branch.city}</p>
