@@ -28,7 +28,7 @@ const timelineEvents = [
   { year: '2025', title: 'Mejor Hamburguesería', subtitle: 'de Córdoba', isAward: true },
 ];
 
-const coveringMedia = ['Circuito Gastronómico', 'InfoNegocios', 'La Voz del Interior', 'Vía País', 'i24', 'Only in Córdoba'];
+const coveringMedia = ['Circuito Gastronómico', 'InfoNegocios', 'La Voz del Interior'];
 
 // Bloque 3: Diseño internacional
 const designMedia = [
