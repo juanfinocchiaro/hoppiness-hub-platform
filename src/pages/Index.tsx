@@ -68,11 +68,11 @@ export default function Index() {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             <div>
-              <p className="text-4xl font-black font-brand">600+</p>
+              <p className="text-4xl font-black font-brand">1000+</p>
               <p className="text-sm opacity-90">Hamburguesas / día</p>
             </div>
             <div>
-              <p className="text-4xl font-black font-brand">5</p>
+              <p className="text-4xl font-black font-brand">5+1</p>
               <p className="text-sm opacity-90">Sucursales</p>
             </div>
             <div>
@@ -202,7 +202,7 @@ export default function Index() {
             NUESTROS CLUBES
           </h2>
           <p className="text-center text-muted-foreground mb-12 text-lg">
-            5 sucursales para disfrutar
+            5 sucursales + 1 próximamente
           </p>
           
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
