@@ -92,11 +92,11 @@ export default function Nosotros() {
                 nuestra cocina sea perfecta.
               </p>
             </div>
-            <div className="relative">
+            <div className="flex justify-center">
               <img 
                 src={juanHoppiness} 
                 alt="Juan, socio de Hoppiness" 
-                className="rounded-2xl shadow-elevated w-full aspect-video object-cover object-top"
+                className="rounded-2xl shadow-elevated w-full max-w-sm aspect-[9/16] object-cover object-top"
               />
             </div>
           </div>
