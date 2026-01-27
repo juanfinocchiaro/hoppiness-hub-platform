@@ -3,7 +3,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Collapsible,
   CollapsibleContent,
@@ -54,7 +53,6 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
   const location = useLocation();
   const [showNewBranchModal, setShowNewBranchModal] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    vision: true,
     locales: true,
     personas: true,
   });
@@ -66,7 +64,6 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
       const { data } = await supabase
         .from('branches')
         .select('id, name, slug')
-        .eq('is_active', true)
         .order('name');
       return data || [];
     },
@@ -76,19 +73,9 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
     setExpandedSections((prev) => ({ ...prev, [sectionId]: !prev[sectionId] }));
   };
 
-  // Build sections - ULTRA SIMPLIFICADO
+  // Build sections - SIMPLIFICADO
   const buildSections = (): NavSection[] => {
     const sections: NavSection[] = [];
-
-    // Dashboard
-    sections.push({
-      id: 'vision',
-      label: 'Visión General',
-      icon: LayoutDashboard,
-      items: [
-        { type: 'navigation', to: '/mimarca', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-      ],
-    });
 
     // Mis Locales (with dynamic branches)
     const localesItems: NavItem[] = [
@@ -140,17 +127,21 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
       : location.pathname.startsWith(item.to);
   };
 
+  const isDashboardActive = location.pathname === '/mimarca';
+
   return (
     <>
       <nav className="space-y-1">
-        {/* Role badge */}
-        {avatarInfo.type !== 'brand_owner' && (
-          <div className="px-3 py-2 mb-2">
-            <Badge variant="secondary" className="text-xs">
-              {avatarInfo.label}
-            </Badge>
-          </div>
-        )}
+        {/* Dashboard - Link directo */}
+        <Link to="/mimarca">
+          <Button
+            variant={isDashboardActive ? 'secondary' : 'ghost'}
+            className={`w-full justify-start ${isDashboardActive ? 'bg-primary/10 text-primary' : ''}`}
+          >
+            <LayoutDashboard className="w-4 h-4 mr-3" />
+            Dashboard
+          </Button>
+        </Link>
 
         {/* Collapsible sections */}
         {sections.map((section) => {
