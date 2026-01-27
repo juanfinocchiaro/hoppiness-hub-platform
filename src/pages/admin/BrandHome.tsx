@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { Store, Clock, Users, DollarSign, Utensils, Receipt, BarChart3, MapPin } from 'lucide-react';
 import { BrandDailySalesTable } from '@/components/admin/BrandDailySalesTable';
-import { BrandAlertsCard } from '@/components/admin/BrandAlertsCard';
 import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -127,9 +126,6 @@ export default function BrandHome() {
         <h1 className="text-3xl font-bold">Panel Mi Marca</h1>
         <p className="text-muted-foreground">Gestión centralizada de todas las sucursales</p>
       </div>
-
-      {/* Alerts */}
-      <BrandAlertsCard />
 
       {/* Daily Sales Table */}
       <BrandDailySalesTable />
