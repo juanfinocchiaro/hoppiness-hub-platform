@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Instagram } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import logoHoppiness from '@/assets/logo-white-transparent.png';
+import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 
 // TikTok icon (not available in lucide-react)
 function TikTokIcon({ className }: { className?: string }) {
