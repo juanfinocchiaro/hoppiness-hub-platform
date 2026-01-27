@@ -9,7 +9,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, ShieldCheck, ShieldX } from 'lucide-react';
-import { useOperatorVerification, OperatorInfo } from '@/hooks/useOperatorVerification';
+import { supabase } from '@/integrations/supabase/client';
+
+interface OperatorInfo {
+  userId: string;
+  fullName: string;
+  role: string;
+}
 
 interface SupervisorPinDialogProps {
   open: boolean;
@@ -34,14 +40,11 @@ export function SupervisorPinDialog({
   const [success, setSuccess] = useState<OperatorInfo | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   
-  const { validateSupervisorPin } = useOperatorVerification(branchId);
-  
   useEffect(() => {
     if (open) {
       setPin(['', '', '', '']);
       setError(null);
       setSuccess(null);
-      // Focus first input
       setTimeout(() => inputRefs.current[0]?.focus(), 100);
     }
   }, [open]);
@@ -54,12 +57,10 @@ export function SupervisorPinDialog({
     setPin(newPin);
     setError(null);
     
-    // Auto-focus next input
     if (value && index < 3) {
       inputRefs.current[index + 1]?.focus();
     }
     
-    // Si completó los 4 dígitos, validar
     if (index === 3 && value) {
       const fullPin = [...newPin.slice(0, 3), value.slice(-1)].join('');
       if (fullPin.length === 4) {
@@ -85,9 +86,19 @@ export function SupervisorPinDialog({
     setError(null);
     
     try {
-      const supervisor = await validateSupervisorPin(pinToValidate);
+      const { data, error: rpcError } = await supabase.rpc('verify_authorization_pin', {
+        _branch_id: branchId,
+        _pin: pinToValidate,
+      });
       
-      if (supervisor) {
+      if (rpcError) throw rpcError;
+      
+      if (data && data.length > 0) {
+        const supervisor: OperatorInfo = {
+          userId: data[0].user_id,
+          fullName: data[0].full_name,
+          role: data[0].local_role || 'encargado',
+        };
         setSuccess(supervisor);
         setTimeout(() => {
           onSuccess(supervisor);
@@ -156,7 +167,7 @@ export function SupervisorPinDialog({
               </div>
               
               {error && (
-                <div className="flex items-center justify-center gap-2 text-red-600">
+                <div className="flex items-center justify-center gap-2 text-destructive">
                   <ShieldX className="h-4 w-4" />
                   <span className="text-sm">{error}</span>
                 </div>

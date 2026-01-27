@@ -6,7 +6,7 @@ import { useParams, useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useSalaryAdvances, useCreateAdvance, useMarkAdvanceTransferred, useCancelAdvance } from '@/hooks/useSalaryAdvances';
-import { useCashRegisters } from '@/hooks/useCashRegister';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,8 +50,6 @@ export default function LocalAdelantos() {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer'>('cash');
 
   const { data: advances, isLoading } = useSalaryAdvances(branchId);
-  const { data: cashRegisters } = useCashRegisters(branchId || '');
-  const openShift = cashRegisters?.all?.find((s: any) => s.status === 'open');
   const createAdvance = useCreateAdvance();
   const markTransferred = useMarkAdvanceTransferred();
   const cancelAdvance = useCancelAdvance();
@@ -101,7 +99,6 @@ export default function LocalAdelantos() {
         reason: pendingAdvance.reason,
         paymentMethod: pendingAdvance.paymentMethod,
         authorizedBy: supervisorId,
-        shiftId: openShift?.id,
       });
       
       setShowNewAdvance(false);
@@ -222,11 +219,6 @@ export default function LocalAdelantos() {
                     Transferencia
                   </Button>
                 </div>
-                {paymentMethod === 'cash' && !openShift && (
-                  <p className="text-sm text-destructive">
-                    ⚠️ No hay caja abierta. Abrí una caja para registrar el egreso.
-                  </p>
-                )}
               </div>
               
               <div className="space-y-2">
@@ -246,7 +238,7 @@ export default function LocalAdelantos() {
               </Button>
               <Button 
                 onClick={handleRequestAdvance}
-                disabled={!selectedEmployee || !amount || (paymentMethod === 'cash' && !openShift)}
+                disabled={!selectedEmployee || !amount}
               >
                 Solicitar Autorización
               </Button>
