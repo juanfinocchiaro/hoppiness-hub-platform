@@ -21,32 +21,35 @@ import {
   MessageCircle,
   Users,
   TrendingUp,
-  Clock
+  Clock,
+  Trophy,
+  Factory
 } from 'lucide-react';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
+import { FranchiseFormSection } from '@/components/landing';
 import heroBurger from '@/assets/hero-burger.jpg';
 import local1 from '@/assets/local-1.jpg';
 import logoHoppiness from '@/assets/logo-hoppiness.png';
 
 export default function Franquicias() {
   const stats = [
-    { value: '5', label: 'Sucursales activas' },
-    { value: '600+', label: 'Burgers/día' },
+    { value: '1000+', label: 'Hamburguesas/día' },
+    { value: '6', label: 'Clubes' },
     { value: '2018', label: 'Desde' },
-    { value: '95%', label: 'Clientes felices' },
+    { value: '12', label: 'Meses recupero' },
   ];
 
   const benefits = [
     {
-      icon: DollarSign,
-      title: 'Alta Rentabilidad',
-      description: 'ROI promedio en 18-24 meses. Márgenes superiores al 25%.'
+      icon: Factory,
+      title: 'Producto Llave en Mano',
+      description: 'Centro de producción propio. Recibís panes, salsas y medallones estandarizados.'
     },
     {
-      icon: Package,
-      title: 'Modelo Llave en Mano',
-      description: 'Te entregamos el local funcionando con todo listo para operar.'
+      icon: TrendingUp,
+      title: 'Recupero en 12 Meses',
+      description: 'Modelo de negocio probado con retorno de inversión demostrado.'
     },
     {
       icon: GraduationCap,
@@ -55,18 +58,18 @@ export default function Franquicias() {
     },
     {
       icon: Smartphone,
-      title: 'Sistema Propio',
-      description: 'Tecnología de gestión incluida sin costo extra. POS, KDS, reportes.'
+      title: 'Sistema de Gestión',
+      description: 'Software propio incluido: POS, KDS, stock, equipo y reportes.'
     },
     {
       icon: Handshake,
       title: 'Soporte Permanente',
-      description: 'Acompañamiento constante del equipo central en cada etapa.'
+      description: 'Acompañamiento del equipo central en apertura y operación.'
     },
     {
-      icon: Beef,
-      title: 'Producto Probado',
-      description: 'Recetas únicas que ya enamoran a miles de clientes.'
+      icon: Trophy,
+      title: 'Marca Premiada',
+      description: '4 veces campeones. 50K seguidores. Reconocimiento en medios nacionales.'
     }
   ];
 
@@ -95,7 +98,7 @@ export default function Franquicias() {
     },
     {
       question: '¿Puedo tener el local en cualquier ciudad?',
-      answer: 'Por ahora operamos en Córdoba capital y alrededores (Villa Allende, Mendiolaza, etc.). Estamos evaluando expansión a otras provincias.'
+      answer: 'Estamos evaluando expansión a todo el país. Actualmente operamos en Córdoba capital y alrededores. Contactanos para consultar disponibilidad en tu zona.'
     },
     {
       question: '¿Cuánto tiempo tarda la apertura?',
@@ -125,23 +128,26 @@ export default function Franquicias() {
         
         <div className="relative container mx-auto px-4 py-20 text-center">
           <div className="max-w-4xl mx-auto">
+            <div className="flex items-center justify-center gap-2 mb-6">
+              <Trophy className="w-8 h-8 text-accent" />
+              <span className="text-accent font-bold text-lg">4 VECES CAMPEONES</span>
+            </div>
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-white mb-6 font-brand leading-tight">
-              Sé dueño de tu propio<br />
-              <span className="text-accent">Hoppiness</span>
+              Llevá la mejor hamburguesa<br />
+              <span className="text-accent">a tu ciudad</span>
             </h1>
             <p className="text-xl md:text-2xl text-white/90 mb-4">
-              Sumate a la red de hamburgueserías más exitosa de Córdoba.
+              Sumate a la red de hamburgueserías más premiada de Córdoba.
             </p>
             <p className="text-lg text-white/80 mb-8">
-              {/* TODO: Actualizar con datos reales */}
-              Facturación promedio de $XX millones/mes por local.
+              De 40 hamburguesas/día en 2020 a más de 1000/día. Y seguimos creciendo.
             </p>
-            <Link to="/contacto?asunto=franquicia">
+            <a href="#formulario-franquicia">
               <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8 py-6 h-auto">
                 <Rocket className="w-5 h-5 mr-2" />
                 Quiero mi Franquicia
               </Button>
-            </Link>
+            </a>
           </div>
         </div>
       </section>
@@ -186,6 +192,19 @@ export default function Franquicias() {
         </div>
       </section>
 
+      {/* Quote del fundador */}
+      <section className="py-16 px-4 bg-primary text-primary-foreground">
+        <div className="container mx-auto max-w-4xl text-center">
+          <Quote className="w-12 h-12 mx-auto mb-6 opacity-50" />
+          <blockquote className="text-2xl md:text-3xl font-medium mb-6 italic">
+            "Nuestra franquicia le va a dar al franquiciado la posibilidad de entrar al rubro gastronómico vendiendo un producto de extrema calidad."
+          </blockquote>
+          <p className="text-primary-foreground/70">
+            — Ismael Sánchez, Socio Fundador
+          </p>
+        </div>
+      </section>
+
       {/* Inversión */}
       <section className="py-20 px-4 bg-secondary/50">
         <div className="container mx-auto max-w-4xl">
@@ -198,12 +217,6 @@ export default function Franquicias() {
 
           <Card className="shadow-elevated">
             <CardContent className="p-8 md:p-12">
-              <div className="text-center mb-8">
-                <p className="text-sm text-muted-foreground uppercase tracking-wide mb-2">Inversión inicial desde</p>
-                {/* TODO: Actualizar con monto real */}
-                <p className="text-5xl md:text-6xl font-black text-primary font-brand">$XX.XXX USD</p>
-              </div>
-
               <div className="grid md:grid-cols-2 gap-8 mb-8">
                 <div>
                   <h4 className="font-bold mb-4 text-lg">La inversión incluye:</h4>
@@ -224,22 +237,27 @@ export default function Franquicias() {
                       <TrendingUp className="w-5 h-5 text-primary" />
                       <span className="font-semibold">Royalty mensual</span>
                     </div>
-                    {/* TODO: Actualizar con % real */}
-                    <p className="text-2xl font-bold text-primary">X% sobre ventas</p>
+                    <p className="text-muted-foreground text-sm">Porcentaje sobre ventas (consultar)</p>
                   </div>
                   <div className="p-4 bg-primary/5 rounded-xl">
                     <div className="flex items-center gap-3 mb-2">
                       <Users className="w-5 h-5 text-primary" />
                       <span className="font-semibold">Fondo de marketing</span>
                     </div>
-                    {/* TODO: Actualizar con % real */}
-                    <p className="text-2xl font-bold text-primary">X% sobre ventas</p>
+                    <p className="text-muted-foreground text-sm">Porcentaje sobre ventas (consultar)</p>
+                  </div>
+                  <div className="p-4 bg-accent/10 rounded-xl border border-accent/30">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Clock className="w-5 h-5 text-accent" />
+                      <span className="font-semibold text-accent">Recupero de inversión</span>
+                    </div>
+                    <p className="text-2xl font-black text-accent">12 meses promedio</p>
                   </div>
                 </div>
               </div>
 
               <p className="text-sm text-muted-foreground text-center">
-                * Los montos son referenciales. Contactanos para una propuesta personalizada según tu zona.
+                * Contactanos para una propuesta personalizada según tu zona y disponibilidad de inversión.
               </p>
             </CardContent>
           </Card>
@@ -278,20 +296,6 @@ export default function Franquicias() {
               <span className="font-medium">Tiempo estimado: 90 días hasta apertura</span>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Testimonial */}
-      <section className="py-20 px-4 bg-primary text-primary-foreground">
-        <div className="container mx-auto max-w-4xl text-center">
-          <Quote className="w-12 h-12 mx-auto mb-6 opacity-50" />
-          <blockquote className="text-2xl md:text-3xl font-medium mb-6 italic">
-            "Mejor decisión de mi vida. En 18 meses recuperé la inversión y hoy tengo 2 locales. 
-            El equipo de Hoppiness te acompaña en todo momento."
-          </blockquote>
-          <p className="text-primary-foreground/70">
-            — Carlos M., Franquiciado Nueva Córdoba
-          </p>
         </div>
       </section>
 
@@ -334,8 +338,11 @@ export default function Franquicias() {
         </div>
       </section>
 
+      {/* Formulario embebido */}
+      <FranchiseFormSection />
+
       {/* CTA Final */}
-      <section className="py-20 px-4 bg-gradient-to-br from-primary via-primary to-primary/90">
+      <section className="py-20 px-4 bg-gradient-to-br from-primary via-primary to-accent/80">
         <div className="container mx-auto max-w-3xl text-center">
           <img 
             src={logoHoppiness} 
@@ -347,14 +354,14 @@ export default function Franquicias() {
             <span className="text-accent">Culto al Sabor</span>?
           </h2>
           <p className="text-xl text-white/90 mb-8">
-            Completá el formulario y un asesor se contactará en menos de 48 horas.
+            Completá el formulario y un asesor se contactará en menos de 24 horas.
           </p>
-          <Link to="/contacto?asunto=franquicia">
-            <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-xl px-10 py-7 h-auto shadow-lg">
+          <a href="#formulario-franquicia">
+            <Button size="lg" className="bg-white text-primary hover:bg-white/90 text-xl px-10 py-7 h-auto shadow-lg">
               <Rocket className="w-6 h-6 mr-2" />
               ¡QUIERO MI FRANQUICIA!
             </Button>
-          </Link>
+          </a>
           <p className="text-white/60 text-sm mt-6">
             <MessageCircle className="w-4 h-4 inline mr-1" />
             Sin compromiso. Solo queremos conocerte.
