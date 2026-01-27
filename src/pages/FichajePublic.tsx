@@ -22,7 +22,7 @@ import { toast } from 'sonner';
 import { Camera, CheckCircle2, Clock, LogIn, LogOut, AlertCircle, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import logoHoppiness from '@/assets/logo-hoppiness.png';
+import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 
 type Step = 'pin' | 'camera' | 'success' | 'error';
 

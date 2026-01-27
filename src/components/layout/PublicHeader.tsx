@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Button } from '@/components/ui/button';
 import { ShoppingBag, Menu as MenuIcon, LogOut, LayoutDashboard, Store, User, ChevronDown, Package, Phone, Users2, Columns, Home } from 'lucide-react';
-import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
+import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 import {
   Sheet,
   SheetContent,
@@ -43,7 +43,7 @@ export function PublicHeader() {
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-3">
-          <img src={logoOriginal} alt="Hoppiness Club" className="w-10 h-10 object-contain rounded-full" />
+          <img src={logoHoppiness} alt="Hoppiness Club" className="w-10 h-10 object-contain rounded-full" />
           <span className="text-lg font-bold tracking-wide font-brand hidden sm:inline">HOPPINESS CLUB</span>
           <span className="text-lg font-bold tracking-wide font-brand sm:hidden">HOPPINESS</span>
         </Link>

@@ -22,7 +22,7 @@ import {
   ReviewsSection
 } from '@/components/landing';
 import heroBurger from '@/assets/hero-burger.jpg';
-import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
+import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 import burgerCheese from '@/assets/burger-cheese-drip.png';
 import burgerSmash from '@/assets/burger-smash-hand.png';
 import burgerProvoleta from '@/assets/burger-provoleta.png';
@@ -44,7 +44,7 @@ export default function Index() {
           <div className="max-w-2xl">
             {/* Logo */}
             <div className="mb-8">
-              <img src={logoOriginal} alt="Hoppiness Club" className="w-28 h-28 object-contain rounded-full shadow-2xl" />
+              <img src={logoHoppiness} alt="Hoppiness Club" className="w-28 h-28 object-contain rounded-full shadow-2xl" />
             </div>
             
             <div className="flex items-center gap-2 mb-4">
