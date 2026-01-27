@@ -4,8 +4,8 @@ import { Factory, Palette, Handshake, Monitor, GraduationCap, TrendingUp } from 
 const reasons = [
   {
     icon: Factory,
-    title: 'Centro de producción propio',
-    description: 'Elaboramos el 100% de nuestros productos: panes, salsas, medallones. Calidad controlada.',
+    title: 'Recetas y fábricas propias',
+    description: 'Todas las recetas son nuestras. Trabajamos con fábricas propias para panes, salsas y medallones estandarizados.',
   },
   {
     icon: Palette,
@@ -15,12 +15,12 @@ const reasons = [
   {
     icon: Handshake,
     title: 'Alianzas estratégicas',
-    description: 'Trabajamos con NotCo (productos plant-based), Tabasco y Lucciano\'s (helados).',
+    description: 'Trabajamos con Pepsi, McCain, Tonadita, Tabasco y NotCo.',
   },
   {
     icon: Monitor,
     title: 'Sistema de gestión',
-    description: 'Software propio para control de stock, ventas, equipo y reportes incluido.',
+    description: 'Software propio para control de stock, equipo y reportes. Desarrollando POS propio.',
   },
   {
     icon: GraduationCap,

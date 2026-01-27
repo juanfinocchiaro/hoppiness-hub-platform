@@ -5,12 +5,12 @@ import { Factory, TrendingUp, Trophy, Quote, ArrowRight } from 'lucide-react';
 const benefits = [
   {
     icon: Factory,
-    title: 'Producto llave en mano',
-    description: 'Centro de producción propio. Recibís todo estandarizado y listo para vender.',
+    title: 'Recetas y fábricas propias',
+    description: 'Todas las recetas son nuestras. Fábricas propias para productos estandarizados.',
   },
   {
     icon: TrendingUp,
-    title: 'Recupero en 12 meses',
+    title: 'Recupero en 18-24 meses',
     description: 'Modelo de negocio probado con retorno de inversión demostrado.',
   },
   {
@@ -64,7 +64,7 @@ export function FranchiseHero() {
             "Nuestra franquicia le va a dar al franquiciado la posibilidad de entrar al rubro gastronómico vendiendo un producto de extrema calidad."
           </blockquote>
           <p className="text-white/70">
-            — Ismael Sánchez, Socio Fundador
+            — Ismael Sánchez, Socio
           </p>
         </div>
       </div>

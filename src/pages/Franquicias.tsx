@@ -37,34 +37,34 @@ export default function Franquicias() {
     { value: '1000+', label: 'Hamburguesas/día' },
     { value: '6', label: 'Clubes' },
     { value: '2018', label: 'Desde' },
-    { value: '12', label: 'Meses recupero' },
+    { value: '18-24', label: 'Meses recupero' },
   ];
 
   const benefits = [
     {
       icon: Factory,
-      title: 'Producto Llave en Mano',
-      description: 'Centro de producción propio. Recibís panes, salsas y medallones estandarizados.'
+      title: 'Recetas y Fábricas Propias',
+      description: 'Todas las recetas son nuestras. Trabajamos con fábricas propias para panes, salsas y medallones estandarizados.'
     },
     {
       icon: TrendingUp,
-      title: 'Recupero en 12 Meses',
+      title: 'Recupero en 18-24 Meses',
       description: 'Modelo de negocio probado con retorno de inversión demostrado.'
     },
     {
       icon: GraduationCap,
       title: 'Capacitación Completa',
-      description: '4 semanas de entrenamiento intensivo para vos y tu equipo.'
+      description: 'Entrenamiento intensivo para vos y tu equipo. Te acompañamos en todo el proceso.'
     },
     {
       icon: Smartphone,
       title: 'Sistema de Gestión',
-      description: 'Software propio incluido: POS, KDS, stock, equipo y reportes.'
+      description: 'Software propio para control de stock, equipo y reportes. Desarrollando POS propio.'
     },
     {
       icon: Handshake,
-      title: 'Soporte Permanente',
-      description: 'Acompañamiento del equipo central en apertura y operación.'
+      title: 'Alianzas Estratégicas',
+      description: 'Trabajamos con Pepsi, McCain, Tonadita, Tabasco y NotCo.'
     },
     {
       icon: Trophy,
@@ -76,11 +76,11 @@ export default function Franquicias() {
   const investmentIncludes = [
     'Canon de entrada',
     'Equipamiento completo de cocina',
-    'Capacitación del equipo (4 semanas)',
+    'Capacitación completa del equipo',
     'Stock inicial de insumos',
     'Campaña de marketing de lanzamiento',
     'Diseño y brandeo del local',
-    'Sistema de gestión (POS, KDS, reportes)',
+    'Sistema de gestión (stock, equipo, reportes)',
     'Manuales operativos completos'
   ];
 
@@ -200,7 +200,7 @@ export default function Franquicias() {
             "Nuestra franquicia le va a dar al franquiciado la posibilidad de entrar al rubro gastronómico vendiendo un producto de extrema calidad."
           </blockquote>
           <p className="text-primary-foreground/70">
-            — Ismael Sánchez, Socio Fundador
+            — Ismael Sánchez, Socio
           </p>
         </div>
       </section>
@@ -237,21 +237,21 @@ export default function Franquicias() {
                       <TrendingUp className="w-5 h-5 text-primary" />
                       <span className="font-semibold">Royalty mensual</span>
                     </div>
-                    <p className="text-muted-foreground text-sm">Porcentaje sobre ventas (consultar)</p>
+                    <p className="text-muted-foreground text-sm">4,5% sobre ventas</p>
                   </div>
                   <div className="p-4 bg-primary/5 rounded-xl">
                     <div className="flex items-center gap-3 mb-2">
                       <Users className="w-5 h-5 text-primary" />
                       <span className="font-semibold">Fondo de marketing</span>
                     </div>
-                    <p className="text-muted-foreground text-sm">Porcentaje sobre ventas (consultar)</p>
+                    <p className="text-muted-foreground text-sm">0,5% sobre ventas</p>
                   </div>
                   <div className="p-4 bg-accent/10 rounded-xl border border-accent/30">
                     <div className="flex items-center gap-3 mb-2">
                       <Clock className="w-5 h-5 text-accent" />
                       <span className="font-semibold text-accent">Recupero de inversión</span>
                     </div>
-                    <p className="text-2xl font-black text-accent">12 meses promedio</p>
+                    <p className="text-2xl font-black text-accent">18 a 24 meses</p>
                   </div>
                 </div>
               </div>
