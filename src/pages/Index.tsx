@@ -18,7 +18,8 @@ import {
   WhyHoppinessSection,
   TimelineSection,
   FranchiseFormSection,
-  LocationsSection
+  LocationsSection,
+  ReviewsSection
 } from '@/components/landing';
 import heroBurger from '@/assets/hero-burger.jpg';
 import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
@@ -127,49 +128,7 @@ export default function Index() {
       <FranchiseFormSection />
 
       {/* Reviews Section */}
-      <section className="py-20 px-4 bg-secondary/50">
-        <div className="container mx-auto max-w-6xl">
-          <h2 className="text-4xl font-black mb-4 font-brand text-center text-primary">
-            EN BOCA DE NUESTROS FANS
-          </h2>
-          <p className="text-center text-muted-foreground mb-12 text-lg">
-            Lo que dicen nuestros clientes fanáticos
-          </p>
-          
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              {
-                name: "Oriana Massaro",
-                rating: 5,
-                text: "10/10. Inmejorable. La atención super eficiente y amable, la rapidez y lo más importante: el sabor. Muy ricas hamburguesas!"
-              },
-              {
-                name: "Java Pez",
-                rating: 5,
-                text: "Sin lugar a dudas de las mejores hamburguesas de Córdoba. El sabor es increíble y los productos son de primer nivel."
-              },
-              {
-                name: "Lautaro Dominguez",
-                rating: 5,
-                text: "Las mejores burgers de Córdoba. Perfecta desde donde se la mire, tiene un sabor especial. Te saca una sonrisa."
-              }
-            ].map((review, i) => (
-              <Card key={i} className="shadow-card hover:shadow-elevated transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex gap-1 mb-4">
-                    {Array(review.rating).fill(0).map((_, j) => (
-                      <Star key={j} className="w-5 h-5 fill-warning text-warning" />
-                    ))}
-                  </div>
-                  <p className="text-muted-foreground mb-4">"{review.text}"</p>
-                  <p className="font-bold">{review.name}</p>
-                  <p className="text-sm text-muted-foreground">Google Review</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+      <ReviewsSection />
 
       {/* About Section - Simplificado */}
       <section className="py-20 px-4">
