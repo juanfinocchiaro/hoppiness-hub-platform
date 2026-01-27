@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Button } from '@/components/ui/button';
-import { ShoppingBag, Menu as MenuIcon, LogOut, LayoutDashboard, Store, User, ChevronDown, Package, Phone, Users2, Columns } from 'lucide-react';
+import { ShoppingBag, Menu as MenuIcon, LogOut, LayoutDashboard, Store, User, ChevronDown, Package, Phone, Users2, Columns, Home } from 'lucide-react';
 import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
 import {
   Sheet,
@@ -50,6 +50,17 @@ export function PublicHeader() {
         
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-1">
+          <Link to="/">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className={`text-primary-foreground hover:bg-primary-foreground/10 ${
+                location.pathname === '/' ? 'bg-primary-foreground/20' : ''
+              }`}
+            >
+              Inicio
+            </Button>
+          </Link>
           <a href="https://pedidos.masdelivery.com/hoppiness" target="_blank" rel="noopener noreferrer">
             <Button 
               variant="ghost" 
@@ -190,6 +201,17 @@ export function PublicHeader() {
             </SheetTrigger>
             <SheetContent side="right" className="bg-primary text-primary-foreground border-primary-foreground/20">
               <nav className="flex flex-col gap-2 mt-8">
+                <Link to="/" onClick={() => setOpen(false)}>
+                  <Button 
+                    variant="ghost" 
+                    className={`w-full justify-start text-primary-foreground hover:bg-primary-foreground/10 ${
+                      location.pathname === '/' ? 'bg-primary-foreground/20' : ''
+                    }`}
+                  >
+                    <Home className="w-4 h-4 mr-2" />
+                    Inicio
+                  </Button>
+                </Link>
                 <a href="https://pedidos.masdelivery.com/hoppiness" target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>
                   <Button 
                     variant="ghost" 
