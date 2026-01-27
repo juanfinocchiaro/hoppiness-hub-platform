@@ -103,6 +103,8 @@ import BranchDetail from "./pages/admin/BranchDetail";
 import Integrations from "./pages/admin/Integrations";
 import Notifications from "./pages/admin/Notifications";
 import MandatoryProducts from "./pages/admin/MandatoryProducts";
+import CommunicationSend from "./pages/admin/CommunicationSend";
+import CommunicationHistory from "./pages/admin/CommunicationHistory";
 import PurchaseAlerts from "./pages/admin/PurchaseAlerts";
 
 // Local Stock & Inventory
@@ -339,6 +341,8 @@ const App = () => (
               <Route path="personas/roles" element={<RoleTemplates />} />
               
               {/* COMUNICACIÓN */}
+              <Route path="comunicacion/enviar" element={<CommunicationSend />} />
+              <Route path="comunicacion/historial" element={<CommunicationHistory />} />
               <Route path="mensajes" element={<Messages />} />
               
               {/* CONFIGURACIÓN */}
