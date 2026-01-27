@@ -30,7 +30,7 @@ import { PublicFooter } from '@/components/layout/PublicFooter';
 import { FranchiseFormSection } from '@/components/landing';
 import heroBurger from '@/assets/hero-burger.jpg';
 import local1 from '@/assets/local-1.jpg';
-import logoHoppiness from '@/assets/logo-hoppiness-white.png';
+import logoHoppiness from '@/assets/logo-white-transparent.png';
 
 export default function Franquicias() {
   const stats = [
