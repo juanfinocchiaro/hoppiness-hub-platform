@@ -110,10 +110,10 @@ export default function LocalLayout() {
       if (branch) {
         setSelectedBranch(branch);
       } else if (!permissions.isSuperadmin) {
-        navigate('/local');
+        navigate('/milocal');
       }
     } else if (!branchId && accessibleBranches.length > 0) {
-      navigate(`/local/${accessibleBranches[0].id}`);
+      navigate(`/milocal/${accessibleBranches[0].id}`);
     }
   }, [branchId, accessibleBranches, permissions.isSuperadmin, navigate]);
 
@@ -157,9 +157,9 @@ export default function LocalLayout() {
     const subPath = pathParts.slice(3).join('/');
     
     if (subPath) {
-      navigate(`/local/${newBranchId}/${subPath}`);
+      navigate(`/milocal/${newBranchId}/${subPath}`);
     } else {
-      navigate(`/local/${newBranchId}`);
+      navigate(`/milocal/${newBranchId}`);
     }
   };
 
@@ -176,7 +176,6 @@ export default function LocalLayout() {
   };
 
   // ===== NAVEGACIÓN ULTRA SIMPLIFICADA =====
-  // Solo: Dashboard, Equipo, Configuración (impresoras)
   const navSections: NavSection[] = [
     {
       id: 'dashboard',
@@ -193,9 +192,9 @@ export default function LocalLayout() {
       icon: Users,
       show: lp.canViewTeam || lp.canViewAllClockIns,
       items: [
-        { to: 'equipo/mi-equipo', label: 'Mi Equipo', icon: Users, show: lp.canViewTeam },
+        { to: 'equipo', label: 'Mi Equipo', icon: Users, show: lp.canViewTeam },
         { to: 'equipo/horarios', label: 'Horarios', icon: Clock, show: lp.canEditSchedules },
-        { to: 'equipo/fichar', label: 'Fichajes', icon: Clock, show: lp.canViewAllClockIns },
+        { to: 'equipo/fichajes', label: 'Fichajes', icon: Clock, show: lp.canViewAllClockIns },
       ]
     },
     {
@@ -221,7 +220,7 @@ export default function LocalLayout() {
           <h1 className="text-xl font-bold">Sin acceso al Panel Local</h1>
           <p className="text-muted-foreground">No tenés permisos para acceder a esta sección.</p>
           {canAccessAdmin && (
-            <Link to="/admin">
+            <Link to="/mimarca">
               <Button>
                 <Home className="w-4 h-4 mr-2" />
                 Ir a Mi Marca
@@ -248,7 +247,7 @@ export default function LocalLayout() {
               <div
                 key={branch.id}
                 className="bg-card border rounded-lg p-6 cursor-pointer hover:shadow-lg transition-shadow hover:border-primary"
-                onClick={() => navigate(`/local/${branch.id}`)}
+                onClick={() => navigate(`/milocal/${branch.id}`)}
               >
                 <div className="flex items-center gap-3 mb-2">
                   <Store className="w-5 h-5 text-primary" />
@@ -265,9 +264,9 @@ export default function LocalLayout() {
 
   const isItemActive = (item: NavItem): boolean => {
     if (item.to === '') {
-      return location.pathname === `/local/${branchId}`;
+      return location.pathname === `/milocal/${branchId}`;
     }
-    const itemPath = `/local/${branchId}/${item.to}`;
+    const itemPath = `/milocal/${branchId}/${item.to}`;
     return location.pathname === itemPath || location.pathname.startsWith(`${itemPath}/`);
   };
 
@@ -282,7 +281,7 @@ export default function LocalLayout() {
           const item = section.items[0];
           const isActive = isItemActive(item);
           return (
-            <Link key={section.id} to={`/local/${branchId}`}>
+            <Link key={section.id} to={`/milocal/${branchId}`}>
               <Button
                 variant={isActive ? 'secondary' : 'ghost'}
                 className={`w-full justify-start ${isActive ? 'bg-primary/10 text-primary' : ''}`}
@@ -321,7 +320,7 @@ export default function LocalLayout() {
                 return (
                   <Link 
                     key={item.to || idx} 
-                    to={item.to ? `/local/${branchId}/${item.to}` : `/local/${branchId}`}
+                    to={item.to ? `/milocal/${branchId}/${item.to}` : `/milocal/${branchId}`}
                   >
                     <Button
                       variant={isActive ? 'secondary' : 'ghost'}
@@ -344,7 +343,7 @@ export default function LocalLayout() {
   const renderContent = () => {
     if (!selectedBranch) return null;
 
-    const isDashboard = location.pathname === `/local/${branchId}`;
+    const isDashboard = location.pathname === `/milocal/${branchId}`;
     if (isDashboard) {
       return <LocalDashboard branch={selectedBranch} />;
     }
@@ -383,7 +382,7 @@ export default function LocalLayout() {
               
               <div className="absolute bottom-4 left-4 right-4 space-y-1">
                 {canAccessAdmin && !isEmbedded && (
-                  <ExternalLink to="/admin">
+                  <ExternalLink to="/mimarca">
                     <Button variant="ghost" className="w-full justify-start">
                       <Building2 className="w-4 h-4 mr-3" />
                       Cambiar a Mi Marca
@@ -404,7 +403,7 @@ export default function LocalLayout() {
             </SheetContent>
           </Sheet>
           <h1 className="font-bold">{selectedBranch?.name || 'Mi Local'}</h1>
-          <div className="w-10" /> {/* Spacer */}
+          <div className="w-10" />
         </div>
       </header>
 
@@ -461,7 +460,7 @@ export default function LocalLayout() {
           {/* Footer */}
           <div className="p-4 border-t space-y-1">
             {canAccessAdmin && !isEmbedded && (
-              <ExternalLink to="/admin">
+              <ExternalLink to="/mimarca">
                 <Button variant="ghost" className="w-full justify-start">
                   <Building2 className="w-4 h-4 mr-3" />
                   Cambiar a Mi Marca
