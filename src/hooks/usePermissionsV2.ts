@@ -229,12 +229,15 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     gcTime: 5 * 60 * 1000,
   });
   
+  // Crear una key estable para branch_ids (stringify para comparar por valor, no por referencia)
+  const branchIdsKey = userRole?.branch_ids?.join(',') || '';
+  
   // Query para obtener sucursales accesibles
   const { 
     data: branches = [], 
     isLoading: loadingBranches 
   } = useQuery({
-    queryKey: ['accessible-branches-v2', user?.id, userRole?.branch_ids, userRole?.brand_role],
+    queryKey: ['accessible-branches-v2', user?.id, branchIdsKey, userRole?.brand_role],
     queryFn: async () => {
       if (!user?.id || !userRole) return [];
       
@@ -263,6 +266,7 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     },
     enabled: !!user?.id && !!userRole,
     staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
   
   // Extraer roles
