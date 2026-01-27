@@ -226,7 +226,7 @@ export default function MyScheduleCard() {
 
         {/* Link to full schedule if needed */}
         {employeeIds.length > 0 && (
-          <Link to="/local" className="block">
+          <Link to="/milocal" className="block">
             <Button variant="ghost" size="sm" className="w-full justify-between text-muted-foreground">
               Ver horario completo
               <ChevronRight className="w-4 h-4" />

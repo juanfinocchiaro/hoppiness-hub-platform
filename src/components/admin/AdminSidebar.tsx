@@ -86,7 +86,7 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
       label: 'Visión General',
       icon: LayoutDashboard,
       items: [
-        { type: 'navigation', to: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
+        { type: 'navigation', to: '/mimarca', icon: LayoutDashboard, label: 'Dashboard', exact: true },
       ],
     });
 
@@ -102,7 +102,7 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
         type: 'navigation' as const,
         icon: MapPin,
         label: branch.name,
-        to: `/admin/locales/${branch.slug}`,
+        to: `/mimarca/locales/${branch.slug}`,
       })) || []),
     ];
     sections.push({
@@ -118,8 +118,8 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
       label: 'Usuarios',
       icon: Users,
       items: [
-        { type: 'navigation', to: '/admin/personas/equipo-central', icon: Building2, label: 'Equipo Central' },
-        { type: 'navigation', to: '/admin/personas/usuarios', icon: Search, label: 'Todos los Usuarios' },
+        { type: 'navigation', to: '/mimarca/equipo-central', icon: Building2, label: 'Equipo Central' },
+        { type: 'navigation', to: '/mimarca/usuarios', icon: Search, label: 'Todos los Usuarios' },
       ],
     });
 

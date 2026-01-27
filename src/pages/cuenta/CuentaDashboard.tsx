@@ -125,7 +125,7 @@ export default function CuentaDashboard() {
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <Link to="/local">
+                        <Link to="/milocal">
                           <Button variant="outline">
                             Ir a Mi Local
                             <ArrowRight className="w-4 h-4 ml-2" />

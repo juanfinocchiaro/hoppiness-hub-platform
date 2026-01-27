@@ -13,7 +13,8 @@ import {
   DollarSign,
   Clock,
   ClipboardList,
-  Calculator
+  Calculator,
+  Coffee
 } from 'lucide-react';
 import { AvatarType } from '@/hooks/useRoleLandingV2';
 
@@ -30,95 +31,71 @@ interface RoleConfig {
   quickActions: QuickAction[];
 }
 
-// Updated to match new AvatarType from useRoleLandingV2
 const roleConfigs: Record<AvatarType, RoleConfig> = {
   superadmin: {
     icon: Crown,
     color: 'bg-amber-500',
     quickActions: [
-      { label: 'Ver Reportes', to: '/admin/reportes', icon: BarChart3 },
-      { label: 'Estado Sucursales', to: '/admin/estado-sucursales', icon: Store },
-      { label: 'Finanzas Marca', to: '/admin/finanzas-marca', icon: DollarSign },
+      { label: 'Mis Locales', to: '/mimarca', icon: Store },
+      { label: 'Usuarios', to: '/mimarca/usuarios', icon: Users },
     ],
   },
   coordinador: {
     icon: Package,
     color: 'bg-blue-500',
     quickActions: [
-      { label: 'Productos', to: '/admin/catalogo/productos', icon: Package },
-      { label: 'Modificadores', to: '/admin/catalogo/modificadores', icon: Package },
-      { label: 'Ingredientes', to: '/admin/catalogo/ingredientes', icon: Package },
+      { label: 'Dashboard', to: '/mimarca', icon: BarChart3 },
     ],
   },
   informes: {
     icon: BarChart3,
     color: 'bg-purple-500',
     quickActions: [
-      { label: 'Reportes', to: '/admin/resultados', icon: BarChart3 },
-      { label: 'Performance', to: '/admin/comparativa', icon: BarChart3 },
+      { label: 'Dashboard', to: '/mimarca', icon: BarChart3 },
     ],
   },
   contador_marca: {
     icon: Calculator,
     color: 'bg-teal-500',
     quickActions: [
-      { label: 'Resultados', to: '/admin/resultados', icon: DollarSign },
-      { label: 'Finanzas', to: '/admin/reportes/finanzas', icon: DollarSign },
+      { label: 'Dashboard', to: '/mimarca', icon: DollarSign },
     ],
   },
   franquiciado: {
     icon: Store,
     color: 'bg-green-500',
     quickActions: [
-      { label: 'Ver P&L', to: 'reportes/resultados', icon: DollarSign },
-      { label: 'Proveedores', to: 'compras/proveedores', icon: ClipboardList },
-      { label: 'Mi Equipo', to: 'equipo/mi-equipo', icon: Users },
+      { label: 'Mi Equipo', to: 'equipo', icon: Users },
+      { label: 'Horarios', to: 'equipo/horarios', icon: Clock },
     ],
   },
   encargado: {
     icon: ClipboardList,
     color: 'bg-orange-500',
     quickActions: [
-      { label: 'Fichajes', to: 'equipo/fichar', icon: Clock },
+      { label: 'Fichajes', to: 'equipo/fichajes', icon: Clock },
       { label: 'Horarios', to: 'equipo/horarios', icon: Clock },
-      { label: 'Cargar Gasto', to: 'caja', icon: DollarSign },
     ],
   },
-  contador_local: {
-    icon: Calculator,
-    color: 'bg-teal-500',
-    quickActions: [
-      { label: 'Movimientos', to: 'finanzas/movimientos', icon: DollarSign },
-      { label: 'Facturas', to: 'finanzas/facturas', icon: DollarSign },
-    ],
+  cocinero: {
+    icon: ChefHat,
+    color: 'bg-rose-500',
+    quickActions: [],
   },
   cajero: {
     icon: Monitor,
     color: 'bg-primary',
     quickActions: [],
   },
-  empleado: {
-    icon: ChefHat,
-    color: 'bg-rose-500',
+  barista: {
+    icon: Coffee,
+    color: 'bg-amber-600',
     quickActions: [],
   },
   guest: {
     icon: Users,
     color: 'bg-gray-500',
     quickActions: [],
-  },
-};
-
-// Variante para panel de marca (admin)
-const brandRoleConfigs: Partial<Record<AvatarType, RoleConfig>> = {
-  informes: {
-    icon: BarChart3,
-    color: 'bg-purple-500',
-    quickActions: [
-      { label: 'Ventas', to: '/admin/resultados', icon: BarChart3 },
-      { label: 'Performance', to: '/admin/comparativa', icon: BarChart3 },
-      { label: 'Finanzas Marca', to: '/admin/reportes/finanzas', icon: DollarSign },
-    ],
   },
 };
 
@@ -137,14 +114,11 @@ export function RoleWelcomeCard({
   userName,
   variant = 'local'
 }: RoleWelcomeCardProps) {
-  // Usar configuración de marca si corresponde
-  const config = variant === 'brand' && brandRoleConfigs[avatarType] 
-    ? brandRoleConfigs[avatarType]! 
-    : roleConfigs[avatarType];
+  const config = roleConfigs[avatarType];
   const Icon = config.icon;
 
-  // Para roles operativos (cajero/empleado) no mostramos tarjeta de bienvenida
-  if (avatarType === 'cajero' || avatarType === 'empleado') {
+  // Para roles operativos no mostramos tarjeta de bienvenida
+  if (['cajero', 'cocinero', 'barista'].includes(avatarType)) {
     return null;
   }
 
@@ -175,7 +149,7 @@ export function RoleWelcomeCard({
                 const path = action.to?.startsWith('/') 
                   ? action.to 
                   : branchId 
-                    ? `/local/${branchId}/${action.to}` 
+                    ? `/milocal/${branchId}/${action.to}` 
                     : action.to;
                 
                 return (

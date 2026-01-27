@@ -40,7 +40,7 @@ export default function AdminDashboard() {
     // Redirect if user doesn't have brand panel access
     if (!loading && !permLoading && user && !canAccessAdmin) {
       if (canAccessLocal && accessibleBranches.length > 0) {
-        navigate(`/local/${accessibleBranches[0].id}`);
+        navigate(`/milocal/${accessibleBranches[0].id}`);
       } else {
         navigate('/cuenta');
       }
@@ -61,7 +61,7 @@ export default function AdminDashboard() {
           <h1 className="text-xl font-bold">Sin acceso al Panel Marca</h1>
           <p className="text-muted-foreground">No tenés permisos para acceder a esta sección.</p>
           {hasLocalPanelAccess && (
-            <Link to={`/local/${accessibleBranches[0].id}`}>
+            <Link to={`/milocal/${accessibleBranches[0].id}`}>
               <Button>
                 <Building2 className="w-4 h-4 mr-2" />
                 Ir a Mi Local
@@ -101,7 +101,7 @@ export default function AdminDashboard() {
               <AdminSidebar avatarInfo={avatarInfo} />
               {hasLocalPanelAccess && !isEmbedded && (
                 <div className="mt-4 pt-4 border-t">
-                  <ExternalLink to={`/local/${accessibleBranches[0].id}`}>
+                  <ExternalLink to={`/milocal/${accessibleBranches[0].id}`}>
                     <Button variant="ghost" className="w-full justify-start">
                       <Building2 className="w-4 h-4 mr-3" />
                       Cambiar a Mi Local
@@ -153,7 +153,7 @@ export default function AdminDashboard() {
 
           <div className="p-4 border-t space-y-1">
             {hasLocalPanelAccess && !isEmbedded && (
-              <ExternalLink to={`/local/${accessibleBranches[0].id}`}>
+              <ExternalLink to={`/milocal/${accessibleBranches[0].id}`}>
                 <Button variant="ghost" className="w-full justify-start">
                   <Building2 className="w-4 h-4 mr-3" />
                   Cambiar a Mi Local

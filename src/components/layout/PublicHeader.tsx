@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Button } from '@/components/ui/button';
-import { ShoppingBag, Menu as MenuIcon, LogOut, LayoutDashboard, Store, User, ChevronDown, Package, Phone, Users2, Columns, Home } from 'lucide-react';
+import { ShoppingBag, Menu as MenuIcon, LogOut, LayoutDashboard, Store, User, ChevronDown, Package, Phone, Users2, Home } from 'lucide-react';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 import {
   Sheet,
@@ -17,24 +17,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 
 export function PublicHeader() {
   const { user, signOut } = useAuth();
   const { canAccessLocalPanel, canAccessBrandPanel, loading: roleLoading } = usePermissionsV2();
-  const canUseMiCuenta = !!user; // Everyone logged in can use Mi Cuenta
+  const canUseMiCuenta = !!user;
   const location = useLocation();
   const [open, setOpen] = useState(false);
 
-  // When running inside the Conciliación iframes we mark the URL with ?embed=conciliacion
-  // so we can ensure navigation happens in the parent (not only inside the iframe).
-  const isConciliacionEmbed = useMemo(() => {
-    return new URLSearchParams(location.search).get('embed') === 'conciliacion';
-  }, [location.search]);
-
   const isActive = (path: string) => location.pathname.startsWith(path);
 
-  // Obtener nombre del usuario
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuario';
   const userEmail = user?.email || '';
 
@@ -136,7 +129,7 @@ export function PublicHeader() {
                 
                 {canAccessLocalPanel && (
                   <DropdownMenuItem asChild>
-                    <Link to="/local" className="cursor-pointer">
+                    <Link to="/milocal" className="cursor-pointer">
                       <Store className="w-4 h-4 mr-2" />
                       Mi Local
                     </Link>
@@ -145,26 +138,10 @@ export function PublicHeader() {
                 
                 {canAccessBrandPanel && (
                   <DropdownMenuItem asChild>
-                    <Link to="/admin" className="cursor-pointer">
+                    <Link to="/mimarca" className="cursor-pointer">
                       <LayoutDashboard className="w-4 h-4 mr-2" />
                       Mi Marca
                     </Link>
-                  </DropdownMenuItem>
-                )}
-                
-                {canAccessBrandPanel && canAccessLocalPanel && (
-                  <DropdownMenuItem asChild>
-                    {isConciliacionEmbed ? (
-                      <a href="/conciliacion" target="_parent" className="cursor-pointer">
-                        <Columns className="w-4 h-4 mr-2" />
-                        Conciliación
-                      </a>
-                    ) : (
-                      <Link to="/conciliacion" className="cursor-pointer">
-                        <Columns className="w-4 h-4 mr-2" />
-                        Conciliación
-                      </Link>
-                    )}
                   </DropdownMenuItem>
                 )}
                 
@@ -186,7 +163,6 @@ export function PublicHeader() {
 
         {/* Mobile Nav */}
         <div className="flex md:hidden items-center gap-2">
-          {/* Botón rápido a Pedir - abre en nueva pestaña */}
           <a href="https://pedidos.masdelivery.com/hoppiness" target="_blank" rel="noopener noreferrer">
             <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10">
               <ShoppingBag className="w-5 h-5" />
@@ -249,7 +225,6 @@ export function PublicHeader() {
                 
                 {user ? (
                   <>
-                    {/* Info usuario */}
                     <div className="px-4 py-2">
                       <p className="text-sm font-medium">{userName}</p>
                       <p className="text-xs text-primary-foreground/70">{userEmail}</p>
@@ -270,11 +245,11 @@ export function PublicHeader() {
                     )}
                     
                     {canAccessLocalPanel && (
-                      <Link to="/local" onClick={() => setOpen(false)}>
+                      <Link to="/milocal" onClick={() => setOpen(false)}>
                         <Button 
                           variant="ghost" 
                           className={`w-full justify-start text-primary-foreground hover:bg-primary-foreground/10 ${
-                            isActive('/local') ? 'bg-primary-foreground/20' : ''
+                            isActive('/milocal') ? 'bg-primary-foreground/20' : ''
                           }`}
                         >
                           <Store className="w-4 h-4 mr-2" />
@@ -284,39 +259,17 @@ export function PublicHeader() {
                     )}
                     
                     {canAccessBrandPanel && (
-                      <Link to="/admin" onClick={() => setOpen(false)}>
+                      <Link to="/mimarca" onClick={() => setOpen(false)}>
                         <Button 
                           variant="ghost" 
                           className={`w-full justify-start text-primary-foreground hover:bg-primary-foreground/10 ${
-                            isActive('/admin') ? 'bg-primary-foreground/20' : ''
+                            isActive('/mimarca') ? 'bg-primary-foreground/20' : ''
                           }`}
                         >
                           <LayoutDashboard className="w-4 h-4 mr-2" />
                           Mi Marca
                         </Button>
                       </Link>
-                    )}
-                    
-                    {canAccessBrandPanel && canAccessLocalPanel && (
-                      <Button
-                        asChild
-                        variant="ghost"
-                        className={`w-full justify-start text-primary-foreground hover:bg-primary-foreground/10 ${
-                          isActive('/conciliacion') ? 'bg-primary-foreground/20' : ''
-                        }`}
-                      >
-                        {isConciliacionEmbed ? (
-                          <a href="/conciliacion" target="_parent" onClick={() => setOpen(false)}>
-                            <Columns className="w-4 h-4 mr-2" />
-                            Conciliación
-                          </a>
-                        ) : (
-                          <Link to="/conciliacion" onClick={() => setOpen(false)}>
-                            <Columns className="w-4 h-4 mr-2" />
-                            Conciliación
-                          </Link>
-                        )}
-                      </Button>
                     )}
                     
                     <div className="border-t border-primary-foreground/20 my-2" />

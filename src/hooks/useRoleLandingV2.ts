@@ -1,29 +1,25 @@
 /**
  * useRoleLandingV2 - Determina landing y accesos basado en roles fijos
- * 
- * Reemplaza a useRoleLanding con la nueva arquitectura.
  */
 import { usePermissionsV2, type BrandRole, type LocalRole } from './usePermissionsV2';
 
 export type AvatarType = 
-  | 'superadmin'       // Dueño de marca - todo
-  | 'coordinador'      // Marketing/gestión
-  | 'informes'         // Solo reportes (socio)
-  | 'contador_marca'   // Finanzas marca
-  | 'franquiciado'     // Dueño del local
-  | 'encargado'        // Gestión día a día
-  | 'contador_local'   // Finanzas local
-  | 'cajero'           // Operación POS
-  | 'empleado'         // Solo Mi Cuenta/KDS
-  | 'guest';           // Sin rol asignado
+  | 'superadmin'
+  | 'coordinador'
+  | 'informes'
+  | 'contador_marca'
+  | 'franquiciado'
+  | 'encargado'
+  | 'cocinero'
+  | 'cajero'
+  | 'barista'
+  | 'guest';
 
 export interface AvatarInfo {
   type: AvatarType;
   label: string;
   landingPath: string;
   description: string;
-  directToPOS?: boolean;
-  directToKDS?: boolean;
 }
 
 export function useRoleLandingV2() {
@@ -46,13 +42,12 @@ export function useRoleLandingV2() {
   } = usePermissionsV2();
 
   const getAvatarInfo = (): AvatarInfo => {
-    // Prioridad: roles de marca primero (más específicos)
-    
+    // Roles de marca
     if (isSuperadmin) {
       return {
         type: 'superadmin',
         label: 'Superadmin',
-        landingPath: '/admin',
+        landingPath: '/mimarca',
         description: 'Control total de la marca',
       };
     }
@@ -61,7 +56,7 @@ export function useRoleLandingV2() {
       return {
         type: 'coordinador',
         label: 'Coordinador',
-        landingPath: '/admin',
+        landingPath: '/mimarca',
         description: 'Gestión de catálogo y marketing',
       };
     }
@@ -70,7 +65,7 @@ export function useRoleLandingV2() {
       return {
         type: 'informes',
         label: 'Informes',
-        landingPath: '/admin/resultados',
+        landingPath: '/mimarca',
         description: 'Vista de reportes de marca',
       };
     }
@@ -79,7 +74,7 @@ export function useRoleLandingV2() {
       return {
         type: 'contador_marca',
         label: 'Contador Marca',
-        landingPath: '/admin/resultados',
+        landingPath: '/mimarca',
         description: 'Finanzas consolidadas',
       };
     }
@@ -90,7 +85,7 @@ export function useRoleLandingV2() {
       return {
         type: 'franquiciado',
         label: 'Franquiciado',
-        landingPath: firstBranch ? `/local/${firstBranch}` : '/local',
+        landingPath: firstBranch ? `/milocal/${firstBranch}` : '/milocal',
         description: 'Gestión completa del local',
       };
     }
@@ -100,39 +95,35 @@ export function useRoleLandingV2() {
       return {
         type: 'encargado',
         label: 'Encargado',
-        landingPath: firstBranch ? `/local/${firstBranch}` : '/local',
+        landingPath: firstBranch ? `/milocal/${firstBranch}` : '/milocal',
         description: 'Operación diaria del local',
       };
     }
 
     if (isContadorLocal) {
-      const firstBranch = accessibleBranches[0]?.id;
       return {
-        type: 'contador_local',
-        label: 'Contador Local',
-        landingPath: firstBranch ? `/local/${firstBranch}/compras/factura` : '/cuenta',
-        description: 'Finanzas del local',
+        type: 'cajero',
+        label: 'Contador',
+        landingPath: '/cuenta',
+        description: 'Mi Cuenta',
       };
     }
 
-    // Cajeros y Empleados: sin POS/KDS, solo Mi Cuenta
     if (isCajero) {
       return {
         type: 'cajero',
         label: 'Cajero',
         landingPath: '/cuenta',
         description: 'Mi Cuenta',
-        directToPOS: false,
       };
     }
 
     if (isEmpleado) {
       return {
-        type: 'empleado',
+        type: 'cocinero',
         label: 'Empleado',
         landingPath: '/cuenta',
         description: 'Mi Cuenta',
-        directToKDS: false,
       };
     }
 
@@ -150,12 +141,10 @@ export function useRoleLandingV2() {
   return {
     avatarInfo,
     loading,
-    // Accesos
     canAccessAdmin: canAccessBrandPanel,
     canAccessLocal: canAccessLocalPanel,
     accessibleBranches,
-    // Helpers
-    isOperationalRole: ['cajero', 'empleado'].includes(avatarInfo.type),
+    isOperationalRole: ['cajero', 'cocinero', 'barista'].includes(avatarInfo.type),
     isManagementRole: ['encargado', 'franquiciado'].includes(avatarInfo.type),
     isBrandRole: ['superadmin', 'coordinador', 'informes', 'contador_marca'].includes(avatarInfo.type),
   };
