@@ -23,9 +23,9 @@ import {
 } from '@/components/landing';
 import heroBurger from '@/assets/hero-burger.jpg';
 import logoOriginal from '@/assets/logo-hoppiness-original.jpg';
-import local1 from '@/assets/local-1.jpg';
-import local2 from '@/assets/local-2.jpg';
-import designAmbiente from '@/assets/design-ambiente.jpg';
+import burgerCheese from '@/assets/burger-cheese-drip.png';
+import burgerSmash from '@/assets/burger-smash-hand.png';
+import burgerProvoleta from '@/assets/burger-provoleta.png';
 
 export default function Index() {
   return (
