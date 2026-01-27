@@ -12,28 +12,20 @@ import {
 import {
   LayoutDashboard,
   Store,
-  Package,
   Users,
   Truck,
   ChevronRight,
   ChevronDown,
   BarChart3,
-  ChefHat,
-  UtensilsCrossed,
   TrendingUp,
-  Boxes,
-  ShoppingCart,
   MessageSquare,
   Settings,
   MapPin,
   Plus,
-  Shield,
-  Percent,
   Building2,
   Search,
-  Bell,
-  Link as LinkIcon,
-  Layers,
+  Send,
+  History,
 } from 'lucide-react';
 import NewBranchModal from './NewBranchModal';
 
@@ -57,16 +49,26 @@ interface AdminSidebarProps {
   avatarInfo: { type: string; label: string };
 }
 
+/**
+ * AdminSidebar - Panel "Mi Marca" simplificado
+ * 
+ * Estructura según reestructuración:
+ * - Dashboard (resumen consolidado)
+ * - Mis Locales (lista dinámica)
+ * - Reportes (Ventas, Comparativa, Movimientos Stock)
+ * - Personas (Equipo Central, Usuarios)
+ * - Comunicación (Enviar, Historial, Mensajes Contacto)
+ * - Configuración
+ */
 export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
   const location = useLocation();
   const [showNewBranchModal, setShowNewBranchModal] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     vision: true,
     locales: true,
-    catalogo: true,
-    abastecimiento: true,
-    personas: true,
-    comunicacion: true,
+    reportes: false,
+    personas: false,
+    comunicacion: false,
     configuracion: false,
   });
 
@@ -87,11 +89,11 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
     setExpandedSections((prev) => ({ ...prev, [sectionId]: !prev[sectionId] }));
   };
 
-  // Build sections based on user role
+  // Build sections based on new simplified structure
   const buildSections = (): NavSection[] => {
     const sections: NavSection[] = [];
 
-    // Socios solo ven Visión General
+    // Socios solo ven Dashboard y Reportes
     if (avatarInfo.type === 'partner') {
       sections.push({
         id: 'vision',
@@ -99,22 +101,27 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
         icon: BarChart3,
         items: [
           { type: 'navigation', to: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-          { type: 'navigation', to: '/admin/resultados', icon: TrendingUp, label: 'Resultados' },
-          { type: 'navigation', to: '/admin/comparativa', icon: BarChart3, label: 'Comparativa de Locales' },
+        ],
+      });
+      sections.push({
+        id: 'reportes',
+        label: 'Reportes',
+        icon: TrendingUp,
+        items: [
+          { type: 'navigation', to: '/admin/reportes/ventas', icon: BarChart3, label: 'Ventas (consolidado)' },
+          { type: 'navigation', to: '/admin/comparativa', icon: TrendingUp, label: 'Comparativa de Locales' },
         ],
       });
       return sections;
     }
 
-    // Visión General
+    // Dashboard
     sections.push({
       id: 'vision',
       label: 'Visión General',
       icon: BarChart3,
       items: [
         { type: 'navigation', to: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-        { type: 'navigation', to: '/admin/resultados', icon: TrendingUp, label: 'Resultados' },
-        { type: 'navigation', to: '/admin/comparativa', icon: BarChart3, label: 'Comparativa de Locales' },
       ],
     });
 
@@ -140,28 +147,15 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
       items: localesItems,
     });
 
-    // Catálogo
+    // Reportes
     sections.push({
-      id: 'catalogo',
-      label: 'Catálogo',
-      icon: UtensilsCrossed,
+      id: 'reportes',
+      label: 'Reportes',
+      icon: TrendingUp,
       items: [
-        { type: 'navigation', to: '/admin/catalogo/productos', icon: Package, label: 'Productos' },
-        { type: 'navigation', to: '/admin/catalogo/combos', icon: Layers, label: 'Combos' },
-        { type: 'navigation', to: '/admin/catalogo/modificadores', icon: ChefHat, label: 'Modificadores' },
-        { type: 'navigation', to: '/admin/catalogo/ingredientes', icon: Boxes, label: 'Ingredientes' },
-        { type: 'navigation', to: '/admin/catalogo/descuentos', icon: Percent, label: 'Promociones y Descuentos' },
-      ],
-    });
-
-    // Abastecimiento (Coordinadores también ven) - Simplificado
-    sections.push({
-      id: 'abastecimiento',
-      label: 'Abastecimiento',
-      icon: Truck,
-      items: [
-        { type: 'navigation', to: '/admin/abastecimiento/obligatorios', icon: Shield, label: 'Productos Obligatorios' },
-        { type: 'navigation', to: '/admin/abastecimiento/alertas', icon: Bell, label: 'Alertas de Compras' },
+        { type: 'navigation', to: '/admin/reportes/ventas', icon: BarChart3, label: 'Ventas (consolidado)' },
+        { type: 'navigation', to: '/admin/comparativa', icon: TrendingUp, label: 'Comparativa de Locales' },
+        { type: 'navigation', to: '/admin/reportes/movimientos-stock', icon: Truck, label: 'Movimientos de Stock' },
       ],
     });
 
@@ -184,7 +178,9 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
       label: 'Comunicación',
       icon: MessageSquare,
       items: [
-        { type: 'navigation', to: '/admin/mensajes', icon: MessageSquare, label: 'Mensajes' },
+        { type: 'navigation', to: '/admin/comunicacion/enviar', icon: Send, label: 'Enviar Comunicado' },
+        { type: 'navigation', to: '/admin/comunicacion/historial', icon: History, label: 'Historial de Comunicados' },
+        { type: 'navigation', to: '/admin/mensajes', icon: MessageSquare, label: 'Mensajes de Contacto' },
       ],
     });
 
@@ -195,9 +191,6 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
       icon: Settings,
       items: [
         { type: 'navigation', to: '/admin/configuracion/marca', icon: Building2, label: 'Datos de la Marca' },
-        { type: 'navigation', to: '/admin/configuracion/canales', icon: ShoppingCart, label: 'Canales de Venta' },
-        { type: 'navigation', to: '/admin/configuracion/integraciones', icon: LinkIcon, label: 'Integraciones' },
-        { type: 'navigation', to: '/admin/configuracion/notificaciones', icon: Bell, label: 'Notificaciones' },
       ],
     });
 
