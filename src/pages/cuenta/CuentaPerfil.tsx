@@ -558,33 +558,6 @@ export default function CuentaPerfil() {
                 )}
               </Card>
 
-              {/* Account Stats */}
-              {profile && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Estadísticas</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4 text-center">
-                      <div>
-                        <p className="text-2xl font-bold">{profile.total_orders || 0}</p>
-                        <p className="text-sm text-muted-foreground">Pedidos</p>
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold">
-                          {new Intl.NumberFormat('es-AR', {
-                            style: 'currency',
-                            currency: 'ARS',
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: 0,
-                          }).format(profile.total_spent || 0)}
-                        </p>
-                        <p className="text-sm text-muted-foreground">Total gastado</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
             </>
           )}
         </div>
