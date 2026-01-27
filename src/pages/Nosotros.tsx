@@ -12,8 +12,8 @@ import {
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import heroBurger from '@/assets/hero-burger.jpg';
-import local1 from '@/assets/local-1.jpg';
-import local2 from '@/assets/local-2.jpg';
+import juanHoppiness from '@/assets/juan-hoppiness.jpg';
+import aperturaLocal from '@/assets/apertura-local.jpg';
 import teamPhoto from '@/assets/team-photo.jpg';
 import logoHoppiness from '@/assets/logo-hoppiness.png';
 
@@ -89,14 +89,14 @@ export default function Nosotros() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <img 
-                src={local1} 
-                alt="Interior Hoppiness" 
-                className="rounded-2xl shadow-elevated w-full h-48 object-cover"
+                src={juanHoppiness} 
+                alt="Juan, socio de Hoppiness" 
+                className="rounded-2xl shadow-elevated w-full h-64 object-cover object-top"
               />
               <img 
-                src={local2} 
-                alt="Interior Hoppiness" 
-                className="rounded-2xl shadow-elevated w-full h-48 object-cover mt-8"
+                src={aperturaLocal} 
+                alt="Apertura de nuevo local Hoppiness" 
+                className="rounded-2xl shadow-elevated w-full h-64 object-cover mt-8"
               />
             </div>
           </div>
