@@ -92,16 +92,11 @@ export default function Nosotros() {
                 nuestra cocina sea perfecta.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="relative">
               <img 
                 src={juanHoppiness} 
                 alt="Juan, socio de Hoppiness" 
-                className="rounded-2xl shadow-elevated w-full h-64 object-cover object-top"
-              />
-              <img 
-                src={aperturaLocal} 
-                alt="Apertura de nuevo local Hoppiness" 
-                className="rounded-2xl shadow-elevated w-full h-64 object-cover mt-8"
+                className="rounded-2xl shadow-elevated w-full aspect-video object-cover object-top"
               />
             </div>
           </div>
