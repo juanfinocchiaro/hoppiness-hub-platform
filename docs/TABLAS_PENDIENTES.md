@@ -2,6 +2,8 @@
 
 Documentación de tablas en la base de datos que no tienen interfaz de gestión completa o son solo para uso interno.
 
+**Última actualización:** 2026-01-27
+
 ## Sin UI de gestión
 
 | Tabla | Descripción | Estado |
@@ -15,18 +17,42 @@ Documentación de tablas en la base de datos que no tienen interfaz de gestión 
 | Tabla | Descripción | Notas |
 |-------|-------------|-------|
 | `availability_logs` | Log de cambios de disponibilidad de productos | Solo lectura para auditoría |
-| `attendance_logs` | Logs de fichaje (tabla principal) | Consolidado desde attendance_records |
+| `attendance_logs` | Logs de fichaje (nuevo sistema) | Usado por dashboard Mi Cuenta |
 | `cash_register_movements` | Movimientos de caja | Visible en LocalCaja, no editable |
 | `stock_movements` | Historial de movimientos de stock | Solo lectura |
 
-## Legacy / Deprecado
+## Legacy / Deprecado ⚠️
 
-| Tabla | Descripción | Estado |
-|-------|-------------|--------|
-| `branch_permissions` | Sistema de permisos legacy (booleanos) | **DEPRECADO** - usar `user_branch_permissions` |
-| `attendance_records` | Registros de asistencia legacy | **DEPRECADO** - usar `attendance_logs` |
+| Tabla | Descripción | Estado | Acción Requerida |
+|-------|-------------|--------|------------------|
+| `user_roles` | Sistema de permisos legacy | **DEPRECADO** - usar `user_roles_v2` | Migrar archivos que aún lo usan |
+| `branch_permissions` | Sistema de permisos legacy (booleanos) | **DEPRECADO** - usar `user_branch_permissions` | Eliminar después de migración |
+| `attendance_records` | Registros de asistencia legacy | **DEPRECADO** - usar `clock_entries` | Migrar código restante |
+| `user_panel_access` | Acceso a paneles legacy | **DEPRECADO** - usar `user_roles_v2.brand_role/local_role` | Sin uso actual |
+| `user_branch_access` | Acceso a sucursales legacy | **DEPRECADO** - usar `user_roles_v2.branch_ids` | Sin uso actual |
+| `customers` | Clientes separados (antes de unificación) | **SEMI-DEPRECADO** | Mantener por POS/CustomerSelector |
 
-## Tablas Eliminadas
+## Archivos que usan tablas LEGACY (pendiente migración)
+
+| Archivo | Tabla Legacy | Prioridad |
+|---------|--------------|-----------|
+| `src/pages/local/LocalUsuarios.tsx` | `user_roles` | Alta |
+| `src/components/local/UserDetailSheet.tsx` | `user_roles` | Alta |
+| `src/pages/RegistroStaff.tsx` | `user_roles` | Alta |
+| `src/pages/AceptarInvitacion.tsx` | `user_roles` | Alta |
+| `src/components/admin/BranchEditPanel.tsx` | `user_roles` | Media |
+| `src/components/admin/UserCard.tsx` | `user_roles` | Media |
+| `supabase/functions/attendance-token/index.ts` | `attendance_records` | Media |
+| `supabase/functions/auto-close-shifts/index.ts` | `attendance_records` | Baja |
+
+## Hooks Eliminados (2026-01-27)
+
+| Hook | Motivo |
+|------|--------|
+| `src/hooks/useUserRoles.ts` | Reemplazado por `usePermissionsV2` |
+| `src/hooks/usePanelAccess.ts` | Reemplazado por `usePermissionsV2` |
+
+## Tablas Eliminadas Históricamente
 
 | Tabla | Motivo | Fecha |
 |-------|--------|-------|
@@ -50,28 +76,29 @@ Documentación de tablas en la base de datos que no tienen interfaz de gestión 
 - `product_ingredients` - Receta de productos
 - `modifier_group_products` - Relación grupos↔productos
 
-## Notas sobre hooks duplicados
+## Sistema de Roles Actual (V2)
 
-### useUserRole.tsx vs useUserRoles.ts
+### Roles de Marca (`brand_role`)
+| Rol | Descripción | Acceso |
+|-----|-------------|--------|
+| `superadmin` | Dueño de la marca | Todo + todas las sucursales |
+| `coordinador` | Marketing/gestión | Catálogo, comunicación |
+| `informes` | Solo reportes | Dashboards solo lectura |
+| `contador_marca` | Finanzas consolidadas | P&L, facturación |
 
-| Hook | Propósito | Uso principal |
-|------|-----------|---------------|
-| `useUserRole.tsx` | Rol + permisos de sucursal + branches accesibles | Navegación, guards, LocalLayout |
-| `useUserRoles.ts` | Roles detallados + panel access flags | Guards de panel (canUseLocalPanel, canUseBrandPanel) |
+### Roles Locales (`local_role`)
+| Rol | Descripción | Requiere `branch_ids` |
+|-----|-------------|----------------------|
+| `franquiciado` | Dueño del local | ✅ |
+| `encargado` | Gestión día a día | ✅ |
+| `contador_local` | Finanzas del local | ✅ |
+| `cajero` | Operación POS/Caja | ✅ |
+| `empleado` | Solo Mi Cuenta | ✅ |
 
-**Decisión**: Mantener ambos ya que tienen responsabilidades diferentes:
-- `useUserRole` → permisos granulares por sucursal
-- `useUserRoles` → acceso a paneles y flags globales
-
-### useChannels.ts vs useBranchChannels.ts
-
-| Hook | Propósito | Uso |
-|------|-----------|-----|
-| `useChannels.ts` | CRUD de canales a nivel marca | Panel Admin |
-| `useBranchChannels.ts` | Canales habilitados por sucursal | Panel Local |
-
-**Decisión**: Correctamente separados. No consolidar.
+### Conteos Actuales (2026-01-27)
+- `user_roles` (legacy): 2 registros
+- `user_roles_v2` (activo): 13 registros
 
 ---
 
-*Última actualización: 2026-01-21*
+*Este documento se actualiza automáticamente durante las auditorías del sistema.*

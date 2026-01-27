@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, Calendar, TrendingDown } from 'lucide-react';
+import { DollarSign, TrendingDown } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,52 +18,63 @@ interface SalaryAdvance {
   created_at: string;
 }
 
-interface EmployeeBasic {
-  id: string;
-  full_name: string;
-}
-
 export default function MySalaryAdvancesCard() {
   const { user } = useAuth();
   
-  // Get employee record for current user
-  const { data: employee, isLoading: employeeLoading } = useQuery<EmployeeBasic | null>({
-    queryKey: ['my-employee-for-advances', user?.id],
+  // Get user's profile phone first
+  const { data: profile, isLoading: profileLoading } = useQuery({
+    queryKey: ['my-profile-phone', user?.id],
     queryFn: async () => {
       if (!user) return null;
-      
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await (supabase as any)
-        .from('employees')
-        .select('id, full_name')
+      const { data } = await supabase
+        .from('profiles')
+        .select('phone')
         .eq('user_id', user.id)
-        .eq('is_active', true)
-        .maybeSingle();
-      
-      if (result.error) throw result.error;
-      return result.data as EmployeeBasic | null;
+        .single();
+      return data;
     },
     enabled: !!user,
   });
 
+  // Find employee by phone
+  const { data: employeeId, isLoading: employeeLoading } = useQuery({
+    queryKey: ['my-employee-by-phone', profile?.phone],
+    queryFn: async () => {
+      if (!profile?.phone) return null;
+      const { data } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('phone', profile.phone)
+        .eq('is_active', true)
+        .maybeSingle();
+      return data?.id || null;
+    },
+    enabled: !!profile?.phone,
+  });
+
   // Get salary advances for this employee
   const { data: advances, isLoading: advancesLoading } = useQuery({
-    queryKey: ['my-salary-advances', employee?.id],
+    queryKey: ['my-salary-advances', employeeId],
     queryFn: async () => {
-      if (!employee) return [];
+      if (!employeeId) return [];
       
       const { data, error } = await supabase
         .from('salary_advances')
         .select('id, amount, status, payment_method, reason, paid_at, created_at')
-        .eq('employee_id', employee.id)
+        .eq('employee_id', employeeId)
         .order('created_at', { ascending: false })
         .limit(10);
       
-      if (error) throw error;
+      if (error) {
+        console.warn('Could not fetch salary advances:', error.message);
+        return [];
+      }
       return data as SalaryAdvance[];
     },
-    enabled: !!employee,
+    enabled: !!employeeId,
   });
+
+  const isLoading = profileLoading || employeeLoading || advancesLoading;
 
   // Calculate totals
   const now = new Date();
@@ -92,11 +103,11 @@ export default function MySalaryAdvancesCard() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'paid':
-        return <Badge className="bg-green-500">Pagado</Badge>;
+        return <Badge className="bg-primary/90 hover:bg-primary">Pagado</Badge>;
       case 'pending_transfer':
-        return <Badge variant="outline" className="border-yellow-500 text-yellow-600">Pendiente</Badge>;
+        return <Badge variant="outline" className="border-yellow-500/50 text-yellow-600 dark:text-yellow-400">Pendiente</Badge>;
       case 'transferred':
-        return <Badge className="bg-blue-500">Transferido</Badge>;
+        return <Badge className="bg-accent text-accent-foreground">Transferido</Badge>;
       case 'cancelled':
         return <Badge variant="destructive">Cancelado</Badge>;
       default:
@@ -104,12 +115,12 @@ export default function MySalaryAdvancesCard() {
     }
   };
 
-  // Don't show if not an employee
-  if (!employeeLoading && !employee) {
+  // Don't show if not an employee (no phone match)
+  if (!isLoading && !employeeId) {
     return null;
   }
 
-  if (employeeLoading || advancesLoading) {
+  if (isLoading) {
     return (
       <Card>
         <CardHeader className="pb-2">
@@ -143,9 +154,9 @@ export default function MySalaryAdvancesCard() {
             <p className="text-lg font-bold">{formatCurrency(thisMonthTotal)}</p>
           </div>
           {pendingTotal > 0 && (
-            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-xs text-yellow-700">Pend. transferencia</p>
-              <p className="text-lg font-bold text-yellow-700">{formatCurrency(pendingTotal)}</p>
+            <div className="p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <p className="text-xs text-yellow-700 dark:text-yellow-400">Pend. transferencia</p>
+              <p className="text-lg font-bold text-yellow-700 dark:text-yellow-400">{formatCurrency(pendingTotal)}</p>
             </div>
           )}
         </div>
