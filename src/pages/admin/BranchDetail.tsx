@@ -1,15 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, MapPin, Building2, Clock, Users, Receipt, UserRound, BarChart3, TrendingUp } from 'lucide-react';
+import { ArrowLeft, MapPin, Building2, Clock, Users, Receipt, BarChart3 } from 'lucide-react';
 import BranchEditPanel from '@/components/admin/BranchEditPanel';
-import BranchCustomersTab from '@/components/admin/BranchCustomersTab';
 import BranchSalesTab from '@/components/admin/BranchSalesTab';
-import BranchResultsTab from '@/components/admin/BranchResultsTab';
 
 export default function BranchDetail() {
   const { slug } = useParams<{ slug: string }>();
@@ -76,9 +74,9 @@ export default function BranchDetail() {
         </Badge>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs - Simplificado */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-7 w-full max-w-3xl">
+        <TabsList className="grid grid-cols-5 w-full max-w-2xl">
           <TabsTrigger value="datos" className="gap-1.5">
             <Building2 className="h-4 w-4" />
             <span className="hidden lg:inline">Datos</span>
@@ -91,17 +89,9 @@ export default function BranchDetail() {
             <Users className="h-4 w-4" />
             <span className="hidden lg:inline">Equipo</span>
           </TabsTrigger>
-          <TabsTrigger value="clientes" className="gap-1.5">
-            <UserRound className="h-4 w-4" />
-            <span className="hidden lg:inline">Clientes</span>
-          </TabsTrigger>
           <TabsTrigger value="ventas" className="gap-1.5">
             <BarChart3 className="h-4 w-4" />
             <span className="hidden lg:inline">Ventas</span>
-          </TabsTrigger>
-          <TabsTrigger value="resultados" className="gap-1.5">
-            <TrendingUp className="h-4 w-4" />
-            <span className="hidden lg:inline">Resultados</span>
           </TabsTrigger>
           <TabsTrigger value="fiscal" className="gap-1.5">
             <Receipt className="h-4 w-4" />
@@ -109,7 +99,6 @@ export default function BranchDetail() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Use BranchEditPanel for Datos, Horarios, Equipo, Fiscal */}
         <TabsContent value="datos" className="mt-4">
           <BranchEditPanel 
             branch={branch} 
@@ -137,16 +126,8 @@ export default function BranchDetail() {
           />
         </TabsContent>
         
-        <TabsContent value="clientes" className="mt-4">
-          <BranchCustomersTab branchId={branch.id} />
-        </TabsContent>
-        
         <TabsContent value="ventas" className="mt-4">
           <BranchSalesTab branchId={branch.id} branchName={branch.name} />
-        </TabsContent>
-        
-        <TabsContent value="resultados" className="mt-4">
-          <BranchResultsTab branchId={branch.id} branchName={branch.name} />
         </TabsContent>
         
         <TabsContent value="fiscal" className="mt-4">

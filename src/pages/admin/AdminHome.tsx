@@ -10,7 +10,7 @@ import { Store, Package, MapPin, Clock, Settings, Truck, ShoppingBag, Users, Bik
 import OrdersHeatmap from '@/components/charts/OrdersHeatmap';
 import { RoleWelcomeCard } from '@/components/dashboard/RoleWelcomeCard';
 import { BrandAlerts } from '@/components/dashboard/DashboardAlerts';
-import { PurchaseAlertsCard } from '@/components/admin/PurchaseAlertsCard';
+
 import { BrandDailySalesTable } from '@/components/admin/BrandDailySalesTable';
 import { BrandAlertsCard } from '@/components/admin/BrandAlertsCard';
 import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
@@ -269,9 +269,8 @@ export default function AdminHome() {
       </div>
 
       {/* Alerts Grid */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-1">
         <BrandAlertsCard />
-        <PurchaseAlertsCard />
       </div>
 
       {/* Daily Sales Table - Consolidated by Branch & Shift */}

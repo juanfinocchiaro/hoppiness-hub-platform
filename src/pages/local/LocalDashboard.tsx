@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,13 +12,10 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  FileSpreadsheet,
-  ArrowRight,
 } from 'lucide-react';
 import { format, startOfWeek, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useTodaySales, useDailySales, getShiftLabel, getMissingShifts } from '@/hooks/useDailySales';
-import { useBranchConsumptionStats } from '@/hooks/useSalesImports';
 import { SalesEntryModal } from '@/components/local/SalesEntryModal';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -44,7 +41,6 @@ export default function LocalDashboard({ branch }: LocalDashboardProps) {
   
   const { data: todaySales, isLoading: loadingToday } = useTodaySales(branch.id);
   const { data: weekSales, isLoading: loadingWeek } = useDailySales(branch.id);
-  const { data: consumptionStats, isLoading: loadingConsumption } = useBranchConsumptionStats(branch.id);
   
   const missingShifts = todaySales ? getMissingShifts(todaySales) : ['midday', 'night'];
   const todayTotal = todaySales?.reduce((sum, s) => sum + Number(s.sales_total || 0), 0) || 0;
@@ -77,8 +73,6 @@ export default function LocalDashboard({ branch }: LocalDashboardProps) {
 
   const isLoading = loadingToday || loadingWeek;
 
-  const formatKg = (kg: number) => `${kg.toFixed(1)} kg`;
-
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -92,61 +86,6 @@ export default function LocalDashboard({ branch }: LocalDashboardProps) {
           Cargar Ventas
         </Button>
       </div>
-
-      {/* Consumption Stats Widget */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <FileSpreadsheet className="w-5 h-5" />
-            Consumo de Ingredientes (Núcleo Check)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loadingConsumption ? (
-            <Skeleton className="h-20" />
-          ) : consumptionStats ? (
-            <div className="space-y-3">
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <div className="text-2xl font-bold">{consumptionStats.consumed_panes}</div>
-                  <div className="text-xs text-muted-foreground">🥖 Panes</div>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <div className="text-2xl font-bold">{formatKg(consumptionStats.consumed_carne_kg)}</div>
-                  <div className="text-xs text-muted-foreground">🥩 Carne</div>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <div className="text-2xl font-bold">{consumptionStats.consumed_papas}</div>
-                  <div className="text-xs text-muted-foreground">🍟 Porciones Papas</div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between pt-2 border-t text-sm">
-                <span className="text-muted-foreground">
-                  Última importación: {format(new Date(consumptionStats.date_from), 'dd/MM', { locale: es })} - {format(new Date(consumptionStats.date_to), 'dd/MM', { locale: es })}
-                </span>
-                <Link to={`/local/${branchId}/ventas/importar`}>
-                  <Button variant="ghost" size="sm">
-                    Ver más
-                    <ArrowRight className="w-3 h-3 ml-1" />
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-muted-foreground mb-3">
-                Importá tus ventas de Núcleo Check para calcular consumo de ingredientes
-              </p>
-              <Link to={`/local/${branchId}/ventas/importar`}>
-                <Button variant="outline" size="sm">
-                  <FileSpreadsheet className="w-4 h-4 mr-2" />
-                  Importar Ventas
-                </Button>
-              </Link>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Today's Sales */}
       <Card>
