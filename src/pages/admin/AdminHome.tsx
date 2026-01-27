@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Store, Clock, Users, DollarSign, Utensils, Receipt, BarChart3, MapPin } from 'lucide-react';
 import { BrandDailySalesTable } from '@/components/admin/BrandDailySalesTable';
@@ -41,7 +40,7 @@ export default function AdminHome() {
       const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
 
       const [branchesRes, ordersRes, orderItemsRes, attendanceRes] = await Promise.all([
-        supabase.from('branches').select('*').eq('is_active', true).order('name'),
+        supabase.from('branches').select('*').order('name'),
         supabase
           .from('orders')
           .select('id, total, branch_id')
@@ -232,9 +231,6 @@ export default function AdminHome() {
                             {branch.city}
                           </div>
                         </div>
-                        <Badge variant={branch.is_active ? 'default' : 'secondary'}>
-                          {branch.is_active ? 'Activa' : 'Inactiva'}
-                        </Badge>
                       </div>
                     </CardContent>
                   </Card>

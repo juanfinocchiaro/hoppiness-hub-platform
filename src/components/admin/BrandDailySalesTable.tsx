@@ -1,17 +1,16 @@
 /**
  * BrandDailySalesTable - Tabla consolidada de ventas diarias por sucursal y turno
- * Para el Panel Mi Marca
+ * Para el Panel Mi Marca - Dos turnos: Mediodía y Noche
  */
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, TrendingUp, TrendingDown, Minus, Sun, Sunset, Moon } from 'lucide-react';
+import { CalendarIcon, TrendingUp, TrendingDown, Minus, Sun, Moon } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useState, useMemo } from 'react';
@@ -25,16 +24,14 @@ type DateRange = {
 interface BranchSalesData {
   branchId: string;
   branchName: string;
-  morning: number;
-  afternoon: number;
+  midday: number;
   night: number;
   total: number;
   vsLastPeriod: number | null;
 }
 
-const shiftLabels = {
-  morning: 'Mañana',
-  afternoon: 'Tarde',
+const shiftLabels: Record<string, string> = {
+  midday: 'Mediodía',
   night: 'Noche',
 };
 
@@ -58,14 +55,13 @@ export function BrandDailySalesTable() {
     ];
   }, []);
 
-  // Fetch branches
+  // Fetch all branches (not filtering by is_active)
   const { data: branches } = useQuery({
-    queryKey: ['branches-active'],
+    queryKey: ['branches-all'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('branches')
         .select('id, name')
-        .eq('is_active', true)
         .order('name');
       if (error) throw error;
       return data;
@@ -107,16 +103,16 @@ export function BrandDailySalesTable() {
     enabled: !!branches,
   });
 
-  // Aggregate data by branch
+  // Aggregate data by branch - Two shifts only: midday and night
   const aggregatedData = useMemo((): BranchSalesData[] => {
     if (!branches || !salesData) return [];
 
-    const branchMap = new Map<string, { morning: number; afternoon: number; night: number; total: number }>();
+    const branchMap = new Map<string, { midday: number; night: number; total: number }>();
     const prevBranchTotals = new Map<string, number>();
 
     // Initialize branches
     branches.forEach(b => {
-      branchMap.set(b.id, { morning: 0, afternoon: 0, night: 0, total: 0 });
+      branchMap.set(b.id, { midday: 0, night: 0, total: 0 });
       prevBranchTotals.set(b.id, 0);
     });
 
@@ -126,8 +122,7 @@ export function BrandDailySalesTable() {
       if (branch) {
         const amount = Number(sale.sales_total) || 0;
         branch.total += amount;
-        if (sale.shift === 'morning') branch.morning += amount;
-        else if (sale.shift === 'afternoon') branch.afternoon += amount;
+        if (sale.shift === 'midday') branch.midday += amount;
         else if (sale.shift === 'night') branch.night += amount;
       }
     });
@@ -140,31 +135,33 @@ export function BrandDailySalesTable() {
       });
     }
 
-    // Build result
-    return branches.map(b => {
-      const data = branchMap.get(b.id)!;
-      const prevTotal = prevBranchTotals.get(b.id) || 0;
-      const vsLastPeriod = prevTotal > 0 ? ((data.total - prevTotal) / prevTotal) * 100 : null;
+    // Build result - only show branches with sales data
+    return branches
+      .map(b => {
+        const data = branchMap.get(b.id)!;
+        const prevTotal = prevBranchTotals.get(b.id) || 0;
+        const vsLastPeriod = prevTotal > 0 ? ((data.total - prevTotal) / prevTotal) * 100 : null;
 
-      return {
-        branchId: b.id,
-        branchName: b.name,
-        ...data,
-        vsLastPeriod,
-      };
-    }).sort((a, b) => b.total - a.total);
+        return {
+          branchId: b.id,
+          branchName: b.name,
+          ...data,
+          vsLastPeriod,
+        };
+      })
+      .filter(b => b.total > 0) // Only show branches with sales
+      .sort((a, b) => b.total - a.total);
   }, [branches, salesData, prevSalesData]);
 
   // Calculate totals
   const totals = useMemo(() => {
     return aggregatedData.reduce(
       (acc, row) => ({
-        morning: acc.morning + row.morning,
-        afternoon: acc.afternoon + row.afternoon,
+        midday: acc.midday + row.midday,
         night: acc.night + row.night,
         total: acc.total + row.total,
       }),
-      { morning: 0, afternoon: 0, night: 0, total: 0 }
+      { midday: 0, night: 0, total: 0 }
     );
   }, [aggregatedData]);
 
@@ -183,9 +180,9 @@ export function BrandDailySalesTable() {
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <CardTitle>Ventas por Sucursal y Turno</CardTitle>
+            <CardTitle>Ventas por Sucursal</CardTitle>
             <CardDescription>
-              Consolidado de ventas manuales cargadas por cada local
+              Consolidado de ventas por turno
             </CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -247,13 +244,7 @@ export function BrandDailySalesTable() {
                   <TableHead className="text-center">
                     <div className="flex items-center justify-center gap-1">
                       <Sun className="w-4 h-4 text-amber-500" />
-                      <span className="hidden sm:inline">{shiftLabels.morning}</span>
-                    </div>
-                  </TableHead>
-                  <TableHead className="text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <Sunset className="w-4 h-4 text-orange-500" />
-                      <span className="hidden sm:inline">{shiftLabels.afternoon}</span>
+                      <span className="hidden sm:inline">{shiftLabels.midday}</span>
                     </div>
                   </TableHead>
                   <TableHead className="text-center">
@@ -269,7 +260,7 @@ export function BrandDailySalesTable() {
               <TableBody>
                 {aggregatedData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                       No hay ventas registradas en este período
                     </TableCell>
                   </TableRow>
@@ -279,10 +270,7 @@ export function BrandDailySalesTable() {
                       <TableRow key={row.branchId}>
                         <TableCell className="font-medium">{row.branchName}</TableCell>
                         <TableCell className="text-center text-muted-foreground">
-                          {row.morning > 0 ? formatCurrency(row.morning) : '-'}
-                        </TableCell>
-                        <TableCell className="text-center text-muted-foreground">
-                          {row.afternoon > 0 ? formatCurrency(row.afternoon) : '-'}
+                          {row.midday > 0 ? formatCurrency(row.midday) : '-'}
                         </TableCell>
                         <TableCell className="text-center text-muted-foreground">
                           {row.night > 0 ? formatCurrency(row.night) : '-'}
@@ -312,8 +300,7 @@ export function BrandDailySalesTable() {
                     {/* Totals Row */}
                     <TableRow className="bg-muted/50 font-bold">
                       <TableCell>TOTAL MARCA</TableCell>
-                      <TableCell className="text-center">{formatCurrency(totals.morning)}</TableCell>
-                      <TableCell className="text-center">{formatCurrency(totals.afternoon)}</TableCell>
+                      <TableCell className="text-center">{formatCurrency(totals.midday)}</TableCell>
                       <TableCell className="text-center">{formatCurrency(totals.night)}</TableCell>
                       <TableCell className="text-right text-primary text-lg">
                         {formatCurrency(totals.total)}
