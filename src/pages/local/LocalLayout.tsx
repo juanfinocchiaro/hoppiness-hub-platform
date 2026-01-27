@@ -264,6 +264,7 @@ export default function LocalLayout() {
       show: lp.canViewSalesReports || lp.canViewStockMovements,
       items: [
         { to: 'reportes/ventas', label: 'Ventas (de carga manual)', icon: BarChart3, show: lp.canViewSalesReports },
+        { to: 'ventas/importar', label: 'Importar Núcleo Check', icon: FileStack, show: lp.canViewSalesReports },
         { to: 'reportes/movimientos-stock', label: 'Movimientos de Stock', icon: History, show: lp.canViewStockMovements },
       ]
     },
