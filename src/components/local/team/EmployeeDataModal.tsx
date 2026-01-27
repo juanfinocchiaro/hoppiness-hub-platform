@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { KeyRound, Check, X } from 'lucide-react';
 import type { EmployeeData } from './types';
 
 interface EmployeeDataModalProps {
@@ -37,6 +38,31 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
   // Labor data
   const [monthlyHoursTarget, setMonthlyHoursTarget] = useState('160');
   const [hourlyRate, setHourlyRate] = useState('');
+  
+  // Clock PIN (stored in profiles)
+  const [clockPin, setClockPin] = useState('');
+  const [pinError, setPinError] = useState('');
+
+  // Fetch current clock_pin from profiles
+  const { data: profileData } = useQuery({
+    queryKey: ['profile-clock-pin', userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('clock_pin')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
+  useEffect(() => {
+    if (profileData?.clock_pin) {
+      setClockPin(profileData.clock_pin);
+    }
+  }, [profileData]);
 
   useEffect(() => {
     if (existingData) {
@@ -54,8 +80,23 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
     }
   }, [existingData]);
 
+  const validatePin = (pin: string): boolean => {
+    if (!pin) return true; // Empty is valid (optional)
+    if (!/^\d{4}$/.test(pin)) {
+      setPinError('El PIN debe ser de 4 dígitos');
+      return false;
+    }
+    setPinError('');
+    return true;
+  };
+
   const saveMutation = useMutation({
     mutationFn: async () => {
+      // Validate PIN
+      if (clockPin && !validatePin(clockPin)) {
+        throw new Error('PIN inválido');
+      }
+
       const data = {
         user_id: userId,
         branch_id: branchId,
@@ -72,6 +113,7 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
         hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
       };
 
+      // Save employee data
       if (existingData?.id) {
         const { error } = await supabase
           .from('employee_data')
@@ -84,14 +126,24 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
           .insert(data);
         if (error) throw error;
       }
+
+      // Save clock_pin to profiles (only if changed)
+      if (clockPin !== (profileData?.clock_pin || '')) {
+        const { error: pinError } = await supabase
+          .from('profiles')
+          .update({ clock_pin: clockPin || null })
+          .eq('user_id', userId);
+        if (pinError) throw pinError;
+      }
     },
     onSuccess: () => {
       toast.success('Datos guardados');
       queryClient.invalidateQueries({ queryKey: ['employee-data', userId, branchId] });
+      queryClient.invalidateQueries({ queryKey: ['profile-clock-pin', userId] });
       onSuccess();
       onOpenChange(false);
     },
-    onError: () => toast.error('Error al guardar'),
+    onError: (error) => toast.error(error instanceof Error ? error.message : 'Error al guardar'),
   });
 
   return (
@@ -210,6 +262,45 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
                   onChange={(e) => setHourlyRate(e.target.value)}
                   placeholder="0.00"
                 />
+              </div>
+            </div>
+
+            {/* Clock PIN */}
+            <div className="pt-4 border-t">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <KeyRound className="h-4 w-4" />
+                  PIN de Fichaje
+                </Label>
+                <div className="flex gap-2 items-center">
+                  <Input 
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={clockPin}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setClockPin(val);
+                      if (val && val.length === 4) {
+                        setPinError('');
+                      }
+                    }}
+                    placeholder="4 dígitos"
+                    className="max-w-32 text-center text-lg tracking-widest"
+                  />
+                  {clockPin.length === 4 && (
+                    <Check className="h-5 w-5 text-green-500" />
+                  )}
+                  {pinError && (
+                    <X className="h-5 w-5 text-destructive" />
+                  )}
+                </div>
+                {pinError && (
+                  <p className="text-sm text-destructive">{pinError}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Este PIN es necesario para fichar entrada/salida con el código QR de la sucursal.
+                </p>
               </div>
             </div>
           </TabsContent>
