@@ -361,10 +361,26 @@ export default function BranchLayout() {
                 <Menu className="w-5 h-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 p-4">
-              {/* Branch selector at top */}
-              {accessibleBranches.length > 1 && (
-                <div className="mb-3">
+            <SheetContent side="left" className="w-72 p-4 flex flex-col">
+              {/* Logo and title at top */}
+              <div className="mb-4 flex items-center gap-3">
+                <img 
+                  src={logoHoppinessBlue} 
+                  alt="Hoppiness" 
+                  className="w-14 h-14 rounded-xl object-contain bg-white p-1"
+                />
+                <span className="text-lg font-bold">Mi Local</span>
+              </div>
+              
+              {/* Navigation */}
+              <div className="flex-1 overflow-y-auto">
+                <NavContent />
+              </div>
+              
+              {/* Footer with branch selector + actions */}
+              <div className="pt-4 border-t space-y-3">
+                {/* Branch Selector */}
+                {accessibleBranches.length > 1 && (
                   <Select value={branchId} onValueChange={handleBranchChange}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Seleccionar local" />
@@ -377,50 +393,37 @@ export default function BranchLayout() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-              )}
-              
-              {/* Single branch display */}
-              {accessibleBranches.length === 1 && selectedBranch && (
-                <div className="flex items-center gap-2 text-sm px-2 py-1.5 bg-muted/50 rounded-md mb-3">
-                  <Store className="w-4 h-4 text-primary" />
-                  <span className="font-medium">{selectedBranch.name}</span>
-                </div>
-              )}
+                )}
+                
+                {/* Single branch display */}
+                {accessibleBranches.length === 1 && selectedBranch && (
+                  <div className="flex items-center gap-2 text-sm px-2 py-1.5 bg-muted/50 rounded-md">
+                    <Store className="w-4 h-4 text-primary" />
+                    <span className="font-medium">{selectedBranch.name}</span>
+                  </div>
+                )}
 
-              {/* Logo and title */}
-              <div className="mb-4 flex items-center gap-3">
-                <img 
-                  src={logoHoppinessBlue} 
-                  alt="Hoppiness" 
-                  className="w-14 h-14 rounded-xl object-contain bg-white p-1"
-                />
-                <div>
-                  <span className="text-lg font-bold">Mi Local</span>
-                </div>
-              </div>
-              
-              <NavContent />
-              
-              <div className="absolute bottom-4 left-4 right-4 space-y-1">
-                {canAccessAdmin && !isEmbedded && (
-                  <ExternalLink to="/mimarca">
+                {/* Actions */}
+                <div className="space-y-1">
+                  {canAccessAdmin && !isEmbedded && (
+                    <ExternalLink to="/mimarca">
+                      <Button variant="ghost" className="w-full justify-start">
+                        <Building2 className="w-4 h-4 mr-3" />
+                        Cambiar a Mi Marca
+                      </Button>
+                    </ExternalLink>
+                  )}
+                  <ExternalLink to="/">
                     <Button variant="ghost" className="w-full justify-start">
-                      <Building2 className="w-4 h-4 mr-3" />
-                      Cambiar a Mi Marca
+                      <Home className="w-4 h-4 mr-3" />
+                      Volver al Inicio
                     </Button>
                   </ExternalLink>
-                )}
-                <ExternalLink to="/">
-                  <Button variant="ghost" className="w-full justify-start">
-                    <Home className="w-4 h-4 mr-3" />
-                    Volver al Inicio
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={signOut}>
+                    <LogOut className="w-4 h-4 mr-3" />
+                    Salir
                   </Button>
-                </ExternalLink>
-                <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={signOut}>
-                  <LogOut className="w-4 h-4 mr-3" />
-                  Salir
-                </Button>
+                </div>
               </div>
             </SheetContent>
           </Sheet>
@@ -431,9 +434,26 @@ export default function BranchLayout() {
 
       <div className="flex">
         <aside className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 bg-card border-r">
-          {/* Header with branch selector ABOVE title */}
-          <div className="p-4 border-b space-y-3">
-            {/* Branch Selector - Always visible at top */}
+          {/* Header - Logo and title only */}
+          <div className="p-6 border-b">
+            <div className="flex items-center gap-3">
+              <img 
+                src={logoHoppinessBlue} 
+                alt="Hoppiness" 
+                className="w-14 h-14 rounded-xl object-contain bg-white p-1"
+              />
+              <span className="text-lg font-bold">Mi Local</span>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <NavContent />
+          </div>
+
+          {/* Footer - Branch selector + actions */}
+          <div className="p-4 border-t space-y-3">
+            {/* Branch Selector */}
             {accessibleBranches.length > 1 && (
               <Select value={branchId} onValueChange={handleBranchChange}>
                 <SelectTrigger className="w-full">
@@ -457,46 +477,31 @@ export default function BranchLayout() {
               </div>
             )}
 
-            {/* Logo and title */}
-            <div className="flex items-center gap-3 pt-2">
-              <img 
-                src={logoHoppinessBlue} 
-                alt="Hoppiness" 
-                className="w-14 h-14 rounded-xl object-contain bg-white p-1"
-              />
-              <span className="text-lg font-bold">Mi Local</span>
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <NavContent />
-          </div>
-
-          {/* Footer - Only actions, no branch selector */}
-          <div className="p-4 border-t space-y-1">
-            {canAccessAdmin && !isEmbedded && (
-              <ExternalLink to="/mimarca">
+            {/* Actions */}
+            <div className="space-y-1">
+              {canAccessAdmin && !isEmbedded && (
+                <ExternalLink to="/mimarca">
+                  <Button variant="ghost" className="w-full justify-start">
+                    <Building2 className="w-4 h-4 mr-3" />
+                    Cambiar a Mi Marca
+                  </Button>
+                </ExternalLink>
+              )}
+              <ExternalLink to="/">
                 <Button variant="ghost" className="w-full justify-start">
-                  <Building2 className="w-4 h-4 mr-3" />
-                  Cambiar a Mi Marca
+                  <Home className="w-4 h-4 mr-3" />
+                  Volver al Inicio
                 </Button>
               </ExternalLink>
-            )}
-            <ExternalLink to="/">
-              <Button variant="ghost" className="w-full justify-start">
-                <Home className="w-4 h-4 mr-3" />
-                Volver al Inicio
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start text-muted-foreground" 
+                onClick={signOut}
+              >
+                <LogOut className="w-4 h-4 mr-3" />
+                Salir
               </Button>
-            </ExternalLink>
-            <Button 
-              variant="ghost" 
-              className="w-full justify-start text-muted-foreground" 
-              onClick={signOut}
-            >
-              <LogOut className="w-4 h-4 mr-3" />
-              Salir
-            </Button>
+            </div>
           </div>
         </aside>
 
