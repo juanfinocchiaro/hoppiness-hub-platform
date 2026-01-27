@@ -102,10 +102,6 @@ const App = () => (
               <Route path="config/impresoras" element={<LocalImpresoras />} />
             </Route>
             
-            {/* Redirecciones de rutas antiguas */}
-            <Route path="/local/*" element={<Navigate to="/milocal" replace />} />
-            <Route path="/admin/*" element={<Navigate to="/mimarca" replace />} />
-            
             {/* Mi Marca - /mimarca */}
             <Route path="/mimarca" element={<AdminRoute><AdminDashboard /></AdminRoute>}>
               <Route index element={<AdminHome />} />
