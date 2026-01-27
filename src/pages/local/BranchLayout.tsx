@@ -363,7 +363,7 @@ export default function BranchLayout() {
             </SheetTrigger>
             <SheetContent side="left" className="w-72 p-4 flex flex-col">
               {/* Logo and title at top */}
-              <div className="mb-4 flex items-center gap-3">
+              <div className="mb-6 flex items-center gap-3">
                 <img 
                   src={logoHoppinessBlue} 
                   alt="Hoppiness" 
@@ -507,7 +507,7 @@ export default function BranchLayout() {
 
         {/* Main content */}
         <main className="flex-1 lg:ml-72">
-          <div className="p-4 md:p-6 lg:p-8">
+          <div className="p-6">
             {renderContent()}
           </div>
         </main>
