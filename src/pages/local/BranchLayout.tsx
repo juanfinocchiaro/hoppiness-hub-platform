@@ -52,7 +52,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import type { Tables } from '@/integrations/supabase/types';
-import BranchHome from '@/pages/local/BranchHome';
+import ManagerDashboard from '@/components/local/ManagerDashboard';
 import logoHoppinessBlue from '@/assets/logo-hoppiness-blue.png';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 
@@ -353,7 +353,7 @@ export default function BranchLayout() {
 
     const isDashboard = location.pathname === `/milocal/${branchId}`;
     if (isDashboard) {
-      return <BranchHome branch={selectedBranch} />;
+      return <ManagerDashboard branch={selectedBranch} />;
     }
 
     return <Outlet context={{ branch: selectedBranch, permissions: lp }} />;
