@@ -37,18 +37,26 @@ export function useCommunications() {
   });
 }
 
+export interface CommunicationWithSource extends CommunicationWithRead {
+  source_type: 'brand' | 'local';
+  source_branch_id: string | null;
+  tag: string | null;
+  custom_label: string | null;
+  branch_name?: string;
+}
+
 export function useUserCommunications() {
   const { user } = useAuth();
   
   return useQuery({
     queryKey: ['user-communications', user?.id],
     queryFn: async () => {
-      if (!user) return [];
+      if (!user) return { brand: [], local: [] };
       
-      // Get all published communications
+      // Get all published communications (RLS handles filtering)
       const { data: comms, error: commsError } = await supabase
         .from('communications')
-        .select('*')
+        .select('*, branches:source_branch_id(name)')
         .eq('is_published', true)
         .or('expires_at.is.null,expires_at.gt.now()')
         .order('published_at', { ascending: false });
@@ -65,10 +73,17 @@ export function useUserCommunications() {
       
       const readIds = new Set(reads?.map(r => r.communication_id) || []);
       
-      return (comms || []).map(c => ({
+      const allComms = (comms || []).map(c => ({
         ...c,
         is_read: readIds.has(c.id),
-      })) as CommunicationWithRead[];
+        branch_name: (c.branches as any)?.name || null,
+      })) as CommunicationWithSource[];
+      
+      // Separate by source
+      const brand = allComms.filter(c => c.source_type === 'brand');
+      const local = allComms.filter(c => c.source_type === 'local');
+      
+      return { brand, local };
     },
     enabled: !!user,
     staleTime: 30000,
@@ -76,8 +91,11 @@ export function useUserCommunications() {
 }
 
 export function useUnreadCount() {
-  const { data: comms } = useUserCommunications();
-  return comms?.filter(c => !c.is_read).length || 0;
+  const { data } = useUserCommunications();
+  if (!data) return 0;
+  const brandUnread = data.brand?.filter(c => !c.is_read).length || 0;
+  const localUnread = data.local?.filter(c => !c.is_read).length || 0;
+  return brandUnread + localUnread;
 }
 
 export function useMarkAsRead() {

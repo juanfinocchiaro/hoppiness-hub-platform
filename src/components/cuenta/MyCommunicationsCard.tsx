@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Bell, 
@@ -10,6 +9,8 @@ import {
   AlertCircle, 
   PartyPopper,
   ChevronRight,
+  Megaphone,
+  MessageSquare,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -18,7 +19,7 @@ import {
   useMarkAsRead, 
   getTypeLabel, 
   getTypeColor,
-  type CommunicationWithRead,
+  type CommunicationWithSource,
 } from '@/hooks/useCommunications';
 import {
   Dialog,
@@ -36,13 +37,16 @@ const TYPE_ICONS = {
 };
 
 export default function MyCommunicationsCard() {
-  const { data: communications, isLoading } = useUserCommunications();
+  const { data, isLoading } = useUserCommunications();
   const markAsRead = useMarkAsRead();
-  const [selectedComm, setSelectedComm] = useState<CommunicationWithRead | null>(null);
+  const [selectedComm, setSelectedComm] = useState<CommunicationWithSource | null>(null);
 
-  const unreadCount = communications?.filter(c => !c.is_read).length || 0;
+  const brandComms = data?.brand || [];
+  const localComms = data?.local || [];
+  const brandUnread = brandComms.filter(c => !c.is_read).length;
+  const localUnread = localComms.filter(c => !c.is_read).length;
 
-  const handleOpen = async (comm: CommunicationWithRead) => {
+  const handleOpen = async (comm: CommunicationWithSource) => {
     setSelectedComm(comm);
     if (!comm.is_read) {
       await markAsRead.mutateAsync(comm.id);
@@ -69,6 +73,62 @@ export default function MyCommunicationsCard() {
     );
   }
 
+  const renderCommList = (comms: CommunicationWithSource[], icon: React.ReactNode, title: string, unread: number) => {
+    if (comms.length === 0) return null;
+    
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          {icon}
+          <span>{title}</span>
+          {unread > 0 && (
+            <Badge variant="destructive" className="text-xs px-1.5 py-0">
+              {unread}
+            </Badge>
+          )}
+        </div>
+        {comms.slice(0, 3).map(comm => {
+          const TypeIcon = TYPE_ICONS[comm.type as keyof typeof TYPE_ICONS] || Info;
+          
+          return (
+            <button
+              key={comm.id}
+              onClick={() => handleOpen(comm)}
+              className={`w-full p-3 rounded-lg border text-left transition-colors hover:bg-muted/50 ${
+                !comm.is_read ? 'bg-primary/5 border-primary/20' : 'border-border'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div className={`p-1.5 rounded ${getTypeColor(comm.type)}`}>
+                  <TypeIcon className="w-4 h-4" />
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`font-medium truncate ${!comm.is_read ? 'text-foreground' : 'text-muted-foreground'}`}>
+                      {comm.title}
+                    </span>
+                    {!comm.is_read && (
+                      <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(comm.published_at), "d MMM", { locale: es })}
+                    {comm.branch_name && ` • ${comm.branch_name}`}
+                  </p>
+                </div>
+                
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const hasAny = brandComms.length > 0 || localComms.length > 0;
+
   return (
     <>
       <Card>
@@ -76,51 +136,18 @@ export default function MyCommunicationsCard() {
           <CardTitle className="flex items-center gap-2">
             <Bell className="w-5 h-5" />
             Comunicados
-            {unreadCount > 0 && (
+            {(brandUnread + localUnread) > 0 && (
               <Badge variant="destructive" className="ml-auto">
-                {unreadCount} sin leer
+                {brandUnread + localUnread} sin leer
               </Badge>
             )}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {communications && communications.length > 0 ? (
-            <div className="space-y-2">
-              {communications.slice(0, 5).map(comm => {
-                const TypeIcon = TYPE_ICONS[comm.type] || Info;
-                
-                return (
-                  <button
-                    key={comm.id}
-                    onClick={() => handleOpen(comm)}
-                    className={`w-full p-3 rounded-lg border text-left transition-colors hover:bg-muted/50 ${
-                      !comm.is_read ? 'bg-primary/5 border-primary/20' : 'border-border'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={`p-1.5 rounded ${getTypeColor(comm.type)}`}>
-                        <TypeIcon className="w-4 h-4" />
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className={`font-medium truncate ${!comm.is_read ? 'text-foreground' : 'text-muted-foreground'}`}>
-                            {comm.title}
-                          </span>
-                          {!comm.is_read && (
-                            <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {format(new Date(comm.published_at), "d MMM", { locale: es })}
-                        </p>
-                      </div>
-                      
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                  </button>
-                );
-              })}
+          {hasAny ? (
+            <div className="space-y-4">
+              {renderCommList(brandComms, <Megaphone className="w-4 h-4" />, "De la Marca", brandUnread)}
+              {renderCommList(localComms, <MessageSquare className="w-4 h-4" />, "De tu Encargado", localUnread)}
             </div>
           ) : (
             <p className="text-center text-muted-foreground py-4">
@@ -139,7 +166,7 @@ export default function MyCommunicationsCard() {
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg ${getTypeColor(selectedComm.type)}`}>
                     {(() => {
-                      const Icon = TYPE_ICONS[selectedComm.type] || Info;
+                      const Icon = TYPE_ICONS[selectedComm.type as keyof typeof TYPE_ICONS] || Info;
                       return <Icon className="w-5 h-5" />;
                     })()}
                   </div>
@@ -159,11 +186,16 @@ export default function MyCommunicationsCard() {
               </div>
               
               <div className="flex items-center justify-between pt-4 border-t">
-                <Badge variant="secondary">
-                  {getTypeLabel(selectedComm.type)}
-                </Badge>
+                <div className="flex gap-2">
+                  <Badge variant="secondary">
+                    {getTypeLabel(selectedComm.type)}
+                  </Badge>
+                  {selectedComm.source_type === 'local' && selectedComm.branch_name && (
+                    <Badge variant="outline">{selectedComm.branch_name}</Badge>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Check className="w-4 h-4 text-success" />
+                  <Check className="w-4 h-4 text-green-500" />
                   Leído
                 </div>
               </div>

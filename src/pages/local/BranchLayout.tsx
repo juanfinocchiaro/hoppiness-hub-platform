@@ -44,6 +44,7 @@ import {
   FileText,
   AlertTriangle,
   DollarSign,
+  MessageSquare,
 } from 'lucide-react';
 import {
   Sheet,
@@ -200,6 +201,7 @@ export default function BranchLayout() {
         { to: 'equipo/adelantos', label: 'Adelantos', icon: DollarSign, show: lp.canViewTeam },
         { to: 'equipo/apercibimientos', label: 'Apercibimientos', icon: AlertTriangle, show: lp.canViewTeam },
         { to: 'equipo/reglamentos', label: 'Firmas Reglamento', icon: FileText, show: lp.canEditSchedules },
+        { to: 'equipo/comunicados', label: 'Comunicados', icon: MessageSquare, show: lp.canViewTeam },
       ]
     },
     {
