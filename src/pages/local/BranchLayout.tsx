@@ -41,6 +41,9 @@ import {
   Printer,
   AlertCircle,
   Building2,
+  FileText,
+  AlertTriangle,
+  DollarSign,
 } from 'lucide-react';
 import {
   Sheet,
@@ -194,6 +197,9 @@ export default function BranchLayout() {
         { to: 'equipo', label: 'Mi Equipo', icon: Users, show: lp.canViewTeam },
         { to: 'equipo/horarios', label: 'Horarios', icon: Clock, show: lp.canEditSchedules },
         { to: 'equipo/fichajes', label: 'Fichajes', icon: Clock, show: lp.canViewAllClockIns },
+        { to: 'equipo/adelantos', label: 'Adelantos', icon: DollarSign, show: lp.canViewTeam },
+        { to: 'equipo/apercibimientos', label: 'Apercibimientos', icon: AlertTriangle, show: lp.canViewTeam },
+        { to: 'equipo/reglamentos', label: 'Firmas Reglamento', icon: FileText, show: lp.canEditSchedules },
       ]
     },
     {

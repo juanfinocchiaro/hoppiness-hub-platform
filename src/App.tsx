@@ -28,6 +28,7 @@ import SchedulesPage from "./pages/local/SchedulesPage";
 import PrintersPage from "./pages/local/PrintersPage";
 import AdvancesPage from "./pages/local/AdvancesPage";
 import WarningsPage from "./pages/local/WarningsPage";
+import RegulationsPage from "./pages/local/RegulationsPage";
 import FichajeQRDisplay from "./pages/local/FichajeQRDisplay";
 
 // Mi Marca
@@ -97,6 +98,7 @@ const App = () => (
               <Route path="equipo/horarios" element={<SchedulesPage />} />
               <Route path="equipo/adelantos" element={<AdvancesPage />} />
               <Route path="equipo/apercibimientos" element={<WarningsPage />} />
+              <Route path="equipo/reglamentos" element={<RegulationsPage />} />
               
               {/* Configuración */}
               <Route path="config/impresoras" element={<PrintersPage />} />

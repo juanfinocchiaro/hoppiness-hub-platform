@@ -5999,6 +5999,7 @@ export type Database = {
           created_at: string
           id: string
           regulation_id: string
+          regulation_version: number | null
           signed_at: string
           signed_document_url: string
           uploaded_by: string
@@ -6009,6 +6010,7 @@ export type Database = {
           created_at?: string
           id?: string
           regulation_id: string
+          regulation_version?: number | null
           signed_at?: string
           signed_document_url: string
           uploaded_by: string
@@ -6019,6 +6021,7 @@ export type Database = {
           created_at?: string
           id?: string
           regulation_id?: string
+          regulation_version?: number | null
           signed_at?: string
           signed_document_url?: string
           uploaded_by?: string
@@ -6059,30 +6062,39 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          description: string | null
           document_url: string
           effective_date: string
           id: string
           is_active: boolean
+          pdf_url: string | null
+          published_at: string | null
           title: string
           version: number
         }
         Insert: {
           created_at?: string
           created_by?: string | null
+          description?: string | null
           document_url: string
           effective_date?: string
           id?: string
           is_active?: boolean
+          pdf_url?: string | null
+          published_at?: string | null
           title?: string
           version: number
         }
         Update: {
           created_at?: string
           created_by?: string | null
+          description?: string | null
           document_url?: string
           effective_date?: string
           id?: string
           is_active?: boolean
+          pdf_url?: string | null
+          published_at?: string | null
           title?: string
           version?: number
         }
