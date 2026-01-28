@@ -75,19 +75,23 @@ export default function CuentaDashboard() {
     <div className="min-h-screen flex flex-col bg-muted/30">
       <PublicHeader />
       
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {/* Welcome */}
-          <div className="flex items-center justify-between">
+      <main className="flex-1 container mx-auto px-4 py-6 md:py-8">
+        <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
+          {/* Welcome - responsive */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-bold">
+              <h1 className="text-xl md:text-2xl font-bold">
                 Hola, {profile?.full_name?.split(' ')[0] || 'Usuario'}! 👋
               </h1>
-              <p className="text-muted-foreground">
-                Bienvenido a tu cuenta de Hoppiness Club
+              <p className="text-sm text-muted-foreground">
+                Bienvenido a tu cuenta
               </p>
             </div>
-            <Button variant="outline" onClick={signOut}>
+            <Button 
+              variant="outline" 
+              onClick={signOut}
+              className="w-full sm:w-auto min-h-[44px]"
+            >
               Cerrar sesión
             </Button>
           </div>
@@ -95,12 +99,12 @@ export default function CuentaDashboard() {
           {/* Employee Section */}
           {isEmployee ? (
             <>
-              <div className="border-t pt-6">
-                <div className="flex items-center gap-2 mb-4">
+              <div className="border-t pt-4 md:pt-6">
+                <div className="flex items-center gap-2 mb-3">
                   <Briefcase className="w-5 h-5 text-primary" />
-                  <h2 className="text-lg font-semibold">Mi Trabajo</h2>
+                  <h2 className="text-base md:text-lg font-semibold">Mi Trabajo</h2>
                   {localRole && (
-                    <span className="text-sm bg-primary/10 text-primary px-2 py-0.5 rounded">
+                    <span className="text-xs md:text-sm bg-primary/10 text-primary px-2 py-0.5 rounded">
                       {getRoleLabel(localRole)}
                     </span>
                   )}
@@ -108,38 +112,37 @@ export default function CuentaDashboard() {
                 
                 {/* Missing PIN Banner */}
                 {needsPinSetup && (
-                  <div className="mb-4">
+                  <div className="mb-3">
                     <MissingPinBanner employeeName={profile?.full_name} />
                   </div>
                 )}
               </div>
 
-              {/* Branch Cards */}
+              {/* Branch Cards - optimized for mobile */}
               {employeeBranches && employeeBranches.length > 0 && (
-                <div className="grid gap-4">
+                <div className="grid gap-3">
                   {employeeBranches.map((branch) => (
-                    <Card key={branch.id}>
-                      <CardHeader className="pb-2">
-                        <div className="flex items-center gap-2">
-                          <Store className="w-5 h-5 text-muted-foreground" />
-                          <CardTitle className="text-lg">{branch.name}</CardTitle>
+                    <Card key={branch.id} className="hover:shadow-sm transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <Store className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                            <span className="font-medium truncate">{branch.name}</span>
+                          </div>
+                          <Link to="/milocal">
+                            <Button variant="outline" size="sm" className="min-h-[36px]">
+                              <ArrowRight className="w-4 h-4" />
+                            </Button>
+                          </Link>
                         </div>
-                      </CardHeader>
-                      <CardContent>
-                        <Link to="/milocal">
-                          <Button variant="outline">
-                            Ir a Mi Local
-                            <ArrowRight className="w-4 h-4 ml-2" />
-                          </Button>
-                        </Link>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
               )}
 
-              {/* Employee Cards */}
-              <div className="grid gap-4">
+              {/* Employee Cards - responsive grid */}
+              <div className="grid gap-3 md:gap-4">
                 <MyCommunicationsCard />
                 <MyRegulationsCard />
                 <MyScheduleCard />
@@ -163,21 +166,18 @@ export default function CuentaDashboard() {
           )}
 
           {/* Profile & Settings - Always visible */}
-          <div className="border-t pt-6">
+          <div className="border-t pt-4 md:pt-6">
             <Link to="/cuenta/perfil">
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardHeader>
-                  <User className="w-8 h-8 text-primary mb-2" />
-                  <CardTitle>Mi Perfil</CardTitle>
-                  <CardDescription>
-                    {profile?.full_name}<br />
-                    {profile?.email}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button variant="link" className="p-0">
-                    Editar <ArrowRight className="w-4 h-4 ml-1" />
-                  </Button>
+              <Card className="hover:shadow-md transition-shadow cursor-pointer active:bg-muted/50">
+                <CardContent className="p-4 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <User className="w-10 h-10 text-primary flex-shrink-0" />
+                    <div className="min-w-0">
+                      <h3 className="font-semibold truncate">{profile?.full_name || 'Mi Perfil'}</h3>
+                      <p className="text-sm text-muted-foreground truncate">{profile?.email}</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                 </CardContent>
               </Card>
             </Link>
