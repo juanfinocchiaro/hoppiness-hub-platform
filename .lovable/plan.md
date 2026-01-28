@@ -297,7 +297,7 @@ supabase/functions/send-schedule-change-email/index.ts
 | 3 | Fase 3 | Fichaje renovado | ✅ COMPLETADO |
 | 4 | Fase 4 | Reglamentos | ✅ COMPLETADO |
 | 5 | Fase 5 | Comunicaciones | ✅ COMPLETADO |
-| 6 | Fase 6 | Apercibimientos | 🔄 PENDIENTE |
+| 6 | Fase 6 | Apercibimientos | ✅ COMPLETADO |
 | 7 | Fase 7 | Adelantos | 🔄 PENDIENTE |
 | 8 | Fase 2 | Sistema turnos | 🔄 PENDIENTE |
 | 9 | Fase 8 | Dashboard Encargado | 🔄 PENDIENTE |

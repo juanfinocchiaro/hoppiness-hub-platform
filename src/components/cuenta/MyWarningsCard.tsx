@@ -1,10 +1,14 @@
+/**
+ * MyWarningsCard - Vista de apercibimientos para empleados en Mi Cuenta
+ * Fase 6: Con descarga de documento firmado
+ */
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Calendar, Eye, EyeOff } from 'lucide-react';
+import { AlertTriangle, Calendar, Eye, EyeOff, FileText, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,13 +20,14 @@ interface Warning {
   description: string;
   warning_date: string;
   acknowledged_at: string | null;
+  signed_document_url: string | null;
   issuer?: { full_name: string };
 }
 
 const WARNING_TYPE_LABELS: Record<string, { label: string; color: string }> = {
   verbal: { label: 'Verbal', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
   written: { label: 'Escrito', color: 'bg-orange-100 text-orange-800 border-orange-300' },
-  late_arrival: { label: 'Llegada tarde', color: 'bg-blue-100 text-blue-800 border-blue-300' },
+  lateness: { label: 'Llegada tarde', color: 'bg-blue-100 text-blue-800 border-blue-300' },
   absence: { label: 'Inasistencia', color: 'bg-red-100 text-red-800 border-red-300' },
   suspension: { label: 'Suspensión', color: 'bg-red-200 text-red-900 border-red-400' },
   other: { label: 'Otro', color: 'bg-gray-100 text-gray-800 border-gray-300' },
@@ -32,13 +37,11 @@ export default function MyWarningsCard() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   
-  // Get warnings for current user - try user_id first, then match by employee
   const { data: warnings, isLoading } = useQuery({
     queryKey: ['my-warnings', user?.id],
     queryFn: async () => {
       if (!user) return [];
       
-      // First get warnings directly by user_id
       const { data, error } = await supabase
         .from('warnings')
         .select(`
@@ -47,6 +50,7 @@ export default function MyWarningsCard() {
           description,
           warning_date,
           acknowledged_at,
+          signed_document_url,
           issued_by
         `)
         .eq('user_id', user.id)
@@ -56,7 +60,7 @@ export default function MyWarningsCard() {
       
       if (error) throw error;
       
-      // Fetch issuer names separately if needed
+      // Fetch issuer names
       const issuerIds = [...new Set(data?.map(w => w.issued_by).filter(Boolean))];
       let issuerMap: Record<string, string> = {};
       
@@ -79,7 +83,6 @@ export default function MyWarningsCard() {
     enabled: !!user,
   });
 
-  // Mutation to mark as seen
   const acknowledgeMutation = useMutation({
     mutationFn: async (warningId: string) => {
       const { error } = await supabase
@@ -122,7 +125,6 @@ export default function MyWarningsCard() {
     );
   }
 
-  // Don't show if no warnings
   if (!warnings || warnings.length === 0) {
     return null;
   }
@@ -164,8 +166,22 @@ export default function MyWarningsCard() {
                 <p className="text-sm">{warning.description}</p>
                 {warning.issuer && (
                   <p className="text-xs text-muted-foreground">
-                    Por: {(warning.issuer as any).full_name}
+                    Por: {warning.issuer.full_name}
                   </p>
+                )}
+                
+                {/* Signed document link */}
+                {warning.signed_document_url && (
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-primary gap-1"
+                    onClick={() => window.open(warning.signed_document_url!, '_blank')}
+                  >
+                    <FileText className="w-3 h-3" />
+                    Ver documento firmado
+                    <ExternalLink className="w-3 h-3" />
+                  </Button>
                 )}
               </div>
               

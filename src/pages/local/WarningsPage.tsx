@@ -1,12 +1,13 @@
 /**
- * WarningsPage - Gestión de advertencias/apercibimientos de empleados
+ * WarningsPage - Gestión de apercibimientos de empleados
+ * Fase 6: Migrado a user_id, con upload de documento firmado
  */
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,7 +28,10 @@ import {
   Clock,
   UserX,
   CheckCircle,
-  Search
+  Search,
+  Upload,
+  Image,
+  ExternalLink
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -42,10 +46,11 @@ interface Warning {
   warning_date: string;
   issued_by: string;
   acknowledged_at: string | null;
+  signed_document_url: string | null;
   is_active: boolean;
   created_at: string;
-  employee?: { full_name: string };
-  issuer?: { full_name: string };
+  employee_name?: string;
+  issuer_name?: string;
 }
 
 const WARNING_TYPES = [
@@ -65,10 +70,42 @@ export default function WarningsPage() {
   
   const [showNewWarning, setShowNewWarning] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [selectedUser, setSelectedUser] = useState('');
   const [warningType, setWarningType] = useState('');
   const [description, setDescription] = useState('');
   const [incidentDate, setIncidentDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  
+  // Upload state
+  const [uploadingWarningId, setUploadingWarningId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch team members using user_roles_v2 + profiles
+  const { data: teamMembers } = useQuery({
+    queryKey: ['branch-team-members', branchId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_roles_v2')
+        .select('user_id')
+        .contains('branch_ids', [branchId!])
+        .eq('is_active', true)
+        .not('local_role', 'is', null);
+      
+      if (error) throw error;
+      
+      const userIds = data?.map(r => r.user_id) || [];
+      if (userIds.length === 0) return [];
+      
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', userIds)
+        .order('full_name');
+      
+      if (profilesError) throw profilesError;
+      return profiles || [];
+    },
+    enabled: !!branchId,
+  });
 
   // Fetch warnings
   const { data: warnings, isLoading } = useQuery({
@@ -76,32 +113,35 @@ export default function WarningsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('warnings')
-        .select(`
-          *,
-          employee:employees!warnings_user_id_fkey(full_name),
-          issuer:profiles!warnings_issued_by_fkey(full_name)
-        `)
+        .select('*')
         .eq('branch_id', branchId!)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return (data || []) as unknown as Warning[];
-    },
-    enabled: !!branchId,
-  });
-
-  // Fetch employees
-  const { data: employees } = useQuery({
-    queryKey: ['branch-employees', branchId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('id, full_name')
-        .eq('branch_id', branchId!)
-        .eq('is_active', true)
-        .order('full_name');
-      if (error) throw error;
-      return data;
+      
+      // Get user names for all warnings
+      const userIds = [...new Set([
+        ...(data?.map(w => w.user_id).filter(Boolean) || []),
+        ...(data?.map(w => w.issued_by).filter(Boolean) || [])
+      ])];
+      
+      let profileMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name')
+          .in('user_id', userIds);
+        
+        profiles?.forEach(p => {
+          if (p.user_id) profileMap[p.user_id] = p.full_name || 'Sin nombre';
+        });
+      }
+      
+      return (data || []).map(w => ({
+        ...w,
+        employee_name: w.user_id ? profileMap[w.user_id] : 'N/A',
+        issuer_name: w.issued_by ? profileMap[w.issued_by] : 'Sistema'
+      })) as Warning[];
     },
     enabled: !!branchId,
   });
@@ -109,13 +149,10 @@ export default function WarningsPage() {
   // Create warning mutation
   const createWarning = useMutation({
     mutationFn: async () => {
-      const employee = employees?.find(e => e.id === selectedEmployee);
-      if (!employee) throw new Error('Empleado no encontrado');
-      
       const { error } = await supabase
         .from('warnings')
         .insert({
-          user_id: employee.id, // Use employee id as user_id
+          user_id: selectedUser,
           branch_id: branchId!,
           warning_type: warningType,
           description,
@@ -130,16 +167,71 @@ export default function WarningsPage() {
       queryClient.invalidateQueries({ queryKey: ['branch-warnings'] });
       toast.success('Apercibimiento registrado');
       setShowNewWarning(false);
-      setSelectedEmployee('');
-      setWarningType('');
-      setDescription('');
-      setIncidentDate(format(new Date(), 'yyyy-MM-dd'));
+      resetForm();
     },
     onError: (error) => {
       console.error(error);
       toast.error('Error al registrar el apercibimiento');
     },
   });
+
+  // Upload signed document mutation
+  const uploadSignedDocument = useMutation({
+    mutationFn: async ({ warningId, file }: { warningId: string; file: File }) => {
+      const warning = warnings?.find(w => w.id === warningId);
+      if (!warning) throw new Error('Apercibimiento no encontrado');
+      
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${warning.user_id}/${warningId}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('warning-signatures')
+        .upload(filePath, file, { upsert: true });
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: urlData } = supabase.storage
+        .from('warning-signatures')
+        .getPublicUrl(filePath);
+      
+      const { error: updateError } = await supabase
+        .from('warnings')
+        .update({ signed_document_url: urlData.publicUrl })
+        .eq('id', warningId);
+      
+      if (updateError) throw updateError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['branch-warnings'] });
+      toast.success('Documento firmado subido correctamente');
+      setUploadingWarningId(null);
+    },
+    onError: (error) => {
+      console.error(error);
+      toast.error('Error al subir el documento');
+      setUploadingWarningId(null);
+    },
+  });
+
+  const resetForm = () => {
+    setSelectedUser('');
+    setWarningType('');
+    setDescription('');
+    setIncidentDate(format(new Date(), 'yyyy-MM-dd'));
+  };
+
+  const handleFileSelect = (warningId: string) => {
+    setUploadingWarningId(warningId);
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && uploadingWarningId) {
+      uploadSignedDocument.mutate({ warningId: uploadingWarningId, file });
+    }
+    e.target.value = '';
+  };
 
   const getWarningTypeBadge = (type: string) => {
     const config = WARNING_TYPES.find(t => t.value === type) || WARNING_TYPES[5];
@@ -155,7 +247,7 @@ export default function WarningsPage() {
   // Filter warnings
   const filteredWarnings = warnings?.filter(w => {
     if (!searchQuery) return true;
-    return w.employee?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    return w.employee_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
            w.description?.toLowerCase().includes(searchQuery.toLowerCase());
   }) || [];
 
@@ -171,6 +263,15 @@ export default function WarningsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -196,14 +297,14 @@ export default function WarningsPage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Empleado *</Label>
-                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                <Select value={selectedUser} onValueChange={setSelectedUser}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar empleado" />
                   </SelectTrigger>
                   <SelectContent>
-                    {employees?.map(emp => (
-                      <SelectItem key={emp.id} value={emp.id}>
-                        {emp.full_name}
+                    {teamMembers?.map(member => (
+                      <SelectItem key={member.user_id} value={member.user_id!}>
+                        {member.full_name || 'Sin nombre'}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -255,7 +356,7 @@ export default function WarningsPage() {
               </Button>
               <Button 
                 onClick={() => createWarning.mutate()}
-                disabled={!selectedEmployee || !warningType || !description || createWarning.isPending}
+                disabled={!selectedUser || !warningType || !description || createWarning.isPending}
               >
                 Registrar
               </Button>
@@ -298,13 +399,14 @@ export default function WarningsPage() {
               <TableHead>Tipo</TableHead>
               <TableHead>Descripción</TableHead>
               <TableHead>Registrado por</TableHead>
-              <TableHead>Visto</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Documento</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredWarnings.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   No hay apercibimientos registrados
                 </TableCell>
@@ -316,14 +418,14 @@ export default function WarningsPage() {
                     {format(new Date(warning.warning_date), "dd/MM/yy", { locale: es })}
                   </TableCell>
                   <TableCell className="font-medium">
-                    {warning.employee?.full_name || 'N/A'}
+                    {warning.employee_name}
                   </TableCell>
                   <TableCell>{getWarningTypeBadge(warning.warning_type)}</TableCell>
-                  <TableCell className="max-w-[300px]">
+                  <TableCell className="max-w-[200px]">
                     <p className="truncate">{warning.description}</p>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {warning.issuer?.full_name || 'Sistema'}
+                    {warning.issuer_name}
                   </TableCell>
                   <TableCell>
                     {warning.acknowledged_at ? (
@@ -333,6 +435,31 @@ export default function WarningsPage() {
                       </Badge>
                     ) : (
                       <Badge variant="secondary">Pendiente</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {warning.signed_document_url ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1 text-primary"
+                        onClick={() => window.open(warning.signed_document_url!, '_blank')}
+                      >
+                        <Image className="h-4 w-4" />
+                        Ver
+                        <ExternalLink className="h-3 w-3" />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1"
+                        onClick={() => handleFileSelect(warning.id)}
+                        disabled={uploadSignedDocument.isPending && uploadingWarningId === warning.id}
+                      >
+                        <Upload className="h-4 w-4" />
+                        Subir firma
+                      </Button>
                     )}
                   </TableCell>
                 </TableRow>
