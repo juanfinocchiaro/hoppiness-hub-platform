@@ -294,8 +294,8 @@ supabase/functions/send-schedule-change-email/index.ts
 |-----------|------|-------------|--------|
 | 1 | Fase 1 | Limpieza BD | ✅ COMPLETADO |
 | 2 | Fase 9 | Bugs críticos | ✅ COMPLETADO |
-| 3 | Fase 3 | Fichaje renovado | 🔄 PENDIENTE |
-| 4 | Fase 4 | Reglamentos | 🔄 PENDIENTE |
+| 3 | Fase 3 | Fichaje renovado | ✅ COMPLETADO |
+| 4 | Fase 4 | Reglamentos | ✅ COMPLETADO |
 | 5 | Fase 5 | Comunicaciones | 🔄 PENDIENTE |
 | 6 | Fase 6 | Apercibimientos | 🔄 PENDIENTE |
 | 7 | Fase 7 | Adelantos | 🔄 PENDIENTE |
