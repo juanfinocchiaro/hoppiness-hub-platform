@@ -210,6 +210,7 @@ export default function BranchLayout() {
       icon: Settings,
       show: lp.canConfigPrinters,
       items: [
+        { to: 'config/turnos', label: 'Turnos', icon: Clock, show: lp.canConfigPrinters },
         { to: 'config/impresoras', label: 'Impresoras', icon: Printer, show: lp.canConfigPrinters },
       ]
     }

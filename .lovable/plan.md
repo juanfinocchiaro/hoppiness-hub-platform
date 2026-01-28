@@ -299,7 +299,7 @@ supabase/functions/send-schedule-change-email/index.ts
 | 5 | Fase 5 | Comunicaciones | ✅ COMPLETADO |
 | 6 | Fase 6 | Apercibimientos | ✅ COMPLETADO |
 | 7 | Fase 7 | Adelantos | ✅ COMPLETADO |
-| 8 | Fase 2 | Sistema turnos | 🔄 PENDIENTE |
+| 8 | Fase 2 | Sistema turnos | ✅ COMPLETADO |
 | 9 | Fase 8 | Dashboard Encargado | 🔄 PENDIENTE |
 | 10 | Fase 10 | Mobile | 🔄 PENDIENTE |
 | 11 | Fase 11 | Emails | 🔄 PENDIENTE |

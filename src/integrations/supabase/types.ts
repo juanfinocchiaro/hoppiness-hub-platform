@@ -1068,6 +1068,8 @@ export type Database = {
           rappi_api_key: string | null
           rappi_enabled: boolean | null
           rappi_store_id: string | null
+          shifts_morning_enabled: boolean | null
+          shifts_overnight_enabled: boolean | null
           slug: string | null
           takeaway_enabled: boolean | null
           updated_at: string
@@ -1116,6 +1118,8 @@ export type Database = {
           rappi_api_key?: string | null
           rappi_enabled?: boolean | null
           rappi_store_id?: string | null
+          shifts_morning_enabled?: boolean | null
+          shifts_overnight_enabled?: boolean | null
           slug?: string | null
           takeaway_enabled?: boolean | null
           updated_at?: string
@@ -1164,6 +1168,8 @@ export type Database = {
           rappi_api_key?: string | null
           rappi_enabled?: boolean | null
           rappi_store_id?: string | null
+          shifts_morning_enabled?: boolean | null
+          shifts_overnight_enabled?: boolean | null
           slug?: string | null
           takeaway_enabled?: boolean | null
           updated_at?: string

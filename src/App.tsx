@@ -30,6 +30,7 @@ import AdvancesPage from "./pages/local/AdvancesPage";
 import WarningsPage from "./pages/local/WarningsPage";
 import RegulationsPage from "./pages/local/RegulationsPage";
 import FichajeQRDisplay from "./pages/local/FichajeQRDisplay";
+import ShiftConfigPage from "./pages/local/ShiftConfigPage";
 
 // Mi Marca
 import BrandLayout from "./pages/admin/BrandLayout";
@@ -107,6 +108,7 @@ const App = () => (
               
               {/* Configuración */}
               <Route path="config/impresoras" element={<PrintersPage />} />
+              <Route path="config/turnos" element={<ShiftConfigPage />} />
             </Route>
             
             {/* Mi Marca - /mimarca */}
