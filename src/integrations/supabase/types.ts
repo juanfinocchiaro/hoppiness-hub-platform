@@ -2087,6 +2087,9 @@ export type Database = {
           id: string
           is_published: boolean | null
           published_at: string | null
+          source_branch_id: string | null
+          source_type: string | null
+          tag: string | null
           target_branch_ids: string[] | null
           target_roles: string[] | null
           title: string
@@ -2102,6 +2105,9 @@ export type Database = {
           id?: string
           is_published?: boolean | null
           published_at?: string | null
+          source_branch_id?: string | null
+          source_type?: string | null
+          tag?: string | null
           target_branch_ids?: string[] | null
           target_roles?: string[] | null
           title: string
@@ -2117,13 +2123,38 @@ export type Database = {
           id?: string
           is_published?: boolean | null
           published_at?: string | null
+          source_branch_id?: string | null
+          source_type?: string | null
+          tag?: string | null
           target_branch_ids?: string[] | null
           target_roles?: string[] | null
           title?: string
           type?: Database["public"]["Enums"]["communication_type"] | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "communications_source_branch_id_fkey"
+            columns: ["source_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communications_source_branch_id_fkey"
+            columns: ["source_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communications_source_branch_id_fkey"
+            columns: ["source_branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+        ]
       }
       contact_messages: {
         Row: {

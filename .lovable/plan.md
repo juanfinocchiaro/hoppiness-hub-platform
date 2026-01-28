@@ -296,7 +296,7 @@ supabase/functions/send-schedule-change-email/index.ts
 | 2 | Fase 9 | Bugs críticos | ✅ COMPLETADO |
 | 3 | Fase 3 | Fichaje renovado | ✅ COMPLETADO |
 | 4 | Fase 4 | Reglamentos | ✅ COMPLETADO |
-| 5 | Fase 5 | Comunicaciones | 🔄 PENDIENTE |
+| 5 | Fase 5 | Comunicaciones | ✅ COMPLETADO |
 | 6 | Fase 6 | Apercibimientos | 🔄 PENDIENTE |
 | 7 | Fase 7 | Adelantos | 🔄 PENDIENTE |
 | 8 | Fase 2 | Sistema turnos | 🔄 PENDIENTE |

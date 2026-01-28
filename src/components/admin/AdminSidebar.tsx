@@ -18,6 +18,7 @@ import {
   Plus,
   Building2,
   Search,
+  Megaphone,
 } from 'lucide-react';
 import NewBranchModal from './NewBranchModal';
 
@@ -107,6 +108,16 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
       items: [
         { type: 'navigation', to: '/mimarca/equipo-central', icon: Building2, label: 'Equipo Central' },
         { type: 'navigation', to: '/mimarca/usuarios', icon: Search, label: 'Todos los Usuarios' },
+      ],
+    });
+
+    // Comunicados
+    sections.push({
+      id: 'comunicados',
+      label: 'Comunicados',
+      icon: Megaphone,
+      items: [
+        { type: 'navigation', to: '/mimarca/comunicados', icon: Megaphone, label: 'Enviar Comunicados' },
       ],
     });
 

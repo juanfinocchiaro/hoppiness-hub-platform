@@ -37,6 +37,10 @@ import BrandHome from "./pages/admin/BrandHome";
 import BranchDetail from "./pages/admin/BranchDetail";
 import UsersPage from "./pages/admin/UsersPage";
 import CentralTeam from "./pages/admin/CentralTeam";
+import CommunicationsPage from "./pages/admin/CommunicationsPage";
+
+// Mi Local - Comunicaciones
+import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
 
 // Mi Cuenta
 import CuentaDashboard from "./pages/cuenta/CuentaDashboard";
@@ -99,6 +103,7 @@ const App = () => (
               <Route path="equipo/adelantos" element={<AdvancesPage />} />
               <Route path="equipo/apercibimientos" element={<WarningsPage />} />
               <Route path="equipo/reglamentos" element={<RegulationsPage />} />
+              <Route path="equipo/comunicados" element={<LocalCommunicationsPage />} />
               
               {/* Configuración */}
               <Route path="config/impresoras" element={<PrintersPage />} />
@@ -114,6 +119,9 @@ const App = () => (
               {/* Usuarios */}
               <Route path="usuarios" element={<UsersPage />} />
               <Route path="equipo-central" element={<CentralTeam />} />
+              
+              {/* Comunicados */}
+              <Route path="comunicados" element={<CommunicationsPage />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />
