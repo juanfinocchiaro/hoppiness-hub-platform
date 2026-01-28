@@ -1,11 +1,13 @@
 /**
  * AdvancesPage - Gestión de adelantos de sueldo
+ * Fase 7: Migrado a user_id, sin PIN, auto-aprobación por encargados
  */
 import { useState } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useSalaryAdvances, useCreateAdvance, useMarkAdvanceTransferred, useCancelAdvance } from '@/hooks/useSalaryAdvances';
+import { useAuth } from '@/hooks/useAuth';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,7 +20,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
-import { SupervisorPinDialog } from '@/components/cash/SupervisorPinDialog';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -31,7 +32,8 @@ import {
   CheckCircle, 
   XCircle, 
   AlertCircle,
-  Send
+  Send,
+  User
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -40,11 +42,10 @@ type Branch = Tables<'branches'>;
 export default function AdvancesPage() {
   const { branchId } = useParams();
   const { branch } = useOutletContext<{ branch: Branch }>();
+  const { user } = useAuth();
   
   const [showNewAdvance, setShowNewAdvance] = useState(false);
-  const [showPinDialog, setShowPinDialog] = useState(false);
-  const [pendingAdvance, setPendingAdvance] = useState<any>(null);
-  const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [selectedUser, setSelectedUser] = useState('');
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer'>('cash');
@@ -54,18 +55,30 @@ export default function AdvancesPage() {
   const markTransferred = useMarkAdvanceTransferred();
   const cancelAdvance = useCancelAdvance();
 
-  // Fetch employees
-  const { data: employees } = useQuery({
-    queryKey: ['branch-employees', branchId],
+  // Fetch team members using user_roles_v2 + profiles
+  const { data: teamMembers } = useQuery({
+    queryKey: ['branch-team-members', branchId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('employees')
-        .select('id, full_name')
-        .eq('branch_id', branchId!)
+        .from('user_roles_v2')
+        .select('user_id')
+        .contains('branch_ids', [branchId!])
         .eq('is_active', true)
-        .order('full_name');
+        .not('local_role', 'is', null);
+      
       if (error) throw error;
-      return data;
+      
+      const userIds = data?.map(r => r.user_id) || [];
+      if (userIds.length === 0) return [];
+      
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', userIds)
+        .order('full_name');
+      
+      if (profilesError) throw profilesError;
+      return profiles || [];
     },
     enabled: !!branchId,
   });
@@ -73,42 +86,33 @@ export default function AdvancesPage() {
   const formatCurrency = (n: number) => 
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n);
 
-  const handleRequestAdvance = () => {
-    if (!selectedEmployee || !amount || parseFloat(amount) <= 0) {
+  const handleCreateAdvance = async () => {
+    if (!selectedUser || !amount || parseFloat(amount) <= 0 || !branchId) {
       toast.error('Completá los campos requeridos');
       return;
     }
     
-    setPendingAdvance({
-      employeeId: selectedEmployee,
-      amount: parseFloat(amount),
-      reason,
-      paymentMethod,
-    });
-    setShowPinDialog(true);
-  };
-
-  const handlePinVerified = async (supervisorId: string) => {
-    if (!pendingAdvance || !branchId) return;
-    
     try {
       await createAdvance.mutateAsync({
         branchId,
-        employeeId: pendingAdvance.employeeId,
-        amount: pendingAdvance.amount,
-        reason: pendingAdvance.reason,
-        paymentMethod: pendingAdvance.paymentMethod,
-        authorizedBy: supervisorId,
+        userId: selectedUser,
+        amount: parseFloat(amount),
+        reason,
+        paymentMethod,
       });
       
       setShowNewAdvance(false);
-      setSelectedEmployee('');
-      setAmount('');
-      setReason('');
-      setPendingAdvance(null);
+      resetForm();
     } catch (error) {
       console.error(error);
     }
+  };
+
+  const resetForm = () => {
+    setSelectedUser('');
+    setAmount('');
+    setReason('');
+    setPaymentMethod('cash');
   };
 
   const getStatusBadge = (status: string) => {
@@ -155,28 +159,31 @@ export default function AdvancesPage() {
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              Nuevo Adelanto
+              Registrar Adelanto
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Registrar Adelanto</DialogTitle>
               <DialogDescription>
-                Requiere autorización de un supervisor con PIN
+                Registrá un adelanto ya entregado al empleado (post-pago)
               </DialogDescription>
             </DialogHeader>
             
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Empleado *</Label>
-                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                <Select value={selectedUser} onValueChange={setSelectedUser}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar empleado" />
                   </SelectTrigger>
                   <SelectContent>
-                    {employees?.map(emp => (
-                      <SelectItem key={emp.id} value={emp.id}>
-                        {emp.full_name}
+                    {teamMembers?.map(member => (
+                      <SelectItem key={member.user_id} value={member.user_id!}>
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          {member.full_name || 'Sin nombre'}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -219,6 +226,11 @@ export default function AdvancesPage() {
                     Transferencia
                   </Button>
                 </div>
+                {paymentMethod === 'transfer' && (
+                  <p className="text-xs text-muted-foreground">
+                    Quedará pendiente hasta que marques la transferencia como realizada
+                  </p>
+                )}
               </div>
               
               <div className="space-y-2">
@@ -237,10 +249,10 @@ export default function AdvancesPage() {
                 Cancelar
               </Button>
               <Button 
-                onClick={handleRequestAdvance}
-                disabled={!selectedEmployee || !amount}
+                onClick={handleCreateAdvance}
+                disabled={!selectedUser || !amount || createAdvance.isPending}
               >
-                Solicitar Autorización
+                Registrar
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -309,7 +321,7 @@ export default function AdvancesPage() {
                         {format(new Date(advance.created_at), "dd/MM/yy HH:mm", { locale: es })}
                       </TableCell>
                       <TableCell className="font-medium">
-                        {advance.employee?.full_name || 'N/A'}
+                        {advance.user_name || 'N/A'}
                       </TableCell>
                       <TableCell>{formatCurrency(advance.amount)}</TableCell>
                       <TableCell>
@@ -374,7 +386,7 @@ export default function AdvancesPage() {
                   {pendingTransfers.map(advance => (
                     <div key={advance.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div>
-                        <p className="font-medium">{advance.employee?.full_name}</p>
+                        <p className="font-medium">{advance.user_name}</p>
                         <p className="text-sm text-muted-foreground">
                           {format(new Date(advance.created_at), "dd 'de' MMMM", { locale: es })}
                         </p>
@@ -397,16 +409,6 @@ export default function AdvancesPage() {
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* PIN Dialog */}
-      <SupervisorPinDialog
-        open={showPinDialog}
-        onOpenChange={setShowPinDialog}
-        onSuccess={(supervisor) => handlePinVerified(supervisor.userId)}
-        branchId={branchId || ''}
-        title="Autorizar Adelanto"
-        description={`Ingresá tu PIN para autorizar un adelanto de ${formatCurrency(pendingAdvance?.amount || 0)}`}
-      />
     </div>
   );
 }
