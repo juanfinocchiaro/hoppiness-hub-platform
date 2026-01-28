@@ -37,12 +37,11 @@ interface Invitation {
 }
 
 const ROLE_LABELS: Record<string, string> = {
-  kds: 'KDS',
+  empleado: 'Colaborador',
   cajero: 'Cajero',
   encargado: 'Encargado',
   franquiciado: 'Franquiciado',
-  marketing: 'Marketing',
-  admin: 'Administrador',
+  contador_local: 'Contador',
 };
 
 export default function AceptarInvitacion() {
@@ -148,19 +147,43 @@ export default function AceptarInvitacion() {
 
     setProcessing(true);
     try {
-      // Create user role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role: invitation.role as any,
-          branch_id: invitation.branch_id,
-          is_active: true,
-        });
+      // Check if user already has a role
+      const { data: existingRole } = await supabase
+        .from('user_roles_v2')
+        .select('id, branch_ids')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-      if (roleError) {
-        console.error('Error creating role:', roleError);
-        // Continue anyway - might be duplicate
+      if (existingRole) {
+        // User already has role, add branch to their branch_ids
+        const currentBranches = existingRole.branch_ids || [];
+        if (!currentBranches.includes(invitation.branch_id)) {
+          const { error: updateError } = await supabase
+            .from('user_roles_v2')
+            .update({
+              branch_ids: [...currentBranches, invitation.branch_id],
+              local_role: invitation.role as any,
+            })
+            .eq('id', existingRole.id);
+
+          if (updateError) {
+            console.error('Error updating role:', updateError);
+          }
+        }
+      } else {
+        // Create new role
+        const { error: roleError } = await supabase
+          .from('user_roles_v2')
+          .insert({
+            user_id: userId,
+            local_role: invitation.role as any,
+            branch_ids: [invitation.branch_id],
+            is_active: true,
+          });
+
+        if (roleError) {
+          console.error('Error creating role:', roleError);
+        }
       }
 
       // Mark invitation as accepted
@@ -177,7 +200,7 @@ export default function AceptarInvitacion() {
       toast.success(`¡Bienvenido al equipo de ${invitation.branch_name}!`);
       
       // Redirect to local panel
-      navigate(`/local/${invitation.branch_id}`);
+      navigate(`/milocal/${invitation.branch_id}`);
     } catch (err: any) {
       console.error('Error accepting invitation:', err);
       toast.error('Error al aceptar la invitación');

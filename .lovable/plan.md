@@ -290,19 +290,19 @@ supabase/functions/send-schedule-change-email/index.ts
 
 ## Orden de Implementación
 
-| Prioridad | Fase | Descripción | Dependencias |
-|-----------|------|-------------|--------------|
-| 1 | Fase 1 | Limpieza BD | Ninguna |
-| 2 | Fase 9 | Bugs críticos | Fase 1 |
-| 3 | Fase 3 | Fichaje renovado | Fase 1 |
-| 4 | Fase 4 | Reglamentos | Fase 1 |
-| 5 | Fase 5 | Comunicaciones | Ninguna |
-| 6 | Fase 6 | Apercibimientos | Ninguna |
-| 7 | Fase 7 | Adelantos | Fase 1 |
-| 8 | Fase 2 | Sistema turnos | Ninguna |
-| 9 | Fase 8 | Dashboard Encargado | Fases 3-7 |
-| 10 | Fase 10 | Mobile | Todas |
-| 11 | Fase 11 | Emails | Fase 3 |
+| Prioridad | Fase | Descripción | Estado |
+|-----------|------|-------------|--------|
+| 1 | Fase 1 | Limpieza BD | ✅ COMPLETADO |
+| 2 | Fase 9 | Bugs críticos | ✅ COMPLETADO |
+| 3 | Fase 3 | Fichaje renovado | 🔄 PENDIENTE |
+| 4 | Fase 4 | Reglamentos | 🔄 PENDIENTE |
+| 5 | Fase 5 | Comunicaciones | 🔄 PENDIENTE |
+| 6 | Fase 6 | Apercibimientos | 🔄 PENDIENTE |
+| 7 | Fase 7 | Adelantos | 🔄 PENDIENTE |
+| 8 | Fase 2 | Sistema turnos | 🔄 PENDIENTE |
+| 9 | Fase 8 | Dashboard Encargado | 🔄 PENDIENTE |
+| 10 | Fase 10 | Mobile | 🔄 PENDIENTE |
+| 11 | Fase 11 | Emails | 🔄 PENDIENTE |
 
 ---
 
