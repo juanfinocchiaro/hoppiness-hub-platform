@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -27,6 +27,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useBranchShiftConfig, getEnabledShifts, type ShiftDefinition } from '@/hooks/useShiftConfig';
 
 interface SalesEntryModalProps {
   open: boolean;
@@ -35,11 +36,6 @@ interface SalesEntryModalProps {
   defaultShift?: string;
   defaultDate?: Date;
 }
-
-const SHIFTS = [
-  { value: 'midday', label: 'Mediodía' },
-  { value: 'night', label: 'Noche' },
-];
 
 const CHANNELS = [
   { key: 'sales_counter', label: 'Mostrador' },
@@ -59,6 +55,10 @@ export function SalesEntryModal({
   const { user } = useAuth();
   const queryClient = useQueryClient();
   
+  // Get enabled shifts for this branch
+  const { data: shiftConfig } = useBranchShiftConfig(branchId);
+  const enabledShifts = getEnabledShifts(shiftConfig);
+  
   const [date, setDate] = useState<Date>(defaultDate);
   const [shift, setShift] = useState(defaultShift);
   const [amounts, setAmounts] = useState<Record<string, number>>({
@@ -69,6 +69,13 @@ export function SalesEntryModal({
     sales_other: 0,
   });
   const [notes, setNotes] = useState('');
+
+  // Update shift if the default is not in enabled list
+  useEffect(() => {
+    if (enabledShifts.length > 0 && !enabledShifts.find(s => s.value === shift)) {
+      setShift(enabledShifts[0].value);
+    }
+  }, [enabledShifts, shift]);
 
   const total = Object.values(amounts).reduce((sum, val) => sum + (val || 0), 0);
 
@@ -99,6 +106,7 @@ export function SalesEntryModal({
     onSuccess: () => {
       toast.success('Ventas cargadas correctamente');
       queryClient.invalidateQueries({ queryKey: ['daily-sales', branchId] });
+      queryClient.invalidateQueries({ queryKey: ['daily-sales-today', branchId] });
       queryClient.invalidateQueries({ queryKey: ['daily-sales-summary'] });
       onOpenChange(false);
       // Reset form
@@ -173,7 +181,7 @@ export function SalesEntryModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {SHIFTS.map(s => (
+                  {enabledShifts.map(s => (
                     <SelectItem key={s.value} value={s.value}>
                       {s.label}
                     </SelectItem>

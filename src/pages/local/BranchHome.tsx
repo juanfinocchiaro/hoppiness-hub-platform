@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 import { format, startOfWeek, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useTodaySales, useDailySales, getShiftLabel, getMissingShifts } from '@/hooks/useDailySales';
+import { useTodaySales, useDailySales, getShiftLabel, getMissingShifts, getEnabledShifts } from '@/hooks/useDailySales';
+import { useBranchShiftConfig } from '@/hooks/useShiftConfig';
 import { SalesEntryModal } from '@/components/local/SalesEntryModal';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -29,7 +30,7 @@ interface BranchHomeProps {
  * BranchHome - Dashboard simplificado con carga manual de ventas
  * 
  * Funcionalidades:
- * - Ver ventas de hoy por turno
+ * - Ver ventas de hoy por turno (4 turnos configurables)
  * - Cargar ventas de un turno
  * - Ver resumen semanal
  * - Ver últimas cargas
@@ -39,10 +40,15 @@ export default function BranchHome({ branch }: BranchHomeProps) {
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [selectedShift, setSelectedShift] = useState<string>('night');
   
+  // Get shift configuration for this branch
+  const { data: shiftConfig, isLoading: loadingConfig } = useBranchShiftConfig(branch.id);
+  const enabledShifts = getEnabledShifts(shiftConfig);
+  
   const { data: todaySales, isLoading: loadingToday } = useTodaySales(branch.id);
   const { data: weekSales, isLoading: loadingWeek } = useDailySales(branch.id);
   
-  const missingShifts = todaySales ? getMissingShifts(todaySales) : ['midday', 'night'];
+  const loadedShifts = todaySales?.map(s => s.shift) || [];
+  const missingShifts = getMissingShifts(loadedShifts, enabledShifts);
   const todayTotal = todaySales?.reduce((sum, s) => sum + Number(s.sales_total || 0), 0) || 0;
   
   // Calculate week totals by day
@@ -71,7 +77,7 @@ export default function BranchHome({ branch }: BranchHomeProps) {
     setShowEntryModal(true);
   };
 
-  const isLoading = loadingToday || loadingWeek;
+  const isLoading = loadingToday || loadingWeek || loadingConfig;
 
   return (
     <div className="space-y-6">
@@ -95,20 +101,20 @@ export default function BranchHome({ branch }: BranchHomeProps) {
         <CardContent>
           {isLoading ? (
             <div className="grid grid-cols-2 gap-4">
-              {[1, 2].map(i => (
+              {[1, 2, 3, 4].map(i => (
                 <Skeleton key={i} className="h-24 rounded-lg" />
               ))}
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                {['midday', 'night'].map(shift => {
-                  const shiftSale = todaySales?.find(s => s.shift === shift);
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                {enabledShifts.map(shiftDef => {
+                  const shiftSale = todaySales?.find(s => s.shift === shiftDef.value);
                   const isLoaded = !!shiftSale;
                   
                   return (
                     <div 
-                      key={shift}
+                      key={shiftDef.value}
                       className={`p-4 rounded-lg border-2 transition-colors ${
                         isLoaded 
                           ? 'border-success/30 bg-success/5' 
@@ -116,7 +122,7 @@ export default function BranchHome({ branch }: BranchHomeProps) {
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium">{getShiftLabel(shift)}</span>
+                        <span className="font-medium">{shiftDef.label}</span>
                         {isLoaded ? (
                           <CheckCircle className="w-4 h-4 text-success" />
                         ) : (
@@ -133,7 +139,7 @@ export default function BranchHome({ branch }: BranchHomeProps) {
                           variant="outline" 
                           size="sm" 
                           className="w-full mt-2"
-                          onClick={() => handleOpenEntry(shift)}
+                          onClick={() => handleOpenEntry(shiftDef.value)}
                         >
                           <Plus className="w-3 h-3 mr-1" />
                           Cargar
@@ -157,9 +163,9 @@ export default function BranchHome({ branch }: BranchHomeProps) {
                 <div className="flex items-center gap-2 mt-4 p-3 rounded-lg bg-warning/10 text-warning-foreground">
                   <AlertCircle className="w-4 h-4 text-warning" />
                   <span className="text-sm">
-                    {missingShifts.length === 2 
+                    {missingShifts.length === enabledShifts.length 
                       ? 'Ningún turno cargado aún' 
-                      : `Faltan cargar: ${missingShifts.map(s => getShiftLabel(s)).join(', ')}`}
+                      : `Faltan cargar: ${missingShifts.map(s => s.label).join(', ')}`}
                   </span>
                 </div>
               )}

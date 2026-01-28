@@ -1,12 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { startOfWeek, endOfWeek, format } from 'date-fns';
+import { 
+  getShiftLabel, 
+  getEnabledShifts, 
+  getMissingShifts, 
+  ALL_SHIFTS,
+  type ShiftType,
+  type ShiftDefinition 
+} from './useShiftConfig';
 
 interface DailySale {
   id: string;
   branch_id: string;
   sale_date: string;
-  shift: 'morning' | 'afternoon' | 'night';
+  shift: ShiftType;
   sales_counter: number;
   sales_rappi: number;
   sales_pedidosya: number;
@@ -125,28 +133,12 @@ export function useBrandDailySalesSummary() {
   });
 }
 
-export function getShiftLabel(shift: string): string {
-  switch (shift) {
-    case 'midday': return 'Mediodía';
-    case 'night': return 'Noche';
-    // Legacy support
-    case 'morning': return 'Mañana';
-    case 'afternoon': return 'Tarde';
-    default: return shift;
-  }
-}
+// Re-export shift utilities from useShiftConfig
+export { 
+  getShiftLabel, 
+  getEnabledShifts, 
+  getMissingShifts, 
+  ALL_SHIFTS 
+};
 
-export function getMissingShifts(todaySales: DailySale[]): string[] {
-  const allShifts = ['midday', 'night'];
-  const loadedShifts = todaySales.map(s => s.shift);
-  return allShifts.filter(s => !loadedShifts.includes(s as any));
-}
-
-export function getAllShifts(): Array<{ value: string; label: string }> {
-  return [
-    { value: 'midday', label: 'Mediodía' },
-    { value: 'night', label: 'Noche' },
-  ];
-}
-
-export type { DailySale };
+export type { DailySale, ShiftType, ShiftDefinition };
