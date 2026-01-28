@@ -2070,6 +2070,7 @@ export type Database = {
           body: string
           created_at: string | null
           created_by: string
+          custom_label: string | null
           expires_at: string | null
           id: string
           is_published: boolean | null
@@ -2084,6 +2085,7 @@ export type Database = {
           body: string
           created_at?: string | null
           created_by: string
+          custom_label?: string | null
           expires_at?: string | null
           id?: string
           is_published?: boolean | null
@@ -2098,6 +2100,7 @@ export type Database = {
           body?: string
           created_at?: string | null
           created_by?: string
+          custom_label?: string | null
           expires_at?: string | null
           id?: string
           is_published?: boolean | null
@@ -2984,6 +2987,7 @@ export type Database = {
           shift_number: number
           start_time: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -2997,6 +3001,7 @@ export type Database = {
           shift_number?: number
           start_time: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -3010,6 +3015,7 @@ export type Database = {
           shift_number?: number
           start_time?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -5975,6 +5981,101 @@ export type Database = {
           },
         ]
       }
+      regulation_signatures: {
+        Row: {
+          branch_id: string
+          created_at: string
+          id: string
+          regulation_id: string
+          signed_at: string
+          signed_document_url: string
+          uploaded_by: string
+          user_id: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          id?: string
+          regulation_id: string
+          signed_at?: string
+          signed_document_url: string
+          uploaded_by: string
+          user_id: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          id?: string
+          regulation_id?: string
+          signed_at?: string
+          signed_document_url?: string
+          uploaded_by?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regulation_signatures_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "regulation_signatures_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "regulation_signatures_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "regulation_signatures_regulation_id_fkey"
+            columns: ["regulation_id"]
+            isOneToOne: false
+            referencedRelation: "regulations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      regulations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          document_url: string
+          effective_date: string
+          id: string
+          is_active: boolean
+          title: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          document_url: string
+          effective_date?: string
+          id?: string
+          is_active?: boolean
+          title?: string
+          version: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          document_url?: string
+          effective_date?: string
+          id?: string
+          is_active?: boolean
+          title?: string
+          version?: number
+        }
+        Relationships: []
+      }
       role_default_permissions: {
         Row: {
           created_at: string | null
@@ -6030,6 +6131,7 @@ export type Database = {
           transferred_at: string | null
           transferred_by: string | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           amount: number
@@ -6053,6 +6155,7 @@ export type Database = {
           transferred_at?: string | null
           transferred_by?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           amount?: number
@@ -6076,6 +6179,7 @@ export type Database = {
           transferred_at?: string | null
           transferred_by?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -8044,6 +8148,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           issued_by: string | null
+          signed_document_url: string | null
           user_id: string
           warning_date: string
           warning_type: string
@@ -8056,6 +8161,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           issued_by?: string | null
+          signed_document_url?: string | null
           user_id: string
           warning_date?: string
           warning_type: string
@@ -8068,6 +8174,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           issued_by?: string | null
+          signed_document_url?: string | null
           user_id?: string
           warning_date?: string
           warning_type?: string

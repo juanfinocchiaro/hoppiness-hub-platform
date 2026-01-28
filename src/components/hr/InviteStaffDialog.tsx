@@ -35,7 +35,7 @@ interface InviteStaffDialogProps {
 const INVITABLE_ROLES: { value: AppRole; label: string }[] = [
   { value: 'encargado', label: 'Encargado' },
   { value: 'cajero', label: 'Cajero' },
-  { value: 'kds', label: 'KDS' },
+  { value: 'empleado', label: 'Colaborador' },
 ];
 
 export function InviteStaffDialog({
@@ -141,9 +141,9 @@ export function InviteStaffDialog({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {role === 'encargado' && 'Operación diaria, horarios, compras y gastos'}
-              {role === 'cajero' && 'POS, cobros y disponibilidad de productos'}
-              {role === 'kds' && 'Solo vista de cocina y fichaje'}
+              {role === 'encargado' && 'Gestiona equipo, horarios, comunicados y operación diaria'}
+              {role === 'cajero' && 'Carga ventas, fichaje y visualiza horarios'}
+              {role === 'empleado' && 'Fichaje y visualiza horarios y comunicados'}
             </p>
           </div>
 

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, Store, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, startOfMonth, endOfMonth, isToday, isTomorrow, addDays } from 'date-fns';
+import { format, isToday, isTomorrow, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -19,15 +19,8 @@ interface ScheduleEntry {
   schedule_month: number | null;
   schedule_year: number | null;
   shift_number: number;
-  employee: {
-    branch_id: string;
-    branch: {
-      name: string;
-    };
-  };
 }
 
-const DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const DAY_NAMES_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 export default function MyScheduleCard() {
@@ -36,40 +29,11 @@ export default function MyScheduleCard() {
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
 
-  // Fetch employee IDs for this user
-  const { data: employeeIds, isLoading: employeesLoading } = useQuery({
-    queryKey: ['my-employee-ids', user?.id],
+  // Fetch schedules directly by user_id
+  const { data: schedules, isLoading } = useQuery({
+    queryKey: ['my-schedules-v2', user?.id, currentMonth, currentYear],
     queryFn: async () => {
       if (!user) return [];
-      
-      // Get employees linked to this user via profiles.phone or direct assignment
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('phone')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (!profile?.phone) return [];
-      
-      const { data, error } = await supabase
-        .from('employees')
-        .select('id, branch_id, branches:branch_id(name)')
-        .eq('phone', profile.phone)
-        .eq('is_active', true);
-      
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!user,
-  });
-
-  // Fetch schedules for next 7 days
-  const { data: schedules, isLoading: schedulesLoading } = useQuery({
-    queryKey: ['my-schedules', employeeIds?.map(e => e.id), currentMonth, currentYear],
-    queryFn: async () => {
-      if (!employeeIds?.length) return [];
-      
-      const ids = employeeIds.map(e => e.id);
       
       const { data, error } = await supabase
         .from('employee_schedules')
@@ -81,24 +45,16 @@ export default function MyScheduleCard() {
           is_day_off,
           schedule_month,
           schedule_year,
-          shift_number,
-          employee_id
+          shift_number
         `)
-        .in('employee_id', ids)
+        .eq('user_id', user.id)
         .or(`schedule_month.is.null,and(schedule_month.eq.${currentMonth},schedule_year.eq.${currentYear})`);
       
       if (error) throw error;
-      
-      // Map employee data to schedules
-      return (data || []).map(schedule => ({
-        ...schedule,
-        employee: employeeIds.find(e => e.id === schedule.employee_id),
-      }));
+      return data || [];
     },
-    enabled: !!employeeIds?.length,
+    enabled: !!user,
   });
-
-  const isLoading = employeesLoading || schedulesLoading;
 
   if (isLoading) {
     return (
@@ -117,8 +73,8 @@ export default function MyScheduleCard() {
     );
   }
 
-  if (!employeeIds?.length) {
-    return null; // No employee record, don't show card
+  if (!schedules?.length) {
+    return null; // No schedules, don't show card
   }
 
   // Get next 7 days schedule
@@ -170,12 +126,6 @@ export default function MyScheduleCard() {
                     <div key={idx} className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                       <Clock className="w-3 h-3" />
                       <span>{formatTime(s.start_time)} - {formatTime(s.end_time)}</span>
-                      {s.employee?.branches && (
-                        <>
-                          <Store className="w-3 h-3 ml-2" />
-                          <span>{(s.employee.branches as any)?.name}</span>
-                        </>
-                      )}
                     </div>
                   ))
               ) : (
@@ -224,15 +174,13 @@ export default function MyScheduleCard() {
           })}
         </div>
 
-        {/* Link to full schedule if needed */}
-        {employeeIds.length > 0 && (
-          <Link to="/milocal" className="block">
-            <Button variant="ghost" size="sm" className="w-full justify-between text-muted-foreground">
-              Ver horario completo
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </Link>
-        )}
+        {/* Link to full schedule */}
+        <Link to="/milocal" className="block">
+          <Button variant="ghost" size="sm" className="w-full justify-between text-muted-foreground">
+            Ver horario completo
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </Link>
       </CardContent>
     </Card>
   );
