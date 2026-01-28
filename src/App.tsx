@@ -17,7 +17,7 @@ import Franquicias from "./pages/Franquicias";
 import Nosotros from "./pages/Nosotros";
 import Contacto from "./pages/Contacto";
 import AceptarInvitacion from "./pages/AceptarInvitacion";
-import FichajePublic from "./pages/FichajePublic";
+import FichajeEmpleado from "./pages/FichajeEmpleado";
 import ClockIn from "./pages/ClockIn";
 
 // Mi Local
@@ -28,7 +28,7 @@ import SchedulesPage from "./pages/local/SchedulesPage";
 import PrintersPage from "./pages/local/PrintersPage";
 import AdvancesPage from "./pages/local/AdvancesPage";
 import WarningsPage from "./pages/local/WarningsPage";
-import AttendanceKiosk from "./pages/local/AttendanceKiosk";
+import FichajeQRDisplay from "./pages/local/FichajeQRDisplay";
 
 // Mi Marca
 import BrandLayout from "./pages/admin/BrandLayout";
@@ -75,14 +75,14 @@ const App = () => (
             <Route path="/clock-in" element={<ClockIn />} />
             <Route path="/registro-staff" element={<RegistroStaff />} />
             <Route path="/invitacion/:token" element={<AceptarInvitacion />} />
-            <Route path="/fichaje/:branchCode" element={<FichajePublic />} />
+            <Route path="/fichaje/:branchCode" element={<FichajeEmpleado />} />
             
             {/* Mi Cuenta */}
             <Route path="/cuenta" element={<RequireAuth><CuentaDashboard /></RequireAuth>} />
             <Route path="/cuenta/perfil" element={<RequireAuth><CuentaPerfil /></RequireAuth>} />
             
-            {/* Kiosk de Fichaje */}
-            <Route path="/kiosk/:branchId" element={<LocalRoute><AttendanceKiosk /></LocalRoute>} />
+            {/* QR de Fichaje Estático */}
+            <Route path="/fichaje-qr/:branchId" element={<LocalRoute><FichajeQRDisplay /></LocalRoute>} />
             
             {/* Mi Local - /milocal */}
             <Route path="/milocal" element={<LocalRoute><BranchLayout /></LocalRoute>}>
