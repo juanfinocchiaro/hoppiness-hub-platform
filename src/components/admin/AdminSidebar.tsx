@@ -19,6 +19,8 @@ import {
   Building2,
   Search,
   Megaphone,
+  Settings,
+  FileText,
 } from 'lucide-react';
 import NewBranchModal from './NewBranchModal';
 
@@ -118,6 +120,16 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
       icon: Megaphone,
       items: [
         { type: 'navigation', to: '/mimarca/comunicados', icon: Megaphone, label: 'Enviar Comunicados' },
+      ],
+    });
+
+    // Configuración
+    sections.push({
+      id: 'config',
+      label: 'Configuración',
+      icon: Settings,
+      items: [
+        { type: 'navigation', to: '/mimarca/reglamentos', icon: FileText, label: 'Reglamentos' },
       ],
     });
 

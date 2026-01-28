@@ -39,6 +39,7 @@ import BranchDetail from "./pages/admin/BranchDetail";
 import UsersPage from "./pages/admin/UsersPage";
 import CentralTeam from "./pages/admin/CentralTeam";
 import CommunicationsPage from "./pages/admin/CommunicationsPage";
+import BrandRegulationsPage from "./pages/admin/BrandRegulationsPage";
 
 // Mi Local - Comunicaciones
 import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
@@ -124,6 +125,9 @@ const App = () => (
               
               {/* Comunicados */}
               <Route path="comunicados" element={<CommunicationsPage />} />
+              
+              {/* Configuración */}
+              <Route path="reglamentos" element={<BrandRegulationsPage />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />
