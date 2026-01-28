@@ -1851,8 +1851,12 @@ export type Database = {
           branch_id: string
           created_at: string | null
           entry_type: string
+          gps_message: string | null
+          gps_status: string | null
           id: string
           ip_address: unknown
+          latitude: number | null
+          longitude: number | null
           photo_url: string | null
           user_agent: string | null
           user_id: string
@@ -1861,8 +1865,12 @@ export type Database = {
           branch_id: string
           created_at?: string | null
           entry_type: string
+          gps_message?: string | null
+          gps_status?: string | null
           id?: string
           ip_address?: unknown
+          latitude?: number | null
+          longitude?: number | null
           photo_url?: string | null
           user_agent?: string | null
           user_id: string
@@ -1871,8 +1879,12 @@ export type Database = {
           branch_id?: string
           created_at?: string | null
           entry_type?: string
+          gps_message?: string | null
+          gps_status?: string | null
           id?: string
           ip_address?: unknown
+          latitude?: number | null
+          longitude?: number | null
           photo_url?: string | null
           user_agent?: string | null
           user_id?: string
