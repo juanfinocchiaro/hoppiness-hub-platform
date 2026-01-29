@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ interface BranchEditPanelProps {
 }
 
 export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEditPanelProps) {
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   
   // Datos básicos
@@ -49,6 +51,11 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
         .eq('id', branch.id);
 
       if (error) throw error;
+
+      // Invalidar TODAS las queries de branches para sincronizar cache
+      queryClient.invalidateQueries({ queryKey: ['admin-sidebar-branches'] });
+      queryClient.invalidateQueries({ queryKey: ['accessible-branches-v2'] });
+      queryClient.invalidateQueries({ queryKey: ['branch-detail'] });
 
       toast.success('Sucursal actualizada');
       onSaved();

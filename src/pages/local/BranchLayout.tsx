@@ -275,7 +275,8 @@ export default function BranchLayout() {
       return location.pathname === `/milocal/${branchId}`;
     }
     const itemPath = `/milocal/${branchId}/${item.to}`;
-    return location.pathname === itemPath || location.pathname.startsWith(`${itemPath}/`);
+    // Solo coincidencia exacta, NO startsWith para evitar doble marcado
+    return location.pathname === itemPath;
   };
 
   const NavContent = () => (
