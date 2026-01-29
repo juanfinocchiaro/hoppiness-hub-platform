@@ -1,35 +1,52 @@
 
+# Plan: Corregir navegación entre sucursales
 
-# Plan: Corregir Timeline - Expansión 2025
+## Problema Identificado
 
-## Problema
-En el timeline, el año 2025 dice:
-> "Mejor Hamburguesería de Córdoba. General Paz y Villa Carlos Paz."
+Cuando navegas entre sucursales en el sidebar de "Mi Marca", el panel de edición de la derecha no se actualiza correctamente. Solo cambia el título del header, pero el formulario mantiene los datos de la sucursal anterior.
 
-Pero no queda claro que **General Paz y Villa Carlos Paz son expansiones** (nuevas aperturas), como sí se entiende claramente en 2023:
-> "Expansión: Manantiales y Villa Allende. Inauguramos centro de producción."
+**Causa técnica**: El componente `BranchEditPanel` inicializa todos sus campos con `useState` basándose en el prop `branch`:
+
+```javascript
+const [name, setName] = useState(branch.name || '');
+const [address, setAddress] = useState(branch.address || '');
+// etc...
+```
+
+Los `useState` solo establecen el valor inicial en el **primer render**. Cuando la URL cambia de `/mimarca/locales/villa-allende` a `/mimarca/locales/villa-carlos-paz`, React reutiliza el mismo componente y los estados mantienen los valores anteriores.
 
 ## Solución
-Reformular el texto de 2025 para que explícitamente mencione "Expansión":
 
-**Archivo:** `src/components/landing/TimelineSection.tsx`
+Agregar un atributo `key` al componente `BranchEditPanel` usando el `branch.id`. Esto le indica a React que son componentes diferentes y debe desmontar/remontar cuando cambia la sucursal.
 
-**Cambio (línea 12):**
+## Cambios
 
-```tsx
-// ANTES
-{ year: '2025', text: 'Mejor Hamburguesería de Córdoba. General Paz y Villa Carlos Paz.', highlight: true },
+### 1. `src/pages/admin/BranchDetail.tsx`
 
-// DESPUÉS
-{ year: '2025', text: 'Mejor Hamburguesería de Córdoba. Expansión: General Paz y Villa Carlos Paz.', highlight: true },
+Modificar la línea donde se renderiza el panel de edición:
+
+```jsx
+// Antes:
+<BranchEditPanel 
+  branch={branch} 
+  onSaved={refetch} 
+  onCancel={() => navigate('/mimarca')}
+/>
+
+// Después:
+<BranchEditPanel 
+  key={branch.id}  // ← Fuerza remount cuando cambia la sucursal
+  branch={branch} 
+  onSaved={refetch} 
+  onCancel={() => navigate('/mimarca')}
+/>
 ```
 
 ## Resultado Esperado
-El timeline mostrará:
-- **2023**: Expansión: Manantiales y Villa Allende. Inauguramos centro de producción.
-- **2024**: Doble campeones: Mejor Clásica y Mejor Gourmet.
-- **2025**: 🏆 Mejor Hamburguesería de Córdoba. **Expansión: General Paz y Villa Carlos Paz.**
-- **2026**: Shopping Pocito. Y seguimos creciendo...
 
-Ahora queda claro que en 2025 hubo tanto el premio como la apertura de dos nuevos locales.
+- Al navegar de Villa Allende → Villa Carlos Paz → Villa Allende, el formulario mostrará los datos correctos de cada sucursal
+- Los horarios públicos también se actualizarán correctamente (el `PublicHoursEditor` ya tiene un `useEffect` para sincronizar, pero igual se beneficia del remount)
 
+---
+
+**Cambio mínimo**: 1 línea modificada en 1 archivo.
