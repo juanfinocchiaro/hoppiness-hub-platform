@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
+import type { Json } from '@/integrations/supabase/types';
 import type {
   ShiftClosure,
   ShiftClosureInput,
@@ -13,10 +14,6 @@ import type {
   VentasLocalData,
   VentasAppsData,
   ShiftType,
-  calcularTotalesHamburguesas,
-  calcularTotalesVentasLocal,
-  calcularTotalesVentasApps,
-  calcularFacturacionEsperada,
 } from '@/types/shiftClosure';
 import * as closureCalcs from '@/types/shiftClosure';
 
@@ -228,10 +225,10 @@ export function useSaveShiftClosure() {
       const tieneAlerta = facturacionEsperada > 0 && 
         Math.abs(facturacionDiferencia) > facturacionEsperada * 0.1;
       
-      // Cast JSONB data to any for Supabase
-      const hamburguesasJson = input.hamburguesas as unknown as Record<string, unknown>;
-      const ventasLocalJson = input.ventas_local as unknown as Record<string, unknown>;
-      const ventasAppsJson = input.ventas_apps as unknown as Record<string, unknown>;
+      // Cast JSONB data to Json for Supabase
+      const hamburguesasJson = input.hamburguesas as unknown as Json;
+      const ventasLocalJson = input.ventas_local as unknown as Json;
+      const ventasAppsJson = input.ventas_apps as unknown as Json;
       
       // Check if exists
       const { data: existing } = await supabase
