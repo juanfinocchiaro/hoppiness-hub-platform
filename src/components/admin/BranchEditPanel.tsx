@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Save, Loader2, MapPin, X, CheckCircle2 } from 'lucide-react';
+import { Save, Loader2, MapPin, X, CheckCircle2, Clock, Eye } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import BranchLocationMap from '@/components/maps/BranchLocationMap';
 
@@ -31,6 +32,11 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
   const [latitude, setLatitude] = useState((branch as any).latitude?.toString() || '');
   const [longitude, setLongitude] = useState((branch as any).longitude?.toString() || '');
   
+  // Visibilidad y horarios públicos
+  const [isActive, setIsActive] = useState(branch.is_active ?? true);
+  const [openingTime, setOpeningTime] = useState(branch.opening_time?.slice(0, 5) || '12:00');
+  const [closingTime, setClosingTime] = useState(branch.closing_time?.slice(0, 5) || '23:30');
+  
   // Mapa (on-demand)
   const [showMap, setShowMap] = useState(false);
 
@@ -45,6 +51,9 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
           city,
           phone: phone || null,
           email: email || null,
+          is_active: isActive,
+          opening_time: openingTime ? `${openingTime}:00` : null,
+          closing_time: closingTime ? `${closingTime}:00` : null,
           latitude: latitude ? parseFloat(latitude) : null,
           longitude: longitude ? parseFloat(longitude) : null,
         } as any)
@@ -56,6 +65,7 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
       queryClient.invalidateQueries({ queryKey: ['admin-sidebar-branches'] });
       queryClient.invalidateQueries({ queryKey: ['accessible-branches-v2'] });
       queryClient.invalidateQueries({ queryKey: ['branch-detail'] });
+      queryClient.invalidateQueries({ queryKey: ['public-branches-landing'] });
 
       toast.success('Sucursal actualizada');
       onSaved();
@@ -167,6 +177,53 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
               placeholder="local@hoppiness.com"
             />
           </div>
+        </div>
+
+        {/* Horarios públicos (lo que ven los clientes) */}
+        <div className="space-y-3 pt-4 border-t">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            Horario Público
+            <span className="text-xs text-muted-foreground font-normal">(visible en la web)</span>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="opening-time">Apertura</Label>
+              <Input
+                id="opening-time"
+                type="time"
+                value={openingTime}
+                onChange={(e) => setOpeningTime(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="closing-time">Cierre</Label>
+              <Input
+                id="closing-time"
+                type="time"
+                value={closingTime}
+                onChange={(e) => setClosingTime(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Visibilidad pública */}
+        <div className="flex items-center justify-between py-4 border-t">
+          <div className="flex items-center gap-3">
+            <Eye className="h-4 w-4 text-muted-foreground" />
+            <div className="space-y-0.5">
+              <Label htmlFor="is-active" className="cursor-pointer">Visible en la web</Label>
+              <p className="text-xs text-muted-foreground">
+                Si está desactivado, el local no aparece en la landing pública
+              </p>
+            </div>
+          </div>
+          <Switch
+            id="is-active"
+            checked={isActive}
+            onCheckedChange={setIsActive}
+          />
         </div>
 
         {/* Acciones */}
