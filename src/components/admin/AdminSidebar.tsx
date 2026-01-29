@@ -130,6 +130,7 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
       icon: Settings,
       items: [
         { type: 'navigation', to: '/mimarca/reglamentos', icon: FileText, label: 'Reglamentos' },
+        { type: 'navigation', to: '/mimarca/configuracion/cierres', icon: FileText, label: 'Cierre de Turno' },
       ],
     });
 
