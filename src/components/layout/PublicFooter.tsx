@@ -31,14 +31,12 @@ export function PublicFooter() {
           <div>
             <h4 className="font-bold mb-4 font-brand">ENLACES</h4>
             <div className="space-y-2 text-sm">
-              <a 
-                href="https://pedidos.masdelivery.com/hoppiness" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="block text-background/70 hover:text-background"
+              <button 
+                onClick={() => window.open('https://pedidos.masdelivery.com/hoppiness', '_blank')}
+                className="block text-background/70 hover:text-background text-left"
               >
                 Pedir
-              </a>
+              </button>
               <Link to="/nosotros" className="block text-background/70 hover:text-background">Nosotros</Link>
               <Link to="/franquicias" className="block text-background/70 hover:text-background">Franquicias</Link>
               <a href="/#clubes" className="block text-background/70 hover:text-background">Nuestros Clubes</a>
@@ -92,10 +90,6 @@ export function PublicFooter() {
         {/* Bottom */}
         <div className="border-t border-background/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-background/50 text-sm">
           <p>© {new Date().getFullYear()} Hoppiness Club. Todos los derechos reservados.</p>
-          <div className="flex gap-4">
-            <Link to="/terminos" className="hover:text-background">Términos y condiciones</Link>
-            <Link to="/privacidad" className="hover:text-background">Política de privacidad</Link>
-          </div>
         </div>
       </div>
     </footer>

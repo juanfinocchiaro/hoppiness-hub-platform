@@ -109,27 +109,6 @@ export interface PermissionsV2 {
   local: {
     // Visión General
     canViewDashboard: boolean;
-    canViewCierreTurno: boolean; // DEPRECADO
-    
-    // Operación - DEPRECADO en modelo simplificado
-    canViewIntegrador: boolean;
-    canManageOrders: boolean;
-    canOperatePOS: boolean;
-    canViewKDS: boolean;
-    canViewPedidosActivos: boolean;
-    canViewHistorial: boolean;
-    canCancelOrder: boolean;
-    canApplyDiscount: boolean;
-    canToggleProductAvailability: boolean;
-    
-    // Caja - DEPRECADO
-    canViewCajaVenta: boolean;
-    canOpenCloseCaja: boolean;
-    canDoAlivio: boolean;
-    canViewCajaAlivio: boolean;
-    canViewCajaResguardo: boolean;
-    canOperateCajaResguardo: boolean;
-    canViewCuentaCorriente: boolean;
     
     // Stock
     canViewStock: boolean;
@@ -142,10 +121,6 @@ export interface PermissionsV2 {
     canViewSupplierAccounts: boolean;
     canPaySupplier: boolean;
     canViewPurchaseHistory: boolean;
-    
-    // Menú - DEPRECADO
-    canViewMenu: boolean;
-    canToggleAvailability: boolean;
     
     // Equipo
     canClockInOut: boolean;
@@ -163,20 +138,12 @@ export interface PermissionsV2 {
     canViewCMV: boolean;
     canViewStockMovements: boolean;
     
-    // Finanzas - DEPRECADO
-    canViewFinanceMovements: boolean;
-    canViewInvoices: boolean;
-    canViewObligaciones: boolean;
-    
     // Configuración
     canEditLocalConfig: boolean;
-    canConfigDeliveryZones: boolean;
-    canConfigIntegrations: boolean;
     canConfigPrinters: boolean;
-    canConfigKDS: boolean;
     canConfigShifts: boolean;
     
-    // Nuevo: Carga manual de ventas
+    // Carga manual de ventas
     canEnterSales: boolean;
   };
   
@@ -343,29 +310,8 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
   // Encargados/Franquiciados: gestión completa simplificada
   
   const localPermissions = {
-    // Visión General - Solo roles de gestión
-    canViewDashboard: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
-    canViewCierreTurno: false, // DEPRECADO - sin sistema de caja automático
-    
-    // Operación - DEPRECADO en modelo simplificado
-    canViewIntegrador: false,
-    canManageOrders: false,
-    canOperatePOS: false,
-    canViewKDS: false,
-    canViewPedidosActivos: false,
-    canViewHistorial: false,
-    canCancelOrder: false,
-    canApplyDiscount: false,
-    canToggleProductAvailability: false,
-    
-    // Caja - DEPRECADO en modelo simplificado  
-    canViewCajaVenta: false,
-    canOpenCloseCaja: false,
-    canDoAlivio: false,
-    canViewCajaAlivio: false,
-    canViewCajaResguardo: false,
-    canOperateCajaResguardo: false,
-    canViewCuentaCorriente: false,
+    // Visión General - Cajeros ven dashboard limitado
+    canViewDashboard: hasCurrentBranchAccess && (isEncargado || isFranquiciado || isCajero),
     
     // Stock - Solo encargados y franquiciados
     canViewStock: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
@@ -378,10 +324,6 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     canViewSupplierAccounts: hasCurrentBranchAccess && (isContadorLocal || isEncargado || isFranquiciado),
     canPaySupplier: hasCurrentBranchAccess && (isContadorLocal || isFranquiciado),
     canViewPurchaseHistory: hasCurrentBranchAccess && (isContadorLocal || isEncargado || isFranquiciado),
-    
-    // Menú - DEPRECADO en modelo simplificado
-    canViewMenu: false,
-    canToggleAvailability: false,
     
     // Equipo - Cajeros/empleados solo ven su propia info en Mi Cuenta
     canClockInOut: hasCurrentBranchAccess && !!localRole,
@@ -399,21 +341,13 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     canViewCMV: hasCurrentBranchAccess && isFranquiciado,
     canViewStockMovements: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
     
-    // Finanzas - DEPRECADO en modelo simplificado
-    canViewFinanceMovements: false,
-    canViewInvoices: false,
-    canViewObligaciones: false,
-    
     // Configuración - Solo franquiciados
     canEditLocalConfig: hasCurrentBranchAccess && isFranquiciado,
-    canConfigDeliveryZones: false, // DEPRECADO
-    canConfigIntegrations: false, // DEPRECADO
     canConfigPrinters: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
-    canConfigKDS: false, // DEPRECADO
     canConfigShifts: hasCurrentBranchAccess && isFranquiciado,
     
-    // Nuevo: Carga manual de ventas
-    canEnterSales: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
+    // Carga manual de ventas - Cajeros pueden cargar
+    canEnterSales: hasCurrentBranchAccess && (isEncargado || isFranquiciado || isCajero),
   };
   
   return {

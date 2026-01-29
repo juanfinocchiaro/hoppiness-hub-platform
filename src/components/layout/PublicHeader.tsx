@@ -54,15 +54,14 @@ export function PublicHeader() {
               Inicio
             </Button>
           </Link>
-          <a href="https://pedidos.masdelivery.com/hoppiness" target="_blank" rel="noopener noreferrer">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-primary-foreground hover:bg-primary-foreground/10"
-            >
-              Pedir
-            </Button>
-          </a>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-primary-foreground hover:bg-primary-foreground/10"
+            onClick={() => window.open('https://pedidos.masdelivery.com/hoppiness', '_blank')}
+          >
+            Pedir
+          </Button>
           <Link to="/nosotros">
             <Button 
               variant="ghost" 
@@ -163,11 +162,14 @@ export function PublicHeader() {
 
         {/* Mobile Nav */}
         <div className="flex md:hidden items-center gap-2">
-          <a href="https://pedidos.masdelivery.com/hoppiness" target="_blank" rel="noopener noreferrer">
-            <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10">
-              <ShoppingBag className="w-5 h-5" />
-            </Button>
-          </a>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="text-primary-foreground hover:bg-primary-foreground/10"
+            onClick={() => window.open('https://pedidos.masdelivery.com/hoppiness', '_blank')}
+          >
+            <ShoppingBag className="w-5 h-5" />
+          </Button>
           
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
@@ -188,15 +190,14 @@ export function PublicHeader() {
                     Inicio
                   </Button>
                 </Link>
-                <a href="https://pedidos.masdelivery.com/hoppiness" target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10"
-                  >
-                    <ShoppingBag className="w-4 h-4 mr-2" />
-                    Pedir
-                  </Button>
-                </a>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10"
+                  onClick={() => { window.open('https://pedidos.masdelivery.com/hoppiness', '_blank'); setOpen(false); }}
+                >
+                  <ShoppingBag className="w-4 h-4 mr-2" />
+                  Pedir
+                </Button>
                 <Link to="/nosotros" onClick={() => setOpen(false)}>
                   <Button 
                     variant="ghost" 
