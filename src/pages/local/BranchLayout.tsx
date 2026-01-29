@@ -146,14 +146,14 @@ export default function BranchLayout() {
     };
   }, [branchId]);
 
-  // Redirect cajeros/empleados a Mi Cuenta
+  // Redirect empleados a Mi Cuenta (cajeros ahora pueden ver dashboard)
   useEffect(() => {
     if (!selectedBranch || !branchId) return;
     
-    if (permissions.isCajero || permissions.isEmpleado) {
+    if (permissions.isEmpleado) {
       navigate('/cuenta');
     }
-  }, [selectedBranch, branchId, permissions.isCajero, permissions.isEmpleado, navigate]);
+  }, [selectedBranch, branchId, permissions.isEmpleado, navigate]);
 
   const handleBranchChange = (newBranchId: string) => {
     const pathParts = location.pathname.split('/');

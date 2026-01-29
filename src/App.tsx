@@ -18,7 +18,6 @@ import Nosotros from "./pages/Nosotros";
 import Contacto from "./pages/Contacto";
 import AceptarInvitacion from "./pages/AceptarInvitacion";
 import FichajeEmpleado from "./pages/FichajeEmpleado";
-import ClockIn from "./pages/ClockIn";
 
 // Mi Local
 import BranchLayout from "./pages/local/BranchLayout";
@@ -80,7 +79,6 @@ const App = () => (
             <Route path="/franquicias" element={<Franquicias />} />
             <Route path="/nosotros" element={<Nosotros />} />
             <Route path="/contacto" element={<Contacto />} />
-            <Route path="/clock-in" element={<ClockIn />} />
             <Route path="/registro-staff" element={<RegistroStaff />} />
             <Route path="/invitacion/:token" element={<AceptarInvitacion />} />
             <Route path="/fichaje/:branchCode" element={<FichajeEmpleado />} />

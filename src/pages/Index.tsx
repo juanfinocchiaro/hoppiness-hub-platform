@@ -145,13 +145,15 @@ export default function Index() {
               <p className="text-lg text-muted-foreground mb-8">
                 Nuestros espacios están diseñados con muchísima onda, creando un estilo de servicio club descontracturado.
               </p>
-              <a href="https://pedidos.masdelivery.com/hoppiness" target="_blank" rel="noopener noreferrer">
-                <Button size="lg" className="group">
-                  <ShoppingBag className="w-5 h-5 mr-2" />
-                  Pedir Ahora
-                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </a>
+              <Button 
+                size="lg" 
+                className="group"
+                onClick={() => window.open('https://pedidos.masdelivery.com/hoppiness', '_blank')}
+              >
+                <ShoppingBag className="w-5 h-5 mr-2" />
+                Pedir Ahora
+                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="col-span-2 grid grid-rows-2 gap-4">
