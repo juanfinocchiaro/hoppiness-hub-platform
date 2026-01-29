@@ -4,7 +4,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { format, startOfWeek, endOfWeek } from 'date-fns';
+import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import type { Json } from '@/integrations/supabase/types';
 import type {
@@ -13,6 +13,7 @@ import type {
   HamburguesasData,
   VentasLocalData,
   VentasAppsData,
+  ArqueoCaja,
   ShiftType,
 } from '@/types/shiftClosure';
 import * as closureCalcs from '@/types/shiftClosure';
@@ -24,6 +25,7 @@ function parseShiftClosure(row: any): ShiftClosure {
     hamburguesas: row.hamburguesas as HamburguesasData,
     ventas_local: row.ventas_local as VentasLocalData,
     ventas_apps: row.ventas_apps as VentasAppsData,
+    arqueo_caja: row.arqueo_caja as ArqueoCaja || { diferencia_caja: 0 },
   };
 }
 
@@ -162,7 +164,7 @@ export function useBrandClosuresSummary(from: Date, to: Date) {
           veggies: acc.veggies + ((c.hamburguesas?.veggies?.not_american || 0) + (c.hamburguesas?.veggies?.not_claudio || 0)),
           ultrasmash: acc.ultrasmash + ((c.hamburguesas?.ultrasmash?.ultra_cheese || 0) + (c.hamburguesas?.ultrasmash?.ultra_bacon || 0)),
           extras: acc.extras + ((c.hamburguesas?.extras?.extra_carne || 0) + (c.hamburguesas?.extras?.extra_not_burger || 0) + (c.hamburguesas?.extras?.extra_not_chicken || 0)),
-          alertas: acc.alertas + (c.tiene_alerta_facturacion ? 1 : 0),
+          alertas: acc.alertas + (c.tiene_alerta_facturacion ? 1 : 0) + (c.tiene_alerta_posnet ? 1 : 0) + (c.tiene_alerta_apps ? 1 : 0) + (c.tiene_alerta_caja ? 1 : 0),
         }), {
           vendido: 0,
           efectivo: 0,
@@ -217,18 +219,29 @@ export function useSaveShiftClosure() {
       const totalEfectivo = totalesLocal.efectivo + totalesApps.efectivo;
       const totalDigital = totalesLocal.digital + totalesApps.digital;
       
+      // Invoicing calculations
       const facturacionEsperada = closureCalcs.calcularFacturacionEsperada(
         input.ventas_local,
         input.ventas_apps
       );
       const facturacionDiferencia = input.total_facturado - facturacionEsperada;
-      const tieneAlerta = facturacionEsperada > 0 && 
+      const tieneAlertaFacturacion = facturacionEsperada > 0 && 
         Math.abs(facturacionDiferencia) > facturacionEsperada * 0.1;
+      
+      // Posnet comparison
+      const posnetDiff = closureCalcs.calcularDiferenciaPosnet(input.ventas_local);
+      
+      // Apps comparison
+      const appsDiff = closureCalcs.calcularDiferenciasApps(input.ventas_apps);
+      
+      // Cash count
+      const tieneAlertaCaja = input.arqueo_caja.diferencia_caja !== 0;
       
       // Cast JSONB data to Json for Supabase
       const hamburguesasJson = input.hamburguesas as unknown as Json;
       const ventasLocalJson = input.ventas_local as unknown as Json;
       const ventasAppsJson = input.ventas_apps as unknown as Json;
+      const arqueoCajaJson = input.arqueo_caja as unknown as Json;
       
       // Check if exists
       const { data: existing } = await supabase
@@ -239,23 +252,33 @@ export function useSaveShiftClosure() {
         .eq('turno', input.turno)
         .maybeSingle();
       
+      const closureData = {
+        hamburguesas: hamburguesasJson,
+        ventas_local: ventasLocalJson,
+        ventas_apps: ventasAppsJson,
+        arqueo_caja: arqueoCajaJson,
+        total_facturado: input.total_facturado,
+        total_hamburguesas: totalHamburguesas,
+        total_vendido: totalVendido,
+        total_efectivo: totalEfectivo,
+        total_digital: totalDigital,
+        facturacion_esperada: facturacionEsperada,
+        facturacion_diferencia: facturacionDiferencia,
+        tiene_alerta_facturacion: tieneAlertaFacturacion,
+        diferencia_posnet: posnetDiff.diferencia,
+        diferencia_apps: appsDiff.diferencia,
+        tiene_alerta_posnet: posnetDiff.tieneAlerta,
+        tiene_alerta_apps: appsDiff.tieneAlerta,
+        tiene_alerta_caja: tieneAlertaCaja,
+        notas: input.notas || null,
+      };
+      
       if (existing) {
         // Update
         const { data, error } = await supabase
           .from('shift_closures')
           .update({
-            hamburguesas: hamburguesasJson,
-            ventas_local: ventasLocalJson,
-            ventas_apps: ventasAppsJson,
-            total_facturado: input.total_facturado,
-            total_hamburguesas: totalHamburguesas,
-            total_vendido: totalVendido,
-            total_efectivo: totalEfectivo,
-            total_digital: totalDigital,
-            facturacion_esperada: facturacionEsperada,
-            facturacion_diferencia: facturacionDiferencia,
-            tiene_alerta_facturacion: tieneAlerta,
-            notas: input.notas || null,
+            ...closureData,
             updated_by: user.id,
           })
           .eq('id', existing.id)
@@ -272,18 +295,7 @@ export function useSaveShiftClosure() {
             branch_id: input.branch_id,
             fecha: input.fecha,
             turno: input.turno,
-            hamburguesas: hamburguesasJson,
-            ventas_local: ventasLocalJson,
-            ventas_apps: ventasAppsJson,
-            total_facturado: input.total_facturado,
-            total_hamburguesas: totalHamburguesas,
-            total_vendido: totalVendido,
-            total_efectivo: totalEfectivo,
-            total_digital: totalDigital,
-            facturacion_esperada: facturacionEsperada,
-            facturacion_diferencia: facturacionDiferencia,
-            tiene_alerta_facturacion: tieneAlerta,
-            notas: input.notas || null,
+            ...closureData,
             cerrado_por: user.id,
           }])
           .select()

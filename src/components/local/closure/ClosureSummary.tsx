@@ -1,8 +1,16 @@
 /**
- * ClosureSummary - Real-time summary of closure data
+ * ClosureSummary - Real-time summary with alerts
  */
 import { Card, CardContent } from '@/components/ui/card';
-import { UtensilsCrossed, DollarSign, Banknote, CreditCard } from 'lucide-react';
+import { UtensilsCrossed, DollarSign, Banknote, CreditCard, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface AlertInfo {
+  posnet: boolean;
+  apps: boolean;
+  caja: boolean;
+  facturacion: boolean;
+}
 
 interface ClosureSummaryProps {
   totalHamburguesas: number;
@@ -10,6 +18,7 @@ interface ClosureSummaryProps {
   totalEfectivo: number;
   totalDigital: number;
   totalFacturado: number;
+  alertas?: AlertInfo;
 }
 
 export function ClosureSummary({
@@ -18,12 +27,18 @@ export function ClosureSummary({
   totalEfectivo,
   totalDigital,
   totalFacturado,
+  alertas,
 }: ClosureSummaryProps) {
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(value);
 
+  const tieneAlertas = alertas && (alertas.posnet || alertas.apps || alertas.caja || alertas.facturacion);
+
   return (
-    <Card className="bg-primary/5 border-primary/20">
+    <Card className={cn(
+      "border-2",
+      tieneAlertas ? "bg-destructive/5 border-destructive/30" : "bg-primary/5 border-primary/20"
+    )}>
       <CardContent className="pt-4">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
           {/* Hamburguesas */}
@@ -68,6 +83,48 @@ export function ClosureSummary({
           <div className="mt-4 pt-3 border-t text-center">
             <span className="text-sm text-muted-foreground">Facturado: </span>
             <span className="font-bold">{formatCurrency(totalFacturado)}</span>
+          </div>
+        )}
+        
+        {/* Alertas section */}
+        {alertas && tieneAlertas && (
+          <div className="mt-4 pt-3 border-t">
+            <div className="flex items-center gap-2 text-destructive mb-2">
+              <AlertTriangle className="w-4 h-4" />
+              <span className="text-sm font-medium">Alertas Detectadas</span>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              {alertas.posnet && (
+                <span className="bg-destructive/10 text-destructive px-2 py-1 rounded-full">
+                  Diferencia Posnet
+                </span>
+              )}
+              {alertas.apps && (
+                <span className="bg-destructive/10 text-destructive px-2 py-1 rounded-full">
+                  Diferencia Apps
+                </span>
+              )}
+              {alertas.caja && (
+                <span className="bg-destructive/10 text-destructive px-2 py-1 rounded-full">
+                  Diferencia Caja
+                </span>
+              )}
+              {alertas.facturacion && (
+                <span className="bg-destructive/10 text-destructive px-2 py-1 rounded-full">
+                  Diferencia Facturación
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* All good indicator */}
+        {alertas && !tieneAlertas && (
+          <div className="mt-4 pt-3 border-t">
+            <div className="flex items-center justify-center gap-2 text-green-600">
+              <CheckCircle2 className="w-4 h-4" />
+              <span className="text-sm font-medium">Sin alertas</span>
+            </div>
           </div>
         )}
       </CardContent>
