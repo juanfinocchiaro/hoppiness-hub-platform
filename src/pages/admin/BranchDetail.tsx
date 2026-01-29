@@ -83,6 +83,7 @@ export default function BranchDetail() {
 
       {/* Panel de edición con tabs */}
       <BranchEditPanel 
+        key={branch.id}
         branch={branch} 
         onSaved={refetch} 
         onCancel={() => navigate('/mimarca')}
