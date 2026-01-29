@@ -158,7 +158,7 @@ export function LocationsSection() {
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-3">
                       <h3 className="font-bold text-lg group-hover:text-primary transition-colors">
-                        Hoppiness {branch.name}
+                        {branch.name}
                       </h3>
                       <HoursPopover branch={branch} />
                     </div>
@@ -185,7 +185,7 @@ export function LocationsSection() {
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-3">
                       <h3 className="font-bold text-lg">
-                        Hoppiness {branch.name}
+                        {branch.name}
                       </h3>
                       <Badge variant="secondary" className="bg-accent/20 text-accent-foreground border-accent/30 gap-1">
                         <CalendarClock className="w-3 h-3" />
