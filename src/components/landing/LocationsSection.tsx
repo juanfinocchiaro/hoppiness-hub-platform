@@ -1,18 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MapPin, Clock, ExternalLink } from 'lucide-react';
-
-// Próximas aperturas (hardcoded ya que no están en BD)
-const upcomingBranches = [
-  { 
-    name: 'Shopping Pocito', 
-    address: 'Córdoba',
-    year: '2026',
-  },
-];
 
 export function LocationsSection() {
   const { data: branches, isLoading } = useQuery({
@@ -51,7 +41,7 @@ export function LocationsSection() {
           NUESTROS CLUBES
         </h2>
         <p className="text-center text-muted-foreground mb-12 text-lg">
-          {isLoading ? 'Cargando...' : `${branches?.length || 0} locales operativos + ${upcomingBranches.length} próximamente`}
+          {isLoading ? 'Cargando...' : `${branches?.length || 0} locales en Córdoba`}
         </p>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -97,28 +87,6 @@ export function LocationsSection() {
             ))
           )}
 
-          {/* Próximamente */}
-          {upcomingBranches.map((branch, i) => (
-            <Card key={`upcoming-${i}`} className="shadow-card border-dashed border-2 border-accent/50 bg-accent/5">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <Badge variant="secondary" className="bg-accent/20 text-accent mb-2">
-                      🆕 Próximamente
-                    </Badge>
-                    <h3 className="font-bold text-lg">
-                      Hoppiness {branch.name}
-                    </h3>
-                  </div>
-                  <span className="text-2xl font-black font-brand text-accent">{branch.year}</span>
-                </div>
-                <p className="text-sm text-muted-foreground flex items-center gap-1">
-                  <MapPin className="w-4 h-4 shrink-0" />
-                  {branch.address}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
         </div>
       </div>
     </section>
