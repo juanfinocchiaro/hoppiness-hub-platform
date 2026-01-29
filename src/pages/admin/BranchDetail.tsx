@@ -6,6 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, MapPin } from 'lucide-react';
 import BranchEditPanel from '@/components/admin/BranchEditPanel';
 
+type PublicStatus = 'active' | 'coming_soon' | 'hidden';
+
+const statusConfig: Record<PublicStatus, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
+  active: { label: 'Activo', variant: 'default' },
+  coming_soon: { label: 'Próximamente', variant: 'secondary' },
+  hidden: { label: 'Oculto', variant: 'outline' },
+};
+
 export default function BranchDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -48,6 +56,9 @@ export default function BranchDetail() {
     );
   }
 
+  const publicStatus = ((branch as any).public_status as PublicStatus) || 'active';
+  const config = statusConfig[publicStatus] || statusConfig.active;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -65,8 +76,8 @@ export default function BranchDetail() {
             <span>{branch.address}, {branch.city}</span>
           </div>
         </div>
-        <Badge variant={branch.is_active ? 'default' : 'secondary'}>
-          {branch.is_active ? 'Activa' : 'Inactiva'}
+        <Badge variant={config.variant}>
+          {config.label}
         </Badge>
       </div>
 
