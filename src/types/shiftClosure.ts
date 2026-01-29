@@ -302,11 +302,15 @@ export function calcularFacturacionEsperada(
   const totalesApps = calcularTotalesVentasApps(ventasApps);
   
   const totalVendido = totalesLocal.total + totalesApps.total;
-  const efectivoLocal = totalesLocal.efectivo + ventasApps.pedidosya.efectivo; // PY cash adds to local
+  
+  // Efectivo mostrador = efectivo de salón + takeaway + delivery_manual + PeYa efectivo (va a caja)
+  const efectivoMostrador = totalesLocal.efectivo + ventasApps.pedidosya.efectivo;
+  
+  // Efectivo MásDelivery tampoco se factura
   const efectivoMasDelivery = ventasApps.mas_delivery.efectivo;
   
-  // Expected = Total sold - Local cash + MásDelivery cash
-  return totalVendido - efectivoLocal + efectivoMasDelivery;
+  // Esperado = Total vendido - Efectivo mostrador - Efectivo MásDelivery
+  return totalVendido - efectivoMostrador - efectivoMasDelivery;
 }
 
 // ==========================================
