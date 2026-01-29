@@ -35,10 +35,27 @@ export function ClosureHelpManual() {
               </h3>
               <ol className="list-decimal list-inside space-y-2 text-muted-foreground ml-8">
                 <li>Ingresá a Núcleo con tu usuario</li>
-                <li>Andá a <strong className="text-foreground">Reportes → Ventas del día</strong></li>
-                <li>Filtrá por la <strong className="text-foreground">fecha y turno</strong> que estás cerrando</li>
-                <li>Anotá los montos separados por forma de pago</li>
+                <li>Andá a <strong className="text-foreground">Estadísticas → Pedidos por productos</strong></li>
+                <li>Filtrá por el <strong className="text-foreground">turno que estás cerrando</strong></li>
+                <li>Filtrá el canal de venta que corresponda:
+                  <ul className="list-disc ml-6 mt-1 space-y-1">
+                    <li><strong className="text-foreground">Mostrador, TAKE AWAY</strong></li>
+                    <li><strong className="text-foreground">Mostrador, SALON</strong></li>
+                    <li><strong className="text-foreground">MOSTRADOR, Delivery Manual</strong></li>
+                  </ul>
+                </li>
               </ol>
+              <div className="ml-8 bg-muted p-3 rounded-lg mt-3">
+                <p className="flex items-center gap-2 font-medium text-foreground">
+                  <Info className="w-4 h-4 text-blue-500" />
+                  Tips importantes
+                </p>
+                <ul className="text-muted-foreground mt-2 space-y-1 text-xs">
+                  <li>• <strong className="text-foreground">Delivery Manual:</strong> Cuando un cliente no pudo hacer su pedido por la WebApp y se carga manual.</li>
+                  <li>• <strong className="text-foreground">Llamadores:</strong> Cargar como cliente "LLAMADOR" con canal "MOSTRADOR, SALON". No usar SALON para números de llamadores.</li>
+                  <li>• Atendemos a todos los clientes en el <strong className="text-foreground">mostrador</strong> (WhatsApp, presencial, etc.), no en salón.</li>
+                </ul>
+              </div>
             </section>
             
             <Separator />
@@ -52,7 +69,6 @@ export function ClosureHelpManual() {
               <ul className="space-y-2 text-muted-foreground ml-8">
                 <li>• Separá las ventas por canal: <strong className="text-foreground">Salón, Takeaway, Delivery Manual</strong></li>
                 <li>• Para cada canal, ingresá el monto de cada forma de pago</li>
-                <li>• Los pedidos de WhatsApp/teléfono van en <strong className="text-foreground">Delivery Manual</strong></li>
               </ul>
             </section>
             
@@ -109,7 +125,7 @@ export function ClosureHelpManual() {
                     <tr className="border-b">
                       <td className="py-2 pr-4 font-medium text-foreground">PedidosYa</td>
                       <td className="py-2 pr-4">Núcleo muestra "PedidosYa"</td>
-                      <td className="py-2"><strong className="text-foreground">"Vales"</strong> + <strong className="text-foreground">"Efectivo"</strong></td>
+                      <td className="py-2"><strong className="text-foreground">"Vales"</strong> + <strong className="text-foreground">"Efectivo"</strong> (va a caja)</td>
                     </tr>
                     <tr>
                       <td className="py-2 pr-4 font-medium text-foreground">MP Delivery</td>
@@ -127,16 +143,30 @@ export function ClosureHelpManual() {
             <section className="space-y-3">
               <h3 className="font-semibold text-base flex items-center gap-2">
                 <span className="bg-primary text-primary-foreground w-6 h-6 rounded-full flex items-center justify-center text-xs">5</span>
-                Comparar con Paneles de Apps
+                Verificar ventas por App
               </h3>
               <p className="text-muted-foreground ml-8">
-                Entrá al panel de cada app y anotá el total de ventas del turno:
+                Cargá los datos de Núcleo y comparalos con el panel de cada app:
               </p>
-              <ul className="space-y-1 ml-8 text-muted-foreground">
-                <li>• <strong className="text-foreground">MásDelivery:</strong> App de restaurante → Historial</li>
-                <li>• <strong className="text-foreground">Rappi:</strong> Partners Portal → Historial de pedidos</li>
-                <li>• <strong className="text-foreground">PedidosYa:</strong> App restaurante → Pedidos entregados</li>
-                <li>• <strong className="text-foreground">MP Delivery:</strong> MercadoPago → Actividad → Filtrar delivery</li>
+              <ul className="space-y-2 ml-8 text-muted-foreground">
+                <li>
+                  <strong className="text-foreground">Más Delivery:</strong><br />
+                  <a href="https://admin.masdelivery.com/login" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    admin.masdelivery.com
+                  </a> → Reportes → Ventas → Filtrá el turno (solo pedidos aceptados)
+                </li>
+                <li>
+                  <strong className="text-foreground">Rappi:</strong><br />
+                  Portal Aliados → Historial de pedidos
+                </li>
+                <li>
+                  <strong className="text-foreground">PedidosYa:</strong><br />
+                  App Go, o WebApp PedidosYa → Historial de pedidos
+                </li>
+                <li>
+                  <strong className="text-foreground">MP Delivery:</strong><br />
+                  MercadoPago → Actividad → Filtrar delivery
+                </li>
               </ul>
             </section>
             

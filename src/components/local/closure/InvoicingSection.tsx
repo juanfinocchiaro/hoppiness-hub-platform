@@ -81,17 +81,20 @@ export function InvoicingSection({
                 <span>{formatCurrency(totalVendido)}</span>
               </div>
               <div className="flex justify-between text-muted-foreground">
-                <span>- Efectivo local:</span>
+                <span>- Efectivo mostrador:</span>
                 <span>- {formatCurrency(efectivoLocal)}</span>
               </div>
               <div className="flex justify-between text-muted-foreground">
-                <span>+ Efectivo MásDelivery:</span>
-                <span>+ {formatCurrency(efectivoMasDelivery)}</span>
+                <span>- Efectivo MásDelivery:</span>
+                <span>- {formatCurrency(efectivoMasDelivery)}</span>
               </div>
               <div className="flex justify-between font-medium pt-2 border-t">
                 <span>Esperado:</span>
                 <span>{formatCurrency(facturacionEsperada)}</span>
               </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                El efectivo de MásDelivery tampoco se factura.
+              </p>
             </div>
             
             {/* Difference alert */}
