@@ -3035,12 +3035,20 @@ export type Database = {
       }
       employee_schedules: {
         Row: {
+          branch_id: string | null
           created_at: string
           day_of_week: number
           employee_id: string
           end_time: string
           id: string
           is_day_off: boolean | null
+          modification_reason: string | null
+          modified_at: string | null
+          modified_by: string | null
+          notification_sent_at: string | null
+          published_at: string | null
+          published_by: string | null
+          schedule_date: string | null
           schedule_month: number | null
           schedule_year: number | null
           shift_number: number
@@ -3049,12 +3057,20 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string
           day_of_week: number
           employee_id: string
           end_time: string
           id?: string
           is_day_off?: boolean | null
+          modification_reason?: string | null
+          modified_at?: string | null
+          modified_by?: string | null
+          notification_sent_at?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          schedule_date?: string | null
           schedule_month?: number | null
           schedule_year?: number | null
           shift_number?: number
@@ -3063,12 +3079,20 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          branch_id?: string | null
           created_at?: string
           day_of_week?: number
           employee_id?: string
           end_time?: string
           id?: string
           is_day_off?: boolean | null
+          modification_reason?: string | null
+          modified_at?: string | null
+          modified_by?: string | null
+          notification_sent_at?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          schedule_date?: string | null
           schedule_month?: number | null
           schedule_year?: number | null
           shift_number?: number
@@ -3077,6 +3101,27 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "employee_schedules_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_schedules_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_schedules_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
           {
             foreignKeyName: "employee_schedules_employee_id_fkey"
             columns: ["employee_id"]
