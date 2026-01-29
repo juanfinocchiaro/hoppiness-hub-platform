@@ -8674,6 +8674,9 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_admin_v2: { Args: { user_uuid: string }; Returns: boolean }
+      is_financial_manager: { Args: { user_uuid: string }; Returns: boolean }
+      is_hr_manager: { Args: { user_uuid: string }; Returns: boolean }
       is_item_available_now: {
         Args: { p_category_id?: string; p_product_id?: string }
         Returns: boolean
