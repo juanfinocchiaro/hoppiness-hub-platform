@@ -2,7 +2,7 @@
  * ManagerDashboard - Vista mobile-first para Encargados
  * 
  * Muestra:
- * - Ventas de hoy por turno
+ * - Ventas de hoy por turno (nuevo sistema de cierre)
  * - Equipo fichado ahora
  * - Pendientes (solicitudes, comunicados, firmas reglamento)
  */
@@ -21,17 +21,15 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  Calendar,
   MessageSquare,
   FileText,
   CalendarX,
   ChevronRight,
 } from 'lucide-react';
-import { format, isToday, differenceInMinutes } from 'date-fns';
+import { format, differenceInMinutes } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useTodaySales, getShiftLabel, getMissingShifts, getEnabledShifts } from '@/hooks/useDailySales';
-import { useBranchShiftConfig } from '@/hooks/useShiftConfig';
-import { SalesEntryModal } from '@/components/local/SalesEntryModal';
+import { useTodayClosures, useEnabledShifts, getShiftLabel } from '@/hooks/useShiftClosures';
+import { ShiftClosureModal } from '@/components/local/closure/ShiftClosureModal';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
@@ -45,7 +43,6 @@ function useCurrentlyWorking(branchId: string) {
   return useQuery({
     queryKey: ['currently-working', branchId],
     queryFn: async () => {
-      // Get attendance records with no check_out (currently working)
       const { data: attendance, error } = await supabase
         .from('attendance_records')
         .select('id, user_id, check_in, notes')
@@ -56,7 +53,6 @@ function useCurrentlyWorking(branchId: string) {
       if (error) throw error;
       if (!attendance?.length) return [];
 
-      // Get profile info for these users
       const userIds = attendance.map(a => a.user_id);
       const { data: profiles } = await supabase
         .from('profiles')
@@ -71,7 +67,7 @@ function useCurrentlyWorking(branchId: string) {
         minutesWorking: differenceInMinutes(new Date(), new Date(record.check_in)),
       }));
     },
-    refetchInterval: 60000, // Refresh every minute
+    refetchInterval: 60000,
   });
 }
 
@@ -80,25 +76,21 @@ function usePendingItems(branchId: string) {
   return useQuery({
     queryKey: ['pending-items', branchId],
     queryFn: async () => {
-      // 1. Pending day-off requests
       const { count: pendingRequests } = await supabase
         .from('schedule_requests')
         .select('id', { count: 'exact', head: true })
         .eq('branch_id', branchId)
         .eq('status', 'pending');
 
-      // 2. Get team members for this branch
       const { data: roles } = await supabase
         .from('user_roles_v2')
         .select('user_id, branch_ids')
         .not('local_role', 'is', null);
 
-      // Filter manually for those with this branch
       const userIds = (roles || [])
         .filter(r => Array.isArray(r.branch_ids) && r.branch_ids.includes(branchId))
         .map(r => r.user_id);
 
-      // Get latest regulation
       const { data: latestReg } = await supabase
         .from('regulations')
         .select('id, version')
@@ -120,7 +112,7 @@ function usePendingItems(branchId: string) {
 
       return {
         pendingRequests: pendingRequests || 0,
-        unreadComms: 0, // TODO: implement when communications table is stable
+        unreadComms: 0,
         pendingSignatures,
         total: (pendingRequests || 0) + (pendingSignatures > 0 ? 1 : 0),
       };
@@ -130,14 +122,13 @@ function usePendingItems(branchId: string) {
 
 export function ManagerDashboard({ branch }: ManagerDashboardProps) {
   const [showEntryModal, setShowEntryModal] = useState(false);
-  const [selectedShift, setSelectedShift] = useState<string>('night');
+  const [selectedShift, setSelectedShift] = useState<string>('mediodía');
 
-  // Shift configuration
-  const { data: shiftConfig, isLoading: loadingConfig } = useBranchShiftConfig(branch.id);
-  const enabledShifts = getEnabledShifts(shiftConfig);
+  // Enabled shifts for this branch
+  const { data: enabledShifts, isLoading: loadingShifts } = useEnabledShifts(branch.id);
 
-  // Today's sales
-  const { data: todaySales, isLoading: loadingSales } = useTodaySales(branch.id);
+  // Today's closures
+  const { data: todayClosures, isLoading: loadingClosures } = useTodayClosures(branch.id);
 
   // Currently working team
   const { data: workingTeam, isLoading: loadingTeam } = useCurrentlyWorking(branch.id);
@@ -145,9 +136,8 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
   // Pending items
   const { data: pending, isLoading: loadingPending } = usePendingItems(branch.id);
 
-  const loadedShifts = todaySales?.map(s => s.shift) || [];
-  const missingShifts = getMissingShifts(loadedShifts, enabledShifts);
-  const todayTotal = todaySales?.reduce((sum, s) => sum + Number(s.sales_total || 0), 0) || 0;
+  const loadedShifts = todayClosures?.map(c => c.turno) || [];
+  const todayTotal = todayClosures?.reduce((sum, c) => sum + Number(c.total_vendido || 0), 0) || 0;
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(value);
@@ -164,11 +154,17 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
     setShowEntryModal(true);
   };
 
-  const isLoading = loadingConfig || loadingSales;
+  const isLoading = loadingShifts || loadingClosures;
+
+  // Default shifts if none configured
+  const shifts = enabledShifts?.length ? enabledShifts : [
+    { value: 'mediodía', label: 'Mediodía' },
+    { value: 'noche', label: 'Noche' },
+  ];
 
   return (
     <div className="space-y-4">
-      {/* Header - Compact for mobile */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl md:text-2xl font-bold">{branch.name}</h1>
@@ -182,7 +178,7 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
         </Button>
       </div>
 
-      {/* VENTAS DE HOY - Card principal */}
+      {/* VENTAS DE HOY */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
@@ -197,11 +193,10 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
             </div>
           ) : (
             <>
-              {/* Shift cards - 2 column grid */}
               <div className="grid grid-cols-2 gap-2">
-                {enabledShifts.map(shiftDef => {
-                  const shiftSale = todaySales?.find(s => s.shift === shiftDef.value);
-                  const isLoaded = !!shiftSale;
+                {shifts.map(shiftDef => {
+                  const closure = todayClosures?.find(c => c.turno === shiftDef.value);
+                  const isLoaded = !!closure;
 
                   return (
                     <div
@@ -211,7 +206,7 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
                           ? 'border-success/40 bg-success/5'
                           : 'border-dashed border-muted-foreground/30 cursor-pointer hover:border-primary/50'
                       }`}
-                      onClick={() => !isLoaded && handleOpenEntry(shiftDef.value)}
+                      onClick={() => handleOpenEntry(shiftDef.value)}
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-muted-foreground">
@@ -224,14 +219,18 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
                         )}
                       </div>
                       <div className={`text-lg font-bold ${isLoaded ? 'text-success' : 'text-muted-foreground'}`}>
-                        {isLoaded ? formatCurrency(Number(shiftSale.sales_total || 0)) : '-'}
+                        {isLoaded ? formatCurrency(Number(closure.total_vendido || 0)) : '-'}
                       </div>
+                      {isLoaded && closure.total_hamburguesas > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          {closure.total_hamburguesas} hamburguesas
+                        </p>
+                      )}
                     </div>
                   );
                 })}
               </div>
 
-              {/* Total */}
               <div className="flex items-center justify-between pt-2 border-t">
                 <span className="font-medium">Total del día</span>
                 <span className="text-xl font-bold text-primary">
@@ -239,15 +238,10 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
                 </span>
               </div>
 
-              {/* Warning for missing shifts */}
-              {missingShifts.length > 0 && (
+              {loadedShifts.length === 0 && (
                 <div className="flex items-center gap-2 p-2 rounded bg-warning/10 text-xs">
                   <AlertCircle className="w-3 h-3 text-warning flex-shrink-0" />
-                  <span>
-                    {missingShifts.length === enabledShifts.length
-                      ? 'Ningún turno cargado'
-                      : `Faltan: ${missingShifts.map(s => s.label).join(', ')}`}
-                  </span>
+                  <span>Ningún turno cargado</span>
                 </div>
               )}
             </>
@@ -276,10 +270,7 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
           ) : workingTeam && workingTeam.length > 0 ? (
             <div className="space-y-2">
               {workingTeam.map(member => (
-                <div
-                  key={member.id}
-                  className="flex items-center gap-3 p-2 rounded-lg bg-muted/50"
-                >
+                <div key={member.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
                   <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">
@@ -301,7 +292,6 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
             </p>
           )}
 
-          {/* Link to full attendance page */}
           <Link to={`/milocal/${branch.id}/equipo/fichajes`}>
             <Button variant="ghost" size="sm" className="w-full mt-2 text-xs">
               Ver todos los fichajes
@@ -333,7 +323,6 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
             </div>
           ) : (
             <div className="space-y-2">
-              {/* Day-off requests */}
               <Link to={`/milocal/${branch.id}/equipo/horarios`}>
                 <div className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
                   <div className="flex items-center gap-3">
@@ -346,7 +335,6 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
                 </div>
               </Link>
 
-              {/* Unread communications */}
               <Link to={`/milocal/${branch.id}/equipo/comunicados`}>
                 <div className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
                   <div className="flex items-center gap-3">
@@ -359,7 +347,6 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
                 </div>
               </Link>
 
-              {/* Pending regulation signatures */}
               <Link to={`/milocal/${branch.id}/equipo/reglamentos`}>
                 <div className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
                   <div className="flex items-center gap-3">
@@ -376,11 +363,12 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
         </CardContent>
       </Card>
 
-      {/* Sales Entry Modal */}
-      <SalesEntryModal
+      {/* Shift Closure Modal */}
+      <ShiftClosureModal
         open={showEntryModal}
         onOpenChange={setShowEntryModal}
         branchId={branch.id}
+        branchName={branch.name}
         defaultShift={selectedShift}
       />
     </div>
