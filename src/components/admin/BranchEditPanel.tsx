@@ -5,13 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { Save, Loader2, MapPin, X, CheckCircle2, Clock, Eye } from 'lucide-react';
+import { Save, Loader2, MapPin, X, CheckCircle2, Clock, Globe, Eye, EyeOff, CalendarClock } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import BranchLocationMap from '@/components/maps/BranchLocationMap';
 
 type Branch = Tables<'branches'>;
+type PublicStatus = 'active' | 'coming_soon' | 'hidden';
 
 interface BranchEditPanelProps {
   branch: Branch;
@@ -32,8 +33,12 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
   const [latitude, setLatitude] = useState((branch as any).latitude?.toString() || '');
   const [longitude, setLongitude] = useState((branch as any).longitude?.toString() || '');
   
-  // Visibilidad y horarios públicos
-  const [isActive, setIsActive] = useState(branch.is_active ?? true);
+  // Estado público (nuevo sistema)
+  const [publicStatus, setPublicStatus] = useState<PublicStatus>(
+    ((branch as any).public_status as PublicStatus) || 'active'
+  );
+  
+  // Horarios públicos
   const [openingTime, setOpeningTime] = useState(branch.opening_time?.slice(0, 5) || '12:00');
   const [closingTime, setClosingTime] = useState(branch.closing_time?.slice(0, 5) || '23:30');
   
@@ -51,7 +56,9 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
           city,
           phone: phone || null,
           email: email || null,
-          is_active: isActive,
+          // Mantener is_active sincronizado (hidden = false, otros = true)
+          is_active: publicStatus !== 'hidden',
+          public_status: publicStatus,
           opening_time: openingTime ? `${openingTime}:00` : null,
           closing_time: closingTime ? `${closingTime}:00` : null,
           latitude: latitude ? parseFloat(latitude) : null,
@@ -208,22 +215,56 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
           </div>
         </div>
 
-        {/* Visibilidad pública */}
-        <div className="flex items-center justify-between py-4 border-t">
-          <div className="flex items-center gap-3">
-            <Eye className="h-4 w-4 text-muted-foreground" />
-            <div className="space-y-0.5">
-              <Label htmlFor="is-active" className="cursor-pointer">Visible en la web</Label>
-              <p className="text-xs text-muted-foreground">
-                Si está desactivado, el local no aparece en la landing pública
-              </p>
-            </div>
+        {/* Estado público del local */}
+        <div className="space-y-4 pt-4 border-t">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Globe className="h-4 w-4 text-muted-foreground" />
+            Estado en la Web
           </div>
-          <Switch
-            id="is-active"
-            checked={isActive}
-            onCheckedChange={setIsActive}
-          />
+          <RadioGroup
+            value={publicStatus}
+            onValueChange={(val) => setPublicStatus(val as PublicStatus)}
+            className="grid gap-3"
+          >
+            <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+              <RadioGroupItem value="active" id="status-active" className="mt-1" />
+              <div className="flex-1">
+                <Label htmlFor="status-active" className="flex items-center gap-2 cursor-pointer font-medium">
+                  <Eye className="h-4 w-4 text-green-600" />
+                  Activo
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  El local está operativo y visible normalmente en la web
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+              <RadioGroupItem value="coming_soon" id="status-coming-soon" className="mt-1" />
+              <div className="flex-1">
+                <Label htmlFor="status-coming-soon" className="flex items-center gap-2 cursor-pointer font-medium">
+                  <CalendarClock className="h-4 w-4 text-accent" />
+                  Próximamente
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Aparece en la web con badge "Próximamente" (para locales en construcción)
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+              <RadioGroupItem value="hidden" id="status-hidden" className="mt-1" />
+              <div className="flex-1">
+                <Label htmlFor="status-hidden" className="flex items-center gap-2 cursor-pointer font-medium">
+                  <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  Oculto
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  No aparece en la landing pública (temporalmente cerrado o en pausa)
+                </p>
+              </div>
+            </div>
+          </RadioGroup>
         </div>
 
         {/* Acciones */}

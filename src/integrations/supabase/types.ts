@@ -1115,6 +1115,7 @@ export type Database = {
           pedidosya_enabled: boolean | null
           pedidosya_restaurant_id: string | null
           phone: string | null
+          public_status: string | null
           rappi_api_key: string | null
           rappi_enabled: boolean | null
           rappi_store_id: string | null
@@ -1165,6 +1166,7 @@ export type Database = {
           pedidosya_enabled?: boolean | null
           pedidosya_restaurant_id?: string | null
           phone?: string | null
+          public_status?: string | null
           rappi_api_key?: string | null
           rappi_enabled?: boolean | null
           rappi_store_id?: string | null
@@ -1215,6 +1217,7 @@ export type Database = {
           pedidosya_enabled?: boolean | null
           pedidosya_restaurant_id?: string | null
           phone?: string | null
+          public_status?: string | null
           rappi_api_key?: string | null
           rappi_enabled?: boolean | null
           rappi_store_id?: string | null
