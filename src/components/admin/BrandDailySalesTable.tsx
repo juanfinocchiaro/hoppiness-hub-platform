@@ -1,6 +1,5 @@
 /**
- * BrandDailySalesTable - Tabla consolidada de ventas diarias por sucursal y turno
- * Para el Panel Mi Marca - Dos turnos: Mediodía y Noche
+ * BrandDailySalesTable - Tabla consolidada de ventas diarias usando shift_closures
  */
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, TrendingUp, TrendingDown, Minus, Sun, Moon } from 'lucide-react';
+import { CalendarIcon, TrendingUp, TrendingDown, Minus, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useState, useMemo } from 'react';
@@ -24,16 +23,19 @@ type DateRange = {
 interface BranchSalesData {
   branchId: string;
   branchName: string;
-  midday: number;
-  night: number;
-  total: number;
-  vsLastPeriod: number | null;
+  vendido: number;
+  efectivo: number;
+  digital: number;
+  hamburguesas: number;
+  clasicas: number;
+  originales: number;
+  mas_sabor: number;
+  veggies: number;
+  ultrasmash: number;
+  extras: number;
+  closures: any[];
+  hasAlert: boolean;
 }
-
-const shiftLabels: Record<string, string> = {
-  midday: 'Mediodía',
-  night: 'Noche',
-};
 
 export function BrandDailySalesTable() {
   const [dateRange, setDateRange] = useState<DateRange>(() => {
@@ -51,11 +53,10 @@ export function BrandDailySalesTable() {
       { label: 'Esta semana', from: startOfWeek(today, { weekStartsOn: 1 }), to: endOfWeek(today, { weekStartsOn: 1 }) },
       { label: 'Este mes', from: startOfMonth(today), to: endOfMonth(today) },
       { label: 'Últimos 7 días', from: subDays(today, 6), to: today },
-      { label: 'Últimos 30 días', from: subDays(today, 29), to: today },
     ];
   }, []);
 
-  // Fetch all branches (not filtering by is_active)
+  // Fetch branches
   const { data: branches } = useQuery({
     queryKey: ['branches-all'],
     queryFn: async () => {
@@ -66,114 +67,92 @@ export function BrandDailySalesTable() {
       if (error) throw error;
       return data;
     },
-    staleTime: 60000,
   });
 
-  // Fetch sales for current period
-  const { data: salesData, isLoading } = useQuery({
-    queryKey: ['brand-daily-sales', dateRange.from, dateRange.to],
+  // Fetch closures for current period
+  const { data: closuresData, isLoading } = useQuery({
+    queryKey: ['brand-closures', dateRange.from, dateRange.to],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('daily_sales')
-        .select('branch_id, shift, sales_total')
-        .gte('sale_date', format(dateRange.from, 'yyyy-MM-dd'))
-        .lte('sale_date', format(dateRange.to, 'yyyy-MM-dd'));
+        .from('shift_closures')
+        .select('*')
+        .gte('fecha', format(dateRange.from, 'yyyy-MM-dd'))
+        .lte('fecha', format(dateRange.to, 'yyyy-MM-dd'));
       if (error) throw error;
       return data;
     },
     enabled: !!branches,
   });
 
-  // Fetch sales for previous period (for comparison)
-  const periodDays = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-  const prevFrom = subDays(dateRange.from, periodDays);
-  const prevTo = subDays(dateRange.to, periodDays);
-
-  const { data: prevSalesData } = useQuery({
-    queryKey: ['brand-daily-sales-prev', prevFrom, prevTo],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('daily_sales')
-        .select('branch_id, sales_total')
-        .gte('sale_date', format(prevFrom, 'yyyy-MM-dd'))
-        .lte('sale_date', format(prevTo, 'yyyy-MM-dd'));
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!branches,
-  });
-
-  // Aggregate data by branch - Two shifts only: midday and night
+  // Aggregate data by branch
   const aggregatedData = useMemo((): BranchSalesData[] => {
-    if (!branches || !salesData) return [];
+    if (!branches || !closuresData) return [];
 
-    const branchMap = new Map<string, { midday: number; night: number; total: number }>();
-    const prevBranchTotals = new Map<string, number>();
-
-    // Initialize branches
-    branches.forEach(b => {
-      branchMap.set(b.id, { midday: 0, night: 0, total: 0 });
-      prevBranchTotals.set(b.id, 0);
-    });
-
-    // Aggregate current period
-    salesData.forEach(sale => {
-      const branch = branchMap.get(sale.branch_id);
-      if (branch) {
-        const amount = Number(sale.sales_total) || 0;
-        branch.total += amount;
-        if (sale.shift === 'midday') branch.midday += amount;
-        else if (sale.shift === 'night') branch.night += amount;
-      }
-    });
-
-    // Aggregate previous period
-    if (prevSalesData) {
-      prevSalesData.forEach(sale => {
-        const current = prevBranchTotals.get(sale.branch_id) || 0;
-        prevBranchTotals.set(sale.branch_id, current + (Number(sale.sales_total) || 0));
-      });
-    }
-
-    // Build result - only show branches with sales data
     return branches
-      .map(b => {
-        const data = branchMap.get(b.id)!;
-        const prevTotal = prevBranchTotals.get(b.id) || 0;
-        const vsLastPeriod = prevTotal > 0 ? ((data.total - prevTotal) / prevTotal) * 100 : null;
+      .map(branch => {
+        const branchClosures = closuresData.filter(c => c.branch_id === branch.id);
+        
+        const totals = branchClosures.reduce((acc, c) => {
+          const h = c.hamburguesas as any || {};
+          return {
+            vendido: acc.vendido + Number(c.total_vendido || 0),
+            efectivo: acc.efectivo + Number(c.total_efectivo || 0),
+            digital: acc.digital + Number(c.total_digital || 0),
+            hamburguesas: acc.hamburguesas + Number(c.total_hamburguesas || 0),
+            clasicas: acc.clasicas + (h.clasicas || 0),
+            originales: acc.originales + (h.originales || 0),
+            mas_sabor: acc.mas_sabor + (h.mas_sabor || 0),
+            veggies: acc.veggies + ((h.veggies?.not_american || 0) + (h.veggies?.not_claudio || 0)),
+            ultrasmash: acc.ultrasmash + ((h.ultrasmash?.ultra_cheese || 0) + (h.ultrasmash?.ultra_bacon || 0)),
+            extras: acc.extras + ((h.extras?.extra_carne || 0) + (h.extras?.extra_not_burger || 0) + (h.extras?.extra_not_chicken || 0)),
+            hasAlert: acc.hasAlert || c.tiene_alerta_facturacion,
+          };
+        }, {
+          vendido: 0,
+          efectivo: 0,
+          digital: 0,
+          hamburguesas: 0,
+          clasicas: 0,
+          originales: 0,
+          mas_sabor: 0,
+          veggies: 0,
+          ultrasmash: 0,
+          extras: 0,
+          hasAlert: false,
+        });
 
         return {
-          branchId: b.id,
-          branchName: b.name,
-          ...data,
-          vsLastPeriod,
+          branchId: branch.id,
+          branchName: branch.name,
+          ...totals,
+          closures: branchClosures,
         };
       })
-      .filter(b => b.total > 0) // Only show branches with sales
-      .sort((a, b) => b.total - a.total);
-  }, [branches, salesData, prevSalesData]);
+      .filter(b => b.vendido > 0 || b.closures.length > 0)
+      .sort((a, b) => b.vendido - a.vendido);
+  }, [branches, closuresData]);
 
   // Calculate totals
   const totals = useMemo(() => {
     return aggregatedData.reduce(
       (acc, row) => ({
-        midday: acc.midday + row.midday,
-        night: acc.night + row.night,
-        total: acc.total + row.total,
+        vendido: acc.vendido + row.vendido,
+        efectivo: acc.efectivo + row.efectivo,
+        digital: acc.digital + row.digital,
+        hamburguesas: acc.hamburguesas + row.hamburguesas,
+        clasicas: acc.clasicas + row.clasicas,
+        originales: acc.originales + row.originales,
+        mas_sabor: acc.mas_sabor + row.mas_sabor,
+        veggies: acc.veggies + row.veggies,
+        ultrasmash: acc.ultrasmash + row.ultrasmash,
+        extras: acc.extras + row.extras,
       }),
-      { midday: 0, night: 0, total: 0 }
+      { vendido: 0, efectivo: 0, digital: 0, hamburguesas: 0, clasicas: 0, originales: 0, mas_sabor: 0, veggies: 0, ultrasmash: 0, extras: 0 }
     );
   }, [aggregatedData]);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(value);
-
-  const renderTrend = (value: number | null) => {
-    if (value === null) return <Minus className="w-4 h-4 text-muted-foreground" />;
-    if (value > 0) return <TrendingUp className="w-4 h-4 text-green-500" />;
-    if (value < 0) return <TrendingDown className="w-4 h-4 text-red-500" />;
-    return <Minus className="w-4 h-4 text-muted-foreground" />;
-  };
 
   return (
     <Card>
@@ -181,9 +160,7 @@ export function BrandDailySalesTable() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <CardTitle>Ventas por Sucursal</CardTitle>
-            <CardDescription>
-              Consolidado de ventas por turno
-            </CardDescription>
+            <CardDescription>Consolidado de cierres de turno</CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
             {presets.map((preset) => (
@@ -205,7 +182,7 @@ export function BrandDailySalesTable() {
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm">
                   <CalendarIcon className="w-4 h-4 mr-2" />
-                  Personalizado
+                  Rango
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
@@ -219,6 +196,7 @@ export function BrandDailySalesTable() {
                   }}
                   locale={es}
                   numberOfMonths={2}
+                  className="pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>
@@ -231,9 +209,7 @@ export function BrandDailySalesTable() {
       <CardContent>
         {isLoading ? (
           <div className="space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} className="h-12 w-full" />
-            ))}
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -241,71 +217,64 @@ export function BrandDailySalesTable() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Sucursal</TableHead>
-                  <TableHead className="text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <Sun className="w-4 h-4 text-amber-500" />
-                      <span className="hidden sm:inline">{shiftLabels.midday}</span>
-                    </div>
-                  </TableHead>
-                  <TableHead className="text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <Moon className="w-4 h-4 text-primary" />
-                      <span className="hidden sm:inline">{shiftLabels.night}</span>
-                    </div>
-                  </TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-center">vs Anterior</TableHead>
+                  <TableHead className="text-right">Vendido</TableHead>
+                  <TableHead className="text-right hidden sm:table-cell">Efectivo</TableHead>
+                  <TableHead className="text-right hidden sm:table-cell">Digital</TableHead>
+                  <TableHead className="text-center">🍔</TableHead>
+                  <TableHead className="text-center hidden md:table-cell">Clás</TableHead>
+                  <TableHead className="text-center hidden md:table-cell">Orig</TableHead>
+                  <TableHead className="text-center hidden md:table-cell">+Sab</TableHead>
+                  <TableHead className="text-center hidden lg:table-cell">Veg</TableHead>
+                  <TableHead className="text-center hidden lg:table-cell">Ultra</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {aggregatedData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                      No hay ventas registradas en este período
+                    <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                      No hay cierres registrados en este período
                     </TableCell>
                   </TableRow>
                 ) : (
                   <>
                     {aggregatedData.map((row) => (
                       <TableRow key={row.branchId}>
-                        <TableCell className="font-medium">{row.branchName}</TableCell>
-                        <TableCell className="text-center text-muted-foreground">
-                          {row.midday > 0 ? formatCurrency(row.midday) : '-'}
-                        </TableCell>
-                        <TableCell className="text-center text-muted-foreground">
-                          {row.night > 0 ? formatCurrency(row.night) : '-'}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          {formatCurrency(row.total)}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            {renderTrend(row.vsLastPeriod)}
-                            {row.vsLastPeriod !== null && (
-                              <span
-                                className={cn(
-                                  'text-sm',
-                                  row.vsLastPeriod > 0 && 'text-green-600',
-                                  row.vsLastPeriod < 0 && 'text-red-600'
-                                )}
-                              >
-                                {row.vsLastPeriod > 0 ? '+' : ''}
-                                {row.vsLastPeriod.toFixed(0)}%
-                              </span>
-                            )}
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {row.branchName}
+                            {row.hasAlert && <AlertTriangle className="w-4 h-4 text-warning" />}
                           </div>
                         </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {formatCurrency(row.vendido)}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground hidden sm:table-cell">
+                          {formatCurrency(row.efectivo)}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground hidden sm:table-cell">
+                          {formatCurrency(row.digital)}
+                        </TableCell>
+                        <TableCell className="text-center font-medium">{row.hamburguesas}</TableCell>
+                        <TableCell className="text-center text-muted-foreground hidden md:table-cell">{row.clasicas}</TableCell>
+                        <TableCell className="text-center text-muted-foreground hidden md:table-cell">{row.originales}</TableCell>
+                        <TableCell className="text-center text-muted-foreground hidden md:table-cell">{row.mas_sabor}</TableCell>
+                        <TableCell className="text-center text-muted-foreground hidden lg:table-cell">{row.veggies}</TableCell>
+                        <TableCell className="text-center text-muted-foreground hidden lg:table-cell">{row.ultrasmash}</TableCell>
                       </TableRow>
                     ))}
-                    {/* Totals Row */}
                     <TableRow className="bg-muted/50 font-bold">
-                      <TableCell>TOTAL MARCA</TableCell>
-                      <TableCell className="text-center">{formatCurrency(totals.midday)}</TableCell>
-                      <TableCell className="text-center">{formatCurrency(totals.night)}</TableCell>
+                      <TableCell>TOTAL</TableCell>
                       <TableCell className="text-right text-primary text-lg">
-                        {formatCurrency(totals.total)}
+                        {formatCurrency(totals.vendido)}
                       </TableCell>
-                      <TableCell />
+                      <TableCell className="text-right hidden sm:table-cell">{formatCurrency(totals.efectivo)}</TableCell>
+                      <TableCell className="text-right hidden sm:table-cell">{formatCurrency(totals.digital)}</TableCell>
+                      <TableCell className="text-center">{totals.hamburguesas}</TableCell>
+                      <TableCell className="text-center hidden md:table-cell">{totals.clasicas}</TableCell>
+                      <TableCell className="text-center hidden md:table-cell">{totals.originales}</TableCell>
+                      <TableCell className="text-center hidden md:table-cell">{totals.mas_sabor}</TableCell>
+                      <TableCell className="text-center hidden lg:table-cell">{totals.veggies}</TableCell>
+                      <TableCell className="text-center hidden lg:table-cell">{totals.ultrasmash}</TableCell>
                     </TableRow>
                   </>
                 )}

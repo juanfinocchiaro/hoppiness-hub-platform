@@ -415,6 +415,56 @@ export type Database = {
           },
         ]
       }
+      branch_closure_config: {
+        Row: {
+          branch_id: string
+          config_id: string
+          habilitado: boolean | null
+          id: string
+        }
+        Insert: {
+          branch_id: string
+          config_id: string
+          habilitado?: boolean | null
+          id?: string
+        }
+        Update: {
+          branch_id?: string
+          config_id?: string
+          habilitado?: boolean | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_closure_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_closure_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_closure_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "branch_closure_config_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "brand_closure_config"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branch_customer_accounts: {
         Row: {
           balance: number
@@ -1174,6 +1224,42 @@ export type Database = {
           takeaway_enabled?: boolean | null
           updated_at?: string
           webhook_api_key?: string | null
+        }
+        Relationships: []
+      }
+      brand_closure_config: {
+        Row: {
+          activo: boolean | null
+          categoria_padre: string | null
+          clave: string
+          created_at: string | null
+          etiqueta: string
+          id: string
+          orden: number | null
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          categoria_padre?: string | null
+          clave: string
+          created_at?: string | null
+          etiqueta: string
+          id?: string
+          orden?: number | null
+          tipo: string
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          categoria_padre?: string | null
+          clave?: string
+          created_at?: string | null
+          etiqueta?: string
+          id?: string
+          orden?: number | null
+          tipo?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -2597,82 +2683,6 @@ export type Database = {
           {
             foreignKeyName: "customers_preferred_branch_id_fkey"
             columns: ["preferred_branch_id"]
-            isOneToOne: false
-            referencedRelation: "supplier_balances"
-            referencedColumns: ["branch_id"]
-          },
-        ]
-      }
-      daily_sales: {
-        Row: {
-          branch_id: string
-          created_at: string | null
-          created_by: string
-          id: string
-          notes: string | null
-          sale_date: string
-          sales_counter: number | null
-          sales_mp_delivery: number | null
-          sales_other: number | null
-          sales_pedidosya: number | null
-          sales_rappi: number | null
-          sales_total: number | null
-          shift: string
-          updated_at: string | null
-          updated_by: string | null
-        }
-        Insert: {
-          branch_id: string
-          created_at?: string | null
-          created_by: string
-          id?: string
-          notes?: string | null
-          sale_date: string
-          sales_counter?: number | null
-          sales_mp_delivery?: number | null
-          sales_other?: number | null
-          sales_pedidosya?: number | null
-          sales_rappi?: number | null
-          sales_total?: number | null
-          shift: string
-          updated_at?: string | null
-          updated_by?: string | null
-        }
-        Update: {
-          branch_id?: string
-          created_at?: string | null
-          created_by?: string
-          id?: string
-          notes?: string | null
-          sale_date?: string
-          sales_counter?: number | null
-          sales_mp_delivery?: number | null
-          sales_other?: number | null
-          sales_pedidosya?: number | null
-          sales_rappi?: number | null
-          sales_total?: number | null
-          shift?: string
-          updated_at?: string | null
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "daily_sales_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_sales_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_sales_branch_id_fkey"
-            columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "supplier_balances"
             referencedColumns: ["branch_id"]
@@ -6593,73 +6603,70 @@ export type Database = {
       }
       shift_closures: {
         Row: {
-          average_ticket: number | null
           branch_id: string
-          cancelled_amount: number | null
-          cancelled_orders: number | null
-          cash_registers_summary: Json | null
-          closure_date: string
-          created_at: string | null
-          created_by: string | null
-          end_time: string
+          cerrado_at: string
+          cerrado_por: string
+          facturacion_diferencia: number
+          facturacion_esperada: number
+          fecha: string
+          hamburguesas: Json
           id: string
-          notes: string[] | null
-          sales_by_channel: Json | null
-          sales_by_payment: Json | null
-          sales_by_product: Json | null
-          shift_id: string | null
-          shift_name: string
-          staff_summary: Json | null
-          start_time: string
-          total_orders: number
-          total_sales: number
-          total_staff_hours: number | null
+          notas: string | null
+          tiene_alerta_facturacion: boolean
+          total_digital: number
+          total_efectivo: number
+          total_facturado: number
+          total_hamburguesas: number
+          total_vendido: number
+          turno: string
+          updated_at: string | null
+          updated_by: string | null
+          ventas_apps: Json
+          ventas_local: Json
         }
         Insert: {
-          average_ticket?: number | null
           branch_id: string
-          cancelled_amount?: number | null
-          cancelled_orders?: number | null
-          cash_registers_summary?: Json | null
-          closure_date: string
-          created_at?: string | null
-          created_by?: string | null
-          end_time: string
+          cerrado_at?: string
+          cerrado_por: string
+          facturacion_diferencia?: number
+          facturacion_esperada?: number
+          fecha: string
+          hamburguesas?: Json
           id?: string
-          notes?: string[] | null
-          sales_by_channel?: Json | null
-          sales_by_payment?: Json | null
-          sales_by_product?: Json | null
-          shift_id?: string | null
-          shift_name: string
-          staff_summary?: Json | null
-          start_time: string
-          total_orders?: number
-          total_sales?: number
-          total_staff_hours?: number | null
+          notas?: string | null
+          tiene_alerta_facturacion?: boolean
+          total_digital?: number
+          total_efectivo?: number
+          total_facturado?: number
+          total_hamburguesas?: number
+          total_vendido?: number
+          turno: string
+          updated_at?: string | null
+          updated_by?: string | null
+          ventas_apps?: Json
+          ventas_local?: Json
         }
         Update: {
-          average_ticket?: number | null
           branch_id?: string
-          cancelled_amount?: number | null
-          cancelled_orders?: number | null
-          cash_registers_summary?: Json | null
-          closure_date?: string
-          created_at?: string | null
-          created_by?: string | null
-          end_time?: string
+          cerrado_at?: string
+          cerrado_por?: string
+          facturacion_diferencia?: number
+          facturacion_esperada?: number
+          fecha?: string
+          hamburguesas?: Json
           id?: string
-          notes?: string[] | null
-          sales_by_channel?: Json | null
-          sales_by_payment?: Json | null
-          sales_by_product?: Json | null
-          shift_id?: string | null
-          shift_name?: string
-          staff_summary?: Json | null
-          start_time?: string
-          total_orders?: number
-          total_sales?: number
-          total_staff_hours?: number | null
+          notas?: string | null
+          tiene_alerta_facturacion?: boolean
+          total_digital?: number
+          total_efectivo?: number
+          total_facturado?: number
+          total_hamburguesas?: number
+          total_vendido?: number
+          turno?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          ventas_apps?: Json
+          ventas_local?: Json
         }
         Relationships: [
           {
@@ -6682,13 +6689,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "supplier_balances"
             referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "shift_closures_shift_id_fkey"
-            columns: ["shift_id"]
-            isOneToOne: false
-            referencedRelation: "branch_shifts"
-            referencedColumns: ["id"]
           },
         ]
       }
