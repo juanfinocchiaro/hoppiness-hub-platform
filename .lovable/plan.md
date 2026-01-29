@@ -1,373 +1,417 @@
 
+# Plan: Sistema de Cierre de Turno con Comparaciones y Manual Integrado
 
-# Plan de Implementación: Sistema de Cierre de Turno Detallado
+## Resumen
 
-## Contexto
-
-Este plan implementa el nuevo sistema de cierre de turno que reemplaza el sistema básico actual (`SalesEntryModal` + tabla `daily_sales` vacía). El objetivo es capturar información detallada de ventas por categoría de hamburguesas, canales de venta y formas de pago, con validación de facturación.
-
----
-
-## FASE 1: Limpieza de Base de Datos
-
-### 1.1 Eliminar Edge Function
-- Eliminar `supabase/functions/auto-close-shifts/index.ts` (no se usa)
-
-### 1.2 Migración SQL
-
-```sql
--- Eliminar tablas antiguas
-DROP TABLE IF EXISTS daily_sales CASCADE;
-DROP TABLE IF EXISTS shift_closures CASCADE;
-
--- Crear nueva tabla de cierres
-CREATE TABLE shift_closures (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
-  fecha DATE NOT NULL,
-  turno TEXT NOT NULL CHECK (turno IN ('mañana', 'mediodía', 'noche', 'trasnoche')),
-  
-  -- JSONB para datos flexibles
-  hamburguesas JSONB NOT NULL DEFAULT '{}',
-  ventas_local JSONB NOT NULL DEFAULT '{}',
-  ventas_apps JSONB NOT NULL DEFAULT '{}',
-  
-  -- Facturación
-  total_facturado DECIMAL(12,2) NOT NULL DEFAULT 0,
-  
-  -- Totales calculados
-  total_hamburguesas INT NOT NULL DEFAULT 0,
-  total_vendido DECIMAL(12,2) NOT NULL DEFAULT 0,
-  total_efectivo DECIMAL(12,2) NOT NULL DEFAULT 0,
-  total_digital DECIMAL(12,2) NOT NULL DEFAULT 0,
-  
-  -- Validaciones
-  facturacion_esperada DECIMAL(12,2) NOT NULL DEFAULT 0,
-  facturacion_diferencia DECIMAL(12,2) NOT NULL DEFAULT 0,
-  tiene_alerta_facturacion BOOLEAN NOT NULL DEFAULT false,
-  
-  -- Notas
-  notas TEXT,
-  
-  -- Metadata
-  cerrado_por UUID NOT NULL REFERENCES auth.users(id),
-  cerrado_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ,
-  updated_by UUID REFERENCES auth.users(id),
-  
-  UNIQUE (branch_id, fecha, turno)
-);
-
--- Índices
-CREATE INDEX idx_shift_closures_branch ON shift_closures(branch_id);
-CREATE INDEX idx_shift_closures_fecha ON shift_closures(fecha);
-CREATE INDEX idx_shift_closures_branch_fecha ON shift_closures(branch_id, fecha);
-
--- Tabla de configuración de marca
-CREATE TABLE brand_closure_config (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tipo TEXT NOT NULL CHECK (tipo IN ('categoria_hamburguesa', 'tipo_hamburguesa', 'extra', 'app_delivery')),
-  clave TEXT NOT NULL,
-  etiqueta TEXT NOT NULL,
-  categoria_padre TEXT,
-  orden INT DEFAULT 0,
-  activo BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ,
-  UNIQUE (tipo, clave)
-);
-
--- Tabla de configuración por local
-CREATE TABLE branch_closure_config (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
-  config_id UUID NOT NULL REFERENCES brand_closure_config(id) ON DELETE CASCADE,
-  habilitado BOOLEAN DEFAULT true,
-  UNIQUE (branch_id, config_id)
-);
-
--- Datos iniciales
-INSERT INTO brand_closure_config (tipo, clave, etiqueta, orden) VALUES
-  ('categoria_hamburguesa', 'clasicas', 'Clásicas', 1),
-  ('categoria_hamburguesa', 'originales', 'Originales', 2),
-  ('categoria_hamburguesa', 'mas_sabor', 'Más Sabor', 3),
-  ('categoria_hamburguesa', 'veggies', 'Veggies', 4),
-  ('categoria_hamburguesa', 'ultrasmash', 'Ultrasmash', 5);
-
-INSERT INTO brand_closure_config (tipo, clave, etiqueta, categoria_padre, orden) VALUES
-  ('tipo_hamburguesa', 'not_american', 'Not American', 'veggies', 1),
-  ('tipo_hamburguesa', 'not_claudio', 'Not Claudio', 'veggies', 2),
-  ('tipo_hamburguesa', 'ultra_cheese', 'Ultra Cheese', 'ultrasmash', 1),
-  ('tipo_hamburguesa', 'ultra_bacon', 'Ultra Bacon', 'ultrasmash', 2);
-
-INSERT INTO brand_closure_config (tipo, clave, etiqueta, orden) VALUES
-  ('extra', 'extra_carne', 'Extra Carne c/Queso', 1),
-  ('extra', 'extra_not_burger', 'Extra Not Burger', 2),
-  ('extra', 'extra_not_chicken', 'Extra Not Chicken', 3);
-
-INSERT INTO brand_closure_config (tipo, clave, etiqueta, orden) VALUES
-  ('app_delivery', 'mas_delivery', 'Más Delivery', 1),
-  ('app_delivery', 'rappi', 'Rappi', 2),
-  ('app_delivery', 'pedidosya', 'PedidosYa', 3),
-  ('app_delivery', 'mp_delivery', 'MP Delivery', 4);
-
--- RLS
-ALTER TABLE shift_closures ENABLE ROW LEVEL SECURITY;
-ALTER TABLE brand_closure_config ENABLE ROW LEVEL SECURITY;
-ALTER TABLE branch_closure_config ENABLE ROW LEVEL SECURITY;
-
--- Políticas RLS para shift_closures
-CREATE POLICY "Users can view closures for their branches"
-  ON shift_closures FOR SELECT TO authenticated
-  USING (has_branch_access_v2(auth.uid(), branch_id));
-
-CREATE POLICY "Staff can insert closures"
-  ON shift_closures FOR INSERT TO authenticated
-  WITH CHECK (has_branch_access_v2(auth.uid(), branch_id));
-
-CREATE POLICY "Staff can update closures"
-  ON shift_closures FOR UPDATE TO authenticated
-  USING (has_branch_access_v2(auth.uid(), branch_id));
-
--- Políticas para brand_closure_config
-CREATE POLICY "Anyone authenticated can view config"
-  ON brand_closure_config FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Only superadmin can modify config"
-  ON brand_closure_config FOR ALL TO authenticated
-  USING (is_superadmin(auth.uid()));
-
--- Políticas para branch_closure_config
-CREATE POLICY "Users can view their branch config"
-  ON branch_closure_config FOR SELECT TO authenticated
-  USING (has_branch_access_v2(auth.uid(), branch_id));
-
-CREATE POLICY "Managers can modify branch config"
-  ON branch_closure_config FOR ALL TO authenticated
-  USING (has_branch_access_v2(auth.uid(), branch_id));
-
--- Trigger updated_at
-CREATE OR REPLACE FUNCTION update_shift_closures_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER set_shift_closures_updated_at
-  BEFORE UPDATE ON shift_closures
-  FOR EACH ROW
-  EXECUTE FUNCTION update_shift_closures_updated_at();
-```
+Rediseño completo del formulario de cierre de turno para incluir:
+1. Comparación de ventas de Núcleo vs fuentes externas (Posnet y Paneles de Apps)
+2. Registro de diferencia de caja
+3. Manual de uso integrado con ayuda contextual en cada sección
 
 ---
 
-## FASE 2: Tipos y Hooks
+## Diseño Visual del Formulario
 
-### 2.1 Crear `src/types/shiftClosure.ts`
-
-Interfaces TypeScript para:
-- `ShiftClosure` - Estructura completa del cierre
-- `HamburguesasData` - Categorías y extras
-- `VentasLocalData` - Salón, Takeaway, Delivery Manual
-- `VentasAppsData` - Apps con sus formas de pago
-- `ClosureConfig` - Configuración de marca/local
-
-### 2.2 Crear `src/hooks/useShiftClosures.ts`
-
-- `useTodayClosures(branchId)` - Cierres del día actual
-- `useClosuresByDateRange(branchId, from, to)` - Rango de fechas
-- `useBrandClosuresSummary(date)` - Resumen para Mi Marca
-- `useSaveShiftClosure()` - Mutation para guardar
-- `useShiftClosure(branchId, fecha, turno)` - Obtener cierre específico
-
-### 2.3 Crear `src/hooks/useClosureConfig.ts`
-
-- `useBrandClosureConfig()` - Configuración global
-- `useBranchClosureConfig(branchId)` - Apps habilitadas por local
-- `useUpdateBranchClosureConfig()` - Mutation para actualizar
-
-### 2.4 Eliminar `src/hooks/useDailySales.ts`
-
----
-
-## FASE 3: Componentes del Modal
-
-### 3.1 Crear `src/components/local/closure/ShiftClosureModal.tsx`
-
-Modal contenedor con:
-- Selector de fecha y turno
-- Secciones colapsables
-- Resumen en tiempo real
-- Validaciones y warnings
-- Botón de guardar
-
-### 3.2 Crear `src/components/local/closure/BurgersSection.tsx`
+### Estructura General (7 secciones)
 
 ```text
-┌────────────────────────────────────────────────────────────────┐
-│ Clásicas [  ]  │  Originales [  ]  │  Más Sabor [  ]          │
-├────────────────────────────────────────────────────────────────┤
-│ VEGGIES                    │ ULTRASMASH                       │
-│ Not American [  ]          │ Ultra Cheese [  ]                │
-│ Not Claudio  [  ]          │ Ultra Bacon  [  ]                │
-├────────────────────────────────────────────────────────────────┤
-│ EXTRAS: ExtraCarne [  ] ExtraNotBurger [  ] ExtraNotChicken [ ]│
-└────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│ CIERRE DE TURNO - [Sucursal] - [Fecha] [Turno]             │
+├────────────────────────────────────────────────────────────┤
+│ 1. HAMBURGUESAS VENDIDAS                          Total: X │
+│ 2. VENTAS MOSTRADOR (Núcleo)                   Subtotal: $ │
+│ 3. COMPARACIÓN CON POSNET                    ✅/⚠️ Dif: $ │
+│ 4. VENTAS POR APPS (Núcleo)                    Subtotal: $ │
+│ 5. COMPARACIÓN CON PANELES                   ✅/⚠️ Dif: $ │
+│ 6. ARQUEO DE CAJA                            ✅/⚠️ Dif: $ │
+│ 7. FACTURACIÓN                               ✅/⚠️ Dif: $ │
+│ 8. NOTAS DEL TURNO                                         │
+├────────────────────────────────────────────────────────────┤
+│ RESUMEN: Hamburguesas | Vendido | Efectivo | Digital       │
+│ ALERTAS: ⚠️ Diferencia Posnet | ⚠️ Diferencia Apps | etc   │
+└────────────────────────────────────────────────────────────┘
 ```
 
-### 3.3 Crear `src/components/local/closure/LocalSalesSection.tsx`
+### Sección 3: Comparación con Posnet (NUEVO)
 
-Tabla con canales (Salón, Takeaway, Delivery Manual) y formas de pago (Efectivo, Débito, Crédito, QR, Transferencia).
-
-### 3.4 Crear `src/components/local/closure/AppSalesSection.tsx`
-
-- Más Delivery: Efectivo + MercadoPago
-- Rappi: App
-- PedidosYa: Efectivo + App
-- MP Delivery: App
-
-Solo muestra apps habilitadas para el local.
-
-### 3.5 Crear `src/components/local/closure/InvoicingSection.tsx`
-
-- Input de total facturado
-- Cálculo automático de esperado
-- Warning si diferencia > 10%
-
-### 3.6 Crear `src/components/local/closure/ClosureSummary.tsx`
-
-Resumen en tiempo real con totales de hamburguesas, vendido, efectivo, digital.
-
-### 3.7 Crear `src/components/local/closure/NucleoGuideDialog.tsx`
-
-Dialog de ayuda para explicar cómo obtener datos de Núcleo.
-
-### 3.8 Eliminar `src/components/local/SalesEntryModal.tsx`
-
----
-
-## FASE 4: Integración en Mi Local
-
-### 4.1 Modificar `src/components/local/ManagerDashboard.tsx`
-
-- Reemplazar `useTodaySales` por `useTodayClosures`
-- Cards de turno con:
-  - Estado: ✅ Cargado | ⏳ Pendiente
-  - Total hamburguesas
-  - Total vendido
-  - Alerta de facturación si aplica
-- Click en turno abre `ShiftClosureModal`
-- Solo mostrar turnos habilitados del local (`branch_shifts`)
-
----
-
-## FASE 5: Vista Mi Marca
-
-### 5.1 Modificar `src/components/admin/BrandDailySalesTable.tsx`
-
-Nueva estructura de tabla:
-
-| Sucursal | Vendido | Efect. | Digital | Clás | Orig | +Sab | Veg | Ultra | Ext | Turnos |
-|----------|---------|--------|---------|------|------|------|-----|-------|-----|--------|
-| Mnt      | $250k   | $80k   | $170k   | 12   | 8    | 6    | 4   | 15    | 3   | M✅ N✅ |
-
-- Desglose de hamburguesas por categoría
-- Columna de estado de turnos dinámica (según turnos habilitados)
-- Warning visual en turnos con alertas de facturación
-- Click en fila para ver detalle
-
-### 5.2 Crear `src/components/admin/ClosureDetailModal.tsx`
-
-Modal para ver detalle completo de un cierre desde Mi Marca.
-
----
-
-## FASE 6: Configuración desde Mi Marca
-
-### 6.1 Crear `src/pages/admin/ClosureConfigPage.tsx`
-
-- Gestión de categorías de hamburguesas
-- Gestión de tipos individuales
-- Gestión de extras
-- Gestión de apps de delivery
-- Preview del formulario resultante
-
-### 6.2 Modificar `src/components/admin/AdminSidebar.tsx`
-
-Agregar enlace en sección Configuración:
-- Reglamentos (ya existe)
-- **Cierre de Turno** (nuevo)
-
-### 6.3 Modificar `src/App.tsx`
-
-Agregar ruta: `/mimarca/configuracion/cierres`
-
----
-
-## Estructura de Archivos Final
-
-### Crear:
-```
-src/types/shiftClosure.ts
-src/hooks/useShiftClosures.ts
-src/hooks/useClosureConfig.ts
-src/components/local/closure/ShiftClosureModal.tsx
-src/components/local/closure/BurgersSection.tsx
-src/components/local/closure/LocalSalesSection.tsx
-src/components/local/closure/AppSalesSection.tsx
-src/components/local/closure/InvoicingSection.tsx
-src/components/local/closure/ClosureSummary.tsx
-src/components/local/closure/NucleoGuideDialog.tsx
-src/components/admin/ClosureDetailModal.tsx
-src/pages/admin/ClosureConfigPage.tsx
+```text
+┌────────────────────────────────────────────────────────────┐
+│ 📟 COMPARACIÓN CON POSNET                                  │
+│ ───────────────────────────────────────────────────────────│
+│ [?] ¿Cómo obtener el cierre del Posnet?                    │
+│ ───────────────────────────────────────────────────────────│
+│                                                            │
+│                      Núcleo          Posnet      Diferencia│
+│ ┌─────────────────┬───────────────┬───────────┬───────────┐│
+│ │ Total Tarjetas  │  $23.500      │ [$_____ ] │ ✅ $0     ││
+│ │ (Déb+Créd+QR)   │  (calculado)  │           │           ││
+│ └─────────────────┴───────────────┴───────────┴───────────┘│
+│                                                            │
+│ Desglose Núcleo:                                           │
+│   Débito: $8.000 | Crédito: $12.000 | QR: $3.500           │
+│                                                            │
+│ ⚠️ Si hay diferencia: puede ser un error de carga en      │
+│    Núcleo o una venta que no se procesó correctamente.     │
+└────────────────────────────────────────────────────────────┘
 ```
 
-### Eliminar:
-```
-supabase/functions/auto-close-shifts/index.ts
-src/components/local/SalesEntryModal.tsx
-src/hooks/useDailySales.ts
+### Sección 4-5: Ventas por Apps con Comparación (REDISEÑO)
+
+```text
+┌────────────────────────────────────────────────────────────┐
+│ 📱 VENTAS POR APPS                                         │
+│ ───────────────────────────────────────────────────────────│
+│ [?] ¿Cómo verificar con cada app?                          │
+│ ───────────────────────────────────────────────────────────│
+│                                                            │
+│ ┌─── MÁS DELIVERY ─────────────────────────────────────────┐
+│ │ Datos de Núcleo:                                         │
+│ │   Efectivo: [$2.000]  MercadoPago: [$8.000]              │
+│ │                                     Suma: $10.000        │
+│ │ ─────────────────────────────────────────────────────────│
+│ │ Total del Panel MásDeli: [$10.200]                       │
+│ │ Diferencia: ⚠️ -$200 (Núcleo tiene $200 menos)           │
+│ └──────────────────────────────────────────────────────────┘
+│                                                            │
+│ ┌─── RAPPI ────────────────────────────────────────────────┐
+│ │ Datos de Núcleo (forma de pago "Vales"):                 │
+│ │   Vales: [$7.000]                     Suma: $7.000       │
+│ │ ─────────────────────────────────────────────────────────│
+│ │ Total del Panel Rappi: [$7.000]                          │
+│ │ Diferencia: ✅ $0                                        │
+│ └──────────────────────────────────────────────────────────┘
+│                                                            │
+│ ┌─── PEDIDOSYA ────────────────────────────────────────────┐
+│ │ Datos de Núcleo:                                         │
+│ │   Efectivo: [$1.500]  Vales (app): [$4.000]              │
+│ │                                     Suma: $5.500         │
+│ │ ─────────────────────────────────────────────────────────│
+│ │ Total del Panel PeYa: [$5.800]                           │
+│ │ Diferencia: ⚠️ -$300 (Núcleo tiene $300 menos)           │
+│ └──────────────────────────────────────────────────────────┘
+│                                                            │
+│ ┌─── MP DELIVERY ──────────────────────────────────────────┐
+│ │ Datos de Núcleo (forma de pago "Vales"):                 │
+│ │   Vales: [$3.000]                     Suma: $3.000       │
+│ │ ─────────────────────────────────────────────────────────│
+│ │ Total del Panel MP: [$3.000]                             │
+│ │ Diferencia: ✅ $0                                        │
+│ └──────────────────────────────────────────────────────────┘
+│                                                            │
+│ ═══════════════════════════════════════════════════════════│
+│ RESUMEN DIFERENCIAS APPS:                                  │
+│ Total Núcleo: $25.500 | Total Paneles: $26.000             │
+│ ⚠️ Diferencia Total: -$500                                 │
+│ Las apps reportan $500 más de lo que está en Núcleo        │
+└────────────────────────────────────────────────────────────┘
 ```
 
-### Modificar:
-```
-src/components/local/ManagerDashboard.tsx
-src/components/admin/BrandDailySalesTable.tsx
-src/components/admin/AdminSidebar.tsx
-src/App.tsx
+### Sección 6: Arqueo de Caja (NUEVO)
+
+```text
+┌────────────────────────────────────────────────────────────┐
+│ 💵 ARQUEO DE CAJA                                          │
+│ ───────────────────────────────────────────────────────────│
+│ [?] ¿Cómo obtener la diferencia de caja?                   │
+│ ───────────────────────────────────────────────────────────│
+│                                                            │
+│ Ingresá la diferencia de caja que te da Núcleo:            │
+│                                                            │
+│ ┌─────────────────────────────────────────────────────────┐│
+│ │ Diferencia de caja: [$ _________ ]                      ││
+│ │                                                         ││
+│ │ Si la caja cerró EXACTA, dejá en $0                     ││
+│ │ Si FALTA dinero, poné el monto en NEGATIVO (ej: -500)   ││
+│ │ Si SOBRA dinero, poné el monto en POSITIVO (ej: +200)   ││
+│ └─────────────────────────────────────────────────────────┘│
+│                                                            │
+│ ✅ Caja exacta                                             │
+│ ⚠️ Diferencia de $500 - Se registrará para seguimiento     │
+└────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Lógica de Negocio
+## Cambios en la Estructura de Datos
 
-### Cálculo de Facturación Esperada
+### Archivo: `src/types/shiftClosure.ts`
+
+**Nuevas interfaces:**
+
+```typescript
+// Comparación con Posnet
+export interface ComparacionPosnet {
+  total_posnet: number;  // Total único del cierre del posnet (tarjetas)
+}
+
+// Comparación con Panel de cada App
+export interface ComparacionApp {
+  total_panel: number;   // Total que reporta el panel de la app
+}
+
+// Actualizar VentasLocalData
+export interface VentasLocalData {
+  salon: ChannelPayments;
+  takeaway: ChannelPayments;
+  delivery_manual: ChannelPayments;
+  comparacion_posnet: ComparacionPosnet;  // NUEVO
+}
+
+// Renombrar campos en VentasAppsData para claridad
+export interface VentasAppsData {
+  mas_delivery: {
+    efectivo: number;      // Forma de pago "Efectivo" en Núcleo
+    mercadopago: number;   // Forma de pago "MercadoPago" en Núcleo  
+    total_panel: number;   // NUEVO: Total del panel MásDeli
+  };
+  rappi: {
+    vales: number;         // Forma de pago "Vales" en Núcleo (antes era "app")
+    total_panel: number;   // NUEVO: Total del panel Rappi
+  };
+  pedidosya: {
+    efectivo: number;      // Forma de pago "Efectivo" en Núcleo
+    vales: number;         // Forma de pago "Vales" en Núcleo (antes era "app")
+    total_panel: number;   // NUEVO: Total del panel PeYa
+  };
+  mp_delivery: {
+    vales: number;         // Forma de pago "Vales" en Núcleo (antes era "app")
+    total_panel: number;   // NUEVO: Total del panel MP Delivery
+  };
+}
+
+// Arqueo de caja
+export interface ArqueoCaja {
+  diferencia_caja: number;  // Diferencia que reporta Núcleo (puede ser negativo)
+}
+
+// Agregar al ShiftClosure principal
+export interface ShiftClosure {
+  // ... campos existentes ...
+  arqueo_caja: ArqueoCaja;
+  
+  // Diferencias calculadas (para persistir y reportes)
+  diferencia_posnet: number;
+  diferencia_apps: number;
+  tiene_alerta_posnet: boolean;
+  tiene_alerta_apps: boolean;
+  tiene_alerta_caja: boolean;
+}
 ```
-Efectivo Local = Salón.efectivo + Takeaway.efectivo + DeliveryManual.efectivo + PedidosYa.efectivo
-Efectivo MásDelivery = MásDelivery.efectivo
 
-Esperado = Total Vendido - Efectivo Local + Efectivo MásDelivery
+**Nuevas funciones helper:**
+
+```typescript
+// Calcular total de tarjetas en Núcleo (para comparar con Posnet)
+export function calcularTotalTarjetasNucleo(ventasLocal: VentasLocalData): number {
+  const canales = [ventasLocal.salon, ventasLocal.takeaway, ventasLocal.delivery_manual];
+  return canales.reduce((sum, canal) => 
+    sum + canal.debito + canal.credito + canal.qr, 0
+  );
+}
+
+// Calcular diferencia con Posnet
+export function calcularDiferenciaPosnet(ventasLocal: VentasLocalData): {
+  nucleo: number;
+  posnet: number;
+  diferencia: number;
+  tieneAlerta: boolean;
+} {
+  const nucleo = calcularTotalTarjetasNucleo(ventasLocal);
+  const posnet = ventasLocal.comparacion_posnet?.total_posnet || 0;
+  const diferencia = nucleo - posnet;
+  return {
+    nucleo,
+    posnet,
+    diferencia,
+    tieneAlerta: diferencia !== 0,
+  };
+}
+
+// Calcular diferencias por App
+export function calcularDiferenciasApps(ventasApps: VentasAppsData): {
+  porApp: {
+    mas_delivery: { nucleo: number; panel: number; diferencia: number; tieneAlerta: boolean };
+    rappi: { nucleo: number; panel: number; diferencia: number; tieneAlerta: boolean };
+    pedidosya: { nucleo: number; panel: number; diferencia: number; tieneAlerta: boolean };
+    mp_delivery: { nucleo: number; panel: number; diferencia: number; tieneAlerta: boolean };
+  };
+  totalNucleo: number;
+  totalPaneles: number;
+  diferencia: number;
+  tieneAlerta: boolean;
+}
+
+// Defaults actualizados
+export function getDefaultVentasLocal(): VentasLocalData {
+  return {
+    salon: { efectivo: 0, debito: 0, credito: 0, qr: 0, transferencia: 0 },
+    takeaway: { efectivo: 0, debito: 0, credito: 0, qr: 0, transferencia: 0 },
+    delivery_manual: { efectivo: 0, debito: 0, credito: 0, qr: 0, transferencia: 0 },
+    comparacion_posnet: { total_posnet: 0 },
+  };
+}
+
+export function getDefaultVentasApps(): VentasAppsData {
+  return {
+    mas_delivery: { efectivo: 0, mercadopago: 0, total_panel: 0 },
+    rappi: { vales: 0, total_panel: 0 },
+    pedidosya: { efectivo: 0, vales: 0, total_panel: 0 },
+    mp_delivery: { vales: 0, total_panel: 0 },
+  };
+}
+
+export function getDefaultArqueoCaja(): ArqueoCaja {
+  return { diferencia_caja: 0 };
+}
 ```
 
-### Validaciones
-- **Total $0:** Warning "¿Seguro que no hubo ventas?" pero permitir guardar
-- **Facturación:** Warning si `|facturado - esperado| > 10%`
-- **Usuario:** Siempre guardar `cerrado_por`
+---
+
+## Componentes a Crear/Modificar
+
+### Nuevo: `src/components/local/closure/PosnetComparisonSection.tsx`
+
+Componente para la comparación Núcleo vs Posnet.
+
+### Nuevo: `src/components/local/closure/CashCountSection.tsx`
+
+Componente para el arqueo de caja (diferencia).
+
+### Nuevo: `src/components/local/closure/ClosureHelpManual.tsx`
+
+Modal con el manual completo de cómo cargar el cierre.
+
+### Modificar: `LocalSalesSection.tsx`
+
+- Mantener la grilla actual de canales x formas de pago
+- Agregar un chip que muestre el "Total Tarjetas" calculado
+
+### Modificar: `AppSalesSection.tsx`
+
+- Cambiar el campo `app` por `vales` en Rappi, PeYa y MP Delivery
+- Agregar input de "Total del Panel" para cada app
+- Mostrar diferencia calculada en tiempo real
+- Agregar resumen de diferencias al final
+
+### Modificar: `ClosureSummary.tsx`
+
+- Agregar sección de "Alertas Detectadas"
+- Mostrar diferencias de Posnet, Apps y Caja si existen
+
+### Modificar: `ShiftClosureModal.tsx`
+
+- Agregar estados para `comparacionPosnet` y `arqueoCaja`
+- Incluir nuevas secciones en el formulario
+- Actualizar cálculos de alertas
+
+### Modificar: `useShiftClosures.ts`
+
+- Actualizar `useSaveShiftClosure` para persistir nuevos campos
+- Agregar cálculos de diferencias en el guardado
+
+---
+
+## Manual de Uso Integrado (Contenido)
+
+### Modal: "¿Cómo cargar el cierre de turno?"
+
+**Paso 1: Obtener datos de Núcleo**
+1. Ingresá a Núcleo con tu usuario
+2. Andá a Reportes > Ventas del día
+3. Filtrá por la fecha y turno que estás cerrando
+4. Anotá los montos separados por forma de pago
+
+**Paso 2: Cargar Ventas de Mostrador**
+- Separá las ventas por canal: Salón, Takeaway, Delivery Manual
+- Para cada canal, ingresá el monto de cada forma de pago
+- Si un local no está integrado con las apps, los pedidos manuales van en "Delivery Manual"
+
+**Paso 3: Comparar con el Posnet**
+- Hacé el cierre del Posnet (terminal de tarjetas)
+- Ingresá el total que da el Posnet
+- El sistema calculará si hay diferencia con lo de Núcleo
+
+**Paso 4: Cargar Ventas de Apps**
+
+| App | Integrada | No Integrada |
+|-----|-----------|--------------|
+| MásDelivery | Se carga automático en Núcleo | Cargar manualmente con canal "MásDelivery" |
+| Rappi | Núcleo muestra "Rappi" | Usar forma de pago "Vales" |
+| PedidosYa | Núcleo muestra "PedidosYa" | Usar forma de pago "Vales" + "Efectivo" |
+| MP Delivery | Núcleo muestra "MP Delivery" | Usar forma de pago "Vales" |
+
+**Paso 5: Comparar con Paneles de Apps**
+- Entrá al panel de cada app y anotá el total de ventas del turno
+- MásDelivery: App de restaurante > Historial
+- Rappi: Partners Portal > Historial de pedidos
+- PedidosYa: App restaurante > Pedidos entregados
+- MP Delivery: MercadoPago > Actividad > Filtrar delivery
+
+**Paso 6: Cargar Arqueo de Caja**
+- En Núcleo, hacé el cierre de caja
+- Si te da diferencia, ingresá el monto (negativo si falta, positivo si sobra)
+- Si cierra exacto, dejá $0
+
+**Paso 7: Cargar Facturación**
+- Ingresá el total facturado del turno
+- El sistema valida contra lo esperado
+
+**Paso 8: Revisar y Guardar**
+- Verificá que no haya alertas rojas
+- Si hay diferencias, revisá los datos antes de guardar
+- Agregá notas si hubo algún incidente
+
+---
+
+## Indicadores Visuales
+
+| Estado | Color | Icono | Significado |
+|--------|-------|-------|-------------|
+| Sin diferencia | Verde | ✅ | Todo coincide |
+| Diferencia detectada | Rojo | ⚠️ | Hay diferencia, revisar |
+| Sin datos externos | Gris | - | No se cargó el dato de comparación |
+
+**Política**: Cualquier diferencia distinta de $0 genera alerta (no hay tolerancia).
+
+---
+
+## Migración de Base de Datos
+
+Se requiere agregar columnas a la tabla `shift_closures`:
+
+```sql
+ALTER TABLE shift_closures
+ADD COLUMN IF NOT EXISTS arqueo_caja JSONB DEFAULT '{"diferencia_caja": 0}'::jsonb,
+ADD COLUMN IF NOT EXISTS diferencia_posnet DECIMAL(12,2) DEFAULT 0,
+ADD COLUMN IF NOT EXISTS diferencia_apps DECIMAL(12,2) DEFAULT 0,
+ADD COLUMN IF NOT EXISTS tiene_alerta_posnet BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS tiene_alerta_apps BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS tiene_alerta_caja BOOLEAN DEFAULT false;
+```
+
+Los campos JSONB existentes (`ventas_local`, `ventas_apps`) se actualizarán automáticamente con la nueva estructura ya que PostgreSQL permite agregar campos a JSONB sin migración.
 
 ---
 
 ## Orden de Implementación
 
-1. Migración SQL (crear tablas, RLS, datos iniciales)
-2. Eliminar edge function `auto-close-shifts`
-3. Crear tipos TypeScript
-4. Crear hooks
-5. Crear componentes del modal
-6. Integrar en ManagerDashboard
-7. Actualizar BrandDailySalesTable
-8. Crear página de configuración
-9. Eliminar archivos legacy
-10. Testing
+1. Migración de base de datos (agregar columnas)
+2. Actualizar `src/types/shiftClosure.ts` con nuevas interfaces y funciones
+3. Crear `PosnetComparisonSection.tsx`
+4. Crear `CashCountSection.tsx`
+5. Crear `ClosureHelpManual.tsx`
+6. Modificar `LocalSalesSection.tsx` (agregar chip de total tarjetas)
+7. Modificar `AppSalesSection.tsx` (rediseño completo)
+8. Modificar `ClosureSummary.tsx` (agregar alertas)
+9. Modificar `ShiftClosureModal.tsx` (integrar todo)
+10. Modificar `useShiftClosures.ts` (persistencia y cálculos)
+11. Testing del flujo completo
 
+---
+
+## Compatibilidad Hacia Atrás
+
+Los registros existentes seguirán funcionando porque:
+- Los nuevos campos JSONB tienen valores por defecto
+- Las funciones de cálculo manejan valores `undefined` o `null`
+- Los campos de comparación son opcionales (si no se cargan, no generan alerta)
