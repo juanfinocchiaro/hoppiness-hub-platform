@@ -7,9 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { Save, Loader2, MapPin, X, CheckCircle2, Clock, Globe, Eye, EyeOff, CalendarClock } from 'lucide-react';
+import { Save, Loader2, MapPin, X, CheckCircle2, Globe, Eye, EyeOff, CalendarClock } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import BranchLocationMap from '@/components/maps/BranchLocationMap';
+import PublicHoursEditor, { PublicHours } from './PublicHoursEditor';
 
 type Branch = Tables<'branches'>;
 type PublicStatus = 'active' | 'coming_soon' | 'hidden';
@@ -38,9 +39,10 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
     ((branch as any).public_status as PublicStatus) || 'active'
   );
   
-  // Horarios públicos
-  const [openingTime, setOpeningTime] = useState(branch.opening_time?.slice(0, 5) || '12:00');
-  const [closingTime, setClosingTime] = useState(branch.closing_time?.slice(0, 5) || '23:30');
+  // Horarios públicos por día
+  const [publicHours, setPublicHours] = useState<PublicHours | null>(
+    (branch as any).public_hours || null
+  );
   
   // Mapa (on-demand)
   const [showMap, setShowMap] = useState(false);
@@ -59,8 +61,7 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
           // Mantener is_active sincronizado (hidden = false, otros = true)
           is_active: publicStatus !== 'hidden',
           public_status: publicStatus,
-          opening_time: openingTime ? `${openingTime}:00` : null,
-          closing_time: closingTime ? `${closingTime}:00` : null,
+          public_hours: publicHours,
           latitude: latitude ? parseFloat(latitude) : null,
           longitude: longitude ? parseFloat(longitude) : null,
         } as any)
@@ -186,33 +187,12 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
           </div>
         </div>
 
-        {/* Horarios públicos (lo que ven los clientes) */}
-        <div className="space-y-3 pt-4 border-t">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            Horario Público
-            <span className="text-xs text-muted-foreground font-normal">(visible en la web)</span>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="opening-time">Apertura</Label>
-              <Input
-                id="opening-time"
-                type="time"
-                value={openingTime}
-                onChange={(e) => setOpeningTime(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="closing-time">Cierre</Label>
-              <Input
-                id="closing-time"
-                type="time"
-                value={closingTime}
-                onChange={(e) => setClosingTime(e.target.value)}
-              />
-            </div>
-          </div>
+        {/* Horarios públicos por día */}
+        <div className="pt-4 border-t">
+          <PublicHoursEditor
+            value={publicHours}
+            onChange={setPublicHours}
+          />
         </div>
 
         {/* Estado público del local */}
