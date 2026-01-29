@@ -23,26 +23,40 @@ import { cn } from '@/lib/utils';
 
 import { BurgersSection } from './BurgersSection';
 import { LocalSalesSection } from './LocalSalesSection';
+import { PosnetComparisonSection } from './PosnetComparisonSection';
 import { AppSalesSection } from './AppSalesSection';
+import { CashCountSection } from './CashCountSection';
 import { InvoicingSection } from './InvoicingSection';
 import { ClosureSummary } from './ClosureSummary';
+import { ClosureHelpManual } from './ClosureHelpManual';
 
 import {
   useSaveShiftClosure,
   useShiftClosure,
   useEnabledShifts,
-  SHIFT_LABELS,
 } from '@/hooks/useShiftClosures';
 import {
   getDefaultHamburguesas,
   getDefaultVentasLocal,
   getDefaultVentasApps,
+  getDefaultArqueoCaja,
   calcularTotalesHamburguesas,
   calcularTotalesVentasLocal,
   calcularTotalesVentasApps,
   calcularFacturacionEsperada,
+  calcularDiferenciaPosnet,
+  calcularDiferenciasApps,
+  migrateVentasApps,
+  migrateVentasLocal,
 } from '@/types/shiftClosure';
-import type { HamburguesasData, VentasLocalData, VentasAppsData, ShiftType } from '@/types/shiftClosure';
+import type { 
+  HamburguesasData, 
+  VentasLocalData, 
+  VentasAppsData, 
+  ArqueoCaja,
+  ComparacionPosnet,
+  ShiftType 
+} from '@/types/shiftClosure';
 
 interface ShiftClosureModalProps {
   open: boolean;
@@ -66,6 +80,7 @@ export function ShiftClosureModal({
   const [hamburguesas, setHamburguesas] = useState<HamburguesasData>(getDefaultHamburguesas());
   const [ventasLocal, setVentasLocal] = useState<VentasLocalData>(getDefaultVentasLocal());
   const [ventasApps, setVentasApps] = useState<VentasAppsData>(getDefaultVentasApps());
+  const [arqueoCaja, setArqueoCaja] = useState<ArqueoCaja>(getDefaultArqueoCaja());
   const [totalFacturado, setTotalFacturado] = useState(0);
   const [notas, setNotas] = useState('');
   
@@ -79,12 +94,14 @@ export function ShiftClosureModal({
   // Save mutation
   const saveMutation = useSaveShiftClosure();
   
-  // Populate form with existing data
+  // Populate form with existing data (with migration for old format)
   useEffect(() => {
     if (existingClosure) {
       setHamburguesas(existingClosure.hamburguesas);
-      setVentasLocal(existingClosure.ventas_local);
-      setVentasApps(existingClosure.ventas_apps);
+      // Migrate old format to new format
+      setVentasLocal(migrateVentasLocal(existingClosure.ventas_local));
+      setVentasApps(migrateVentasApps(existingClosure.ventas_apps));
+      setArqueoCaja(existingClosure.arqueo_caja || getDefaultArqueoCaja());
       setTotalFacturado(Number(existingClosure.total_facturado) || 0);
       setNotas(existingClosure.notas || '');
     } else {
@@ -92,6 +109,7 @@ export function ShiftClosureModal({
       setHamburguesas(getDefaultHamburguesas());
       setVentasLocal(getDefaultVentasLocal());
       setVentasApps(getDefaultVentasApps());
+      setArqueoCaja(getDefaultArqueoCaja());
       setTotalFacturado(0);
       setNotas('');
     }
@@ -125,6 +143,30 @@ export function ShiftClosureModal({
     };
   }, [hamburguesas, ventasLocal, ventasApps]);
   
+  // Calculate alerts
+  const alertas = useMemo(() => {
+    const posnetDiff = calcularDiferenciaPosnet(ventasLocal);
+    const appsDiff = calcularDiferenciasApps(ventasApps);
+    const cajaAlerta = arqueoCaja.diferencia_caja !== 0;
+    const facturacionAlerta = totals.facturacionEsperada > 0 && 
+      Math.abs(totalFacturado - totals.facturacionEsperada) > totals.facturacionEsperada * 0.1;
+    
+    return {
+      posnet: posnetDiff.tieneAlerta,
+      apps: appsDiff.tieneAlerta,
+      caja: cajaAlerta,
+      facturacion: facturacionAlerta,
+    };
+  }, [ventasLocal, ventasApps, arqueoCaja, totalFacturado, totals.facturacionEsperada]);
+  
+  // Handle posnet change
+  const handlePosnetChange = (data: ComparacionPosnet) => {
+    setVentasLocal(prev => ({
+      ...prev,
+      comparacion_posnet: data,
+    }));
+  };
+  
   const handleSave = async () => {
     await saveMutation.mutateAsync({
       branch_id: branchId,
@@ -133,6 +175,7 @@ export function ShiftClosureModal({
       hamburguesas,
       ventas_local: ventasLocal,
       ventas_apps: ventasApps,
+      arqueo_caja: arqueoCaja,
       total_facturado: totalFacturado,
       notas: notas || undefined,
     });
@@ -143,8 +186,13 @@ export function ShiftClosureModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] p-0">
         <DialogHeader className="px-6 pt-6 pb-2">
-          <DialogTitle>Cierre de Turno</DialogTitle>
-          <p className="text-sm text-muted-foreground">{branchName}</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle>Cierre de Turno</DialogTitle>
+              <p className="text-sm text-muted-foreground">{branchName}</p>
+            </div>
+            <ClosureHelpManual />
+          </div>
         </DialogHeader>
         
         <ScrollArea className="max-h-[calc(90vh-180px)] px-6">
@@ -202,19 +250,27 @@ export function ShiftClosureModal({
               </div>
             </div>
             
-            {/* Sections */}
+            {/* 1. Hamburguesas */}
             <BurgersSection
               data={hamburguesas}
               onChange={setHamburguesas}
               totalHamburguesas={totals.totalHamburguesas}
             />
             
+            {/* 2. Ventas Mostrador */}
             <LocalSalesSection
               data={ventasLocal}
               onChange={setVentasLocal}
               subtotal={totals.subtotalLocal}
             />
             
+            {/* 3. Comparación Posnet */}
+            <PosnetComparisonSection
+              ventasLocal={ventasLocal}
+              onPosnetChange={handlePosnetChange}
+            />
+            
+            {/* 4. Ventas Apps */}
             <AppSalesSection
               branchId={branchId}
               data={ventasApps}
@@ -222,6 +278,13 @@ export function ShiftClosureModal({
               subtotal={totals.subtotalApps}
             />
             
+            {/* 5. Arqueo de Caja */}
+            <CashCountSection
+              data={arqueoCaja}
+              onChange={setArqueoCaja}
+            />
+            
+            {/* 6. Facturación */}
             <InvoicingSection
               totalFacturado={totalFacturado}
               onTotalFacturadoChange={setTotalFacturado}
@@ -231,16 +294,17 @@ export function ShiftClosureModal({
               efectivoMasDelivery={totals.efectivoMasDelivery}
             />
             
-            {/* Summary */}
+            {/* 7. Resumen */}
             <ClosureSummary
               totalHamburguesas={totals.totalHamburguesas}
               totalVendido={totals.totalVendido}
               totalEfectivo={totals.totalEfectivo}
               totalDigital={totals.totalDigital}
               totalFacturado={totalFacturado}
+              alertas={alertas}
             />
             
-            {/* Notes */}
+            {/* 8. Notas */}
             <div>
               <Label className="text-xs text-muted-foreground">Notas del turno (opcional)</Label>
               <Textarea

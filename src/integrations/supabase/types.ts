@@ -6603,16 +6603,22 @@ export type Database = {
       }
       shift_closures: {
         Row: {
+          arqueo_caja: Json | null
           branch_id: string
           cerrado_at: string
           cerrado_por: string
+          diferencia_apps: number | null
+          diferencia_posnet: number | null
           facturacion_diferencia: number
           facturacion_esperada: number
           fecha: string
           hamburguesas: Json
           id: string
           notas: string | null
+          tiene_alerta_apps: boolean | null
+          tiene_alerta_caja: boolean | null
           tiene_alerta_facturacion: boolean
+          tiene_alerta_posnet: boolean | null
           total_digital: number
           total_efectivo: number
           total_facturado: number
@@ -6625,16 +6631,22 @@ export type Database = {
           ventas_local: Json
         }
         Insert: {
+          arqueo_caja?: Json | null
           branch_id: string
           cerrado_at?: string
           cerrado_por: string
+          diferencia_apps?: number | null
+          diferencia_posnet?: number | null
           facturacion_diferencia?: number
           facturacion_esperada?: number
           fecha: string
           hamburguesas?: Json
           id?: string
           notas?: string | null
+          tiene_alerta_apps?: boolean | null
+          tiene_alerta_caja?: boolean | null
           tiene_alerta_facturacion?: boolean
+          tiene_alerta_posnet?: boolean | null
           total_digital?: number
           total_efectivo?: number
           total_facturado?: number
@@ -6647,16 +6659,22 @@ export type Database = {
           ventas_local?: Json
         }
         Update: {
+          arqueo_caja?: Json | null
           branch_id?: string
           cerrado_at?: string
           cerrado_por?: string
+          diferencia_apps?: number | null
+          diferencia_posnet?: number | null
           facturacion_diferencia?: number
           facturacion_esperada?: number
           fecha?: string
           hamburguesas?: Json
           id?: string
           notas?: string | null
+          tiene_alerta_apps?: boolean | null
+          tiene_alerta_caja?: boolean | null
           tiene_alerta_facturacion?: boolean
+          tiene_alerta_posnet?: boolean | null
           total_digital?: number
           total_efectivo?: number
           total_facturado?: number

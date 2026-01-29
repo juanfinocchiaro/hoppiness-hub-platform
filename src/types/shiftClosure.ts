@@ -26,7 +26,7 @@ export interface HamburguesasData {
   };
 }
 
-// Local sales by channel and payment method
+// Payment methods for local sales
 export interface ChannelPayments {
   efectivo: number;
   debito: number;
@@ -35,28 +35,44 @@ export interface ChannelPayments {
   transferencia: number;
 }
 
+// Posnet comparison data
+export interface ComparacionPosnet {
+  total_posnet: number; // Total from Posnet terminal (cards)
+}
+
+// Local sales by channel and payment method
 export interface VentasLocalData {
   salon: ChannelPayments;
   takeaway: ChannelPayments;
   delivery_manual: ChannelPayments;
+  comparacion_posnet: ComparacionPosnet;
 }
 
-// App sales with their specific payment methods
+// App sales with their specific payment methods and panel comparison
 export interface VentasAppsData {
   mas_delivery: {
-    efectivo: number;
-    mercadopago: number;
+    efectivo: number;      // Payment type "Efectivo" in Núcleo
+    mercadopago: number;   // Payment type "MercadoPago" in Núcleo
+    total_panel: number;   // Total from MásDelivery panel
   };
   rappi: {
-    app: number;
+    vales: number;         // Payment type "Vales" in Núcleo
+    total_panel: number;   // Total from Rappi panel
   };
   pedidosya: {
-    efectivo: number;
-    app: number;
+    efectivo: number;      // Payment type "Efectivo" in Núcleo
+    vales: number;         // Payment type "Vales" in Núcleo
+    total_panel: number;   // Total from PeYa panel
   };
   mp_delivery: {
-    app: number;
+    vales: number;         // Payment type "Vales" in Núcleo
+    total_panel: number;   // Total from MP Delivery panel
   };
+}
+
+// Cash count data
+export interface ArqueoCaja {
+  diferencia_caja: number; // Cash difference from Núcleo (can be negative)
 }
 
 // Full shift closure record
@@ -69,6 +85,7 @@ export interface ShiftClosure {
   hamburguesas: HamburguesasData;
   ventas_local: VentasLocalData;
   ventas_apps: VentasAppsData;
+  arqueo_caja: ArqueoCaja;
   
   total_facturado: number;
   total_hamburguesas: number;
@@ -79,6 +96,12 @@ export interface ShiftClosure {
   facturacion_esperada: number;
   facturacion_diferencia: number;
   tiene_alerta_facturacion: boolean;
+  
+  diferencia_posnet: number;
+  diferencia_apps: number;
+  tiene_alerta_posnet: boolean;
+  tiene_alerta_apps: boolean;
+  tiene_alerta_caja: boolean;
   
   notas: string | null;
   
@@ -96,6 +119,7 @@ export interface ShiftClosureInput {
   hamburguesas: HamburguesasData;
   ventas_local: VentasLocalData;
   ventas_apps: VentasAppsData;
+  arqueo_caja: ArqueoCaja;
   total_facturado: number;
   notas?: string;
 }
@@ -120,7 +144,10 @@ export interface BranchClosureConfig {
   habilitado: boolean;
 }
 
-// Helper functions to calculate totals
+// ==========================================
+// CALCULATION FUNCTIONS
+// ==========================================
+
 export function calcularTotalesHamburguesas(data: HamburguesasData): number {
   return (
     data.clasicas +
@@ -153,11 +180,109 @@ export function calcularTotalesVentasLocal(data: VentasLocalData): { total: numb
   };
 }
 
+// Calculate total cards in Núcleo (for Posnet comparison)
+export function calcularTotalTarjetasNucleo(ventasLocal: VentasLocalData): number {
+  const canales = [ventasLocal.salon, ventasLocal.takeaway, ventasLocal.delivery_manual];
+  return canales.reduce((sum, canal) => 
+    sum + canal.debito + canal.credito + canal.qr, 0
+  );
+}
+
+// Calculate card breakdown for display
+export function calcularDesgloseTarjetas(ventasLocal: VentasLocalData): { debito: number; credito: number; qr: number } {
+  const canales = [ventasLocal.salon, ventasLocal.takeaway, ventasLocal.delivery_manual];
+  return {
+    debito: canales.reduce((sum, c) => sum + c.debito, 0),
+    credito: canales.reduce((sum, c) => sum + c.credito, 0),
+    qr: canales.reduce((sum, c) => sum + c.qr, 0),
+  };
+}
+
+// Calculate Posnet difference
+export function calcularDiferenciaPosnet(ventasLocal: VentasLocalData): {
+  nucleo: number;
+  posnet: number;
+  diferencia: number;
+  tieneAlerta: boolean;
+} {
+  const nucleo = calcularTotalTarjetasNucleo(ventasLocal);
+  const posnet = ventasLocal.comparacion_posnet?.total_posnet || 0;
+  const diferencia = nucleo - posnet;
+  return {
+    nucleo,
+    posnet,
+    diferencia,
+    tieneAlerta: diferencia !== 0,
+  };
+}
+
+// Calculate Núcleo totals for each app
+function calcularNucleoApp(app: keyof VentasAppsData, data: VentasAppsData): number {
+  switch (app) {
+    case 'mas_delivery':
+      return data.mas_delivery.efectivo + data.mas_delivery.mercadopago;
+    case 'rappi':
+      return data.rappi.vales;
+    case 'pedidosya':
+      return data.pedidosya.efectivo + data.pedidosya.vales;
+    case 'mp_delivery':
+      return data.mp_delivery.vales;
+    default:
+      return 0;
+  }
+}
+
+// Calculate app differences
+export function calcularDiferenciasApps(ventasApps: VentasAppsData): {
+  porApp: {
+    mas_delivery: { nucleo: number; panel: number; diferencia: number; tieneAlerta: boolean };
+    rappi: { nucleo: number; panel: number; diferencia: number; tieneAlerta: boolean };
+    pedidosya: { nucleo: number; panel: number; diferencia: number; tieneAlerta: boolean };
+    mp_delivery: { nucleo: number; panel: number; diferencia: number; tieneAlerta: boolean };
+  };
+  totalNucleo: number;
+  totalPaneles: number;
+  diferencia: number;
+  tieneAlerta: boolean;
+} {
+  const apps: Array<keyof VentasAppsData> = ['mas_delivery', 'rappi', 'pedidosya', 'mp_delivery'];
+  
+  const porApp = {} as any;
+  let totalNucleo = 0;
+  let totalPaneles = 0;
+  
+  for (const app of apps) {
+    const nucleo = calcularNucleoApp(app, ventasApps);
+    const panel = ventasApps[app].total_panel || 0;
+    const diferencia = nucleo - panel;
+    
+    porApp[app] = {
+      nucleo,
+      panel,
+      diferencia,
+      tieneAlerta: diferencia !== 0 && panel > 0, // Only alert if panel was filled
+    };
+    
+    totalNucleo += nucleo;
+    totalPaneles += panel;
+  }
+  
+  const diferencia = totalNucleo - totalPaneles;
+  
+  return {
+    porApp,
+    totalNucleo,
+    totalPaneles,
+    diferencia,
+    tieneAlerta: diferencia !== 0 && totalPaneles > 0,
+  };
+}
+
 export function calcularTotalesVentasApps(data: VentasAppsData): { total: number; efectivo: number; digital: number } {
   const masDeliveryTotal = data.mas_delivery.efectivo + data.mas_delivery.mercadopago;
-  const rappiTotal = data.rappi.app;
-  const pedidosyaTotal = data.pedidosya.efectivo + data.pedidosya.app;
-  const mpDeliveryTotal = data.mp_delivery.app;
+  const rappiTotal = data.rappi.vales;
+  const pedidosyaTotal = data.pedidosya.efectivo + data.pedidosya.vales;
+  const mpDeliveryTotal = data.mp_delivery.vales;
   
   const efectivo = data.mas_delivery.efectivo + data.pedidosya.efectivo;
   const total = masDeliveryTotal + rappiTotal + pedidosyaTotal + mpDeliveryTotal;
@@ -177,12 +302,16 @@ export function calcularFacturacionEsperada(
   const totalesApps = calcularTotalesVentasApps(ventasApps);
   
   const totalVendido = totalesLocal.total + totalesApps.total;
-  const efectivoLocal = totalesLocal.efectivo + ventasApps.pedidosya.efectivo; // PY efectivo se suma a local
+  const efectivoLocal = totalesLocal.efectivo + ventasApps.pedidosya.efectivo; // PY cash adds to local
   const efectivoMasDelivery = ventasApps.mas_delivery.efectivo;
   
-  // Esperado = Total vendido - Efectivo local + Efectivo MásDelivery
+  // Expected = Total sold - Local cash + MásDelivery cash
   return totalVendido - efectivoLocal + efectivoMasDelivery;
 }
+
+// ==========================================
+// DEFAULT VALUES
+// ==========================================
 
 export function getDefaultHamburguesas(): HamburguesasData {
   return {
@@ -200,14 +329,54 @@ export function getDefaultVentasLocal(): VentasLocalData {
     salon: { efectivo: 0, debito: 0, credito: 0, qr: 0, transferencia: 0 },
     takeaway: { efectivo: 0, debito: 0, credito: 0, qr: 0, transferencia: 0 },
     delivery_manual: { efectivo: 0, debito: 0, credito: 0, qr: 0, transferencia: 0 },
+    comparacion_posnet: { total_posnet: 0 },
   };
 }
 
 export function getDefaultVentasApps(): VentasAppsData {
   return {
-    mas_delivery: { efectivo: 0, mercadopago: 0 },
-    rappi: { app: 0 },
-    pedidosya: { efectivo: 0, app: 0 },
-    mp_delivery: { app: 0 },
+    mas_delivery: { efectivo: 0, mercadopago: 0, total_panel: 0 },
+    rappi: { vales: 0, total_panel: 0 },
+    pedidosya: { efectivo: 0, vales: 0, total_panel: 0 },
+    mp_delivery: { vales: 0, total_panel: 0 },
+  };
+}
+
+export function getDefaultArqueoCaja(): ArqueoCaja {
+  return { diferencia_caja: 0 };
+}
+
+// Migration helper: convert old VentasAppsData to new format
+export function migrateVentasApps(data: any): VentasAppsData {
+  // Handle old format that had 'app' instead of 'vales' and no 'total_panel'
+  return {
+    mas_delivery: {
+      efectivo: data?.mas_delivery?.efectivo || 0,
+      mercadopago: data?.mas_delivery?.mercadopago || 0,
+      total_panel: data?.mas_delivery?.total_panel || 0,
+    },
+    rappi: {
+      vales: data?.rappi?.vales || data?.rappi?.app || 0,
+      total_panel: data?.rappi?.total_panel || 0,
+    },
+    pedidosya: {
+      efectivo: data?.pedidosya?.efectivo || 0,
+      vales: data?.pedidosya?.vales || data?.pedidosya?.app || 0,
+      total_panel: data?.pedidosya?.total_panel || 0,
+    },
+    mp_delivery: {
+      vales: data?.mp_delivery?.vales || data?.mp_delivery?.app || 0,
+      total_panel: data?.mp_delivery?.total_panel || 0,
+    },
+  };
+}
+
+// Migration helper: ensure VentasLocalData has comparacion_posnet
+export function migrateVentasLocal(data: any): VentasLocalData {
+  return {
+    salon: data?.salon || { efectivo: 0, debito: 0, credito: 0, qr: 0, transferencia: 0 },
+    takeaway: data?.takeaway || { efectivo: 0, debito: 0, credito: 0, qr: 0, transferencia: 0 },
+    delivery_manual: data?.delivery_manual || { efectivo: 0, debito: 0, credito: 0, qr: 0, transferencia: 0 },
+    comparacion_posnet: data?.comparacion_posnet || { total_posnet: 0 },
   };
 }

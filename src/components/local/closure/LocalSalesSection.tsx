@@ -1,14 +1,15 @@
 /**
- * LocalSalesSection - Local sales by channel and payment method
+ * LocalSalesSection - Local sales by channel with card total indicator
  */
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ChevronDown, Store, HelpCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ChevronDown, Store, HelpCircle, CreditCard } from 'lucide-react';
 import type { VentasLocalData, ChannelPayments } from '@/types/shiftClosure';
+import { calcularTotalTarjetasNucleo } from '@/types/shiftClosure';
 
 interface LocalSalesSectionProps {
   data: VentasLocalData;
@@ -31,7 +32,9 @@ const PAYMENT_METHODS = [
 ] as const;
 
 export function LocalSalesSection({ data, onChange, subtotal }: LocalSalesSectionProps) {
-  const handleChange = (channel: keyof VentasLocalData, method: keyof ChannelPayments, value: number) => {
+  const totalTarjetas = calcularTotalTarjetasNucleo(data);
+  
+  const handleChange = (channel: keyof Omit<VentasLocalData, 'comparacion_posnet'>, method: keyof ChannelPayments, value: number) => {
     onChange({
       ...data,
       [channel]: {
@@ -97,6 +100,15 @@ export function LocalSalesSection({ data, onChange, subtotal }: LocalSalesSectio
                 </div>
               </DialogContent>
             </Dialog>
+            
+            {/* Card total indicator for Posnet comparison */}
+            <div className="flex items-center justify-center gap-2">
+              <Badge variant="secondary" className="flex items-center gap-1 px-3 py-1">
+                <CreditCard className="w-3 h-3" />
+                Total Tarjetas: {formatCurrency(totalTarjetas)}
+              </Badge>
+              <span className="text-xs text-muted-foreground">(para comparar con Posnet)</span>
+            </div>
             
             {/* Sales grid */}
             <div className="overflow-x-auto">
