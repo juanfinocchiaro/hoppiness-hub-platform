@@ -1,113 +1,35 @@
 
-# Plan: Corregir Navegación de Menús + Cache de Nombres
 
-## Resumen
-Dos bugs de navegación/cache:
-1. El menú de Mi Local marca dos items activos simultáneamente (Equipo + Fichajes)
-2. Al cambiar nombre de sucursal, el sidebar no se actualiza hasta refrescar
+# Plan: Corregir Timeline - Expansión 2025
 
----
+## Problema
+En el timeline, el año 2025 dice:
+> "Mejor Hamburguesería de Córdoba. General Paz y Villa Carlos Paz."
 
-## Problema 1: Doble marcado en menú de Mi Local
+Pero no queda claro que **General Paz y Villa Carlos Paz son expansiones** (nuevas aperturas), como sí se entiende claramente en 2023:
+> "Expansión: Manantiales y Villa Allende. Inauguramos centro de producción."
 
-### Causa raíz
-En `BranchLayout.tsx`, la lógica `isItemActive` usa `startsWith` para detectar rutas activas. Cuando estás en `/milocal/{id}/equipo/fichajes`:
-- `equipo` (path: `equipo`) → `startsWith('equipo')` = TRUE
-- `equipo/fichajes` (path: `equipo/fichajes`) → coincidencia exacta = TRUE
+## Solución
+Reformular el texto de 2025 para que explícitamente mencione "Expansión":
 
-Resultado: ambos items se marcan activos.
+**Archivo:** `src/components/landing/TimelineSection.tsx`
 
-### Solución
-Cambiar la lógica para que solo marque activo cuando:
-1. Es una coincidencia exacta, O
-2. Es padre directo (solo si el item tiene subitems)
-
-**Archivo:** `src/pages/local/BranchLayout.tsx`
+**Cambio (línea 12):**
 
 ```tsx
-// ANTES (líneas 273-279)
-const isItemActive = (item: NavItem): boolean => {
-  if (item.to === '') {
-    return location.pathname === `/milocal/${branchId}`;
-  }
-  const itemPath = `/milocal/${branchId}/${item.to}`;
-  return location.pathname === itemPath || location.pathname.startsWith(`${itemPath}/`);
-};
+// ANTES
+{ year: '2025', text: 'Mejor Hamburguesería de Córdoba. General Paz y Villa Carlos Paz.', highlight: true },
 
 // DESPUÉS
-const isItemActive = (item: NavItem): boolean => {
-  if (item.to === '') {
-    return location.pathname === `/milocal/${branchId}`;
-  }
-  const itemPath = `/milocal/${branchId}/${item.to}`;
-  // Solo coincidencia exacta, NO startsWith
-  return location.pathname === itemPath;
-};
+{ year: '2025', text: 'Mejor Hamburguesería de Córdoba. Expansión: General Paz y Villa Carlos Paz.', highlight: true },
 ```
 
----
+## Resultado Esperado
+El timeline mostrará:
+- **2023**: Expansión: Manantiales y Villa Allende. Inauguramos centro de producción.
+- **2024**: Doble campeones: Mejor Clásica y Mejor Gourmet.
+- **2025**: 🏆 Mejor Hamburguesería de Córdoba. **Expansión: General Paz y Villa Carlos Paz.**
+- **2026**: Shopping Pocito. Y seguimos creciendo...
 
-## Problema 2: Cache del sidebar no se actualiza
+Ahora queda claro que en 2025 hubo tanto el premio como la apertura de dos nuevos locales.
 
-### Causa raíz
-Hay 3 queries separadas para branches:
-1. `['branch-detail', slug]` → `BranchDetail.tsx` 
-2. `['admin-sidebar-branches']` → `AdminSidebar.tsx`
-3. `['accessible-branches-v2', ...]` → `usePermissionsV2.ts`
-
-Cuando se guarda en `BranchEditPanel`, solo se llama `refetch()` del primero. Los otros mantienen datos viejos en cache.
-
-### Solución
-Usar `queryClient.invalidateQueries` para invalidar TODAS las queries de branches cuando se guarda.
-
-**Archivo:** `src/components/admin/BranchEditPanel.tsx`
-
-```tsx
-import { useQueryClient } from '@tanstack/react-query';
-
-export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEditPanelProps) {
-  const queryClient = useQueryClient();
-  // ... resto del código ...
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from('branches')
-        .update({ /* campos */ })
-        .eq('id', branch.id);
-
-      if (error) throw error;
-
-      // Invalidar TODAS las queries de branches
-      queryClient.invalidateQueries({ queryKey: ['admin-sidebar-branches'] });
-      queryClient.invalidateQueries({ queryKey: ['accessible-branches-v2'] });
-      queryClient.invalidateQueries({ queryKey: ['branch-detail'] });
-
-      toast.success('Sucursal actualizada');
-      onSaved();
-    } catch (error) {
-      // ...
-    } finally {
-      setSaving(false);
-    }
-  };
-  // ...
-}
-```
-
----
-
-## Archivos a modificar
-
-| Archivo | Cambio |
-|---------|--------|
-| `src/pages/local/BranchLayout.tsx` | Corregir `isItemActive` para solo coincidencia exacta |
-| `src/components/admin/BranchEditPanel.tsx` | Agregar `invalidateQueries` para todas las queries de branches |
-
----
-
-## Resultado esperado
-
-1. **Mi Local**: Al navegar a Fichajes, solo ese item se marca activo (no "Mi Equipo" también)
-2. **Mi Marca**: Al cambiar nombre de sucursal y guardar, el menú lateral se actualiza inmediatamente sin necesidad de refrescar la página
