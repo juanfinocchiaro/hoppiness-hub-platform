@@ -1,385 +1,304 @@
 
-# Plan: Sistema de Gestión de Horarios de Empleados
+# Plan de Limpieza Integral + Correcciones
 
 ## Resumen Ejecutivo
-
-Implementaremos un sistema completo de gestión de horarios que:
-1. Configure feriados globales antes de crear horarios
-2. Permita crear el horario mensual completo de un empleado en un solo flujo
-3. Notifique automáticamente a empleados (comunicado + email)
-4. Respete los permisos V2 existentes
-
----
-
-## Análisis de Reutilización
-
-### Lo que REUTILIZAMOS sin cambios
-| Elemento | Descripción | Estado |
-|----------|-------------|--------|
-| `user_roles_v2` | Obtención de empleados por sucursal | ✅ Funciona |
-| `useTeamData.ts` | Hook que ya obtiene empleados correctamente | ✅ Funciona |
-| `usePermissionsV2` | Sistema de permisos | ✅ Funciona |
-| `schedule_requests` | Tabla de solicitudes de días libres | ✅ Funciona |
-| `PendingScheduleRequests.tsx` | Componente de solicitudes pendientes | ✅ Funciona |
-| `MyScheduleCard.tsx` | Vista de horario del empleado | ✅ Funciona |
-| `MyRequestsCard.tsx` + `RequestDayOffModal.tsx` | Solicitudes del empleado | ✅ Funciona |
-| `communications` + `useCommunications` | Sistema de notificaciones | ✅ Funciona |
-| `send-staff-invitation` | Patrón para enviar emails con Resend | ✅ Referencia |
-
-### Lo que MODIFICAMOS
-| Elemento | Cambio | Justificación |
-|----------|--------|---------------|
-| `special_days` | Hacer `branch_id = NULL` para feriados globales | Respeta tu respuesta #6 |
-| `employee_schedules` | Agregar `published_at`, `modified_at`, columnas de notificación | Tracking de publicación |
-| `SchedulesPage.tsx` | Reestructurar con 3 tabs: Feriados, Calendario, Solicitudes | Nuevo flujo |
-
-### Lo que ELIMINAMOS (Código muerto)
-| Elemento | Razón |
-|----------|-------|
-| `EmployeeScheduleEditor.tsx` (1155 líneas) | Código muerto que no se usa |
-| `MonthlyScheduleCalendar.tsx` (468 líneas) | Usa tabla `employees` vacía, lógica rota |
-| Tab "Horario Semanal Base" en SchedulesPage | No se usa |
-
-### Lo que CREAMOS
-| Elemento | Descripción |
-|----------|-------------|
-| `HolidaysManager.tsx` | CRUD de feriados globales |
-| `CreateScheduleWizard.tsx` | Wizard para crear horario mensual completo |
-| `MonthlyScheduleView.tsx` | Vista de calendario con todos los horarios |
-| `useSchedules.ts` | Hook unificado para horarios |
-| `useHolidays.ts` | Hook para feriados |
-| `send-schedule-notification` | Edge function para emails |
+Este plan aborda:
+1. **Bug Android "Pedir"**: usar `window.open()` para compatibilidad cross-browser
+2. **20+ archivos a eliminar**: código huérfano y legacy sin uso
+3. **Permisos legacy**: eliminar ~20 permisos siempre-false de usePermissionsV2
+4. **Corrección Equipo Ahora**: usar `clock_entries` en lugar de `attendance_records`
+5. **Acceso Cajero**: dashboard limitado para cargar cierres
+6. **Sucursales dinámicas**: traer de BD en lugar de hardcoded
+7. **Unificar URL MasDelivery**: a `pedidos.masdelivery.com/hoppiness`
+8. **Eliminar links legales**: quitar `/terminos` y `/privacidad` del footer
 
 ---
 
-## Flujo del Usuario
+## Fase 1: Bug Android + Unificación URLs
 
-### Flujo 1: Configurar Feriados (Antes de crear horarios)
+### 1.1 Corregir botón "Pedir" para Android
+Cambiar todos los links a MasDelivery para usar `window.open()`:
 
-```text
-┌────────────────────────────────────────────────────────────┐
-│ HORARIOS > FERIADOS                                        │
-├────────────────────────────────────────────────────────────┤
-│ ℹ️ Los feriados son globales para todas las sucursales     │
-│                                                            │
-│ FEBRERO 2026                         [+ Agregar Feriado]   │
-│ ───────────────────────────────────────────────────────────│
-│                                                            │
-│ ┌─────────┐ ┌─────────┐ ┌─────────┐                        │
-│ │ 16 Feb  │ │ 17 Feb  │ │ 24 Feb  │                        │
-│ │ Carnaval│ │ Carnaval│ │ Puente  │                        │
-│ │  [🗑️]   │ │  [🗑️]   │ │  [🗑️]   │                        │
-│ └─────────┘ └─────────┘ └─────────┘                        │
-│                                                            │
-│ Sin feriados configurados para Marzo 2026                  │
-│                                                            │
-└────────────────────────────────────────────────────────────┘
+**Archivos a modificar:**
+- `src/components/layout/PublicHeader.tsx`
+- `src/components/layout/PublicFooter.tsx`
+- `src/pages/Nosotros.tsx`
+- `src/pages/Index.tsx`
+
+**Cambio:**
+```tsx
+// ANTES
+<a href="https://..." target="_blank">Pedir</a>
+
+// DESPUÉS
+<button onClick={() => window.open('https://pedidos.masdelivery.com/hoppiness', '_blank')}>
+  Pedir
+</button>
 ```
 
-### Flujo 2: Crear Horario Mensual (Wizard paso a paso)
+### 1.2 Unificar URL MasDelivery
+Cambiar todas las referencias a la URL correcta: `https://pedidos.masdelivery.com/hoppiness`
 
-**Paso 1: Seleccionar empleado**
-```text
-┌────────────────────────────────────────────────────────────┐
-│ CREAR HORARIO - Paso 1 de 3                                │
-├────────────────────────────────────────────────────────────┤
-│                                                            │
-│ Mes: Febrero 2026                                          │
-│                                                            │
-│ Seleccioná un empleado:                                    │
-│                                                            │
-│ ┌─────────────────────────────────────────────────────────┐│
-│ │ 🔘 Juan Pérez (Cajero)                                  ││
-│ │    ⚠️ Tiene 2 solicitudes pendientes para este mes     ││
-│ ├─────────────────────────────────────────────────────────┤│
-│ │ ○ María García (Encargado)                              ││
-│ │    ✅ Sin solicitudes pendientes                        ││
-│ ├─────────────────────────────────────────────────────────┤│
-│ │ ○ Carlos López (Empleado)                               ││
-│ │    ✅ Sin solicitudes pendientes                        ││
-│ └─────────────────────────────────────────────────────────┘│
-│                                                            │
-│                                          [Cancelar] [Siguiente →]│
-└────────────────────────────────────────────────────────────┘
-```
+**Archivo con URL incorrecta:**
+- `src/pages/Nosotros.tsx` (usa `hoppinessclub.masdelivery.com.ar`)
 
-**Paso 2: Ver solicitudes y feriados**
-```text
-┌────────────────────────────────────────────────────────────┐
-│ CREAR HORARIO - Paso 2 de 3                                │
-│ Juan Pérez - Febrero 2026                                  │
-├────────────────────────────────────────────────────────────┤
-│                                                            │
-│ 📋 SOLICITUDES DE JUAN PARA ESTE MES:                      │
-│ ┌─────────────────────────────────────────────────────────┐│
-│ │ 📅 15 Feb - Día libre - "Turno médico"         [Aprobar]││
-│ │ 📅 20 Feb - Día libre - "Compromiso familiar"  [Aprobar]││
-│ └─────────────────────────────────────────────────────────┘│
-│                                                            │
-│ 🎉 FERIADOS DEL MES:                                       │
-│ • 16 Feb - Carnaval                                        │
-│ • 17 Feb - Carnaval                                        │
-│                                                            │
-│ Estos días ya están marcados como no laborables.           │
-│                                                            │
-│                                   [← Atrás] [Siguiente →]  │
-└────────────────────────────────────────────────────────────┘
-```
+---
 
-**Paso 3: Cargar horario día por día**
-```text
-┌────────────────────────────────────────────────────────────┐
-│ CREAR HORARIO - Paso 3 de 3                                │
-│ Juan Pérez - Febrero 2026                                  │
-├────────────────────────────────────────────────────────────┤
-│                                                            │
-│ [Aplicar turno a selección] [Copiar semana anterior]       │
-│                                                            │
-│     Dom   Lun   Mar   Mié   Jue   Vie   Sáb               │
-│ ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┐               │
-│ │     │  1  │  2  │  3  │  4  │  5  │  6  │               │
-│ │     │09-17│09-17│LIBRE│09-17│09-17│     │               │
-│ ├─────┼─────┼─────┼─────┼─────┼─────┼─────┤               │
-│ │  7  │  8  │  9  │ 10  │ 11  │ 12  │ 13  │               │
-│ │     │09-17│09-17│09-17│09-17│09-17│     │               │
-│ ├─────┼─────┼─────┼─────┼─────┼─────┼─────┤               │
-│ │ 14  │ 15  │ 16🎉│ 17🎉│ 18  │ 19  │ 20  │               │
-│ │     │LIBRE│FERI │FERI │09-17│09-17│LIBRE│ <- Solicitudes│
-│ └─────┴─────┴─────┴─────┴─────┴─────┴─────┘   aprobadas   │
-│                                                            │
-│ Click en un día para editar horario                        │
-│                                                            │
-│ ☑️ Notificar a Juan por email                              │
-│ ☑️ Enviar comunicado interno                               │
-│                                                            │
-│                          [← Atrás] [💾 Guardar y Publicar] │
-└────────────────────────────────────────────────────────────┘
-```
+## Fase 2: Eliminar Links Legales Inexistentes
 
-### Flujo 3: Ver Calendario General
+**Archivo:** `src/components/layout/PublicFooter.tsx`
 
-```text
-┌────────────────────────────────────────────────────────────┐
-│ HORARIOS > CALENDARIO                    Febrero 2026      │
-├────────────────────────────────────────────────────────────┤
-│ [◀ Ene] [Feb ▶]           [Filtrar empleado ▼]             │
-│                                    [+ Crear Horario]       │
-│                                                            │
-│     Dom   Lun   Mar   Mié   Jue   Vie   Sáb               │
-│ ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┐               │
-│ │     │  1  │  2  │  3  │  4  │  5  │  6  │               │
-│ │     │JP 09│JP 09│JP L │JP 09│JP 09│     │               │
-│ │     │MG 10│MG 10│MG 10│MG 10│MG 10│MG 18│               │
-│ │     │CL 14│CL 14│CL 14│CL L │CL 14│CL 14│               │
-│ ├─────┼─────┼─────┼─────┼─────┼─────┼─────┤               │
-│ │  7  │  8  │  ...                                        │
-│ └─────┴─────┴─────────────────────────────────────────────┘│
-│                                                            │
-│ JP = Juan Pérez | MG = María García | CL = Carlos López    │
-│ L = Franco | 🎉 = Feriado                                  │
-└────────────────────────────────────────────────────────────┘
-```
-
-### Flujo 4: Modificación con Notificación
-
-```text
-┌────────────────────────────────────────────────────────────┐
-│ ⚠️ Modificación de Horario Publicado                       │
-├────────────────────────────────────────────────────────────┤
-│                                                            │
-│ Estás por modificar el horario de Juan Pérez para el       │
-│ día 18 de Febrero.                                         │
-│                                                            │
-│ El horario ya fue publicado el 25 de Enero.                │
-│                                                            │
-│ ☑️ Notificar cambio por email                              │
-│ ☑️ Enviar comunicado interno                               │
-│                                                            │
-│ Motivo del cambio (opcional):                              │
-│ ┌─────────────────────────────────────────────────────────┐│
-│ │                                                         ││
-│ └─────────────────────────────────────────────────────────┘│
-│                                                            │
-│                              [Cancelar] [Guardar Cambio]   │
-└────────────────────────────────────────────────────────────┘
+Eliminar las líneas:
+```tsx
+<Link to="/terminos">Términos y condiciones</Link>
+<Link to="/privacidad">Política de privacidad</Link>
 ```
 
 ---
 
-## Cambios en Base de Datos
+## Fase 3: Sucursales Dinámicas en Landing
 
-### 1. Modificar `employee_schedules`
+**Archivo:** `src/components/landing/LocationsSection.tsx`
 
-```sql
--- Agregar columnas para tracking de publicación
-ALTER TABLE employee_schedules
-ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ,
-ADD COLUMN IF NOT EXISTS published_by UUID REFERENCES auth.users(id),
-ADD COLUMN IF NOT EXISTS modified_at TIMESTAMPTZ,
-ADD COLUMN IF NOT EXISTS modified_by UUID REFERENCES auth.users(id),
-ADD COLUMN IF NOT EXISTS modification_reason TEXT,
-ADD COLUMN IF NOT EXISTS notification_sent_at TIMESTAMPTZ;
+Cambiar de datos hardcoded a query de la tabla `branches`:
 
--- Crear índice para consultas por mes/año/usuario
-CREATE INDEX IF NOT EXISTS idx_schedules_user_month 
-ON employee_schedules(user_id, schedule_year, schedule_month);
-```
+```tsx
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
-### 2. Usar `special_days` existente (sin cambios de estructura)
-
-La tabla ya tiene `branch_id` nullable para feriados globales:
-```sql
--- Estructura existente (no requiere cambios):
--- id, branch_id (NULL = global), day_date, day_type, description, user_id, created_by, created_at
-```
-
----
-
-## Archivos a Crear
-
-### 1. `src/hooks/useHolidays.ts`
-```typescript
-// Hook para CRUD de feriados globales
-// - useHolidays(month, year): Obtener feriados del mes
-// - useCreateHoliday(): Crear feriado
-// - useDeleteHoliday(): Eliminar feriado
-```
-
-### 2. `src/hooks/useSchedules.ts`
-```typescript
-// Hook unificado para horarios
-// - useMonthlySchedules(branchId, month, year, employeeId?)
-// - useEmployeeSchedule(userId, month, year)
-// - useSaveMonthlySchedule(): Guardar horario completo del mes
-// - useModifySchedule(): Modificar día específico con notificación
-```
-
-### 3. `src/components/hr/HolidaysManager.tsx`
-```typescript
-// Componente para gestionar feriados
-// - Lista de feriados del mes actual y próximo
-// - Agregar/eliminar feriados
-// - Solo visible para encargados+
-```
-
-### 4. `src/components/hr/CreateScheduleWizard.tsx`
-```typescript
-// Wizard de 3 pasos
-// Paso 1: Seleccionar empleado (mostrando solicitudes pendientes)
-// Paso 2: Ver/aprobar solicitudes + ver feriados
-// Paso 3: Grilla interactiva para cargar horarios
-// Opciones: copiar semana, aplicar turno masivo
-// Checkboxes: notificar por email, crear comunicado
-```
-
-### 5. `src/components/hr/MonthlyScheduleView.tsx`
-```typescript
-// Vista de calendario mensual
-// - Muestra todos los empleados o filtrado
-// - Click para editar día específico
-// - Indicadores de feriados
-// - Botón para crear nuevo horario
-```
-
-### 6. `supabase/functions/send-schedule-notification/index.ts`
-```typescript
-// Edge function para notificar horarios
-// - Envía email cuando se publica/modifica horario
-// - Usa Resend (igual que send-staff-invitation)
-// - Incluye resumen del horario en el email
-```
-
----
-
-## Archivos a Modificar
-
-### 1. `src/pages/local/SchedulesPage.tsx`
-**Cambios:**
-- Eliminar import de `EmployeeScheduleEditor`
-- Cambiar tabs a: "Feriados", "Calendario", "Solicitudes"
-- Usar nuevos componentes
-
-### 2. `src/components/hr/PendingScheduleRequests.tsx`
-**Cambios:**
-- Agregar función para aprobar solicitud desde el wizard
-- Crear comunicado automático al aprobar/rechazar (línea 113 tiene TODO)
-
----
-
-## Archivos a Eliminar
-
-1. `src/components/hr/EmployeeScheduleEditor.tsx` (1155 líneas - código muerto)
-2. `src/components/hr/MonthlyScheduleCalendar.tsx` (468 líneas - usa tabla vacía)
-
----
-
-## Notificaciones
-
-### Canales de notificación (según tu respuesta #9: "Todas las anteriores")
-
-| Evento | Comunicado Interno | Email | Banner/Alerta |
-|--------|-------------------|-------|---------------|
-| Horario publicado | ✅ | ✅ | ✅ (badge en Mi Cuenta) |
-| Horario modificado | ✅ (diferente texto) | ✅ | ✅ |
-| Solicitud aprobada | ✅ | ✅ | ✅ |
-| Solicitud rechazada | ✅ | ✅ | ✅ |
-
-### Ejemplo de comunicado automático
-
-```javascript
-{
-  title: "📅 Tu horario de Febrero ya está disponible",
-  body: "Tu encargado publicó el horario del mes. Revisalo en 'Mi Horario'.",
-  type: "info",
-  tag: "horario",
-  source_type: "local",
-  source_branch_id: branchId,
-  target_roles: null, // Para el usuario específico
-  // Se filtra por user_id en frontend
+function LocationsSection() {
+  const { data: branches } = useQuery({
+    queryKey: ['public-branches'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('branches_public')
+        .select('name, address, city, hours, maps_url, is_active')
+        .eq('is_active', true)
+        .order('name');
+      return data;
+    },
+  });
+  // ...render dinámico
 }
 ```
 
 ---
 
-## Permisos (respetando V2)
+## Fase 4: Corrección "Equipo Ahora" en ManagerDashboard
 
-| Acción | Roles permitidos |
-|--------|------------------|
-| Ver feriados | Todos |
-| Gestionar feriados | superadmin, coordinador |
-| Ver calendario de equipo | encargado, franquiciado, superadmin |
-| Crear/editar horarios | encargado, franquiciado, superadmin |
-| Ver mi propio horario | Todos los empleados |
-| Solicitar día libre | Todos los empleados |
+**Archivo:** `src/components/local/ManagerDashboard.tsx`
+
+El hook `useCurrentlyWorking` usa `attendance_records` (vacía). Cambiar a `clock_entries`:
+
+```tsx
+// ANTES: attendance_records con check_in/check_out
+// DESPUÉS: clock_entries con entry_type='entrada' sin salida posterior
+
+function useCurrentlyWorking(branchId: string) {
+  return useQuery({
+    queryKey: ['currently-working', branchId],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Obtener todas las entradas/salidas de hoy
+      const { data: entries } = await supabase
+        .from('clock_entries')
+        .select('user_id, entry_type, created_at')
+        .eq('branch_id', branchId)
+        .gte('created_at', today)
+        .order('created_at', { ascending: true });
+
+      // Calcular quién está fichado (última acción = entrada)
+      const userStatus = new Map();
+      entries?.forEach(e => {
+        userStatus.set(e.user_id, {
+          type: e.entry_type,
+          time: e.created_at
+        });
+      });
+
+      const workingUserIds = [...userStatus.entries()]
+        .filter(([_, v]) => v.type === 'entrada')
+        .map(([k, v]) => ({ user_id: k, clock_in: v.time }));
+
+      if (!workingUserIds.length) return [];
+
+      // Obtener perfiles
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, avatar_url')
+        .in('user_id', workingUserIds.map(u => u.user_id));
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]));
+
+      return workingUserIds.map(w => ({
+        user_id: w.user_id,
+        check_in: w.clock_in,
+        profile: profileMap.get(w.user_id),
+        minutesWorking: differenceInMinutes(new Date(), new Date(w.clock_in)),
+      }));
+    },
+    refetchInterval: 60000,
+  });
+}
+```
 
 ---
 
-## Orden de Implementación
+## Fase 5: Acceso Cajero al Dashboard (Limitado)
 
-| Paso | Descripción | Archivos |
-|------|-------------|----------|
-| 1 | Migración de BD | SQL: agregar columnas a employee_schedules |
-| 2 | Hooks | useHolidays.ts, useSchedules.ts |
-| 3 | Componentes | HolidaysManager.tsx |
-| 4 | Componentes | CreateScheduleWizard.tsx |
-| 5 | Componentes | MonthlyScheduleView.tsx |
-| 6 | Integración | Modificar SchedulesPage.tsx |
-| 7 | Edge Function | send-schedule-notification |
-| 8 | Eliminar código muerto | EmployeeScheduleEditor.tsx, MonthlyScheduleCalendar.tsx |
-| 9 | Testing | Flujo completo end-to-end |
+### 5.1 Modificar permisos
+**Archivo:** `src/hooks/usePermissionsV2.ts`
+
+```tsx
+// Línea ~347
+canViewDashboard: hasCurrentBranchAccess && (isEncargado || isFranquiciado || isCajero),
+canEnterSales: hasCurrentBranchAccess && (isEncargado || isFranquiciado || isCajero),
+```
+
+### 5.2 Modificar BranchLayout para permitir cajeros
+**Archivo:** `src/pages/local/BranchLayout.tsx`
+
+Actualmente redirige cajeros a `/cuenta`. Cambiar para que puedan ver el dashboard.
+
+### 5.3 Dashboard limitado para cajeros
+**Archivo:** `src/components/local/ManagerDashboard.tsx`
+
+Agregar lógica condicional:
+```tsx
+const { isCajero } = usePermissionsV2(branchId);
+
+// Solo mostrar sección "Ventas Hoy" si es cajero
+// Ocultar "Equipo Ahora" y "Pendientes" para cajeros
+```
 
 ---
 
-## Vista del Empleado (Mi Cuenta)
+## Fase 6: Eliminar Permisos Legacy de usePermissionsV2
 
-El componente `MyScheduleCard.tsx` ya funciona correctamente con `user_id` y se reutiliza sin cambios. Solo agregamos un badge de "Nuevo" cuando hay un horario recién publicado.
+**Archivo:** `src/hooks/usePermissionsV2.ts`
+
+Eliminar los siguientes permisos que siempre son `false`:
+
+**Interface (tipos):**
+```tsx
+// ELIMINAR de la interface PermissionsV2.local:
+canViewCierreTurno, canViewIntegrador, canManageOrders, canOperatePOS, 
+canViewKDS, canViewPedidosActivos, canViewHistorial, canCancelOrder, 
+canApplyDiscount, canToggleProductAvailability, canViewCajaVenta, 
+canOpenCloseCaja, canDoAlivio, canViewCajaAlivio, canViewCajaResguardo, 
+canOperateCajaResguardo, canViewCuentaCorriente, canViewMenu, 
+canToggleAvailability, canViewFinanceMovements, canViewInvoices, 
+canViewObligaciones, canConfigDeliveryZones, canConfigIntegrations, canConfigKDS
+```
+
+**Implementación (localPermissions):**
+Eliminar las mismas propiedades del objeto `localPermissions`.
 
 ---
 
-## Consideraciones Adicionales
+## Fase 7: Archivos a Eliminar
 
-1. **Copiar semana anterior**: Función para acelerar la carga de horarios repetitivos
-2. **Aplicar turno masivo**: Seleccionar varios días y aplicar el mismo horario
-3. **Feriados pre-cargados**: Podemos agregar un botón para cargar feriados oficiales de Argentina
-4. **Historial de cambios**: Los campos `modified_at`, `modified_by`, `modification_reason` permiten auditoría
-5. **Restricción multi-sucursal** (respuesta #12): Un encargado solo puede editar horarios de empleados de SU sucursal (validado por `branch_ids` en `user_roles_v2`)
+### 7.1 Páginas huérfanas
+| Archivo | Razón |
+|---------|-------|
+| `src/pages/ClockIn.tsx` | Usa edge function legacy que escribe a attendance_records |
+| `src/pages/FichajePublic.tsx` | No está en rutas de App.tsx |
+| `src/pages/local/AttendanceKiosk.tsx` | No está en rutas, QR dinámico no usado |
+
+### 7.2 Componentes huérfanos
+| Archivo | Razón |
+|---------|-------|
+| `src/components/cash/SupervisorPinDialog.tsx` | No importado en ningún lado |
+| `src/components/hr/EmployeeDetailManager.tsx` | No importado en ningún lado |
+
+### 7.3 Carpetas vacías resultantes
+| Carpeta | Acción |
+|---------|--------|
+| `src/components/cash/` | Eliminar si queda vacía |
+
+### 7.4 Tipos no usados
+| Archivo | Razón |
+|---------|-------|
+| `src/types/channels.ts` | Nunca se importa |
+
+### 7.5 Rutas a quitar de App.tsx
+```tsx
+// ELIMINAR:
+<Route path="/clock-in" element={<ClockIn />} />
+```
+
+---
+
+## Fase 8: Documentar para Eliminación Futura
+
+Crear archivo `docs/LEGACY_ELIMINATION_QUEUE.md`:
+
+### Edge Functions a eliminar
+| Función | Razón |
+|---------|-------|
+| `attendance-token` | Escribe a attendance_records (legacy) |
+| `create-web-order` | POS/WebApp no implementados |
+| `webhook-orders` | POS/WebApp no implementados |
+| `order-tracking` | POS/WebApp no implementados |
+| `generate-invoice` | Facturación automática no implementada |
+| `facturante-invoice` | Facturación automática no implementada |
+| `generate-pos-thumbnail` | POS no implementado |
+| `process-invoice` | No usado en código |
+
+### Tablas a eliminar
+| Grupo | Tablas |
+|-------|--------|
+| KDS | `kds_settings`, `kds_stations`, `kds_tokens` |
+| Productos | `products`, `product_categories`, `modifier_groups`, `modifier_options`, `product_*` |
+| Cash Registers | `cash_registers`, `cash_register_movements`, `cash_register_shifts` |
+| Attendance Legacy | `attendance_records`, `attendance_tokens`, `attendance_logs` |
+| POS/Orders | `orders`, `order_items`, `order_*` |
+| Printers | `printers` |
+
+### Imágenes a eliminar
+- Carpeta `public/images/products/` (39 productos)
+- Carpeta `public/images/modifiers/`
+
+---
+
+## Orden de Ejecución
+
+1. **Fase 1**: Bug Android + URLs (bajo riesgo)
+2. **Fase 2**: Links legales (bajo riesgo)
+3. **Fase 3**: Sucursales dinámicas (medio riesgo - nueva query)
+4. **Fase 4**: Corrección Equipo Ahora (medio riesgo - lógica de fichaje)
+5. **Fase 5**: Acceso Cajero (medio riesgo - permisos)
+6. **Fase 6**: Eliminar permisos legacy (bajo riesgo)
+7. **Fase 7**: Eliminar archivos (bajo riesgo)
+8. **Fase 8**: Documentación (sin riesgo)
+
+---
+
+## Archivos Modificados (Resumen)
+
+| Archivo | Cambio |
+|---------|--------|
+| `src/components/layout/PublicHeader.tsx` | window.open para Pedir |
+| `src/components/layout/PublicFooter.tsx` | window.open + eliminar links legales |
+| `src/pages/Nosotros.tsx` | Corregir URL MasDelivery |
+| `src/pages/Index.tsx` | window.open para Pedir |
+| `src/components/landing/LocationsSection.tsx` | Query dinámica de branches |
+| `src/components/local/ManagerDashboard.tsx` | clock_entries + vista cajero |
+| `src/hooks/usePermissionsV2.ts` | Permisos cajero + eliminar legacy |
+| `src/pages/local/BranchLayout.tsx` | Permitir cajeros en dashboard |
+| `src/App.tsx` | Eliminar ruta /clock-in |
+
+## Archivos Eliminados (7)
+
+1. `src/pages/ClockIn.tsx`
+2. `src/pages/FichajePublic.tsx`
+3. `src/pages/local/AttendanceKiosk.tsx`
+4. `src/components/cash/SupervisorPinDialog.tsx`
+5. `src/components/hr/EmployeeDetailManager.tsx`
+6. `src/types/channels.ts`
+7. `src/components/cash/` (carpeta)
+
+## Documentación Creada (1)
+
+- `docs/LEGACY_ELIMINATION_QUEUE.md`
