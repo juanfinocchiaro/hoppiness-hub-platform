@@ -21,8 +21,11 @@ import {
   Megaphone,
   Settings,
   FileText,
+  MessageSquare,
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import NewBranchModal from './NewBranchModal';
+import { useUnreadMessagesCount } from '@/hooks/useContactMessages';
 
 interface NavItem {
   type: 'navigation' | 'action';
@@ -59,6 +62,8 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
     locales: true,
     personas: true,
   });
+  
+  const { data: unreadCount } = useUnreadMessagesCount();
 
   // Fetch branches for dynamic menu
   const { data: branches, refetch: refetchBranches } = useQuery({
@@ -113,13 +118,14 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
       ],
     });
 
-    // Comunicados
+    // Comunicación
     sections.push({
-      id: 'comunicados',
-      label: 'Comunicados',
+      id: 'comunicacion',
+      label: 'Comunicación',
       icon: Megaphone,
       items: [
-        { type: 'navigation', to: '/mimarca/comunicados', icon: Megaphone, label: 'Enviar Comunicados' },
+        { type: 'navigation', to: '/mimarca/mensajes', icon: MessageSquare, label: 'Mensajes de Contacto' },
+        { type: 'navigation', to: '/mimarca/comunicados', icon: Megaphone, label: 'Comunicados' },
       ],
     });
 
@@ -210,6 +216,8 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
                   }
 
                   const itemActive = isItemActive(item);
+                  const showBadge = item.to === '/mimarca/mensajes' && unreadCount && unreadCount > 0;
+                  
                   return (
                     <Link key={item.to} to={item.to!}>
                       <Button
@@ -219,6 +227,11 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
                       >
                         <item.icon className="w-4 h-4 mr-3" />
                         {item.label}
+                        {showBadge && (
+                          <Badge className="ml-auto bg-orange-500 text-white text-xs px-1.5 py-0.5">
+                            {unreadCount}
+                          </Badge>
+                        )}
                       </Button>
                     </Link>
                   );
