@@ -1309,8 +1309,10 @@ export type Database = {
           created_at: string
           email: string
           expires_at: string
+          full_name: string | null
           id: string
           invited_by: string
+          role: string
           status: string
           token: string
         }
@@ -1321,8 +1323,10 @@ export type Database = {
           created_at?: string
           email: string
           expires_at?: string
+          full_name?: string | null
           id?: string
           invited_by: string
+          role?: string
           status?: string
           token?: string
         }
@@ -1333,8 +1337,10 @@ export type Database = {
           created_at?: string
           email?: string
           expires_at?: string
+          full_name?: string | null
           id?: string
           invited_by?: string
+          role?: string
           status?: string
           token?: string
         }
@@ -1552,18 +1558,6 @@ export type Database = {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
       }
-      can_use_brand_panel: { Args: { _user_id: string }; Returns: boolean }
-      can_use_local_panel: { Args: { _user_id: string }; Returns: boolean }
-      get_allowed_suppliers_for_ingredient: {
-        Args: { p_ingredient_id: string }
-        Returns: {
-          is_approved: boolean
-          is_primary: boolean
-          negotiated_price: number
-          supplier_id: string
-          supplier_name: string
-        }[]
-      }
       get_brand_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["brand_role_type"]
@@ -1576,7 +1570,6 @@ export type Database = {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
       }
-      has_brand_access: { Args: { _user_id: string }; Returns: boolean }
       has_financial_access: { Args: { p_branch_id: string }; Returns: boolean }
       has_hr_access: { Args: { p_branch_id: string }; Returns: boolean }
       is_cashier_for_branch: {
@@ -1614,10 +1607,6 @@ export type Database = {
           full_name: string
           user_id: string
         }[]
-      }
-      validate_supplier_for_ingredient: {
-        Args: { p_ingredient_id: string; p_supplier_id: string }
-        Returns: boolean
       }
       verify_authorization_pin: {
         Args: { _branch_id: string; _pin: string }

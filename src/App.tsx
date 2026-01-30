@@ -16,7 +16,7 @@ import Pedir from "./pages/Pedir";
 import Franquicias from "./pages/Franquicias";
 import Nosotros from "./pages/Nosotros";
 import Contacto from "./pages/Contacto";
-import AceptarInvitacion from "./pages/AceptarInvitacion";
+
 import FichajeEmpleado from "./pages/FichajeEmpleado";
 
 // Mi Local
@@ -24,7 +24,7 @@ import BranchLayout from "./pages/local/BranchLayout";
 import TeamPage from "./pages/local/TeamPage";
 import ClockInsPage from "./pages/local/ClockInsPage";
 import SchedulesPage from "./pages/local/SchedulesPage";
-import PrintersPage from "./pages/local/PrintersPage";
+
 import AdvancesPage from "./pages/local/AdvancesPage";
 import WarningsPage from "./pages/local/WarningsPage";
 import RegulationsPage from "./pages/local/RegulationsPage";
@@ -80,7 +80,6 @@ const App = () => (
             <Route path="/nosotros" element={<Nosotros />} />
             <Route path="/contacto" element={<Contacto />} />
             <Route path="/registro-staff" element={<RegistroStaff />} />
-            <Route path="/invitacion/:token" element={<AceptarInvitacion />} />
             <Route path="/fichaje/:branchCode" element={<FichajeEmpleado />} />
             
             {/* Mi Cuenta */}
@@ -107,7 +106,7 @@ const App = () => (
               <Route path="equipo/comunicados" element={<LocalCommunicationsPage />} />
               
               {/* Configuración */}
-              <Route path="config/impresoras" element={<PrintersPage />} />
+              
               <Route path="config/turnos" element={<ShiftConfigPage />} />
             </Route>
             
