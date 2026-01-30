@@ -7,15 +7,10 @@ export interface UserWithStats {
   email: string;
   phone: string | null;
   created_at: string;
-  loyalty_points: number; // Kept for interface compatibility, always 0
-  internal_notes: NoteEntry[]; // Kept for interface compatibility, always []
   brand_role: BrandRole;
   local_role: LocalRole;
   branch_ids: string[];
   role_id: string | null;
-  total_orders: number; // Kept for interface compatibility, always 0
-  total_spent: number; // Kept for interface compatibility, always 0
-  last_order_date: string | null; // Kept for interface compatibility, always null
 }
 
 export interface NoteEntry {

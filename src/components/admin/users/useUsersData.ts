@@ -40,15 +40,10 @@ export function useUsersData() {
           email: p.email || '',
           phone: p.phone,
           created_at: p.created_at,
-          loyalty_points: 0, // Removed - no loyalty system
-          internal_notes: [], // Removed - use communications
           brand_role: (role?.brand_role as BrandRole) || null,
           local_role: (role?.local_role as LocalRole) || null,
           branch_ids: role?.branch_ids || [],
           role_id: role?.id || null,
-          total_orders: 0, // Removed - no orders system
-          total_spent: 0, // Removed - no orders system
-          last_order_date: null, // Removed - no orders system
         } as UserWithStats;
       });
     },

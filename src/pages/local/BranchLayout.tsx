@@ -38,7 +38,6 @@ import {
   Home,
   Users,
   Clock,
-  Printer,
   AlertCircle,
   Building2,
   FileText,
@@ -211,7 +210,6 @@ export default function BranchLayout() {
       show: lp.canConfigPrinters,
       items: [
         { to: 'config/turnos', label: 'Turnos', icon: Clock, show: lp.canConfigPrinters },
-        { to: 'config/impresoras', label: 'Impresoras', icon: Printer, show: lp.canConfigPrinters },
       ]
     }
   ].filter(section => section.show);

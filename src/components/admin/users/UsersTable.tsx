@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { UserExpandedRow } from './UserExpandedRow';
 import type { UserWithStats, Branch } from './types';
-import { getHighestRole, formatMoney, formatRelativeDate, formatShortDate, ROLE_LABELS } from './types';
+import { getHighestRole, formatShortDate, ROLE_LABELS } from './types';
 
 interface UsersTableProps {
   users: UserWithStats[];
@@ -29,8 +29,6 @@ export function UsersTable({ users, branches, onUserUpdated }: UsersTableProps) 
               <TableHead className="min-w-[150px]">Nombre</TableHead>
               <TableHead className="min-w-[180px]">Email</TableHead>
               <TableHead className="w-[110px]">Rol</TableHead>
-              <TableHead className="w-[100px] text-right">Pedidos</TableHead>
-              <TableHead className="w-[100px]">Últ. pedido</TableHead>
               <TableHead className="w-[80px] text-center">Mi Marca</TableHead>
               <TableHead className="w-[80px] text-center">Mi Local</TableHead>
             </TableRow>
@@ -39,7 +37,7 @@ export function UsersTable({ users, branches, onUserUpdated }: UsersTableProps) 
             {users.map((user) => {
               const isExpanded = expandedUserId === user.id;
               const highestRole = getHighestRole(user.brand_role, user.local_role);
-              const roleLabel = ROLE_LABELS[highestRole] || 'Cliente';
+              const roleLabel = ROLE_LABELS[highestRole] || 'Sin rol';
               
               return (
                 <>
@@ -75,22 +73,10 @@ export function UsersTable({ users, branches, onUserUpdated }: UsersTableProps) 
                         highestRole === 'franquiciado' && "text-amber-600",
                         highestRole === 'encargado' && "text-green-600",
                         (highestRole === 'cajero' || highestRole === 'empleado') && "text-slate-600",
-                        highestRole === 'cliente' && "text-muted-foreground"
+                        highestRole === 'staff' && "text-muted-foreground"
                       )}>
                         {roleLabel}
                       </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {user.total_orders > 0 ? (
-                        <span className="text-sm">
-                          {user.total_orders} ({formatMoney(user.total_spent)})
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatRelativeDate(user.last_order_date)}
                     </TableCell>
                     <TableCell className="text-center">
                       <AccessIndicator hasAccess={!!user.brand_role} />
@@ -102,7 +88,7 @@ export function UsersTable({ users, branches, onUserUpdated }: UsersTableProps) 
                   
                   {isExpanded && (
                     <TableRow key={`${user.id}-expanded`}>
-                      <TableCell colSpan={8} className="p-0 bg-muted/30">
+                      <TableCell colSpan={6} className="p-0 bg-muted/30">
                         <UserExpandedRow 
                           user={user} 
                           branches={branches}
