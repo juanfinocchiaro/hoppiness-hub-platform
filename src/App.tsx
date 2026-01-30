@@ -40,6 +40,7 @@ import CentralTeam from "./pages/admin/CentralTeam";
 import CommunicationsPage from "./pages/admin/CommunicationsPage";
 import BrandRegulationsPage from "./pages/admin/BrandRegulationsPage";
 import ClosureConfigPage from "./pages/admin/ClosureConfigPage";
+import ContactMessagesPage from "./pages/admin/ContactMessagesPage";
 
 // Mi Local - Comunicaciones
 import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
@@ -123,6 +124,9 @@ const App = () => (
               
               {/* Comunicados */}
               <Route path="comunicados" element={<CommunicationsPage />} />
+              
+              {/* Mensajes de Contacto */}
+              <Route path="mensajes" element={<ContactMessagesPage />} />
               
               {/* Configuración */}
               <Route path="reglamentos" element={<BrandRegulationsPage />} />

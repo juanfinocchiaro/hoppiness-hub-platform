@@ -79,7 +79,7 @@ const handler = async (req: Request): Promise<Response> => {
         detailsHtml = message.message ? `<p><strong>Mensaje:</strong> ${message.message}</p>` : '';
     }
 
-    const adminUrl = `https://hoppiness-hub-platform.lovable.app/admin/mensajes`;
+    const adminUrl = `https://hoppiness-hub-platform.lovable.app/mimarca/mensajes`;
 
     const emailHtml = `
       <!DOCTYPE html>
