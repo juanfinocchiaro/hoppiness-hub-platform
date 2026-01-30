@@ -44,18 +44,17 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Missing required fields: email, role, branch_id");
     }
 
-    // Check permissions
-    const { data: hasPermission } = await supabase.rpc('has_branch_permission', {
-      _branch_id: branch_id,
-      _permission: 'hr.employees_manage',
+    // Check permissions using V2 functions
+    const { data: isSuperadmin } = await supabase.rpc('is_superadmin', {
       _user_id: user.id
     });
 
-    const { data: isAdmin } = await supabase.rpc('is_admin', {
-      _user_id: user.id
+    const { data: isHrRole } = await supabase.rpc('is_hr_role', {
+      _user_id: user.id,
+      _branch_id: branch_id
     });
 
-    if (!hasPermission && !isAdmin) {
+    if (!isSuperadmin && !isHrRole) {
       throw new Error("No tienes permiso para invitar colaboradores a esta sucursal");
     }
 
@@ -77,13 +76,13 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('user_id', user.id)
       .single();
 
-    // Check for existing pending invitation
+    // Check for existing pending invitation in staff_invitations
     const { data: existingInvitation } = await supabase
-      .from('user_invitations')
+      .from('staff_invitations')
       .select('id')
       .eq('email', email.toLowerCase().trim())
       .eq('branch_id', branch_id)
-      .is('accepted_at', null)
+      .eq('status', 'pending')
       .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
@@ -96,9 +95,9 @@ const handler = async (req: Request): Promise<Response> => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
 
-    // Create invitation in user_invitations table
+    // Create invitation in staff_invitations table
     const { data: invitation, error: inviteError } = await supabase
-      .from('user_invitations')
+      .from('staff_invitations')
       .insert({
         email: email.toLowerCase().trim(),
         full_name: full_name || null,
@@ -107,6 +106,7 @@ const handler = async (req: Request): Promise<Response> => {
         invited_by: user.id,
         token: inviteToken,
         expires_at: expiresAt.toISOString(),
+        status: 'pending',
       })
       .select()
       .single();
@@ -117,15 +117,13 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const appUrl = Deno.env.get("APP_URL") || "https://hoppiness-hub-platform.lovable.app";
-    const registrationUrl = `${appUrl}/invitacion/${inviteToken}`;
+    const registrationUrl = `${appUrl}/registro-staff?token=${inviteToken}`;
 
     const roleLabels: Record<string, string> = {
       'encargado': 'Encargado',
       'cajero': 'Cajero',
-      'kds': 'KDS',
+      'empleado': 'Empleado',
       'franquiciado': 'Franquiciado',
-      'marketing': 'Marketing',
-      'admin': 'Administrador',
     };
 
     const htmlContent = `
@@ -150,19 +148,15 @@ const handler = async (req: Request): Promise<Response> => {
             </p>
             
             <p style="color: #52525b; font-size: 16px; line-height: 1.6;">
-              Hacé clic en el siguiente botón para aceptar la invitación:
+              Hacé clic en el siguiente botón para completar tu registro:
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${registrationUrl}" 
                  style="display: inline-block; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                Aceptar invitación
+                Completar Registro
               </a>
             </div>
-            
-            <p style="color: #71717a; font-size: 14px; line-height: 1.6;">
-              Si ya tenés una cuenta, podés iniciar sesión directamente. Si no, podrás crear una nueva.
-            </p>
             
             <p style="color: #71717a; font-size: 14px; line-height: 1.6;">
               Esta invitación expira en 7 días. Si no solicitaste esto, podés ignorar este email.
