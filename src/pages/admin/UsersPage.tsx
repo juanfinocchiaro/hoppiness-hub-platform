@@ -7,12 +7,10 @@ export default function UsersPage() {
   const { isSuperadmin, loading: permLoading } = usePermissionsV2();
   const { users, branches, loading, refetch } = useUsersData();
 
-  // Filter state
+  // Filter state - simplified (no order filters)
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [accessFilter, setAccessFilter] = useState('all');
-  const [activityFilter, setActivityFilter] = useState('all');
-  const [hideInactiveClients, setHideInactiveClients] = useState(false);
 
   // Filtered users
   const filteredUsers = useMemo(() => {
@@ -28,7 +26,7 @@ export default function UsersPage() {
       // Role filter
       if (roleFilter !== 'all') {
         const highestRole = getHighestRole(user.brand_role, user.local_role);
-        if (roleFilter === 'cliente') {
+        if (roleFilter === 'sin_rol') {
           if (user.brand_role || user.local_role) return false;
         } else if (highestRole !== roleFilter) {
           return false;
@@ -40,18 +38,9 @@ export default function UsersPage() {
       if (accessFilter === 'local' && !user.local_role) return false;
       if (accessFilter === 'none' && (user.brand_role || user.local_role)) return false;
 
-      // Activity filter
-      if (activityFilter === 'with_orders' && user.total_orders === 0) return false;
-      if (activityFilter === 'no_orders' && user.total_orders > 0) return false;
-
-      // Hide inactive clients
-      if (hideInactiveClients && !user.brand_role && !user.local_role && user.total_orders === 0) {
-        return false;
-      }
-
       return true;
     });
-  }, [users, search, roleFilter, accessFilter, activityFilter, hideInactiveClients]);
+  }, [users, search, roleFilter, accessFilter]);
 
   if (permLoading || loading) {
     return (
@@ -86,10 +75,6 @@ export default function UsersPage() {
         onRoleFilterChange={setRoleFilter}
         accessFilter={accessFilter}
         onAccessFilterChange={setAccessFilter}
-        activityFilter={activityFilter}
-        onActivityFilterChange={setActivityFilter}
-        hideInactiveClients={hideInactiveClients}
-        onHideInactiveClientsChange={setHideInactiveClients}
       />
 
       <div className="text-sm text-muted-foreground">

@@ -197,42 +197,31 @@ export default function FichajeEmpleado() {
     }
   }, [branch]);
 
-  // Check regulation status
+  // Check regulation status using Supabase client
   const checkRegulationStatus = useCallback(async (userId: string): Promise<RegulationStatus> => {
     try {
-      // Get latest regulation using raw fetch to avoid type issues with new tables
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      
-      // Check regulations table
-      const regResponse = await fetch(
-        `${supabaseUrl}/rest/v1/regulations?select=id,version,created_at&order=version.desc&limit=1`,
-        { headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` } }
-      );
-      
-      if (!regResponse.ok) {
-        // Table might not exist yet
-        return { hasPending: false, daysSinceUpload: 0, isBlocked: false };
-      }
-      
-      const regulations = await regResponse.json();
-      if (!regulations || regulations.length === 0) {
+      // Get latest regulation
+      const { data: regulations, error: regError } = await supabase
+        .from('regulations')
+        .select('id, version, created_at')
+        .order('version', { ascending: false })
+        .limit(1);
+
+      if (regError || !regulations || regulations.length === 0) {
         return { hasPending: false, daysSinceUpload: 0, isBlocked: false };
       }
 
       const regulation = regulations[0];
 
       // Check if user has signed the latest version
-      const sigResponse = await fetch(
-        `${supabaseUrl}/rest/v1/regulation_signatures?select=id&user_id=eq.${userId}&regulation_version=eq.${regulation.version}`,
-        { headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` } }
-      );
-      
-      if (sigResponse.ok) {
-        const signatures = await sigResponse.json();
-        if (signatures && signatures.length > 0) {
-          return { hasPending: false, daysSinceUpload: 0, isBlocked: false };
-        }
+      const { data: signatures, error: sigError } = await supabase
+        .from('regulation_signatures')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('regulation_version', regulation.version);
+
+      if (!sigError && signatures && signatures.length > 0) {
+        return { hasPending: false, daysSinceUpload: 0, isBlocked: false };
       }
 
       // Calculate days since regulation was uploaded
@@ -240,8 +229,8 @@ export default function FichajeEmpleado() {
       const isBlocked = daysSinceUpload > 5;
 
       return { hasPending: true, daysSinceUpload, isBlocked };
-    } catch {
-      // If anything fails, allow clock-in
+    } catch (error) {
+      console.warn('Error checking regulation status:', error);
       return { hasPending: false, daysSinceUpload: 0, isBlocked: false };
     }
   }, []);

@@ -38,10 +38,10 @@ export function LocationsSection() {
   const { data: branches, isLoading } = useQuery({
     queryKey: ['public-branches-landing'],
     queryFn: async () => {
+      // Usar la vista branches_public que ahora tiene public_status y public_hours
       const { data, error } = await supabase
-        .from('branches')
+        .from('branches_public')
         .select('id, name, address, city, opening_time, closing_time, public_status, public_hours')
-        .in('public_status', ['active', 'coming_soon'])
         .order('name');
       
       if (error) throw error;

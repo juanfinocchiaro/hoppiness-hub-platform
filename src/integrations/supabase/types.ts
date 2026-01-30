@@ -1476,6 +1476,8 @@ export type Database = {
           opening_time: string | null
           pedidosya_enabled: boolean | null
           phone: string | null
+          public_hours: Json | null
+          public_status: string | null
           rappi_enabled: boolean | null
           slug: string | null
           takeaway_enabled: boolean | null
@@ -1499,6 +1501,8 @@ export type Database = {
           opening_time?: string | null
           pedidosya_enabled?: boolean | null
           phone?: string | null
+          public_hours?: Json | null
+          public_status?: string | null
           rappi_enabled?: boolean | null
           slug?: string | null
           takeaway_enabled?: boolean | null
@@ -1522,6 +1526,8 @@ export type Database = {
           opening_time?: string | null
           pedidosya_enabled?: boolean | null
           phone?: string | null
+          public_hours?: Json | null
+          public_status?: string | null
           rappi_enabled?: boolean | null
           slug?: string | null
           takeaway_enabled?: boolean | null

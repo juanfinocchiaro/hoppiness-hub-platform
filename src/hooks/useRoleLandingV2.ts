@@ -3,6 +3,7 @@
  */
 import { usePermissionsV2, type BrandRole, type LocalRole } from './usePermissionsV2';
 
+// Alineado con los roles reales de la DB: brand_role_type y local_role_type
 export type AvatarType = 
   | 'superadmin'
   | 'coordinador'
@@ -10,9 +11,9 @@ export type AvatarType =
   | 'contador_marca'
   | 'franquiciado'
   | 'encargado'
-  | 'cocinero'
+  | 'contador_local'
   | 'cajero'
-  | 'barista'
+  | 'empleado'
   | 'guest';
 
 export interface AvatarInfo {
@@ -102,8 +103,8 @@ export function useRoleLandingV2() {
 
     if (isContadorLocal) {
       return {
-        type: 'cajero',
-        label: 'Contador',
+        type: 'contador_local',
+        label: 'Contador Local',
         landingPath: '/cuenta',
         description: 'Mi Cuenta',
       };
@@ -120,7 +121,7 @@ export function useRoleLandingV2() {
 
     if (isEmpleado) {
       return {
-        type: 'cocinero',
+        type: 'empleado',
         label: 'Empleado',
         landingPath: '/cuenta',
         description: 'Mi Cuenta',
@@ -144,7 +145,7 @@ export function useRoleLandingV2() {
     canAccessAdmin: canAccessBrandPanel,
     canAccessLocal: canAccessLocalPanel,
     accessibleBranches,
-    isOperationalRole: ['cajero', 'cocinero', 'barista'].includes(avatarInfo.type),
+    isOperationalRole: ['cajero', 'empleado'].includes(avatarInfo.type),
     isManagementRole: ['encargado', 'franquiciado'].includes(avatarInfo.type),
     isBrandRole: ['superadmin', 'coordinador', 'informes', 'contador_marca'].includes(avatarInfo.type),
   };

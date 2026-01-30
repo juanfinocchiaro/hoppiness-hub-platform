@@ -12,11 +12,11 @@ import MyScheduleCard from '@/components/cuenta/MyScheduleCard';
 import MyClockInsCard from '@/components/cuenta/MyClockInsCard';
 import MySalaryAdvancesCard from '@/components/cuenta/MySalaryAdvancesCard';
 import MyWarningsCard from '@/components/cuenta/MyWarningsCard';
-import MyCashClosingsCard from '@/components/cuenta/MyCashClosingsCard';
 import MyCommunicationsCard from '@/components/cuenta/MyCommunicationsCard';
 import MissingPinBanner from '@/components/cuenta/MissingPinBanner';
 import MyRequestsCard from '@/components/cuenta/MyRequestsCard';
 import MyRegulationsCard from '@/components/cuenta/MyRegulationsCard';
+import { ROLE_LABELS } from '@/components/admin/users/types';
 
 export default function CuentaDashboard() {
   const { user, signOut } = useAuth();
@@ -61,14 +61,7 @@ export default function CuentaDashboard() {
 
   const getRoleLabel = (role: string | null) => {
     if (!role) return '';
-    const labels: Record<string, string> = {
-      franquiciado: 'Franquiciado',
-      encargado: 'Encargado',
-      contador_local: 'Contador',
-      cajero: 'Cajero',
-      empleado: 'Empleado',
-    };
-    return labels[role] || role;
+    return ROLE_LABELS[role] || role;
   };
 
   return (
@@ -150,7 +143,6 @@ export default function CuentaDashboard() {
                 <MyClockInsCard />
                 <MySalaryAdvancesCard />
                 <MyWarningsCard />
-                <MyCashClosingsCard />
               </div>
             </>
           ) : (
