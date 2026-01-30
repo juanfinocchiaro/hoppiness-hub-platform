@@ -1,236 +1,216 @@
 
-# Plan: Corrección de Auditoría de Código
 
-## Análisis de la Auditoría
+# Plan Fusionado: Página de Mensajes de Contacto
 
-La auditoría es **100% precisa**. Todos los hallazgos fueron verificados en el código actual.
+## Resumen Ejecutivo
+
+Crear una página completa de gestión de mensajes de contacto combinando:
+- **De Claude:** Badge de no leídos en sidebar, botón WhatsApp directo, estados simples, UX enfocada en acción rápida
+- **De Lovable:** Estructura de datos por tipo, expansión con campos específicos, arquitectura siguiendo patrones existentes
 
 ---
 
-## CRÍTICOS - Correcciones Inmediatas
+## Archivos a Crear
 
-### 1. Ruta de Impresoras en Menú (Sin Página)
+### 1. `src/pages/admin/ContactMessagesPage.tsx`
 
-**Estado:** El menú en `BranchLayout.tsx:214` tiene link a `config/impresoras` pero la página fue eliminada y no hay ruta en App.tsx.
+Página principal con:
+- Header con título y botón de exportar CSV
+- Tabs de filtro: Todos | Franquicias | Empleo | Proveedores | Otros
+- Checkbox "Solo no leídos"
+- Lista de mensajes como Cards (no tabla)
+- Expansión inline con detalles según tipo
 
-**Acción:** Eliminar el item del menú ya que el sistema de impresoras se eliminó en la limpieza anterior.
-
-```tsx
-// BranchLayout.tsx - ANTES
-items: [
-  { to: 'config/turnos', label: 'Turnos', icon: Clock, show: lp.canConfigPrinters },
-  { to: 'config/impresoras', label: 'Impresoras', icon: Printer, show: lp.canConfigPrinters },
-]
-
-// DESPUÉS
-items: [
-  { to: 'config/turnos', label: 'Turnos', icon: Clock, show: lp.canConfigPrinters },
-]
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  📬 Mensajes de contacto                        [Exportar CSV]  │
+├─────────────────────────────────────────────────────────────────┤
+│  [Todos (12)] [Franquicias (3)] [Empleo (5)] [Otros (4)]       │
+│  ☑ Solo no leídos                                               │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ 🟠 NUEVO │ Juan Pérez           │ Franquicia │ Hace 2hs  │  │
+│  │          │ juan@email.com                                 │  │
+│  │          │ [📱 WhatsApp] [✓ Marcar leído] [📂 Archivar]  │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ ⚪ LEÍDO │ María García         │ Empleo     │ Hace 1 día│  │
+│  │          │ CV adjunto: curriculum.pdf                     │  │
+│  │          │ [📱 WhatsApp] [📂 Archivar]                    │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-También eliminar el import de `Printer` ya que no se usará.
+### 2. `src/hooks/useContactMessages.ts`
+
+Hook con:
+- Query de mensajes con filtros
+- Mutación para marcar leído
+- Mutación para archivar
+- Query de conteo de no leídos (para badge)
 
 ---
 
-### 2. MyCashClosingsCard Retorna Null
+## Archivos a Modificar
 
-**Acción:** 
-- Eliminar archivo `src/components/cuenta/MyCashClosingsCard.tsx`
-- Eliminar import y uso en `CuentaDashboard.tsx`
+### 3. `src/components/admin/AdminSidebar.tsx`
 
----
+Agregar item "Mensajes" con badge dinámico de no leídos:
 
-### 3. Roles Fantasma (cocinero/barista)
+```tsx
+// Nuevo import
+import { MessageSquare } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
-**Problema:** `AvatarType` incluye `cocinero` y `barista` que no existen en el enum de DB.
+// Query para contar no leídos
+const { data: unreadCount } = useQuery({
+  queryKey: ['unread-messages-count'],
+  queryFn: async () => {
+    const { count } = await supabase
+      .from('contact_messages')
+      .select('*', { count: 'exact', head: true })
+      .is('read_at', null)
+      .neq('status', 'archived');
+    return count || 0;
+  },
+  refetchInterval: 60000, // Refrescar cada minuto
+});
 
-**Acción:** Actualizar `useRoleLandingV2.ts`:
+// Nuevo item antes de Comunicados (línea ~116)
+<Link to="/mimarca/mensajes">
+  <Button variant={...} className="w-full justify-start">
+    <MessageSquare className="w-4 h-4 mr-3" />
+    Mensajes
+    {unreadCount > 0 && (
+      <Badge className="ml-auto bg-orange-500">{unreadCount}</Badge>
+    )}
+  </Button>
+</Link>
+```
+
+### 4. `src/App.tsx`
+
+Agregar ruta:
+
+```tsx
+// Línea ~43 - Nuevo import
+import ContactMessagesPage from "./pages/admin/ContactMessagesPage";
+
+// Línea ~126 - Nueva ruta dentro de /mimarca
+<Route path="mensajes" element={<ContactMessagesPage />} />
+```
+
+### 5. `supabase/functions/contact-notification/index.ts`
+
+Corregir URL del botón en el email (línea 82):
 
 ```typescript
 // ANTES
-export type AvatarType = 
-  | 'superadmin' | 'coordinador' | 'informes' | 'contador_marca'
-  | 'franquiciado' | 'encargado' | 'cocinero' | 'cajero' | 'barista' | 'guest';
-
-// DESPUÉS - Alineado con DB
-export type AvatarType = 
-  | 'superadmin' | 'coordinador' | 'informes' | 'contador_marca'
-  | 'franquiciado' | 'encargado' | 'contador_local' | 'cajero' | 'empleado' | 'guest';
-```
-
-Y actualizar la lógica:
-
-```typescript
-// ANTES
-isOperationalRole: ['cajero', 'cocinero', 'barista'].includes(avatarInfo.type)
+const adminUrl = `https://hoppiness-hub-platform.lovable.app/admin/mensajes`;
 
 // DESPUÉS
-isOperationalRole: ['cajero', 'empleado'].includes(avatarInfo.type)
+const adminUrl = `https://hoppiness-hub-platform.lovable.app/mimarca/mensajes`;
 ```
 
 ---
 
-### 4. Archivo Duplicado use-toast
+## Archivos a Eliminar
 
-**Acción:** Eliminar `src/components/ui/use-toast.ts` (solo re-exporta desde hooks).
+### 6. `docs/PERMISSIONS_ARCHITECTURE.md`
+
+Razón: Documenta un sistema de permisos granulares (55+ keys, tablas `permission_definitions`, `user_branch_permissions`) que **nunca se implementó**. El sistema real usa roles fijos en `user_roles_v2` con permisos derivados en `usePermissionsV2.ts`. Mantener este documento causa confusión arquitectónica.
 
 ---
 
-## IMPORTANTES - Correcciones de Calidad
+## Detalle Técnico de ContactMessagesPage
 
-### 5. Fetch Directo en FichajeEmpleado
+### Estados del mensaje
 
-**Problema:** Se usa `fetch()` directo a la API REST en lugar del cliente Supabase.
+| Estado | Badge | Color | Descripción |
+|--------|-------|-------|-------------|
+| Nuevo | 🟠 NUEVO | orange | read_at IS NULL |
+| Leído | ⚪ LEÍDO | gray | read_at IS NOT NULL, status != 'archived' |
+| Archivado | (oculto) | - | status = 'archived' |
 
-**Acción:** Refactorizar a usar cliente Supabase:
+### Tipos de mensaje y sus campos
+
+| Tipo | Ícono | Campos específicos |
+|------|-------|-------------------|
+| franquicia | 🟣 | franchise_has_zone, franchise_has_location, franchise_investment_capital |
+| empleo | 🟢 | employment_position, employment_cv_link, attachment_url |
+| proveedor | 🟠 | message (productos/servicios ofrecidos) |
+| pedidos | 🔴 | order_number, order_date, order_issue |
+| consulta | 🔵 | message |
+
+### Acciones por mensaje
+
+1. **WhatsApp** - Abre `https://wa.me/54{phone}` en nueva pestaña
+2. **Marcar leído** - Actualiza `read_at = now()`
+3. **Archivar** - Actualiza `status = 'archived'`
+
+### Query principal
 
 ```typescript
-// ANTES (líneas 208-229)
-const regResponse = await fetch(
-  `${supabaseUrl}/rest/v1/regulations?...`,
-  { headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` } }
-);
-
-// DESPUÉS
-const { data: regulations } = await supabase
-  .from('regulations')
-  .select('id, version, created_at')
-  .order('version', { ascending: false })
-  .limit(1);
+const { data: messages } = useQuery({
+  queryKey: ['contact-messages', typeFilter, showOnlyUnread],
+  queryFn: async () => {
+    let query = supabase
+      .from('contact_messages')
+      .select('*')
+      .neq('status', 'archived')
+      .order('created_at', { ascending: false });
+    
+    if (typeFilter !== 'all') {
+      query = query.eq('subject', typeFilter);
+    }
+    
+    if (showOnlyUnread) {
+      query = query.is('read_at', null);
+    }
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  }
+});
 ```
 
 ---
 
-### 6. Catch Vacío sin Logging
+## Componentes UI a Utilizar
 
-**Acción:** Agregar logging en el catch de `checkRegulationStatus`:
+Siguiendo el patrón de `CommunicationsPage.tsx`:
 
-```typescript
-} catch (error) {
-  console.warn('Error checking regulation status:', error);
-  return { hasPending: false, daysSinceUpload: 0, isBlocked: false };
-}
-```
-
----
-
-### 7. Vista branches_public Incompleta
-
-**Problema:** La vista no tiene `public_status` ni `public_hours`, por eso se usa la tabla directamente.
-
-**Acción:** Actualizar la vista con una migración SQL:
-
-```sql
-CREATE OR REPLACE VIEW branches_public AS
-SELECT 
-  id, name, address, city, slug, phone, email,
-  latitude, longitude, opening_time, closing_time,
-  delivery_enabled, takeaway_enabled, dine_in_enabled,
-  estimated_prep_time_min, is_active, is_open,
-  local_open_state, rappi_enabled, pedidosya_enabled,
-  mercadopago_delivery_enabled,
-  public_status,    -- NUEVO
-  public_hours      -- NUEVO
-FROM branches
-WHERE public_status IN ('active', 'coming_soon');
-```
-
-Luego actualizar `LocationsSection.tsx` para usar la vista.
-
----
-
-### 8. NotFound.tsx en Inglés
-
-**Acción:** Traducir al español:
-
-```tsx
-<p className="mb-4 text-xl text-muted-foreground">¡Ups! Página no encontrada</p>
-<a href="/" className="text-primary underline hover:text-primary/90">
-  Volver al Inicio
-</a>
-```
-
-Y cambiar `console.error` a `console.warn` (menos alarmante en DevTools).
-
----
-
-### 9. Campos Legacy en UserWithStats
-
-**Acción:** Eliminar campos que siempre son 0/null/[]:
-
-```typescript
-// ELIMINAR de la interfaz
-loyalty_points: number;
-internal_notes: NoteEntry[];
-total_orders: number;
-total_spent: number;
-last_order_date: string | null;
-```
-
----
-
-### 10. Cast `as never` en Contacto.tsx
-
-**Problema:** El tipo de `insertData` no coincide con la tabla.
-
-**Acción:** Crear un tipo correcto para el insert.
-
----
-
-## MENORES - Mejoras de Código
-
-### 11. Labels de Roles Inconsistentes
-
-**Problema:** `contador_local` tiene diferentes labels según el archivo.
-
-**Acción:** Usar siempre el map de `ROLE_LABELS` de `types.ts`:
-
-```typescript
-// Ya existe en src/components/admin/users/types.ts
-export const ROLE_LABELS: Record<string, string> = {
-  contador_local: 'Contador Local',
-  // ...
-};
-```
-
-Importar y usar este mapa en `CuentaDashboard.tsx` en lugar de tener su propio map local.
-
----
-
-## Resumen de Archivos
-
-### Eliminar (4)
-```text
-src/components/cuenta/MyCashClosingsCard.tsx
-src/components/ui/use-toast.ts
-```
-
-### Modificar (7)
-```text
-src/pages/local/BranchLayout.tsx - Quitar link impresoras
-src/pages/cuenta/CuentaDashboard.tsx - Quitar MyCashClosingsCard
-src/hooks/useRoleLandingV2.ts - Corregir tipos de rol
-src/pages/FichajeEmpleado.tsx - Usar cliente Supabase
-src/pages/NotFound.tsx - Traducir al español
-src/components/landing/LocationsSection.tsx - Usar vista pública
-src/components/admin/users/types.ts - Limpiar campos legacy
-```
-
-### Migración SQL (1)
-```text
-Actualizar vista branches_public
-```
+- `Card` / `CardContent` - Contenedor de cada mensaje
+- `Badge` - Estados y tipos
+- `Button` - Acciones
+- `Skeleton` - Loading state
+- `Tabs` / `TabsList` / `TabsTrigger` - Filtros por tipo
+- `Checkbox` - Filtro de no leídos
+- `Dialog` - Para notas internas (opcional, fase 2)
 
 ---
 
 ## Orden de Ejecución
 
-1. Eliminar archivos muertos
-2. Corregir tipos de roles (useRoleLandingV2)
-3. Limpiar menú de impresoras (BranchLayout)
-4. Limpiar CuentaDashboard
-5. Traducir NotFound
-6. Migrar a cliente Supabase (FichajeEmpleado)
-7. Actualizar vista SQL
-8. Actualizar LocationsSection para usar vista
-9. Limpiar tipos legacy (UserWithStats)
+1. **Eliminar** `docs/PERMISSIONS_ARCHITECTURE.md`
+2. **Crear** `src/hooks/useContactMessages.ts`
+3. **Crear** `src/pages/admin/ContactMessagesPage.tsx`
+4. **Modificar** `src/App.tsx` (agregar ruta e import)
+5. **Modificar** `src/components/admin/AdminSidebar.tsx` (agregar link con badge)
+6. **Modificar** `supabase/functions/contact-notification/index.ts` (corregir URL)
+
+---
+
+## Estimación de Tiempo
+
+| Tarea | Tiempo |
+|-------|--------|
+| Eliminar doc obsoleto | 1 min |
+| Hook useContactMessages | 15 min |
+| ContactMessagesPage | 45 min |
+| Modificar App.tsx | 2 min |
+| Modificar AdminSidebar | 10 min |
+| Actualizar edge function | 2 min |
+| **Total** | **~1.5 horas** |
+
