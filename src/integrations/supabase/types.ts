@@ -8681,13 +8681,26 @@ export type Database = {
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_admin_v2: { Args: { user_uuid: string }; Returns: boolean }
+      is_cashier_for_branch: {
+        Args: { _branch_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_financial_for_branch: {
+        Args: { _branch_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_financial_manager: { Args: { user_uuid: string }; Returns: boolean }
+      is_hr_for_branch: {
+        Args: { _branch_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_hr_manager: { Args: { user_uuid: string }; Returns: boolean }
       is_item_available_now: {
         Args: { p_category_id?: string; p_product_id?: string }
         Returns: boolean
       }
       is_staff: { Args: never; Returns: boolean }
+      is_staff_member: { Args: { _user_id: string }; Returns: boolean }
       is_superadmin: { Args: { _user_id: string }; Returns: boolean }
       toggle_product_channel_availability: {
         Args: {
