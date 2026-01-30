@@ -3,29 +3,23 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Store, Clock, Users, DollarSign, Utensils, Receipt, BarChart3, MapPin } from 'lucide-react';
+import { Store, Clock, DollarSign, Utensils, BarChart3, MapPin } from 'lucide-react';
 import { BrandDailySalesTable } from '@/components/admin/BrandDailySalesTable';
-import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
 
 interface Stats {
   globalRevenue: number;
-  globalItems: number;
-  globalOrders: number;
-  globalAvgTicket: number;
+  globalHamburguesas: number;
   globalHours: number;
   globalProductivity: number;
 }
 
 export default function BrandHome() {
-  const { avatarInfo } = useRoleLandingV2();
   const [stats, setStats] = useState<Stats>({ 
     globalRevenue: 0, 
-    globalItems: 0, 
-    globalOrders: 0, 
-    globalAvgTicket: 0, 
+    globalHamburguesas: 0, 
     globalHours: 0, 
     globalProductivity: 0 
   });
@@ -35,80 +29,69 @@ export default function BrandHome() {
   useEffect(() => {
     async function fetchData() {
       const now = new Date();
-      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
 
-      const [branchesRes, ordersRes, orderItemsRes, attendanceRes] = await Promise.all([
+      const [branchesRes, closuresRes, clockRes] = await Promise.all([
         supabase.from('branches').select('*').order('name'),
+        // Get shift closures for the month (actual sales data)
         supabase
-          .from('orders')
-          .select('id, total, branch_id')
-          .gte('created_at', firstDayOfMonth)
-          .in('status', ['delivered', 'ready', 'preparing', 'confirmed']),
+          .from('shift_closures')
+          .select('branch_id, total_facturado, total_hamburguesas')
+          .gte('fecha', firstDayOfMonth)
+          .lte('fecha', lastDayOfMonth),
+        // Get clock entries for calculating hours
         supabase
-          .from('order_items')
-          .select('quantity, order_id')
-          .gte('created_at', firstDayOfMonth),
-        supabase
-          .from('attendance_logs')
-          .select('employee_id, branch_id, log_type, timestamp')
-          .gte('timestamp', firstDayOfMonth)
-          .lte('timestamp', lastDayOfMonth)
-          .order('timestamp', { ascending: true }),
+          .from('clock_entries')
+          .select('user_id, branch_id, entry_type, created_at')
+          .gte('created_at', `${firstDayOfMonth}T00:00:00`)
+          .lte('created_at', `${lastDayOfMonth}T23:59:59`)
+          .order('created_at', { ascending: true }),
       ]);
 
       const branchesData = branchesRes.data || [];
       setBranches(branchesData);
 
-      const orders = ordersRes.data || [];
-      const orderItems = orderItemsRes.data || [];
-      
+      // Calculate totals from shift_closures
+      const closures = closuresRes.data || [];
       let globalRevenue = 0;
-      let globalOrders = 0;
-      let globalItems = 0;
+      let globalHamburguesas = 0;
       
-      orders.forEach(order => {
-        globalRevenue += Number(order.total || 0);
-        globalOrders += 1;
+      closures.forEach(closure => {
+        globalRevenue += Number(closure.total_facturado || 0);
+        globalHamburguesas += Number(closure.total_hamburguesas || 0);
       });
-      
-      orderItems.forEach(item => {
-        globalItems += item.quantity || 0;
-      });
-      
-      const globalAvgTicket = globalOrders > 0 ? globalRevenue / globalOrders : 0;
 
-      // Calculate hours from attendance logs
-      const attendanceLogs = attendanceRes.data || [];
-      const employeeLogs = new Map<string, Date | null>();
+      // Calculate hours from clock_entries
+      const clockEntries = clockRes.data || [];
+      const userSessions = new Map<string, Date | null>();
       let globalTotalMinutes = 0;
       
-      attendanceLogs.forEach(log => {
-        const empId = log.employee_id;
-        const timestamp = new Date(log.timestamp);
+      clockEntries.forEach(entry => {
+        const key = `${entry.user_id}-${entry.branch_id}`;
+        const timestamp = new Date(entry.created_at);
         
-        if (log.log_type === 'IN') {
-          employeeLogs.set(empId, timestamp);
-        } else if (log.log_type === 'OUT') {
-          const inTime = employeeLogs.get(empId);
+        if (entry.entry_type === 'entrada') {
+          userSessions.set(key, timestamp);
+        } else if (entry.entry_type === 'salida') {
+          const inTime = userSessions.get(key);
           if (inTime) {
             const minutes = (timestamp.getTime() - inTime.getTime()) / (1000 * 60);
+            // Reasonable shift: between 0 and 16 hours
             if (minutes > 0 && minutes < 960) {
               globalTotalMinutes += minutes;
             }
-            employeeLogs.set(empId, null);
+            userSessions.set(key, null);
           }
         }
       });
       
       const globalHours = Math.round(globalTotalMinutes / 60 * 10) / 10;
-      const globalProductivity = globalHours > 0 ? Math.round(globalItems / globalHours * 10) / 10 : 0;
+      const globalProductivity = globalHours > 0 ? Math.round(globalHamburguesas / globalHours * 10) / 10 : 0;
 
       setStats({
         globalRevenue,
-        globalItems,
-        globalOrders,
-        globalAvgTicket,
+        globalHamburguesas,
         globalHours,
         globalProductivity,
       });
@@ -137,7 +120,7 @@ export default function BrandHome() {
           <CardDescription>Totales de todas las sucursales</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div className="text-center p-4 bg-muted/50 rounded-lg">
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
                 <DollarSign className="w-4 h-4" />
@@ -150,28 +133,10 @@ export default function BrandHome() {
             <div className="text-center p-4 bg-muted/50 rounded-lg">
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
                 <Utensils className="w-4 h-4" />
-                Unidades Vendidas
+                Hamburguesas
               </div>
               <div className="text-2xl font-bold text-primary">
-                {loading ? <Skeleton className="h-8 w-16 mx-auto" /> : stats.globalItems.toLocaleString('es-AR')}
-              </div>
-            </div>
-            <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
-                <Receipt className="w-4 h-4" />
-                Ticket Promedio
-              </div>
-              <div className="text-2xl font-bold text-primary">
-                {loading ? <Skeleton className="h-8 w-20 mx-auto" /> : formatCurrency(stats.globalAvgTicket)}
-              </div>
-            </div>
-            <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
-                <Users className="w-4 h-4" />
-                Total Pedidos
-              </div>
-              <div className="text-2xl font-bold text-primary">
-                {loading ? <Skeleton className="h-8 w-16 mx-auto" /> : stats.globalOrders.toLocaleString('es-AR')}
+                {loading ? <Skeleton className="h-8 w-16 mx-auto" /> : stats.globalHamburguesas.toLocaleString('es-AR')}
               </div>
             </div>
             <div className="text-center p-4 bg-muted/50 rounded-lg">
@@ -191,7 +156,7 @@ export default function BrandHome() {
               <div className="text-2xl font-bold text-accent-foreground">
                 {loading ? <Skeleton className="h-8 w-16 mx-auto" /> : stats.globalProductivity}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">unid/hora</p>
+              <p className="text-xs text-muted-foreground mt-1">hamburguesas/hora</p>
             </div>
           </div>
         </CardContent>

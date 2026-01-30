@@ -1,6 +1,6 @@
 /**
  * useSalaryAdvances - Hook para gestión de adelantos de sueldo
- * Fase 7: Migrado a user_id, simplificado sin PIN, auto-aprobación
+ * V2: Simplificado sin employee_id legacy, sin cash_register_movements
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,7 +18,6 @@ export interface SalaryAdvance {
   id: string;
   branch_id: string;
   user_id: string | null;
-  employee_id: string | null; // Legacy, kept for backward compatibility
   amount: number;
   reason: string | null;
   payment_method: 'cash' | 'transfer';
@@ -126,12 +125,41 @@ export function useShiftAdvances(shiftId: string | undefined) {
     queryFn: async () => {
       if (!shiftId) return [];
       
-      const { data, error } = await supabase.rpc('get_shift_advances', {
-        _shift_id: shiftId
-      });
+      // Direct query instead of RPC (RPC references legacy employee table)
+      const { data, error } = await supabase
+        .from('salary_advances')
+        .select('id, amount, paid_at, user_id, authorized_by')
+        .eq('shift_id', shiftId)
+        .eq('status', 'paid')
+        .order('paid_at');
       
       if (error) throw error;
-      return data;
+      
+      // Get names
+      const userIds = [...new Set([
+        ...(data?.map(a => a.user_id).filter(Boolean) || []),
+        ...(data?.map(a => a.authorized_by).filter(Boolean) || [])
+      ])];
+      
+      let profileMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name')
+          .in('user_id', userIds);
+        
+        profiles?.forEach(p => {
+          if (p.user_id) profileMap[p.user_id] = p.full_name || 'Sin nombre';
+        });
+      }
+      
+      return (data || []).map(a => ({
+        id: a.id,
+        employee_name: a.user_id ? profileMap[a.user_id] : 'N/A',
+        amount: a.amount,
+        authorized_by_name: a.authorized_by ? profileMap[a.authorized_by] : null,
+        paid_at: a.paid_at,
+      }));
     },
     enabled: !!shiftId,
   });
@@ -196,19 +224,18 @@ export function useCreateAdvance() {
       const isCash = params.paymentMethod === 'cash';
       const status = isCash ? 'paid' : 'pending_transfer';
       
-      // Create advance - auto-approved by current user (encargado/franquiciado)
-      // Note: employee_id is still required in DB, we use user_id for reference
+      // Create advance - using user_id (V2) + employee_id for DB constraint
       const { data: advance, error: advanceError } = await supabase
         .from('salary_advances')
         .insert({
           branch_id: params.branchId,
-          employee_id: params.userId, // Legacy field, still required
+          employee_id: params.userId, // Required by DB, using user_id value
           user_id: params.userId,
           amount: params.amount,
           reason: params.reason || null,
           payment_method: params.paymentMethod,
           status,
-          authorized_by: user.id, // Self-approval
+          authorized_by: user.id,
           authorized_at: new Date().toISOString(),
           paid_by: isCash ? user.id : null,
           paid_at: isCash ? new Date().toISOString() : null,
@@ -220,40 +247,12 @@ export function useCreateAdvance() {
       
       if (advanceError) throw advanceError;
       
-      // If cash and has shift, create cash movement
-      if (isCash && params.shiftId) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('user_id', params.userId)
-          .single();
-        
-        const { error: movementError } = await supabase
-          .from('cash_register_movements')
-          .insert({
-            branch_id: params.branchId,
-            shift_id: params.shiftId,
-            type: 'egreso',
-            amount: params.amount,
-            concept: `Adelanto de sueldo - ${profile?.full_name || 'Empleado'}`,
-            payment_method: 'efectivo',
-            recorded_by: user.id,
-            operated_by: user.id,
-            authorized_by: user.id,
-            salary_advance_id: advance.id,
-            requires_authorization: false, // Auto-approved
-          });
-        
-        if (movementError) throw movementError;
-      }
-      
       return advance;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: salaryAdvanceKeys.list(variables.branchId) });
       if (variables.shiftId) {
         queryClient.invalidateQueries({ queryKey: salaryAdvanceKeys.shift(variables.shiftId) });
-        queryClient.invalidateQueries({ queryKey: ['cash-registers', 'movements', variables.shiftId] });
       }
       toast.success('Adelanto registrado correctamente');
     },
@@ -307,19 +306,10 @@ export function useCancelAdvance() {
         .from('salary_advances')
         .update({ status: 'cancelled' })
         .eq('id', advanceId)
-        .select('branch_id, shift_id')
+        .select('branch_id')
         .single();
       
       if (error) throw error;
-      
-      // Delete cash movement if exists
-      if (data.shift_id) {
-        await supabase
-          .from('cash_register_movements')
-          .delete()
-          .eq('salary_advance_id', advanceId);
-      }
-      
       return data;
     },
     onSuccess: () => {
