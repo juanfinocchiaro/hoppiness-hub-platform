@@ -20,9 +20,8 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Loader2, Mail, UserPlus } from 'lucide-react';
-import type { Enums } from '@/integrations/supabase/types';
 
-type AppRole = Enums<'app_role'>;
+type LocalRole = 'encargado' | 'cajero' | 'empleado';
 
 interface InviteStaffDialogProps {
   open: boolean;
@@ -32,7 +31,7 @@ interface InviteStaffDialogProps {
   onSuccess?: () => void;
 }
 
-const INVITABLE_ROLES: { value: AppRole; label: string }[] = [
+const INVITABLE_ROLES: { value: LocalRole; label: string }[] = [
   { value: 'encargado', label: 'Encargado' },
   { value: 'cajero', label: 'Cajero' },
   { value: 'empleado', label: 'Colaborador' },
@@ -46,7 +45,7 @@ export function InviteStaffDialog({
   onSuccess,
 }: InviteStaffDialogProps) {
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<AppRole>('cajero');
+  const [role, setRole] = useState<LocalRole>('cajero');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -128,7 +127,7 @@ export function InviteStaffDialog({
 
           <div className="space-y-2">
             <Label htmlFor="role">Rol</Label>
-            <Select value={role} onValueChange={(v) => setRole(v as AppRole)}>
+            <Select value={role} onValueChange={(v) => setRole(v as LocalRole)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

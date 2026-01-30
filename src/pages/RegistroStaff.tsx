@@ -13,17 +13,13 @@ import { handleError, devWarn } from '@/lib/errorHandler';
 import { 
   Loader2, 
   User, 
-  Mail, 
   Phone, 
   MapPin, 
   Calendar, 
   CreditCard, 
-  FileText,
   Upload,
   Shield,
-  Building2,
   AlertCircle,
-  CheckCircle2
 } from 'lucide-react';
 
 interface InvitationData {
@@ -41,7 +37,7 @@ interface InvitationData {
 const roleLabels: Record<string, string> = {
   encargado: 'Encargado',
   cajero: 'Cajero',
-  kds: 'KDS',
+  empleado: 'Empleado',
 };
 
 export default function RegistroStaff() {
@@ -142,7 +138,7 @@ export default function RegistroStaff() {
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}/dni-${type}.${fileExt}`;
     
-    const { error: uploadError, data } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('staff-documents')
       .upload(fileName, file, { upsert: true });
 
@@ -248,55 +244,52 @@ export default function RegistroStaff() {
         devWarn('Profile update error:', profileError);
       }
 
-      // 4. Assign role - delete existing and insert new
-      await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId);
-
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role: invitation.role as 'encargado' | 'cajero' | 'kds',
-        });
+      // 4. Assign role using user_roles_v2 (V2 system)
+      // Map old role names to new local_role values
+      const localRoleMap: Record<string, 'encargado' | 'cajero' | 'empleado' | 'contador_local' | 'franquiciado'> = {
+        encargado: 'encargado',
+        cajero: 'cajero',
+        kds: 'empleado',
+        empleado: 'empleado',
+      };
+      
+      const localRole = localRoleMap[invitation.role] || 'empleado';
+      
+      // Check if role exists, then update or insert
+      const { data: existingRole } = await supabase
+        .from('user_roles_v2')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      let roleError;
+      if (existingRole) {
+        const { error } = await supabase
+          .from('user_roles_v2')
+          .update({
+            local_role: localRole,
+            branch_ids: [invitation.branch_id],
+            is_active: true,
+          })
+          .eq('user_id', userId);
+        roleError = error;
+      } else {
+        const { error } = await supabase
+          .from('user_roles_v2')
+          .insert({
+            user_id: userId,
+            local_role: localRole,
+            branch_ids: [invitation.branch_id],
+            is_active: true,
+          });
+        roleError = error;
+      }
 
       if (roleError) {
         devWarn('Role assignment error:', roleError);
       }
 
-      // 5. Assign granular branch permissions from role defaults
-      // NOTE: grant_role_defaults RPC already handles this below, 
-      // but we fetch and insert explicitly for clearer control
-      const { data: defaultPerms, error: permsQueryError } = await supabase
-        .from('role_default_permissions')
-        .select('permission_key')
-        .eq('role', invitation.role as 'encargado' | 'cajero' | 'kds');
-
-      if (!permsQueryError && defaultPerms && defaultPerms.length > 0) {
-        const permsToInsert = defaultPerms.map(p => ({
-          user_id: userId,
-          branch_id: invitation.branch_id,
-          permission_key: p.permission_key,
-        }));
-        
-        const { error: permError } = await supabase
-          .from('user_branch_permissions')
-          .insert(permsToInsert);
-
-        if (permError) {
-          devWarn('Granular permission assignment error:', permError);
-        }
-      }
-
-      // 6. Grant role defaults
-      await supabase.rpc('grant_role_defaults', {
-        _user_id: userId,
-        _branch_id: invitation.branch_id,
-        _role: invitation.role as 'encargado' | 'cajero' | 'kds',
-      });
-
-      // 7. Mark invitation as accepted
+      // 5. Mark invitation as accepted
       await supabase
         .from('staff_invitations')
         .update({
@@ -307,7 +300,7 @@ export default function RegistroStaff() {
         .eq('id', invitation.id);
 
       toast.success('¡Registro completado! Revisá tu email para confirmar la cuenta.');
-      navigate('/auth?registered=true');
+      navigate('/ingresar?registered=true');
 
     } catch (error: any) {
       handleError(error, { userMessage: error.message || 'Error al completar el registro', context: 'RegistroStaff.handleSubmit' });
@@ -498,13 +491,13 @@ export default function RegistroStaff() {
                 </h3>
                 
                 <div>
-                  <Label htmlFor="cbu">CBU o Alias *</Label>
+                  <Label htmlFor="cbu">CBU/Alias (para cobrar tu sueldo) *</Label>
                   <Input
                     id="cbu"
                     value={formData.cbu}
                     onChange={(e) => setFormData(prev => ({ ...prev, cbu: e.target.value }))}
                     required
-                    placeholder="CBU o alias de cuenta bancaria"
+                    placeholder="CBU o Alias de MercadoPago/Banco"
                   />
                 </div>
               </div>
@@ -544,62 +537,34 @@ export default function RegistroStaff() {
 
               <Separator />
 
-              {/* DNI Photos */}
+              {/* DNI Upload */}
               <div className="space-y-4">
                 <h3 className="font-semibold flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Fotos del DNI
+                  <Upload className="h-4 w-4" />
+                  Foto del DNI
                 </h3>
                 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <Label>DNI Frente *</Label>
-                    <div className="mt-2">
-                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-                        {dniFront ? (
-                          <div className="flex items-center gap-2 text-green-600">
-                            <CheckCircle2 className="h-5 w-5" />
-                            <span className="text-sm">{dniFront.name}</span>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center text-muted-foreground">
-                            <Upload className="h-8 w-8 mb-2" />
-                            <span className="text-sm">Subir foto frente</span>
-                          </div>
-                        )}
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          onChange={(e) => handleFileChange('front', e.target.files?.[0] || null)}
-                        />
-                      </label>
-                    </div>
+                    <Label>Frente del DNI *</Label>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleFileChange('front', e.target.files?.[0] || null)}
+                      className="cursor-pointer"
+                    />
+                    {dniFront && <p className="text-xs text-muted-foreground mt-1">{dniFront.name}</p>}
                   </div>
                   
                   <div>
-                    <Label>DNI Dorso *</Label>
-                    <div className="mt-2">
-                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-                        {dniBack ? (
-                          <div className="flex items-center gap-2 text-green-600">
-                            <CheckCircle2 className="h-5 w-5" />
-                            <span className="text-sm">{dniBack.name}</span>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center text-muted-foreground">
-                            <Upload className="h-8 w-8 mb-2" />
-                            <span className="text-sm">Subir foto dorso</span>
-                          </div>
-                        )}
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          onChange={(e) => handleFileChange('back', e.target.files?.[0] || null)}
-                        />
-                      </label>
-                    </div>
+                    <Label>Dorso del DNI *</Label>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleFileChange('back', e.target.files?.[0] || null)}
+                      className="cursor-pointer"
+                    />
+                    {dniBack && <p className="text-xs text-muted-foreground mt-1">{dniBack.name}</p>}
                   </div>
                 </div>
               </div>
@@ -607,23 +572,15 @@ export default function RegistroStaff() {
               <Separator />
 
               {/* Terms */}
-              <div className="flex items-start gap-3">
+              <div className="flex items-start space-x-3">
                 <Checkbox
                   id="terms"
                   checked={acceptedTerms}
                   onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
                 />
-                <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
-                  Acepto el{' '}
-                  <a href="/reglamento-interno" target="_blank" className="text-primary underline">
-                    Reglamento Interno
-                  </a>{' '}
-                  y los{' '}
-                  <a href="/terminos" target="_blank" className="text-primary underline">
-                    Términos y Condiciones
-                  </a>{' '}
-                  de trabajo.
-                </Label>
+                <label htmlFor="terms" className="text-sm leading-5 cursor-pointer">
+                  Acepto los términos y condiciones de trabajo, y autorizo el tratamiento de mis datos personales según la política de privacidad.
+                </label>
               </div>
 
               <Button 
@@ -635,7 +592,7 @@ export default function RegistroStaff() {
                 {submitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Registrando...
+                    Procesando...
                   </>
                 ) : (
                   'Completar Registro'

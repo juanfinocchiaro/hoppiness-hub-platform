@@ -7,15 +7,15 @@ export interface UserWithStats {
   email: string;
   phone: string | null;
   created_at: string;
-  loyalty_points: number;
-  internal_notes: NoteEntry[];
+  loyalty_points: number; // Kept for interface compatibility, always 0
+  internal_notes: NoteEntry[]; // Kept for interface compatibility, always []
   brand_role: BrandRole;
   local_role: LocalRole;
   branch_ids: string[];
   role_id: string | null;
-  total_orders: number;
-  total_spent: number;
-  last_order_date: string | null;
+  total_orders: number; // Kept for interface compatibility, always 0
+  total_spent: number; // Kept for interface compatibility, always 0
+  last_order_date: string | null; // Kept for interface compatibility, always null
 }
 
 export interface NoteEntry {
@@ -23,27 +23,6 @@ export interface NoteEntry {
   note: string;
   by: string;
   by_name?: string;
-}
-
-export interface UserAddress {
-  id: string;
-  label: string | null;
-  street: string;
-  city: string;
-  postal_code: string | null;
-}
-
-export interface RecentOrder {
-  id: string;
-  order_number: number;
-  total: number;
-  created_at: string;
-  items: OrderItemSummary[];
-}
-
-export interface OrderItemSummary {
-  name: string;
-  quantity: number;
 }
 
 export interface Branch {
@@ -82,7 +61,7 @@ export function getHighestRole(brandRole: BrandRole, localRole: LocalRole): stri
   
   if (brandPriority >= localPriority && brandRole) return brandRole;
   if (localRole) return localRole;
-  return 'cliente';
+  return 'staff';
 }
 
 export function formatMoney(amount: number): string {
