@@ -59,7 +59,10 @@ export function BranchPinCard({ branchName, branchId, roleId, currentPin, userId
         _exclude_user_id: userId || null,
       });
 
-      if (checkError) throw checkError;
+      if (checkError) {
+        console.error('Error checking PIN availability:', checkError);
+        throw checkError;
+      }
       if (!available) throw new Error('Este PIN ya está en uso en esta sucursal');
 
       // Save to user_branch_roles
@@ -68,7 +71,27 @@ export function BranchPinCard({ branchName, branchId, roleId, currentPin, userId
         .update({ clock_pin: newPin })
         .eq('id', roleId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error saving PIN:', error);
+        throw error;
+      }
+
+      // Verify the PIN was actually saved
+      const { data: verification, error: verifyError } = await supabase
+        .from('user_branch_roles')
+        .select('clock_pin')
+        .eq('id', roleId)
+        .single();
+
+      if (verifyError) {
+        console.error('Error verifying PIN save:', verifyError);
+        throw new Error('No se pudo verificar el guardado del PIN');
+      }
+
+      if (verification?.clock_pin !== newPin) {
+        console.error('PIN verification failed:', { expected: newPin, got: verification?.clock_pin });
+        throw new Error('El PIN no se guardó correctamente. Intentá de nuevo.');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-branch-roles'] });

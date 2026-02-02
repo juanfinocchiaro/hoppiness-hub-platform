@@ -245,7 +245,7 @@ export default function FichajeEmpleado() {
       
       if (error) throw error;
       if (!data || data.length === 0) {
-        throw new Error('PIN inválido o no tenés acceso a este local');
+        throw new Error('PIN incorrecto. Verificá que hayas configurado tu PIN para esta sucursal.');
       }
       
       return data[0] as ValidatedUser;
@@ -342,7 +342,10 @@ export default function FichajeEmpleado() {
             <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
             <h1 className="text-xl font-bold mb-2">Local no encontrado</h1>
             <p className="text-muted-foreground">
-              El código de fichaje "{branchCode}" no existe o no está activo.
+              El código "{branchCode || '(vacío)'}" no existe o no está activo.
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Verificá que estás escaneando el QR correcto.
             </p>
           </CardContent>
         </Card>
