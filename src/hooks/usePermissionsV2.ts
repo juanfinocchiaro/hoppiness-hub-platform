@@ -1,15 +1,16 @@
 /**
- * usePermissionsV2 Hook - Sistema de Roles Fijos
+ * usePermissionsV2 Hook - Sistema de Roles Fijos con Roles por Sucursal
  * 
- * Nueva arquitectura simplificada sin plantillas ni overrides.
+ * Arquitectura V2: Los roles locales ahora son específicos por sucursal.
+ * Un usuario puede tener roles diferentes en diferentes sucursales.
  * 
- * Roles de Marca (brand_role):
+ * Roles de Marca (brand_role) - único por usuario:
  * - superadmin: Dueño de la marca, acceso total
  * - coordinador: Marketing/gestión de productos
  * - informes: Solo reportes (socio/inversor)
  * - contador_marca: Finanzas de marca
  * 
- * Roles Locales (local_role):
+ * Roles Locales (local_role) - uno por sucursal:
  * - franquiciado: Dueño del local
  * - encargado: Gestión día a día
  * - contador_local: Finanzas del local
@@ -27,15 +28,19 @@ type Branch = Tables<'branches'>;
 export type BrandRole = 'superadmin' | 'coordinador' | 'informes' | 'contador_marca' | null;
 export type LocalRole = 'franquiciado' | 'encargado' | 'contador_local' | 'cajero' | 'empleado' | null;
 
-// Estructura de datos del rol del usuario
-interface UserRoleV2 {
+// Estructura de rol de marca
+interface UserBrandRole {
   id: string;
   user_id: string;
   brand_role: BrandRole;
-  local_role: LocalRole;
-  branch_ids: string[];
-  authorization_pin_hash: string | null;
   is_active: boolean;
+}
+
+// Estructura de rol por sucursal
+export interface UserBranchRole {
+  branch_id: string;
+  local_role: LocalRole;
+  authorization_pin_hash: string | null;
 }
 
 // Interface de retorno del hook
@@ -46,8 +51,8 @@ export interface PermissionsV2 {
   
   // Roles
   brandRole: BrandRole;
-  localRole: LocalRole;
-  branchIds: string[];
+  localRole: LocalRole; // Rol en la sucursal actual (si se pasó currentBranchId)
+  branchRoles: UserBranchRole[]; // Todos los roles por sucursal del usuario
   accessibleBranches: Branch[];
   
   // Helpers de rol
@@ -67,6 +72,7 @@ export interface PermissionsV2 {
   
   // Verificación de acceso a sucursal
   hasAccessToBranch: (branchId: string) => boolean;
+  getLocalRoleForBranch: (branchId: string) => LocalRole;
   canApproveWithPin: boolean;
   
   // ===== PERMISOS PANEL MARCA =====
@@ -75,6 +81,7 @@ export interface PermissionsV2 {
     canViewDashboard: boolean;
     canViewPnL: boolean;
     canViewComparativa: boolean;
+    canViewHoursSummary: boolean;
     
     // Locales
     canViewLocales: boolean;
@@ -105,7 +112,7 @@ export interface PermissionsV2 {
     canManageIntegrations: boolean;
   };
   
-  // ===== PERMISOS PANEL LOCAL (MODELO SIMPLIFICADO) =====
+  // ===== PERMISOS PANEL LOCAL =====
   local: {
     // Visión General
     canViewDashboard: boolean;
@@ -131,6 +138,8 @@ export interface PermissionsV2 {
     canViewPayroll: boolean;
     canInviteEmployees: boolean;
     canDeactivateEmployees: boolean;
+    canViewSalaryAdvances: boolean;
+    canViewWarnings: boolean;
     
     // Reportes
     canViewSalesReports: boolean;
@@ -170,46 +179,71 @@ export const LOCAL_ROLE_LABELS: Record<string, string> = {
 export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
   const { user } = useAuth();
   
-  // Query para obtener el rol del usuario
+  // Query para obtener el rol de marca del usuario (desde user_roles_v2)
   const { 
-    data: userRole, 
-    isLoading: loadingRole, 
-    error: roleError,
-    refetch: refetchRole
+    data: brandRoleData, 
+    isLoading: loadingBrandRole, 
+    error: brandRoleError,
+    refetch: refetchBrandRole
   } = useQuery({
-    queryKey: ['user-role-v2', user?.id],
+    queryKey: ['user-brand-role', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
       
       const { data, error } = await supabase
         .from('user_roles_v2')
-        .select('*')
+        .select('id, user_id, brand_role, is_active')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .maybeSingle();
       
       if (error) throw error;
-      return data as UserRoleV2 | null;
+      return data as UserBrandRole | null;
     },
     enabled: !!user?.id,
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
   });
   
-  // Crear una key estable para branch_ids (stringify para comparar por valor, no por referencia)
-  const branchIdsKey = userRole?.branch_ids?.join(',') || '';
+  // Query para obtener roles por sucursal (desde user_branch_roles - NUEVA TABLA)
+  const { 
+    data: branchRolesData = [], 
+    isLoading: loadingBranchRoles,
+    refetch: refetchBranchRoles
+  } = useQuery({
+    queryKey: ['user-branch-roles', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('user_branch_roles')
+        .select('branch_id, local_role, authorization_pin_hash')
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      return (data || []) as UserBranchRole[];
+    },
+    enabled: !!user?.id,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+  });
+  
+  // Crear una key estable para branch_ids
+  const branchIdsFromRoles = branchRolesData.map(r => r.branch_id);
+  const branchIdsKey = branchIdsFromRoles.join(',');
   
   // Query para obtener sucursales accesibles
   const { 
     data: branches = [], 
     isLoading: loadingBranches 
   } = useQuery({
-    queryKey: ['accessible-branches-v2', user?.id, branchIdsKey, userRole?.brand_role],
+    queryKey: ['accessible-branches-v2', user?.id, branchIdsKey, brandRoleData?.brand_role],
     queryFn: async () => {
-      if (!user?.id || !userRole) return [];
+      if (!user?.id) return [];
       
       // Superadmin ve todas las sucursales
-      if (userRole.brand_role === 'superadmin') {
+      if (brandRoleData?.brand_role === 'superadmin') {
         const { data } = await supabase
           .from('branches')
           .select('*')
@@ -218,12 +252,12 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
         return data || [];
       }
       
-      // Otros ven solo las asignadas
-      if (userRole.branch_ids && userRole.branch_ids.length > 0) {
+      // Otros ven solo las que tienen asignadas via user_branch_roles
+      if (branchIdsFromRoles.length > 0) {
         const { data } = await supabase
           .from('branches')
           .select('*')
-          .in('id', userRole.branch_ids)
+          .in('id', branchIdsFromRoles)
           .eq('is_active', true)
           .order('name');
         return data || [];
@@ -231,22 +265,30 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
       
       return [];
     },
-    enabled: !!user?.id && !!userRole,
+    enabled: !!user?.id && (!!brandRoleData || branchRolesData.length > 0),
     staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
   });
   
   // Extraer roles
-  const brandRole = (userRole?.brand_role as BrandRole) || null;
-  const localRole = (userRole?.local_role as LocalRole) || null;
-  const branchIds = userRole?.branch_ids || [];
+  const brandRole = (brandRoleData?.brand_role as BrandRole) || null;
   
-  // Helpers de rol
+  // Función helper para obtener rol local por sucursal
+  const getLocalRoleForBranch = (branchId: string): LocalRole => {
+    const role = branchRolesData.find(r => r.branch_id === branchId);
+    return (role?.local_role as LocalRole) || null;
+  };
+  
+  // Rol local en la sucursal actual (si se pasó currentBranchId)
+  const localRole = currentBranchId ? getLocalRoleForBranch(currentBranchId) : null;
+  
+  // Helpers de rol de marca
   const isSuperadmin = brandRole === 'superadmin';
   const isCoordinador = brandRole === 'coordinador';
   const isInformes = brandRole === 'informes';
   const isContadorMarca = brandRole === 'contador_marca';
   
+  // Helpers de rol local (para la sucursal actual)
   const isFranquiciado = localRole === 'franquiciado';
   const isEncargado = localRole === 'encargado';
   const isContadorLocal = localRole === 'contador_local';
@@ -255,12 +297,12 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
   
   // Acceso a paneles
   const canAccessBrandPanel = !!brandRole;
-  const canAccessLocalPanel = !!localRole;
+  const canAccessLocalPanel = branchRolesData.length > 0;
   
   // Verificar acceso a sucursal específica
   const hasAccessToBranch = (branchId: string): boolean => {
     if (isSuperadmin) return true;
-    return branchIds.includes(branchId);
+    return branchRolesData.some(r => r.branch_id === branchId);
   };
   
   const canApproveWithPin = isFranquiciado || isEncargado;
@@ -270,7 +312,8 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     // Dashboard
     canViewDashboard: !!brandRole,
     canViewPnL: isSuperadmin || isInformes || isContadorMarca,
-    canViewComparativa: !!brandRole,
+    canViewComparativa: isSuperadmin || isInformes || isContadorMarca,
+    canViewHoursSummary: isSuperadmin || isInformes || isContadorMarca,
     
     // Locales
     canViewLocales: !!brandRole,
@@ -303,11 +346,7 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
   
   // ===== CALCULAR PERMISOS LOCALES =====
   // Verificar si tiene acceso a la sucursal actual
-  const hasCurrentBranchAccess = currentBranchId ? hasAccessToBranch(currentBranchId) : true;
-  
-  // ===== MODELO SIMPLIFICADO - Sin POS/KDS automático =====
-  // Cajeros y Empleados: solo ven su info personal (Mi Cuenta)
-  // Encargados/Franquiciados: gestión completa simplificada
+  const hasCurrentBranchAccess = currentBranchId ? hasAccessToBranch(currentBranchId) : false;
   
   const localPermissions = {
     // Visión General - Cajeros ven dashboard limitado
@@ -318,22 +357,24 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     canOrderFromSupplier: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
     canDoInventoryCount: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
     
-    // Compras
+    // Compras - Incluye contador_local
     canUploadInvoice: hasCurrentBranchAccess && (isContadorLocal || isEncargado || isFranquiciado),
     canViewSuppliers: hasCurrentBranchAccess && (isContadorLocal || isEncargado || isFranquiciado),
     canViewSupplierAccounts: hasCurrentBranchAccess && (isContadorLocal || isEncargado || isFranquiciado),
     canPaySupplier: hasCurrentBranchAccess && (isContadorLocal || isFranquiciado),
     canViewPurchaseHistory: hasCurrentBranchAccess && (isContadorLocal || isEncargado || isFranquiciado),
     
-    // Equipo - Cajeros/empleados solo ven su propia info en Mi Cuenta
+    // Equipo - Contador también ve horas, adelantos y apercibimientos
     canClockInOut: hasCurrentBranchAccess && !!localRole,
-    canViewAllClockIns: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
+    canViewAllClockIns: hasCurrentBranchAccess && (isEncargado || isFranquiciado || isContadorLocal),
     canViewTeam: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
     canEditSchedules: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
-    canViewMonthlyHours: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
-    canViewPayroll: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
+    canViewMonthlyHours: hasCurrentBranchAccess && (isEncargado || isFranquiciado || isContadorLocal),
+    canViewPayroll: hasCurrentBranchAccess && (isEncargado || isFranquiciado || isContadorLocal),
     canInviteEmployees: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
     canDeactivateEmployees: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
+    canViewSalaryAdvances: hasCurrentBranchAccess && (isEncargado || isFranquiciado || isContadorLocal),
+    canViewWarnings: hasCurrentBranchAccess && (isEncargado || isFranquiciado || isContadorLocal),
     
     // Reportes - Solo roles de gestión
     canViewSalesReports: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
@@ -350,15 +391,21 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     canEnterSales: hasCurrentBranchAccess && (isEncargado || isFranquiciado || isCajero),
   };
   
+  // Refetch combinado
+  const refetch = () => {
+    refetchBrandRole();
+    refetchBranchRoles();
+  };
+  
   return {
     // Estado
-    loading: loadingRole || loadingBranches,
-    error: roleError as Error | null,
+    loading: loadingBrandRole || loadingBranchRoles || loadingBranches,
+    error: brandRoleError as Error | null,
     
     // Roles
     brandRole,
     localRole,
-    branchIds,
+    branchRoles: branchRolesData,
     accessibleBranches: branches as Branch[],
     
     // Helpers de rol
@@ -378,6 +425,7 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     
     // Verificación
     hasAccessToBranch,
+    getLocalRoleForBranch,
     canApproveWithPin,
     
     // Permisos
@@ -385,7 +433,7 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     local: localPermissions,
     
     // Refetch
-    refetch: refetchRole,
+    refetch,
   };
 }
 

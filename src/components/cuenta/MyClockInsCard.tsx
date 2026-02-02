@@ -19,10 +19,10 @@ interface ClockEntry {
 
 export default function MyClockInsCard() {
   const { user } = useAuth();
-  const { localRole, branchIds } = usePermissionsV2();
+  const { branchRoles } = usePermissionsV2();
   
-  // Only show for employees with local roles
-  const isEmployee = !!localRole;
+  // Only show for employees with at least one branch role
+  const isEmployee = branchRoles.length > 0;
 
   // Get clock entries for current month from clock_entries table
   const { data: clockEntries, isLoading } = useQuery({

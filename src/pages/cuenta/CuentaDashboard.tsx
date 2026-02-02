@@ -20,10 +20,13 @@ import { ROLE_LABELS } from '@/components/admin/users/types';
 
 export default function CuentaDashboard() {
   const { user, signOut } = useAuth();
-  const { localRole, branchIds } = usePermissionsV2();
+  const { branchRoles, getLocalRoleForBranch } = usePermissionsV2();
 
-  // Check if user is an employee (has local role)
-  const isEmployee = !!localRole;
+  // Check if user is an employee (has at least one branch role)
+  const isEmployee = branchRoles.length > 0;
+
+  // Get branch IDs from roles
+  const branchIds = branchRoles.map(r => r.branch_id);
 
   // Fetch profile data including clock_pin
   const { data: profile } = useQuery({
@@ -46,9 +49,9 @@ export default function CuentaDashboard() {
 
   // Fetch branch names for employee section
   const { data: employeeBranches } = useQuery({
-    queryKey: ['employee-branches', branchIds],
+    queryKey: ['employee-branches', branchIds.join(',')],
     queryFn: async () => {
-      if (!branchIds || branchIds.length === 0) return [];
+      if (branchIds.length === 0) return [];
       const result = await supabase
         .from('branches')
         .select('id, name')
@@ -56,7 +59,7 @@ export default function CuentaDashboard() {
       if (result.error) throw result.error;
       return result.data as { id: string; name: string }[];
     },
-    enabled: !!branchIds && branchIds.length > 0,
+    enabled: branchIds.length > 0,
   });
 
   const getRoleLabel = (role: string | null) => {
@@ -96,9 +99,9 @@ export default function CuentaDashboard() {
                 <div className="flex items-center gap-2 mb-3">
                   <Briefcase className="w-5 h-5 text-primary" />
                   <h2 className="text-base md:text-lg font-semibold">Mi Trabajo</h2>
-                  {localRole && (
+                  {branchRoles.length === 1 && branchRoles[0].local_role && (
                     <span className="text-xs md:text-sm bg-primary/10 text-primary px-2 py-0.5 rounded">
-                      {getRoleLabel(localRole)}
+                      {getRoleLabel(branchRoles[0].local_role)}
                     </span>
                   )}
                 </div>
