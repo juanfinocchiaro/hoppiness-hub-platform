@@ -35,9 +35,6 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
   const [alias, setAlias] = useState('');
   const [cuil, setCuil] = useState('');
   
-  // Labor data
-  const [hourlyRate, setHourlyRate] = useState('');
-  
   // Clock PIN (stored in profiles)
   const [clockPin, setClockPin] = useState('');
   const [pinError, setPinError] = useState('');
@@ -49,7 +46,7 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
       const { data, error } = await supabase
         .from('profiles')
         .select('clock_pin')
-        .eq('user_id', userId)
+        .eq('id', userId)
         .maybeSingle();
       if (error) throw error;
       return data;
@@ -74,7 +71,6 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
       setCbu(existingData.cbu || '');
       setAlias(existingData.alias || '');
       setCuil(existingData.cuil || '');
-      setHourlyRate(existingData.hourly_rate ? String(existingData.hourly_rate) : '');
     }
   }, [existingData]);
 
@@ -107,7 +103,6 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
         cbu: cbu || null,
         alias: alias || null,
         cuil: cuil || null,
-        hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
       };
 
       // Save employee data
@@ -129,7 +124,7 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
         const { error: pinError } = await supabase
           .from('profiles')
           .update({ clock_pin: clockPin || null })
-          .eq('user_id', userId);
+          .eq('id', userId);
         if (pinError) throw pinError;
       }
     },
@@ -242,53 +237,41 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
           </TabsContent>
 
           <TabsContent value="labor" className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label>Valor hora ($)</Label>
-              <Input 
-                type="number"
-                value={hourlyRate}
-                onChange={(e) => setHourlyRate(e.target.value)}
-                placeholder="0.00"
-              />
-            </div>
-
             {/* Clock PIN */}
-            <div className="pt-4 border-t">
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <KeyRound className="h-4 w-4" />
-                  PIN de Fichaje
-                </Label>
-                <div className="flex gap-2 items-center">
-                  <Input 
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={4}
-                    value={clockPin}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, '');
-                      setClockPin(val);
-                      if (val && val.length === 4) {
-                        setPinError('');
-                      }
-                    }}
-                    placeholder="4 dígitos"
-                    className="max-w-32 text-center text-lg tracking-widest"
-                  />
-                  {clockPin.length === 4 && (
-                    <Check className="h-5 w-5 text-green-500" />
-                  )}
-                  {pinError && (
-                    <X className="h-5 w-5 text-destructive" />
-                  )}
-                </div>
-                {pinError && (
-                  <p className="text-sm text-destructive">{pinError}</p>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <KeyRound className="h-4 w-4" />
+                PIN de Fichaje
+              </Label>
+              <div className="flex gap-2 items-center">
+                <Input 
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={4}
+                  value={clockPin}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setClockPin(val);
+                    if (val && val.length === 4) {
+                      setPinError('');
+                    }
+                  }}
+                  placeholder="4 dígitos"
+                  className="max-w-32 text-center text-lg tracking-widest"
+                />
+                {clockPin.length === 4 && (
+                  <Check className="h-5 w-5 text-green-500" />
                 )}
-                <p className="text-xs text-muted-foreground">
-                  Este PIN es necesario para fichar entrada/salida con el código QR de la sucursal.
-                </p>
+                {pinError && (
+                  <X className="h-5 w-5 text-destructive" />
+                )}
               </div>
+              {pinError && (
+                <p className="text-sm text-destructive">{pinError}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Este PIN es necesario para fichar entrada/salida con el código QR de la sucursal.
+              </p>
             </div>
           </TabsContent>
         </Tabs>

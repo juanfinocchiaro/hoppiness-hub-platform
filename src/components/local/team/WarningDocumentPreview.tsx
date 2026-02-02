@@ -2,7 +2,7 @@
  * WarningDocumentPreview - Documento membretado para imprimir apercibimientos
  */
 import { forwardRef } from 'react';
-import logoHoppiness from '@/assets/logo-hoppiness.png';
+import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 

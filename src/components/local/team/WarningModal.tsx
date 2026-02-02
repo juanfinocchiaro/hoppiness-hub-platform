@@ -1,15 +1,16 @@
 import { useState, useRef } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Printer, Eye, ArrowLeft, Save } from 'lucide-react';
+import { CalendarIcon, Printer, Eye, ArrowLeft, Save, Camera, Upload, Clock, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -34,12 +35,18 @@ const WARNING_TYPES = [
   { value: 'other', label: 'Otro' },
 ];
 
+type ModalStep = 'form' | 'preview' | 'upload-prompt' | 'uploading';
+
 export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }: WarningModalProps) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [type, setType] = useState<string>('verbal');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState<Date>(new Date());
-  const [showPreview, setShowPreview] = useState(false);
+  const [step, setStep] = useState<ModalStep>('form');
+  const [savedWarningId, setSavedWarningId] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   // Fetch employee data
@@ -49,7 +56,7 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
       const { data: profile } = await supabase
         .from('profiles')
         .select('full_name')
-        .eq('user_id', userId)
+        .eq('id', userId)
         .maybeSingle();
 
       const { data: empData } = await supabase
@@ -97,7 +104,7 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
       const { data } = await supabase
         .from('profiles')
         .select('full_name')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .maybeSingle();
       return data;
     },
@@ -106,7 +113,7 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('warnings')
         .insert({
           user_id: userId,
@@ -116,17 +123,62 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
           warning_date: format(date, 'yyyy-MM-dd'),
           issued_by: user?.id,
           is_active: true,
-        });
+        })
+        .select('id')
+        .single();
       
       if (error) throw error;
+      return data.id;
     },
-    onSuccess: () => {
+    onSuccess: (warningId) => {
       toast.success('Apercibimiento registrado');
+      setSavedWarningId(warningId);
+      setStep('upload-prompt');
       onSuccess();
-      onOpenChange(false);
     },
     onError: () => toast.error('Error al crear apercibimiento'),
   });
+
+  const handleUploadSignature = async () => {
+    if (!savedWarningId || !selectedFile || !user) return;
+    
+    setUploading(true);
+    try {
+      // Upload file
+      const filePath = `${userId}/${savedWarningId}_${Date.now()}.jpg`;
+      const { error: uploadError } = await supabase.storage
+        .from('warning-signatures')
+        .upload(filePath, selectedFile);
+
+      if (uploadError) throw uploadError;
+
+      // Update warning with signed document URL
+      const { error: updateError } = await supabase
+        .from('warnings')
+        .update({ signed_document_url: filePath, acknowledged_at: new Date().toISOString() })
+        .eq('id', savedWarningId);
+
+      if (updateError) throw updateError;
+
+      toast.success('Documento firmado subido correctamente');
+      queryClient.invalidateQueries({ queryKey: ['employee-warnings', userId, branchId] });
+      handleClose();
+    } catch (error: any) {
+      toast.error('Error al subir el documento: ' + error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleClose = () => {
+    setStep('form');
+    setSavedWarningId(null);
+    setSelectedFile(null);
+    setType('verbal');
+    setDescription('');
+    setDate(new Date());
+    onOpenChange(false);
+  };
 
   const handlePrint = () => {
     const printContent = printRef.current;
@@ -165,8 +217,109 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
   const warningTypeLabel = WARNING_TYPES.find(t => t.value === type)?.label || type;
   const roleLabel = LOCAL_ROLE_LABELS[employeeProfile?.role || ''] || 'Empleado';
 
+  // Upload Prompt View - after saving, ask if they want to upload the signed document now
+  if (step === 'upload-prompt') {
+    return (
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              Apercibimiento guardado
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="py-4 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              El apercibimiento fue registrado correctamente. ¿Querés subir ahora la foto del documento firmado?
+            </p>
+
+            <div className="p-4 bg-muted rounded-lg text-sm">
+              <p className="font-medium mb-2">Próximos pasos:</p>
+              <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                <li>Imprimí el documento (ya lo hiciste antes)</li>
+                <li>Hacé firmar al empleado</li>
+                <li>Sacá una foto del documento firmado</li>
+                <li>Subí la foto aquí</li>
+              </ol>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={handleClose}>
+              Subir después
+            </Button>
+            <Button onClick={() => setStep('uploading')}>
+              <Camera className="h-4 w-4 mr-2" />
+              Subir firma ahora
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Uploading View
+  if (step === 'uploading') {
+    return (
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Subir documento firmado</DialogTitle>
+          </DialogHeader>
+
+          <div className="py-4 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Subí una foto del apercibimiento firmado por {employeeProfile?.fullName}.
+            </p>
+
+            <div className="space-y-2">
+              <Label htmlFor="warning-signature">Foto del documento firmado</Label>
+              <Input
+                id="warning-signature"
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+              />
+            </div>
+
+            {selectedFile && (
+              <div className="p-2 bg-muted rounded text-sm flex items-center gap-2">
+                📎 {selectedFile.name}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setStep('upload-prompt')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver
+            </Button>
+            <Button 
+              onClick={handleUploadSignature} 
+              disabled={!selectedFile || uploading}
+            >
+              {uploading ? (
+                <>
+                  <Clock className="h-4 w-4 mr-2 animate-spin" />
+                  Subiendo...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Confirmar
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   // Form View
-  if (!showPreview) {
+  if (step === 'form') {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md">
@@ -239,7 +392,7 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
             </Button>
             <Button 
               variant="secondary"
-              onClick={() => setShowPreview(true)}
+              onClick={() => setStep('preview')}
               disabled={!description.trim()}
             >
               <Eye className="h-4 w-4 mr-2" />
@@ -257,7 +410,7 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setShowPreview(false)}>
+            <Button variant="ghost" size="sm" onClick={() => setStep('form')}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
             Vista previa del apercibimiento
@@ -282,13 +435,13 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
         </div>
 
         <DialogFooter className="gap-2 mt-4">
-          <Button variant="outline" onClick={() => setShowPreview(false)}>
+          <Button variant="outline" onClick={() => setStep('form')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Volver a editar
           </Button>
-          <Button variant="secondary" onClick={handlePrint}>
+          <Button variant="secondary" onClick={handlePrint} title="Podés elegir 'Guardar como PDF' en el diálogo de impresión">
             <Printer className="h-4 w-4 mr-2" />
-            Imprimir
+            Descargar / Imprimir
           </Button>
           <Button 
             onClick={() => createMutation.mutate()} 

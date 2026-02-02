@@ -31,7 +31,6 @@ export interface EmployeeData {
   cuil: string | null;
   hire_date: string | null;
   monthly_hours_target: number;
-  hourly_rate: number | null;
   internal_notes: NoteEntry[];
 }
 

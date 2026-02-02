@@ -269,42 +269,49 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
         <h4 className="font-semibold text-sm uppercase text-muted-foreground">Acciones</h4>
         
         <div className="space-y-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-full justify-start"
-            onClick={() => setShowClockInsModal(true)}
-          >
-            <ClipboardList className="h-4 w-4 mr-2" />
-            Ver fichajes
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-full justify-start"
-            onClick={() => setShowScheduleModal(true)}
-          >
-            <Clock className="h-4 w-4 mr-2" />
-            Ver horarios
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-full justify-start"
-            onClick={() => toast.info('Funcionalidad de liquidación próximamente')}
-          >
-            <DollarSign className="h-4 w-4 mr-2" />
-            Ver liquidación
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-full justify-start text-amber-600"
-            onClick={() => setShowWarningModal(true)}
-          >
-            <AlertTriangle className="h-4 w-4 mr-2" />
-            Nuevo apercibimiento
-          </Button>
+          {/* HR actions - hidden for franchisees (they are owners, not employees) */}
+          {member.local_role !== 'franquiciado' && (
+            <>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start"
+                onClick={() => setShowClockInsModal(true)}
+              >
+                <ClipboardList className="h-4 w-4 mr-2" />
+                Ver fichajes
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start"
+                onClick={() => setShowScheduleModal(true)}
+              >
+                <Clock className="h-4 w-4 mr-2" />
+                Ver horarios
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start"
+                onClick={() => toast.info('Funcionalidad de liquidación próximamente')}
+              >
+                <DollarSign className="h-4 w-4 mr-2" />
+                Ver liquidación
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start text-amber-600"
+                onClick={() => setShowWarningModal(true)}
+              >
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Nuevo apercibimiento
+              </Button>
+            </>
+          )}
+          
+          {/* These actions are always visible */}
           <Button 
             variant="outline" 
             size="sm" 
