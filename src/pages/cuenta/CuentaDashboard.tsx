@@ -31,12 +31,11 @@ export default function CuentaDashboard() {
   // Get branch IDs from roles
   const branchIds = branchRoles.map(r => r.branch_id);
 
-  // Fetch profile data including clock_pin
+  // Fetch profile data
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user) return null;
-      // profiles.id = user_id after migration
       const result = await supabase
         .from('profiles')
         .select('*')
@@ -47,6 +46,26 @@ export default function CuentaDashboard() {
     },
     enabled: !!user,
   });
+
+  // Fetch branch roles with clock_pin status to detect missing PINs
+  const { data: branchPinData } = useQuery({
+    queryKey: ['user-branch-roles-pins', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('user_branch_roles')
+        .select('id, branch_id, clock_pin, branches!inner(name)')
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user && canAccessLocalPanel,
+  });
+
+  // Check if ANY branch is missing PIN
+  const branchesMissingPin = branchPinData?.filter(r => !r.clock_pin) || [];
+  const needsPinSetup = branchesMissingPin.length > 0;
 
   // Fetch urgent unread communications
   const { data: urgentUnread = [] } = useQuery({
@@ -78,8 +97,7 @@ export default function CuentaDashboard() {
     staleTime: 60000,
   });
 
-  // Check if employee needs to set up PIN
-  const needsPinSetup = hasLocalAccess && profile && !profile.clock_pin;
+  // needsPinSetup is now calculated above from branchPinData
 
   // Fetch branch names for employee section
   const { data: employeeBranches } = useQuery({
@@ -183,7 +201,10 @@ export default function CuentaDashboard() {
                 {/* Missing PIN Banner */}
                 {needsPinSetup && (
                   <div className="mb-3">
-                    <MissingPinBanner employeeName={profile?.full_name} />
+                    <MissingPinBanner 
+                      missingCount={branchesMissingPin.length}
+                      totalCount={branchPinData?.length || 0}
+                    />
                   </div>
                 )}
               </div>
