@@ -30,7 +30,7 @@ interface RequestDayOffModalProps {
 
 export default function RequestDayOffModal({ branchId, trigger }: RequestDayOffModalProps) {
   const { user } = useAuth();
-  const { branchIds } = usePermissionsV2();
+  const { branchRoles } = usePermissionsV2();
   const queryClient = useQueryClient();
   
   const [open, setOpen] = useState(false);
@@ -39,7 +39,7 @@ export default function RequestDayOffModal({ branchId, trigger }: RequestDayOffM
   const [reason, setReason] = useState('');
 
   // Use first branch if not specified
-  const targetBranchId = branchId || branchIds?.[0];
+  const targetBranchId = branchId || branchRoles?.[0]?.branch_id;
 
   const createRequest = useMutation({
     mutationFn: async () => {

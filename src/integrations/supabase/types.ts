@@ -402,18 +402,21 @@ export type Database = {
       communication_reads: {
         Row: {
           communication_id: string
+          confirmed_at: string | null
           id: string
           read_at: string | null
           user_id: string
         }
         Insert: {
           communication_id: string
+          confirmed_at?: string | null
           id?: string
           read_at?: string | null
           user_id: string
         }
         Update: {
           communication_id?: string
+          confirmed_at?: string | null
           id?: string
           read_at?: string | null
           user_id?: string
@@ -438,6 +441,7 @@ export type Database = {
           id: string
           is_published: boolean | null
           published_at: string | null
+          requires_confirmation: boolean | null
           source_branch_id: string | null
           source_type: string | null
           tag: string | null
@@ -456,6 +460,7 @@ export type Database = {
           id?: string
           is_published?: boolean | null
           published_at?: string | null
+          requires_confirmation?: boolean | null
           source_branch_id?: string | null
           source_type?: string | null
           tag?: string | null
@@ -474,6 +479,7 @@ export type Database = {
           id?: string
           is_published?: boolean | null
           published_at?: string | null
+          requires_confirmation?: boolean | null
           source_branch_id?: string | null
           source_type?: string | null
           tag?: string | null
@@ -808,14 +814,17 @@ export type Database = {
           emergency_contact_phone: string | null
           favorite_branch_id: string | null
           full_name: string
+          help_dismissed_pages: string[] | null
           id: string
           internal_notes: Json | null
           invitation_token: string | null
           is_active: boolean
           last_order_at: string | null
           loyalty_points: number | null
+          onboarding_completed_at: string | null
           phone: string | null
           pin_hash: string | null
+          show_floating_help: boolean | null
           total_orders: number | null
           total_spent: number | null
           updated_at: string
@@ -841,14 +850,17 @@ export type Database = {
           emergency_contact_phone?: string | null
           favorite_branch_id?: string | null
           full_name: string
+          help_dismissed_pages?: string[] | null
           id?: string
           internal_notes?: Json | null
           invitation_token?: string | null
           is_active?: boolean
           last_order_at?: string | null
           loyalty_points?: number | null
+          onboarding_completed_at?: string | null
           phone?: string | null
           pin_hash?: string | null
+          show_floating_help?: boolean | null
           total_orders?: number | null
           total_spent?: number | null
           updated_at?: string
@@ -874,14 +886,17 @@ export type Database = {
           emergency_contact_phone?: string | null
           favorite_branch_id?: string | null
           full_name?: string
+          help_dismissed_pages?: string[] | null
           id?: string
           internal_notes?: Json | null
           invitation_token?: string | null
           is_active?: boolean
           last_order_at?: string | null
           loyalty_points?: number | null
+          onboarding_completed_at?: string | null
           phone?: string | null
           pin_hash?: string | null
+          show_floating_help?: boolean | null
           total_orders?: number | null
           total_spent?: number | null
           updated_at?: string
@@ -1361,6 +1376,54 @@ export type Database = {
           },
         ]
       }
+      user_branch_roles: {
+        Row: {
+          authorization_pin_hash: string | null
+          branch_id: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          local_role: Database["public"]["Enums"]["local_role_type"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          authorization_pin_hash?: string | null
+          branch_id: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          local_role: Database["public"]["Enums"]["local_role_type"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          authorization_pin_hash?: string | null
+          branch_id?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          local_role?: Database["public"]["Enums"]["local_role_type"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_branch_roles_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_branch_roles_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles_v2: {
         Row: {
           authorization_pin_hash: string | null
@@ -1572,7 +1635,22 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["local_role_type"]
       }
+      get_local_role_for_branch: {
+        Args: { _branch_id: string; _user_id: string }
+        Returns: Database["public"]["Enums"]["local_role_type"]
+      }
+      get_user_branches: {
+        Args: { _user_id: string }
+        Returns: {
+          branch_id: string
+          local_role: Database["public"]["Enums"]["local_role_type"]
+        }[]
+      }
       has_branch_access_v2: {
+        Args: { _branch_id: string; _user_id: string }
+        Returns: boolean
+      }
+      has_branch_role: {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
       }
@@ -1588,6 +1666,10 @@ export type Database = {
       }
       is_financial_manager: { Args: { user_uuid: string }; Returns: boolean }
       is_hr_for_branch: {
+        Args: { _branch_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_hr_for_branch_v2: {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
       }
