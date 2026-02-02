@@ -28,6 +28,7 @@ import {
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import { FranchiseFormSection } from '@/components/landing';
+import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 import heroBurger from '@/assets/hero-burger.jpg';
 import local1 from '@/assets/local-1.jpg';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
@@ -116,6 +117,7 @@ export default function Franquicias() {
 
   return (
     <div className="min-h-screen bg-background">
+      <ImpersonationBanner />
       <PublicHeader />
 
       {/* Hero Section */}

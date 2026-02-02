@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
+import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 import heroBurger from '@/assets/hero-burger.jpg';
 import juanHoppiness from '@/assets/juan-hoppiness.jpg';
 import aperturaLocal from '@/assets/apertura-local.jpg';
@@ -48,6 +49,7 @@ export default function Nosotros() {
 
   return (
     <div className="min-h-screen bg-background">
+      <ImpersonationBanner />
       <PublicHeader />
       
       {/* Hero Section */}
