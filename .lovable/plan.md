@@ -1,234 +1,280 @@
 
 
-# Plan Óptimo Definitivo: Unificar a Patrón Supabase Estándar
+# Plan Definitivo: Correcciones Estructurales + Sistema de Documentos Imprimibles
 
-## Diagnóstico Final
+## Resumen Ejecutivo
 
-### Estructura Actual (Incorrecta)
-```
-profiles
-├── id         → gen_random_uuid() [DIFERENTE de auth.users.id]
-├── user_id    → auth.users.id [REFERENCIA REAL]
-```
+Este plan consolida todas las correcciones pendientes en una implementación cohesiva:
 
-### Patrón Oficial de Supabase
-```
-profiles
-├── id         → auth.users.id [ES LO MISMO, NO EXISTE user_id]
-```
-
-### El Problema
-- **30 profiles** todos tienen `id ≠ user_id`
-- El código mezcla `.eq('id', ...)` y `.eq('user_id', ...)`
-- Las políticas RLS también mezclan ambos campos
-- Esto causa bugs recurrentes e inevitables
+| # | Problema | Solución |
+|---|----------|----------|
+| 1 | Campo "Valor hora" no usado | Eliminar de UI (3 archivos) |
+| 2 | Franquiciados con fichajes/horarios/apercibimientos | Excluirlos de esos sistemas |
+| 3 | Apercibimiento sin nombre + logo negro | Corregir queries a `.eq('id', ...)` + cambiar logo |
+| 4 | No exporta PDF | Agregar botón "Descargar PDF" |
+| 5 | No sube foto de documento firmado | Agregar flujo de upload post-creación |
+| 6 | Proceso de firma de reglamento confuso | Rediseñar igual que apercibimiento |
 
 ---
 
-## Solución Óptima: Eliminar `user_id`, Usar Solo `id`
+## Corrección 1: Eliminar "Valor Hora"
 
-La solución más limpia es adoptar el patrón estándar de Supabase:
-1. Hacer que `profiles.id = auth.users.id`
-2. Eliminar el campo `user_id` (redundante)
-3. Actualizar todo el código para usar `id`
+El campo `hourly_rate` existe en la base de datos pero no se usa. Lo quitamos de la UI.
 
-### Por Qué Esta es la Mejor Opción
+### Archivos a Modificar
 
-| Aspecto | Mantener Ambos | Eliminar user_id |
-|---------|----------------|------------------|
-| Confusión futura | Sigue existiendo | Eliminada |
-| Estándar Supabase | No cumple | Cumple |
-| Código duplicado | Sí (mezcla) | No |
-| RLS policies | Confusas | Claras |
-| Docs/Tutoriales | No aplican | Aplican directo |
+**`src/components/local/team/EmployeeDataModal.tsx`**
+- Eliminar estado `hourlyRate` y `setHourlyRate` (líneas 39, 77)
+- Eliminar el input de "Valor hora ($)" del tab "Laboral" (líneas 244-253)
+- Eliminar `hourly_rate` del objeto de guardado (línea 110)
+
+**`src/components/local/team/types.ts`**
+- Eliminar `hourly_rate: number | null` del tipo `EmployeeData` (línea 34)
 
 ---
 
-## Plan de Implementación en 3 Fases
+## Corrección 2: Excluir Franquiciados de RRHH
 
-### Fase 1: Migración de Base de Datos
+### Contexto de Negocio
 
-```sql
--- 1. Actualizar id = user_id para todos los registros existentes
-UPDATE profiles SET id = user_id;
+Un **franquiciado** es el dueño del local, no un empleado. No corresponde que tenga:
+- Fichajes de entrada/salida (no trabaja turnos operativos)
+- Horarios asignados (nadie le asigna horarios)
+- Apercibimientos (no se le puede amonestar)
+- Adelantos de sueldo (no tiene sueldo del local)
 
--- 2. Eliminar el campo user_id (ya no es necesario)
-ALTER TABLE profiles DROP COLUMN user_id;
+### Archivos a Modificar
 
--- 3. Actualizar el trigger para nuevos usuarios
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-    INSERT INTO public.profiles (id, full_name, email)
-    VALUES (
-        NEW.id,  -- id = auth.users.id directamente
-        COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
-        NEW.email
-    );
-    RETURN NEW;
-END;
-$$;
+**`src/components/local/team/TeamTable.tsx`**
+- Separar el listado: franquiciados en header/sección especial, empleados en tabla principal
+- Agregar filtro: `team.filter(m => m.local_role !== 'franquiciado')`
 
--- 4. Recrear políticas RLS usando solo id
-DROP POLICY IF EXISTS "profiles_insert" ON profiles;
-DROP POLICY IF EXISTS "profiles_insert_own" ON profiles;
-DROP POLICY IF EXISTS "profiles_update" ON profiles;
-DROP POLICY IF EXISTS "profiles_update_own" ON profiles;
-DROP POLICY IF EXISTS "profiles_update_v2" ON profiles;
-DROP POLICY IF EXISTS "profiles_own_select" ON profiles;
-DROP POLICY IF EXISTS "profiles_select_v2" ON profiles;
-DROP POLICY IF EXISTS "Profiles can be created on signup" ON profiles;
-DROP POLICY IF EXISTS "Users view own profile or HR managers view staff" ON profiles;
-DROP POLICY IF EXISTS "profiles_hr_select" ON profiles;
+**`src/components/local/team/EmployeeExpandedRow.tsx`**
+- Agregar condición para ocultar acciones RRHH si `member.local_role === 'franquiciado'`:
+  - Ocultar: "Ver fichajes", "Ver horarios", "Ver liquidación", "Nuevo apercibimiento"
+  - Mantener: "Editar datos", "Desactivar"
 
--- Crear políticas limpias
-CREATE POLICY "profiles_insert" ON profiles 
-  FOR INSERT WITH CHECK (id = auth.uid());
+**`src/components/local/RegulationSignaturesPanel.tsx`**
+- Excluir franquiciados del sistema de firmas (agregar filtro en línea 52):
+  ```typescript
+  .not('local_role', 'eq', 'franquiciado')
+  ```
 
-CREATE POLICY "profiles_select_own" ON profiles 
-  FOR SELECT USING (id = auth.uid());
+---
 
-CREATE POLICY "profiles_select_admin" ON profiles 
-  FOR SELECT USING (is_superadmin(auth.uid()));
+## Corrección 3: Bug del Nombre + Logo Negro
 
-CREATE POLICY "profiles_select_hr" ON profiles 
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM user_branch_roles ubr_viewer
-      JOIN user_branch_roles ubr_target ON ubr_target.user_id = profiles.id
-      WHERE ubr_viewer.user_id = auth.uid()
-      AND ubr_viewer.is_active = true
-      AND ubr_viewer.local_role IN ('encargado', 'franquiciado')
-      AND ubr_viewer.branch_id = ubr_target.branch_id
-    )
-  );
+### Causa del Bug
+Los archivos aún usan `.eq('user_id', userId)` pero el campo `user_id` ya no existe en `profiles` después de la migración. Debe ser `.eq('id', userId)`.
 
-CREATE POLICY "profiles_update_own" ON profiles 
-  FOR UPDATE USING (id = auth.uid()) 
-  WITH CHECK (id = auth.uid());
+### Archivos a Corregir
+
+**`src/components/local/team/WarningModal.tsx`**
+- Línea 52: `.eq('user_id', userId)` → `.eq('id', userId)`
+- Línea 100: `.eq('user_id', user.id)` → `.eq('id', user.id)`
+
+**`src/components/local/team/EmployeeDataModal.tsx`**
+- Línea 52: `.eq('user_id', userId)` → `.eq('id', userId)`
+- Línea 132: `.eq('user_id', userId)` → `.eq('id', userId)`
+
+### Logo con Fondo Negro
+
+**`src/components/local/team/WarningDocumentPreview.tsx`**
+- Cambiar import del logo:
+  ```typescript
+  // Antes
+  import logoHoppiness from '@/assets/logo-hoppiness.png';
+  // Después
+  import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
+  ```
+
+---
+
+## Corrección 4: Exportar a PDF
+
+### Implementación
+
+No hay librerías de PDF instaladas. La solución más simple y efectiva es usar la API nativa de impresión del navegador con opción "Guardar como PDF".
+
+**`src/components/local/team/WarningModal.tsx`**
+- Cambiar el texto del botón de "Imprimir" a "Descargar / Imprimir"
+- La función `handlePrint()` ya abre ventana de impresión donde el usuario puede elegir "Guardar como PDF"
+- Agregar tooltip explicativo: "Podés elegir 'Guardar como PDF' en el diálogo de impresión"
+
+### Alternativa Futura (Opcional)
+Si se requiere generación directa de PDF sin diálogo de impresión, se puede instalar `jspdf` + `html2canvas` en el futuro.
+
+---
+
+## Corrección 5: Upload de Documento Firmado (Apercibimiento)
+
+### Flujo Actual
+1. Encargado crea apercibimiento → Guarda en DB
+2. Desde WarningsPage puede subir foto firmada
+
+### Flujo Mejorado
+1. Encargado crea apercibimiento
+2. Ve vista previa
+3. Botones: **"Descargar/Imprimir"** + **"Guardar y subir firma después"**
+4. Después de guardar, el sistema muestra: **"¿Subir documento firmado ahora?"**
+5. Puede subir foto inmediatamente o desde WarningsPage después
+
+### Archivos a Modificar
+
+**`src/components/local/team/WarningModal.tsx`**
+- Agregar estado `savedWarningId` para tracking
+- Después de guardar exitosamente, mostrar diálogo de upload
+- Reutilizar lógica de upload de `WarningsPage.tsx`
+
+---
+
+## Corrección 6: Sistema de Firma de Reglamento Rediseñado
+
+### Problema Actual
+El proceso es confuso:
+1. Superadmin sube PDF del reglamento (OK)
+2. Encargado imprime TODO el reglamento (??)
+3. Empleado firma físicamente (¿dónde?)
+4. Encargado saca foto de... ¿qué página?
+5. Sube la foto al sistema
+
+### Nuevo Proceso (Igual que Apercibimiento)
+1. Superadmin sube PDF del reglamento (sin cambios)
+2. Encargado va a "Firmas de Reglamento" en Mi Local
+3. Por cada empleado pendiente puede:
+   - **Ver PDF del reglamento** (para mostrarlo/entregarlo al empleado)
+   - **Generar hoja de firma** (documento membretado personalizado)
+   - Imprimir la hoja de firma
+   - Hacer firmar físicamente
+   - **Subir foto de la hoja firmada**
+
+### Nuevo Componente: RegulationSignatureSheet.tsx
+
+Documento formal similar al apercibimiento con:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                        [LOGO HOPPINESS]    │
+│                                                             │
+│     CONSTANCIA DE RECEPCIÓN Y FIRMA DEL REGLAMENTO         │
+│                      INTERNO                                │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│  DATOS DEL EMPLEADO                                         │
+│  ─────────────────────                                      │
+│  Nombre: ___________________                                │
+│  DNI: ______________________                                │
+│  Puesto: ___________________                                │
+│  Sucursal: _________________                                │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│  Por la presente dejo constancia de haber recibido,        │
+│  leído y comprendido el Reglamento Interno de              │
+│  Hoppiness Club (Versión X, publicado el DD/MM/AAAA),      │
+│  comprometiéndome a cumplir con todas las disposiciones    │
+│  allí establecidas.                                         │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────────────┐    ┌─────────────────┐                │
+│  │                 │    │                 │                │
+│  │  Firma Empleado │    │  Firma Encargado│                │
+│  │                 │    │     (testigo)   │                │
+│  └─────────────────┘    └─────────────────┘                │
+│  Aclaración: _________   Aclaración: _________              │
+│                                                             │
+│  Fecha de firma: ____/____/________                        │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│  © 2026 Hoppiness Club - Documento interno                 │
+│  Ref: REG-V{version}-{user_id_short}                       │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Fase 2: Actualizar Código (13+ archivos)
+### Archivos a Crear
 
-Todos los archivos que usan `.eq('user_id', ...)` o `p.user_id` deben cambiar a usar `id`:
+**`src/components/local/RegulationSignatureSheet.tsx`**
+- Componente que genera el documento de firma
+- Props: `employeeName`, `employeeDni`, `employeeRole`, `branchName`, `regulationVersion`, `publishedAt`
+- Mismo estilo que WarningDocumentPreview
 
-| Archivo | Cambio |
-|---------|--------|
-| `src/pages/cuenta/CuentaDashboard.tsx` | `.eq('user_id', user.id)` → `.eq('id', user.id)` |
-| `src/pages/cuenta/CuentaPerfil.tsx` | Ídem |
-| `src/hooks/useContextualHelp.ts` | Ídem |
-| `src/hooks/usePermissionsV2.ts` | Sin cambio (usa otras tablas) |
-| `src/components/cuenta/*.tsx` | Ídem |
-| `src/components/local/team/useTeamData.ts` | Ya corregido: usa `id` |
-| `src/components/hr/PendingScheduleRequests.tsx` | `p.user_id` → `p.id` |
-| `src/components/local/RegulationSignaturesPanel.tsx` | Ídem |
-| `src/components/local/ManagerDashboard.tsx` | Ídem |
-| `src/components/admin/users/useUsersData.ts` | Ídem |
-| `src/hooks/useMonthlyHours.ts` | Ídem |
-| `src/hooks/useSalaryAdvances.ts` | Ídem |
-| Todas las Edge Functions que usen profiles | Ídem |
+### Archivos a Modificar
 
-### Fase 3: Actualizar Documentación
+**`src/components/local/RegulationSignaturesPanel.tsx`**
+- Agregar botón "Generar hoja de firma" por cada empleado pendiente
+- Agregar modal con vista previa del documento
+- Agregar botón "Descargar/Imprimir"
+- Mantener flujo existente de "Subir foto firmada"
 
-**Archivo: `docs/LOVABLE_RULES.md`**
+---
 
-Agregar sección:
+## Resumen de Archivos
 
-```markdown
-## ESTRUCTURA DE PROFILES (Patrón Supabase Estándar)
+| Archivo | Tipo | Cambios |
+|---------|------|---------|
+| `EmployeeDataModal.tsx` | Modificar | Eliminar valor hora + corregir `.eq('id', ...)` |
+| `types.ts` | Modificar | Eliminar `hourly_rate` del tipo |
+| `TeamTable.tsx` | Modificar | Separar franquiciados de empleados |
+| `EmployeeExpandedRow.tsx` | Modificar | Ocultar acciones RRHH para franquiciados |
+| `WarningModal.tsx` | Modificar | Corregir query + agregar upload post-guardado |
+| `WarningDocumentPreview.tsx` | Modificar | Cambiar logo a versión azul |
+| `RegulationSignaturesPanel.tsx` | Modificar | Excluir franquiciados + generar hoja de firma |
+| `RegulationSignatureSheet.tsx` | **CREAR** | Documento de constancia de firma |
 
-La tabla `profiles` sigue el patrón oficial de Supabase:
+---
 
-- `profiles.id` = `auth.users.id` (son el mismo UUID)
-- NO existe campo `user_id` separado
-- Todas las queries usan `.eq('id', userId)`
+## Flujo Visual Final
 
-Ejemplo correcto:
-const { data } = await supabase
-  .from('profiles')
-  .select('id, full_name, email')
-  .eq('id', user.id);  // ← Siempre 'id'
-
-En Maps de profiles:
-const profileMap = new Map(profiles.map(p => [p.id, p]));
+### Apercibimiento
+```
+Encargado selecciona empleado
+         ↓
+Completa formulario (tipo, fecha, descripción)
+         ↓
+    Vista previa del documento
+         ↓
+   ┌─────────────────────────────┐
+   │  [Volver]  [Imprimir/PDF]  [Guardar]
+   └─────────────────────────────┘
+         ↓ (al guardar)
+   "¿Subir foto del documento firmado?"
+         ↓
+   [Ahora] o [Después desde Apercibimientos]
 ```
 
----
-
-## Fase Adicional: Vincular Usuarios Faltantes
-
-Los 4 usuarios ya existen pero no están en `user_branch_roles` para General Paz:
-
-```sql
-INSERT INTO user_branch_roles (user_id, branch_id, local_role, is_active)
-SELECT p.id, si.branch_id, si.role::local_role_type, true
-FROM staff_invitations si
-JOIN profiles p ON LOWER(p.email) = LOWER(si.email)
-WHERE si.status = 'pending'
-  AND NOT EXISTS (
-    SELECT 1 FROM user_branch_roles ubr 
-    WHERE ubr.user_id = p.id AND ubr.branch_id = si.branch_id
-  );
-
-UPDATE staff_invitations 
-SET status = 'accepted', accepted_at = now()
-WHERE status = 'pending'
-  AND EXISTS (SELECT 1 FROM profiles p WHERE LOWER(p.email) = LOWER(staff_invitations.email));
+### Reglamento
 ```
-
----
-
-## Archivos a Modificar
-
-| Archivo | Tipo de Cambio |
-|---------|----------------|
-| Base de datos | Migración: eliminar `user_id`, actualizar `id` |
-| `docs/LOVABLE_RULES.md` | Documentar patrón estándar |
-| 13+ archivos TypeScript | Reemplazar `user_id` → `id` |
-| 2+ Edge Functions | Reemplazar `user_id` → `id` |
-| Políticas RLS | Recrear usando solo `id` |
-
----
-
-## Resultado Final
-
-Después de la implementación:
-
-1. **Estructura limpia:** `profiles.id = auth.users.id` (sin campo extra)
-2. **Cero confusión:** Solo existe `id`, imposible equivocarse
-3. **Estándar Supabase:** Compatible con toda la documentación oficial
-4. **Código consistente:** Todo usa `.eq('id', ...)` o `p.id`
-5. **RLS claras:** Todas las políticas usan `id = auth.uid()`
+Encargado ve lista de empleados pendientes
+         ↓
+Por cada empleado:
+   [Ver PDF reglamento] [Generar hoja firma]
+         ↓ (generar hoja)
+   Vista previa del documento de constancia
+         ↓
+   [Imprimir/PDF] → Imprime → Hace firmar
+         ↓
+   [Subir foto firmada] → Sube imagen
+         ↓
+   Sistema registra firma ✓
+```
 
 ---
 
 ## Sección Técnica
 
-### Riesgo de la Migración
+### Dependencias
+No se requieren nuevas dependencias. Se usa la API nativa de impresión del navegador.
 
-La migración es segura porque:
-1. `profiles.user_id` tiene constraint UNIQUE
-2. No hay FKs apuntando a `profiles.id` desde otras tablas
-3. El UPDATE `SET id = user_id` mantiene integridad referencial con auth.users
+### Storage Buckets
+Ya existen:
+- `regulation-signatures` - Para fotos de reglamento firmado
+- `warning-signatures` - Para fotos de apercibimiento firmado (crear si no existe)
 
-### Rollback
-
-Si algo falla:
-```sql
--- Agregar user_id de vuelta
-ALTER TABLE profiles ADD COLUMN user_id uuid REFERENCES auth.users(id);
-UPDATE profiles SET user_id = id;
-```
-
-### Orden de Ejecución
-
-1. Migración SQL (modifica estructura)
-2. Deploy Edge Functions (usan nueva estructura)
-3. Actualizar código frontend (13+ archivos)
-4. Vincular usuarios faltantes
-5. Actualizar documentación
+### Orden de Implementación
+1. Corregir queries `.eq('id', ...)` (crítico - nombres "Sin nombre")
+2. Cambiar logo a versión azul
+3. Eliminar "Valor hora"
+4. Excluir franquiciados de RRHH
+5. Mejorar flujo de upload en WarningModal
+6. Crear RegulationSignatureSheet y actualizar panel
 
