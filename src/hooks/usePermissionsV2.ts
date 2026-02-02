@@ -349,46 +349,47 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
   const hasCurrentBranchAccess = currentBranchId ? hasAccessToBranch(currentBranchId) : false;
   
   const localPermissions = {
-    // Visión General - Cajeros ven dashboard limitado
-    canViewDashboard: hasCurrentBranchAccess && (isEncargado || isFranquiciado || isCajero),
+    // Visión General - Superadmin siempre puede ver. Cajeros ven dashboard limitado.
+    canViewDashboard: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero),
     
-    // Stock - Solo encargados y franquiciados
-    canViewStock: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
-    canOrderFromSupplier: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
-    canDoInventoryCount: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
+    // Stock
+    canViewStock: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+    canOrderFromSupplier: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+    canDoInventoryCount: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
     
     // Compras - Incluye contador_local
-    canUploadInvoice: hasCurrentBranchAccess && (isContadorLocal || isEncargado || isFranquiciado),
-    canViewSuppliers: hasCurrentBranchAccess && (isContadorLocal || isEncargado || isFranquiciado),
-    canViewSupplierAccounts: hasCurrentBranchAccess && (isContadorLocal || isEncargado || isFranquiciado),
-    canPaySupplier: hasCurrentBranchAccess && (isContadorLocal || isFranquiciado),
-    canViewPurchaseHistory: hasCurrentBranchAccess && (isContadorLocal || isEncargado || isFranquiciado),
+    canUploadInvoice: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado || isFranquiciado),
+    canViewSuppliers: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado || isFranquiciado),
+    canViewSupplierAccounts: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado || isFranquiciado),
+    canPaySupplier: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isFranquiciado),
+    canViewPurchaseHistory: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado || isFranquiciado),
     
     // Equipo - Contador también ve horas, adelantos y apercibimientos
-    canClockInOut: hasCurrentBranchAccess && !!localRole,
-    canViewAllClockIns: hasCurrentBranchAccess && (isEncargado || isFranquiciado || isContadorLocal),
-    canViewTeam: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
-    canEditSchedules: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
-    canViewMonthlyHours: hasCurrentBranchAccess && (isEncargado || isFranquiciado || isContadorLocal),
-    canViewPayroll: hasCurrentBranchAccess && (isEncargado || isFranquiciado || isContadorLocal),
-    canInviteEmployees: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
-    canDeactivateEmployees: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
-    canViewSalaryAdvances: hasCurrentBranchAccess && (isEncargado || isFranquiciado || isContadorLocal),
-    canViewWarnings: hasCurrentBranchAccess && (isEncargado || isFranquiciado || isContadorLocal),
+    // Superadmin puede operar aunque no tenga localRole explícito asignado por sucursal.
+    canClockInOut: hasCurrentBranchAccess && (isSuperadmin || !!localRole),
+    canViewAllClockIns: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
+    canViewTeam: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+    canEditSchedules: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+    canViewMonthlyHours: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
+    canViewPayroll: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
+    canInviteEmployees: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+    canDeactivateEmployees: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+    canViewSalaryAdvances: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
+    canViewWarnings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
     
-    // Reportes - Solo roles de gestión
-    canViewSalesReports: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
-    canViewLocalPnL: hasCurrentBranchAccess && (isContadorLocal || isFranquiciado),
-    canViewCMV: hasCurrentBranchAccess && isFranquiciado,
-    canViewStockMovements: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
+    // Reportes
+    canViewSalesReports: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+    canViewLocalPnL: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isFranquiciado),
+    canViewCMV: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado),
+    canViewStockMovements: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
     
-    // Configuración - Solo franquiciados
-    canEditLocalConfig: hasCurrentBranchAccess && isFranquiciado,
-    canConfigPrinters: hasCurrentBranchAccess && (isEncargado || isFranquiciado),
-    canConfigShifts: hasCurrentBranchAccess && isFranquiciado,
+    // Configuración
+    canEditLocalConfig: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado),
+    canConfigPrinters: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+    canConfigShifts: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado),
     
-    // Carga manual de ventas - Cajeros pueden cargar
-    canEnterSales: hasCurrentBranchAccess && (isEncargado || isFranquiciado || isCajero),
+    // Carga manual de ventas
+    canEnterSales: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero),
   };
   
   // Refetch combinado
