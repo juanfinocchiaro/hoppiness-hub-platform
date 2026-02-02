@@ -23,7 +23,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { 
   ChevronLeft, ChevronRight, User, Calendar, AlertCircle, 
-  Check, X, Clock, Copy, Wand2, Save, Mail, MessageSquare,
+  Check, X, Clock, Wand2, Save, Mail, MessageSquare,
   CalendarCheck, CalendarX
 } from 'lucide-react';
 import { useTeamData } from '@/components/local/team/useTeamData';
@@ -219,34 +219,6 @@ export default function CreateScheduleWizard({
     toast.success(`Turno aplicado a ${selectedDays.size} días`);
   };
   
-  // Copy previous week
-  const copyPreviousWeek = () => {
-    // Find the first date in selected days and copy from week before
-    if (selectedDays.size === 0) {
-      toast.error('Seleccioná al menos un día');
-      return;
-    }
-    
-    const sortedDays = Array.from(selectedDays).sort();
-    const firstDate = parseISO(sortedDays[0]);
-    
-    // Copy schedule from 7 days ago for each selected day
-    const newData = { ...scheduleData };
-    selectedDays.forEach(dateStr => {
-      const date = parseISO(dateStr);
-      const prevWeekDate = format(new Date(date.getTime() - 7 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
-      
-      if (scheduleData[prevWeekDate]) {
-        newData[dateStr] = {
-          ...scheduleData[prevWeekDate],
-          date: dateStr,
-        };
-      }
-    });
-    setScheduleData(newData);
-    setSelectedDays(new Set());
-    toast.success('Horarios copiados de la semana anterior');
-  };
   
   // Handle save
   const handleSave = async () => {
@@ -585,15 +557,6 @@ export default function CreateScheduleWizard({
             Aplicar ({selectedDays.size})
           </Button>
           
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={copyPreviousWeek}
-            disabled={selectedDays.size === 0}
-          >
-            <Copy className="w-4 h-4 mr-2" />
-            Copiar semana anterior
-          </Button>
         </div>
         
         {/* Calendar grid */}

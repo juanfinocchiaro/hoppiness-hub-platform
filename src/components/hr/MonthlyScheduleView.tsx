@@ -4,29 +4,36 @@
  * Features:
  * - View all employees' schedules for the month
  * - Filter by employee
- * - Click to edit individual days
+ * - Click to edit individual days (uses EditScheduleDayModal)
  * - Holiday indicators
  * - Quick access to create new schedule
  */
 import { useState, useMemo } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, parseISO } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { ChevronLeft, ChevronRight, Plus, Calendar, User, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, User, Clock, Pencil } from 'lucide-react';
 import { useTeamData } from '@/components/local/team/useTeamData';
 import { useHolidays } from '@/hooks/useHolidays';
 import { useMonthlySchedules, type ScheduleEntry } from '@/hooks/useSchedules';
-import { usePermissionsV2, LOCAL_ROLE_LABELS } from '@/hooks/usePermissionsV2';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import CreateScheduleWizard from './CreateScheduleWizard';
+import EditScheduleDayModal from './EditScheduleDayModal';
 
 interface MonthlyScheduleViewProps {
   branchId: string;
+}
+
+interface EditModalState {
+  open: boolean;
+  schedule: ScheduleEntry | null;
+  employeeName: string;
 }
 
 export default function MonthlyScheduleView({ branchId }: MonthlyScheduleViewProps) {
@@ -35,6 +42,11 @@ export default function MonthlyScheduleView({ branchId }: MonthlyScheduleViewPro
   const [year, setYear] = useState(now.getFullYear());
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('all');
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [editModal, setEditModal] = useState<EditModalState>({
+    open: false,
+    schedule: null,
+    employeeName: '',
+  });
   
   const { isSuperadmin, isFranquiciado, isEncargado, local } = usePermissionsV2(branchId);
   const canManageSchedules = isSuperadmin || isFranquiciado || isEncargado || local.canEditSchedules;
@@ -112,6 +124,20 @@ export default function MonthlyScheduleView({ branchId }: MonthlyScheduleViewPro
     return '-';
   };
   
+  // Handle cell click for editing
+  const handleCellClick = (schedule: ScheduleEntry | undefined, member: { id: string; full_name: string }, dateStr: string) => {
+    if (!canManageSchedules || !schedule) return;
+    
+    // Don't allow editing holidays
+    if (holidayDates.has(dateStr)) return;
+    
+    setEditModal({
+      open: true,
+      schedule,
+      employeeName: member.full_name,
+    });
+  };
+  
   const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
   const firstDayOfMonth = getDay(monthDays[0]);
   
@@ -186,6 +212,12 @@ export default function MonthlyScheduleView({ branchId }: MonthlyScheduleViewPro
             <Clock className="w-3 h-3" />
             Hora de entrada
           </span>
+          {canManageSchedules && (
+            <span className="flex items-center gap-1">
+              <Pencil className="w-3 h-3" />
+              Clic para editar
+            </span>
+          )}
         </div>
         
         {/* Calendar */}
@@ -287,28 +319,37 @@ export default function MonthlyScheduleView({ branchId }: MonthlyScheduleViewPro
                             const isHoliday = holidayDates.has(dateStr);
                             const schedule = userSchedules?.get(dateStr);
                             const isSunday = day.getDay() === 0;
+                            const isEditable = canManageSchedules && schedule && !isHoliday;
                             
                             return (
                               <div
                                 key={dayIdx}
+                                onClick={() => handleCellClick(schedule, member, dateStr)}
                                 className={cn(
-                                  'p-1 text-center border-r last:border-r-0 min-h-[32px] flex items-center justify-center',
+                                  'p-1 text-center border-r last:border-r-0 min-h-[32px] flex items-center justify-center group',
                                   isHoliday && 'bg-orange-50 dark:bg-orange-950/30',
-                                  isSunday && 'bg-muted/30'
+                                  isSunday && 'bg-muted/30',
+                                  isEditable && 'cursor-pointer hover:bg-primary/5 transition-colors'
                                 )}
                               >
                                 {schedule ? (
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <Badge
-                                        variant={schedule.is_day_off ? 'secondary' : 'default'}
-                                        className={cn(
-                                          'text-xs cursor-default',
-                                          schedule.is_day_off && 'bg-muted text-muted-foreground'
+                                      <div className="relative">
+                                        <Badge
+                                          variant={schedule.is_day_off ? 'secondary' : 'default'}
+                                          className={cn(
+                                            'text-xs',
+                                            schedule.is_day_off && 'bg-muted text-muted-foreground',
+                                            isEditable && 'group-hover:ring-2 group-hover:ring-primary/30'
+                                          )}
+                                        >
+                                          {formatScheduleTime(schedule)}
+                                        </Badge>
+                                        {isEditable && (
+                                          <Pencil className="w-3 h-3 absolute -top-1 -right-1 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
                                         )}
-                                      >
-                                        {formatScheduleTime(schedule)}
-                                      </Badge>
+                                      </div>
                                     </TooltipTrigger>
                                     <TooltipContent>
                                       {schedule.is_day_off ? (
@@ -316,6 +357,7 @@ export default function MonthlyScheduleView({ branchId }: MonthlyScheduleViewPro
                                       ) : (
                                         `${schedule.start_time?.slice(0, 5)} - ${schedule.end_time?.slice(0, 5)}`
                                       )}
+                                      {isEditable && <span className="block text-xs opacity-70">Clic para editar</span>}
                                     </TooltipContent>
                                   </Tooltip>
                                 ) : isHoliday ? (
@@ -346,6 +388,17 @@ export default function MonthlyScheduleView({ branchId }: MonthlyScheduleViewPro
           initialYear={year}
           onSuccess={() => refetch()}
         />
+        
+        {/* Edit modal */}
+        {editModal.schedule && (
+          <EditScheduleDayModal
+            open={editModal.open}
+            onOpenChange={(open) => setEditModal(prev => ({ ...prev, open }))}
+            schedule={editModal.schedule}
+            employeeName={editModal.employeeName}
+            onSuccess={() => refetch()}
+          />
+        )}
       </div>
     </TooltipProvider>
   );
