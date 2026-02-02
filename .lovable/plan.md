@@ -1,133 +1,234 @@
 
-# Respuesta: ¿El plan de Claude soluciona el problema?
 
-## Resumen Ejecutivo
+# Plan Óptimo Definitivo: Unificar a Patrón Supabase Estándar
 
-**SÍ, el plan de Claude identifica correctamente el problema**, pero **NO soluciona el bloqueo actual** de forma inmediata. El plan propone la Fase 0 como prerequisito para limpiar la coexistencia de sistemas, pero NO menciona el bug de recursión infinita en las políticas RLS que está bloqueando tu app AHORA MISMO.
+## Diagnóstico Final
 
----
-
-## Diagnóstico: Dos Problemas Distintos
-
-| Problema | Descripción | Urgencia | Plan de Claude lo cubre? |
-|----------|-------------|----------|--------------------------|
-| **Bug RLS Recursivo** | La política `ubr_branch_managers` consulta `user_branch_roles` dentro de sí misma, causando loop infinito | **CRÍTICO - App bloqueada** | NO lo menciona |
-| **Coexistencia de Sistemas** | `user_roles_v2` (antiguo) y `user_branch_roles` (nuevo) funcionan en paralelo | Alta | SÍ - Es la Fase 0 |
-
----
-
-## Problema 1: Bug RLS (El que te bloquea ahora)
-
-Cuando el hook `usePermissionsV2` intenta consultar `user_branch_roles`, Postgres evalúa esta política:
-
-```sql
--- POLÍTICA PROBLEMÁTICA (RECURSIÓN INFINITA)
-CREATE POLICY "ubr_branch_managers" ON user_branch_roles
-  FOR ALL TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM user_branch_roles ubr2  -- ← Consulta la misma tabla!
-      WHERE ubr2.user_id = auth.uid()
-      AND ubr2.branch_id = user_branch_roles.branch_id
-      AND ubr2.local_role IN ('encargado', 'franquiciado')
-      ...
-    )
-  );
+### Estructura Actual (Incorrecta)
+```
+profiles
+├── id         → gen_random_uuid() [DIFERENTE de auth.users.id]
+├── user_id    → auth.users.id [REFERENCIA REAL]
 ```
 
-**Por qué causa recursión:**
-1. Usuario consulta `user_branch_roles`
-2. Postgres evalúa política `ubr_branch_managers`
-3. La política intenta hacer `SELECT FROM user_branch_roles`
-4. Para ese SELECT, Postgres necesita evaluar las políticas de `user_branch_roles`
-5. Vuelve al paso 2 → Loop infinito
+### Patrón Oficial de Supabase
+```
+profiles
+├── id         → auth.users.id [ES LO MISMO, NO EXISTE user_id]
+```
 
-**Solución inmediata:** Usar una función `SECURITY DEFINER` que bypasee RLS:
+### El Problema
+- **30 profiles** todos tienen `id ≠ user_id`
+- El código mezcla `.eq('id', ...)` y `.eq('user_id', ...)`
+- Las políticas RLS también mezclan ambos campos
+- Esto causa bugs recurrentes e inevitables
+
+---
+
+## Solución Óptima: Eliminar `user_id`, Usar Solo `id`
+
+La solución más limpia es adoptar el patrón estándar de Supabase:
+1. Hacer que `profiles.id = auth.users.id`
+2. Eliminar el campo `user_id` (redundante)
+3. Actualizar todo el código para usar `id`
+
+### Por Qué Esta es la Mejor Opción
+
+| Aspecto | Mantener Ambos | Eliminar user_id |
+|---------|----------------|------------------|
+| Confusión futura | Sigue existiendo | Eliminada |
+| Estándar Supabase | No cumple | Cumple |
+| Código duplicado | Sí (mezcla) | No |
+| RLS policies | Confusas | Claras |
+| Docs/Tutoriales | No aplican | Aplican directo |
+
+---
+
+## Plan de Implementación en 3 Fases
+
+### Fase 1: Migración de Base de Datos
 
 ```sql
--- 1. Eliminar política recursiva
-DROP POLICY IF EXISTS "ubr_branch_managers" ON user_branch_roles;
+-- 1. Actualizar id = user_id para todos los registros existentes
+UPDATE profiles SET id = user_id;
 
--- 2. Función que bypasea RLS
-CREATE OR REPLACE FUNCTION public.is_branch_manager_v2(_user_id uuid, _branch_id uuid)
-RETURNS boolean
-LANGUAGE sql
-STABLE SECURITY DEFINER
+-- 2. Eliminar el campo user_id (ya no es necesario)
+ALTER TABLE profiles DROP COLUMN user_id;
+
+-- 3. Actualizar el trigger para nuevos usuarios
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM user_branch_roles
-    WHERE user_id = _user_id 
-    AND branch_id = _branch_id
-    AND local_role IN ('encargado', 'franquiciado')
-    AND is_active = true
-  )
+BEGIN
+    INSERT INTO public.profiles (id, full_name, email)
+    VALUES (
+        NEW.id,  -- id = auth.users.id directamente
+        COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
+        NEW.email
+    );
+    RETURN NEW;
+END;
 $$;
 
--- 3. Nueva política sin recursión
-CREATE POLICY "ubr_branch_managers_v2" ON user_branch_roles
-  FOR ALL TO authenticated
-  USING (is_branch_manager_v2(auth.uid(), branch_id));
+-- 4. Recrear políticas RLS usando solo id
+DROP POLICY IF EXISTS "profiles_insert" ON profiles;
+DROP POLICY IF EXISTS "profiles_insert_own" ON profiles;
+DROP POLICY IF EXISTS "profiles_update" ON profiles;
+DROP POLICY IF EXISTS "profiles_update_own" ON profiles;
+DROP POLICY IF EXISTS "profiles_update_v2" ON profiles;
+DROP POLICY IF EXISTS "profiles_own_select" ON profiles;
+DROP POLICY IF EXISTS "profiles_select_v2" ON profiles;
+DROP POLICY IF EXISTS "Profiles can be created on signup" ON profiles;
+DROP POLICY IF EXISTS "Users view own profile or HR managers view staff" ON profiles;
+DROP POLICY IF EXISTS "profiles_hr_select" ON profiles;
+
+-- Crear políticas limpias
+CREATE POLICY "profiles_insert" ON profiles 
+  FOR INSERT WITH CHECK (id = auth.uid());
+
+CREATE POLICY "profiles_select_own" ON profiles 
+  FOR SELECT USING (id = auth.uid());
+
+CREATE POLICY "profiles_select_admin" ON profiles 
+  FOR SELECT USING (is_superadmin(auth.uid()));
+
+CREATE POLICY "profiles_select_hr" ON profiles 
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM user_branch_roles ubr_viewer
+      JOIN user_branch_roles ubr_target ON ubr_target.user_id = profiles.id
+      WHERE ubr_viewer.user_id = auth.uid()
+      AND ubr_viewer.is_active = true
+      AND ubr_viewer.local_role IN ('encargado', 'franquiciado')
+      AND ubr_viewer.branch_id = ubr_target.branch_id
+    )
+  );
+
+CREATE POLICY "profiles_update_own" ON profiles 
+  FOR UPDATE USING (id = auth.uid()) 
+  WITH CHECK (id = auth.uid());
+```
+
+### Fase 2: Actualizar Código (13+ archivos)
+
+Todos los archivos que usan `.eq('user_id', ...)` o `p.user_id` deben cambiar a usar `id`:
+
+| Archivo | Cambio |
+|---------|--------|
+| `src/pages/cuenta/CuentaDashboard.tsx` | `.eq('user_id', user.id)` → `.eq('id', user.id)` |
+| `src/pages/cuenta/CuentaPerfil.tsx` | Ídem |
+| `src/hooks/useContextualHelp.ts` | Ídem |
+| `src/hooks/usePermissionsV2.ts` | Sin cambio (usa otras tablas) |
+| `src/components/cuenta/*.tsx` | Ídem |
+| `src/components/local/team/useTeamData.ts` | Ya corregido: usa `id` |
+| `src/components/hr/PendingScheduleRequests.tsx` | `p.user_id` → `p.id` |
+| `src/components/local/RegulationSignaturesPanel.tsx` | Ídem |
+| `src/components/local/ManagerDashboard.tsx` | Ídem |
+| `src/components/admin/users/useUsersData.ts` | Ídem |
+| `src/hooks/useMonthlyHours.ts` | Ídem |
+| `src/hooks/useSalaryAdvances.ts` | Ídem |
+| Todas las Edge Functions que usen profiles | Ídem |
+
+### Fase 3: Actualizar Documentación
+
+**Archivo: `docs/LOVABLE_RULES.md`**
+
+Agregar sección:
+
+```markdown
+## ESTRUCTURA DE PROFILES (Patrón Supabase Estándar)
+
+La tabla `profiles` sigue el patrón oficial de Supabase:
+
+- `profiles.id` = `auth.users.id` (son el mismo UUID)
+- NO existe campo `user_id` separado
+- Todas las queries usan `.eq('id', userId)`
+
+Ejemplo correcto:
+const { data } = await supabase
+  .from('profiles')
+  .select('id, full_name, email')
+  .eq('id', user.id);  // ← Siempre 'id'
+
+En Maps de profiles:
+const profileMap = new Map(profiles.map(p => [p.id, p]));
 ```
 
 ---
 
-## Problema 2: Coexistencia de Sistemas (Lo que el plan de Claude cubre)
+## Fase Adicional: Vincular Usuarios Faltantes
 
-El plan identifica correctamente que existen dos sistemas:
+Los 4 usuarios ya existen pero no están en `user_branch_roles` para General Paz:
 
-| Tabla | Propósito | Usado en |
-|-------|-----------|----------|
-| `user_roles_v2` | brand_role + local_role (array branch_ids) | 20+ archivos antiguos |
-| `user_branch_roles` | 1 fila por usuario/sucursal | Hook nuevo + algunos componentes |
+```sql
+INSERT INTO user_branch_roles (user_id, branch_id, local_role, is_active)
+SELECT p.id, si.branch_id, si.role::local_role_type, true
+FROM staff_invitations si
+JOIN profiles p ON LOWER(p.email) = LOWER(si.email)
+WHERE si.status = 'pending'
+  AND NOT EXISTS (
+    SELECT 1 FROM user_branch_roles ubr 
+    WHERE ubr.user_id = p.id AND ubr.branch_id = si.branch_id
+  );
 
-El hook `usePermissionsV2` ya usa AMBAS tablas correctamente:
-- Lee `brand_role` de `user_roles_v2` (línea 193)
-- Lee roles por sucursal de `user_branch_roles` (línea 219)
-
-**Esto está BIEN diseñado** - no necesariamente hay que eliminar una tabla.
-
----
-
-## Recomendación: Plan de Acción en Orden
-
-### Paso 0: Arreglar RLS (15 minutos) - **BLOQUEANTE**
-Ejecutar la migración SQL para corregir la política recursiva.
-
-### Paso 1: Verificar funcionamiento (5 minutos)
-Confirmar que puedes acceder a Mi Marca y Mi Local.
-
-### Paso 2: Decidir sobre la coexistencia
-Dos opciones:
-
-**Opción A: Mantener ambas tablas (Recomendado)**
-- `user_roles_v2` → Solo para `brand_role`
-- `user_branch_roles` → Solo para roles locales por sucursal
-- El hook ya funciona así, es la arquitectura más limpia
-
-**Opción B: Migrar todo a `user_branch_roles`**
-- Más trabajo
-- Hay que modificar 20+ archivos
-- Riesgo de introducir más bugs
-
-### Paso 3: Continuar con Etapa 2
-Una vez estabilizado el sistema de roles, implementar:
-1. Fase 1: Productividad por Local
-2. Fase 2: Productividad por Turno
-3. Fase 3: Ranking de Empleados
-4. Fase 4: Permisos Personalizables
+UPDATE staff_invitations 
+SET status = 'accepted', accepted_at = now()
+WHERE status = 'pending'
+  AND EXISTS (SELECT 1 FROM profiles p WHERE LOWER(p.email) = LOWER(staff_invitations.email));
+```
 
 ---
 
-## Conclusión
+## Archivos a Modificar
 
-| Aspecto | Estado |
-|---------|--------|
-| El plan de Claude identifica la coexistencia | Correcto |
-| El plan soluciona el bloqueo actual | **NO** - Falta corregir RLS |
-| La arquitectura de `usePermissionsV2` | Bien diseñada |
-| Prioridad ahora | Arreglar la política RLS recursiva |
+| Archivo | Tipo de Cambio |
+|---------|----------------|
+| Base de datos | Migración: eliminar `user_id`, actualizar `id` |
+| `docs/LOVABLE_RULES.md` | Documentar patrón estándar |
+| 13+ archivos TypeScript | Reemplazar `user_id` → `id` |
+| 2+ Edge Functions | Reemplazar `user_id` → `id` |
+| Políticas RLS | Recrear usando solo `id` |
 
-**Recomiendo:**
-1. Primero: Ejecutar la migración SQL para corregir el bug RLS
-2. Después: Evaluar si realmente necesitamos la Fase 0 del plan de Claude (migrar archivos) o si podemos mantener la coexistencia controlada actual
+---
+
+## Resultado Final
+
+Después de la implementación:
+
+1. **Estructura limpia:** `profiles.id = auth.users.id` (sin campo extra)
+2. **Cero confusión:** Solo existe `id`, imposible equivocarse
+3. **Estándar Supabase:** Compatible con toda la documentación oficial
+4. **Código consistente:** Todo usa `.eq('id', ...)` o `p.id`
+5. **RLS claras:** Todas las políticas usan `id = auth.uid()`
+
+---
+
+## Sección Técnica
+
+### Riesgo de la Migración
+
+La migración es segura porque:
+1. `profiles.user_id` tiene constraint UNIQUE
+2. No hay FKs apuntando a `profiles.id` desde otras tablas
+3. El UPDATE `SET id = user_id` mantiene integridad referencial con auth.users
+
+### Rollback
+
+Si algo falla:
+```sql
+-- Agregar user_id de vuelta
+ALTER TABLE profiles ADD COLUMN user_id uuid REFERENCES auth.users(id);
+UPDATE profiles SET user_id = id;
+```
+
+### Orden de Ejecución
+
+1. Migración SQL (modifica estructura)
+2. Deploy Edge Functions (usan nueva estructura)
+3. Actualizar código frontend (13+ archivos)
+4. Vincular usuarios faltantes
+5. Actualizar documentación
+
