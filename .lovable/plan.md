@@ -1,163 +1,107 @@
 
-# Plan: Corregir Sistema de Fichaje y Guardado de PIN
+# Plan: Corregir Error de UUID Inválido en Creación de PIN
 
-## Diagnóstico Completo
+## Problema Identificado
 
-### Estado Actual de la Base de Datos (Verificado)
+El error `invalid input syntax for type uuid: "undefined"` ocurre porque:
 
-| Usuario | Sucursal | clock_pin | Estado |
-|---------|----------|-----------|--------|
-| Juan Finocchiaro | Manantiales | `1273` | OK - Tiene PIN |
-| Dalma Ledesma | Manantiales | `NULL` | ERROR - Sin PIN |
-| Braian, Wanda, etc. | Manantiales | `NULL` | Pendiente configurar |
+1. En `CuentaPerfil.tsx` línea 423:
+   ```typescript
+   userId={user?.id || ''}
+   ```
+   Cuando `user?.id` es undefined, se pasa una **string vacía** `''`
 
-### Sucursal Manantiales
+2. En `BranchPinCard.tsx` línea 39 y 59:
+   ```typescript
+   _exclude_user_id: userId || null,
+   ```
+   Aquí `'' || null` evalúa a `''` (string vacía) porque `''` es **truthy** en este contexto de JavaScript. La string vacía NO es convertida a `null`.
 
-| Campo | Valor | Estado |
-|-------|-------|--------|
-| clock_code | `mnt` | OK |
-| is_active | `true` | OK |
-| URL fichaje | `/fichaje/mnt` | OK |
+3. PostgreSQL recibe `''` como valor para un campo UUID → Error de sintaxis
 
-### Causa del Error
+## Solución
 
-El error **"Local no encontrado"** puede aparecer en dos escenarios:
+### Cambio 1: `CuentaPerfil.tsx`
 
-1. **La query de sucursal falla** - Improbable, ya que `mnt` existe y está activo
-2. **El usuario está en una URL incorrecta** - Posible (ej: `/fichaje/undefined` o `/fichaje/`)
-
-Pero el **problema real** es que **Dalma no tiene PIN configurado**, lo que significa que:
-- El guardado del PIN falló silenciosamente, o
-- El usuario no completó el proceso de creación
-
----
-
-## Cambios a Implementar
-
-### 1. Mejorar Mensajes de Error en Fichaje
-
-**Archivo**: `src/pages/FichajeEmpleado.tsx`
-
-Actualmente cuando `validate_clock_pin_v2` no retorna resultados, el mensaje es genérico. Mejorar para distinguir entre:
-- PIN incorrecto
-- Usuario sin PIN configurado
-- Sin acceso a esta sucursal
+Pasar `undefined` en lugar de string vacía y no renderizar `BranchPinCard` si no hay `user.id`:
 
 ```typescript
-// ANTES (línea 247-249):
-if (!data || data.length === 0) {
-  throw new Error('PIN inválido o no tenés acceso a este local');
-}
-
-// DESPUÉS:
-if (!data || data.length === 0) {
-  throw new Error('PIN incorrecto. Verificá que hayas configurado tu PIN para esta sucursal.');
-}
-```
-
-### 2. Agregar Logging para Diagnóstico
-
-**Archivo**: `src/components/cuenta/BranchPinCard.tsx`
-
-Agregar mejor manejo de errores en el guardado:
-
-```typescript
-// En savePinMutation.mutationFn, después de la línea 70:
-const { error } = await supabase
-  .from('user_branch_roles')
-  .update({ clock_pin: newPin })
-  .eq('id', roleId);
-
-if (error) {
-  console.error('Error saving PIN:', error);
-  throw error;
-}
-
-// Verificar que se guardó correctamente
-const { data: verification } = await supabase
-  .from('user_branch_roles')
-  .select('clock_pin')
-  .eq('id', roleId)
-  .single();
-
-if (verification?.clock_pin !== newPin) {
-  throw new Error('El PIN no se guardó correctamente. Intentá de nuevo.');
-}
-```
-
-### 3. Verificar URL de Fichaje en Dashboard
-
-**Archivo**: `src/components/local/ManagerDashboard.tsx`
-
-Asegurar que la URL de fichaje se construye correctamente:
-
-```typescript
-// Verificar que branch.clock_code existe antes de mostrar
-{branch.clock_code && (
-  <Card>
-    <CardHeader>
-      <CardTitle>Fichaje del Local</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <p className="text-sm text-muted-foreground mb-2">
-        URL: {window.location.origin}/fichaje/{branch.clock_code}
-      </p>
-      {/* QR Code */}
-    </CardContent>
-  </Card>
-)}
-```
-
-### 4. Agregar Validación Pre-vuelo en Fichaje
-
-**Archivo**: `src/pages/FichajeEmpleado.tsx`
-
-Antes de intentar validar el PIN, verificar que el branchCode es válido:
-
-```typescript
-// Después de obtener la sucursal exitosamente (línea 337):
-if (!branch) {
+// Línea 417-425 - Agregar validación
+{branchRoles.map((role: any) => {
+  const branchName = role.branches?.name || 'Sucursal';
+  // No renderizar si faltan datos críticos
+  if (!role.id || !role.branch_id || !user?.id) return null;
   return (
-    <Card>
-      <CardContent>
-        <AlertCircle />
-        <h1>Local no encontrado</h1>
-        <p>El código "{branchCode || '(vacío)'}" no existe.</p>
-        <p className="text-xs mt-2">
-          Verificá que estás escaneando el QR correcto.
-        </p>
-      </CardContent>
-    </Card>
+    <BranchPinCard
+      key={role.id}
+      branchName={branchName}
+      branchId={role.branch_id}
+      roleId={role.id}
+      currentPin={role.clock_pin}
+      userId={user.id}  // Ya verificamos que existe
+    />
   );
+})}
+```
+
+### Cambio 2: `BranchPinCard.tsx`
+
+Validar explícitamente que los UUIDs son strings no vacías antes de llamar a la función RPC:
+
+```typescript
+// En checkPinAvailability (línea 28+)
+const checkPinAvailability = async (pinValue: string) => {
+  if (pinValue.length !== 4) {
+    setPinAvailable(null);
+    return;
+  }
+  
+  // Validar que tenemos los IDs necesarios
+  if (!branchId || !roleId) {
+    console.error('Missing branchId or roleId');
+    setPinAvailable(null);
+    return;
+  }
+
+  setCheckingPin(true);
+  try {
+    const { data, error } = await supabase.rpc('is_clock_pin_available', {
+      _branch_id: branchId,
+      _pin: pinValue,
+      // Pasar null si userId está vacío o no existe
+      _exclude_user_id: userId && userId.trim() !== '' ? userId : null,
+    });
+    // ...
+  }
+};
+
+// En savePinMutation (línea 54+)
+mutationFn: async (newPin: string) => {
+  // Validar que tenemos los IDs necesarios
+  if (!branchId || !roleId) {
+    throw new Error('Datos de sucursal incompletos');
+  }
+
+  const { data: available, error: checkError } = await supabase.rpc('is_clock_pin_available', {
+    _branch_id: branchId,
+    _pin: newPin,
+    // Pasar null si userId está vacío o no existe
+    _exclude_user_id: userId && userId.trim() !== '' ? userId : null,
+  });
+  // ...
 }
 ```
 
----
+## Archivos a Modificar
 
-## Resumen de Archivos
+| Archivo | Cambio |
+|---------|--------|
+| `src/pages/cuenta/CuentaPerfil.tsx` | Validar `user?.id` antes de renderizar cada card |
+| `src/components/cuenta/BranchPinCard.tsx` | Validar UUIDs y usar null correctamente |
 
-| Archivo | Cambio | Prioridad |
-|---------|--------|-----------|
-| `FichajeEmpleado.tsx` | Mejorar mensaje de error de PIN | Alta |
-| `BranchPinCard.tsx` | Agregar verificación post-guardado | Alta |
-| `ManagerDashboard.tsx` | Validar clock_code antes de mostrar URL | Media |
+## Verificación
 
----
-
-## Verificación Post-Implementación
-
-1. **Dalma debe ir a /cuenta/perfil** y ver la card de PIN para Manantiales
-2. **Crear un PIN** (ej: 1234) y verificar que aparece el mensaje de éxito
-3. **Consultar la base de datos** para confirmar que `clock_pin` ya no es NULL
-4. **Ir a /fichaje/mnt** e ingresar el PIN
-5. **Debe pasar al paso de cámara** sin errores
-
----
-
-## Datos de Prueba
-
-Para probar manualmente, Dalma puede:
-- URL de Mi Perfil: `/cuenta/perfil`
-- URL de Fichaje Manantiales: `/fichaje/mnt`
-- Su user_id: `056919fb-abde-43bc-972c-a0610a52f694`
-- Su role_id en Manantiales: `891773da-72f4-4fce-84ec-94a6e9b78c17`
+Después de aplicar estos cambios:
+1. Dalma podrá crear su PIN sin errores de UUID
+2. El sistema validará correctamente la disponibilidad del PIN
+3. El PIN se guardará en `user_branch_roles.clock_pin`
