@@ -36,7 +36,7 @@ export function BranchPinCard({ branchName, branchId, roleId, currentPin, userId
       const { data, error } = await supabase.rpc('is_clock_pin_available', {
         _branch_id: branchId,
         _pin: pinValue,
-        _exclude_user_id: userId,
+        _exclude_user_id: userId || null,
       });
 
       if (error) throw error;
@@ -56,7 +56,7 @@ export function BranchPinCard({ branchName, branchId, roleId, currentPin, userId
       const { data: available, error: checkError } = await supabase.rpc('is_clock_pin_available', {
         _branch_id: branchId,
         _pin: newPin,
-        _exclude_user_id: userId,
+        _exclude_user_id: userId || null,
       });
 
       if (checkError) throw checkError;
