@@ -1,18 +1,28 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Fingerprint, ArrowRight } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 interface MissingPinBannerProps {
-  employeeName?: string;
+  missingCount?: number;
+  totalCount?: number;
 }
 
-export default function MissingPinBanner({ employeeName }: MissingPinBannerProps) {
+export default function MissingPinBanner({ missingCount = 1, totalCount = 1 }: MissingPinBannerProps) {
   const navigate = useNavigate();
   
   const handleClick = () => {
-    // Navigate to profile page with hash to scroll to PIN section
     navigate('/cuenta/perfil#pin');
+  };
+
+  const getMessage = () => {
+    if (totalCount === 1) {
+      return 'Para poder fichar entrada y salida en tu sucursal, necesitás crear un PIN de 4 dígitos.';
+    }
+    if (missingCount === totalCount) {
+      return `Necesitás configurar tu PIN de fichaje en ${missingCount} ${missingCount === 1 ? 'sucursal' : 'sucursales'}.`;
+    }
+    return `Te falta configurar el PIN en ${missingCount} de ${totalCount} sucursales.`;
   };
   
   return (
@@ -23,7 +33,7 @@ export default function MissingPinBanner({ employeeName }: MissingPinBannerProps
       </AlertTitle>
       <AlertDescription className="mt-2">
         <p className="text-muted-foreground mb-3">
-          Para poder fichar entrada y salida en tu sucursal, necesitás crear un PIN de 4 dígitos.
+          {getMessage()}
         </p>
         <Button size="sm" className="gap-2" onClick={handleClick}>
           Crear mi PIN
