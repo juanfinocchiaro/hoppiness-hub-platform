@@ -411,16 +411,19 @@ export default function CuentaPerfil() {
                       </div>
                     ) : branchRoles && branchRoles.length > 0 ? (
                       <div className="space-y-3">
-                        {branchRoles.map((role: any) => (
-                          <BranchPinCard
-                            key={role.id}
-                            branchName={(role.branches as any).name}
-                            branchId={role.branch_id}
-                            roleId={role.id}
-                            currentPin={role.clock_pin}
-                            userId={user?.id || ''}
-                          />
-                        ))}
+                        {branchRoles.map((role: any) => {
+                          const branchName = role.branches?.name || 'Sucursal';
+                          return (
+                            <BranchPinCard
+                              key={role.id}
+                              branchName={branchName}
+                              branchId={role.branch_id}
+                              roleId={role.id}
+                              currentPin={role.clock_pin}
+                              userId={user?.id || ''}
+                            />
+                          );
+                        })}
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground text-center py-4">
