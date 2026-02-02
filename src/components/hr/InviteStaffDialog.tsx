@@ -19,9 +19,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2, Mail, UserPlus, CheckCircle } from 'lucide-react';
+import { Loader2, Mail, UserPlus, CheckCircle, Search, ArrowLeft, AlertCircle, User } from 'lucide-react';
 
 type LocalRole = 'encargado' | 'cajero' | 'empleado';
+type SearchStatus = 'idle' | 'searching' | 'found' | 'not_found';
+
+interface FoundUser {
+  id: string;
+  full_name: string;
+  email: string;
+}
 
 interface InviteStaffDialogProps {
   open: boolean;
@@ -47,15 +54,72 @@ export function InviteStaffDialog({
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<LocalRole>('cajero');
   const [loading, setLoading] = useState(false);
+  const [searchStatus, setSearchStatus] = useState<SearchStatus>('idle');
+  const [foundUser, setFoundUser] = useState<FoundUser | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email.trim()) {
+  const handleClose = (isOpen: boolean) => {
+    if (!isOpen) {
+      setEmail('');
+      setRole('cajero');
+      setSearchStatus('idle');
+      setFoundUser(null);
+      setLoading(false);
+    }
+    onOpenChange(isOpen);
+  };
+
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    if (searchStatus !== 'idle') {
+      setSearchStatus('idle');
+      setFoundUser(null);
+    }
+  };
+
+  const handleSearch = async () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.trim() || !emailRegex.test(email)) {
       toast.error('Ingresá un email válido');
       return;
     }
 
+    setSearchStatus('searching');
+
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .eq('email', email.toLowerCase().trim())
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error searching profile:', error);
+        toast.error('Error al buscar el usuario');
+        setSearchStatus('idle');
+        return;
+      }
+
+      if (profile) {
+        setFoundUser(profile);
+        setSearchStatus('found');
+      } else {
+        setFoundUser(null);
+        setSearchStatus('not_found');
+      }
+    } catch (error) {
+      console.error('Error searching profile:', error);
+      toast.error('Error al buscar el usuario');
+      setSearchStatus('idle');
+    }
+  };
+
+  const handleReset = () => {
+    setSearchStatus('idle');
+    setFoundUser(null);
+    setEmail('');
+  };
+
+  const handleSubmit = async () => {
     setLoading(true);
 
     try {
@@ -81,7 +145,6 @@ export function InviteStaffDialog({
         throw new Error(response.data.error);
       }
 
-      // Differentiate message based on action
       const action = response.data?.action;
       if (action === 'added') {
         toast.success(response.data.message || `Colaborador agregado al equipo`, {
@@ -91,21 +154,30 @@ export function InviteStaffDialog({
         toast.success(response.data.message || `Invitación enviada a ${email}`);
       }
 
-      setEmail('');
-      setRole('cajero');
-      onOpenChange(false);
+      handleClose(false);
       onSuccess?.();
 
     } catch (error: any) {
-      console.error('Error sending invitation:', error);
+      console.error('Error processing request:', error);
       toast.error(error.message || 'Error al procesar la solicitud');
     } finally {
       setLoading(false);
     }
   };
 
+  const getRoleDescription = (r: LocalRole) => {
+    switch (r) {
+      case 'encargado':
+        return 'Gestiona equipo, horarios, comunicados y operación diaria';
+      case 'cajero':
+        return 'Carga ventas, fichaje y visualiza horarios';
+      case 'empleado':
+        return 'Fichaje y visualiza horarios y comunicados';
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -113,68 +185,177 @@ export function InviteStaffDialog({
             Agregar Colaborador
           </DialogTitle>
           <DialogDescription>
-            Ingresá el email del colaborador para agregarlo al equipo de <strong>{branchName}</strong>.
-            Si ya tiene cuenta, se agregará automáticamente. Si no, recibirá una invitación por email.
+            {searchStatus === 'idle' || searchStatus === 'searching'
+              ? `Buscá el email del colaborador para agregarlo al equipo de ${branchName}.`
+              : searchStatus === 'found'
+              ? `Confirmá el rol para agregar a ${foundUser?.full_name} al equipo.`
+              : `El email no está registrado. Podés enviar una invitación.`
+            }
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email del colaborador</Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="email"
-                type="email"
-                placeholder="ejemplo@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-10"
-                required
-              />
+        {/* Step 1: Search */}
+        {(searchStatus === 'idle' || searchStatus === 'searching') && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email del colaborador</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="ejemplo@email.com"
+                  value={email}
+                  onChange={(e) => handleEmailChange(e.target.value)}
+                  className="pl-10"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSearch();
+                    }
+                  }}
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="role">Rol</Label>
-            <Select value={role} onValueChange={(v) => setRole(v as LocalRole)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {INVITABLE_ROLES.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>
-                    {r.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              {role === 'encargado' && 'Gestiona equipo, horarios, comunicados y operación diaria'}
-              {role === 'cajero' && 'Carga ventas, fichaje y visualiza horarios'}
-              {role === 'empleado' && 'Fichaje y visualiza horarios y comunicados'}
-            </p>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => handleClose(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleSearch} 
+                disabled={searchStatus === 'searching' || !email.trim()}
+              >
+                {searchStatus === 'searching' ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Buscando...
+                  </>
+                ) : (
+                  <>
+                    <Search className="mr-2 h-4 w-4" />
+                    Buscar
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
           </div>
+        )}
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Procesando...
-                </>
-              ) : (
-                <>
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Agregar
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
+        {/* Step 2a: User Found */}
+        {searchStatus === 'found' && foundUser && (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950">
+              <div className="flex items-center gap-2 text-green-700 dark:text-green-300 mb-2">
+                <CheckCircle className="h-4 w-4" />
+                <span className="font-medium text-sm">Usuario encontrado</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-green-200 dark:bg-green-800 flex items-center justify-center">
+                  <User className="h-5 w-5 text-green-700 dark:text-green-300" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">{foundUser.full_name}</p>
+                  <p className="text-sm text-muted-foreground">{foundUser.email}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="role">Rol</Label>
+              <Select value={role} onValueChange={(v) => setRole(v as LocalRole)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {INVITABLE_ROLES.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>
+                      {r.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {getRoleDescription(role)}
+              </p>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleReset}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Buscar otro
+              </Button>
+              <Button onClick={handleSubmit} disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Agregando...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Agregar al equipo
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+
+        {/* Step 2b: User Not Found */}
+        {searchStatus === 'not_found' && (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
+              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 mb-2">
+                <AlertCircle className="h-4 w-4" />
+                <span className="font-medium text-sm">Usuario no encontrado</span>
+              </div>
+              <p className="text-sm text-amber-600 dark:text-amber-400">
+                El email <strong>{email}</strong> no está registrado en el sistema. 
+                Se enviará una invitación para que pueda registrarse.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="role">Rol</Label>
+              <Select value={role} onValueChange={(v) => setRole(v as LocalRole)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {INVITABLE_ROLES.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>
+                      {r.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {getRoleDescription(role)}
+              </p>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleReset}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Buscar otro
+              </Button>
+              <Button onClick={handleSubmit} disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="mr-2 h-4 w-4" />
+                    Enviar invitación
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
