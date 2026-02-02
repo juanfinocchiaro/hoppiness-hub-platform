@@ -74,14 +74,13 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
     queryFn: async () => {
       if (!latestRegulation) return [];
 
-      // Get team members for this branch (excluding franchisees)
+      // Get team members for this branch (excluding franchisees) from user_branch_roles
       const { data: roles } = await supabase
-        .from('user_roles_v2')
+        .from('user_branch_roles')
         .select('user_id, local_role')
-        .contains('branch_ids', [branchId])
+        .eq('branch_id', branchId)
         .eq('is_active', true)
-        .not('local_role', 'is', null)
-        .not('local_role', 'eq', 'franquiciado');  // Exclude franchisees
+        .neq('local_role', 'franquiciado');
 
       if (!roles?.length) return [];
 
@@ -178,9 +177,27 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
         <head>
           <title>Constancia de Firma - ${previewFor?.full_name}</title>
           <style>
-            @media print {
-              body { margin: 0; padding: 20px; }
-              @page { size: A4; margin: 15mm; }
+            @page {
+              size: A4;
+              margin: 15mm;
+            }
+            
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            
+            body {
+              font-family: Arial, sans-serif;
+              font-size: 12pt;
+              line-height: 1.6;
+              color: #000;
+              background: #fff;
+            }
+            
+            img {
+              max-height: 64px;
             }
           </style>
         </head>
@@ -193,7 +210,7 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
     printWindow.focus();
     setTimeout(() => {
       printWindow.print();
-    }, 250);
+    }, 500);
   };
 
   if (!latestRegulation) {

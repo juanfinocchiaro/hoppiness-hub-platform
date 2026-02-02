@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,9 +11,29 @@ import { FileText, Download, CheckCircle, AlertCircle, ExternalLink } from 'luci
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+type LocalRole = Database['public']['Enums']['local_role_type'];
+
 export default function MyRegulationsCard() {
   const { user } = useAuth();
   const [expanded, setExpanded] = useState(false);
+
+  // Check if user only has franchisee role (franchisees don't need to sign regulations)
+  const { data: userLocalRoles = [] } = useQuery({
+    queryKey: ['my-local-roles', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase
+        .from('user_branch_roles')
+        .select('local_role')
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+      return (data || []).map(r => r.local_role as LocalRole);
+    },
+    enabled: !!user,
+  });
+
+  const isOnlyFranquiciado = userLocalRoles.length > 0 && 
+    userLocalRoles.every(role => role === 'franquiciado');
 
   // Fetch latest regulation
   const { data: latestRegulation } = useQuery({
@@ -82,7 +103,8 @@ export default function MyRegulationsCard() {
     }
   };
 
-  if (!latestRegulation) {
+  // Don't show regulations card for franchisees or if no regulation exists
+  if (!latestRegulation || isOnlyFranquiciado) {
     return null;
   }
 
