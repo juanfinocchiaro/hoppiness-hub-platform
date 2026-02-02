@@ -56,17 +56,17 @@ export default function CentralTeam() {
       if (rolesError) throw rolesError;
       if (!roles || roles.length === 0) return [];
 
-      // 2. Get profiles for those users
+      // 2. Get profiles for those users (profiles.id = user_id after migration)
       const userIds = roles.map(r => r.user_id);
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('user_id, full_name, email')
-        .in('user_id', userIds);
+        .select('id, full_name, email')
+        .in('id', userIds);
 
       if (profilesError) throw profilesError;
 
-      // 3. Merge data
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      // 3. Merge data (profiles.id = user_id)
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
       
       return roles.map(role => {
         const profile = profileMap.get(role.user_id);
@@ -104,10 +104,10 @@ export default function CentralTeam() {
 
   const inviteMutation = useMutation({
     mutationFn: async ({ email, role }: { email: string; role: BrandRole }) => {
-      // First find user by email
+      // First find user by email (profiles.id = user_id after migration)
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('user_id')
+        .select('id')
         .eq('email', email)
         .single();
 
@@ -115,11 +115,13 @@ export default function CentralTeam() {
         throw new Error('Usuario no encontrado. Debe registrarse primero.');
       }
 
+      const userId = profile.id; // profiles.id IS the user_id
+
       // Check if user already has a role record
       const { data: existing } = await supabase
         .from('user_roles_v2')
         .select('id')
-        .eq('user_id', profile.user_id)
+        .eq('user_id', userId)
         .maybeSingle();
 
       if (existing) {
@@ -127,12 +129,12 @@ export default function CentralTeam() {
         const { error } = await supabase
           .from('user_roles_v2')
           .update({ brand_role: role })
-          .eq('user_id', profile.user_id);
+          .eq('user_id', userId);
         if (error) throw error;
       } else {
         // Insert new record
         const { error } = await supabase.from('user_roles_v2').insert({
-          user_id: profile.user_id,
+          user_id: userId,
           brand_role: role,
           local_role: null,
           branch_ids: [],

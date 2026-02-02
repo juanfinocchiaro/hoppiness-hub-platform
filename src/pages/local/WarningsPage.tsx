@@ -94,14 +94,16 @@ export default function WarningsPage() {
       const userIds = data?.map(r => r.user_id) || [];
       if (userIds.length === 0) return [];
       
+      // profiles.id = user_id after migration
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('user_id, full_name')
-        .in('user_id', userIds)
+        .select('id, full_name')
+        .in('id', userIds)
         .order('full_name');
       
       if (profilesError) throw profilesError;
-      return profiles || [];
+      // Map to maintain user_id field for compatibility
+      return (profiles || []).map(p => ({ user_id: p.id, full_name: p.full_name }));
     },
     enabled: !!branchId,
   });
@@ -126,13 +128,14 @@ export default function WarningsPage() {
       
       let profileMap: Record<string, string> = {};
       if (userIds.length > 0) {
+        // profiles.id = user_id after migration
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('user_id, full_name')
-          .in('user_id', userIds);
+          .select('id, full_name')
+          .in('id', userIds);
         
         profiles?.forEach(p => {
-          if (p.user_id) profileMap[p.user_id] = p.full_name || 'Sin nombre';
+          if (p.id) profileMap[p.id] = p.full_name || 'Sin nombre';
         });
       }
       

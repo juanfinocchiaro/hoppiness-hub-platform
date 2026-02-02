@@ -69,11 +69,11 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
 
       const userIds = roles.map(r => r.user_id);
 
-      // Get profiles
+      // Get profiles (profiles.id = user_id after migration)
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('user_id, full_name')
-        .in('user_id', userIds);
+        .select('id, full_name')
+        .in('id', userIds);
 
       // Get signatures for latest regulation
       const { data: signatures } = await supabase
@@ -84,10 +84,10 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
 
       // Merge data
       const signaturesMap = new Map(signatures?.map(s => [s.user_id, s]));
-      const profilesMap = new Map(profiles?.map(p => [p.user_id, p]));
+      const profilesMap = new Map(profiles?.map(p => [p.id, p]));
 
       return roles.map(role => ({
-        user_id: role.user_id,
+        user_id: role.user_id,  // This is already the auth user_id
         full_name: profilesMap.get(role.user_id)?.full_name || 'Sin nombre',
         local_role: role.local_role,
         signature: signaturesMap.get(role.user_id) || null,

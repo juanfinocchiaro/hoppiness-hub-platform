@@ -70,14 +70,16 @@ export default function AdvancesPage() {
       const userIds = data?.map(r => r.user_id) || [];
       if (userIds.length === 0) return [];
       
+      // profiles.id = user_id after migration
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('user_id, full_name')
-        .in('user_id', userIds)
+        .select('id, full_name')
+        .in('id', userIds)
         .order('full_name');
       
       if (profilesError) throw profilesError;
-      return profiles || [];
+      // Map profiles.id (which is user_id) to maintain consistency
+      return (profiles || []).map(p => ({ user_id: p.id, full_name: p.full_name }));
     },
     enabled: !!branchId,
   });

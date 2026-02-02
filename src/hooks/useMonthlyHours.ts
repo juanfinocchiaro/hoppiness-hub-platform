@@ -132,10 +132,11 @@ export function useMonthlyHours({ branchId, year, month }: UseMonthlyHoursOption
     queryFn: async () => {
       if (userIds.length === 0) return [];
       
+      // profiles.id = user_id after migration
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('user_id, full_name, avatar_url')
-        .in('user_id', userIds);
+        .select('id, full_name, avatar_url')
+        .in('id', userIds);
       
       if (profilesError) throw profilesError;
       
@@ -149,11 +150,11 @@ export function useMonthlyHours({ branchId, year, month }: UseMonthlyHoursOption
       
       if (rolesError) throw rolesError;
       
-      // Combinar
+      // Combinar (profiles.id = user_id)
       return (profiles || []).map(p => {
-        const role = roles?.find(r => r.user_id === p.user_id);
+        const role = roles?.find(r => r.user_id === p.id);
         return {
-          user_id: p.user_id,
+          user_id: p.id,
           full_name: p.full_name,
           avatar_url: p.avatar_url,
           local_role: role?.local_role as LocalRole || null,

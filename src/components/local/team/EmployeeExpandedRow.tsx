@@ -38,14 +38,14 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
   const [showClockInsModal, setShowClockInsModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
 
-  // Check if user has clock PIN configured
+  // Check if user has clock PIN configured (profiles.id = user_id after migration)
   const { data: profileData } = useQuery({
     queryKey: ['profile-clock-pin', member.user_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('clock_pin')
-        .eq('user_id', member.user_id)
+        .eq('id', member.user_id)
         .maybeSingle();
       if (error) throw error;
       return data;

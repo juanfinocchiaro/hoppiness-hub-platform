@@ -238,7 +238,7 @@ export default function RegistroStaff() {
           accepted_terms_at: new Date().toISOString(),
           invitation_token: token,
         })
-        .eq('user_id', userId);
+        .eq('id', userId); // profiles.id = user_id after migration
 
       if (profileError) {
         devWarn('Profile update error:', profileError);

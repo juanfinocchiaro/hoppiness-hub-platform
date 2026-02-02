@@ -8,17 +8,17 @@ export function useUsersData() {
   const { data: users = [], isLoading: loadingUsers, refetch } = useQuery({
     queryKey: ['admin-users-v2'],
     queryFn: async () => {
-      // 1. Fetch all profiles
+      // 1. Fetch all profiles (id = auth.users.id after migration)
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, user_id, full_name, email, phone, created_at')
+        .select('id, full_name, email, phone, created_at')
         .order('created_at', { ascending: false });
       
       if (profilesError) throw profilesError;
       if (!profiles?.length) return [];
 
-      // 2. Fetch roles for all users
-      const profileUserIds = profiles.map(p => p.user_id).filter(Boolean);
+      // 2. Fetch roles for all users (profiles.id = user_id)
+      const profileUserIds = profiles.map(p => p.id).filter(Boolean);
       
       const { data: roles } = await supabase
         .from('user_roles_v2')
@@ -29,13 +29,13 @@ export function useUsersData() {
       // Build roles map
       const rolesMap = new Map(roles?.map(r => [r.user_id, r]));
 
-      // Merge data
+      // Merge data (p.id = user_id after migration)
       return profiles.map(p => {
-        const role = rolesMap.get(p.user_id);
+        const role = rolesMap.get(p.id);
         
         return {
           id: p.id,
-          user_id: p.user_id,
+          user_id: p.id, // profiles.id IS now the user_id
           full_name: p.full_name || '',
           email: p.email || '',
           phone: p.phone,

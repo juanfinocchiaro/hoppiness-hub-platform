@@ -828,7 +828,6 @@ export type Database = {
           total_orders: number | null
           total_spent: number | null
           updated_at: string
-          user_id: string
         }
         Insert: {
           accepted_terms_at?: string | null
@@ -864,7 +863,6 @@ export type Database = {
           total_orders?: number | null
           total_spent?: number | null
           updated_at?: string
-          user_id: string
         }
         Update: {
           accepted_terms_at?: string | null
@@ -900,7 +898,6 @@ export type Database = {
           total_orders?: number | null
           total_spent?: number | null
           updated_at?: string
-          user_id?: string
         }
         Relationships: [
           {

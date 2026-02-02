@@ -67,11 +67,11 @@ export default function MyWarningsCard() {
       if (issuerIds.length > 0) {
         const { data: issuers } = await supabase
           .from('profiles')
-          .select('user_id, full_name')
-          .in('user_id', issuerIds);
+          .select('id, full_name')
+          .in('id', issuerIds);
         
         issuers?.forEach(i => {
-          if (i.user_id) issuerMap[i.user_id] = i.full_name || '';
+          if (i.id) issuerMap[i.id] = i.full_name || '';
         });
       }
       

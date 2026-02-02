@@ -59,13 +59,14 @@ export function useSalaryAdvances(branchId: string | undefined) {
       
       let profileMap: Record<string, string> = {};
       if (userIds.length > 0) {
+        // profiles.id = user_id after migration
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('user_id, full_name')
-          .in('user_id', userIds);
+          .select('id, full_name')
+          .in('id', userIds);
         
         profiles?.forEach(p => {
-          if (p.user_id) profileMap[p.user_id] = p.full_name || 'Sin nombre';
+          if (p.id) profileMap[p.id] = p.full_name || 'Sin nombre';
         });
       }
       
@@ -100,13 +101,14 @@ export function useMyAdvances(userId: string | undefined) {
       let profileMap: Record<string, string> = {};
       
       if (authorizerIds.length > 0) {
+        // profiles.id = user_id after migration
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('user_id, full_name')
-          .in('user_id', authorizerIds);
+          .select('id, full_name')
+          .in('id', authorizerIds);
         
         profiles?.forEach(p => {
-          if (p.user_id) profileMap[p.user_id] = p.full_name || '';
+          if (p.id) profileMap[p.id] = p.full_name || '';
         });
       }
       
@@ -143,13 +145,14 @@ export function useShiftAdvances(shiftId: string | undefined) {
       
       let profileMap: Record<string, string> = {};
       if (userIds.length > 0) {
+        // profiles.id = user_id after migration
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('user_id, full_name')
-          .in('user_id', userIds);
+          .select('id, full_name')
+          .in('id', userIds);
         
         profiles?.forEach(p => {
-          if (p.user_id) profileMap[p.user_id] = p.full_name || 'Sin nombre';
+          if (p.id) profileMap[p.id] = p.full_name || 'Sin nombre';
         });
       }
       
@@ -185,13 +188,14 @@ export function usePendingTransferAdvances(branchId: string | undefined) {
       let profileMap: Record<string, string> = {};
       
       if (userIds.length > 0) {
+        // profiles.id = user_id after migration
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('user_id, full_name')
-          .in('user_id', userIds);
+          .select('id, full_name')
+          .in('id', userIds);
         
         profiles?.forEach(p => {
-          if (p.user_id) profileMap[p.user_id] = p.full_name || 'Sin nombre';
+          if (p.id) profileMap[p.id] = p.full_name || 'Sin nombre';
         });
       }
       

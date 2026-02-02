@@ -68,16 +68,16 @@ export default function ClockInsPage() {
       
       if (error) throw error;
       
-      // Fetch profiles separately
+      // Fetch profiles separately (profiles.id = user_id after migration)
       const userIds = [...new Set(data?.map(e => e.user_id) || [])];
       if (userIds.length === 0) return [];
       
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('user_id, full_name')
-        .in('user_id', userIds);
+        .select('id, full_name')
+        .in('id', userIds);
       
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]));
+      const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]));
       
       return data?.map(entry => ({
         ...entry,
@@ -105,12 +105,13 @@ export default function ClockInsPage() {
       const userIds = [...new Set(data?.map(e => e.user_id) || [])];
       if (userIds.length === 0) return [];
       
+      // profiles.id = user_id after migration
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('user_id, full_name')
-        .in('user_id', userIds);
+        .select('id, full_name')
+        .in('id', userIds);
       
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]));
+      const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]));
       
       return data?.map(entry => ({
         ...entry,

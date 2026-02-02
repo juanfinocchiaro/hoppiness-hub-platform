@@ -71,20 +71,21 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Sucursal no encontrada");
     }
 
-    // Check if user already exists in profiles by email
+    // Check if user already exists in profiles by email (profiles.id = user_id after migration)
     const { data: existingProfile } = await supabase
       .from('profiles')
-      .select('user_id, full_name')
+      .select('id, full_name')
       .eq('email', normalizedEmail)
       .maybeSingle();
 
     // CASE 1: User already exists - add directly to user_branch_roles
-    if (existingProfile?.user_id) {
+    // After migration: profiles.id IS the user_id
+    if (existingProfile?.id) {
       // Check if already has a role in this branch
       const { data: existingRole } = await supabase
         .from('user_branch_roles')
         .select('id, is_active')
-        .eq('user_id', existingProfile.user_id)
+        .eq('user_id', existingProfile.id)
         .eq('branch_id', branch_id)
         .maybeSingle();
 
@@ -108,7 +109,7 @@ const handler = async (req: Request): Promise<Response> => {
         const { error: insertError } = await supabase
           .from('user_branch_roles')
           .insert({
-            user_id: existingProfile.user_id,
+            user_id: existingProfile.id,  // profiles.id = user_id after migration
             branch_id,
             local_role: role,
             is_active: true,
@@ -146,11 +147,11 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Ya existe una invitación pendiente para este email");
     }
 
-    // Get inviter name
+    // Get inviter name (profiles.id = user_id after migration)
     const { data: inviterProfile } = await supabase
       .from('profiles')
       .select('full_name')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
 
     // Generate unique token
