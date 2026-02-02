@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Bell, 
@@ -11,12 +12,14 @@ import {
   ChevronRight,
   Megaphone,
   MessageSquare,
+  CheckCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
   useUserCommunications, 
-  useMarkAsRead, 
+  useMarkAsRead,
+  useConfirmCommunication,
   getTypeLabel, 
   getTypeColor,
   type CommunicationWithSource,
@@ -28,6 +31,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 const TYPE_ICONS = {
   info: Info,
@@ -39,6 +43,7 @@ const TYPE_ICONS = {
 export default function MyCommunicationsCard() {
   const { data, isLoading } = useUserCommunications();
   const markAsRead = useMarkAsRead();
+  const confirmMutation = useConfirmCommunication();
   const [selectedComm, setSelectedComm] = useState<CommunicationWithSource | null>(null);
 
   const brandComms = data?.brand || [];
@@ -50,6 +55,19 @@ export default function MyCommunicationsCard() {
     setSelectedComm(comm);
     if (!comm.is_read) {
       await markAsRead.mutateAsync(comm.id);
+    }
+  };
+
+  const handleConfirm = async (commId: string) => {
+    try {
+      await confirmMutation.mutateAsync(commId);
+      toast.success('Comunicado confirmado');
+      // Update local state
+      if (selectedComm?.id === commId) {
+        setSelectedComm(prev => prev ? { ...prev, is_confirmed: true } : null);
+      }
+    } catch {
+      toast.error('Error al confirmar');
     }
   };
 
@@ -89,6 +107,7 @@ export default function MyCommunicationsCard() {
         </div>
         {comms.slice(0, 3).map(comm => {
           const TypeIcon = TYPE_ICONS[comm.type as keyof typeof TYPE_ICONS] || Info;
+          const needsConfirmation = comm.requires_confirmation && !comm.is_confirmed;
           
           return (
             <button
@@ -110,6 +129,11 @@ export default function MyCommunicationsCard() {
                     </span>
                     {!comm.is_read && (
                       <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
+                    )}
+                    {needsConfirmation && (
+                      <Badge variant="outline" className="text-xs px-1.5 py-0 border-orange-300 text-orange-600">
+                        Confirmar
+                      </Badge>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -194,10 +218,22 @@ export default function MyCommunicationsCard() {
                     <Badge variant="outline">{selectedComm.branch_name}</Badge>
                   )}
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Check className="w-4 h-4 text-green-500" />
-                  Leído
-                </div>
+                
+                {selectedComm.requires_confirmation && !selectedComm.is_confirmed ? (
+                  <Button 
+                    size="sm" 
+                    onClick={() => handleConfirm(selectedComm.id)}
+                    disabled={confirmMutation.isPending}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-1" />
+                    Confirmar lectura
+                  </Button>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Check className="w-4 h-4 text-green-500" />
+                    {selectedComm.is_confirmed ? 'Confirmado' : 'Leído'}
+                  </div>
+                )}
               </div>
             </>
           )}

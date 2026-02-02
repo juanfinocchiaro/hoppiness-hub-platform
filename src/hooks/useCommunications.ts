@@ -43,6 +43,8 @@ export interface CommunicationWithSource extends CommunicationWithRead {
   tag: string | null;
   custom_label: string | null;
   branch_name?: string;
+  requires_confirmation?: boolean;
+  is_confirmed?: boolean;
 }
 
 export function useUserCommunications() {
@@ -63,21 +65,25 @@ export function useUserCommunications() {
       
       if (commsError) throw commsError;
       
-      // Get user's reads
+      // Get user's reads with confirmation status
       const { data: reads, error: readsError } = await supabase
         .from('communication_reads')
-        .select('communication_id')
+        .select('communication_id, confirmed_at')
         .eq('user_id', user.id);
       
       if (readsError) throw readsError;
       
-      const readIds = new Set(reads?.map(r => r.communication_id) || []);
+      const readMap = new Map(reads?.map(r => [r.communication_id, r]) || []);
       
-      const allComms = (comms || []).map(c => ({
-        ...c,
-        is_read: readIds.has(c.id),
-        branch_name: (c.branches as any)?.name || null,
-      })) as CommunicationWithSource[];
+      const allComms = (comms || []).map(c => {
+        const readRecord = readMap.get(c.id);
+        return {
+          ...c,
+          is_read: !!readRecord,
+          is_confirmed: !!readRecord?.confirmed_at,
+          branch_name: (c.branches as any)?.name || null,
+        };
+      }) as CommunicationWithSource[];
       
       // Separate by source
       const brand = allComms.filter(c => c.source_type === 'brand');
@@ -117,6 +123,28 @@ export function useMarkAsRead() {
       if (error && !error.message.includes('duplicate')) {
         throw error;
       }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-communications'] });
+    },
+  });
+}
+
+export function useConfirmCommunication() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  
+  return useMutation({
+    mutationFn: async (communicationId: string) => {
+      if (!user) throw new Error('Not authenticated');
+      
+      const { error } = await supabase
+        .from('communication_reads')
+        .update({ confirmed_at: new Date().toISOString() })
+        .eq('communication_id', communicationId)
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-communications'] });

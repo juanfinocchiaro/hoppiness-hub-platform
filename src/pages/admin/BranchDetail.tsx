@@ -3,8 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, MapPin } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowLeft, MapPin, Settings, Users } from 'lucide-react';
 import BranchEditPanel from '@/components/admin/BranchEditPanel';
+import BranchTeamTab from '@/components/admin/BranchTeamTab';
 
 type PublicStatus = 'active' | 'coming_soon' | 'hidden';
 
@@ -81,13 +83,32 @@ export default function BranchDetail() {
         </Badge>
       </div>
 
-      {/* Panel de edición con tabs */}
-      <BranchEditPanel 
-        key={branch.id}
-        branch={branch} 
-        onSaved={refetch} 
-        onCancel={() => navigate('/mimarca')}
-      />
+      {/* Tabs */}
+      <Tabs defaultValue="info" className="w-full">
+        <TabsList>
+          <TabsTrigger value="info" className="gap-2">
+            <Settings className="h-4 w-4" />
+            Información
+          </TabsTrigger>
+          <TabsTrigger value="team" className="gap-2">
+            <Users className="h-4 w-4" />
+            Equipo
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="info" className="mt-6">
+          <BranchEditPanel 
+            key={branch.id}
+            branch={branch} 
+            onSaved={refetch} 
+            onCancel={() => navigate('/mimarca')}
+          />
+        </TabsContent>
+
+        <TabsContent value="team" className="mt-6">
+          <BranchTeamTab branchId={branch.id} branchName={branch.name} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
