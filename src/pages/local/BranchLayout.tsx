@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
 import { useEmbedMode } from '@/hooks/useEmbedMode';
+import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { ExternalLink } from '@/components/ui/ExternalLink';
 import { Button } from '@/components/ui/button';
 import {
@@ -52,6 +53,7 @@ import {
 } from '@/components/ui/sheet';
 import type { Tables } from '@/integrations/supabase/types';
 import ManagerDashboard from '@/components/local/ManagerDashboard';
+import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 import logoHoppinessBlue from '@/assets/logo-hoppiness-blue.png';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 
@@ -79,6 +81,7 @@ export default function BranchLayout() {
   const permissions = usePermissionsV2(branchId);
   const { avatarInfo, canAccessLocal, canAccessAdmin } = useRoleLandingV2();
   const { isEmbedded } = useEmbedMode();
+  const { isImpersonating } = useImpersonation();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -359,8 +362,11 @@ export default function BranchLayout() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Impersonation Banner */}
+      <ImpersonationBanner />
+      
       {/* Mobile Header */}
-      <header className="lg:hidden sticky top-0 z-50 bg-primary text-primary-foreground">
+      <header className={`lg:hidden sticky z-50 bg-primary text-primary-foreground ${isImpersonating ? 'top-[52px]' : 'top-0'}`}>
         <div className="flex items-center justify-between p-4">
           <Sheet>
             <SheetTrigger asChild>
@@ -440,7 +446,7 @@ export default function BranchLayout() {
       </header>
 
       <div className="flex">
-        <aside className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 bg-card border-r">
+        <aside className={`hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 bg-card border-r ${isImpersonating ? 'lg:top-[52px]' : ''}`}>
           {/* Header - Logo and title only */}
           <div className="p-6 border-b">
             <div className="flex items-center gap-3">

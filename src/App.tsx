@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
 import { AdminRoute, LocalRoute } from "@/components/guards";
 
 // Páginas públicas
@@ -67,10 +68,11 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
+        <ImpersonationProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
             {/* Rutas Públicas */}
             <Route path="/" element={<Index />} />
             <Route path="/ingresar" element={<Ingresar />} />
@@ -133,9 +135,10 @@ const App = () => (
               <Route path="configuracion/cierres" element={<ClosureConfigPage />} />
             </Route>
             
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </ImpersonationProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

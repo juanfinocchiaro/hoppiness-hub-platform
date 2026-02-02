@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { Button } from '@/components/ui/button';
 import {
   Collapsible,
@@ -22,9 +23,11 @@ import {
   Settings,
   FileText,
   MessageSquare,
+  Eye,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import NewBranchModal from './NewBranchModal';
+import ImpersonationSelector from './ImpersonationSelector';
 import { useUnreadMessagesCount } from '@/hooks/useContactMessages';
 
 interface NavItem {
@@ -57,7 +60,9 @@ interface AdminSidebarProps {
  */
 export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
   const location = useLocation();
+  const { canImpersonate, isImpersonating } = useImpersonation();
   const [showNewBranchModal, setShowNewBranchModal] = useState(false);
+  const [showImpersonationSelector, setShowImpersonationSelector] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     locales: true,
     personas: true,
@@ -173,6 +178,18 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
           </Button>
         </Link>
 
+        {/* Impersonation button - Only for superadmins */}
+        {canImpersonate && (
+          <Button
+            variant={isImpersonating ? 'secondary' : 'ghost'}
+            className={`w-full justify-start ${isImpersonating ? 'bg-amber-100 text-amber-900 hover:bg-amber-200' : ''}`}
+            onClick={() => setShowImpersonationSelector(true)}
+          >
+            <Eye className="w-4 h-4 mr-3" />
+            Ver como...
+          </Button>
+        )}
+
         {/* Collapsible sections */}
         {sections.map((section) => {
           const isActive = isSectionActive(section);
@@ -246,6 +263,11 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
         open={showNewBranchModal}
         onOpenChange={setShowNewBranchModal}
         onCreated={refetchBranches}
+      />
+
+      <ImpersonationSelector
+        open={showImpersonationSelector}
+        onOpenChange={setShowImpersonationSelector}
       />
     </>
   );
