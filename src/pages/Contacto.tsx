@@ -40,6 +40,7 @@ import {
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import { cn } from '@/lib/utils';
+import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 
 type SubjectType = 'consulta' | 'franquicia' | 'empleo' | 'pedidos' | 'proveedor';
 
@@ -721,6 +722,7 @@ ${formData.message || 'Sin mensaje adicional'}
     const successMsg = getSuccessMessage(formData.subject as SubjectType);
     return (
       <div className="min-h-screen bg-background">
+        <ImpersonationBanner />
         <PublicHeader />
         
         <section className="py-20 px-4">
@@ -747,6 +749,7 @@ ${formData.message || 'Sin mensaje adicional'}
 
   return (
     <div className="min-h-screen bg-background">
+      <ImpersonationBanner />
       <PublicHeader />
       
       {/* Hero */}

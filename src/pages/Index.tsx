@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
+import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 import { 
   SumateSection, 
   AwardsSection, 
@@ -30,6 +31,7 @@ import burgerProvoleta from '@/assets/burger-provoleta.png';
 export default function Index() {
   return (
     <div className="min-h-screen bg-background">
+      <ImpersonationBanner />
       <PublicHeader />
 
       {/* Hero Section - Nueva orientación a franquicias */}
