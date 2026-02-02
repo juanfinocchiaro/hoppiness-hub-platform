@@ -20,10 +20,11 @@ import { Calendar } from '@/components/ui/calendar';
 import { format, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { BranchPinCard } from '@/components/cuenta/BranchPinCard';
 
 export default function CuentaPerfil() {
   const { user } = useAuth();
-  const { localRole } = usePermissionsV2();
+  const { canAccessLocalPanel } = usePermissionsV2();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -33,10 +34,6 @@ export default function CuentaPerfil() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   
-  // PIN de fichaje state
-  const [clockPin, setClockPin] = useState('');
-  const [showPin, setShowPin] = useState(false);
-  
   // Password change state
   const [showPasswordSection, setShowPasswordSection] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -44,14 +41,11 @@ export default function CuentaPerfil() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPasswords, setShowPasswords] = useState(false);
 
-  const isEmployee = !!localRole;
-
   // Fetch profile data
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user) return null;
-      // profiles.id = user_id after migration
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -63,12 +57,35 @@ export default function CuentaPerfil() {
     enabled: !!user,
   });
 
+  // Fetch user branch roles for PIN management
+  const { data: branchRoles, isLoading: loadingRoles } = useQuery({
+    queryKey: ['user-branch-roles', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('user_branch_roles')
+        .select(`
+          id,
+          branch_id,
+          clock_pin,
+          local_role,
+          branches!inner(id, name)
+        `)
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  const isEmployee = canAccessLocalPanel || (branchRoles && branchRoles.length > 0);
+
   // Initialize form with profile data
   useEffect(() => {
     if (profile) {
       setFullName(profile.full_name || '');
       setPhone(profile.phone || '');
-      setClockPin(profile.clock_pin || '');
       setAvatarUrl(profile.avatar_url || null);
       if (profile.birth_date) {
         setBirthDate(new Date(profile.birth_date));
@@ -159,30 +176,6 @@ export default function CuentaPerfil() {
     }
   };
 
-  // Update clock PIN mutation
-  const updateClockPin = useMutation({
-    mutationFn: async (pin: string) => {
-      if (!user) throw new Error('No user');
-      // profiles.id = user_id after migration
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          clock_pin: pin || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
-      toast.success('PIN de fichaje actualizado');
-    },
-    onError: (error) => {
-      toast.error('Error al actualizar el PIN');
-      console.error(error);
-    },
-  });
-
   // Change password mutation
   const changePassword = useMutation({
     mutationFn: async ({ newPassword }: { newPassword: string }) => {
@@ -219,19 +212,6 @@ export default function CuentaPerfil() {
       .slice(0, 2)
       .join('')
       .toUpperCase();
-  };
-
-  const handlePinSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (clockPin && clockPin.length !== 4) {
-      toast.error('El PIN debe tener 4 dígitos');
-      return;
-    }
-    if (clockPin && !/^\d{4}$/.test(clockPin)) {
-      toast.error('El PIN debe contener solo números');
-      return;
-    }
-    updateClockPin.mutate(clockPin);
   };
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
@@ -412,66 +392,43 @@ export default function CuentaPerfil() {
                 </Card>
               </form>
 
-              {/* PIN de fichaje - Solo para empleados */}
+              {/* PIN de fichaje - Uno por cada sucursal del usuario */}
               {isEmployee && (
-                <form onSubmit={handlePinSubmit}>
-                  <Card>
-                    <CardHeader>
-                      <div className="flex items-center gap-2">
-                        <Fingerprint className="w-5 h-5 text-primary" />
-                        <CardTitle>PIN de Fichaje</CardTitle>
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <Fingerprint className="w-5 h-5 text-primary" />
+                      <CardTitle>PIN de Fichaje</CardTitle>
+                    </div>
+                    <CardDescription>
+                      Cada sucursal tiene su propio PIN de 4 dígitos para fichar entrada y salida
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {loadingRoles ? (
+                      <div className="flex justify-center py-4">
+                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                       </div>
-                      <CardDescription>
-                        Este PIN de 4 dígitos te permite fichar entrada y salida en tu sucursal
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="clockPin">PIN (4 dígitos)</Label>
-                        <div className="relative">
-                          <Input
-                            id="clockPin"
-                            type={showPin ? 'text' : 'password'}
-                            value={clockPin}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/\D/g, '').slice(0, 4);
-                              setClockPin(value);
-                            }}
-                            placeholder="••••"
-                            maxLength={4}
-                            className="pr-10 text-center text-2xl tracking-[0.5em] font-mono"
+                    ) : branchRoles && branchRoles.length > 0 ? (
+                      <div className="space-y-3">
+                        {branchRoles.map((role: any) => (
+                          <BranchPinCard
+                            key={role.id}
+                            branchName={(role.branches as any).name}
+                            branchId={role.branch_id}
+                            roleId={role.id}
+                            currentPin={role.clock_pin}
+                            userId={user?.id || ''}
                           />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-0 top-0 h-full px-3"
-                            onClick={() => setShowPin(!showPin)}
-                          >
-                            {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {profile?.clock_pin ? 'Ya tienes un PIN configurado' : 'Aún no tienes PIN configurado'}
-                        </p>
+                        ))}
                       </div>
-
-                      <Button 
-                        type="submit" 
-                        variant="outline"
-                        className="w-full"
-                        disabled={updateClockPin.isPending || clockPin.length !== 4}
-                      >
-                        {updateClockPin.isPending ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <Key className="w-4 h-4 mr-2" />
-                        )}
-                        {profile?.clock_pin ? 'Actualizar PIN' : 'Crear PIN'}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </form>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        No tenés sucursales asignadas
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
               )}
 
               {/* Cambiar contraseña */}
