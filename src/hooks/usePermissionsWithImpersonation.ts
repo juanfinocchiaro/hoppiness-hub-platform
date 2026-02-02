@@ -1,0 +1,157 @@
+/**
+ * usePermissionsWithImpersonation - Wrapper de usePermissionsV2 con soporte para impersonación
+ * 
+ * Cuando hay impersonación activa, retorna los permisos del usuario impersonado
+ * en lugar del usuario real. Las operaciones de DB siguen usando auth.uid() real.
+ */
+import { useMemo } from 'react';
+import { useImpersonation } from '@/contexts/ImpersonationContext';
+import { usePermissionsV2, type PermissionsV2, type BrandRole, type LocalRole, type UserBranchRole } from './usePermissionsV2';
+import type { Tables } from '@/integrations/supabase/types';
+
+type Branch = Tables<'branches'>;
+
+export function usePermissionsWithImpersonation(currentBranchId?: string): PermissionsV2 & { 
+  isViewingAs: boolean;
+  realUserPermissions: PermissionsV2 | null;
+} {
+  const realPermissions = usePermissionsV2(currentBranchId);
+  const { isImpersonating, targetUser } = useImpersonation();
+
+  // Calculate impersonated permissions
+  const impersonatedPermissions = useMemo((): PermissionsV2 | null => {
+    if (!isImpersonating || !targetUser) return null;
+
+    const brandRole = targetUser.brandRole;
+    const branchRoles = targetUser.branchRoles;
+    const accessibleBranches = targetUser.accessibleBranches;
+
+    // Get local role for current branch
+    const getLocalRoleForBranch = (branchId: string): LocalRole => {
+      const role = branchRoles.find(r => r.branch_id === branchId);
+      return role?.local_role || null;
+    };
+
+    const localRole = currentBranchId ? getLocalRoleForBranch(currentBranchId) : null;
+
+    // Role helpers
+    const isSuperadmin = brandRole === 'superadmin';
+    const isCoordinador = brandRole === 'coordinador';
+    const isInformes = brandRole === 'informes';
+    const isContadorMarca = brandRole === 'contador_marca';
+    const isFranquiciado = localRole === 'franquiciado';
+    const isEncargado = localRole === 'encargado';
+    const isContadorLocal = localRole === 'contador_local';
+    const isCajero = localRole === 'cajero';
+    const isEmpleado = localRole === 'empleado';
+
+    const canAccessBrandPanel = !!brandRole;
+    const canAccessLocalPanel = branchRoles.length > 0;
+
+    const hasAccessToBranch = (branchId: string): boolean => {
+      if (isSuperadmin) return true;
+      return branchRoles.some(r => r.branch_id === branchId);
+    };
+
+    const canApproveWithPin = isFranquiciado || isEncargado;
+    const hasCurrentBranchAccess = currentBranchId ? hasAccessToBranch(currentBranchId) : false;
+
+    // Brand permissions
+    const brandPermissions = {
+      canViewDashboard: !!brandRole,
+      canViewPnL: isSuperadmin || isInformes || isContadorMarca,
+      canViewComparativa: isSuperadmin || isInformes || isContadorMarca,
+      canViewHoursSummary: isSuperadmin || isInformes || isContadorMarca,
+      canViewLocales: !!brandRole,
+      canCreateLocales: isSuperadmin,
+      canViewProducts: isSuperadmin || isCoordinador,
+      canEditProducts: isSuperadmin || isCoordinador,
+      canManageModifiers: isSuperadmin || isCoordinador,
+      canManageIngredients: isSuperadmin || isCoordinador,
+      canEditPrices: isSuperadmin || isCoordinador,
+      canManagePromotions: isSuperadmin || isCoordinador,
+      canManageSuppliers: isSuperadmin,
+      canManageCentralTeam: isSuperadmin,
+      canSearchUsers: isSuperadmin,
+      canAssignRoles: isSuperadmin,
+      canManageMessages: isSuperadmin || isCoordinador,
+      canEditBrandConfig: isSuperadmin,
+      canManageChannels: isSuperadmin || isCoordinador,
+      canManageIntegrations: isSuperadmin,
+    };
+
+    // Local permissions
+    const localPermissions = {
+      canViewDashboard: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero),
+      canViewStock: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+      canOrderFromSupplier: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+      canDoInventoryCount: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+      canUploadInvoice: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado || isFranquiciado),
+      canViewSuppliers: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado || isFranquiciado),
+      canViewSupplierAccounts: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado || isFranquiciado),
+      canPaySupplier: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isFranquiciado),
+      canViewPurchaseHistory: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado || isFranquiciado),
+      canClockInOut: hasCurrentBranchAccess && (isSuperadmin || !!localRole),
+      canViewAllClockIns: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
+      canViewTeam: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+      canEditSchedules: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+      canViewMonthlyHours: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
+      canViewPayroll: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
+      canInviteEmployees: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+      canDeactivateEmployees: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+      canViewSalaryAdvances: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
+      canViewWarnings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
+      canViewSalesReports: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+      canViewLocalPnL: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isFranquiciado),
+      canViewCMV: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado),
+      canViewStockMovements: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+      canEditLocalConfig: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado),
+      canConfigPrinters: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+      canConfigShifts: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado),
+      canEnterSales: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero),
+    };
+
+    return {
+      loading: false,
+      error: null,
+      brandRole,
+      localRole,
+      branchRoles,
+      accessibleBranches,
+      isSuperadmin,
+      isCoordinador,
+      isInformes,
+      isContadorMarca,
+      isFranquiciado,
+      isEncargado,
+      isContadorLocal,
+      isCajero,
+      isEmpleado,
+      canAccessBrandPanel,
+      canAccessLocalPanel,
+      hasAccessToBranch,
+      getLocalRoleForBranch,
+      canApproveWithPin,
+      brand: brandPermissions,
+      local: localPermissions,
+      refetch: () => {}, // No-op for impersonation
+    };
+  }, [isImpersonating, targetUser, currentBranchId]);
+
+  // Return impersonated permissions if active, otherwise real permissions
+  if (isImpersonating && impersonatedPermissions) {
+    return {
+      ...impersonatedPermissions,
+      isViewingAs: true,
+      realUserPermissions: realPermissions,
+    };
+  }
+
+  return {
+    ...realPermissions,
+    isViewingAs: false,
+    realUserPermissions: null,
+  };
+}
+
+export default usePermissionsWithImpersonation;
