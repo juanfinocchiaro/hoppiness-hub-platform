@@ -77,10 +77,10 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
       const userIds = data.map(d => d.user_id);
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('user_id, full_name, email, avatar_url')
-        .in('user_id', userIds);
+        .select('id, full_name, email, avatar_url')
+        .in('id', userIds);
 
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
       return data.map(d => ({
         ...d,
@@ -98,15 +98,15 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id, full_name, email')
+        .select('id, full_name, email')
         .ilike('email', `%${searchEmail}%`)
         .limit(5);
 
       if (error) throw error;
 
-      // Filter out users already in this branch
+      // Filter out users already in this branch (profile.id = user_id)
       const existingUserIds = new Set(team.map(t => t.user_id));
-      return (data || []).filter(u => !existingUserIds.has(u.user_id));
+      return (data || []).filter(u => !existingUserIds.has(u.id));
     },
     enabled: searchEmail.length >= 3,
   });
@@ -178,7 +178,8 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
   });
 
   const handleSelectUser = (user: typeof searchResults[0]) => {
-    setSelectedUser(user);
+    // Map profile.id to user_id for state
+    setSelectedUser({ user_id: user.id, full_name: user.full_name, email: user.email });
     setShowAddModal(true);
   };
 
@@ -234,7 +235,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
                 ) : searchResults.length > 0 ? (
                   searchResults.map((user) => (
                     <button
-                      key={user.user_id}
+                      key={user.id}
                       onClick={() => handleSelectUser(user)}
                       className="w-full p-3 text-left hover:bg-muted flex items-center gap-3"
                     >

@@ -53,14 +53,14 @@ export default function ReadersModal({
 
       if (!reads?.length) return { readers: [], totalTargeted: 0 };
 
-      // Get profiles
+      // Get profiles (profiles.id = user_id after migration)
       const userIds = reads.map(r => r.user_id);
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('user_id, full_name, avatar_url')
-        .in('user_id', userIds);
+        .select('id, full_name, avatar_url')
+        .in('id', userIds);
 
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
       const readers = reads.map(r => ({
         ...r,

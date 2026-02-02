@@ -75,15 +75,15 @@ export default function PendingScheduleRequests({ branchId }: PendingScheduleReq
       
       if (error) throw error;
 
-      // Fetch profiles for each user
+      // Fetch profiles for each user (profiles.id = user_id after migration)
       if (data && data.length > 0) {
         const userIds = [...new Set(data.map(r => r.user_id))];
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('user_id, full_name, avatar_url')
-          .in('user_id', userIds);
+          .select('id, full_name, avatar_url')
+          .in('id', userIds);
 
-        const profileMap = new Map(profiles?.map(p => [p.user_id, p]));
+        const profileMap = new Map(profiles?.map(p => [p.id, p]));
         
         return data.map(r => ({
           ...r,

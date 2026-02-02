@@ -51,10 +51,11 @@ export default function CuentaPerfil() {
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user) return null;
+      // profiles.id = user_id after migration
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single();
       if (error) throw error;
       return data;
@@ -79,6 +80,7 @@ export default function CuentaPerfil() {
   const updateProfile = useMutation({
     mutationFn: async (data: { full_name: string; phone: string; birth_date?: string | null }) => {
       if (!user) throw new Error('No user');
+      // profiles.id = user_id after migration
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -87,7 +89,7 @@ export default function CuentaPerfil() {
           birth_date: data.birth_date,
           updated_at: new Date().toISOString(),
         })
-        .eq('user_id', user.id);
+        .eq('id', user.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -135,14 +137,14 @@ export default function CuentaPerfil() {
         .from('avatars')
         .getPublicUrl(filePath);
 
-      // Update profile
+      // Update profile (profiles.id = user_id after migration)
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ 
           avatar_url: publicUrl,
           updated_at: new Date().toISOString(),
         })
-        .eq('user_id', user.id);
+        .eq('id', user.id);
 
       if (updateError) throw updateError;
 
@@ -161,13 +163,14 @@ export default function CuentaPerfil() {
   const updateClockPin = useMutation({
     mutationFn: async (pin: string) => {
       if (!user) throw new Error('No user');
+      // profiles.id = user_id after migration
       const { error } = await supabase
         .from('profiles')
         .update({
           clock_pin: pin || null,
           updated_at: new Date().toISOString(),
         })
-        .eq('user_id', user.id);
+        .eq('id', user.id);
       if (error) throw error;
     },
     onSuccess: () => {

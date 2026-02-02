@@ -36,10 +36,11 @@ export default function CuentaDashboard() {
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user) return null;
+      // profiles.id = user_id after migration
       const result = await supabase
         .from('profiles')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single();
       if (result.error) throw result.error;
       return result.data;

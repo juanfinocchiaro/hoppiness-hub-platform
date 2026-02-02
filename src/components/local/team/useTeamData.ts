@@ -22,7 +22,7 @@ export function useTeamData(branchId: string | undefined) {
 
       const userIds = roles.map(r => r.user_id);
 
-      // 2. Get profiles
+      // 2. Get profiles (profiles.id = user_id after migration)
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name, email, phone')

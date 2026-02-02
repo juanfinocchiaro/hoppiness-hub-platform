@@ -72,13 +72,13 @@ function useCurrentlyWorking(branchId: string) {
 
       if (!workingUserIds.length) return [];
 
-      // Obtener perfiles
+      // Obtener perfiles (profiles.id = user_id after migration)
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('user_id, full_name, avatar_url')
-        .in('user_id', workingUserIds.map(u => u.user_id));
+        .select('id, full_name, avatar_url')
+        .in('id', workingUserIds.map(u => u.user_id));
 
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
       return workingUserIds.map(w => ({
         id: w.user_id,
