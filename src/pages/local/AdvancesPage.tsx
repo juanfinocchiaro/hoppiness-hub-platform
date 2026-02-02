@@ -55,16 +55,15 @@ export default function AdvancesPage() {
   const markTransferred = useMarkAdvanceTransferred();
   const cancelAdvance = useCancelAdvance();
 
-  // Fetch team members using user_roles_v2 + profiles
+  // Fetch team members using user_branch_roles + profiles
   const { data: teamMembers } = useQuery({
     queryKey: ['branch-team-members', branchId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('user_roles_v2')
+        .from('user_branch_roles')
         .select('user_id')
-        .contains('branch_ids', [branchId!])
-        .eq('is_active', true)
-        .not('local_role', 'is', null);
+        .eq('branch_id', branchId!)
+        .eq('is_active', true);
       
       if (error) throw error;
       
