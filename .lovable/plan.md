@@ -1,80 +1,123 @@
 
 
-# Plan: Corregir Detección de PIN Faltante en Dashboard
+# Plan: Impersonación Completa - Afectar TODA la Navegación
 
-## Problema
+## Problema Detectado
 
-El banner "¡Configurá tu PIN de fichaje!" en `/cuenta` no se muestra correctamente porque:
+Actualmente la impersonación solo afecta parcialmente porque hay **3 puntos de fuga**:
 
-1. Busca en `profiles.clock_pin` (columna obsoleta)
-2. Debería buscar en `user_branch_roles.clock_pin`
-3. No considera que un usuario puede tener PINs faltantes en algunas sucursales pero no en otras
-
-## Solución
-
-### Cambio en `CuentaDashboard.tsx`
-
-**Estado actual (línea 82):**
-```typescript
-const needsPinSetup = hasLocalAccess && profile && !profile.clock_pin;
+```text
+                    usePermissionsV2 (REAL)
+                    /        |          \
+   useRoleLandingV2    BranchLayout    RequireAdmin/RequireLocal
+        ↓                   ↓                    ↓
+   Determina landing   Verifica acceso      Guards de ruta
+   y roles            a sucursal
 ```
 
-**Nuevo enfoque:**
-```typescript
-// Fetch branch roles with clock_pin status
-const { data: branchRolesData } = useQuery({
-  queryKey: ['user-branch-roles-pins', user?.id],
-  queryFn: async () => {
-    if (!user) return [];
-    const { data, error } = await supabase
-      .from('user_branch_roles')
-      .select('id, branch_id, clock_pin, branches!inner(name)')
-      .eq('user_id', user.id)
-      .eq('is_active', true);
-    if (error) throw error;
-    return data || [];
-  },
-  enabled: !!user && hasLocalAccess,
-});
+Cuando impersonás a Braian (empleado de Manantiales):
+- Los guards siguen viendo que VOS sos Superadmin
+- BranchLayout sigue mostrando todas las sucursales
+- Podés navegar a General Paz aunque Braian no tiene acceso
 
-// Check if ANY branch is missing PIN
-const branchesMissingPin = branchRolesData?.filter(r => !r.clock_pin) || [];
-const needsPinSetup = branchesMissingPin.length > 0;
+---
+
+## Solución: Cambiar a usePermissionsWithImpersonation
+
+| Archivo | Hook Actual | Hook Nuevo |
+|---------|-------------|------------|
+| `useRoleLandingV2.ts` | `usePermissionsV2` | `usePermissionsWithImpersonation` |
+| `BranchLayout.tsx` | `usePermissionsV2(branchId)` | `usePermissionsWithImpersonation(branchId)` |
+
+---
+
+## Cambios Específicos
+
+### 1. `src/hooks/useRoleLandingV2.ts`
+
+**Línea 4 - Cambiar import:**
+```typescript
+// ANTES
+import { usePermissionsV2, type BrandRole, type LocalRole } from './usePermissionsV2';
+
+// DESPUÉS
+import { usePermissionsWithImpersonation } from './usePermissionsWithImpersonation';
+import type { BrandRole, LocalRole } from './usePermissionsV2';
 ```
 
-### Mejora del Banner
-
-Actualizar `MissingPinBanner` para mostrar cuántas sucursales tienen PIN faltante:
-
+**Línea 43 - Cambiar hook:**
 ```typescript
-interface MissingPinBannerProps {
-  employeeName?: string;
-  missingCount?: number;  // Cuántas sucursales faltan
-  totalCount?: number;    // Total de sucursales del usuario
-}
+// ANTES
+} = usePermissionsV2();
+
+// DESPUÉS  
+} = usePermissionsWithImpersonation();
 ```
 
-Mensaje mejorado:
-- "Te falta configurar el PIN en 1 sucursal"
-- "Te falta configurar el PIN en 2 sucursales"
+### 2. `src/pages/local/BranchLayout.tsx`
+
+**Línea 13 - Cambiar import:**
+```typescript
+// ANTES
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+
+// DESPUÉS
+import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
+```
+
+**Línea 81 - Cambiar llamada:**
+```typescript
+// ANTES
+const permissions = usePermissionsV2(branchId);
+
+// DESPUÉS
+const permissions = usePermissionsWithImpersonation(branchId);
+```
+
+---
+
+## Resultado Esperado
+
+| Escenario | Antes | Después |
+|-----------|-------|---------|
+| Impersonando Braian en /mimarca | Ve todo Mi Marca | Redirige a /cuenta |
+| Impersonando Braian intenta /milocal/general-paz | Ve General Paz | Redirige a /milocal/manantiales o /cuenta |
+| Impersonando Braian en /cuenta | Ve Mi Cuenta | Ve Mi Cuenta (correcto) |
+| Selector de sucursales | Muestra todas | Muestra SOLO Manantiales |
+
+---
+
+## Flujo Corregido
+
+```text
+1. Superadmin está en /mimarca
+2. Click "Ver como..." → Selecciona Braian (empleado Manantiales)
+3. useRoleLandingV2 detecta: "Braian es empleado, landing = /cuenta"
+4. RequireAdmin ve: "Braian NO tiene brand_role"
+5. REDIRECT automático a /cuenta
+6. Si Braian intenta ir a /milocal/general-paz:
+   - BranchLayout ve que Braian solo tiene acceso a Manantiales
+   - REDIRECT a /milocal (selector) o /cuenta
+```
+
+---
 
 ## Archivos a Modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| `CuentaDashboard.tsx` | Fetch de `user_branch_roles` para verificar PINs |
-| `MissingPinBanner.tsx` | Mostrar cantidad de sucursales sin PIN |
+| `src/hooks/useRoleLandingV2.ts` | Usar `usePermissionsWithImpersonation` |
+| `src/pages/local/BranchLayout.tsx` | Usar `usePermissionsWithImpersonation` |
 
-## Resultado Esperado
+---
 
-1. Dalma (y otros sin PIN) verán el banner amarillo correctamente
-2. El banner indicará cuántas sucursales faltan configurar
-3. Al hacer clic, irán a `/cuenta/perfil` donde pueden crear el PIN por sucursal
+## Complejidad
 
-## Verificación
+**Baja** - Solo 2 archivos, ~4 líneas cada uno.
 
-Después de implementar:
-1. Login como Dalma → Debería ver banner "Te falta configurar PIN en 1 sucursal"
-2. Login como Juan → NO debería ver el banner (ya tiene PIN)
-3. Crear PIN de Dalma → Banner desaparece
+---
+
+## Nota de Seguridad
+
+Las operaciones de base de datos (crear, editar, eliminar) siguen usando tu `auth.uid()` real. La impersonación solo afecta la **visualización** y **navegación**, no los permisos reales de RLS.
 
