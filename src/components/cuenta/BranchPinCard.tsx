@@ -31,12 +31,20 @@ export function BranchPinCard({ branchName, branchId, roleId, currentPin, userId
       return;
     }
 
+    // Validar que tenemos los IDs necesarios
+    if (!branchId || !roleId) {
+      console.error('Missing branchId or roleId');
+      setPinAvailable(null);
+      return;
+    }
+
     setCheckingPin(true);
     try {
       const { data, error } = await supabase.rpc('is_clock_pin_available', {
         _branch_id: branchId,
         _pin: pinValue,
-        _exclude_user_id: userId || null,
+        // Pasar null si userId está vacío o no existe
+        _exclude_user_id: userId && userId.trim() !== '' ? userId : null,
       });
 
       if (error) throw error;
@@ -52,11 +60,17 @@ export function BranchPinCard({ branchName, branchId, roleId, currentPin, userId
   // Save PIN mutation
   const savePinMutation = useMutation({
     mutationFn: async (newPin: string) => {
+      // Validar que tenemos los IDs necesarios
+      if (!branchId || !roleId) {
+        throw new Error('Datos de sucursal incompletos');
+      }
+
       // First verify availability
       const { data: available, error: checkError } = await supabase.rpc('is_clock_pin_available', {
         _branch_id: branchId,
         _pin: newPin,
-        _exclude_user_id: userId || null,
+        // Pasar null si userId está vacío o no existe
+        _exclude_user_id: userId && userId.trim() !== '' ? userId : null,
       });
 
       if (checkError) {

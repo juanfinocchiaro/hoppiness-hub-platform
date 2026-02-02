@@ -413,6 +413,8 @@ export default function CuentaPerfil() {
                       <div className="space-y-3">
                         {branchRoles.map((role: any) => {
                           const branchName = role.branches?.name || 'Sucursal';
+                          // No renderizar si faltan datos críticos
+                          if (!role.id || !role.branch_id || !user?.id) return null;
                           return (
                             <BranchPinCard
                               key={role.id}
@@ -420,7 +422,7 @@ export default function CuentaPerfil() {
                               branchId={role.branch_id}
                               roleId={role.id}
                               currentPin={role.clock_pin}
-                              userId={user?.id || ''}
+                              userId={user.id}
                             />
                           );
                         })}
