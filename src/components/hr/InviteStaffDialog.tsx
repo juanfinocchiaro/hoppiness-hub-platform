@@ -19,15 +19,21 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2, Mail, UserPlus, CheckCircle, Search, ArrowLeft, AlertCircle, User } from 'lucide-react';
+import { Loader2, Mail, UserPlus, CheckCircle, Search, ArrowLeft, AlertCircle, User, RefreshCw, UserCheck } from 'lucide-react';
 
 type LocalRole = 'encargado' | 'cajero' | 'empleado';
 type SearchStatus = 'idle' | 'searching' | 'found' | 'not_found';
+type BranchMemberStatus = 'available' | 'already_active' | 'inactive';
 
 interface FoundUser {
   id: string;
   full_name: string;
   email: string;
+}
+
+interface BranchRoleInfo {
+  status: BranchMemberStatus;
+  currentRole?: string;
 }
 
 interface InviteStaffDialogProps {
@@ -56,6 +62,7 @@ export function InviteStaffDialog({
   const [loading, setLoading] = useState(false);
   const [searchStatus, setSearchStatus] = useState<SearchStatus>('idle');
   const [foundUser, setFoundUser] = useState<FoundUser | null>(null);
+  const [branchRoleInfo, setBranchRoleInfo] = useState<BranchRoleInfo | null>(null);
 
   const handleClose = (isOpen: boolean) => {
     if (!isOpen) {
@@ -63,6 +70,7 @@ export function InviteStaffDialog({
       setRole('cajero');
       setSearchStatus('idle');
       setFoundUser(null);
+      setBranchRoleInfo(null);
       setLoading(false);
     }
     onOpenChange(isOpen);
@@ -73,6 +81,7 @@ export function InviteStaffDialog({
     if (searchStatus !== 'idle') {
       setSearchStatus('idle');
       setFoundUser(null);
+      setBranchRoleInfo(null);
     }
   };
 
@@ -99,13 +108,41 @@ export function InviteStaffDialog({
         return;
       }
 
-      if (profile) {
-        setFoundUser(profile);
-        setSearchStatus('found');
-      } else {
+      if (!profile) {
         setFoundUser(null);
+        setBranchRoleInfo(null);
         setSearchStatus('not_found');
+        return;
       }
+
+      setFoundUser(profile);
+
+      // Check if user already has a role in this branch
+      const { data: existingRole } = await supabase
+        .from('user_branch_roles')
+        .select('id, local_role, is_active')
+        .eq('user_id', profile.id)
+        .eq('branch_id', branchId)
+        .maybeSingle();
+
+      if (existingRole) {
+        if (existingRole.is_active) {
+          setBranchRoleInfo({ 
+            status: 'already_active', 
+            currentRole: existingRole.local_role 
+          });
+        } else {
+          setBranchRoleInfo({ 
+            status: 'inactive', 
+            currentRole: existingRole.local_role 
+          });
+          setRole(existingRole.local_role as LocalRole);
+        }
+      } else {
+        setBranchRoleInfo({ status: 'available' });
+      }
+
+      setSearchStatus('found');
     } catch (error) {
       console.error('Error searching profile:', error);
       toast.error('Error al buscar el usuario');
@@ -116,7 +153,43 @@ export function InviteStaffDialog({
   const handleReset = () => {
     setSearchStatus('idle');
     setFoundUser(null);
+    setBranchRoleInfo(null);
     setEmail('');
+    setRole('cajero');
+  };
+
+  const handleReactivate = async () => {
+    if (!foundUser) return;
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('user_branch_roles')
+        .update({ is_active: true, local_role: role, updated_at: new Date().toISOString() })
+        .eq('user_id', foundUser.id)
+        .eq('branch_id', branchId);
+
+      if (error) throw error;
+
+      toast.success(`${foundUser.full_name} reactivado en el equipo`);
+      handleClose(false);
+      onSuccess?.();
+    } catch (error: any) {
+      console.error('Error reactivating user:', error);
+      toast.error(error.message || 'Error al reactivar colaborador');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getRoleName = (r: string) => {
+    switch (r) {
+      case 'encargado': return 'Encargado';
+      case 'cajero': return 'Cajero';
+      case 'empleado': return 'Colaborador';
+      case 'franquiciado': return 'Franquiciado';
+      default: return r;
+    }
   };
 
   const handleSubmit = async () => {
@@ -187,6 +260,10 @@ export function InviteStaffDialog({
           <DialogDescription>
             {searchStatus === 'idle' || searchStatus === 'searching'
               ? `Buscá el email del colaborador para agregarlo al equipo de ${branchName}.`
+              : searchStatus === 'found' && branchRoleInfo?.status === 'already_active'
+              ? `Este colaborador ya está activo en el equipo.`
+              : searchStatus === 'found' && branchRoleInfo?.status === 'inactive'
+              ? `Podés reactivar a este ex-colaborador.`
               : searchStatus === 'found'
               ? `Confirmá el rol para agregar a ${foundUser?.full_name} al equipo.`
               : `El email no está registrado. Podés enviar una invitación.`
@@ -242,8 +319,113 @@ export function InviteStaffDialog({
           </div>
         )}
 
-        {/* Step 2a: User Found */}
-        {searchStatus === 'found' && foundUser && (
+        {/* Step 2a: User Found - Already Active */}
+        {searchStatus === 'found' && foundUser && branchRoleInfo?.status === 'already_active' && (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950">
+              <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 mb-2">
+                <UserCheck className="h-4 w-4" />
+                <span className="font-medium text-sm">Ya es parte del equipo</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-blue-200 dark:bg-blue-800 flex items-center justify-center">
+                  <User className="h-5 w-5 text-blue-700 dark:text-blue-300" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">{foundUser.full_name}</p>
+                  <p className="text-sm text-muted-foreground">{foundUser.email}</p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                    Rol actual: {getRoleName(branchRoleInfo.currentRole || '')}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              Podés editar su rol desde la lista de equipo.
+            </p>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleReset}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Buscar otro
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => handleClose(false)}>
+                Cerrar
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+
+        {/* Step 2b: User Found - Inactive (Ex-collaborator) */}
+        {searchStatus === 'found' && foundUser && branchRoleInfo?.status === 'inactive' && (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
+              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 mb-2">
+                <RefreshCw className="h-4 w-4" />
+                <span className="font-medium text-sm">Ex-colaborador encontrado</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-amber-200 dark:bg-amber-800 flex items-center justify-center">
+                  <User className="h-5 w-5 text-amber-700 dark:text-amber-300" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">{foundUser.full_name}</p>
+                  <p className="text-sm text-muted-foreground">{foundUser.email}</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    Rol anterior: {getRoleName(branchRoleInfo.currentRole || '')}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              Este colaborador estuvo en el equipo y fue dado de baja. Podés reactivarlo con un nuevo rol.
+            </p>
+
+            <div className="space-y-2">
+              <Label htmlFor="role">Rol</Label>
+              <Select value={role} onValueChange={(v) => setRole(v as LocalRole)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {INVITABLE_ROLES.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>
+                      {r.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {getRoleDescription(role)}
+              </p>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleReset}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Buscar otro
+              </Button>
+              <Button onClick={handleReactivate} disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Reactivando...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Reactivar colaborador
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+
+        {/* Step 2c: User Found - Available (New to branch) */}
+        {searchStatus === 'found' && foundUser && branchRoleInfo?.status === 'available' && (
           <div className="space-y-4">
             <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950">
               <div className="flex items-center gap-2 text-green-700 dark:text-green-300 mb-2">
