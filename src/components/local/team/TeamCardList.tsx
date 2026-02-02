@@ -82,9 +82,6 @@ export function TeamCardList({ team, branchId, onMemberUpdated }: TeamCardListPr
                     <div className="text-sm font-medium">
                       {formatHours(member.hours_this_month)}h
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      / {formatHours(member.monthly_hours_target)}h
-                    </div>
                   </div>
                   
                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0">

@@ -10,13 +10,12 @@ export function useTeamData(branchId: string | undefined) {
     queryFn: async () => {
       if (!branchId) return [];
 
-      // 1. Get users with local roles for this branch
+      // 1. Get users with local roles for this branch from user_branch_roles
       const { data: roles, error: rolesError } = await supabase
-        .from('user_roles_v2')
-        .select('id, user_id, local_role, branch_ids, created_at')
-        .not('local_role', 'is', null)
-        .eq('is_active', true)
-        .contains('branch_ids', [branchId]);
+        .from('user_branch_roles')
+        .select('id, user_id, local_role, is_active, created_at')
+        .eq('branch_id', branchId)
+        .eq('is_active', true);
 
       if (rolesError) throw rolesError;
       if (!roles?.length) return [];

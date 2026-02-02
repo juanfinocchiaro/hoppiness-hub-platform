@@ -44,6 +44,8 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Missing required fields: email, role, branch_id");
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+
     // Check permissions using V2 functions
     const { data: isSuperadmin } = await supabase.rpc('is_superadmin', {
       _user_id: user.id
@@ -55,7 +57,7 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     if (!isSuperadmin && !isHrRole) {
-      throw new Error("No tienes permiso para invitar colaboradores a esta sucursal");
+      throw new Error("No tienes permiso para agregar colaboradores a esta sucursal");
     }
 
     // Get branch info
@@ -69,18 +71,72 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Sucursal no encontrada");
     }
 
-    // Get inviter name
-    const { data: inviterProfile } = await supabase
+    // Check if user already exists in profiles by email
+    const { data: existingProfile } = await supabase
       .from('profiles')
-      .select('full_name')
-      .eq('user_id', user.id)
-      .single();
+      .select('user_id, full_name')
+      .eq('email', normalizedEmail)
+      .maybeSingle();
 
-    // Check for existing pending invitation in staff_invitations
+    // CASE 1: User already exists - add directly to user_branch_roles
+    if (existingProfile?.user_id) {
+      // Check if already has a role in this branch
+      const { data: existingRole } = await supabase
+        .from('user_branch_roles')
+        .select('id, is_active')
+        .eq('user_id', existingProfile.user_id)
+        .eq('branch_id', branch_id)
+        .maybeSingle();
+
+      if (existingRole) {
+        if (existingRole.is_active) {
+          throw new Error("Este usuario ya es parte del equipo de esta sucursal");
+        }
+        // Reactivate existing role
+        const { error: updateError } = await supabase
+          .from('user_branch_roles')
+          .update({ 
+            is_active: true, 
+            local_role: role,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingRole.id);
+
+        if (updateError) throw updateError;
+      } else {
+        // Create new branch role
+        const { error: insertError } = await supabase
+          .from('user_branch_roles')
+          .insert({
+            user_id: existingProfile.user_id,
+            branch_id,
+            local_role: role,
+            is_active: true,
+          });
+
+        if (insertError) throw insertError;
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          action: 'added',
+          message: `${existingProfile.full_name || normalizedEmail} agregado al equipo`,
+          user_name: existingProfile.full_name,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // CASE 2: User doesn't exist - send invitation email
+    // Check for existing pending invitation
     const { data: existingInvitation } = await supabase
       .from('staff_invitations')
       .select('id')
-      .eq('email', email.toLowerCase().trim())
+      .eq('email', normalizedEmail)
       .eq('branch_id', branch_id)
       .eq('status', 'pending')
       .gt('expires_at', new Date().toISOString())
@@ -89,6 +145,13 @@ const handler = async (req: Request): Promise<Response> => {
     if (existingInvitation) {
       throw new Error("Ya existe una invitación pendiente para este email");
     }
+
+    // Get inviter name
+    const { data: inviterProfile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('user_id', user.id)
+      .single();
 
     // Generate unique token
     const inviteToken = crypto.randomUUID();
@@ -99,7 +162,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: invitation, error: inviteError } = await supabase
       .from('staff_invitations')
       .insert({
-        email: email.toLowerCase().trim(),
+        email: normalizedEmail,
         full_name: full_name || null,
         role,
         branch_id,
@@ -181,7 +244,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
       body: JSON.stringify({
         from: "Hoppiness Club <no-reply@hoppiness.club>",
-        to: [email],
+        to: [normalizedEmail],
         subject: `¡Te invitaron a unirte al equipo de ${branch.name}!`,
         html: htmlContent,
       }),
@@ -193,7 +256,8 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Invitación enviada a ${email}`,
+        action: 'invited',
+        message: `Invitación enviada a ${normalizedEmail}`,
         invitation_id: invitation.id 
       }),
       {

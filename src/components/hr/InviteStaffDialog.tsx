@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2, Mail, UserPlus } from 'lucide-react';
+import { Loader2, Mail, UserPlus, CheckCircle } from 'lucide-react';
 
 type LocalRole = 'encargado' | 'cajero' | 'empleado';
 
@@ -74,14 +74,23 @@ export function InviteStaffDialog({
       });
 
       if (response.error) {
-        throw new Error(response.error.message || 'Error al enviar invitación');
+        throw new Error(response.error.message || 'Error al procesar solicitud');
       }
 
       if (response.data?.error) {
         throw new Error(response.data.error);
       }
 
-      toast.success(`Invitación enviada a ${email}`);
+      // Differentiate message based on action
+      const action = response.data?.action;
+      if (action === 'added') {
+        toast.success(response.data.message || `Colaborador agregado al equipo`, {
+          icon: <CheckCircle className="h-4 w-4 text-green-500" />,
+        });
+      } else {
+        toast.success(response.data.message || `Invitación enviada a ${email}`);
+      }
+
       setEmail('');
       setRole('cajero');
       onOpenChange(false);
@@ -89,7 +98,7 @@ export function InviteStaffDialog({
 
     } catch (error: any) {
       console.error('Error sending invitation:', error);
-      toast.error(error.message || 'Error al enviar la invitación');
+      toast.error(error.message || 'Error al procesar la solicitud');
     } finally {
       setLoading(false);
     }
@@ -101,10 +110,11 @@ export function InviteStaffDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
-            Invitar Colaborador
+            Agregar Colaborador
           </DialogTitle>
           <DialogDescription>
-            Enviá una invitación por email para que se una al equipo de <strong>{branchName}</strong>
+            Ingresá el email del colaborador para agregarlo al equipo de <strong>{branchName}</strong>.
+            Si ya tiene cuenta, se agregará automáticamente. Si no, recibirá una invitación por email.
           </DialogDescription>
         </DialogHeader>
 
@@ -154,12 +164,12 @@ export function InviteStaffDialog({
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enviando...
+                  Procesando...
                 </>
               ) : (
                 <>
-                  <Mail className="mr-2 h-4 w-4" />
-                  Enviar Invitación
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Agregar
                 </>
               )}
             </Button>

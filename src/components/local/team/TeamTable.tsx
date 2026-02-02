@@ -31,7 +31,7 @@ export function TeamTable({ team, branchId, onMemberUpdated }: TeamTableProps) {
               <TableHead className="min-w-[150px]">Nombre</TableHead>
               <TableHead className="min-w-[180px]">Email</TableHead>
               <TableHead className="w-[100px]">Rol</TableHead>
-              <TableHead className="w-[100px] text-right">Horas/mes</TableHead>
+              <TableHead className="w-[100px] text-right">Horas mes</TableHead>
               <TableHead className="w-[120px]">Últ. fichaje</TableHead>
               <TableHead className="w-[120px]">Estado</TableHead>
             </TableRow>
@@ -78,11 +78,7 @@ export function TeamTable({ team, branchId, onMemberUpdated }: TeamTableProps) {
                       </span>
                     </TableCell>
                     <TableCell className="text-right text-sm">
-                      <span className={cn(
-                        member.hours_this_month < member.monthly_hours_target * 0.5 && "text-amber-600"
-                      )}>
-                        {formatHours(member.hours_this_month)} / {formatHours(member.monthly_hours_target)}
-                      </span>
+                      {formatHours(member.hours_this_month)}h
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {formatClockIn(member.last_clock_in)}

@@ -13,6 +13,8 @@ import { toast } from 'sonner';
 import { useEmployeeDetails } from './useTeamData';
 import { WarningModal } from './WarningModal';
 import { EmployeeDataModal } from './EmployeeDataModal';
+import { EmployeeClockInsModal } from './EmployeeClockInsModal';
+import { EmployeeScheduleModal } from './EmployeeScheduleModal';
 import type { TeamMember, NoteEntry } from './types';
 import { WARNING_TYPE_LABELS, calculateAge } from './types';
 import { format } from 'date-fns';
@@ -33,6 +35,8 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
   const [newNote, setNewNote] = useState('');
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showClockInsModal, setShowClockInsModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   // Check if user has clock PIN configured
   const { data: profileData } = useQuery({
@@ -87,15 +91,12 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
     onError: () => toast.error('Error al agregar nota'),
   });
 
-  // Deactivate mutation
+  // Deactivate mutation - now uses user_branch_roles
   const deactivateMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
-        .from('user_roles_v2')
-        .update({ 
-          local_role: null,
-          branch_ids: [],
-        })
+        .from('user_branch_roles')
+        .update({ is_active: false })
         .eq('id', member.role_id);
       if (error) throw error;
     },
@@ -268,15 +269,30 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
         <h4 className="font-semibold text-sm uppercase text-muted-foreground">Acciones</h4>
         
         <div className="space-y-2">
-          <Button variant="outline" size="sm" className="w-full justify-start">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full justify-start"
+            onClick={() => setShowClockInsModal(true)}
+          >
             <ClipboardList className="h-4 w-4 mr-2" />
             Ver fichajes
           </Button>
-          <Button variant="outline" size="sm" className="w-full justify-start">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full justify-start"
+            onClick={() => setShowScheduleModal(true)}
+          >
             <Clock className="h-4 w-4 mr-2" />
             Ver horarios
           </Button>
-          <Button variant="outline" size="sm" className="w-full justify-start">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full justify-start"
+            onClick={() => toast.info('Funcionalidad de liquidación próximamente')}
+          >
             <DollarSign className="h-4 w-4 mr-2" />
             Ver liquidación
           </Button>
@@ -337,6 +353,26 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['employee-data', member.user_id, branchId] });
           }}
+        />
+      )}
+
+      {showClockInsModal && (
+        <EmployeeClockInsModal
+          userId={member.user_id}
+          userName={member.full_name}
+          branchId={branchId}
+          open={showClockInsModal}
+          onOpenChange={setShowClockInsModal}
+        />
+      )}
+
+      {showScheduleModal && (
+        <EmployeeScheduleModal
+          userId={member.user_id}
+          userName={member.full_name}
+          branchId={branchId}
+          open={showScheduleModal}
+          onOpenChange={setShowScheduleModal}
         />
       )}
     </div>

@@ -36,7 +36,6 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
   const [cuil, setCuil] = useState('');
   
   // Labor data
-  const [monthlyHoursTarget, setMonthlyHoursTarget] = useState('160');
   const [hourlyRate, setHourlyRate] = useState('');
   
   // Clock PIN (stored in profiles)
@@ -75,7 +74,6 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
       setCbu(existingData.cbu || '');
       setAlias(existingData.alias || '');
       setCuil(existingData.cuil || '');
-      setMonthlyHoursTarget(String(existingData.monthly_hours_target || 160));
       setHourlyRate(existingData.hourly_rate ? String(existingData.hourly_rate) : '');
     }
   }, [existingData]);
@@ -109,7 +107,6 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
         cbu: cbu || null,
         alias: alias || null,
         cuil: cuil || null,
-        monthly_hours_target: parseInt(monthlyHoursTarget) || 160,
         hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
       };
 
@@ -245,24 +242,14 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
           </TabsContent>
 
           <TabsContent value="labor" className="space-y-4 mt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Horas objetivo/mes</Label>
-                <Input 
-                  type="number"
-                  value={monthlyHoursTarget}
-                  onChange={(e) => setMonthlyHoursTarget(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Valor hora ($)</Label>
-                <Input 
-                  type="number"
-                  value={hourlyRate}
-                  onChange={(e) => setHourlyRate(e.target.value)}
-                  placeholder="0.00"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Valor hora ($)</Label>
+              <Input 
+                type="number"
+                value={hourlyRate}
+                onChange={(e) => setHourlyRate(e.target.value)}
+                placeholder="0.00"
+              />
             </div>
 
             {/* Clock PIN */}
