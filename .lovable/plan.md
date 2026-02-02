@@ -1,123 +1,63 @@
 
 
-# Plan: Impersonación Completa - Afectar TODA la Navegación
+# Plan: Agregar ImpersonationBanner a la Página de Inicio
 
-## Problema Detectado
+## Problema
 
-Actualmente la impersonación solo afecta parcialmente porque hay **3 puntos de fuga**:
+La página de inicio (`/`) no tiene el banner de impersonación, lo que impide ver que estás en modo "Ver como..." y no tenés forma de salir.
 
-```text
-                    usePermissionsV2 (REAL)
-                    /        |          \
-   useRoleLandingV2    BranchLayout    RequireAdmin/RequireLocal
-        ↓                   ↓                    ↓
-   Determina landing   Verifica acceso      Guards de ruta
-   y roles            a sucursal
-```
+## Solución
 
-Cuando impersonás a Braian (empleado de Manantiales):
-- Los guards siguen viendo que VOS sos Superadmin
-- BranchLayout sigue mostrando todas las sucursales
-- Podés navegar a General Paz aunque Braian no tiene acceso
+Agregar el `ImpersonationBanner` a la página Index.tsx para que el banner sutil aparezca en todas las páginas públicas también.
 
 ---
 
-## Solución: Cambiar a usePermissionsWithImpersonation
+## Cambios
 
-| Archivo | Hook Actual | Hook Nuevo |
-|---------|-------------|------------|
-| `useRoleLandingV2.ts` | `usePermissionsV2` | `usePermissionsWithImpersonation` |
-| `BranchLayout.tsx` | `usePermissionsV2(branchId)` | `usePermissionsWithImpersonation(branchId)` |
+### Archivo: `src/pages/Index.tsx`
 
----
-
-## Cambios Específicos
-
-### 1. `src/hooks/useRoleLandingV2.ts`
-
-**Línea 4 - Cambiar import:**
+**Agregar import (línea ~12):**
 ```typescript
-// ANTES
-import { usePermissionsV2, type BrandRole, type LocalRole } from './usePermissionsV2';
-
-// DESPUÉS
-import { usePermissionsWithImpersonation } from './usePermissionsWithImpersonation';
-import type { BrandRole, LocalRole } from './usePermissionsV2';
+import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 ```
 
-**Línea 43 - Cambiar hook:**
+**Agregar banner al inicio del componente (línea ~32):**
 ```typescript
-// ANTES
-} = usePermissionsV2();
-
-// DESPUÉS  
-} = usePermissionsWithImpersonation();
-```
-
-### 2. `src/pages/local/BranchLayout.tsx`
-
-**Línea 13 - Cambiar import:**
-```typescript
-// ANTES
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
-
-// DESPUÉS
-import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
-```
-
-**Línea 81 - Cambiar llamada:**
-```typescript
-// ANTES
-const permissions = usePermissionsV2(branchId);
-
-// DESPUÉS
-const permissions = usePermissionsWithImpersonation(branchId);
+return (
+  <div className="min-h-screen bg-background">
+    <ImpersonationBanner />  {/* ← NUEVO */}
+    <PublicHeader />
+    ...
 ```
 
 ---
 
-## Resultado Esperado
+## Páginas que Ya Tienen el Banner
 
-| Escenario | Antes | Después |
-|-----------|-------|---------|
-| Impersonando Braian en /mimarca | Ve todo Mi Marca | Redirige a /cuenta |
-| Impersonando Braian intenta /milocal/general-paz | Ve General Paz | Redirige a /milocal/manantiales o /cuenta |
-| Impersonando Braian en /cuenta | Ve Mi Cuenta | Ve Mi Cuenta (correcto) |
-| Selector de sucursales | Muestra todas | Muestra SOLO Manantiales |
+| Página | Estado |
+|--------|--------|
+| `/cuenta` (CuentaDashboard) | ✅ Agregado |
+| `/mimarca/*` (BrandLayout) | ✅ Ya estaba |
+| `/milocal/*` (BranchLayout) | ✅ Ya estaba |
 
----
+## Páginas que Necesitan el Banner
 
-## Flujo Corregido
-
-```text
-1. Superadmin está en /mimarca
-2. Click "Ver como..." → Selecciona Braian (empleado Manantiales)
-3. useRoleLandingV2 detecta: "Braian es empleado, landing = /cuenta"
-4. RequireAdmin ve: "Braian NO tiene brand_role"
-5. REDIRECT automático a /cuenta
-6. Si Braian intenta ir a /milocal/general-paz:
-   - BranchLayout ve que Braian solo tiene acceso a Manantiales
-   - REDIRECT a /milocal (selector) o /cuenta
-```
+| Página | Archivo |
+|--------|---------|
+| `/` (Inicio) | `src/pages/Index.tsx` |
+| `/franquicias` | `src/pages/Franquicias.tsx` |
+| `/nosotros` | `src/pages/Nosotros.tsx` |
+| `/contacto` | `src/pages/Contacto.tsx` |
 
 ---
 
-## Archivos a Modificar
+## Resultado
 
-| Archivo | Cambio |
-|---------|--------|
-| `src/hooks/useRoleLandingV2.ts` | Usar `usePermissionsWithImpersonation` |
-| `src/pages/local/BranchLayout.tsx` | Usar `usePermissionsWithImpersonation` |
+El banner sutil "Viendo como [Nombre]" aparecerá en la esquina superior de TODAS las páginas, permitiendo salir del modo impersonación desde cualquier lugar.
 
 ---
 
 ## Complejidad
 
-**Baja** - Solo 2 archivos, ~4 líneas cada uno.
-
----
-
-## Nota de Seguridad
-
-Las operaciones de base de datos (crear, editar, eliminar) siguen usando tu `auth.uid()` real. La impersonación solo afecta la **visualización** y **navegación**, no los permisos reales de RLS.
+**Muy baja** - 2 líneas por archivo (4 archivos públicos).
 
