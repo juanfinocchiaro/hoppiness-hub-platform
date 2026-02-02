@@ -25,7 +25,11 @@ import {
   FileText,
   CalendarX,
   ChevronRight,
+  QrCode,
+  Link2,
+  ExternalLink,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { format, differenceInMinutes } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useTodayClosures, useEnabledShifts } from '@/hooks/useShiftClosures';
@@ -384,22 +388,61 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
                       {pending?.pendingSignatures || 0}
                     </Badge>
                   </div>
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+            </Link>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )}
 
-      {/* Shift Closure Modal */}
-      <ShiftClosureModal
-        open={showEntryModal}
-        onOpenChange={setShowEntryModal}
-        branchId={branch.id}
-        branchName={branch.name}
-        defaultShift={selectedShift}
-      />
-    </div>
+  {/* FICHAJE DEL LOCAL - QR y Link */}
+  {!isCajero && branch.clock_code && (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <QrCode className="w-4 h-4" />
+          Fichaje del Local
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Código: <span className="font-mono font-bold text-foreground">{branch.clock_code}</span>
+        </p>
+        
+        <div className="flex flex-wrap gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              const url = `${window.location.origin}/fichaje/${branch.clock_code}`;
+              navigator.clipboard.writeText(url);
+              toast.success('Link copiado al portapapeles');
+            }}
+          >
+            <Link2 className="w-4 h-4 mr-2" />
+            Copiar Link
+          </Button>
+          
+          <Link to={`/fichaje-qr/${branch.id}`} target="_blank">
+            <Button variant="outline" size="sm">
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Ver QR
+            </Button>
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
+  )}
+
+  {/* Shift Closure Modal */}
+  <ShiftClosureModal
+    open={showEntryModal}
+    onOpenChange={setShowEntryModal}
+    branchId={branch.id}
+    branchName={branch.name}
+    defaultShift={selectedShift}
+  />
+</div>
   );
 }
 

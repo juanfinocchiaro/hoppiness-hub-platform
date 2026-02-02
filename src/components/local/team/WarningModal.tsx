@@ -43,6 +43,7 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
   const [type, setType] = useState<string>('verbal');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState<Date>(new Date());
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [step, setStep] = useState<ModalStep>('form');
   const [savedWarningId, setSavedWarningId] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -369,7 +370,7 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
 
             <div className="space-y-2">
               <Label>Fecha del incidente</Label>
-              <Popover>
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -386,7 +387,10 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
                   <Calendar
                     mode="single"
                     selected={date}
-                    onSelect={(d) => d && setDate(d)}
+                    onSelect={(d) => {
+                      if (d) setDate(d);
+                      setCalendarOpen(false);
+                    }}
                     initialFocus
                   />
                 </PopoverContent>

@@ -60,6 +60,7 @@ const SHIFT_PRESETS = [
   { label: 'Tarde (14:00 - 22:00)', start: '14:00', end: '22:00' },
   { label: 'Noche (18:00 - 02:00)', start: '18:00', end: '02:00' },
   { label: 'Mediodía (11:00 - 15:00)', start: '11:00', end: '15:00' },
+  { label: 'Personalizado', start: null, end: null, isCustom: true },
   { label: 'Franco', start: null, end: null, isDayOff: true },
 ];
 
@@ -87,6 +88,8 @@ export default function CreateScheduleWizard({
   // For bulk apply
   const [selectedDays, setSelectedDays] = useState<Set<string>>(new Set());
   const [bulkPreset, setBulkPreset] = useState<string>('');
+  const [customStartTime, setCustomStartTime] = useState('19:30');
+  const [customEndTime, setCustomEndTime] = useState('23:30');
   
   // Fetch data
   const { team, loading: loadingTeam } = useTeamData(branchId);
@@ -192,12 +195,22 @@ export default function CreateScheduleWizard({
     const newData = { ...scheduleData };
     selectedDays.forEach(dateStr => {
       if (!holidayDates.has(dateStr)) {
-        newData[dateStr] = {
-          date: dateStr,
-          start_time: preset.start,
-          end_time: preset.end,
-          is_day_off: preset.isDayOff || false,
-        };
+        // If custom preset, use custom times
+        if ((preset as any).isCustom) {
+          newData[dateStr] = {
+            date: dateStr,
+            start_time: customStartTime,
+            end_time: customEndTime,
+            is_day_off: false,
+          };
+        } else {
+          newData[dateStr] = {
+            date: dateStr,
+            start_time: preset.start,
+            end_time: preset.end,
+            is_day_off: preset.isDayOff || false,
+          };
+        }
       }
     });
     setScheduleData(newData);
@@ -521,19 +534,46 @@ export default function CreateScheduleWizard({
     return (
       <div className="space-y-4">
         {/* Toolbar */}
-        <div className="flex flex-wrap gap-2">
-          <Select value={bulkPreset} onValueChange={setBulkPreset}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Seleccionar turno" />
-            </SelectTrigger>
-            <SelectContent>
-              {SHIFT_PRESETS.map((preset) => (
-                <SelectItem key={preset.label} value={preset.label}>
-                  {preset.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex flex-wrap gap-2 items-end">
+          <div className="space-y-1">
+            <Label className="text-xs">Turno</Label>
+            <Select value={bulkPreset} onValueChange={setBulkPreset}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Seleccionar turno" />
+              </SelectTrigger>
+              <SelectContent>
+                {SHIFT_PRESETS.map((preset) => (
+                  <SelectItem key={preset.label} value={preset.label}>
+                    {preset.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Custom time inputs - show when "Personalizado" is selected */}
+          {bulkPreset === 'Personalizado' && (
+            <>
+              <div className="space-y-1">
+                <Label className="text-xs">Entrada</Label>
+                <Input 
+                  type="time" 
+                  value={customStartTime}
+                  onChange={(e) => setCustomStartTime(e.target.value)}
+                  className="w-[110px]"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Salida</Label>
+                <Input 
+                  type="time" 
+                  value={customEndTime}
+                  onChange={(e) => setCustomEndTime(e.target.value)}
+                  className="w-[110px]"
+                />
+              </div>
+            </>
+          )}
           
           <Button
             variant="outline"

@@ -7,6 +7,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
   SelectContent,
@@ -30,6 +33,7 @@ import {
   PartyPopper,
   Info,
   MessageSquare,
+  Users,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -55,6 +59,8 @@ export default function LocalCommunicationsPage() {
     body: '',
     type: 'info' as 'info' | 'warning' | 'urgent' | 'celebration',
   });
+  const [targetType, setTargetType] = useState<'all' | 'selected'>('all');
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
   const { data: branch } = useQuery({
     queryKey: ['branch', branchId],
@@ -66,6 +72,32 @@ export default function LocalCommunicationsPage() {
         .single();
       if (error) throw error;
       return data;
+    },
+    enabled: !!branchId,
+  });
+
+  // Fetch team members
+  const { data: teamMembers } = useQuery({
+    queryKey: ['branch-team-for-comms', branchId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_branch_roles')
+        .select('user_id')
+        .eq('branch_id', branchId!)
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      
+      const userIds = data?.map(r => r.user_id) || [];
+      if (userIds.length === 0) return [];
+      
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds)
+        .order('full_name');
+      
+      return (profiles || []).map(p => ({ user_id: p.id, full_name: p.full_name }));
     },
     enabled: !!branchId,
   });
@@ -90,7 +122,7 @@ export default function LocalCommunicationsPage() {
     mutationFn: async () => {
       if (!user || !branchId) throw new Error('No autenticado');
 
-      const { error } = await supabase.from('communications').insert({
+      const insertData: any = {
         title: formData.title,
         body: formData.body,
         type: formData.type,
@@ -100,7 +132,16 @@ export default function LocalCommunicationsPage() {
         created_by: user.id,
         is_published: true,
         published_at: new Date().toISOString(),
-      });
+      };
+
+      // If specific users selected, add target info
+      if (targetType === 'selected' && selectedUsers.length > 0) {
+        // Store target_roles as the selected user IDs for filtering
+        // Note: This is a workaround using the existing schema
+        insertData.target_roles = selectedUsers;
+      }
+
+      const { error } = await supabase.from('communications').insert(insertData);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -108,6 +149,8 @@ export default function LocalCommunicationsPage() {
       toast.success('Comunicado enviado al equipo');
       setOpen(false);
       setFormData({ title: '', body: '', type: 'info' });
+      setTargetType('all');
+      setSelectedUsers([]);
     },
     onError: () => toast.error('Error al enviar comunicado'),
   });
@@ -124,6 +167,14 @@ export default function LocalCommunicationsPage() {
   });
 
   const getTypeInfo = (type: string) => TYPES.find(t => t.value === type) || TYPES[0];
+
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUsers(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -191,10 +242,53 @@ export default function LocalCommunicationsPage() {
                 </Select>
               </div>
 
+              {/* Recipients Selector */}
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Destinatarios
+                </Label>
+                <RadioGroup value={targetType} onValueChange={(v) => setTargetType(v as 'all' | 'selected')}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="all" id="all" />
+                    <label htmlFor="all" className="text-sm">Todo el equipo</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="selected" id="selected" />
+                    <label htmlFor="selected" className="text-sm">Seleccionar empleados</label>
+                  </div>
+                </RadioGroup>
+
+                {targetType === 'selected' && (
+                  <ScrollArea className="h-40 border rounded-md p-2">
+                    <div className="space-y-2">
+                      {teamMembers?.map(member => (
+                        <div key={member.user_id} className="flex items-center gap-2">
+                          <Checkbox
+                            id={member.user_id!}
+                            checked={selectedUsers.includes(member.user_id!)}
+                            onCheckedChange={() => toggleUserSelection(member.user_id!)}
+                          />
+                          <label htmlFor={member.user_id!} className="text-sm cursor-pointer">
+                            {member.full_name || 'Sin nombre'}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+                
+                {targetType === 'selected' && selectedUsers.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {selectedUsers.length} empleado(s) seleccionado(s)
+                  </p>
+                )}
+              </div>
+
               <Button 
                 className="w-full" 
                 onClick={() => createMutation.mutate()}
-                disabled={!formData.title || !formData.body || createMutation.isPending}
+                disabled={!formData.title || !formData.body || createMutation.isPending || (targetType === 'selected' && selectedUsers.length === 0)}
               >
                 <Send className="w-4 h-4 mr-2" />
                 Enviar al Equipo
@@ -228,6 +322,11 @@ export default function LocalCommunicationsPage() {
                       <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                         <span>{format(new Date(comm.published_at), "d MMM yyyy HH:mm", { locale: es })}</span>
                         <span>👁 {readCount} lecturas</span>
+                        {comm.target_roles && comm.target_roles.length > 0 && (
+                          <Badge variant="outline" className="text-xs">
+                            {comm.target_roles.length} destinatarios
+                          </Badge>
+                        )}
                       </div>
                     </div>
                     <Button
