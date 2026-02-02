@@ -18,6 +18,7 @@ import MyCommunicationsCard from '@/components/cuenta/MyCommunicationsCard';
 import MissingPinBanner from '@/components/cuenta/MissingPinBanner';
 import MyRequestsCard from '@/components/cuenta/MyRequestsCard';
 import MyRegulationsCard from '@/components/cuenta/MyRegulationsCard';
+import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 
 export default function CuentaDashboard() {
   const { user, signOut } = useAuth();
@@ -119,6 +120,7 @@ export default function CuentaDashboard() {
 
   return (
     <div className="min-h-screen flex flex-col bg-muted/30">
+      <ImpersonationBanner />
       <PublicHeader />
       
       <main className="flex-1 container mx-auto px-4 py-6 md:py-8">

@@ -28,36 +28,31 @@ export default function ImpersonationBanner() {
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[100] bg-amber-500 text-amber-950 px-4 py-2 shadow-lg">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <Eye className="w-5 h-5 flex-shrink-0" />
-          <span className="font-medium hidden sm:inline">Modo Vista Previa:</span>
-          <div className="flex items-center gap-2 min-w-0">
-            {targetUser.avatar_url ? (
-              <img 
-                src={targetUser.avatar_url} 
-                alt="" 
-                className="w-6 h-6 rounded-full object-cover flex-shrink-0"
-              />
-            ) : (
-              <User className="w-5 h-5 flex-shrink-0" />
-            )}
-            <span className="font-semibold truncate">{targetUser.full_name}</span>
-            <span className="text-amber-800 hidden md:inline">({getRoleLabel()})</span>
-          </div>
+    <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[100]">
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-100 border border-amber-300 rounded-full shadow-sm text-sm">
+        <Eye className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+        <span className="text-amber-800 font-medium">Viendo como</span>
+        <div className="flex items-center gap-1.5">
+          {targetUser.avatar_url ? (
+            <img 
+              src={targetUser.avatar_url} 
+              alt="" 
+              className="w-5 h-5 rounded-full object-cover"
+            />
+          ) : (
+            <User className="w-4 h-4 text-amber-700" />
+          )}
+          <span className="font-semibold text-amber-900 max-w-[120px] truncate">
+            {targetUser.full_name.split(' ')[0]}
+          </span>
         </div>
-        
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
           onClick={stopImpersonating}
-          className="flex-shrink-0 text-amber-950 hover:bg-amber-600/20 hover:text-amber-950"
+          className="ml-1 p-1 rounded-full hover:bg-amber-200 text-amber-700 hover:text-amber-900 transition-colors"
+          aria-label="Salir del modo vista previa"
         >
-          <X className="w-4 h-4 mr-1" />
-          <span className="hidden sm:inline">Salir del modo</span>
-          <span className="sm:hidden">Salir</span>
-        </Button>
+          <X className="w-3.5 h-3.5" />
+        </button>
       </div>
     </div>
   );
