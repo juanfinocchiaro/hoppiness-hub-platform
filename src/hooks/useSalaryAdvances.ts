@@ -37,17 +37,28 @@ export interface SalaryAdvance {
   authorizer_name?: string;
 }
 
-export function useSalaryAdvances(branchId: string | undefined) {
+export function useSalaryAdvances(branchId: string | undefined, selectedMonth?: Date) {
   return useQuery({
     queryKey: salaryAdvanceKeys.list(branchId || ''),
     queryFn: async () => {
       if (!branchId) return [];
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('salary_advances')
         .select('*')
         .eq('branch_id', branchId)
         .order('created_at', { ascending: false });
+      
+      // Filter by month if provided
+      if (selectedMonth) {
+        const startOfMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
+        const endOfMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0, 23, 59, 59);
+        query = query
+          .gte('created_at', startOfMonth.toISOString())
+          .lte('created_at', endOfMonth.toISOString());
+      }
+      
+      const { data, error } = await query;
       
       if (error) throw error;
       
@@ -226,7 +237,8 @@ export function useCreateAdvance() {
       if (!user) throw new Error('No autenticado');
       
       const isCash = params.paymentMethod === 'cash';
-      const status = isCash ? 'paid' : 'pending_transfer';
+      // Both cash and transfer are recorded as already completed
+      const status = isCash ? 'paid' : 'transferred';
       
       // Create advance - using user_id (V2) + employee_id for DB constraint
       const { data: advance, error: advanceError } = await supabase
@@ -241,8 +253,10 @@ export function useCreateAdvance() {
           status,
           authorized_by: user.id,
           authorized_at: new Date().toISOString(),
-          paid_by: isCash ? user.id : null,
-          paid_at: isCash ? new Date().toISOString() : null,
+          paid_by: user.id,
+          paid_at: new Date().toISOString(),
+          transferred_by: !isCash ? user.id : null,
+          transferred_at: !isCash ? new Date().toISOString() : null,
           shift_id: isCash ? params.shiftId : null,
           created_by: user.id,
         })

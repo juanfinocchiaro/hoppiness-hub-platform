@@ -198,7 +198,6 @@ export default function BranchLayout() {
         { to: 'equipo/horarios', label: 'Horarios', icon: Clock, show: lp.canEditSchedules },
         { to: 'equipo/fichajes', label: 'Fichajes', icon: Clock, show: lp.canViewAllClockIns },
         { to: 'equipo/adelantos', label: 'Adelantos', icon: DollarSign, show: lp.canViewTeam },
-        { to: 'equipo/apercibimientos', label: 'Apercibimientos', icon: AlertTriangle, show: lp.canViewTeam },
         { to: 'equipo/reglamentos', label: 'Firmas Reglamento', icon: FileText, show: lp.canEditSchedules },
         { to: 'equipo/comunicados', label: 'Comunicados', icon: MessageSquare, show: lp.canViewTeam },
       ]

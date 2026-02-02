@@ -28,11 +28,11 @@ export function useContextualHelp(pageId: string): UseContextualHelpResult {
       const { data, error } = await supabase
         .from('profiles')
         .select('help_dismissed_pages, show_floating_help')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single();
       
       if (error) throw error;
-      return data;
+      return data as { help_dismissed_pages: string[] | null; show_floating_help: boolean | null } | null;
     },
     enabled: !!user?.id,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -54,7 +54,7 @@ export function useContextualHelp(pageId: string): UseContextualHelpResult {
         .update({
           help_dismissed_pages: [...currentDismissed, pageId],
         })
-        .eq('user_id', user.id);
+        .eq('id', user.id);
       
       if (error) throw error;
     },
@@ -73,7 +73,7 @@ export function useContextualHelp(pageId: string): UseContextualHelpResult {
         .update({
           show_floating_help: !showFloatingHelp,
         })
-        .eq('user_id', user.id);
+        .eq('id', user.id);
       
       if (error) throw error;
     },
