@@ -1,7 +1,8 @@
 /**
  * useRoleLandingV2 - Determina landing y accesos basado en roles fijos
  */
-import { usePermissionsV2, type BrandRole, type LocalRole } from './usePermissionsV2';
+import { usePermissionsWithImpersonation } from './usePermissionsWithImpersonation';
+import type { BrandRole, LocalRole } from './usePermissionsV2';
 
 // Alineado con los roles reales de la DB: brand_role_type y local_role_type
 export type AvatarType = 
@@ -40,7 +41,7 @@ export function useRoleLandingV2() {
     isContadorLocal,
     isCajero,
     isEmpleado,
-  } = usePermissionsV2();
+  } = usePermissionsWithImpersonation();
 
   const getAvatarInfo = (): AvatarInfo => {
     // Roles de marca

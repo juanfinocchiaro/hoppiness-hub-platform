@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { Link, Outlet, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
 import { useEmbedMode } from '@/hooks/useEmbedMode';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
@@ -78,7 +78,7 @@ export default function BranchLayout() {
   const { user, signOut, loading: authLoading } = useAuth();
   const { branchId } = useParams();
   
-  const permissions = usePermissionsV2(branchId);
+  const permissions = usePermissionsWithImpersonation(branchId);
   const { avatarInfo, canAccessLocal, canAccessAdmin } = useRoleLandingV2();
   const { isEmbedded } = useEmbedMode();
   const { isImpersonating } = useImpersonation();
