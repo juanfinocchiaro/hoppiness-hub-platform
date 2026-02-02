@@ -1656,6 +1656,10 @@ export type Database = {
       }
       has_financial_access: { Args: { p_branch_id: string }; Returns: boolean }
       has_hr_access: { Args: { p_branch_id: string }; Returns: boolean }
+      is_branch_manager_v2: {
+        Args: { _branch_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_cashier_for_branch: {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
