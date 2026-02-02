@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,9 +10,10 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { FileText, Upload, CheckCircle, AlertCircle, Clock, Camera, User } from 'lucide-react';
+import { FileText, Upload, CheckCircle, AlertCircle, Clock, Camera, User, Printer, Eye, ExternalLink } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { RegulationSignatureSheet } from './RegulationSignatureSheet';
 
 interface RegulationSignaturesPanelProps {
   branchId: string;
@@ -22,6 +23,7 @@ interface TeamMemberSignature {
   user_id: string;
   full_name: string;
   local_role: string;
+  dni?: string;
   signature: {
     id: string;
     signed_at: string;
@@ -33,8 +35,10 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [uploadingFor, setUploadingFor] = useState<TeamMemberSignature | null>(null);
+  const [previewFor, setPreviewFor] = useState<TeamMemberSignature | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
 
   // Fetch latest regulation
   const { data: latestRegulation } = useQuery({
@@ -51,19 +55,33 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
     },
   });
 
+  // Fetch branch name
+  const { data: branch } = useQuery({
+    queryKey: ['branch-name', branchId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('branches')
+        .select('name')
+        .eq('id', branchId)
+        .single();
+      return data;
+    },
+  });
+
   // Fetch team members with their signature status
   const { data: teamSignatures = [], isLoading } = useQuery({
     queryKey: ['team-regulation-signatures', branchId, latestRegulation?.version],
     queryFn: async () => {
       if (!latestRegulation) return [];
 
-      // Get team members for this branch
+      // Get team members for this branch (excluding franchisees)
       const { data: roles } = await supabase
         .from('user_roles_v2')
         .select('user_id, local_role')
         .contains('branch_ids', [branchId])
         .eq('is_active', true)
-        .not('local_role', 'is', null);
+        .not('local_role', 'is', null)
+        .not('local_role', 'eq', 'franquiciado');  // Exclude franchisees
 
       if (!roles?.length) return [];
 
@@ -75,6 +93,13 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
         .select('id, full_name')
         .in('id', userIds);
 
+      // Get employee data for DNI
+      const { data: employeeData } = await supabase
+        .from('employee_data')
+        .select('user_id, dni')
+        .eq('branch_id', branchId)
+        .in('user_id', userIds);
+
       // Get signatures for latest regulation
       const { data: signatures } = await supabase
         .from('regulation_signatures')
@@ -85,11 +110,13 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
       // Merge data
       const signaturesMap = new Map(signatures?.map(s => [s.user_id, s]));
       const profilesMap = new Map(profiles?.map(p => [p.id, p]));
+      const employeeDataMap = new Map(employeeData?.map(e => [e.user_id, e]));
 
       return roles.map(role => ({
-        user_id: role.user_id,  // This is already the auth user_id
+        user_id: role.user_id,
         full_name: profilesMap.get(role.user_id)?.full_name || 'Sin nombre',
         local_role: role.local_role,
+        dni: employeeDataMap.get(role.user_id)?.dni || undefined,
         signature: signaturesMap.get(role.user_id) || null,
       })) as TeamMemberSignature[];
     },
@@ -135,6 +162,40 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
     }
   };
 
+  const handlePrint = () => {
+    const printContent = printRef.current;
+    if (!printContent) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('No se pudo abrir la ventana de impresión');
+      return;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Constancia de Firma - ${previewFor?.full_name}</title>
+          <style>
+            @media print {
+              body { margin: 0; padding: 20px; }
+              @page { size: A4; margin: 15mm; }
+            }
+          </style>
+        </head>
+        <body>
+          ${printContent.innerHTML}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
   if (!latestRegulation) {
     return (
       <Card>
@@ -162,7 +223,6 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
 
   const getRoleLabel = (role: string) => {
     const labels: Record<string, string> = {
-      franquiciado: 'Franquiciado',
       encargado: 'Encargado',
       contador_local: 'Contador',
       cajero: 'Cajero',
@@ -185,15 +245,30 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
                 Versión {latestRegulation.version}: {latestRegulation.title}
               </CardDescription>
             </div>
-            <Badge variant={pendingSignatures.length > 0 ? 'secondary' : 'outline'}>
-              {signedCount}/{teamSignatures.length} firmados
-            </Badge>
+            <div className="flex items-center gap-2">
+              {latestRegulation.document_url && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const url = supabase.storage.from('regulations').getPublicUrl(latestRegulation.document_url).data.publicUrl;
+                    window.open(url, '_blank');
+                  }}
+                >
+                  <ExternalLink className="w-4 h-4 mr-1" />
+                  Ver PDF
+                </Button>
+              )}
+              <Badge variant={pendingSignatures.length > 0 ? 'secondary' : 'outline'}>
+                {signedCount}/{teamSignatures.length} firmados
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Alert for pending signatures */}
           {pendingSignatures.length > 0 && (
-            <div className={`p-3 rounded-lg flex items-start gap-2 ${daysSincePublished > 5 ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700'}`}>
+            <div className={`p-3 rounded-lg flex items-start gap-2 ${daysSincePublished > 5 ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400'}`}>
               <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-medium">
@@ -216,12 +291,16 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
                 <div 
                   key={member.user_id} 
                   className={`flex items-center justify-between p-3 rounded-lg border ${
-                    member.signature ? 'bg-green-50/50 border-green-200' : 'bg-muted/50'
+                    member.signature 
+                      ? 'bg-green-50/50 border-green-200 dark:bg-green-900/10 dark:border-green-800' 
+                      : 'bg-muted/50'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      member.signature ? 'bg-green-100 text-green-600' : 'bg-muted text-muted-foreground'
+                      member.signature 
+                        ? 'bg-green-100 text-green-600 dark:bg-green-900/30' 
+                        : 'bg-muted text-muted-foreground'
                     }`}>
                       {member.signature ? <CheckCircle className="w-4 h-4" /> : <User className="w-4 h-4" />}
                     </div>
@@ -233,7 +312,7 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
 
                   {member.signature ? (
                     <div className="text-right">
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
                         <CheckCircle className="w-3 h-3 mr-1" />
                         Firmado
                       </Badge>
@@ -242,14 +321,25 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
                       </p>
                     </div>
                   ) : (
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => setUploadingFor(member)}
-                    >
-                      <Camera className="w-4 h-4 mr-1" />
-                      Subir firma
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setPreviewFor(member)}
+                        title="Generar hoja de firma para imprimir"
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        Hoja firma
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="default"
+                        onClick={() => setUploadingFor(member)}
+                      >
+                        <Camera className="w-4 h-4 mr-1" />
+                        Subir firma
+                      </Button>
+                    </div>
                   )}
                 </div>
               ))}
@@ -267,7 +357,7 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
           
           <div className="space-y-4 py-4">
             <p className="text-sm text-muted-foreground">
-              Subí una foto del reglamento firmado físicamente por el empleado.
+              Subí una foto de la hoja de constancia firmada físicamente por el empleado.
             </p>
             
             <div className="space-y-2">
@@ -307,6 +397,50 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
                   Confirmar firma
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview/Print Dialog */}
+      <Dialog open={!!previewFor} onOpenChange={(open) => !open && setPreviewFor(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Hoja de Constancia de Firma - {previewFor?.full_name}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="border rounded-lg overflow-hidden shadow-sm">
+            {previewFor && latestRegulation && (
+              <RegulationSignatureSheet
+                ref={printRef}
+                data={{
+                  employeeName: previewFor.full_name,
+                  employeeDni: previewFor.dni,
+                  employeeRole: getRoleLabel(previewFor.local_role),
+                  branchName: branch?.name || 'Sucursal',
+                  regulationVersion: latestRegulation.version,
+                  regulationTitle: latestRegulation.title,
+                  publishedAt: latestRegulation.published_at || latestRegulation.created_at,
+                  referenceId: `REG-V${latestRegulation.version}-${previewFor.user_id.slice(0, 8).toUpperCase()}`,
+                }}
+              />
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 mt-4">
+            <Button variant="outline" onClick={() => setPreviewFor(null)}>
+              Cerrar
+            </Button>
+            <Button variant="secondary" onClick={handlePrint} title="Podés elegir 'Guardar como PDF' en el diálogo de impresión">
+              <Printer className="w-4 h-4 mr-2" />
+              Descargar / Imprimir
+            </Button>
+            <Button onClick={() => {
+              setUploadingFor(previewFor);
+              setPreviewFor(null);
+            }}>
+              <Camera className="w-4 h-4 mr-2" />
+              Subir firma
             </Button>
           </DialogFooter>
         </DialogContent>

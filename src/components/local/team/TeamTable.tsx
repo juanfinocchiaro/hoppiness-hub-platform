@@ -17,94 +17,124 @@ interface TeamTableProps {
 export function TeamTable({ team, branchId, onMemberUpdated }: TeamTableProps) {
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
 
+  // Separate franchisees from employees (franchisees are owners, not employees)
+  const employees = team.filter(m => m.local_role !== 'franquiciado');
+  const franchisees = team.filter(m => m.local_role === 'franquiciado');
+
   const handleRowClick = (memberId: string) => {
     setExpandedMemberId(prev => prev === memberId ? null : memberId);
   };
 
   return (
-    <div className="border rounded-lg overflow-hidden">
-      <div className="overflow-auto max-h-[calc(100vh-280px)]">
-        <Table>
-          <TableHeader className="sticky top-0 bg-background z-10">
-            <TableRow>
-              <TableHead className="w-[90px]">Ingreso</TableHead>
-              <TableHead className="min-w-[150px]">Nombre</TableHead>
-              <TableHead className="min-w-[180px]">Email</TableHead>
-              <TableHead className="w-[100px]">Rol</TableHead>
-              <TableHead className="w-[100px] text-right">Horas mes</TableHead>
-              <TableHead className="w-[120px]">Últ. fichaje</TableHead>
-              <TableHead className="w-[120px]">Estado</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {team.map((member) => {
-              const isExpanded = expandedMemberId === member.id;
-              const roleLabel = LOCAL_ROLE_LABELS[member.local_role || ''] || 'Empleado';
-              
-              return (
-                <>
-                  <TableRow 
-                    key={member.id}
-                    onClick={() => handleRowClick(member.id)}
-                    className={cn(
-                      "cursor-pointer transition-colors",
-                      isExpanded && "bg-muted/50"
-                    )}
-                  >
-                    <TableCell className="text-muted-foreground text-sm">
-                      {format(new Date(member.hire_date), 'dd/MM/yy', { locale: es })}
-                    </TableCell>
-                    <TableCell className="font-medium truncate max-w-[200px]">
-                      {member.full_name || 'Sin nombre'}
-                    </TableCell>
-                    <TableCell>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="truncate block max-w-[200px] text-muted-foreground">
-                            {member.email}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>{member.email}</TooltipContent>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>
-                      <span className={cn(
-                        "text-sm font-medium",
-                        member.local_role === 'franquiciado' && "text-amber-600",
-                        member.local_role === 'encargado' && "text-green-600",
-                        (member.local_role === 'cajero' || member.local_role === 'empleado') && "text-slate-600"
-                      )}>
-                        {roleLabel}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right text-sm">
-                      {formatHours(member.hours_this_month)}h
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatClockIn(member.last_clock_in)}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge member={member} />
-                    </TableCell>
-                  </TableRow>
-                  
-                  {isExpanded && (
-                    <TableRow key={`${member.id}-expanded`}>
-                      <TableCell colSpan={7} className="p-0 bg-muted/30">
-                        <EmployeeExpandedRow 
-                          member={member}
-                          branchId={branchId}
-                          onClose={() => setExpandedMemberId(null)}
-                          onMemberUpdated={onMemberUpdated}
-                        />
+    <div className="space-y-4">
+      {/* Franchisees Section - shown at top if any */}
+      {franchisees.length > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
+          <h3 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">
+            Propietario{franchisees.length > 1 ? 's' : ''} del Local
+          </h3>
+          <div className="space-y-2">
+            {franchisees.map(f => (
+              <div key={f.id} className="flex items-center justify-between text-sm">
+                <span className="font-medium">{f.full_name}</span>
+                <span className="text-amber-600 dark:text-amber-400">{f.email}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Employees Table */}
+      <div className="border rounded-lg overflow-hidden">
+        <div className="overflow-auto max-h-[calc(100vh-280px)]">
+          <Table>
+            <TableHeader className="sticky top-0 bg-background z-10">
+              <TableRow>
+                <TableHead className="w-[90px]">Ingreso</TableHead>
+                <TableHead className="min-w-[150px]">Nombre</TableHead>
+                <TableHead className="min-w-[180px]">Email</TableHead>
+                <TableHead className="w-[100px]">Rol</TableHead>
+                <TableHead className="w-[100px] text-right">Horas mes</TableHead>
+                <TableHead className="w-[120px]">Últ. fichaje</TableHead>
+                <TableHead className="w-[120px]">Estado</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {employees.map((member) => {
+                const isExpanded = expandedMemberId === member.id;
+                const roleLabel = LOCAL_ROLE_LABELS[member.local_role || ''] || 'Empleado';
+                
+                return (
+                  <>
+                    <TableRow 
+                      key={member.id}
+                      onClick={() => handleRowClick(member.id)}
+                      className={cn(
+                        "cursor-pointer transition-colors",
+                        isExpanded && "bg-muted/50"
+                      )}
+                    >
+                      <TableCell className="text-muted-foreground text-sm">
+                        {format(new Date(member.hire_date), 'dd/MM/yy', { locale: es })}
+                      </TableCell>
+                      <TableCell className="font-medium truncate max-w-[200px]">
+                        {member.full_name || 'Sin nombre'}
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="truncate block max-w-[200px] text-muted-foreground">
+                              {member.email}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>{member.email}</TooltipContent>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>
+                        <span className={cn(
+                          "text-sm font-medium",
+                          member.local_role === 'encargado' && "text-green-600",
+                          (member.local_role === 'cajero' || member.local_role === 'empleado') && "text-slate-600"
+                        )}>
+                          {roleLabel}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right text-sm">
+                        {formatHours(member.hours_this_month)}h
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {formatClockIn(member.last_clock_in)}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge member={member} />
                       </TableCell>
                     </TableRow>
-                  )}
-                </>
-              );
-            })}
-          </TableBody>
-        </Table>
+                    
+                    {isExpanded && (
+                      <TableRow key={`${member.id}-expanded`}>
+                        <TableCell colSpan={7} className="p-0 bg-muted/30">
+                          <EmployeeExpandedRow 
+                            member={member}
+                            branchId={branchId}
+                            onClose={() => setExpandedMemberId(null)}
+                            onMemberUpdated={onMemberUpdated}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </>
+                );
+              })}
+              {employees.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    No hay empleados en este local
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );
