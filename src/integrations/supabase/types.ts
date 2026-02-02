@@ -1377,6 +1377,7 @@ export type Database = {
         Row: {
           authorization_pin_hash: string | null
           branch_id: string
+          clock_pin: string | null
           created_at: string | null
           id: string
           is_active: boolean | null
@@ -1387,6 +1388,7 @@ export type Database = {
         Insert: {
           authorization_pin_hash?: string | null
           branch_id: string
+          clock_pin?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -1397,6 +1399,7 @@ export type Database = {
         Update: {
           authorization_pin_hash?: string | null
           branch_id?: string
+          clock_pin?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -1661,6 +1664,10 @@ export type Database = {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
       }
+      is_clock_pin_available: {
+        Args: { _branch_id: string; _exclude_user_id?: string; _pin: string }
+        Returns: boolean
+      }
       is_financial_for_branch: {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
@@ -1689,6 +1696,15 @@ export type Database = {
         Returns: boolean
       }
       validate_clock_pin: {
+        Args: { _branch_code: string; _pin: string }
+        Returns: {
+          branch_id: string
+          branch_name: string
+          full_name: string
+          user_id: string
+        }[]
+      }
+      validate_clock_pin_v2: {
         Args: { _branch_code: string; _pin: string }
         Returns: {
           branch_id: string

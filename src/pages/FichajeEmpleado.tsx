@@ -235,10 +235,10 @@ export default function FichajeEmpleado() {
     }
   }, []);
 
-  // Validate PIN mutation
+  // Validate PIN mutation (using v2 function with branch-specific PINs)
   const validatePinMutation = useMutation({
     mutationFn: async (pinValue: string) => {
-      const { data, error } = await supabase.rpc('validate_clock_pin', {
+      const { data, error } = await supabase.rpc('validate_clock_pin_v2', {
         _branch_code: branchCode,
         _pin: pinValue,
       });

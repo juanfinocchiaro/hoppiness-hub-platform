@@ -51,30 +51,55 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
   const [selectedRole, setSelectedRole] = useState<LocalRole>(currentRole);
   const [hireDate, setHireDate] = useState('');
   
-  // Clock PIN (stored in profiles)
+  // Clock PIN (stored in user_branch_roles)
   const [clockPin, setClockPin] = useState('');
   const [pinError, setPinError] = useState('');
+  const [pinAvailable, setPinAvailable] = useState<boolean | null>(null);
+  const [checkingPin, setCheckingPin] = useState(false);
 
-  // Fetch current clock_pin from profiles
-  const { data: profileData } = useQuery({
-    queryKey: ['profile-clock-pin', userId],
+  // Fetch current clock_pin from user_branch_roles
+  const { data: roleData } = useQuery({
+    queryKey: ['branch-role-clock-pin', roleId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('user_branch_roles')
         .select('clock_pin')
-        .eq('id', userId)
+        .eq('id', roleId)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: open,
+    enabled: open && !!roleId,
   });
 
   useEffect(() => {
-    if (profileData?.clock_pin) {
-      setClockPin(profileData.clock_pin);
+    if (roleData?.clock_pin) {
+      setClockPin(roleData.clock_pin);
     }
-  }, [profileData]);
+  }, [roleData]);
+
+  // Check PIN availability in this branch
+  const checkPinAvailability = async (pin: string) => {
+    if (pin.length !== 4) {
+      setPinAvailable(null);
+      return;
+    }
+    setCheckingPin(true);
+    try {
+      const { data, error } = await supabase.rpc('is_clock_pin_available', {
+        _branch_id: branchId,
+        _pin: pin,
+        _exclude_user_id: userId,
+      });
+      if (error) throw error;
+      setPinAvailable(data);
+    } catch (error) {
+      console.error('Error checking PIN:', error);
+      setPinAvailable(null);
+    } finally {
+      setCheckingPin(false);
+    }
+  };
 
   useEffect(() => {
     if (existingData) {
@@ -150,19 +175,30 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
         if (roleError) throw roleError;
       }
 
-      // Save clock_pin to profiles (only if changed)
-      if (clockPin !== (profileData?.clock_pin || '')) {
+      // Save clock_pin to user_branch_roles (only if changed)
+      if (clockPin !== (roleData?.clock_pin || '')) {
+        // Check availability first
+        if (clockPin) {
+          const { data: available, error: checkError } = await supabase.rpc('is_clock_pin_available', {
+            _branch_id: branchId,
+            _pin: clockPin,
+            _exclude_user_id: userId,
+          });
+          if (checkError) throw checkError;
+          if (!available) throw new Error('Este PIN ya está en uso en esta sucursal');
+        }
+
         const { error: pinError } = await supabase
-          .from('profiles')
+          .from('user_branch_roles')
           .update({ clock_pin: clockPin || null })
-          .eq('id', userId);
+          .eq('id', roleId);
         if (pinError) throw pinError;
       }
     },
     onSuccess: () => {
       toast.success('Datos guardados');
       queryClient.invalidateQueries({ queryKey: ['employee-data', userId, branchId] });
-      queryClient.invalidateQueries({ queryKey: ['profile-clock-pin', userId] });
+      queryClient.invalidateQueries({ queryKey: ['branch-role-clock-pin', roleId] });
       queryClient.invalidateQueries({ queryKey: ['branch-team', branchId] });
       onSuccess();
       onOpenChange(false);
