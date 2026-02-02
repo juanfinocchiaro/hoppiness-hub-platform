@@ -196,9 +196,27 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
         <head>
           <title>Apercibimiento - ${employeeProfile?.fullName}</title>
           <style>
-            @media print {
-              body { margin: 0; padding: 20px; }
-              @page { size: A4; margin: 15mm; }
+            @page {
+              size: A4;
+              margin: 15mm;
+            }
+            
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            
+            body {
+              font-family: Arial, sans-serif;
+              font-size: 12pt;
+              line-height: 1.5;
+              color: #000;
+              background: #fff;
+            }
+            
+            img {
+              max-height: 64px;
             }
           </style>
         </head>
@@ -211,7 +229,7 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
     printWindow.focus();
     setTimeout(() => {
       printWindow.print();
-    }, 250);
+    }, 500);
   };
 
   const warningTypeLabel = WARNING_TYPES.find(t => t.value === type)?.label || type;

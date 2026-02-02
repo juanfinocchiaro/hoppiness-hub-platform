@@ -43,12 +43,16 @@ export default function RegulationsManager() {
     queryFn: async () => {
       if (!latestRegulation) return null;
 
-      // Count total employees
-      const { count: totalEmployees } = await supabase
-        .from('user_roles_v2')
-        .select('*', { count: 'exact', head: true })
+      // Count unique employees (excluding franchisees) from user_branch_roles
+      const { data: employeeRoles } = await supabase
+        .from('user_branch_roles')
+        .select('user_id')
         .eq('is_active', true)
-        .not('local_role', 'is', null);
+        .neq('local_role', 'franquiciado');
+
+      // Eliminate duplicates (an employee can work at multiple branches)
+      const uniqueEmployees = new Set(employeeRoles?.map(r => r.user_id) || []);
+      const totalEmployees = uniqueEmployees.size;
 
       // Count signatures for this regulation
       const { count: signedCount } = await supabase
