@@ -4,6 +4,29 @@
 
 ---
 
+## ESTRUCTURA DE PROFILES (Patrón Supabase Estándar)
+
+La tabla `profiles` sigue el patrón oficial de Supabase:
+
+- `profiles.id` = `auth.users.id` (son el mismo UUID)
+- **NO existe campo `user_id` separado**
+- Todas las queries usan `.eq('id', userId)`
+
+### Ejemplo correcto:
+```typescript
+const { data } = await supabase
+  .from('profiles')
+  .select('id, full_name, email')
+  .eq('id', user.id);  // ← Siempre 'id'
+```
+
+### En Maps de profiles:
+```typescript
+const profileMap = new Map(profiles.map(p => [p.id, p]));
+```
+
+---
+
 ## SISTEMA DE ROLES
 
 ```
