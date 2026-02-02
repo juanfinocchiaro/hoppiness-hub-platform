@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -29,6 +30,8 @@ import {
   PartyPopper,
   Info,
   Megaphone,
+  Eye,
+  CheckCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -36,6 +39,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import ReadersModal from '@/components/communications/ReadersModal';
 
 const TAGS = [
   { value: 'general', label: 'General' },
@@ -62,6 +66,12 @@ export default function CommunicationsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [readersModal, setReadersModal] = useState<{ open: boolean; id: string | null; title: string; requiresConfirmation: boolean }>({
+    open: false,
+    id: null,
+    title: '',
+    requiresConfirmation: false,
+  });
   const [formData, setFormData] = useState({
     title: '',
     body: '',
@@ -69,6 +79,7 @@ export default function CommunicationsPage() {
     tag: 'general',
     custom_label: '',
     target_role: 'all',
+    requires_confirmation: false,
   });
 
   const { data: communications, isLoading } = useQuery({
@@ -76,7 +87,7 @@ export default function CommunicationsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('communications')
-        .select('*, communication_reads(user_id)')
+        .select('*, communication_reads(user_id, confirmed_at)')
         .eq('source_type', 'brand')
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -104,6 +115,7 @@ export default function CommunicationsPage() {
         created_by: user.id,
         is_published: true,
         published_at: new Date().toISOString(),
+        requires_confirmation: formData.requires_confirmation,
       });
       if (error) throw error;
     },
@@ -118,6 +130,7 @@ export default function CommunicationsPage() {
         tag: 'general',
         custom_label: '',
         target_role: 'all',
+        requires_confirmation: false,
       });
     },
     onError: () => toast.error('Error al enviar comunicado'),
@@ -247,6 +260,19 @@ export default function CommunicationsPage() {
                 </Select>
               </div>
 
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                <Checkbox
+                  id="requires-confirmation"
+                  checked={formData.requires_confirmation}
+                  onCheckedChange={(checked) => 
+                    setFormData(prev => ({ ...prev, requires_confirmation: checked === true }))
+                  }
+                />
+                <Label htmlFor="requires-confirmation" className="text-sm cursor-pointer">
+                  Requiere confirmación del equipo
+                </Label>
+              </div>
+
               <Button 
                 className="w-full" 
                 onClick={() => createMutation.mutate()}
@@ -270,6 +296,7 @@ export default function CommunicationsPage() {
             const typeInfo = getTypeInfo(comm.type);
             const TypeIcon = typeInfo.icon;
             const readCount = comm.communication_reads?.length || 0;
+            const confirmedCount = comm.communication_reads?.filter((r: any) => r.confirmed_at).length || 0;
 
             return (
               <Card key={comm.id}>
@@ -279,17 +306,37 @@ export default function CommunicationsPage() {
                       <TypeIcon className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h3 className="font-semibold truncate">{comm.title}</h3>
                         <Badge variant="secondary">{TAGS.find(t => t.value === comm.tag)?.label || comm.tag}</Badge>
                         {comm.custom_label && (
                           <Badge variant="outline">{comm.custom_label}</Badge>
                         )}
+                        {comm.requires_confirmation && (
+                          <Badge variant="default" className="bg-primary/80">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Requiere confirmación
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground line-clamp-2">{comm.body}</p>
                       <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                         <span>{format(new Date(comm.published_at), "d MMM yyyy HH:mm", { locale: es })}</span>
-                        <span>👁 {readCount} lecturas</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-auto p-0 text-xs hover:text-foreground"
+                          onClick={() => setReadersModal({
+                            open: true,
+                            id: comm.id,
+                            title: comm.title,
+                            requiresConfirmation: comm.requires_confirmation || false,
+                          })}
+                        >
+                          <Eye className="w-3 h-3 mr-1" />
+                          {readCount} lecturas
+                          {comm.requires_confirmation && ` • ${confirmedCount} confirmaciones`}
+                        </Button>
                         {comm.target_roles && comm.target_roles.length > 0 && (
                           <span>→ {comm.target_roles.join(', ')}</span>
                         )}
@@ -316,6 +363,14 @@ export default function CommunicationsPage() {
           </CardContent>
         </Card>
       )}
+
+      <ReadersModal
+        open={readersModal.open}
+        onOpenChange={(open) => setReadersModal(prev => ({ ...prev, open }))}
+        communicationId={readersModal.id}
+        communicationTitle={readersModal.title}
+        requiresConfirmation={readersModal.requiresConfirmation}
+      />
     </div>
   );
 }
