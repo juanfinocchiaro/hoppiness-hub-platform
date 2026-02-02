@@ -6,20 +6,32 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { KeyRound, Check, X } from 'lucide-react';
-import type { EmployeeData } from './types';
+import { KeyRound, Check, X, Calendar } from 'lucide-react';
+import type { EmployeeData, LOCAL_ROLE_LABELS } from './types';
+import type { LocalRole } from '@/hooks/usePermissionsV2';
+
+const ROLE_OPTIONS: { value: LocalRole; label: string }[] = [
+  { value: 'encargado', label: 'Encargado' },
+  { value: 'contador_local', label: 'Contador Local' },
+  { value: 'cajero', label: 'Cajero' },
+  { value: 'empleado', label: 'Empleado' },
+];
 
 interface EmployeeDataModalProps {
   userId: string;
   branchId: string;
   existingData: EmployeeData | null | undefined;
+  currentRole: LocalRole;
+  roleId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
 }
 
-export function EmployeeDataModal({ userId, branchId, existingData, open, onOpenChange, onSuccess }: EmployeeDataModalProps) {
+export function EmployeeDataModal({ userId, branchId, existingData, currentRole, roleId, open, onOpenChange, onSuccess }: EmployeeDataModalProps) {
   const queryClient = useQueryClient();
   
   // Personal data
@@ -34,6 +46,10 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
   const [cbu, setCbu] = useState('');
   const [alias, setAlias] = useState('');
   const [cuil, setCuil] = useState('');
+  
+  // Labor data
+  const [selectedRole, setSelectedRole] = useState<LocalRole>(currentRole);
+  const [hireDate, setHireDate] = useState('');
   
   // Clock PIN (stored in profiles)
   const [clockPin, setClockPin] = useState('');
@@ -71,8 +87,13 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
       setCbu(existingData.cbu || '');
       setAlias(existingData.alias || '');
       setCuil(existingData.cuil || '');
+      setHireDate(existingData.hire_date || '');
     }
   }, [existingData]);
+
+  useEffect(() => {
+    setSelectedRole(currentRole);
+  }, [currentRole]);
 
   const validatePin = (pin: string): boolean => {
     if (!pin) return true; // Empty is valid (optional)
@@ -103,6 +124,7 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
         cbu: cbu || null,
         alias: alias || null,
         cuil: cuil || null,
+        hire_date: hireDate || null,
       };
 
       // Save employee data
@@ -119,6 +141,15 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
         if (error) throw error;
       }
 
+      // Save role if changed
+      if (selectedRole !== currentRole && roleId) {
+        const { error: roleError } = await supabase
+          .from('user_branch_roles')
+          .update({ local_role: selectedRole })
+          .eq('id', roleId);
+        if (roleError) throw roleError;
+      }
+
       // Save clock_pin to profiles (only if changed)
       if (clockPin !== (profileData?.clock_pin || '')) {
         const { error: pinError } = await supabase
@@ -132,6 +163,7 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
       toast.success('Datos guardados');
       queryClient.invalidateQueries({ queryKey: ['employee-data', userId, branchId] });
       queryClient.invalidateQueries({ queryKey: ['profile-clock-pin', userId] });
+      queryClient.invalidateQueries({ queryKey: ['branch-team', branchId] });
       onSuccess();
       onOpenChange(false);
     },
@@ -237,6 +269,51 @@ export function EmployeeDataModal({ userId, branchId, existingData, open, onOpen
           </TabsContent>
 
           <TabsContent value="labor" className="space-y-4 mt-4">
+            {/* Role Selector - Only if NOT franquiciado */}
+            {currentRole !== 'franquiciado' && (
+              <div className="space-y-2">
+                <Label>Rol en el local</Label>
+                <Select
+                  value={selectedRole}
+                  onValueChange={(v) => setSelectedRole(v as LocalRole)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        {role.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Determina los permisos y acceso del colaborador en este local.
+                </p>
+              </div>
+            )}
+
+            <Separator />
+
+            {/* Hire Date */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Fecha de ingreso
+              </Label>
+              <Input 
+                type="date"
+                value={hireDate}
+                onChange={(e) => setHireDate(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Fecha en que el colaborador comenzó a trabajar en la empresa.
+              </p>
+            </div>
+
+            <Separator />
+
             {/* Clock PIN */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2">

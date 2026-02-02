@@ -355,10 +355,13 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
           userId={member.user_id}
           branchId={branchId}
           existingData={employeeData}
+          currentRole={member.local_role}
+          roleId={member.role_id}
           open={showEditModal}
           onOpenChange={setShowEditModal}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['employee-data', member.user_id, branchId] });
+            onMemberUpdated();
           }}
         />
       )}
