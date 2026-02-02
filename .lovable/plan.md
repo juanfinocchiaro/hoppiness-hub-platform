@@ -1,165 +1,80 @@
 
-# Plan: Sistema de Edición de Horarios y Limpieza
 
-## Resumen del Problema
+# Plan: Corregir Detección de PIN Faltante en Dashboard
 
-Actualmente, el sistema solo permite **crear horarios nuevos** que reemplazan completamente el mes anterior. No hay forma de:
-- Editar un día específico de un horario ya publicado
-- Ver visualmente qué empleados ya tienen horario y cuáles no
+## Problema
 
-Además, la función "Copiar semana anterior" no aporta valor real al flujo de trabajo.
+El banner "¡Configurá tu PIN de fichaje!" en `/cuenta` no se muestra correctamente porque:
 
----
+1. Busca en `profiles.clock_pin` (columna obsoleta)
+2. Debería buscar en `user_branch_roles.clock_pin`
+3. No considera que un usuario puede tener PINs faltantes en algunas sucursales pero no en otras
 
-## Diagnóstico Técnico
+## Solución
 
-| Elemento | Estado Actual |
-|----------|---------------|
-| `useSaveMonthlySchedule` | DELETE + INSERT completo del mes |
-| `useModifySchedule` | Existe pero NO se usa |
-| "Copiar semana anterior" | Líneas 223-249 y 588-596 del wizard |
-| Edición de día individual | No implementada |
+### Cambio en `CuentaDashboard.tsx`
 
----
-
-## Cambios a Implementar
-
-### 1. Refactorizar MonthlyScheduleView para permitir edición de días
-
-**Archivo**: `src/components/hr/MonthlyScheduleView.tsx`
-
-- Al hacer clic en una celda con horario existente, abrir un modal de edición rápida
-- Mostrar botón "Editar" al hacer hover sobre celdas con horario
-- El modal permite:
-  - Cambiar hora de entrada/salida
-  - Marcar como franco
-  - Ingresar motivo del cambio (obligatorio)
-  - Opción de notificar al empleado
-
-### 2. Crear componente EditScheduleDayModal
-
-**Nuevo archivo**: `src/components/hr/EditScheduleDayModal.tsx`
-
-Modal simple con:
-- Selector de horario (presets + personalizado)
-- Checkbox "Día franco"
-- Campo de texto "Motivo del cambio" (obligatorio)
-- Checkbox de notificaciones
-- Botones Cancelar / Guardar
-
-Usará el hook existente `useModifySchedule()`.
-
-### 3. Eliminar "Copiar semana anterior"
-
-**Archivo**: `src/components/hr/CreateScheduleWizard.tsx`
-
-- Eliminar función `copyPreviousWeek` (líneas 223-249)
-- Eliminar botón de la UI (líneas 588-596)
-
-### 4. Mejorar visualización del calendario
-
-**Archivo**: `src/components/hr/MonthlyScheduleView.tsx`
-
-- Agregar indicador visual de "empleados con horario publicado" vs "sin horario"
-- Mostrar ícono de lápiz al hover para indicar que es editable
-
----
-
-## Flujo de Usuario Mejorado
-
-```text
-ANTES:
-1. Encargado quiere cambiar horario de Braian del día 15
-2. Abre "Crear Horario"
-3. Selecciona Braian
-4. Carga TODO el mes de nuevo
-5. Al guardar, se borra el horario anterior completo
-
-DESPUÉS:
-1. Encargado ve calendario mensual
-2. Hace clic en la celda del día 15 de Braian
-3. Se abre modal de edición rápida
-4. Cambia el horario y escribe "Cambio de turno por pedido del empleado"
-5. Guarda solo ese día
+**Estado actual (línea 82):**
+```typescript
+const needsPinSetup = hasLocalAccess && profile && !profile.clock_pin;
 ```
 
----
+**Nuevo enfoque:**
+```typescript
+// Fetch branch roles with clock_pin status
+const { data: branchRolesData } = useQuery({
+  queryKey: ['user-branch-roles-pins', user?.id],
+  queryFn: async () => {
+    if (!user) return [];
+    const { data, error } = await supabase
+      .from('user_branch_roles')
+      .select('id, branch_id, clock_pin, branches!inner(name)')
+      .eq('user_id', user.id)
+      .eq('is_active', true);
+    if (error) throw error;
+    return data || [];
+  },
+  enabled: !!user && hasLocalAccess,
+});
 
-## Detalles Técnicos
+// Check if ANY branch is missing PIN
+const branchesMissingPin = branchRolesData?.filter(r => !r.clock_pin) || [];
+const needsPinSetup = branchesMissingPin.length > 0;
+```
 
-### EditScheduleDayModal Props
+### Mejora del Banner
+
+Actualizar `MissingPinBanner` para mostrar cuántas sucursales tienen PIN faltante:
 
 ```typescript
-interface EditScheduleDayModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  schedule: ScheduleEntry;  // El registro existente
-  employeeName: string;
-  onSuccess: () => void;
+interface MissingPinBannerProps {
+  employeeName?: string;
+  missingCount?: number;  // Cuántas sucursales faltan
+  totalCount?: number;    // Total de sucursales del usuario
 }
 ```
 
-### Lógica del Modal
-
-```typescript
-// Usar useModifySchedule existente
-const modifySchedule = useModifySchedule();
-
-const handleSave = async () => {
-  await modifySchedule.mutateAsync({
-    schedule_id: schedule.id,
-    start_time: isDayOff ? undefined : startTime,
-    end_time: isDayOff ? undefined : endTime,
-    is_day_off: isDayOff,
-    modification_reason: reason,
-    notify_email: notifyEmail,
-    notify_communication: notifyCommunication,
-  });
-};
-```
-
----
+Mensaje mejorado:
+- "Te falta configurar el PIN en 1 sucursal"
+- "Te falta configurar el PIN en 2 sucursales"
 
 ## Archivos a Modificar
 
-| Archivo | Cambio | Prioridad |
-|---------|--------|-----------|
-| `MonthlyScheduleView.tsx` | Agregar onClick en celdas + modal | Alta |
-| `EditScheduleDayModal.tsx` | Nuevo componente | Alta |
-| `CreateScheduleWizard.tsx` | Eliminar "Copiar semana anterior" | Media |
+| Archivo | Cambio |
+|---------|--------|
+| `CuentaDashboard.tsx` | Fetch de `user_branch_roles` para verificar PINs |
+| `MissingPinBanner.tsx` | Mostrar cantidad de sucursales sin PIN |
 
----
+## Resultado Esperado
 
-## Consideraciones de UX
+1. Dalma (y otros sin PIN) verán el banner amarillo correctamente
+2. El banner indicará cuántas sucursales faltan configurar
+3. Al hacer clic, irán a `/cuenta/perfil` donde pueden crear el PIN por sucursal
 
-1. **Solo se pueden editar días con horario existente** - Para agregar días nuevos, usar "Crear Horario"
-2. **El motivo del cambio es obligatorio** - Para auditoría y comunicación
-3. **Notificaciones opcionales** - Por defecto activadas
-4. **Visual claro** - Celda hover muestra que es editable
+## Verificación
 
----
+Después de implementar:
+1. Login como Dalma → Debería ver banner "Te falta configurar PIN en 1 sucursal"
+2. Login como Juan → NO debería ver el banner (ya tiene PIN)
+3. Crear PIN de Dalma → Banner desaparece
 
-## Ejemplo Visual del Modal
-
-```text
-┌─────────────────────────────────────────┐
-│  Editar Horario - Braian                │
-│  Viernes 15 de Febrero                  │
-├─────────────────────────────────────────┤
-│                                         │
-│  Horario actual: 19:30 - 23:30          │
-│                                         │
-│  ○ Turno: [Tarde (14:00 - 22:00)   ▼]  │
-│                                         │
-│  □ Marcar como Franco                   │
-│                                         │
-│  Motivo del cambio: *                   │
-│  [_________________________________]    │
-│                                         │
-│  ─────────────────────────────────────  │
-│  ☑ Notificar por email                  │
-│  ☑ Enviar comunicado interno            │
-│                                         │
-│        [Cancelar]     [Guardar]         │
-└─────────────────────────────────────────┘
-```
