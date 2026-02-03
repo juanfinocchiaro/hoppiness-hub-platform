@@ -3,19 +3,33 @@ import { supabase } from '@/integrations/supabase/client';
 import type { TeamMember, EmployeeData, Warning, NoteEntry } from './types';
 import type { LocalRole } from '@/hooks/usePermissionsV2';
 
-export function useTeamData(branchId: string | undefined) {
+interface UseTeamDataOptions {
+  /** Exclude franchise owners (franquiciado) from team list - useful for schedules/HR operations */
+  excludeOwners?: boolean;
+}
+
+export function useTeamData(branchId: string | undefined, options?: UseTeamDataOptions) {
+  const { excludeOwners = false } = options || {};
+  
   // Fetch team members
   const { data: team = [], isLoading, refetch } = useQuery({
-    queryKey: ['branch-team', branchId],
+    queryKey: ['branch-team', branchId, excludeOwners],
     queryFn: async () => {
       if (!branchId) return [];
 
       // 1. Get users with local roles for this branch from user_branch_roles
-      const { data: roles, error: rolesError } = await supabase
+      let query = supabase
         .from('user_branch_roles')
         .select('id, user_id, local_role, default_position, is_active, created_at')
         .eq('branch_id', branchId)
         .eq('is_active', true);
+      
+      // Exclude franchise owners for HR operations (schedules, clock-ins, advances, etc.)
+      if (excludeOwners) {
+        query = query.neq('local_role', 'franquiciado');
+      }
+      
+      const { data: roles, error: rolesError } = await query;
 
       if (rolesError) throw rolesError;
       if (!roles?.length) return [];

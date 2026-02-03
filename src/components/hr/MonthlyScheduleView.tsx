@@ -51,8 +51,8 @@ export default function MonthlyScheduleView({ branchId }: MonthlyScheduleViewPro
   const { isSuperadmin, isFranquiciado, isEncargado, local } = usePermissionsV2(branchId);
   const canManageSchedules = isSuperadmin || isFranquiciado || isEncargado || local.canEditSchedules;
   
-  // Fetch data
-  const { team, loading: loadingTeam } = useTeamData(branchId);
+  // Fetch data - exclude franchise owners from schedule management
+  const { team, loading: loadingTeam } = useTeamData(branchId, { excludeOwners: true });
   const { data: holidays = [] } = useHolidays(month, year);
   const { data: schedules = [], isLoading: loadingSchedules, refetch } = useMonthlySchedules(branchId, month, year);
   
