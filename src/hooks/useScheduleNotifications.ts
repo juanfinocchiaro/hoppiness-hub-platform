@@ -33,29 +33,26 @@ export async function sendScheduleNotification(input: NotificationInput): Promis
   // Create internal communication
   if (input.notify_communication) {
     const title = input.is_modification
-      ? `📅 Tu horario de ${monthName} fue modificado`
+      ? `📅 Tu encargado modificó tu horario de ${monthName}`
       : `📅 Tu horario de ${monthName} ya está disponible`;
     
     const body = input.is_modification
-      ? `Tu encargado modificó tu horario. ${input.modification_reason ? `Motivo: ${input.modification_reason}` : ''} Revisalo en 'Mi Horario'.`
+      ? `Se realizó una modificación sobre tu horario${input.modified_date ? ` del día ${input.modified_date}` : ''}. ${input.modification_reason ? `Motivo: ${input.modification_reason}` : ''} Revisalo en 'Mi Horario'.`
       : `Tu encargado publicó el horario del mes. Revisalo en 'Mi Horario'.`;
     
     try {
       await supabase.from('communications').insert({
         title,
         body,
-        type: 'info',
+        type: input.is_modification ? 'warning' : 'info',
         source_type: 'local',
         source_branch_id: input.branch_id,
         target_branch_ids: [input.branch_id],
-        target_roles: null, // Will be filtered by target_user logic below
+        target_roles: null,
         is_published: true,
         published_at: new Date().toISOString(),
         created_by: input.sender_id,
       });
-      
-      // Since communications doesn't have target_user_id, we'll skip individual targeting
-      // The employee will see it via branch-level communications
     } catch (e) {
       console.error('Failed to create communication:', e);
     }
@@ -91,18 +88,18 @@ export async function sendBulkScheduleNotifications(
   if (params.notify_communication) {
     const monthName = monthNames[params.month - 1];
     const title = params.is_modification
-      ? `📅 Los horarios de ${monthName} fueron modificados`
+      ? `📅 Tu encargado modificó los horarios de ${monthName}`
       : `📅 Los horarios de ${monthName} ya están disponibles`;
     
     const body = params.is_modification
-      ? `Se modificaron los horarios del equipo. ${params.modification_reason ? `Motivo: ${params.modification_reason}` : ''} Revisá tu horario en 'Mi Cuenta'.`
+      ? `Se realizó una modificación sobre los horarios del equipo${params.modified_date ? ` (${params.modified_date})` : ''}. ${params.modification_reason ? `Motivo: ${params.modification_reason}` : ''} Revisá tu horario en 'Mi Cuenta'.`
       : `Se publicaron los horarios del mes. Revisá tu horario en 'Mi Cuenta'.`;
     
     try {
       await supabase.from('communications').insert({
         title,
         body,
-        type: 'info',
+        type: params.is_modification ? 'warning' : 'info',
         source_type: 'local',
         source_branch_id: params.branch_id,
         target_branch_ids: [params.branch_id],

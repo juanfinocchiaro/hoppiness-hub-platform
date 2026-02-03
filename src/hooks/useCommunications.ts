@@ -62,7 +62,10 @@ export function useUserCommunications() {
         .eq('user_id', userId)
         .eq('is_active', true);
       
-      if (branchError) throw branchError;
+      if (branchError) {
+        console.error('Error fetching user branches:', branchError);
+        throw branchError;
+      }
       
       const userBranchIds = new Set(userBranches?.map(b => b.branch_id) || []);
       const userLocalRoles = new Set<string>(userBranches?.map(b => b.local_role).filter(Boolean) || []);
