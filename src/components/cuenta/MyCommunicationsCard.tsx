@@ -64,12 +64,15 @@ export default function MyCommunicationsCard({ showOnlyBrand = false }: MyCommun
 
   const handleConfirm = async (commId: string) => {
     try {
-      await confirmMutation.mutateAsync(commId);
-      toast.success('Comunicado confirmado');
-      // Update local state
-      if (selectedComm?.id === commId) {
-        setSelectedComm(prev => prev ? { ...prev, is_confirmed: true } : null);
+      // First mark as read if not already
+      if (!selectedComm?.is_read) {
+        await markAsRead.mutateAsync(commId);
       }
+      // Update local state to show "Cerrar" button
+      if (selectedComm?.id === commId) {
+        setSelectedComm(prev => prev ? { ...prev, is_read: true } : null);
+      }
+      toast.success('Lectura confirmada');
     } catch {
       toast.error('Error al confirmar');
     }
@@ -186,8 +189,8 @@ export default function MyCommunicationsCard({ showOnlyBrand = false }: MyCommun
       </Card>
 
       {/* Detail Dialog */}
-      <Dialog open={!!selectedComm} onOpenChange={() => setSelectedComm(null)}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
+      <Dialog open={!!selectedComm} onOpenChange={(open) => !open && selectedComm?.is_read && setSelectedComm(null)}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col [&>button]:hidden">
           {selectedComm && (
             <>
               <DialogHeader className="flex-shrink-0">
@@ -223,20 +226,23 @@ export default function MyCommunicationsCard({ showOnlyBrand = false }: MyCommun
                   )}
                 </div>
                 
-                {selectedComm.requires_confirmation && !selectedComm.is_confirmed ? (
+                {selectedComm.is_read ? (
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => setSelectedComm(null)}
+                  >
+                    Cerrar
+                  </Button>
+                ) : (
                   <Button 
                     size="sm" 
                     onClick={() => handleConfirm(selectedComm.id)}
-                    disabled={confirmMutation.isPending}
+                    disabled={confirmMutation.isPending || markAsRead.isPending}
                   >
                     <CheckCircle className="w-4 h-4 mr-1" />
-                    Confirmar lectura
+                    Confirmar Lectura
                   </Button>
-                ) : (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Check className="w-4 h-4 text-green-500" />
-                    {selectedComm.is_confirmed ? 'Confirmado' : 'Leído'}
-                  </div>
                 )}
               </div>
             </>
