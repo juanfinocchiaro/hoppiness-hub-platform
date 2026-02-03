@@ -127,14 +127,13 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       // Fetch branch roles
       const { data: branchRolesData } = await supabase
         .from('user_branch_roles')
-        .select('branch_id, local_role, authorization_pin_hash')
+        .select('branch_id, local_role')
         .eq('user_id', userId)
         .eq('is_active', true);
 
       const branchRoles: UserBranchRole[] = (branchRolesData || []).map(r => ({
         branch_id: r.branch_id,
         local_role: r.local_role as LocalRole,
-        authorization_pin_hash: r.authorization_pin_hash,
       }));
 
       // Fetch accessible branches

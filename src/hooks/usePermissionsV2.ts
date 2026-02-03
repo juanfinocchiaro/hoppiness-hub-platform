@@ -40,7 +40,6 @@ interface UserBrandRole {
 export interface UserBranchRole {
   branch_id: string;
   local_role: LocalRole;
-  authorization_pin_hash: string | null;
 }
 
 // Interface de retorno del hook
@@ -217,7 +216,7 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
       
       const { data, error } = await supabase
         .from('user_branch_roles')
-        .select('branch_id, local_role, authorization_pin_hash')
+        .select('branch_id, local_role')
         .eq('user_id', user.id)
         .eq('is_active', true);
       

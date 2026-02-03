@@ -1740,7 +1740,6 @@ export type Database = {
       }
       user_branch_roles: {
         Row: {
-          authorization_pin_hash: string | null
           branch_id: string
           clock_pin: string | null
           created_at: string | null
@@ -1752,7 +1751,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          authorization_pin_hash?: string | null
           branch_id: string
           clock_pin?: string | null
           created_at?: string | null
@@ -1764,7 +1762,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          authorization_pin_hash?: string | null
           branch_id?: string
           clock_pin?: string | null
           created_at?: string | null
@@ -1794,7 +1791,6 @@ export type Database = {
       }
       user_roles_v2: {
         Row: {
-          authorization_pin_hash: string | null
           branch_ids: string[] | null
           brand_role: Database["public"]["Enums"]["brand_role_type"] | null
           created_at: string | null
@@ -1805,7 +1801,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          authorization_pin_hash?: string | null
           branch_ids?: string[] | null
           brand_role?: Database["public"]["Enums"]["brand_role_type"] | null
           created_at?: string | null
@@ -1816,7 +1811,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          authorization_pin_hash?: string | null
           branch_ids?: string[] | null
           brand_role?: Database["public"]["Enums"]["brand_role_type"] | null
           created_at?: string | null
@@ -2154,14 +2148,6 @@ export type Database = {
           branch_id: string
           branch_name: string
           full_name: string
-          user_id: string
-        }[]
-      }
-      verify_authorization_pin: {
-        Args: { _branch_id: string; _pin: string }
-        Returns: {
-          full_name: string
-          local_role: Database["public"]["Enums"]["local_role_type"]
           user_id: string
         }[]
       }
