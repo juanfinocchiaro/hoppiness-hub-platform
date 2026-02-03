@@ -569,10 +569,12 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
               </div>
             </CardHeader>
             
-            {/* CalendarViewport - contained scroll area for the grid only */}
-            <CardContent className="p-0 max-h-[calc(100vh-320px)] overflow-y-auto overflow-x-hidden relative">
-              {/* Inner wrapper that handles horizontal scroll */}
-              <div className="w-full overflow-x-auto">
+            {/* CalendarViewport - scroll horizontal solo aquí dentro */}
+            <CardContent className="p-0 overflow-hidden">
+              <div 
+                className="max-h-[calc(100vh-320px)] overflow-auto"
+                style={{ maxWidth: '100%' }}
+              >
                 <div 
                   className="flex"
                   style={{ minWidth: EMPLOYEE_COL_WIDTH + gridWidth }}
