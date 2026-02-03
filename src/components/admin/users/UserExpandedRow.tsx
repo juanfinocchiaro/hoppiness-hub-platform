@@ -4,7 +4,7 @@ import { Phone, MapPin } from 'lucide-react';
 import { UserRoleModalV2 } from './UserRoleModalV2';
 import type { UserWithStats, Branch } from './types';
 import { ROLE_LABELS } from './types';
-import { WORK_POSITION_LABELS } from '@/types/workPosition';
+import { useWorkPositions } from '@/hooks/useWorkPositions';
 
 interface UserExpandedRowProps {
   user: UserWithStats;
@@ -15,6 +15,14 @@ interface UserExpandedRowProps {
 
 export function UserExpandedRow({ user, branches, onClose, onUserUpdated }: UserExpandedRowProps) {
   const [showRoleModal, setShowRoleModal] = useState(false);
+  const { data: workPositions = [] } = useWorkPositions();
+
+  // Helper to get position label
+  const getPositionLabel = (key: string | null | undefined) => {
+    if (!key) return null;
+    const position = workPositions.find(p => p.key === key);
+    return position?.label || key;
+  };
 
   return (
     <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -68,7 +76,7 @@ export function UserExpandedRow({ user, branches, onClose, onUserUpdated }: User
                       <span>{ROLE_LABELS[br.local_role] || br.local_role}</span>
                       {br.default_position && (
                         <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                          {WORK_POSITION_LABELS[br.default_position]}
+                          {getPositionLabel(br.default_position)}
                         </span>
                       )}
                     </div>

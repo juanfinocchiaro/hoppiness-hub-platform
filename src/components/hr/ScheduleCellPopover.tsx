@@ -12,7 +12,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Coffee, X, Check } from 'lucide-react';
-import { WORK_POSITION_LABELS, WORK_POSITIONS, type WorkPositionType } from '@/types/workPosition';
+import { useWorkPositions } from '@/hooks/useWorkPositions';
+import type { WorkPositionType } from '@/types/workPosition';
 
 export interface ScheduleValue {
   startTime: string | null;
@@ -43,10 +44,13 @@ export function ScheduleCellPopover({
   const [open, setOpen] = useState(false);
   const [customStart, setCustomStart] = useState(value.startTime || '19:30');
   const [customEnd, setCustomEnd] = useState(value.endTime || '23:30');
-  const [position, setPosition] = useState<WorkPositionType | ''>(value.position || '');
+  const [position, setPosition] = useState<string>(value.position || '');
   const [hasBreak, setHasBreak] = useState(!!value.breakStart);
   const [breakStart, setBreakStart] = useState(value.breakStart || '15:00');
   const [breakEnd, setBreakEnd] = useState(value.breakEnd || '16:00');
+  
+  // Fetch work positions dynamically
+  const { data: workPositions = [] } = useWorkPositions();
 
   // Reset state when popover opens
   useEffect(() => {
@@ -197,15 +201,15 @@ export function ScheduleCellPopover({
           {/* Position selector */}
           <Select 
             value={position || 'none'} 
-            onValueChange={(v) => setPosition(v === 'none' ? '' : v as WorkPositionType)}
+            onValueChange={(v) => setPosition(v === 'none' ? '' : v)}
           >
             <SelectTrigger className="h-8 text-xs">
               <SelectValue placeholder="Posición (opcional)" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Sin posición</SelectItem>
-              {WORK_POSITIONS.map((pos) => (
-                <SelectItem key={pos.value} value={pos.value}>
+              {workPositions.map((pos) => (
+                <SelectItem key={pos.key} value={pos.key}>
                   {pos.label}
                 </SelectItem>
               ))}

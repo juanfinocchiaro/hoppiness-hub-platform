@@ -24,7 +24,8 @@ import { Label } from '@/components/ui/label';
 import { Search, UserPlus, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { LOCAL_ROLE_LABELS, type LocalRole } from '@/hooks/usePermissionsV2';
-import { WORK_POSITIONS, WORK_POSITION_LABELS, type WorkPositionType } from '@/types/workPosition';
+import { useWorkPositions } from '@/hooks/useWorkPositions';
+import type { WorkPositionType } from '@/types/workPosition';
 
 interface BranchTeamTabProps {
   branchId: string;
@@ -56,7 +57,10 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<{ user_id: string; full_name: string; email: string } | null>(null);
   const [selectedRole, setSelectedRole] = useState<LocalRole>('empleado');
-  const [selectedPosition, setSelectedPosition] = useState<WorkPositionType | 'none'>('none');
+  const [selectedPosition, setSelectedPosition] = useState<string>('none');
+
+  // Fetch work positions dynamically
+  const { data: workPositions = [] } = useWorkPositions();
 
   // Fetch team members for this branch
   const { data: team = [], isLoading } = useQuery({
@@ -133,12 +137,12 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
     onError: () => toast.error('Error al actualizar rol'),
   });
 
-  // Update position mutation
+  // Update position mutation - use type assertion for dynamic positions
   const updatePositionMutation = useMutation({
-    mutationFn: async ({ userId, position }: { userId: string; position: WorkPositionType | null }) => {
+    mutationFn: async ({ userId, position }: { userId: string; position: string | null }) => {
       const { error } = await supabase
         .from('user_branch_roles')
-        .update({ default_position: position, updated_at: new Date().toISOString() })
+        .update({ default_position: position as any, updated_at: new Date().toISOString() })
         .eq('user_id', userId)
         .eq('branch_id', branchId);
 
@@ -151,18 +155,18 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
     onError: () => toast.error('Error al actualizar posición'),
   });
 
-  // Add member mutation
+  // Add member mutation - use type assertion to bypass strict ENUM type
   const addMemberMutation = useMutation({
-    mutationFn: async ({ userId, role, position }: { userId: string; role: LocalRole; position: WorkPositionType | null }) => {
+    mutationFn: async ({ userId, role, position }: { userId: string; role: LocalRole; position: string | null }) => {
       const { error } = await supabase
         .from('user_branch_roles')
         .insert({
           user_id: userId,
           branch_id: branchId,
           local_role: role,
-          default_position: position,
+          default_position: position as any,
           is_active: true,
-        });
+        } as any);
 
       if (error) throw error;
     },
@@ -214,6 +218,13 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
         position: selectedPosition === 'none' ? null : selectedPosition,
       });
     }
+  };
+
+  // Helper to get position label
+  const getPositionLabel = (key: string | null) => {
+    if (!key) return 'Sin definir';
+    const position = workPositions.find(p => p.key === key);
+    return position?.label || key;
   };
 
   if (isLoading) {
@@ -334,7 +345,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
                     value={member.default_position || 'none'}
                     onValueChange={(value) => updatePositionMutation.mutate({
                       userId: member.user_id,
-                      position: value === 'none' ? null : value as WorkPositionType,
+                      position: value === 'none' ? null : value,
                     })}
                   >
                     <SelectTrigger className="w-28">
@@ -342,8 +353,8 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Sin definir</SelectItem>
-                      {WORK_POSITIONS.map((pos) => (
-                        <SelectItem key={pos.value} value={pos.value}>
+                      {workPositions.map((pos) => (
+                        <SelectItem key={pos.key} value={pos.key}>
                           {pos.label}
                         </SelectItem>
                       ))}
@@ -405,15 +416,15 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
                 <Label>Posición habitual</Label>
                 <Select
                   value={selectedPosition}
-                  onValueChange={(v) => setSelectedPosition(v as WorkPositionType | 'none')}
+                  onValueChange={(v) => setSelectedPosition(v)}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Sin definir</SelectItem>
-                    {WORK_POSITIONS.map((pos) => (
-                      <SelectItem key={pos.value} value={pos.value}>
+                    {workPositions.map((pos) => (
+                      <SelectItem key={pos.key} value={pos.key}>
                         {pos.label}
                       </SelectItem>
                     ))}

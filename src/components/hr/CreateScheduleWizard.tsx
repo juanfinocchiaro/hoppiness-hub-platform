@@ -36,9 +36,10 @@ import {
   type DaySchedule 
 } from '@/hooks/useSchedules';
 import { LOCAL_ROLE_LABELS } from '@/hooks/usePermissionsV2';
-import { WORK_POSITION_LABELS, WORK_POSITIONS, type WorkPositionType } from '@/types/workPosition';
+import { useWorkPositions } from '@/hooks/useWorkPositions';
+import type { WorkPositionType } from '@/types/workPosition';
 
-type WorkPosition = WorkPositionType;
+type WorkPosition = string;
 
 interface CreateScheduleWizardProps {
   branchId: string;
@@ -100,6 +101,14 @@ export default function CreateScheduleWizard({
   const { team, loading: loadingTeam } = useTeamData(branchId, { excludeOwners: true });
   const { data: holidays = [] } = useHolidays(month, year);
   const { data: requests = [] } = useEmployeeScheduleRequests(selectedEmployee?.id, month, year);
+  const { data: workPositions = [] } = useWorkPositions();
+  
+  // Helper to get position label
+  const getPositionLabel = (key: string | null | undefined) => {
+    if (!key) return '';
+    const pos = workPositions.find(p => p.key === key);
+    return pos?.label || key;
+  };
   
   const saveSchedule = useSaveMonthlySchedule();
   const approveRequest = useApproveScheduleRequest();
@@ -384,7 +393,7 @@ export default function CreateScheduleWizard({
                           </span>
                           {(member as any).default_position && (
                             <Badge variant="secondary" className="text-[10px]">
-                              {WORK_POSITION_LABELS[(member as any).default_position as WorkPosition]}
+                              {getPositionLabel((member as any).default_position)}
                             </Badge>
                           )}
                         </div>
@@ -576,12 +585,12 @@ export default function CreateScheduleWizard({
               onValueChange={(v) => setBulkPosition(v as WorkPosition | '')}
             >
               <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder={selectedEmployee?.defaultPosition ? WORK_POSITION_LABELS[selectedEmployee.defaultPosition] : 'Por defecto'} />
+                <SelectValue placeholder={selectedEmployee?.defaultPosition ? getPositionLabel(selectedEmployee.defaultPosition) : 'Por defecto'} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">Por defecto</SelectItem>
-                {WORK_POSITIONS.map((pos) => (
-                  <SelectItem key={pos.value} value={pos.value}>
+                {workPositions.map((pos) => (
+                  <SelectItem key={pos.key} value={pos.key}>
                     {pos.label}
                   </SelectItem>
                 ))}
@@ -668,7 +677,7 @@ export default function CreateScheduleWizard({
                             </span>
                             {schedule.work_position && (
                               <span className="text-[10px] text-muted-foreground">
-                                {WORK_POSITION_LABELS[schedule.work_position]}
+                                {getPositionLabel(schedule.work_position)}
                               </span>
                             )}
                           </>
