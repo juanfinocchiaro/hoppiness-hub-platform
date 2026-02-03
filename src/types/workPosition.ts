@@ -9,7 +9,6 @@
 export type WorkPositionType = 
   | 'cajero'
   | 'cocinero'
-  | 'barista'
   | 'runner'
   | 'lavacopas';
 
@@ -19,7 +18,6 @@ export type WorkPosition = WorkPositionType;
 export const WORK_POSITION_LABELS: Record<WorkPositionType, string> = {
   cajero: 'Cajero/a',
   cocinero: 'Cocinero/a',
-  barista: 'Barista',
   runner: 'Runner',
   lavacopas: 'Lavacopas',
 };
@@ -27,7 +25,6 @@ export const WORK_POSITION_LABELS: Record<WorkPositionType, string> = {
 export const WORK_POSITIONS: { value: WorkPositionType; label: string }[] = [
   { value: 'cajero', label: 'Cajero/a' },
   { value: 'cocinero', label: 'Cocinero/a' },
-  { value: 'barista', label: 'Barista' },
   { value: 'runner', label: 'Runner' },
   { value: 'lavacopas', label: 'Lavacopas' },
 ];
