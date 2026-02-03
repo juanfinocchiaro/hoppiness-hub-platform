@@ -147,8 +147,8 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [selectedShift, setSelectedShift] = useState<string>('mediodía');
 
-  // Permisos - verificar si es cajero para vista limitada
-  const { isCajero } = usePermissionsV2(branch.id);
+  // Permisos - verificar rol para vista limitada
+  const { isCajero, local } = usePermissionsV2(branch.id);
 
   // Enabled shifts for this branch
   const { data: enabledShifts, isLoading: loadingShifts } = useEnabledShifts(branch.id);
@@ -198,10 +198,13 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
             {format(new Date(), "EEEE d MMM", { locale: es })}
           </p>
         </div>
-        <Button size="sm" onClick={() => handleOpenEntry()}>
-          <Plus className="w-4 h-4 mr-1" />
-          Cargar
-        </Button>
+        {/* Solo mostrar botón Cargar si puede cargar ventas */}
+        {local.canEnterSales && (
+          <Button size="sm" onClick={() => handleOpenEntry()}>
+            <Plus className="w-4 h-4 mr-1" />
+            Cargar
+          </Button>
+        )}
       </div>
 
       {/* VENTAS DE HOY */}
@@ -391,15 +394,15 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
         )}
       </CardContent>
     </Card>
-  )}
+   )}
 
-  {/* COACHING DEL MES - Solo para encargados/franquiciados */}
-  {!isCajero && (
-    <CoachingPendingCard 
-      branchId={branch.id}
-      onStartCoaching={() => window.location.href = `/milocal/${branch.id}/equipo/coaching`}
-    />
-  )}
+   {/* COACHING DEL MES - Solo para quienes pueden hacer coaching */}
+   {local.canDoCoaching && (
+     <CoachingPendingCard 
+       branchId={branch.id}
+       onStartCoaching={() => window.location.href = `/milocal/${branch.id}/equipo/coaching`}
+     />
+   )}
 
 
   {/* Shift Closure Modal */}

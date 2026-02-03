@@ -17,6 +17,7 @@ import { useCoachingStats } from '@/hooks/useCoachingStats';
 import { useTeamCertifications } from '@/hooks/useCertifications';
 import { useWorkStations } from '@/hooks/useStationCompetencies';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { PageHelp } from '@/components/ui/PageHelp';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,6 +34,7 @@ interface TeamMember {
 export default function CoachingPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const { id: currentUserId } = useEffectiveUser();
+  const { local } = usePermissionsV2(branchId);
   const [expandedEmployeeId, setExpandedEmployeeId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('team');
 
@@ -138,8 +140,8 @@ export default function CoachingPage() {
             >
               <div className={`border rounded-lg transition-colors ${isExpanded ? 'border-primary bg-muted/50' : ''}`}>
                 {/* Employee row */}
-                <CollapsibleTrigger asChild disabled={hasCoaching}>
-                  <div className={`flex items-center justify-between p-4 ${!hasCoaching ? 'cursor-pointer hover:bg-muted/30' : ''}`}>
+                    <CollapsibleTrigger asChild disabled={hasCoaching || !local.canDoCoaching}>
+                      <div className={`flex items-center justify-between p-4 ${!hasCoaching && local.canDoCoaching ? 'cursor-pointer hover:bg-muted/30' : ''}`}>
                     <div className="flex items-center gap-3">
                       <Avatar>
                         <AvatarImage src={member.avatar_url || undefined} />
@@ -156,25 +158,30 @@ export default function CoachingPage() {
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-2">
-                      {hasCoaching ? (
-                        <Badge variant="secondary" className="gap-1">
-                          <CheckCircle className="h-3 w-3" />
-                          Completado
-                        </Badge>
-                      ) : (
-                        <>
-                          <span className="text-sm text-muted-foreground">
-                            {isExpanded ? 'Cerrar' : 'Evaluar'}
-                          </span>
-                          {isExpanded ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
-                        </>
-                      )}
-                    </div>
+                      <div className="flex items-center gap-2">
+                        {hasCoaching ? (
+                          <Badge variant="secondary" className="gap-1">
+                            <CheckCircle className="h-3 w-3" />
+                            Completado
+                          </Badge>
+                        ) : local.canDoCoaching ? (
+                          <>
+                            <span className="text-sm text-muted-foreground">
+                              {isExpanded ? 'Cerrar' : 'Evaluar'}
+                            </span>
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                          </>
+                        ) : (
+                          <Badge variant="outline" className="gap-1">
+                            <Clock className="h-3 w-3" />
+                            Pendiente
+                          </Badge>
+                        )}
+                      </div>
                   </div>
                 </CollapsibleTrigger>
 

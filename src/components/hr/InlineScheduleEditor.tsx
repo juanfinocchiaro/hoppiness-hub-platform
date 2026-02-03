@@ -79,7 +79,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
   const { id: currentUserId } = useEffectiveUser();
 
   const { isSuperadmin, isFranquiciado, isEncargado, local } = usePermissionsV2(branchId);
-  const canManageSchedules = isSuperadmin || isFranquiciado || isEncargado || local.canEditSchedules;
+  const canManageSchedules = local.canEditSchedules;
 
   // Fetch data
   const { team, loading: loadingTeam } = useTeamData(branchId, { excludeOwners: true });

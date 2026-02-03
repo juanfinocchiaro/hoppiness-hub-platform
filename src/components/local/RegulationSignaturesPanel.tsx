@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +33,7 @@ interface TeamMemberSignature {
 
 export default function RegulationSignaturesPanel({ branchId }: RegulationSignaturesPanelProps) {
   const { user } = useAuth();
+  const { local } = usePermissionsV2(branchId);
   const queryClient = useQueryClient();
   const [uploadingFor, setUploadingFor] = useState<TeamMemberSignature | null>(null);
   const [previewFor, setPreviewFor] = useState<TeamMemberSignature | null>(null);
@@ -337,23 +339,27 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
                   </div>
                 ) : (
                   <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => setPreviewFor(member)}
-                      title="Generar hoja de firma para imprimir"
-                    >
-                      <Eye className="w-4 h-4 mr-1" />
-                      Hoja firma
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="default"
-                      onClick={() => setUploadingFor(member)}
-                    >
-                      <Camera className="w-4 h-4 mr-1" />
-                      Subir firma
-                    </Button>
+                    {local.canUploadSignature && (
+                      <>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => setPreviewFor(member)}
+                          title="Generar hoja de firma para imprimir"
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          Hoja firma
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="default"
+                          onClick={() => setUploadingFor(member)}
+                        >
+                          <Camera className="w-4 h-4 mr-1" />
+                          Subir firma
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
