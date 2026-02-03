@@ -1873,18 +1873,13 @@ export type Database = {
         Row: {
           address: string | null
           city: string | null
-          clock_code: string | null
           closing_time: string | null
-          email: string | null
           id: string | null
           is_active: boolean | null
           is_open: boolean | null
-          latitude: number | null
           local_open_state: boolean | null
-          longitude: number | null
           name: string | null
           opening_time: string | null
-          phone: string | null
           public_hours: Json | null
           public_status: string | null
           slug: string | null
@@ -1892,18 +1887,13 @@ export type Database = {
         Insert: {
           address?: string | null
           city?: string | null
-          clock_code?: string | null
           closing_time?: string | null
-          email?: string | null
           id?: string | null
           is_active?: boolean | null
           is_open?: boolean | null
-          latitude?: number | null
           local_open_state?: boolean | null
-          longitude?: number | null
           name?: string | null
           opening_time?: string | null
-          phone?: string | null
           public_hours?: Json | null
           public_status?: string | null
           slug?: string | null
@@ -1911,18 +1901,13 @@ export type Database = {
         Update: {
           address?: string | null
           city?: string | null
-          clock_code?: string | null
           closing_time?: string | null
-          email?: string | null
           id?: string | null
           is_active?: boolean | null
           is_open?: boolean | null
-          latitude?: number | null
           local_open_state?: boolean | null
-          longitude?: number | null
           name?: string | null
           opening_time?: string | null
-          phone?: string | null
           public_hours?: Json | null
           public_status?: string | null
           slug?: string | null
@@ -1966,6 +1951,25 @@ export type Database = {
       can_view_coaching: {
         Args: { _coaching_id: string; _user_id: string }
         Returns: boolean
+      }
+      get_branch_contact_info: {
+        Args: { _branch_id: string }
+        Returns: {
+          email: string
+          latitude: number
+          longitude: number
+          phone: string
+        }[]
+      }
+      get_branch_for_clock: {
+        Args: { _clock_code: string }
+        Returns: {
+          clock_code: string
+          id: string
+          latitude: number
+          longitude: number
+          name: string
+        }[]
       }
       get_brand_role: {
         Args: { _user_id: string }

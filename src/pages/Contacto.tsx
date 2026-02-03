@@ -141,9 +141,8 @@ export default function Contacto() {
     queryKey: ['branches-public'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('branches')
+        .from('branches_public')
         .select('id, name')
-        .eq('is_active', true)
         .order('name');
       if (error) throw error;
       return data;
