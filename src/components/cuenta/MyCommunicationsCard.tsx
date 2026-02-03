@@ -187,10 +187,10 @@ export default function MyCommunicationsCard({ showOnlyBrand = false }: MyCommun
 
       {/* Detail Dialog */}
       <Dialog open={!!selectedComm} onOpenChange={() => setSelectedComm(null)}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
           {selectedComm && (
             <>
-              <DialogHeader>
+              <DialogHeader className="flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg ${getTypeColor(selectedComm.type)}`}>
                     {(() => {
@@ -207,13 +207,13 @@ export default function MyCommunicationsCard({ showOnlyBrand = false }: MyCommun
                 </div>
               </DialogHeader>
               
-              <div className="py-4">
+              <div className="flex-1 overflow-y-auto py-4 min-h-0">
                 <p className="whitespace-pre-wrap text-sm leading-relaxed">
                   {selectedComm.body}
                 </p>
               </div>
               
-              <div className="flex items-center justify-between pt-4 border-t">
+              <div className="flex-shrink-0 flex items-center justify-between pt-4 border-t">
                 <div className="flex gap-2">
                   <Badge variant="secondary">
                     {getTypeLabel(selectedComm.type)}
