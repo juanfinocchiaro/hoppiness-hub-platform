@@ -3,31 +3,17 @@
  * 
  * Estas posiciones son DIFERENTES de los roles de sistema (local_role).
  * - local_role: Define permisos en el sistema (empleado, encargado, etc.)
- * - work_position: Define qué función cumple operativamente (cajero, cocinero, etc.)
+ * - work_position: Define qué función cumple operativamente (cajero, sandwichero, etc.)
+ * 
+ * IMPORTANTE: Las posiciones ahora se cargan dinámicamente desde la tabla work_positions.
+ * Usar el hook useWorkPositions() para obtener la lista actualizada.
  */
 
-export type WorkPositionType = 
-  | 'cajero'
-  | 'cocinero'
-  | 'runner'
-  | 'lavacopas';
+// Tipo genérico para compatibilidad - ahora es dinámico
+export type WorkPositionType = string;
 
 // Alias for convenience
 export type WorkPosition = WorkPositionType;
-
-export const WORK_POSITION_LABELS: Record<WorkPositionType, string> = {
-  cajero: 'Cajero/a',
-  cocinero: 'Cocinero/a',
-  runner: 'Runner',
-  lavacopas: 'Lavacopas',
-};
-
-export const WORK_POSITIONS: { value: WorkPositionType; label: string }[] = [
-  { value: 'cajero', label: 'Cajero/a' },
-  { value: 'cocinero', label: 'Cocinero/a' },
-  { value: 'runner', label: 'Runner' },
-  { value: 'lavacopas', label: 'Lavacopas' },
-];
 
 /**
  * Permission Config Types

@@ -950,9 +950,7 @@ export type Database = {
           start_time: string
           updated_at: string
           user_id: string | null
-          work_position:
-            | Database["public"]["Enums"]["work_position_type"]
-            | null
+          work_position: string | null
         }
         Insert: {
           branch_id?: string | null
@@ -975,9 +973,7 @@ export type Database = {
           start_time: string
           updated_at?: string
           user_id?: string | null
-          work_position?:
-            | Database["public"]["Enums"]["work_position_type"]
-            | null
+          work_position?: string | null
         }
         Update: {
           branch_id?: string | null
@@ -1000,9 +996,7 @@ export type Database = {
           start_time?: string
           updated_at?: string
           user_id?: string | null
-          work_position?:
-            | Database["public"]["Enums"]["work_position_type"]
-            | null
+          work_position?: string | null
         }
         Relationships: [
           {
@@ -1890,6 +1884,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      work_positions: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          key: string
+          label: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key: string
+          label: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key?: string
+          label?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       work_stations: {
         Row: {

@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { Trash2, Plus } from 'lucide-react';
 import type { UserWithStats, Branch, BranchRoleInfo } from './types';
 import type { BrandRole, LocalRole } from '@/hooks/usePermissionsV2';
-import { WORK_POSITIONS, type WorkPositionType } from '@/types/workPosition';
+import { useWorkPositions } from '@/hooks/useWorkPositions';
 
 interface UserRoleModalV2Props {
   user: UserWithStats;
@@ -38,13 +38,14 @@ const LOCAL_ROLES: { value: LocalRole; label: string }[] = [
 interface BranchRoleEdit {
   branch_id: string;
   local_role: LocalRole;
-  default_position: WorkPositionType | null;
+  default_position: string | null;
   existing_id: string | null; // null = new
   toDelete?: boolean;
 }
 
 export function UserRoleModalV2({ user, branches, open, onOpenChange, onSuccess }: UserRoleModalV2Props) {
   const queryClient = useQueryClient();
+  const { data: workPositions = [] } = useWorkPositions();
   
   // Brand role state
   const [hasBrandAccess, setHasBrandAccess] = useState(!!user.brand_role);
@@ -123,26 +124,26 @@ export function UserRoleModalV2({ user, branches, open, onOpenChange, onSuccess 
             .eq('id', br.existing_id);
           if (error) throw error;
         } else if (br.existing_id) {
-          // Update
+          // Update - use type assertion for dynamic positions
           const { error } = await supabase
             .from('user_branch_roles')
             .update({
               local_role: br.local_role,
-              default_position: br.default_position,
+              default_position: br.default_position as any,
             })
             .eq('id', br.existing_id);
           if (error) throw error;
         } else if (!br.toDelete) {
-          // Insert new
+          // Insert new - use type assertion
           const { error } = await supabase
             .from('user_branch_roles')
             .insert({
               user_id: user.user_id!,
               branch_id: br.branch_id,
               local_role: br.local_role,
-              default_position: br.default_position,
+              default_position: br.default_position as any,
               is_active: true,
-            });
+            } as any);
           if (error) throw error;
         }
       }
@@ -251,7 +252,7 @@ export function UserRoleModalV2({ user, branches, open, onOpenChange, onSuccess 
                           <Select 
                             value={br.default_position || 'none'} 
                             onValueChange={(v) => updateBranchRole(index, { 
-                              default_position: v === 'none' ? null : v as WorkPositionType 
+                              default_position: v === 'none' ? null : v 
                             })}
                           >
                             <SelectTrigger className="h-9">
@@ -259,8 +260,8 @@ export function UserRoleModalV2({ user, branches, open, onOpenChange, onSuccess 
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="none">Sin definir</SelectItem>
-                              {WORK_POSITIONS.map(p => (
-                                <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                              {workPositions.map(p => (
+                                <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
