@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 
 interface Communication {
   id: string;
@@ -48,12 +48,12 @@ export interface CommunicationWithSource extends CommunicationWithRead {
 }
 
 export function useUserCommunications() {
-  const { user } = useAuth();
+  const { id: userId } = useEffectiveUser();
   
   return useQuery({
-    queryKey: ['user-communications', user?.id],
+    queryKey: ['user-communications', userId],
     queryFn: async () => {
-      if (!user) return { brand: [], local: [] };
+      if (!userId) return { brand: [], local: [] };
       
       // Get all published communications (RLS handles filtering)
       const { data: comms, error: commsError } = await supabase
@@ -69,7 +69,7 @@ export function useUserCommunications() {
       const { data: reads, error: readsError } = await supabase
         .from('communication_reads')
         .select('communication_id, confirmed_at')
-        .eq('user_id', user.id);
+        .eq('user_id', userId);
       
       if (readsError) throw readsError;
       
@@ -91,7 +91,7 @@ export function useUserCommunications() {
       
       return { brand, local };
     },
-    enabled: !!user,
+    enabled: !!userId,
     staleTime: 30000,
   });
 }
@@ -106,17 +106,17 @@ export function useUnreadCount() {
 
 export function useMarkAsRead() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { id: userId } = useEffectiveUser();
   
   return useMutation({
     mutationFn: async (communicationId: string) => {
-      if (!user) throw new Error('Not authenticated');
+      if (!userId) throw new Error('Not authenticated');
       
       const { error } = await supabase
         .from('communication_reads')
         .insert({
           communication_id: communicationId,
-          user_id: user.id,
+          user_id: userId,
         });
       
       // Ignore unique constraint violation (already read)
@@ -132,17 +132,17 @@ export function useMarkAsRead() {
 
 export function useConfirmCommunication() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { id: userId } = useEffectiveUser();
   
   return useMutation({
     mutationFn: async (communicationId: string) => {
-      if (!user) throw new Error('Not authenticated');
+      if (!userId) throw new Error('Not authenticated');
       
       const { error } = await supabase
         .from('communication_reads')
         .update({ confirmed_at: new Date().toISOString() })
         .eq('communication_id', communicationId)
-        .eq('user_id', user.id);
+        .eq('user_id', userId);
       
       if (error) throw error;
     },
@@ -154,7 +154,7 @@ export function useConfirmCommunication() {
 
 export function useCreateCommunication() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { id: userId } = useEffectiveUser();
   
   return useMutation({
     mutationFn: async (data: {
@@ -165,13 +165,13 @@ export function useCreateCommunication() {
       target_roles?: string[];
       expires_at?: string;
     }) => {
-      if (!user) throw new Error('Not authenticated');
+      if (!userId) throw new Error('Not authenticated');
       
       const { error } = await supabase
         .from('communications')
         .insert({
           ...data,
-          created_by: user.id,
+          created_by: userId,
         });
       
       if (error) throw error;

@@ -1,5 +1,5 @@
-import { useAuth } from '@/hooks/useAuth';
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { useEffectiveUser } from '@/hooks/useEffectiveUser';
+import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,17 +18,17 @@ interface ClockEntry {
 }
 
 export default function MyClockInsCard() {
-  const { user } = useAuth();
-  const { branchRoles } = usePermissionsV2();
+  const { id: userId } = useEffectiveUser();
+  const { branchRoles } = usePermissionsWithImpersonation();
   
   // Only show for employees with at least one branch role
   const isEmployee = branchRoles.length > 0;
 
   // Get clock entries for current month from clock_entries table
   const { data: clockEntries, isLoading } = useQuery({
-    queryKey: ['my-clock-entries', user?.id],
+    queryKey: ['my-clock-entries', userId],
     queryFn: async () => {
-      if (!user) return [];
+      if (!userId) return [];
       
       const now = new Date();
       const monthStart = startOfMonth(now);
@@ -37,7 +37,7 @@ export default function MyClockInsCard() {
       const { data, error } = await supabase
         .from('clock_entries')
         .select('id, entry_type, created_at, branch_id, branches:branch_id(name)')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .gte('created_at', monthStart.toISOString())
         .lte('created_at', monthEnd.toISOString())
         .order('created_at', { ascending: false })
@@ -46,7 +46,7 @@ export default function MyClockInsCard() {
       if (error) throw error;
       return data as ClockEntry[];
     },
-    enabled: !!user && isEmployee,
+    enabled: !!userId && isEmployee,
   });
 
   // Calculate total hours worked this month

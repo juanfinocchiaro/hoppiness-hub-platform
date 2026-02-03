@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,24 +20,24 @@ interface ScheduleRequest {
 }
 
 export default function MyRequestsCard() {
-  const { user } = useAuth();
+  const { id: userId } = useEffectiveUser();
 
   const { data: requests, isLoading } = useQuery({
-    queryKey: ['my-schedule-requests', user?.id],
+    queryKey: ['my-schedule-requests', userId],
     queryFn: async () => {
-      if (!user) return [];
+      if (!userId) return [];
       
       const { data, error } = await supabase
         .from('schedule_requests')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(5);
       
       if (error) throw error;
       return data as ScheduleRequest[];
     },
-    enabled: !!user,
+    enabled: !!userId,
   });
 
   const getStatusBadge = (status: string) => {

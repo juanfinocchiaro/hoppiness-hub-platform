@@ -2,7 +2,7 @@
  * MyWarningsCard - Vista de apercibimientos para empleados en Mi Cuenta
  * Fase 6: Con descarga de documento firmado
  */
-import { useAuth } from '@/hooks/useAuth';
+import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,13 +34,13 @@ const WARNING_TYPE_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 export default function MyWarningsCard() {
-  const { user } = useAuth();
+  const { id: userId } = useEffectiveUser();
   const queryClient = useQueryClient();
   
   const { data: warnings, isLoading } = useQuery({
-    queryKey: ['my-warnings', user?.id],
+    queryKey: ['my-warnings', userId],
     queryFn: async () => {
-      if (!user) return [];
+      if (!userId) return [];
       
       const { data, error } = await supabase
         .from('warnings')
@@ -53,7 +53,7 @@ export default function MyWarningsCard() {
           signed_document_url,
           issued_by
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('is_active', true)
         .order('warning_date', { ascending: false })
         .limit(10);
@@ -80,7 +80,7 @@ export default function MyWarningsCard() {
         issuer: w.issued_by ? { full_name: issuerMap[w.issued_by] || 'Desconocido' } : undefined
       })) as Warning[];
     },
-    enabled: !!user,
+    enabled: !!userId,
   });
 
   const acknowledgeMutation = useMutation({
