@@ -2,12 +2,13 @@
  * InlineScheduleEditor - Excel-like schedule editing with proper scroll isolation
  * 
  * Features:
- * - Horizontal grid with sticky employee names
- * - Synchronized day headers between schedule and coverage
- * - Only shows hours with actual coverage
+ * - Only the day columns scroll horizontally (not the sidebar or page)
+ * - Synchronized scrolling between schedule and coverage grids
+ * - Days are perfectly aligned between both grids
  * - Shows position icons and break times
+ * - Only shows hours with actual coverage
  */
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -55,9 +56,9 @@ const POSITION_ICONS: Record<string, { icon: React.ComponentType<any>; color: st
 
 const changeKey = (userId: string, date: string) => `${userId}:${date}`;
 
-const DAY_WIDTH = 80; // Fixed width for each day column
-const EMPLOYEE_COL_WIDTH = 160; // Fixed width for employee column
-const HOUR_COL_WIDTH = 60; // Fixed width for hour column
+const DAY_WIDTH = 80;
+const EMPLOYEE_COL_WIDTH = 180;
+const HOUR_COL_WIDTH = 60;
 
 export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorProps) {
   const now = new Date();
@@ -406,12 +407,10 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
         'flex flex-col items-center gap-0.5 p-1 rounded text-[10px]',
         isPending && 'ring-2 ring-primary ring-offset-1 bg-primary/5'
       )}>
-        {/* Time range */}
         <div className="font-medium text-foreground">
           {value.startTime.slice(0, 5)}-{value.endTime.slice(0, 5)}
         </div>
         
-        {/* Position & Break indicators */}
         <div className="flex items-center gap-1">
           {PositionIcon && (
             <Tooltip>
@@ -440,10 +439,39 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
 
   const gridWidth = monthDays.length * DAY_WIDTH;
 
+  // Common day header component to ensure alignment
+  const renderDayHeaders = (height: string = 'h-12') => (
+    <div className="flex" style={{ width: gridWidth }}>
+      {monthDays.map((day) => {
+        const dateStr = format(day, 'yyyy-MM-dd');
+        const isHoliday = holidayDates.has(dateStr);
+        const isSunday = day.getDay() === 0;
+
+        return (
+          <div
+            key={dateStr}
+            style={{ width: DAY_WIDTH }}
+            className={cn(
+              'shrink-0 flex flex-col items-center justify-center border-r',
+              height,
+              isHoliday && 'bg-warning/20',
+              isSunday && 'bg-muted/60'
+            )}
+          >
+            <span className="text-[10px] text-muted-foreground">{dayNames[day.getDay()]}</span>
+            <span className={cn('text-sm font-medium', isHoliday && 'text-warning')}>
+              {format(day, 'd')}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+
   return (
     <TooltipProvider>
       <div className="space-y-4">
-        {/* Header - Always visible */}
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={goToPrevMonth}>
@@ -491,15 +519,18 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
         ) : (
           <div className="space-y-4">
             {/* Schedule Grid Card */}
-            <Card>
-              <CardHeader className="py-3 px-4 border-b">
+            <Card className="overflow-hidden">
+              <CardHeader className="py-3 px-4 border-b bg-muted/30">
                 <CardTitle className="text-sm font-medium">📅 Horarios del Equipo</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="flex">
                   {/* Fixed Employee Column */}
-                  <div className="shrink-0 border-r bg-card z-10" style={{ width: EMPLOYEE_COL_WIDTH }}>
-                    {/* Header */}
+                  <div 
+                    className="shrink-0 border-r bg-card z-10" 
+                    style={{ width: EMPLOYEE_COL_WIDTH }}
+                  >
+                    {/* Header cell */}
                     <div className="h-12 border-b bg-muted/50 flex items-center px-3">
                       <span className="text-xs font-medium text-muted-foreground">Empleado</span>
                     </div>
@@ -514,37 +545,17 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                     ))}
                   </div>
 
-                  {/* Scrollable Days */}
+                  {/* Scrollable Days Container */}
                   <div 
                     ref={scheduleScrollRef}
                     onScroll={handleScheduleScroll}
-                    className="flex-1 overflow-x-auto"
+                    className="flex-1 overflow-x-auto overscroll-x-contain"
+                    style={{ scrollbarWidth: 'thin' }}
                   >
-                    <div style={{ width: gridWidth }}>
+                    <div style={{ width: gridWidth, minWidth: gridWidth }}>
                       {/* Day headers */}
-                      <div className="flex h-12 border-b bg-muted/50">
-                        {monthDays.map((day) => {
-                          const dateStr = format(day, 'yyyy-MM-dd');
-                          const isHoliday = holidayDates.has(dateStr);
-                          const isSunday = day.getDay() === 0;
-
-                          return (
-                            <div
-                              key={dateStr}
-                              style={{ width: DAY_WIDTH }}
-                              className={cn(
-                                'shrink-0 flex flex-col items-center justify-center border-r',
-                                isHoliday && 'bg-warning/20',
-                                isSunday && 'bg-muted/60'
-                              )}
-                            >
-                              <span className="text-[10px] text-muted-foreground">{dayNames[day.getDay()]}</span>
-                              <span className={cn('text-sm font-medium', isHoliday && 'text-warning')}>
-                                {format(day, 'd')}
-                              </span>
-                            </div>
-                          );
-                        })}
+                      <div className="border-b bg-muted/50">
+                        {renderDayHeaders('h-12')}
                       </div>
 
                       {/* Schedule rows */}
@@ -591,8 +602,8 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
 
             {/* Coverage Grid Card */}
             {hoursWithCoverage.length > 0 && (
-              <Card>
-                <CardHeader className="py-3 px-4 border-b">
+              <Card className="overflow-hidden">
+                <CardHeader className="py-3 px-4 border-b bg-muted/30">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-medium">📊 Cobertura por Hora</CardTitle>
                     <div className="flex gap-3 text-xs">
@@ -611,9 +622,12 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                 <CardContent className="p-0">
                   <div className="flex">
                     {/* Fixed Hour Column */}
-                    <div className="shrink-0 border-r bg-card z-10" style={{ width: HOUR_COL_WIDTH }}>
-                      {/* Header */}
-                      <div className="h-8 border-b bg-muted/50 flex items-center px-2">
+                    <div 
+                      className="shrink-0 border-r bg-card z-10" 
+                      style={{ width: HOUR_COL_WIDTH }}
+                    >
+                      {/* Header cell - same height as schedule header */}
+                      <div className="h-12 border-b bg-muted/50 flex items-center px-2">
                         <span className="text-xs font-medium text-muted-foreground">Hora</span>
                       </div>
                       {/* Hour rows */}
@@ -624,35 +638,17 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                       ))}
                     </div>
 
-                    {/* Scrollable Coverage */}
+                    {/* Scrollable Coverage Container */}
                     <div 
                       ref={coverageScrollRef}
                       onScroll={handleCoverageScroll}
-                      className="flex-1 overflow-x-auto"
+                      className="flex-1 overflow-x-auto overscroll-x-contain"
+                      style={{ scrollbarWidth: 'thin' }}
                     >
-                      <div style={{ width: gridWidth }}>
+                      <div style={{ width: gridWidth, minWidth: gridWidth }}>
                         {/* Day headers - aligned with schedule */}
-                        <div className="flex h-8 border-b bg-muted/50">
-                          {monthDays.map((day) => {
-                            const dateStr = format(day, 'yyyy-MM-dd');
-                            const isHoliday = holidayDates.has(dateStr);
-                            const isSunday = day.getDay() === 0;
-
-                            return (
-                              <div
-                                key={dateStr}
-                                style={{ width: DAY_WIDTH }}
-                                className={cn(
-                                  'shrink-0 flex items-center justify-center border-r text-xs',
-                                  isHoliday && 'bg-warning/20',
-                                  isSunday && 'bg-muted/60'
-                                )}
-                              >
-                                <span className="text-muted-foreground">{dayNames[day.getDay()].slice(0, 2)}</span>
-                                <span className="ml-1 font-medium">{format(day, 'd')}</span>
-                              </div>
-                            );
-                          })}
+                        <div className="border-b bg-muted/50">
+                          {renderDayHeaders('h-12')}
                         </div>
 
                         {/* Hourly coverage rows */}
