@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Phone } from 'lucide-react';
-import { UserRoleModal } from './UserRoleModal';
+import { Phone, MapPin } from 'lucide-react';
+import { UserRoleModalV2 } from './UserRoleModalV2';
 import type { UserWithStats, Branch } from './types';
 import { ROLE_LABELS } from './types';
+import { WORK_POSITION_LABELS } from '@/types/workPosition';
 
 interface UserExpandedRowProps {
   user: UserWithStats;
@@ -14,13 +15,6 @@ interface UserExpandedRowProps {
 
 export function UserExpandedRow({ user, branches, onClose, onUserUpdated }: UserExpandedRowProps) {
   const [showRoleModal, setShowRoleModal] = useState(false);
-
-  const getBranchNames = (branchIds: string[]) => {
-    return branchIds
-      .map(id => branches.find(b => b.id === id)?.name)
-      .filter(Boolean)
-      .join(', ');
-  };
 
   return (
     <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -60,23 +54,29 @@ export function UserExpandedRow({ user, branches, onClose, onUserUpdated }: User
             </div>
           </div>
 
-          {/* Local Access */}
+          {/* Local Access - Nueva arquitectura con múltiples sucursales */}
           <div className="flex items-start gap-2">
-            <span className={`w-2.5 h-2.5 rounded-full mt-1 ${user.local_role ? 'bg-green-500' : 'bg-gray-300'}`} />
+            <span className={`w-2.5 h-2.5 rounded-full mt-1 ${user.hasLocalAccess ? 'bg-green-500' : 'bg-gray-300'}`} />
             <div className="flex-1">
               <span className="font-medium">Mi Local: </span>
-              <span className="text-muted-foreground">
-                {user.local_role ? (
-                  <>
-                    {ROLE_LABELS[user.local_role]}
-                    {user.branch_ids.length > 0 && (
-                      <span className="block text-xs mt-0.5">
-                        en {getBranchNames(user.branch_ids)}
-                      </span>
-                    )}
-                  </>
-                ) : 'Sin acceso'}
-              </span>
+              {user.branch_roles.length > 0 ? (
+                <div className="space-y-1 mt-1">
+                  {user.branch_roles.map((br) => (
+                    <div key={br.branch_id} className="flex items-center gap-2 text-muted-foreground">
+                      <MapPin className="h-3 w-3" />
+                      <span className="font-medium">{br.branch_name}:</span>
+                      <span>{ROLE_LABELS[br.local_role] || br.local_role}</span>
+                      {br.default_position && (
+                        <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                          {WORK_POSITION_LABELS[br.default_position]}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-muted-foreground">Sin acceso</span>
+              )}
             </div>
           </div>
         </div>
@@ -87,12 +87,12 @@ export function UserExpandedRow({ user, branches, onClose, onUserUpdated }: User
           onClick={() => setShowRoleModal(true)}
           className="w-full"
         >
-          {user.brand_role || user.local_role ? 'Editar roles' : 'Asignar roles'}
+          {user.brand_role || user.hasLocalAccess ? 'Editar roles' : 'Asignar roles'}
         </Button>
       </div>
 
       {showRoleModal && (
-        <UserRoleModal
+        <UserRoleModalV2
           user={user}
           branches={branches}
           open={showRoleModal}

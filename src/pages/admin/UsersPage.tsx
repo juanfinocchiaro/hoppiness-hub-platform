@@ -7,7 +7,7 @@ export default function UsersPage() {
   const { isSuperadmin, loading: permLoading } = usePermissionsV2();
   const { users, branches, loading, refetch } = useUsersData();
 
-  // Filter state - simplified (no order filters)
+  // Filter state - simplified
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [accessFilter, setAccessFilter] = useState('all');
@@ -23,20 +23,20 @@ export default function UsersPage() {
         }
       }
 
-      // Role filter
+      // Role filter - usa nueva arquitectura
       if (roleFilter !== 'all') {
-        const highestRole = getHighestRole(user.brand_role, user.local_role);
+        const highestRole = getHighestRole(user.brand_role, user.branch_roles);
         if (roleFilter === 'sin_rol') {
-          if (user.brand_role || user.local_role) return false;
+          if (user.brand_role || user.hasLocalAccess) return false;
         } else if (highestRole !== roleFilter) {
           return false;
         }
       }
 
-      // Access filter
+      // Access filter - usa nueva arquitectura
       if (accessFilter === 'brand' && !user.brand_role) return false;
-      if (accessFilter === 'local' && !user.local_role) return false;
-      if (accessFilter === 'none' && (user.brand_role || user.local_role)) return false;
+      if (accessFilter === 'local' && !user.hasLocalAccess) return false;
+      if (accessFilter === 'none' && (user.brand_role || user.hasLocalAccess)) return false;
 
       return true;
     });

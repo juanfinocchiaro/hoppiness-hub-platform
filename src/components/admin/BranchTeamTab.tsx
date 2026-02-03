@@ -4,7 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -25,6 +24,7 @@ import { Label } from '@/components/ui/label';
 import { Search, UserPlus, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { LOCAL_ROLE_LABELS, type LocalRole } from '@/hooks/usePermissionsV2';
+import { WORK_POSITIONS, WORK_POSITION_LABELS, type WorkPositionType } from '@/types/workPosition';
 
 interface BranchTeamTabProps {
   branchId: string;
@@ -34,6 +34,7 @@ interface BranchTeamTabProps {
 interface TeamMember {
   user_id: string;
   local_role: LocalRole;
+  default_position: WorkPositionType | null;
   profile: {
     full_name: string;
     email: string;
@@ -55,6 +56,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<{ user_id: string; full_name: string; email: string } | null>(null);
   const [selectedRole, setSelectedRole] = useState<LocalRole>('empleado');
+  const [selectedPosition, setSelectedPosition] = useState<WorkPositionType | 'none'>('none');
 
   // Fetch team members for this branch
   const { data: team = [], isLoading } = useQuery({
@@ -64,7 +66,8 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
         .from('user_branch_roles')
         .select(`
           user_id,
-          local_role
+          local_role,
+          default_position
         `)
         .eq('branch_id', branchId)
         .eq('is_active', true);
@@ -84,6 +87,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
 
       return data.map(d => ({
         ...d,
+        default_position: d.default_position as WorkPositionType | null,
         profile: profileMap.get(d.user_id) || null,
       })) as TeamMember[];
     },
@@ -104,7 +108,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
 
       if (error) throw error;
 
-      // Filter out users already in this branch (profile.id = user_id)
+      // Filter out users already in this branch
       const existingUserIds = new Set(team.map(t => t.user_id));
       return (data || []).filter(u => !existingUserIds.has(u.id));
     },
@@ -129,15 +133,34 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
     onError: () => toast.error('Error al actualizar rol'),
   });
 
+  // Update position mutation
+  const updatePositionMutation = useMutation({
+    mutationFn: async ({ userId, position }: { userId: string; position: WorkPositionType | null }) => {
+      const { error } = await supabase
+        .from('user_branch_roles')
+        .update({ default_position: position, updated_at: new Date().toISOString() })
+        .eq('user_id', userId)
+        .eq('branch_id', branchId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['branch-team', branchId] });
+      toast.success('Posición actualizada');
+    },
+    onError: () => toast.error('Error al actualizar posición'),
+  });
+
   // Add member mutation
   const addMemberMutation = useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: LocalRole }) => {
+    mutationFn: async ({ userId, role, position }: { userId: string; role: LocalRole; position: WorkPositionType | null }) => {
       const { error } = await supabase
         .from('user_branch_roles')
         .insert({
           user_id: userId,
           branch_id: branchId,
           local_role: role,
+          default_position: position,
           is_active: true,
         });
 
@@ -149,6 +172,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
       setShowAddModal(false);
       setSelectedUser(null);
       setSearchEmail('');
+      setSelectedPosition('none');
     },
     onError: (error: any) => {
       if (error.message?.includes('duplicate')) {
@@ -178,14 +202,17 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
   });
 
   const handleSelectUser = (user: typeof searchResults[0]) => {
-    // Map profile.id to user_id for state
     setSelectedUser({ user_id: user.id, full_name: user.full_name, email: user.email });
     setShowAddModal(true);
   };
 
   const handleConfirmAdd = () => {
     if (selectedUser) {
-      addMemberMutation.mutate({ userId: selectedUser.user_id, role: selectedRole });
+      addMemberMutation.mutate({ 
+        userId: selectedUser.user_id, 
+        role: selectedRole,
+        position: selectedPosition === 'none' ? null : selectedPosition,
+      });
     }
   };
 
@@ -291,13 +318,33 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
                       newRole: value as LocalRole,
                     })}
                   >
-                    <SelectTrigger className="w-36">
+                    <SelectTrigger className="w-32">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {AVAILABLE_ROLES.map((role) => (
                         <SelectItem key={role.value} value={role.value!}>
                           {role.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    value={member.default_position || 'none'}
+                    onValueChange={(value) => updatePositionMutation.mutate({
+                      userId: member.user_id,
+                      position: value === 'none' ? null : value as WorkPositionType,
+                    })}
+                  >
+                    <SelectTrigger className="w-28">
+                      <SelectValue placeholder="Posición" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin definir</SelectItem>
+                      {WORK_POSITIONS.map((pos) => (
+                        <SelectItem key={pos.value} value={pos.value}>
+                          {pos.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -352,6 +399,29 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Posición habitual</Label>
+                <Select
+                  value={selectedPosition}
+                  onValueChange={(v) => setSelectedPosition(v as WorkPositionType | 'none')}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin definir</SelectItem>
+                    {WORK_POSITIONS.map((pos) => (
+                      <SelectItem key={pos.value} value={pos.value}>
+                        {pos.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Esta es la posición que se asignará automáticamente al crear horarios.
+                </p>
               </div>
             </div>
           )}

@@ -731,6 +731,9 @@ export type Database = {
           start_time: string
           updated_at: string
           user_id: string | null
+          work_position:
+            | Database["public"]["Enums"]["work_position_type"]
+            | null
         }
         Insert: {
           branch_id?: string | null
@@ -753,6 +756,9 @@ export type Database = {
           start_time: string
           updated_at?: string
           user_id?: string | null
+          work_position?:
+            | Database["public"]["Enums"]["work_position_type"]
+            | null
         }
         Update: {
           branch_id?: string | null
@@ -775,6 +781,9 @@ export type Database = {
           start_time?: string
           updated_at?: string
           user_id?: string | null
+          work_position?:
+            | Database["public"]["Enums"]["work_position_type"]
+            | null
         }
         Relationships: [
           {
@@ -792,6 +801,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      permission_config: {
+        Row: {
+          allowed_roles: string[]
+          category: string
+          created_at: string | null
+          id: string
+          is_editable: boolean | null
+          permission_key: string
+          permission_label: string
+          scope: string
+        }
+        Insert: {
+          allowed_roles: string[]
+          category: string
+          created_at?: string | null
+          id?: string
+          is_editable?: boolean | null
+          permission_key: string
+          permission_label: string
+          scope: string
+        }
+        Update: {
+          allowed_roles?: string[]
+          category?: string
+          created_at?: string | null
+          id?: string
+          is_editable?: boolean | null
+          permission_key?: string
+          permission_label?: string
+          scope?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -1379,6 +1421,9 @@ export type Database = {
           branch_id: string
           clock_pin: string | null
           created_at: string | null
+          default_position:
+            | Database["public"]["Enums"]["work_position_type"]
+            | null
           id: string
           is_active: boolean | null
           local_role: Database["public"]["Enums"]["local_role_type"]
@@ -1390,6 +1435,9 @@ export type Database = {
           branch_id: string
           clock_pin?: string | null
           created_at?: string | null
+          default_position?:
+            | Database["public"]["Enums"]["work_position_type"]
+            | null
           id?: string
           is_active?: boolean | null
           local_role: Database["public"]["Enums"]["local_role_type"]
@@ -1401,6 +1449,9 @@ export type Database = {
           branch_id?: string
           clock_pin?: string | null
           created_at?: string | null
+          default_position?:
+            | Database["public"]["Enums"]["work_position_type"]
+            | null
           id?: string
           is_active?: boolean | null
           local_role?: Database["public"]["Enums"]["local_role_type"]
@@ -1759,6 +1810,12 @@ export type Database = {
         | "production"
       supplier_control_type: "brand_only" | "brand_preferred" | "free"
       transaction_type: "income" | "expense"
+      work_position_type:
+        | "cajero"
+        | "cocinero"
+        | "barista"
+        | "runner"
+        | "lavacopas"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1926,6 +1983,13 @@ export const Constants = {
       ],
       supplier_control_type: ["brand_only", "brand_preferred", "free"],
       transaction_type: ["income", "expense"],
+      work_position_type: [
+        "cajero",
+        "cocinero",
+        "barista",
+        "runner",
+        "lavacopas",
+      ],
     },
   },
 } as const
