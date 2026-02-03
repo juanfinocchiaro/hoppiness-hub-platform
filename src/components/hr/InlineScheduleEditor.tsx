@@ -494,11 +494,12 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
               </div>
             </CardHeader>
             
-            <CardContent className="p-0">
-              <div className="flex">
-                {/* Fixed Left Column */}
+            {/* Scrollable container with max height */}
+            <CardContent className="p-0 max-h-[calc(100vh-320px)] overflow-auto">
+              <div className="flex min-w-max">
+                {/* Fixed Left Column - sticky */}
                 <div 
-                  className="shrink-0 border-r bg-card z-10" 
+                  className="shrink-0 border-r bg-card z-20 sticky left-0" 
                   style={{ width: EMPLOYEE_COL_WIDTH }}
                 >
                   {/* Header cell */}
@@ -544,11 +545,10 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                   )}
                 </div>
 
-                {/* Scrollable Grid Container */}
+                {/* Days Grid */}
                 <div 
                   ref={gridScrollRef}
-                  className="flex-1 overflow-x-auto overscroll-x-contain"
-                  style={{ scrollbarWidth: 'thin' }}
+                  className="flex-1"
                 >
                   <div style={{ width: gridWidth, minWidth: gridWidth }}>
                     {/* Day headers */}
