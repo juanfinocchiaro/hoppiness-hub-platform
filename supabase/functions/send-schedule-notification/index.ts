@@ -112,7 +112,9 @@ const handler = async (req: Request): Promise<Response> => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Hoppiness Hub <noreply@hoppiness.com.ar>",
+        // Use Resend's test domain until hoppiness.com.ar is verified
+        // Change to "Hoppiness Hub <noreply@hoppiness.com.ar>" after domain verification
+        from: "Hoppiness Hub <onboarding@resend.dev>",
         to: [profile.email],
         subject: subject,
         html: htmlContent,
