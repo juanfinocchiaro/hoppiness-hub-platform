@@ -1,120 +1,186 @@
 
-# Plan: Sincronizar Usuarios Huérfanos y Prevenir Futuros Problemas
+# Plan: Mejorar Vista de Equipo en Mi Marca con Coaching Integrado
 
-## Problema Identificado
+## Resumen del Cambio
 
-El usuario `isanfundaro@gmail.com` existe en `auth.users` (confirmado por el error "ya está registrado") pero **no existe en `profiles`**, por lo que no aparece en la lista de usuarios del panel de administración.
-
-El sistema actual:
-1. Tiene un trigger `on_auth_user_created` que DEBERÍA crear el perfil automáticamente
-2. El trigger está correctamente configurado (SECURITY DEFINER, owner postgres)
-3. Los 30 usuarios existentes fueron creados correctamente con este sistema
-
-Sin embargo, hay al menos un usuario "huérfano" que no tiene su perfil correspondiente.
+Mejorar `BranchTeamTab.tsx` (usado en Mi Marca > Locales > Detalle > Equipo) para que:
+1. Muestre jerarquía visual clara (Propietarios > Encargados > Staff)
+2. Muestre estado de coaching de todos los miembros
+3. Permita al Coordinador hacer coaching **solo a encargados**
+4. Permita al Coordinador **ver** los coachings que los encargados hicieron al staff
 
 ---
 
-## Solución Propuesta
+## Lógica de Permisos de Coaching
 
-### Parte 1: Sincronización Inmediata (One-time fix)
+| Rol del Evaluador | Puede Evaluar | Puede Ver |
+|-------------------|---------------|-----------|
+| **Coordinador/Superadmin** | Solo Encargados | Todos los coachings del local |
+| **Encargado** | Staff (cajero, empleado) | Coachings de su equipo |
+| **Franquiciado** | Nadie (es dueño) | Coachings de su local |
 
-Crear una función administrativa que sincronice todos los usuarios huérfanos:
+---
 
-```sql
--- Función para sincronizar usuarios de auth.users que no tienen profile
-CREATE OR REPLACE FUNCTION sync_orphan_users()
-RETURNS TABLE(user_id uuid, email text, action text)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  RETURN QUERY
-  INSERT INTO profiles (id, email, full_name, created_at)
-  SELECT 
-    au.id,
-    au.email,
-    COALESCE(au.raw_user_meta_data->>'full_name', au.email),
-    au.created_at
-  FROM auth.users au
-  WHERE NOT EXISTS (
-    SELECT 1 FROM profiles p WHERE p.id = au.id
-  )
-  ON CONFLICT (id) DO NOTHING
-  RETURNING id, email, 'created'::text;
-END;
-$$;
+## Diseño de la Nueva Interfaz
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  Equipo de General Paz                         Febrero 2026    │
+├─────────────────────────────────────────────────────────────────┤
+│  📊 Coachings del mes: 5/8 completados                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  🏠 PROPIETARIOS                                                │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ 👤 María González        Franquiciada                     │  │
+│  │    maria@email.com                                        │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  👔 ENCARGADOS                                     2/2 ✓        │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ 👤 Juan Pérez            Encargado                        │  │
+│  │    juan@email.com        Coaching: ✓ Feb 2026 (4.2/4)     │  │
+│  │                          Evaluado por: Admin Central      │  │
+│  │                          [Ver Detalle]                    │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ 👤 Ana López             Encargada                        │  │
+│  │    ana@email.com         Coaching: ⏳ Pendiente           │  │
+│  │                          [Evaluar >]  ← Solo Coordinador  │  │
+│  │   ┌─────────────────────────────────────────────────────┐ │  │
+│  │   │      [Formulario de Coaching Expandido]             │ │  │
+│  │   └─────────────────────────────────────────────────────┘ │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  👥 EQUIPO                                         3/5          │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ Nombre       │ Rol      │ Posición │ Coaching             │  │
+│  ├──────────────┼──────────┼──────────┼──────────────────────┤  │
+│  │ Carlos R.    │ Cajero   │ Caja     │ ✓ 3.8 por Juan P.    │  │
+│  │ Laura M.     │ Empleado │ Cocina   │ ✓ 4.0 por Ana L.     │  │
+│  │ Pedro S.     │ Empleado │ Runner   │ ⏳ Pendiente         │  │
+│  │ ... (expand para ver historial)                           │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Parte 2: Ejecutar la Sincronización
+---
 
-Una vez creada la función, ejecutar:
+## Interacciones
 
-```sql
-SELECT * FROM sync_orphan_users();
-```
+### Para Encargados (en Staff):
+- **Click en fila** → Expande y muestra historial de coachings con quién lo evaluó
+- **Solo lectura** desde Mi Marca (Coordinador no evalúa staff directo)
 
-Esto creará perfiles para todos los usuarios huérfanos, incluyendo `isanfundaro@gmail.com`.
-
-### Parte 3: Hacer el Trigger Más Robusto
-
-Modificar el trigger para que maneje errores de forma más elegante y tenga logging:
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  INSERT INTO public.profiles (id, full_name, email, created_at)
-  VALUES (
-    NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
-    NEW.email,
-    NEW.created_at
-  )
-  ON CONFLICT (id) DO NOTHING;  -- Prevenir errores si ya existe
-  
-  RETURN NEW;
-EXCEPTION WHEN OTHERS THEN
-  -- Log el error pero no fallar el signup
-  RAISE WARNING 'handle_new_user failed for %: %', NEW.id, SQLERRM;
-  RETURN NEW;
-END;
-$$;
-```
+### Para Encargados (la persona):
+- **Click en "Evaluar"** → Expande formulario de coaching (solo si eres Coordinador/Superadmin)
+- **Click en "Ver Detalle"** → Muestra el coaching completo con scores
 
 ---
 
 ## Archivos a Modificar
 
-Ninguno - todo es cambio en base de datos via migración SQL.
+| Archivo | Cambio |
+|---------|--------|
+| `src/components/admin/BranchTeamTab.tsx` | Refactorización completa |
+
+## Archivos a Crear
+
+| Archivo | Propósito |
+|---------|-----------|
+| `src/components/admin/BranchTeamMemberRow.tsx` | Fila de miembro con estado de coaching |
+| `src/components/admin/BranchCoachingPreview.tsx` | Vista resumen de coaching realizado |
 
 ---
 
-## Pasos de Implementación
+## Detalles Técnicos
 
-1. **Crear migración SQL** con:
-   - Función `sync_orphan_users()`
-   - Actualización del trigger `handle_new_user` con manejo de errores
-   
-2. **Ejecutar sincronización** llamando a `sync_orphan_users()` una vez
+### Query Mejorada
 
-3. **Verificar** que `isanfundaro@gmail.com` aparece en la lista de usuarios
+```typescript
+// 1. Obtener equipo del local
+const { data: team } = await supabase
+  .from('user_branch_roles')
+  .select(`user_id, local_role, default_position`)
+  .eq('branch_id', branchId)
+  .eq('is_active', true);
+
+// 2. Obtener coachings del mes actual
+const currentMonth = new Date().getMonth() + 1;
+const currentYear = new Date().getFullYear();
+
+const { data: monthCoachings } = await supabase
+  .from('coachings')
+  .select(`
+    id, user_id, overall_score, coaching_date, 
+    evaluated_by, acknowledged_at
+  `)
+  .eq('branch_id', branchId)
+  .eq('coaching_month', currentMonth)
+  .eq('coaching_year', currentYear);
+
+// 3. Obtener perfiles (incluir evaluadores)
+const allUserIds = [
+  ...team.map(t => t.user_id),
+  ...monthCoachings.map(c => c.evaluated_by)
+];
+const { data: profiles } = await supabase
+  .from('profiles')
+  .select('id, full_name, email, avatar_url')
+  .in('id', allUserIds);
+```
+
+### Agrupación de Miembros
+
+```typescript
+const grouped = {
+  propietarios: team.filter(m => m.local_role === 'franquiciado'),
+  encargados: team.filter(m => m.local_role === 'encargado'),
+  staff: team.filter(m => 
+    ['cajero', 'empleado', 'contador_local'].includes(m.local_role)
+  ),
+};
+```
+
+### Lógica de "Puede Evaluar"
+
+```typescript
+const canEvaluateManager = (memberRole: string) => {
+  // Solo Coordinador o Superadmin pueden evaluar encargados
+  return (isCoordinador || isSuperadmin) && memberRole === 'encargado';
+};
+
+const canEvaluateStaff = (memberRole: string) => {
+  // Desde Mi Marca, el coordinador NO evalúa staff directamente
+  // Solo puede VER los coachings que hicieron los encargados
+  return false;
+};
+```
+
+### Mostrar Info del Evaluador
+
+Para cada coaching, se mostrará:
+- Score obtenido (ej: 3.8/4)
+- Nombre del evaluador (ej: "Por: Juan Pérez")
+- Fecha del coaching
+- Badge de confirmación si el empleado lo leyó
+
+---
+
+## Estados de Coaching
+
+| Estado | Visual | Descripción |
+|--------|--------|-------------|
+| `completado` | ✓ Verde + Score | Tiene coaching este mes |
+| `pendiente` | ⏳ Amarillo | No tiene coaching este mes |
+| `sin_confirmar` | Badge naranja | Coaching hecho pero no leído |
 
 ---
 
 ## Beneficios
 
-- Soluciona el problema inmediato de usuarios huérfanos
-- Previene problemas futuros con manejo de errores robusto
-- No requiere cambios en el código frontend
-- Es idempotente (se puede ejecutar múltiples veces sin efectos secundarios)
-
----
-
-## Riesgo
-
-Bajo - La función usa `ON CONFLICT DO NOTHING` para evitar duplicados y el trigger mejorado tiene manejo de excepciones.
+1. **Visibilidad total**: Coordinador ve de un vistazo quién falta evaluar
+2. **Jerarquía clara**: Propietarios, encargados y staff diferenciados
+3. **Trazabilidad**: Se ve quién hizo cada coaching al staff
+4. **Flujo correcto**: Coordinador solo evalúa encargados, staff es evaluado por encargados
+5. **Una sola vista**: Todo desde Mi Marca sin cambiar de panel
