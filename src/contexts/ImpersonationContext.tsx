@@ -41,10 +41,23 @@ const ImpersonationContext = createContext<ImpersonationContextType | undefined>
 
 const STORAGE_KEY = 'hoppiness_impersonation';
 
+function readStoredImpersonation(): ImpersonatedUser | null {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as ImpersonatedUser;
+  } catch {
+    sessionStorage.removeItem(STORAGE_KEY);
+    return null;
+  }
+}
+
 export function ImpersonationProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [isImpersonating, setIsImpersonating] = useState(false);
-  const [targetUser, setTargetUser] = useState<ImpersonatedUser | null>(null);
+
+  // Restore synchronously to avoid layout shifts (banner/offset toggling after first render)
+  const [targetUser, setTargetUser] = useState<ImpersonatedUser | null>(() => readStoredImpersonation());
+  const [isImpersonating, setIsImpersonating] = useState<boolean>(() => !!readStoredImpersonation());
   const [loading, setLoading] = useState(false);
   const [isSuperadmin, setIsSuperadmin] = useState(false);
 
@@ -69,17 +82,23 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     checkSuperadmin();
   }, [user?.id]);
 
-  // Restore from sessionStorage on mount
+  // Validate restored impersonation once we know if the current user is superadmin
   useEffect(() => {
-    const stored = sessionStorage.getItem(STORAGE_KEY);
-    if (stored && isSuperadmin) {
-      try {
-        const parsed = JSON.parse(stored) as ImpersonatedUser;
-        setTargetUser(parsed);
-        setIsImpersonating(true);
-      } catch {
+    if (!isSuperadmin) {
+      // If user isn't superadmin, never keep impersonation state
+      if (sessionStorage.getItem(STORAGE_KEY)) {
         sessionStorage.removeItem(STORAGE_KEY);
       }
+      setIsImpersonating(false);
+      setTargetUser(null);
+      return;
+    }
+
+    // If superadmin and we have stored target, keep it (already set synchronously)
+    const stored = readStoredImpersonation();
+    if (stored) {
+      setTargetUser(stored);
+      setIsImpersonating(true);
     }
   }, [isSuperadmin]);
 
