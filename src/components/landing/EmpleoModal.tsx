@@ -89,7 +89,7 @@ export function EmpleoModal({ open, onOpenChange }: EmpleoModalProps) {
         .upload(fileName, cvFile);
 
       if (uploadError) {
-        console.error('Upload error:', uploadError);
+        if (import.meta.env.DEV) console.error('Upload error:', uploadError);
         // If bucket doesn't exist, still save the application
       }
 
@@ -116,7 +116,7 @@ export function EmpleoModal({ open, onOpenChange }: EmpleoModalProps) {
       setSuccess(true);
       toast.success('¡Postulación enviada! Te contactaremos pronto.');
     } catch (err) {
-      console.error(err);
+      if (import.meta.env.DEV) console.error(err);
       toast.error('Error al enviar. Intentá de nuevo.');
     } finally {
       setLoading(false);

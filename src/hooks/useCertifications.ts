@@ -158,7 +158,7 @@ export function useUpsertCertification() {
       toast.success('Certificación actualizada');
     },
     onError: (error) => {
-      console.error('Error updating certification:', error);
+      if (import.meta.env.DEV) console.error('Error updating certification:', error);
       toast.error('Error al actualizar certificación');
     },
   });
@@ -204,7 +204,7 @@ export function useBatchUpdateCertifications() {
       toast.success('Certificaciones actualizadas');
     },
     onError: (error) => {
-      console.error('Error batch updating certifications:', error);
+      if (import.meta.env.DEV) console.error('Error batch updating certifications:', error);
       toast.error('Error al actualizar certificaciones');
     },
   });

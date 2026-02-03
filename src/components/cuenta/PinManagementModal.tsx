@@ -65,7 +65,7 @@ export function PinManagementModal({
       if (error) throw error;
       setPinAvailable(data);
     } catch (error) {
-      console.error('Error checking PIN availability:', error);
+      if (import.meta.env.DEV) console.error('Error checking PIN availability:', error);
       setPinAvailable(null);
     } finally {
       setCheckingPin(false);

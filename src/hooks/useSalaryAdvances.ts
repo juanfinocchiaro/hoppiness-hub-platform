@@ -275,7 +275,7 @@ export function useCreateAdvance() {
       toast.success('Adelanto registrado correctamente');
     },
     onError: (error) => {
-      console.error('Error al crear adelanto:', error);
+      if (import.meta.env.DEV) console.error('Error al crear adelanto:', error);
       toast.error('Error al registrar el adelanto');
     },
   });
@@ -309,7 +309,7 @@ export function useMarkAdvanceTransferred() {
       toast.success('Transferencia marcada como ejecutada');
     },
     onError: (error) => {
-      console.error('Error:', error);
+      if (import.meta.env.DEV) console.error('Error:', error);
       toast.error('Error al marcar transferencia');
     },
   });
@@ -335,7 +335,7 @@ export function useCancelAdvance() {
       toast.success('Adelanto cancelado');
     },
     onError: (error) => {
-      console.error('Error:', error);
+      if (import.meta.env.DEV) console.error('Error:', error);
       toast.error('Error al cancelar adelanto');
     },
   });

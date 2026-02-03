@@ -172,7 +172,8 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       setIsImpersonating(true);
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(impersonatedUser));
     } catch (error) {
-      console.error('Error starting impersonation:', error);
+      // Error logged in dev mode only, re-throw for caller handling
+      if (import.meta.env.DEV) console.error('Error starting impersonation:', error);
       throw error;
     } finally {
       setLoading(false);

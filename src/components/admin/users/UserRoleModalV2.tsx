@@ -155,7 +155,7 @@ export function UserRoleModalV2({ user, branches, open, onOpenChange, onSuccess 
     },
     onError: (error) => {
       toast.error('Error al guardar');
-      console.error(error);
+      if (import.meta.env.DEV) console.error(error);
     },
   });
 

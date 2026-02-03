@@ -88,7 +88,7 @@ export default function CuentaPerfil() {
     },
     onError: (error) => {
       toast.error('Error al actualizar el perfil');
-      console.error(error);
+      if (import.meta.env.DEV) console.error(error);
     },
   });
 
@@ -142,7 +142,7 @@ export default function CuentaPerfil() {
       queryClient.invalidateQueries({ queryKey: ['profile', effectiveUserId] });
       toast.success('Foto actualizada');
     } catch (error) {
-      console.error('Error uploading avatar:', error);
+      if (import.meta.env.DEV) console.error('Error uploading avatar:', error);
       toast.error('Error al subir la foto');
     } finally {
       setIsUploadingAvatar(false);

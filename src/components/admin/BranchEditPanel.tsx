@@ -78,7 +78,7 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
       toast.success('Sucursal actualizada');
       onSaved();
     } catch (error) {
-      console.error('Error saving branch:', error);
+      if (import.meta.env.DEV) console.error('Error saving branch:', error);
       toast.error('Error al guardar los cambios');
     } finally {
       setSaving(false);

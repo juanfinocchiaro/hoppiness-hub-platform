@@ -131,7 +131,7 @@ export default function PendingScheduleRequests({ branchId }: PendingScheduleReq
       setActionType(null);
     },
     onError: (error) => {
-      console.error('Error responding to request:', error);
+      if (import.meta.env.DEV) console.error('Error responding to request:', error);
       toast.error('Error al procesar la solicitud');
     },
   });

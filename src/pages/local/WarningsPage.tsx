@@ -172,7 +172,7 @@ export default function WarningsPage() {
       resetForm();
     },
     onError: (error) => {
-      console.error(error);
+      if (import.meta.env.DEV) console.error(error);
       toast.error('Error al registrar el apercibimiento');
     },
   });
@@ -209,7 +209,7 @@ export default function WarningsPage() {
       setUploadingWarningId(null);
     },
     onError: (error) => {
-      console.error(error);
+      if (import.meta.env.DEV) console.error(error);
       toast.error('Error al subir el documento');
       setUploadingWarningId(null);
     },
