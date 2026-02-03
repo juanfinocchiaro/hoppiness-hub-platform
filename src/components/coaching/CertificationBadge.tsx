@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { CertificationLevel, CERTIFICATION_LEVELS } from '@/types/coaching';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { HelpCircle } from 'lucide-react';
 
 interface CertificationBadgeProps {
   level: CertificationLevel;
@@ -94,5 +95,49 @@ export function CertificationBadgeRow({ certifications, size = 'sm' }: Certifica
         />
       ))}
     </div>
+  );
+}
+
+/**
+ * Leyenda explicativa de los niveles de certificación
+ */
+export function CertificationLegend({ compact = false }: { compact?: boolean }) {
+  return (
+    <TooltipProvider>
+      <div className={cn(
+        "flex items-center gap-3 text-xs",
+        compact ? "flex-wrap" : "flex-wrap md:flex-nowrap"
+      )}>
+        {CERTIFICATION_LEVELS.map((level) => (
+          <Tooltip key={level.value}>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-1.5 cursor-help">
+                <div className={cn(
+                  'w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold',
+                  levelColors[level.value]
+                )}>
+                  {level.value}
+                </div>
+                <span className="text-muted-foreground">{level.label}</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-xs">
+              <p className="font-medium">{level.label}</p>
+              <p className="text-xs">{level.description}</p>
+            </TooltipContent>
+          </Tooltip>
+        ))}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <HelpCircle className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="max-w-xs">
+            <p className="text-xs">
+              Los <strong>Expertos (3)</strong> pueden certificar a otros empleados en esa estación.
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+    </TooltipProvider>
   );
 }
