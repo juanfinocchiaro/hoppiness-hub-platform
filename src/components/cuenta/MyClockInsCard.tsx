@@ -21,8 +21,10 @@ export default function MyClockInsCard() {
   const { id: userId } = useEffectiveUser();
   const { branchRoles } = usePermissionsWithImpersonation();
   
-  // Only show for employees with at least one branch role
-  const isEmployee = branchRoles.length > 0;
+  // Only show for operational employees (not franchise owners)
+  const isOperationalEmployee = branchRoles.some(r => 
+    r.local_role && r.local_role !== 'franquiciado'
+  );
 
   // Get clock entries for current month from clock_entries table
   const { data: clockEntries, isLoading } = useQuery({
@@ -46,7 +48,7 @@ export default function MyClockInsCard() {
       if (error) throw error;
       return data as ClockEntry[];
     },
-    enabled: !!userId && isEmployee,
+    enabled: !!userId && isOperationalEmployee,
   });
 
   // Calculate total hours worked this month
@@ -99,8 +101,8 @@ export default function MyClockInsCard() {
   // Get last 5 unique dates
   const recentDates = Object.keys(groupedEntries).slice(0, 5);
 
-  // Don't show if not an employee
-  if (!isEmployee) {
+  // Don't show if not an operational employee (excludes franchisees)
+  if (!isOperationalEmployee) {
     return null;
   }
 

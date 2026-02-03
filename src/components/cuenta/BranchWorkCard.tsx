@@ -28,6 +28,9 @@ export function BranchWorkCard({
   const [pinModalOpen, setPinModalOpen] = useState(false);
 
   const hasPin = !!clockPin;
+  
+  // Franquiciados don't need PIN (they don't clock in)
+  const isFranquiciado = localRole === 'franquiciado';
 
   // Auto-hide PIN after 3 seconds
   const handleShowPin = () => {
@@ -55,66 +58,71 @@ export function BranchWorkCard({
             </Link>
           </div>
 
-          {/* PIN Section */}
-          <div className="flex items-center justify-between bg-muted/50 rounded-lg p-2 pl-3">
-            <div className="flex items-center gap-2">
-              <Fingerprint className="w-4 h-4 text-muted-foreground" />
-              {hasPin ? (
-                <>
-                  <span className="text-sm text-muted-foreground">PIN:</span>
-                  <span className="font-mono tracking-widest text-sm">
-                    {showPin ? clockPin : '••••'}
-                  </span>
-                  {!showPin && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2"
-                      onClick={handleShowPin}
-                    >
-                      <Eye className="w-3.5 h-3.5 mr-1" />
-                      <span className="text-xs">Ver</span>
-                    </Button>
-                  )}
-                  {showPin && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2"
-                      onClick={() => setShowPin(false)}
-                    >
-                      <EyeOff className="w-3.5 h-3.5" />
-                    </Button>
-                  )}
-                  <Check className="w-4 h-4 text-green-500" />
-                </>
-              ) : (
-                <span className="text-sm text-warning">Sin PIN configurado</span>
-              )}
-            </div>
+          {/* PIN Section - only for operational roles (not franchisees) */}
+          {!isFranquiciado && (
+            <div className="flex items-center justify-between bg-muted/50 rounded-lg p-2 pl-3">
+              <div className="flex items-center gap-2">
+                <Fingerprint className="w-4 h-4 text-muted-foreground" />
+                {hasPin ? (
+                  <>
+                    <span className="text-sm text-muted-foreground">PIN:</span>
+                    <span className="font-mono tracking-widest text-sm">
+                      {showPin ? clockPin : '••••'}
+                    </span>
+                    {!showPin && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2"
+                        onClick={handleShowPin}
+                      >
+                        <Eye className="w-3.5 h-3.5 mr-1" />
+                        <span className="text-xs">Ver</span>
+                      </Button>
+                    )}
+                    {showPin && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2"
+                        onClick={() => setShowPin(false)}
+                      >
+                        <EyeOff className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                    <Check className="w-4 h-4 text-green-500" />
+                  </>
+                ) : (
+                  <span className="text-sm text-warning">Sin PIN configurado</span>
+                )}
+              </div>
 
-            <Button
-              variant={hasPin ? 'ghost' : 'default'}
-              size="sm"
-              className="h-7"
-              onClick={() => setPinModalOpen(true)}
-            >
-              <KeyRound className="w-3.5 h-3.5 mr-1" />
-              <span className="text-xs">{hasPin ? 'Cambiar' : 'Crear'}</span>
-            </Button>
-          </div>
+              <Button
+                variant={hasPin ? 'ghost' : 'default'}
+                size="sm"
+                className="h-7"
+                onClick={() => setPinModalOpen(true)}
+              >
+                <KeyRound className="w-3.5 h-3.5 mr-1" />
+                <span className="text-xs">{hasPin ? 'Cambiar' : 'Crear'}</span>
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      <PinManagementModal
-        open={pinModalOpen}
-        onOpenChange={setPinModalOpen}
-        branchName={branchName}
-        branchId={branchId}
-        roleId={roleId}
-        currentPin={clockPin}
-        userId={userId}
-      />
+      {/* PIN Modal - only for operational roles */}
+      {!isFranquiciado && (
+        <PinManagementModal
+          open={pinModalOpen}
+          onOpenChange={setPinModalOpen}
+          branchName={branchName}
+          branchId={branchId}
+          roleId={roleId}
+          currentPin={clockPin}
+          userId={userId}
+        />
+      )}
     </>
   );
 }

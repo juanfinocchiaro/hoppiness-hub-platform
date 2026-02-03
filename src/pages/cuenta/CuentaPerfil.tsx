@@ -6,11 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Save, Loader2, Lock, Eye, EyeOff, Camera, User, Calendar as CalendarIcon } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Lock, Eye, EyeOff, User, Calendar as CalendarIcon } from 'lucide-react';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -23,13 +23,11 @@ import { cn } from '@/lib/utils';
 export default function CuentaPerfil() {
   const { id: effectiveUserId, email: effectiveEmail } = useEffectiveUser();
   const queryClient = useQueryClient();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [birthDate, setBirthDate] = useState<Date | undefined>(undefined);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   
   // Password change state
   const [showPasswordSection, setShowPasswordSection] = useState(false);
@@ -91,63 +89,6 @@ export default function CuentaPerfil() {
       if (import.meta.env.DEV) console.error(error);
     },
   });
-
-  // Upload avatar
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !effectiveUserId) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Solo se permiten imágenes');
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('La imagen no puede superar 5MB');
-      return;
-    }
-
-    setIsUploadingAvatar(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${effectiveUserId}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
-
-      // Upload to storage
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      // Update profile (profiles.id = user_id after migration)
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ 
-          avatar_url: publicUrl,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', effectiveUserId);
-
-      if (updateError) throw updateError;
-
-      setAvatarUrl(publicUrl);
-      queryClient.invalidateQueries({ queryKey: ['profile', effectiveUserId] });
-      toast.success('Foto actualizada');
-    } catch (error) {
-      if (import.meta.env.DEV) console.error('Error uploading avatar:', error);
-      toast.error('Error al subir la foto');
-    } finally {
-      setIsUploadingAvatar(false);
-    }
-  };
 
   // Change password mutation
   const changePassword = useMutation({
@@ -234,42 +175,17 @@ export default function CuentaPerfil() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {/* Avatar Section */}
+                    {/* Avatar Section - display only, no upload */}
                     <div className="flex items-center gap-4">
-                      <div className="relative">
-                        <Avatar className="w-20 h-20">
-                          <AvatarImage src={avatarUrl || undefined} alt={fullName} />
-                          <AvatarFallback className="text-lg bg-primary/10 text-primary">
-                            {fullName ? getInitials(fullName) : <User className="w-8 h-8" />}
-                          </AvatarFallback>
-                        </Avatar>
-                        {isUploadingAvatar && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
-                            <Loader2 className="w-6 h-6 text-white animate-spin" />
-                          </div>
-                        )}
-                      </div>
+                      <Avatar className="w-20 h-20">
+                        <AvatarImage src={avatarUrl || undefined} alt={fullName} />
+                        <AvatarFallback className="text-lg bg-primary/10 text-primary">
+                          {fullName ? getInitials(fullName) : <User className="w-8 h-8" />}
+                        </AvatarFallback>
+                      </Avatar>
                       <div>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          onChange={handleAvatarUpload}
-                          className="hidden"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={isUploadingAvatar}
-                        >
-                          <Camera className="w-4 h-4 mr-2" />
-                          Cambiar foto
-                        </Button>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          JPG, PNG. Máximo 5MB.
-                        </p>
+                        <p className="text-sm font-medium">{fullName || 'Sin nombre'}</p>
+                        <p className="text-xs text-muted-foreground">{effectiveEmail}</p>
                       </div>
                     </div>
 

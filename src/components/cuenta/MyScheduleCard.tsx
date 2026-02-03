@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
+import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, Store, ChevronRight } from 'lucide-react';
@@ -25,9 +26,14 @@ const DAY_NAMES_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 export default function MyScheduleCard() {
   const { id: userId } = useEffectiveUser();
+  const { branchRoles } = usePermissionsWithImpersonation();
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
+  
+  // Franquiciados don't have schedules - hide if only has that role
+  const hasOnlyFranquiciado = branchRoles.length > 0 && 
+    branchRoles.every(r => r.local_role === 'franquiciado');
 
   // Fetch schedules directly by user_id
   const { data: schedules, isLoading } = useQuery({
@@ -71,6 +77,11 @@ export default function MyScheduleCard() {
         </CardContent>
       </Card>
     );
+  }
+
+  // Hide for franchisees
+  if (hasOnlyFranquiciado) {
+    return null;
   }
 
   if (!schedules?.length) {

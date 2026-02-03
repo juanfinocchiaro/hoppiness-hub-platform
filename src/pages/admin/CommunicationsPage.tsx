@@ -56,10 +56,9 @@ const TYPES = [
   { value: 'celebration', label: 'Celebración', icon: PartyPopper, color: 'bg-green-500/10 text-green-600' },
 ];
 
-const TARGET_ROLES = [
-  { value: 'all', label: 'Todos' },
-  { value: 'franquiciado', label: 'Solo Franquiciados' },
-  { value: 'encargado', label: 'Solo Encargados' },
+const TARGET_ROLE_OPTIONS = [
+  { value: 'franquiciado', label: 'Franquiciados' },
+  { value: 'encargado', label: 'Encargados' },
 ];
 
 export default function CommunicationsPage() {
@@ -78,7 +77,9 @@ export default function CommunicationsPage() {
     type: 'info' as 'info' | 'warning' | 'urgent' | 'celebration',
     tag: 'general',
     custom_label: '',
-    target_role: 'all',
+    target_all: true,
+    target_franquiciado: false,
+    target_encargado: false,
     requires_confirmation: false,
   });
 
@@ -100,9 +101,14 @@ export default function CommunicationsPage() {
     mutationFn: async () => {
       if (!user) throw new Error('No autenticado');
       
-      const targetRoles = formData.target_role === 'all' 
-        ? null 
-        : [formData.target_role];
+      // Build target_roles array based on checkboxes
+      let targetRoles: string[] | null = null;
+      if (!formData.target_all) {
+        const roles: string[] = [];
+        if (formData.target_franquiciado) roles.push('franquiciado');
+        if (formData.target_encargado) roles.push('encargado');
+        targetRoles = roles.length > 0 ? roles : null;
+      }
 
       const { error } = await supabase.from('communications').insert({
         title: formData.title,
@@ -129,7 +135,9 @@ export default function CommunicationsPage() {
         type: 'info',
         tag: 'general',
         custom_label: '',
-        target_role: 'all',
+        target_all: true,
+        target_franquiciado: false,
+        target_encargado: false,
         requires_confirmation: false,
       });
     },
@@ -243,21 +251,61 @@ export default function CommunicationsPage() {
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Label>Destinatarios</Label>
-                <Select
-                  value={formData.target_role}
-                  onValueChange={(v) => setFormData(prev => ({ ...prev, target_role: v }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TARGET_ROLES.map(r => (
-                      <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                <div className="space-y-2 p-3 rounded-lg border bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="target-all"
+                      checked={formData.target_all}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setFormData(prev => ({
+                            ...prev,
+                            target_all: true,
+                            target_franquiciado: false,
+                            target_encargado: false,
+                          }));
+                        } else {
+                          setFormData(prev => ({ ...prev, target_all: false }));
+                        }
+                      }}
+                    />
+                    <Label htmlFor="target-all" className="text-sm font-medium cursor-pointer">
+                      Todos
+                    </Label>
+                  </div>
+                  
+                  <div className="pl-6 space-y-2 border-l-2 border-muted ml-2">
+                    {TARGET_ROLE_OPTIONS.map(role => (
+                      <div key={role.value} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`target-${role.value}`}
+                          checked={formData[`target_${role.value}` as keyof typeof formData] as boolean}
+                          disabled={formData.target_all}
+                          onCheckedChange={(checked) => {
+                            setFormData(prev => ({
+                              ...prev,
+                              [`target_${role.value}`]: checked === true,
+                            }));
+                          }}
+                        />
+                        <Label 
+                          htmlFor={`target-${role.value}`} 
+                          className={`text-sm cursor-pointer ${formData.target_all ? 'text-muted-foreground' : ''}`}
+                        >
+                          {role.label}
+                        </Label>
+                      </div>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                  
+                  {!formData.target_all && !formData.target_franquiciado && !formData.target_encargado && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      Seleccioná al menos un destinatario o marcá "Todos"
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">

@@ -55,16 +55,17 @@ export function useUserCommunications() {
     queryFn: async () => {
       if (!userId) return { brand: [], local: [] };
       
-      // Get user's branch IDs from user_branch_roles
+      // Get user's branch IDs and local roles from user_branch_roles
       const { data: userBranches, error: branchError } = await supabase
         .from('user_branch_roles')
-        .select('branch_id')
+        .select('branch_id, local_role')
         .eq('user_id', userId)
         .eq('is_active', true);
       
       if (branchError) throw branchError;
       
       const userBranchIds = new Set(userBranches?.map(b => b.branch_id) || []);
+      const userLocalRoles = new Set<string>(userBranches?.map(b => b.local_role).filter(Boolean) || []);
       
       // Get all published communications (RLS handles basic filtering)
       const { data: comms, error: commsError } = await supabase
@@ -96,8 +97,16 @@ export function useUserCommunications() {
         };
       }) as CommunicationWithSource[];
       
-      // Separate by source
-      const brand = allComms.filter(c => c.source_type === 'brand');
+      // Separate by source - filter brand communications by target_roles
+      const brand = allComms.filter(c => {
+        if (c.source_type !== 'brand') return false;
+        
+        // If no target_roles specified, it's for everyone
+        if (!c.target_roles || c.target_roles.length === 0) return true;
+        
+        // Check if user has at least one of the target roles
+        return c.target_roles.some(role => userLocalRoles.has(role));
+      });
       
       // Filter local communications: only show those from user's branches
       const local = allComms.filter(c => 

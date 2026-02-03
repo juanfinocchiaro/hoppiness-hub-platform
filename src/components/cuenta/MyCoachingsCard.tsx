@@ -36,13 +36,18 @@ export function MyCoachingsCard() {
   } | null>(null);
   const [acknowledgeNotes, setAcknowledgeNotes] = useState('');
   
-  // Los encargados son evaluados por coordinadores/superadmins, no ven sus coachings aquí
-  const isManager = branchRoles.some(r => r.local_role === 'encargado');
+  // Los encargados y franquiciados no reciben coachings - ocultar este card
+  const isExcludedRole = branchRoles.some(r => 
+    r.local_role === 'encargado' || r.local_role === 'franquiciado'
+  );
+  // Si solo tiene roles excluidos (no tiene otros roles operativos), no mostrar
+  const hasOnlyExcludedRoles = branchRoles.length > 0 && 
+    branchRoles.every(r => r.local_role === 'encargado' || r.local_role === 'franquiciado');
 
   const isLoading = loadingPending || loadingRecent;
 
-  // Si es encargado, no mostrar este card (son evaluados por coordinadores)
-  if (isManager) {
+  // Si solo tiene roles excluidos, no mostrar este card
+  if (hasOnlyExcludedRoles) {
     return null;
   }
 
