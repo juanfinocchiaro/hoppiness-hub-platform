@@ -1,5 +1,5 @@
-import { useAuth } from '@/hooks/useAuth';
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { useEffectiveUser } from '@/hooks/useEffectiveUser';
+import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
@@ -23,8 +23,8 @@ import { cn } from '@/lib/utils';
 import { BranchPinCard } from '@/components/cuenta/BranchPinCard';
 
 export default function CuentaPerfil() {
-  const { user } = useAuth();
-  const { canAccessLocalPanel } = usePermissionsV2();
+  const { id: effectiveUserId, email: effectiveEmail } = useEffectiveUser();
+  const { canAccessLocalPanel } = usePermissionsWithImpersonation();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -43,25 +43,25 @@ export default function CuentaPerfil() {
 
   // Fetch profile data
   const { data: profile, isLoading } = useQuery({
-    queryKey: ['profile', user?.id],
+    queryKey: ['profile', effectiveUserId],
     queryFn: async () => {
-      if (!user) return null;
+      if (!effectiveUserId) return null;
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', effectiveUserId)
         .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   // Fetch user branch roles for PIN management
   const { data: branchRoles, isLoading: loadingRoles } = useQuery({
-    queryKey: ['user-branch-roles', user?.id],
+    queryKey: ['user-branch-roles', effectiveUserId],
     queryFn: async () => {
-      if (!user) return [];
+      if (!effectiveUserId) return [];
       const { data, error } = await supabase
         .from('user_branch_roles')
         .select(`
@@ -71,12 +71,12 @@ export default function CuentaPerfil() {
           local_role,
           branches!inner(id, name)
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', effectiveUserId)
         .eq('is_active', true);
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const isEmployee = canAccessLocalPanel || (branchRoles && branchRoles.length > 0);
@@ -96,7 +96,7 @@ export default function CuentaPerfil() {
   // Update profile mutation
   const updateProfile = useMutation({
     mutationFn: async (data: { full_name: string; phone: string; birth_date?: string | null }) => {
-      if (!user) throw new Error('No user');
+      if (!effectiveUserId) throw new Error('No user');
       // profiles.id = user_id after migration
       const { error } = await supabase
         .from('profiles')
@@ -106,11 +106,11 @@ export default function CuentaPerfil() {
           birth_date: data.birth_date,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', user.id);
+        .eq('id', effectiveUserId);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['profile', effectiveUserId] });
       toast.success('Perfil actualizado');
     },
     onError: (error) => {
@@ -122,7 +122,7 @@ export default function CuentaPerfil() {
   // Upload avatar
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !user) return;
+    if (!file || !effectiveUserId) return;
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
@@ -139,7 +139,7 @@ export default function CuentaPerfil() {
     setIsUploadingAvatar(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const fileName = `${effectiveUserId}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
       // Upload to storage
@@ -161,12 +161,12 @@ export default function CuentaPerfil() {
           avatar_url: publicUrl,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', user.id);
+        .eq('id', effectiveUserId);
 
       if (updateError) throw updateError;
 
       setAvatarUrl(publicUrl);
-      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['profile', effectiveUserId] });
       toast.success('Foto actualizada');
     } catch (error) {
       console.error('Error uploading avatar:', error);
@@ -307,7 +307,7 @@ export default function CuentaPerfil() {
                       <Input
                         id="email"
                         type="email"
-                        value={user?.email || ''}
+                        value={effectiveEmail || ''}
                         disabled
                         className="bg-muted"
                       />
@@ -398,10 +398,14 @@ export default function CuentaPerfil() {
                   <CardHeader>
                     <div className="flex items-center gap-2">
                       <Fingerprint className="w-5 h-5 text-primary" />
-                      <CardTitle>PIN de Fichaje</CardTitle>
+                      <CardTitle>Mi PIN de Fichaje</CardTitle>
                     </div>
                     <CardDescription>
-                      Cada sucursal tiene su propio PIN de 4 dígitos para fichar entrada y salida
+                      {branchRoles && branchRoles.length === 1
+                        ? 'Tu PIN de 4 dígitos para fichar entrada y salida'
+                        : branchRoles && branchRoles.length > 1
+                        ? 'Configurá un PIN para cada sucursal donde trabajás'
+                        : 'PIN de 4 dígitos para fichar entrada y salida'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -414,7 +418,7 @@ export default function CuentaPerfil() {
                         {branchRoles.map((role: any) => {
                           const branchName = role.branches?.name || 'Sucursal';
                           // No renderizar si faltan datos críticos
-                          if (!role.id || !role.branch_id || !user?.id) return null;
+                          if (!role.id || !role.branch_id || !effectiveUserId) return null;
                           return (
                             <BranchPinCard
                               key={role.id}
@@ -422,7 +426,7 @@ export default function CuentaPerfil() {
                               branchId={role.branch_id}
                               roleId={role.id}
                               currentPin={role.clock_pin}
-                              userId={user.id}
+                              userId={effectiveUserId}
                             />
                           );
                         })}
