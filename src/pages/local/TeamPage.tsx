@@ -7,7 +7,7 @@ import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TeamTable, TeamCardList, useTeamData } from '@/components/local/team';
 import { InviteStaffDialog } from '@/components/hr/InviteStaffDialog';
-import MonthlyHoursSummary from '@/components/local/MonthlyHoursSummary';
+import LaborHoursSummary from '@/components/local/LaborHoursSummary';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { PageHelp } from '@/components/ui/PageHelp';
 import type { Tables } from '@/integrations/supabase/types';
@@ -95,7 +95,7 @@ export default function TeamPage() {
         </TabsContent>
         
         <TabsContent value="hours" className="mt-4">
-          <MonthlyHoursSummary branchId={branch?.id} />
+          <LaborHoursSummary branchId={branch?.id} />
         </TabsContent>
       </Tabs>
 

@@ -269,6 +269,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
     }));
   }, [pendingChanges]);
 
+
   // Month navigation
   const goToPrevMonth = () => {
     const prev = subMonths(new Date(year, month - 1), 1);
@@ -344,6 +345,55 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
     
     return result;
   }, [schedules, pendingChanges, team]);
+
+  // Validación: máximo 6 días consecutivos sin franco (Ley 11.544 Art 6)
+  const consecutiveDaysViolations = useMemo(() => {
+    const violations: { userId: string; userName: string; consecutiveDays: number }[] = [];
+    
+    team.forEach(member => {
+      const userScheduleMap = new Map<string, boolean>();
+      
+      schedulesWithPending.forEach(s => {
+        if (s.user_id === member.id) {
+          const isDayOff = s.is_day_off || (!s.start_time && !s.end_time);
+          userScheduleMap.set(s.schedule_date, isDayOff);
+        }
+      });
+      
+      let consecutiveWorking = 0;
+      
+      monthDays.forEach(day => {
+        const dateStr = format(day, 'yyyy-MM-dd');
+        const isDayOff = userScheduleMap.get(dateStr);
+        const hasSchedule = userScheduleMap.has(dateStr);
+        
+        if (hasSchedule && !isDayOff) {
+          consecutiveWorking++;
+        } else {
+          if (consecutiveWorking >= 7) {
+            violations.push({
+              userId: member.id,
+              userName: member.full_name || 'Empleado',
+              consecutiveDays: consecutiveWorking,
+            });
+          }
+          consecutiveWorking = 0;
+        }
+      });
+      
+      if (consecutiveWorking >= 7) {
+        violations.push({
+          userId: member.id,
+          userName: member.full_name || 'Empleado',
+          consecutiveDays: consecutiveWorking,
+        });
+      }
+    });
+    
+    return violations;
+  }, [team, schedulesWithPending, monthDays]);
+
+  const hasLaborViolations = consecutiveDaysViolations.length > 0;
 
   // Calculate all hours with coverage
   const allHoursWithCoverage = useMemo(() => {
@@ -778,6 +828,22 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
           </Card>
         )}
 
+        {/* Labor violations warning */}
+        {hasLaborViolations && (
+          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50">
+            <Card className="shadow-lg border-destructive bg-destructive/10">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2 text-destructive">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-sm font-medium">
+                    ⚠️ {consecutiveDaysViolations.map(v => v.userName).join(', ')} tiene(n) 7+ días consecutivos sin franco (Ley 11.544)
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Pending Changes Bar */}
         {pendingChanges.size > 0 && (
           <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
@@ -794,7 +860,12 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                     <Undo2 className="w-4 h-4 mr-1" />
                     Descartar
                   </Button>
-                  <Button size="sm" onClick={() => setSaveDialogOpen(true)}>
+                  <Button 
+                    size="sm" 
+                    onClick={() => setSaveDialogOpen(true)}
+                    disabled={hasLaborViolations}
+                    title={hasLaborViolations ? 'Corrige las violaciones laborales antes de guardar' : ''}
+                  >
                     <Save className="w-4 h-4 mr-1" />
                     Guardar
                   </Button>
