@@ -411,7 +411,12 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
       );
     }
     
-    if (!value.startTime || !value.endTime) {
+    // Treat "00:00" as empty (default value when no schedule set)
+    const isEmptySchedule = !value.startTime || !value.endTime || 
+      (value.startTime === '00:00' && value.endTime === '00:00') ||
+      (value.startTime === '00:00:00' && value.endTime === '00:00:00');
+    
+    if (isEmptySchedule) {
       return <span className="text-xs text-muted-foreground">{isHoliday ? '🎉' : '-'}</span>;
     }
 
