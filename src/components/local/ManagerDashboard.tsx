@@ -31,7 +31,7 @@ import { format, differenceInMinutes } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useTodayClosures, useEnabledShifts } from '@/hooks/useShiftClosures';
 import { ShiftClosureModal } from '@/components/local/closure/ShiftClosureModal';
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { CoachingPendingCard } from '@/components/coaching';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -147,8 +147,8 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [selectedShift, setSelectedShift] = useState<string>('mediodía');
 
-  // Permisos - verificar rol para vista limitada
-  const { isCajero, local } = usePermissionsV2(branch.id);
+  // Permisos - verificar rol para vista limitada (con soporte de impersonación)
+  const { isCajero, local } = usePermissionsWithImpersonation(branch.id);
 
   // Enabled shifts for this branch
   const { data: enabledShifts, isLoading: loadingShifts } = useEnabledShifts(branch.id);
