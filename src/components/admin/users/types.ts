@@ -1,4 +1,18 @@
 import type { BrandRole, LocalRole } from '@/hooks/usePermissionsV2';
+import type { WorkPositionType } from '@/types/workPosition';
+
+/**
+ * Rol de sucursal con posición operativa
+ */
+export interface BranchRoleInfo {
+  branch_id: string;
+  branch_name: string;
+  local_role: LocalRole;
+  default_position: WorkPositionType | null;
+  clock_pin: string | null;
+  is_active: boolean;
+  role_record_id: string;
+}
 
 export interface UserWithStats {
   id: string;
@@ -7,10 +21,14 @@ export interface UserWithStats {
   email: string;
   phone: string | null;
   created_at: string;
+  // Rol de marca (de user_roles_v2)
   brand_role: BrandRole;
-  local_role: LocalRole;
-  branch_ids: string[];
-  role_id: string | null;
+  brand_role_id: string | null;
+  // Roles locales (de user_branch_roles) - NUEVA ARQUITECTURA
+  branch_roles: BranchRoleInfo[];
+  // Helpers para compatibilidad
+  hasLocalAccess: boolean;
+  primaryLocalRole: LocalRole;
 }
 
 export interface NoteEntry {
@@ -50,7 +68,28 @@ export const ROLE_LABELS: Record<string, string> = {
   empleado: 'Empleado',
 };
 
-export function getHighestRole(brandRole: BrandRole, localRole: LocalRole): string {
+export function getHighestRole(brandRole: BrandRole, branchRoles: BranchRoleInfo[]): string {
+  const brandPriority = brandRole ? ROLE_PRIORITY[brandRole] || 0 : 0;
+  
+  // Encontrar el rol local más alto entre todas las sucursales
+  let maxLocalPriority = 0;
+  let maxLocalRole: LocalRole = null;
+  
+  for (const br of branchRoles) {
+    const priority = br.local_role ? ROLE_PRIORITY[br.local_role] || 0 : 0;
+    if (priority > maxLocalPriority) {
+      maxLocalPriority = priority;
+      maxLocalRole = br.local_role;
+    }
+  }
+  
+  if (brandPriority >= maxLocalPriority && brandRole) return brandRole;
+  if (maxLocalRole) return maxLocalRole;
+  return 'staff';
+}
+
+// Compatibilidad con código viejo
+export function getHighestRoleLegacy(brandRole: BrandRole, localRole: LocalRole): string {
   const brandPriority = brandRole ? ROLE_PRIORITY[brandRole] || 0 : 0;
   const localPriority = localRole ? ROLE_PRIORITY[localRole] || 0 : 0;
   

@@ -30,14 +30,15 @@ export function UsersTable({ users, branches, onUserUpdated }: UsersTableProps) 
               <TableHead className="min-w-[180px]">Email</TableHead>
               <TableHead className="w-[110px]">Rol</TableHead>
               <TableHead className="w-[80px] text-center">Mi Marca</TableHead>
-              <TableHead className="w-[80px] text-center">Mi Local</TableHead>
+              <TableHead className="w-[100px] text-center">Sucursales</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {users.map((user) => {
               const isExpanded = expandedUserId === user.id;
-              const highestRole = getHighestRole(user.brand_role, user.local_role);
+              const highestRole = getHighestRole(user.brand_role, user.branch_roles);
               const roleLabel = ROLE_LABELS[highestRole] || 'Sin rol';
+              const branchCount = user.branch_roles.length;
               
               return (
                 <>
@@ -82,7 +83,13 @@ export function UsersTable({ users, branches, onUserUpdated }: UsersTableProps) 
                       <AccessIndicator hasAccess={!!user.brand_role} />
                     </TableCell>
                     <TableCell className="text-center">
-                      <AccessIndicator hasAccess={!!user.local_role} />
+                      {branchCount > 0 ? (
+                        <span className="text-sm font-medium text-green-600">
+                          {branchCount} local{branchCount > 1 ? 'es' : ''}
+                        </span>
+                      ) : (
+                        <AccessIndicator hasAccess={false} />
+                      )}
                     </TableCell>
                   </TableRow>
                   
