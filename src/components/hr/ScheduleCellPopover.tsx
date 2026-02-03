@@ -2,16 +2,15 @@
  * ScheduleCellPopover - Quick edit popover for schedule cells
  * 
  * Allows custom time selection and Franco/day off marking.
- * Supports break times within the schedule.
+ * Break is automatically applied for shifts over 6 hours.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Coffee, X, Check } from 'lucide-react';
+import { Coffee, X, Check, Info } from 'lucide-react';
 import { useWorkPositions } from '@/hooks/useWorkPositions';
 import type { WorkPositionType } from '@/types/workPosition';
 
@@ -33,6 +32,54 @@ interface ScheduleCellPopoverProps {
   dateLabel?: string;
 }
 
+// Helper to calculate shift duration in hours
+function calculateShiftHours(start: string, end: string): number {
+  if (!start || !end) return 0;
+  
+  const [startH, startM] = start.split(':').map(Number);
+  const [endH, endM] = end.split(':').map(Number);
+  
+  let startMinutes = startH * 60 + startM;
+  let endMinutes = endH * 60 + endM;
+  
+  // Handle overnight shifts (e.g., 19:00 - 02:00)
+  if (endMinutes <= startMinutes) {
+    endMinutes += 24 * 60;
+  }
+  
+  return (endMinutes - startMinutes) / 60;
+}
+
+// Calculate default break time (1 hour, starting halfway through the shift)
+function calculateDefaultBreak(start: string, end: string): { breakStart: string; breakEnd: string } {
+  const [startH, startM] = start.split(':').map(Number);
+  const [endH, endM] = end.split(':').map(Number);
+  
+  let startMinutes = startH * 60 + startM;
+  let endMinutes = endH * 60 + endM;
+  
+  if (endMinutes <= startMinutes) {
+    endMinutes += 24 * 60;
+  }
+  
+  // Break starts at the middle of the shift
+  const midpoint = startMinutes + (endMinutes - startMinutes) / 2;
+  const breakStartMinutes = Math.floor(midpoint / 30) * 30; // Round to nearest 30 min
+  const breakEndMinutes = breakStartMinutes + 60; // 1 hour break
+  
+  const formatTime = (minutes: number) => {
+    const normalizedMinutes = minutes % (24 * 60);
+    const h = Math.floor(normalizedMinutes / 60);
+    const m = normalizedMinutes % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  };
+  
+  return {
+    breakStart: formatTime(breakStartMinutes),
+    breakEnd: formatTime(breakEndMinutes),
+  };
+}
+
 export function ScheduleCellPopover({
   children,
   value,
@@ -45,12 +92,27 @@ export function ScheduleCellPopover({
   const [customStart, setCustomStart] = useState(value.startTime || '19:30');
   const [customEnd, setCustomEnd] = useState(value.endTime || '23:30');
   const [position, setPosition] = useState<string>(value.position || '');
-  const [hasBreak, setHasBreak] = useState(!!value.breakStart);
-  const [breakStart, setBreakStart] = useState(value.breakStart || '15:00');
-  const [breakEnd, setBreakEnd] = useState(value.breakEnd || '16:00');
+  const [breakStart, setBreakStart] = useState(value.breakStart || '');
+  const [breakEnd, setBreakEnd] = useState(value.breakEnd || '');
   
   // Fetch work positions dynamically
   const { data: workPositions = [] } = useWorkPositions();
+
+  // Calculate if break is required (shift > 6 hours)
+  const shiftHours = useMemo(() => calculateShiftHours(customStart, customEnd), [customStart, customEnd]);
+  const requiresBreak = shiftHours > 6;
+
+  // Update break times when shift times change and break is required
+  useEffect(() => {
+    if (requiresBreak && customStart && customEnd) {
+      const defaultBreak = calculateDefaultBreak(customStart, customEnd);
+      // Only set default if no break is currently set
+      if (!breakStart || !breakEnd) {
+        setBreakStart(defaultBreak.breakStart);
+        setBreakEnd(defaultBreak.breakEnd);
+      }
+    }
+  }, [requiresBreak, customStart, customEnd]);
 
   // Reset state when popover opens
   useEffect(() => {
@@ -58,9 +120,8 @@ export function ScheduleCellPopover({
       setCustomStart(value.startTime || '19:30');
       setCustomEnd(value.endTime || '23:30');
       setPosition(value.position || '');
-      setHasBreak(!!value.breakStart);
-      setBreakStart(value.breakStart || '15:00');
-      setBreakEnd(value.breakEnd || '16:00');
+      setBreakStart(value.breakStart || '');
+      setBreakEnd(value.breakEnd || '');
     }
   }, [open, value]);
 
@@ -95,8 +156,8 @@ export function ScheduleCellPopover({
         endTime: customEnd,
         isDayOff: false,
         position: (position || null) as WorkPositionType | null,
-        breakStart: hasBreak ? breakStart : null,
-        breakEnd: hasBreak ? breakEnd : null,
+        breakStart: requiresBreak ? breakStart : null,
+        breakEnd: requiresBreak ? breakEnd : null,
       });
       setOpen(false);
     }
@@ -161,39 +222,41 @@ export function ScheduleCellPopover({
             </div>
           </div>
 
-          {/* Break toggle */}
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-2">
-              <Coffee className="w-4 h-4 text-muted-foreground" />
-              <Label className="text-xs">Incluir break/descanso</Label>
-            </div>
-            <Switch
-              checked={hasBreak}
-              onCheckedChange={setHasBreak}
-            />
+          {/* Shift duration info */}
+          <div className="text-xs text-muted-foreground">
+            Duración: {shiftHours.toFixed(1)} horas
+            {requiresBreak && (
+              <span className="text-primary ml-1">(incluye break obligatorio)</span>
+            )}
           </div>
 
-          {/* Break times */}
-          {hasBreak && (
-            <div className="flex gap-2 items-center pl-6 pb-2">
-              <div className="flex-1">
-                <Label className="text-xs text-muted-foreground">Inicio break</Label>
-                <Input
-                  type="time"
-                  value={breakStart}
-                  onChange={(e) => setBreakStart(e.target.value)}
-                  className="h-8 text-sm"
-                />
+          {/* Break times - only shown when required (>6h) */}
+          {requiresBreak && (
+            <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-medium">
+                <Coffee className="w-4 h-4 text-primary" />
+                <span>Break obligatorio (1h)</span>
               </div>
-              <span className="text-muted-foreground mt-5">→</span>
-              <div className="flex-1">
-                <Label className="text-xs text-muted-foreground">Fin break</Label>
-                <Input
-                  type="time"
-                  value={breakEnd}
-                  onChange={(e) => setBreakEnd(e.target.value)}
-                  className="h-8 text-sm"
-                />
+              <div className="flex gap-2 items-center">
+                <div className="flex-1">
+                  <Label className="text-xs text-muted-foreground">Inicio</Label>
+                  <Input
+                    type="time"
+                    value={breakStart}
+                    onChange={(e) => setBreakStart(e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <span className="text-muted-foreground mt-5">→</span>
+                <div className="flex-1">
+                  <Label className="text-xs text-muted-foreground">Fin</Label>
+                  <Input
+                    type="time"
+                    value={breakEnd}
+                    onChange={(e) => setBreakEnd(e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                </div>
               </div>
             </div>
           )}
