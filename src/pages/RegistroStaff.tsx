@@ -25,13 +25,12 @@ import {
 interface InvitationData {
   id: string;
   email: string;
+  full_name: string | null;
   role: string;
   branch_id: string;
+  branch_name: string;
   status: string;
   expires_at: string;
-  branch?: {
-    name: string;
-  };
 }
 
 const roleLabels: Record<string, string> = {
@@ -78,44 +77,33 @@ export default function RegistroStaff() {
       }
 
       try {
+        // Use secure RPC function instead of direct table query
         const { data, error: fetchError } = await supabase
-          .from('staff_invitations')
-          .select(`
-            id,
-            email,
-            role,
-            branch_id,
-            status,
-            expires_at,
-            branches:branch_id (name)
-          `)
-          .eq('token', token)
-          .single();
+          .rpc('validate_invitation_token', { _token: token });
 
-        if (fetchError || !data) {
+        if (fetchError || !data || data.length === 0) {
           setError('Invitación no encontrada o inválida');
           setLoading(false);
           return;
         }
 
+        const invitationData = data[0];
+
         // Check if expired
-        if (new Date(data.expires_at) < new Date()) {
+        if (new Date(invitationData.expires_at) < new Date()) {
           setError('Esta invitación ha expirado');
           setLoading(false);
           return;
         }
 
         // Check if already used
-        if (data.status !== 'pending') {
+        if (invitationData.status !== 'pending') {
           setError('Esta invitación ya fue utilizada');
           setLoading(false);
           return;
         }
 
-        setInvitation({
-          ...data,
-          branch: data.branches as any,
-        });
+        setInvitation(invitationData);
       } catch (err) {
         setError('Error al verificar la invitación');
       } finally {
@@ -348,7 +336,7 @@ export default function RegistroStaff() {
             <CardDescription>
               Te invitaron a unirte al equipo de{' '}
               <span className="font-semibold text-foreground">
-                {invitation?.branch?.name}
+                {invitation?.branch_name}
               </span>{' '}
               como{' '}
               <Badge variant="secondary">

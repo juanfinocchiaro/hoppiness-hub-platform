@@ -2061,6 +2061,19 @@ export type Database = {
           user_id: string
         }[]
       }
+      validate_invitation_token: {
+        Args: { _token: string }
+        Returns: {
+          branch_id: string
+          branch_name: string
+          email: string
+          expires_at: string
+          full_name: string
+          id: string
+          role: string
+          status: string
+        }[]
+      }
     }
     Enums: {
       brand_role_type:
