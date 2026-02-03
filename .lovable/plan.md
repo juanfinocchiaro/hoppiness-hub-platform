@@ -1,172 +1,191 @@
 
-# Plan: Separar Horarios en 2 Vistas (Personas + Cobertura)
+# Plan: Segregacion de Coaching por Jerarquia de Roles
 
-## Objetivo
-Simplificar la pantalla de Horarios separando en 2 tabs independientes que comparten el mismo contenedor de scroll, logrando:
-- Mejor rendimiento (solo se renderiza la vista activa)
-- Scroll horizontal sincronizado entre tabs
-- Sticky header + sticky primera columna funcionando correctamente
+## Problema Detectado
 
-## Arquitectura de la Solución
+Actualmente la pagina de Coaching no respeta la jerarquia de evaluacion:
 
-### Enfoque Elegante
-Usar **un solo contenedor scrollable** que alterna su contenido interno segun el tab activo. Esto mantiene el `scrollLeft` automaticamente sincronizado sin necesidad de estado extra.
+1. **Encargados** ven el panel para evaluar a su equipo, pero tambien ven "Mis Coachings" en Mi Cuenta (no deberian - ellos evaluan, no son evaluados por el local)
+2. **Los coachings de Encargados** deben ser vistos y creados por Coordinadores/Superadmin/Franquiciado, no por el propio encargado
+3. **Falta un panel separado** para "Coaching de Encargados" visible solo para roles de supervision (coordinador, superadmin, franquiciado)
 
-```
-[Tab: Personas] [Tab: Cobertura]
-     |                 |
-     v                 v
-+--------------------------------------------------+
-| CONTENEDOR SCROLL UNICO                          |
-| +-------+----------------------------------+     |
-| | STICKY |  DIAS (scroll horizontal) -->   |     |
-| | COL    |                                  |     |
-| +-------+----------------------------------+     |
-|                                                  |
-|  Si tab=Personas: filas de empleados            |
-|  Si tab=Cobertura: filas de horas               |
-+--------------------------------------------------+
+## Jerarquia de Evaluacion
+
+```text
++------------------+          evalua         +------------------+
+|   Coordinador    | ----------------------> |    Encargado     |
+|   Superadmin     |                         |                  |
+|   Franquiciado   |                         |                  |
++------------------+                         +------------------+
+                                                     |
+                                                     | evalua
+                                                     v
+                                             +------------------+
+                                             |  Empleado/Cajero |
+                                             +------------------+
 ```
 
-## Cambios en Archivos
+## Cambios Propuestos
 
-### 1. Modificar `InlineScheduleEditor.tsx`
+### 1. Modificar CoachingPage.tsx
 
-**Agregar estado para tab activo:**
+**Logica de roles a corregir:**
+
+- Si el usuario efectivo es `encargado`: 
+  - Muestra lista de empleados/cajeros para evaluar
+  - NO muestra encargados en la lista (el encargado no se evalua a si mismo ni a otros encargados)
+  
+- Si el usuario efectivo es `coordinador`, `superadmin` o `franquiciado`:
+  - Muestra lista de empleados/cajeros para evaluar (igual que encargado)
+  - Muestra seccion adicional "Coaching de Encargados" con lista de encargados para evaluar
+
+**Nueva UI:**
+
+```text
+Coaching del Equipo
+[Stats cards]
+
+Tabs: [Equipo] [Encargados*] [Certificaciones]
+              ↑ solo visible para coordinador/superadmin/franquiciado
+
+Tab Equipo:
+- Lista empleados y cajeros (sin encargados)
+- Click para evaluar
+
+Tab Encargados (nuevo):
+- Lista de encargados de la sucursal
+- Click para evaluar con formulario de competencias de manager
+- Solo visible para roles de supervision
+
+Tab Certificaciones:
+- Matriz actual (sin cambios)
+```
+
+### 2. Modificar MyCoachingsCard.tsx
+
+**Logica a agregar:**
+
+- Si el usuario efectivo tiene rol `encargado` en alguna sucursal → NO mostrar "Mis Coachings"
+- Solo mostrar para roles `empleado` y `cajero`
+
+Esto es porque los encargados son evaluados desde otro panel (por coordinadores), no ven sus propios coachings en "Mi Cuenta".
+
+### 3. Crear Seccion de Coaching de Encargados
+
+**Nueva seccion dentro de la misma pagina:**
+
+- Filtrar `user_branch_roles` por `local_role = 'encargado'`
+- Excluir al usuario actual (si es coordinador en esa sucursal)
+- Mostrar formulario de coaching con competencias especificas de managers
+
+### 4. Actualizar useCoachingStats.ts
+
+Agregar estadisticas separadas para encargados:
+- `totalManagers`: cantidad de encargados
+- `managersWithCoaching`: encargados evaluados este mes
+- `managersWithoutCoaching`: pendientes
+
+---
+
+## Detalle Tecnico de Cambios
+
+### Archivo: `src/pages/local/CoachingPage.tsx`
+
+**Cambios:**
+
+1. Agregar nuevo tab "Encargados" condicional
+
+2. Modificar query de teamMembers para excluir encargados cuando el usuario es encargado:
 ```typescript
-const [activeView, setActiveView] = useState<'personas' | 'cobertura'>('personas');
+const rolesToEvaluate = canEvaluateManagers 
+  ? ['empleado', 'cajero', 'encargado'] as const
+  : ['empleado', 'cajero'] as const;
 ```
-
-**Agregar Segmented Control antes del calendario:**
-```tsx
-<div className="flex items-center gap-2 bg-muted p-1 rounded-lg w-fit">
-  <button 
-    className={cn("px-3 py-1.5 rounded text-sm", activeView === 'personas' && "bg-background shadow")}
-    onClick={() => setActiveView('personas')}
-  >
-    Personas
-  </button>
-  <button 
-    className={cn("px-3 py-1.5 rounded text-sm", activeView === 'cobertura' && "bg-background shadow")}
-    onClick={() => setActiveView('cobertura')}
-  >
-    Cobertura
-  </button>
-</div>
-```
-
-**Estructura del contenedor unico:**
-```tsx
-<CardContent className="p-0 max-h-[calc(100vh-320px)] overflow-auto relative">
-  <div className="flex">
-    {/* Columna sticky izquierda - cambia segun vista */}
-    <div className="shrink-0 border-r bg-card z-20 sticky left-0">
-      {/* Header sticky */}
-      <div className="h-12 sticky top-0 z-30 bg-muted/50">
-        {activeView === 'personas' ? 'Empleado' : 'Hora'}
-      </div>
-      
-      {/* Filas de la columna izquierda */}
-      {activeView === 'personas' 
-        ? team.map(...) 
-        : filteredHours.map(...) 
-      }
-    </div>
-    
-    {/* Grilla de dias - mismo ancho siempre */}
-    <div ref={gridScrollRef} style={{ width: gridWidth }}>
-      {/* Header de dias - sticky top */}
-      <div className="h-12 sticky top-0 z-10 bg-muted/50">
-        {monthDays.map(day => ...)}
-      </div>
-      
-      {/* Contenido segun vista activa */}
-      {activeView === 'personas' 
-        ? team.map(member => <ScheduleRow />)
-        : filteredHours.map(hour => <CoverageRow />)
-      }
-    </div>
-  </div>
-</CardContent>
-```
-
-### 2. Vista Personas (existente, solo reorganizar)
-
-Mantiene exactamente la funcionalidad actual:
-- Filas por empleado
-- Click en celda abre popover de edicion
-- Indicadores de turno, break, posicion
-- Badge de "Franco" para dias libres
-
-### 3. Vista Cobertura (nueva, extraer de lo existente)
-
-**Agregar filtro de rango horario:**
+Cambia a:
 ```typescript
-const [hourRange, setHourRange] = useState<'all' | '12-00' | '18-00'>('all');
+// Lista base siempre: empleados y cajeros
+const baseRoles = ['empleado', 'cajero'];
 
-const filteredHours = useMemo(() => {
-  if (hourRange === 'all') return hoursWithCoverage;
-  const [start, end] = hourRange === '12-00' ? [12, 24] : [18, 24];
-  return hoursWithCoverage.filter(h => h >= start || h < end);
-}, [hoursWithCoverage, hourRange]);
+// Para el tab "Equipo", siempre solo empleados/cajeros
+// Para el tab "Encargados", solo encargados (si puede evaluarlos)
 ```
 
-**Selector de rango:**
+3. Agregar query separada para encargados:
+```typescript
+const { data: managers } = useQuery({
+  queryKey: ['branch-managers-coaching', branchId],
+  enabled: canEvaluateManagers,
+  queryFn: async () => {
+    // Fetch encargados de la sucursal
+    // Excluir usuario actual
+  }
+});
+```
+
+4. Nuevo TabsContent para "Encargados":
 ```tsx
-<Select value={hourRange} onValueChange={setHourRange}>
-  <SelectItem value="all">Todas las horas</SelectItem>
-  <SelectItem value="12-00">12:00 - 00:00</SelectItem>
-  <SelectItem value="18-00">18:00 - 00:00</SelectItem>
-</Select>
+{canEvaluateManagers && (
+  <TabsTrigger value="managers">
+    <UserCog /> Encargados
+  </TabsTrigger>
+)}
+
+<TabsContent value="managers">
+  {/* Lista de encargados con opcion de evaluar */}
+</TabsContent>
 ```
 
-**Tooltip mejorado con nombres:**
-```tsx
-<TooltipContent>
-  <p className="font-medium">Lun 2, 19:00</p>
-  <p>2 personas:</p>
-  <ul className="text-xs">
-    <li>Brian</li>
-    <li>Caro</li>
-  </ul>
-</TooltipContent>
+### Archivo: `src/components/cuenta/MyCoachingsCard.tsx`
+
+**Cambios:**
+
+1. Importar `useEffectiveUser` y `usePermissionsWithImpersonation`
+
+2. Agregar verificacion de rol:
+```typescript
+const { id: effectiveUserId } = useEffectiveUser();
+const { branchRoles } = usePermissionsWithImpersonation();
+
+// Verificar si el usuario tiene rol de encargado en alguna sucursal
+const isManager = branchRoles.some(r => r.local_role === 'encargado');
+
+// Si es encargado, no mostrar este card
+if (isManager) {
+  return null;
+}
 ```
 
-### 4. Sticky Headers y Columnas
+### Archivo: `src/hooks/useCoachingStats.ts`
 
-**CSS clave para sticky correcto:**
-```tsx
-// Columna izquierda
-<div className="sticky left-0 z-20 bg-card">
+**Cambios:**
 
-// Celda esquina (interseccion header + columna)
-<div className="sticky left-0 top-0 z-30 bg-muted/50">
-
-// Header de dias
-<div className="sticky top-0 z-10 bg-muted/50">
+1. Agregar campos para managers:
+```typescript
+interface CoachingStats {
+  // ... existentes
+  totalManagers: number;
+  managersWithCoaching: number;
+  pendingManagerCoachings: number;
+}
 ```
 
-## Codigo Eliminado
+2. Query adicional para encargados en el fetch
 
-- Remover la seccion de cobertura integrada al final de la grilla de empleados (lineas 621-664)
-- Remover la fila separadora "Cobertura" de la columna izquierda (lineas 524-545)
-- Ya no se necesita `ShiftCoverageBar.tsx` (no se usa en esta pantalla)
+---
 
-## Beneficios
+## Archivos a Modificar
 
-1. **Rendimiento**: Solo se renderiza una grilla a la vez
-2. **Scroll sincronizado**: Al usar un solo contenedor, el scrollLeft se mantiene automaticamente
-3. **Sticky funcional**: Sin conflictos entre grillas multiples
-4. **UX limpia**: Cada vista tiene un proposito claro
-5. **Alineacion perfecta**: Mismas columnas de dias, mismo ancho
+| Archivo | Cambio |
+|---------|--------|
+| `src/pages/local/CoachingPage.tsx` | Tab Encargados, queries separadas, logica de roles |
+| `src/components/cuenta/MyCoachingsCard.tsx` | Ocultar para encargados |
+| `src/hooks/useCoachingStats.ts` | Stats de managers |
 
 ## Criterios de Aceptacion
 
-- [ ] Scroll horizontal funciona en ambas vistas
-- [ ] Sticky header (dias) queda fijo al scrollear vertical
-- [ ] Sticky primera columna queda fija al scrollear horizontal
-- [ ] Cambiar de tab mantiene la misma posicion de scroll horizontal
-- [ ] No hay doble scroll horizontal
-- [ ] Vista Personas permite editar turnos
-- [ ] Vista Cobertura muestra heatmap por hora con tooltips
-- [ ] Filtro de rango horario funciona en Cobertura
+- [ ] Encargados ven solo empleados/cajeros en su lista de evaluacion
+- [ ] Encargados NO ven "Mis Coachings" en Mi Cuenta
+- [ ] Coordinadores/Superadmin/Franquiciado ven tab "Encargados" adicional
+- [ ] El tab Encargados muestra lista de managers para evaluar
+- [ ] Stats cards muestran metricas separadas cuando corresponde
+- [ ] Impersonacion funciona correctamente (viendo como Dalma → no ve tab Encargados, no ve Mis Coachings)
