@@ -31,6 +31,10 @@ export default function TeamPage() {
       )
     : team;
 
+  // Separate franchisees from employees for counter display
+  const employees = filteredTeam.filter(m => m.local_role !== 'franquiciado');
+  const franchisees = filteredTeam.filter(m => m.local_role === 'franquiciado');
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -47,7 +51,8 @@ export default function TeamPage() {
         <div>
           <h1 className="text-xl md:text-2xl font-bold">Mi Equipo</h1>
           <p className="text-sm text-muted-foreground">
-            {filteredTeam.length} empleado{filteredTeam.length !== 1 ? 's' : ''}
+            {employees.length} empleado{employees.length !== 1 ? 's' : ''}
+            {franchisees.length > 0 && ` · ${franchisees.length} propietario${franchisees.length !== 1 ? 's' : ''}`}
           </p>
         </div>
         <Button 
