@@ -40,12 +40,11 @@ export default function CoachingPage() {
   const { 
     isSuperadmin, 
     isCoordinador, 
-    isFranquiciado,
-    isEncargado,
   } = usePermissionsWithImpersonation(branchId);
   
-  // Solo supervisores pueden evaluar encargados
-  const canEvaluateManagers = isSuperadmin || isCoordinador || isFranquiciado;
+  // Solo coordinadores y superadmins pueden evaluar encargados
+  // Los franquiciados rara vez están capacitados para esto
+  const canEvaluateManagers = isSuperadmin || isCoordinador;
 
   // Fetch empleados y cajeros (SIEMPRE sin encargados)
   const { data: teamMembers, isLoading: loadingTeam, refetch: refetchTeam } = useQuery({
@@ -408,7 +407,7 @@ export default function CoachingPage() {
                   Encargados del Local
                 </CardTitle>
                 <CardDescription>
-                  Como {isSuperadmin ? 'superadmin' : isFranquiciado ? 'franquiciado' : 'coordinador'}, 
+                  Como {isSuperadmin ? 'superadmin' : 'coordinador'}, 
                   podés evaluar a los encargados de esta sucursal
                 </CardDescription>
               </CardHeader>
