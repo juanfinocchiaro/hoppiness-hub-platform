@@ -231,12 +231,15 @@ export function ScheduleCellPopover({
           )}
 
           {/* Position selector */}
-          <Select value={position} onValueChange={(v) => setPosition(v as WorkPositionType)}>
+          <Select 
+            value={position || 'none'} 
+            onValueChange={(v) => setPosition(v === 'none' ? '' : v as WorkPositionType)}
+          >
             <SelectTrigger className="h-8 text-xs">
               <SelectValue placeholder="Posición (opcional)" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Sin posición</SelectItem>
+              <SelectItem value="none">Sin posición</SelectItem>
               {WORK_POSITIONS.map((pos) => (
                 <SelectItem key={pos.value} value={pos.value}>
                   {pos.label}
