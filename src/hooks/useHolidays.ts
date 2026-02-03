@@ -141,7 +141,24 @@ export function useCreateHolidaysBulk() {
     mutationFn: async (holidays: CreateHolidayInput[]) => {
       if (!user) throw new Error('Not authenticated');
       
-      const records = holidays.map(h => ({
+      // First, get existing global holidays to avoid duplicates
+      const dates = holidays.map(h => h.day_date);
+      const { data: existing } = await supabase
+        .from('special_days')
+        .select('day_date')
+        .is('branch_id', null)
+        .in('day_date', dates);
+      
+      const existingDates = new Set(existing?.map(e => e.day_date) || []);
+      
+      // Filter out holidays that already exist
+      const newHolidays = holidays.filter(h => !existingDates.has(h.day_date));
+      
+      if (newHolidays.length === 0) {
+        return []; // All holidays already exist
+      }
+      
+      const records = newHolidays.map(h => ({
         branch_id: null,
         day_date: h.day_date,
         day_type: h.day_type || 'holiday',
@@ -151,7 +168,7 @@ export function useCreateHolidaysBulk() {
       
       const { data, error } = await supabase
         .from('special_days')
-        .upsert(records, { onConflict: 'branch_id,day_date' })
+        .insert(records)
         .select();
       
       if (error) throw error;
