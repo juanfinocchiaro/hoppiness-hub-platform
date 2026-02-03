@@ -1,100 +1,172 @@
 
-# Plan: Rediseño de Horarios - Cobertura Integrada
+# Plan: Separar Horarios en 2 Vistas (Personas + Cobertura)
 
-## Problema Actual
+## Objetivo
+Simplificar la pantalla de Horarios separando en 2 tabs independientes que comparten el mismo contenedor de scroll, logrando:
+- Mejor rendimiento (solo se renderiza la vista activa)
+- Scroll horizontal sincronizado entre tabs
+- Sticky header + sticky primera columna funcionando correctamente
 
-La UI tiene **dos grids separados** (Cards independientes) que intentan sincronizar scroll pero:
-- Visualmente se sienten como "dos cosas distintas"
-- El título "Cobertura por Hora" interrumpe la continuidad
-- Los días de arriba no están perfectamente alineados con los de abajo
-- El scroll sincronizado entre dos elementos es propenso a errores
+## Arquitectura de la Solución
 
-## Solución Propuesta
+### Enfoque Elegante
+Usar **un solo contenedor scrollable** que alterna su contenido interno segun el tab activo. Esto mantiene el `scrollLeft` automaticamente sincronizado sin necesidad de estado extra.
 
-Integrar la **cobertura por hora como filas de resumen** al final del mismo grid de empleados:
-
-```text
-+------------------+-------+-------+-------+-------+
-| Empleado         | Lun 1 | Mar 2 | Mié 3 | Jue 4 | ...
-+------------------+-------+-------+-------+-------+
-| Juan Pérez       | 11-19 | 11-19 | Franco| 14-22 |
-| María López      | 12-20 | Franco| 11-19 | 11-19 |
-| Carlos García    | 18-23 | 18-23 | 18-23 | 18-23 |
-+==================+=======+=======+=======+=======+
-|  COBERTURA       |       |       |       |       |
-| 11:00            |   2   |   1   |   1   |   2   |
-| 12:00            |   2   |   1   |   1   |   2   |
-| ...              |  ...  |  ...  |  ...  |  ...  |
-| 22:00            |   2   |   1   |   1   |   2   |
-+------------------+-------+-------+-------+-------+
+```
+[Tab: Personas] [Tab: Cobertura]
+     |                 |
+     v                 v
++--------------------------------------------------+
+| CONTENEDOR SCROLL UNICO                          |
+| +-------+----------------------------------+     |
+| | STICKY |  DIAS (scroll horizontal) -->   |     |
+| | COL    |                                  |     |
+| +-------+----------------------------------+     |
+|                                                  |
+|  Si tab=Personas: filas de empleados            |
+|  Si tab=Cobertura: filas de horas               |
++--------------------------------------------------+
 ```
 
-## Cambios a Realizar
+## Cambios en Archivos
 
-### 1. Estructura Unificada
-- Eliminar la Card separada de "Cobertura por Hora"
-- Mover las filas de cobertura al final del mismo contenedor scrollable
-- Un solo scroll horizontal = alineación perfecta garantizada
+### 1. Modificar `InlineScheduleEditor.tsx`
 
-### 2. Separador Visual
-- Agregar una fila divisoria con fondo diferenciado entre empleados y cobertura
-- Texto pequeño "Cobertura por hora" en gris, inline con la columna de empleados
-- Fondo sutilmente diferente (gris claro) para las filas de cobertura
-
-### 3. Columna Fija de Horas
-- La columna izquierda mostrará:
-  - Nombre del empleado (para filas de horarios)
-  - Hora (11:00, 12:00, etc.) para filas de cobertura
-- Misma posición sticky, un solo elemento
-
-### 4. Mantener Funcionalidad
-- Los días siguen siendo clickeables para editar horarios
-- La cobertura sigue siendo hora-a-hora dinámica
-- Colores de cobertura: Rojo (<2), Ámbar (2-3), Verde (4+)
-- Solo se muestran las horas donde hay al menos 1 empleado
-
-## Diseño Final Esperado
-
-```text
-┌────────────────────────────────────────────────────────┐
-│  📅 Horarios del Equipo                    [leyenda]   │
-├──────────────┬────┬────┬────┬────┬────┬────┬────┬─────┤
-│ Empleado     │ 1  │ 2  │ 3  │ 4  │ 5  │ 6  │ 7  │ ... │◄─ scroll →
-├──────────────┼────┼────┼────┼────┼────┼────┼────┼─────┤
-│ Juan         │    │    │    │    │    │    │    │     │
-│ María        │    │    │    │    │    │    │    │     │
-│ Carlos       │    │    │    │    │    │    │    │     │
-├──────────────┴────┴────┴────┴────┴────┴────┴────┴─────┤
-│ ─────────────── Cobertura por hora ─────────────────  │  ← separador sutil
-├──────────────┬────┬────┬────┬────┬────┬────┬────┬─────┤
-│ 11:00        │ 2  │ 1  │ 1  │ 2  │ 2  │ 1  │ 0  │     │  ← fondo gris
-│ 12:00        │ 2  │ 2  │ 2  │ 2  │ 2  │ 2  │ 0  │     │
-│ ...          │    │    │    │    │    │    │    │     │
-│ 22:00        │ 1  │ 1  │ 1  │ 1  │ 1  │ 1  │ 0  │     │
-└──────────────┴────┴────┴────┴────┴────┴────┴────┴─────┘
+**Agregar estado para tab activo:**
+```typescript
+const [activeView, setActiveView] = useState<'personas' | 'cobertura'>('personas');
 ```
 
-## Archivo a Modificar
+**Agregar Segmented Control antes del calendario:**
+```tsx
+<div className="flex items-center gap-2 bg-muted p-1 rounded-lg w-fit">
+  <button 
+    className={cn("px-3 py-1.5 rounded text-sm", activeView === 'personas' && "bg-background shadow")}
+    onClick={() => setActiveView('personas')}
+  >
+    Personas
+  </button>
+  <button 
+    className={cn("px-3 py-1.5 rounded text-sm", activeView === 'cobertura' && "bg-background shadow")}
+    onClick={() => setActiveView('cobertura')}
+  >
+    Cobertura
+  </button>
+</div>
+```
 
-`src/components/hr/InlineScheduleEditor.tsx`
+**Estructura del contenedor unico:**
+```tsx
+<CardContent className="p-0 max-h-[calc(100vh-320px)] overflow-auto relative">
+  <div className="flex">
+    {/* Columna sticky izquierda - cambia segun vista */}
+    <div className="shrink-0 border-r bg-card z-20 sticky left-0">
+      {/* Header sticky */}
+      <div className="h-12 sticky top-0 z-30 bg-muted/50">
+        {activeView === 'personas' ? 'Empleado' : 'Hora'}
+      </div>
+      
+      {/* Filas de la columna izquierda */}
+      {activeView === 'personas' 
+        ? team.map(...) 
+        : filteredHours.map(...) 
+      }
+    </div>
+    
+    {/* Grilla de dias - mismo ancho siempre */}
+    <div ref={gridScrollRef} style={{ width: gridWidth }}>
+      {/* Header de dias - sticky top */}
+      <div className="h-12 sticky top-0 z-10 bg-muted/50">
+        {monthDays.map(day => ...)}
+      </div>
+      
+      {/* Contenido segun vista activa */}
+      {activeView === 'personas' 
+        ? team.map(member => <ScheduleRow />)
+        : filteredHours.map(hour => <CoverageRow />)
+      }
+    </div>
+  </div>
+</CardContent>
+```
 
-## Secciones Técnicas
+### 2. Vista Personas (existente, solo reorganizar)
 
-### Estructura del Componente
-1. Eliminar `coverageScrollRef` y `handleCoverageScroll` (ya no necesarios)
-2. Mantener un solo `scheduleScrollRef` para todo el grid
-3. Combinar empleados + cobertura en el mismo div scrollable
+Mantiene exactamente la funcionalidad actual:
+- Filas por empleado
+- Click en celda abre popover de edicion
+- Indicadores de turno, break, posicion
+- Badge de "Franco" para dias libres
 
-### Layout
-- **Columna fija izquierda**: muestra "Empleado" luego nombres, luego separador, luego horas
-- **Contenedor scrollable**: días de cabecera + celdas de horario + separador + celdas de cobertura
+### 3. Vista Cobertura (nueva, extraer de lo existente)
 
-### Separador Visual
-- Fila con `border-t-2 border-dashed` y texto "Cobertura por hora"
-- Altura reducida (~32px)
-- Sin interacción
+**Agregar filtro de rango horario:**
+```typescript
+const [hourRange, setHourRange] = useState<'all' | '12-00' | '18-00'>('all');
 
-### Filas de Cobertura
-- `bg-muted/40` para diferenciarse visualmente
-- Altura de 28px (más compactas que las de empleados)
-- Mismo ancho de columna (`DAY_WIDTH = 80`)
+const filteredHours = useMemo(() => {
+  if (hourRange === 'all') return hoursWithCoverage;
+  const [start, end] = hourRange === '12-00' ? [12, 24] : [18, 24];
+  return hoursWithCoverage.filter(h => h >= start || h < end);
+}, [hoursWithCoverage, hourRange]);
+```
+
+**Selector de rango:**
+```tsx
+<Select value={hourRange} onValueChange={setHourRange}>
+  <SelectItem value="all">Todas las horas</SelectItem>
+  <SelectItem value="12-00">12:00 - 00:00</SelectItem>
+  <SelectItem value="18-00">18:00 - 00:00</SelectItem>
+</Select>
+```
+
+**Tooltip mejorado con nombres:**
+```tsx
+<TooltipContent>
+  <p className="font-medium">Lun 2, 19:00</p>
+  <p>2 personas:</p>
+  <ul className="text-xs">
+    <li>Brian</li>
+    <li>Caro</li>
+  </ul>
+</TooltipContent>
+```
+
+### 4. Sticky Headers y Columnas
+
+**CSS clave para sticky correcto:**
+```tsx
+// Columna izquierda
+<div className="sticky left-0 z-20 bg-card">
+
+// Celda esquina (interseccion header + columna)
+<div className="sticky left-0 top-0 z-30 bg-muted/50">
+
+// Header de dias
+<div className="sticky top-0 z-10 bg-muted/50">
+```
+
+## Codigo Eliminado
+
+- Remover la seccion de cobertura integrada al final de la grilla de empleados (lineas 621-664)
+- Remover la fila separadora "Cobertura" de la columna izquierda (lineas 524-545)
+- Ya no se necesita `ShiftCoverageBar.tsx` (no se usa en esta pantalla)
+
+## Beneficios
+
+1. **Rendimiento**: Solo se renderiza una grilla a la vez
+2. **Scroll sincronizado**: Al usar un solo contenedor, el scrollLeft se mantiene automaticamente
+3. **Sticky funcional**: Sin conflictos entre grillas multiples
+4. **UX limpia**: Cada vista tiene un proposito claro
+5. **Alineacion perfecta**: Mismas columnas de dias, mismo ancho
+
+## Criterios de Aceptacion
+
+- [ ] Scroll horizontal funciona en ambas vistas
+- [ ] Sticky header (dias) queda fijo al scrollear vertical
+- [ ] Sticky primera columna queda fija al scrollear horizontal
+- [ ] Cambiar de tab mantiene la misma posicion de scroll horizontal
+- [ ] No hay doble scroll horizontal
+- [ ] Vista Personas permite editar turnos
+- [ ] Vista Cobertura muestra heatmap por hora con tooltips
+- [ ] Filtro de rango horario funciona en Cobertura
