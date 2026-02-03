@@ -15,7 +15,7 @@ import MyClockInsCard from '@/components/cuenta/MyClockInsCard';
 import MySalaryAdvancesCard from '@/components/cuenta/MySalaryAdvancesCard';
 import MyWarningsCard from '@/components/cuenta/MyWarningsCard';
 import MyCommunicationsCard from '@/components/cuenta/MyCommunicationsCard';
-import MissingPinBanner from '@/components/cuenta/MissingPinBanner';
+
 import MyRequestsCard from '@/components/cuenta/MyRequestsCard';
 import MyRegulationsCard from '@/components/cuenta/MyRegulationsCard';
 import { MyCoachingsCard } from '@/components/cuenta/MyCoachingsCard';
@@ -69,10 +69,6 @@ export default function CuentaDashboard() {
     enabled: !!effectiveUserId,
   });
 
-  // Check if ANY branch is missing PIN - only count branches where user actually has a role
-  const branchesMissingPin = branchPinData?.filter(r => r.local_role && !r.clock_pin) || [];
-  const totalBranchesWithRole = branchPinData?.filter(r => r.local_role) || [];
-  const needsPinSetup = branchesMissingPin.length > 0;
 
   // Fetch urgent unread communications
   const { data: urgentUnread = [] } = useQuery({
@@ -190,16 +186,6 @@ export default function CuentaDashboard() {
                   <Briefcase className="w-5 h-5 text-primary" />
                   <h2 className="text-base md:text-lg font-semibold">Mi Trabajo</h2>
                 </div>
-                
-                {/* Missing PIN Banner */}
-                {needsPinSetup && (
-                  <div className="mb-3">
-                    <MissingPinBanner 
-                      missingCount={branchesMissingPin.length}
-                      totalCount={totalBranchesWithRole.length}
-                    />
-                  </div>
-                )}
               </div>
 
               {/* Branch Cards with PIN management integrated */}
