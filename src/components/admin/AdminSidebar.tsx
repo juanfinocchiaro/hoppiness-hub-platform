@@ -24,6 +24,7 @@ import {
   FileText,
   MessageSquare,
   Eye,
+  Shield,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import NewBranchModal from './NewBranchModal';
@@ -142,6 +143,7 @@ export default function AdminSidebar({ avatarInfo }: AdminSidebarProps) {
       items: [
         { type: 'navigation', to: '/mimarca/reglamentos', icon: FileText, label: 'Reglamentos' },
         { type: 'navigation', to: '/mimarca/configuracion/cierres', icon: FileText, label: 'Cierre de Turno' },
+        { type: 'navigation', to: '/mimarca/configuracion/permisos', icon: Shield, label: 'Permisos' },
       ],
     });
 
