@@ -1,281 +1,348 @@
 
+# Plan de Mejoras: PIN de Fichaje, Fecha de Ingreso, y Sistema de Horarios
 
-# Plan de Implementación: Sistema de Coaching y Desarrollo de Equipo
+## Resumen de Cambios Solicitados
 
-## Resumen Ejecutivo
+1. **PIN de Fichaje en Mi Cuenta**
+   - El banner "Configura tu PIN" aparece aunque el PIN ya existe (bug)
+   - Mover la gestión de PIN de /cuenta/perfil a /cuenta directamente
+   - Mostrar PIN con botón "ver" y "modificar" en modal independiente
 
-Este proyecto implementa un **sistema completo de coaching y certificaciones** para Hoppiness Club, permitiendo:
+2. **Editar Fecha de Ingreso**
+   - Los encargados deben poder editar la fecha de ingreso (hire_date)
+   - Ya existe en EmployeeDataModal pero verificar que funcione correctamente
 
-- Certificar empleados en 4 estaciones de trabajo (Cocinero, Cajero, Runner, Lavacopas)
-- Realizar evaluaciones mensuales estructuradas por encargados/franquiciados
-- Mostrar matriz de certificaciones del equipo
-- Integrar ayuda contextual en todas las páginas
+3. **UI de Horarios Simplificada**
+   - Eliminar el wizard de 3 pasos
+   - Edición inline tipo Excel directamente en el calendario
+   - Al guardar, mostrar confirmación antes de notificar
 
-El proyecto se divide en **4 fases** que se implementarán secuencialmente.
-
----
-
-## FASE 1: Base de Datos
-
-### 1.1 Actualizar tipos de posición de trabajo
-
-**Archivo:** `src/types/workPosition.ts`
-
-Remover `barista` del tipo ya que las 4 estaciones reales son: Cocinero, Cajero, Runner, Lavacopas.
-
-### 1.2 Crear tablas del sistema de coaching
-
-Se crearán las siguientes tablas mediante migración SQL:
-
-| Tabla | Propósito |
-|-------|-----------|
-| `work_stations` | Catálogo de estaciones (cocinero, cajero, runner, lavacopas) |
-| `station_competencies` | 5 competencias por cada estación |
-| `general_competencies` | 10 competencias generales con pesos |
-| `manager_competencies` | 8 competencias para evaluar encargados |
-| `employee_certifications` | Nivel de certificación por empleado/estación (0-3) |
-| `coachings` | Registro de cada coaching mensual |
-| `coaching_station_scores` | Scores por estación en cada coaching |
-| `coaching_competency_scores` | Puntuación individual por competencia |
-
-### 1.3 Funciones de seguridad
-
-Crear funciones `SECURITY DEFINER`:
-- `can_manage_coaching(user_id, branch_id)` - Verificar si puede gestionar coaching
-- `can_view_coaching(user_id, coaching_id)` - Verificar si puede ver un coaching
-
-### 1.4 Políticas RLS
-
-- Tablas de catálogo (estaciones, competencias): Lectura pública autenticada
-- Certificaciones: Ver propias + manager ve todas del local
-- Coachings: Ver propios + manager ve todos del local
-
-### 1.5 Datos iniciales
-
-Insertar automáticamente:
-- 4 estaciones con iconos
-- 20 competencias de estación (5 por cada estación)
-- 10 competencias generales con pesos oficiales
-- 8 competencias de encargado
+4. **Visualización de Cobertura por Turno**
+   - Mostrar cuántos empleados hay por hora/turno del día
+   - Barra o resumen debajo del calendario
 
 ---
 
-## FASE 2: Hooks y Servicios
+## CAMBIO 1: Sistema de PIN de Fichaje Mejorado
 
-### 2.1 Nuevos hooks a crear
+### 1.1 Problema Actual
 
-| Hook | Archivo | Propósito |
-|------|---------|-----------|
-| `useCoachings` | `src/hooks/useCoachings.ts` | CRUD de coachings, listados, filtros |
-| `useCertifications` | `src/hooks/useCertifications.ts` | CRUD de certificaciones por empleado |
-| `useCoachingStats` | `src/hooks/useCoachingStats.ts` | Estadísticas: pendientes, completados |
-| `useStationCompetencies` | `src/hooks/useStationCompetencies.ts` | Obtener competencias por estación |
+El banner `MissingPinBanner` aparece cuando `branchPinData?.filter(r => !r.clock_pin)` encuentra registros sin PIN. Sin embargo:
+- El PIN existe en `user_branch_roles.clock_pin`
+- Pero la query puede no estar trayendo el dato correctamente
+- Además, la gestión de PIN está en `/cuenta/perfil`, muy enterrado
 
-### 2.2 Nuevos tipos TypeScript
+### 1.2 Nueva Arquitectura
 
-**Archivo:** `src/types/coaching.ts`
+**Mover PIN a CuentaDashboard con modal:**
 
-```text
-- CertificationLevel (0 | 1 | 2 | 3)
-- WorkStation
-- StationCompetency
-- GeneralCompetency
-- EmployeeCertification
-- Coaching
-- CoachingStationScore
-- CoachingCompetencyScore
+| Elemento | Ubicación Actual | Ubicación Nueva |
+|----------|------------------|-----------------|
+| BranchPinCard | CuentaPerfil.tsx | CuentaDashboard.tsx (como modal) |
+| MissingPinBanner | CuentaDashboard.tsx | Mantener pero corregir lógica |
+
+### 1.3 Archivos a Modificar
+
+**`src/pages/cuenta/CuentaDashboard.tsx`:**
+- Agregar estado para modal de PIN abierto
+- Crear nuevo componente inline `PinManagementModal`
+- Mostrar PIN por sucursal con botones "Ver" / "Modificar"
+- Corregir la lógica de detección de PIN faltante
+
+**`src/pages/cuenta/CuentaPerfil.tsx`:**
+- Remover toda la sección de PIN de fichaje
+- Mantener solo: avatar, nombre, teléfono, fecha nacimiento, contraseña
+
+### 1.4 Nuevo Componente: PinManagementModal
+
+```
+src/components/cuenta/PinManagementModal.tsx
+```
+
+**Funcionalidad:**
+- Lista de sucursales asignadas
+- Por cada sucursal:
+  - Si tiene PIN: mostrar "••••" + botón "Ver" + botón "Modificar"
+  - Si no tiene PIN: mostrar "Sin PIN" + botón "Crear"
+- Al hacer clic en "Ver": mostrar PIN durante 3 segundos
+- Al hacer clic en "Modificar" o "Crear": formulario inline con validación
+
+### 1.5 UI en CuentaDashboard
+
+Dentro de la sección "Mi Trabajo", agregar debajo de cada card de sucursal:
+
+```
+┌─────────────────────────────────────────────┐
+│ 📍 Manantiales                              │
+│ └─ PIN: •••• [Ver] [Modificar]              │
+│                                    [Entrar] │
+└─────────────────────────────────────────────┘
+```
+
+O como alternativa más limpia:
+
+```
+┌─────────────────────────────────────────────┐
+│ 📍 Manantiales          [👤 Encargado]      │
+│ 🔑 PIN configurado ✓    [Gestionar PIN]     │
+└─────────────────────────────────────────────┘
 ```
 
 ---
 
-## FASE 3: Componentes UI de Coaching
+## CAMBIO 2: Editar Fecha de Ingreso (Verificación)
 
-### 3.1 Nuevos componentes
+### 2.1 Estado Actual
 
-| Componente | Ubicación | Descripción |
-|------------|-----------|-------------|
-| `CertificationBadge` | `src/components/coaching/` | Badge visual con nivel (negro, amarillo, verde, azul) |
-| `CertificationMatrix` | `src/components/coaching/` | Matriz visual de certificaciones del equipo |
-| `CoachingForm` | `src/components/coaching/` | Formulario completo de coaching |
-| `CoachingStationSection` | `src/components/coaching/` | Sección de evaluación por estación |
-| `CoachingGeneralSection` | `src/components/coaching/` | Sección de competencias generales |
-| `CoachingHistory` | `src/components/coaching/` | Historial de coachings de un empleado |
-| `CoachingPendingCard` | `src/components/coaching/` | Card de coachings pendientes |
-| `MyCoachingsCard` | `src/components/cuenta/` | Card para Mi Cuenta del empleado |
+El modal `EmployeeDataModal.tsx` ya tiene:
+- Campo `hire_date` en la pestaña "Laboral" (línea 335-349)
+- Input tipo date que se guarda en `employee_data.hire_date`
 
-### 3.2 Modificaciones a componentes existentes
+### 2.2 Verificación Necesaria
 
-| Componente | Cambio |
-|------------|--------|
-| `TeamPage.tsx` | Agregar tab "Coaching" junto a Personal y Horas |
-| `EmployeeExpandedRow.tsx` | Agregar badges de certificación y botón "Ver Coaching" |
-| `ManagerDashboard.tsx` | Agregar card de coachings pendientes del mes |
-| `CuentaDashboard.tsx` | Agregar `MyCoachingsCard` |
+La fecha de ingreso ya es editable. El único ajuste necesario es:
+- Agregar texto explicativo más claro: "Fecha real de inicio en la empresa (puede ser anterior al registro en el sistema)"
+- Posiblemente hacer el campo más prominente
 
-### 3.3 Nueva página de coaching
+### 2.3 Modificación Menor
 
-**Archivo:** `src/pages/local/CoachingPage.tsx`
-
-- Lista de empleados con indicador de coaching del mes
-- Botón "Hacer Coaching" para cada empleado sin coaching
-- Vista de matriz de certificaciones
-- Historial de coachings anteriores
-
-### 3.4 Nueva ruta
-
-Agregar en `App.tsx`:
-```text
-/milocal/:branchId/equipo/coaching → CoachingPage
-```
-
-### 3.5 Niveles de certificación (visual)
-
-| Nivel | Nombre | Significado | Color |
-|-------|--------|-------------|-------|
-| 0 | Sin entrenar | No puede trabajar en esa estación | Negro |
-| 1 | En entrenamiento | Puede con supervisión | Amarillo |
-| 2 | Certificado | Puede trabajar solo | Verde |
-| 3 | Experto | Puede entrenar a otros | Azul |
+En `EmployeeDataModal.tsx`, actualizar el texto descriptivo del campo hire_date.
 
 ---
 
-## FASE 4: Sistema de Ayuda Contextual
+## CAMBIO 3: UI de Horarios Tipo Excel
 
-### 4.1 Estado actual
+### 3.1 Problema Actual
 
-La infraestructura ya existe pero **no está siendo usada**:
-- `helpConfig.ts` - Configuraciones parciales
-- `useContextualHelp.ts` - Hook funcional
-- `PageHelp.tsx` - Componente listo
+El flujo actual requiere:
+1. Clic en "Crear Horario" → abre wizard
+2. Paso 1: Seleccionar empleado
+3. Paso 2: Revisar solicitudes
+4. Paso 3: Configurar días con selección múltiple y presets
+5. Guardar → notificaciones
 
-### 4.2 Completar configuraciones
+**Demasiados pasos para ediciones simples.**
 
-Actualizar `src/lib/helpConfig.ts` con configuraciones para:
+### 3.2 Nuevo Flujo Propuesto
 
-**Mi Local:**
-- local-dashboard, local-team, local-coaching (NUEVO), local-schedules
-- local-clockins, local-advances, local-warnings, local-regulations
-- local-communications, local-shift-config
+**Edición inline directamente en el calendario:**
 
-**Mi Marca:**
-- brand-dashboard, brand-branch-detail (NUEVO), brand-users
-- brand-central-team, brand-communications, brand-regulations
-- brand-closure-config, brand-contact-messages, brand-permissions
+1. El calendario muestra TODOS los empleados con sus celdas
+2. Clic en celda vacía → aparece popover rápido con opciones
+3. Clic en celda con horario → aparece popover de edición
+4. Los cambios se acumulan localmente (estado "dirty")
+5. Botón flotante "Guardar cambios (N pendientes)" aparece cuando hay cambios
+6. Al guardar → modal de confirmación: "Se notificará a X empleados"
 
-**Mi Cuenta:**
-- cuenta-dashboard, cuenta-profile, cuenta-coachings (NUEVO)
+### 3.3 Componentes a Crear/Modificar
 
-### 4.3 Integrar en cada página
+**Nuevo: `src/components/hr/InlineScheduleEditor.tsx`**
+- Reemplaza a MonthlyScheduleView + CreateScheduleWizard
+- Grid editable con todas las celdas interactivas
+- Estado local para cambios pendientes
+- Botón flotante de guardar
 
-Agregar al inicio de cada página:
-```text
-import { PageHelp } from '@/components/ui/PageHelp';
+**Nuevo: `src/components/hr/ScheduleCellPopover.tsx`**
+- Popover que aparece al hacer clic en una celda
+- Presets de turno: Mañana, Tarde, Noche, Franco
+- Input de hora personalizada
+- Selector de posición (opcional)
+- Botón "Aplicar"
 
-<PageHelp pageId="[ID_DE_LA_PAGINA]" />
+**Nuevo: `src/components/hr/SaveScheduleDialog.tsx`**
+- Modal de confirmación antes de guardar
+- Lista de empleados afectados
+- Checkboxes de notificación (email/comunicado)
+- Botón "Publicar horarios"
+
+**Modificar: `src/pages/local/SchedulesPage.tsx`**
+- Reemplazar `MonthlyScheduleView` por `InlineScheduleEditor`
+- Eliminar referencia a CreateScheduleWizard
+
+### 3.4 Flujo Visual del Nuevo Sistema
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Horarios de Febrero 2026                    [< Mes] [Mes >] │
+├─────────────────────────────────────────────────────────────┤
+│         │ Lun 1 │ Mar 2 │ Mié 3 │ Jue 4 │ Vie 5 │ Sab 6 │   │
+├─────────┼───────┼───────┼───────┼───────┼───────┼───────┤   │
+│ Juan P  │ 19:30 │ 19:30 │   L   │ 12:00 │ 19:30 │ 19:30 │   │
+│ María G │ 12:00 │ 12:00 │ 12:00 │   L   │ 12:00 │ 19:30 │   │
+│ Pedro L │   -   │   -   │ 19:30*│ 19:30 │   -   │   -   │   │
+└─────────────────────────────────────────────────────────────┘
+                                    * = modificado sin guardar
+
+┌─────────────────────────────────────────────────────────────┐
+│ 3 cambios pendientes                    [Descartar] [Guardar]│
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 4.4 Agregar campos a profiles
+### 3.5 Estructura de Estado
 
-Verificar/agregar columnas:
-- `help_dismissed_pages TEXT[] DEFAULT '{}'`
-- `show_floating_help BOOLEAN DEFAULT true`
+```typescript
+interface PendingChange {
+  userId: string;
+  date: string;
+  startTime: string | null;
+  endTime: string | null;
+  isDayOff: boolean;
+  position: WorkPositionType | null;
+  action: 'create' | 'update' | 'delete';
+}
+
+// Estado local en el componente
+const [pendingChanges, setPendingChanges] = useState<Map<string, PendingChange>>();
+```
+
+---
+
+## CAMBIO 4: Visualización de Cobertura por Turno
+
+### 4.1 Problema
+
+El encargado quiere ver rápidamente:
+- ¿Cuántas personas trabajan en cada turno del día?
+- ¿Hay días con poca gente?
+
+### 4.2 Solución: Barra de Resumen por Día
+
+Debajo del calendario, agregar una fila de resumen:
+
+```
+│ Día     │ Lun 1 │ Mar 2 │ Mié 3 │ Jue 4 │ Vie 5 │ Sab 6 │
+│─────────┼───────┼───────┼───────┼───────┼───────┼───────│
+│ 👥 Total│   5   │   4   │   3   │   6   │   5   │   7   │
+│ ☀️ Med  │   2   │   2   │   1   │   3   │   2   │   3   │
+│ 🌙 Noche│   3   │   2   │   2   │   3   │   3   │   4   │
+```
+
+Con indicadores de color:
+- **Rojo**: Menos de 2 personas en un turno
+- **Amarillo**: 2-3 personas
+- **Verde**: 4+ personas
+
+### 4.3 Componente Nuevo: ShiftCoverageBar
+
+```
+src/components/hr/ShiftCoverageBar.tsx
+```
+
+**Props:**
+- `schedules: ScheduleEntry[]`
+- `branchShifts: BranchShift[]` (para saber los turnos configurados)
+- `monthDays: Date[]`
+
+**Lógica:**
+1. Agrupar schedules por fecha
+2. Para cada fecha, contar cuántos en cada franja horaria
+3. Clasificar según `branch_shifts` del local (Mediodía: 12:00-17:00, Noche: 17:00-00:00)
+
+### 4.4 Integración
+
+Agregar al final del grid en `InlineScheduleEditor.tsx`:
+
+```jsx
+<ShiftCoverageBar 
+  schedules={allSchedules}
+  branchShifts={branchShifts}
+  monthDays={monthDays}
+/>
+```
 
 ---
 
 ## Archivos a Crear
 
-| Archivo | Fase |
-|---------|------|
-| `src/types/coaching.ts` | 1 |
-| `src/hooks/useCoachings.ts` | 2 |
-| `src/hooks/useCertifications.ts` | 2 |
-| `src/hooks/useCoachingStats.ts` | 2 |
-| `src/hooks/useStationCompetencies.ts` | 2 |
-| `src/components/coaching/CertificationBadge.tsx` | 3 |
-| `src/components/coaching/CertificationMatrix.tsx` | 3 |
-| `src/components/coaching/CoachingForm.tsx` | 3 |
-| `src/components/coaching/CoachingStationSection.tsx` | 3 |
-| `src/components/coaching/CoachingGeneralSection.tsx` | 3 |
-| `src/components/coaching/CoachingHistory.tsx` | 3 |
-| `src/components/coaching/CoachingPendingCard.tsx` | 3 |
-| `src/components/coaching/index.ts` | 3 |
-| `src/components/cuenta/MyCoachingsCard.tsx` | 3 |
-| `src/pages/local/CoachingPage.tsx` | 3 |
+| Archivo | Descripción |
+|---------|-------------|
+| `src/components/cuenta/PinManagementModal.tsx` | Modal para gestionar PINs |
+| `src/components/hr/InlineScheduleEditor.tsx` | Editor de horarios tipo Excel |
+| `src/components/hr/ScheduleCellPopover.tsx` | Popover de edición de celda |
+| `src/components/hr/SaveScheduleDialog.tsx` | Dialog de confirmación al guardar |
+| `src/components/hr/ShiftCoverageBar.tsx` | Barra de resumen de cobertura |
 
 ## Archivos a Modificar
 
-| Archivo | Fase | Cambio |
-|---------|------|--------|
-| `src/types/workPosition.ts` | 1 | Remover 'barista' |
-| `src/lib/helpConfig.ts` | 4 | Completar todas las configuraciones |
-| `src/pages/local/TeamPage.tsx` | 3 | Agregar tab Coaching |
-| `src/components/local/team/EmployeeExpandedRow.tsx` | 3 | Agregar badges + botón coaching |
-| `src/components/local/ManagerDashboard.tsx` | 3 | Agregar card pendientes |
-| `src/pages/cuenta/CuentaDashboard.tsx` | 3 | Agregar MyCoachingsCard |
-| `src/App.tsx` | 3 | Agregar ruta /coaching |
-| 20+ páginas | 4 | Integrar `<PageHelp />` |
+| Archivo | Cambio |
+|---------|--------|
+| `src/pages/cuenta/CuentaDashboard.tsx` | Agregar gestión de PIN inline + modal |
+| `src/pages/cuenta/CuentaPerfil.tsx` | Remover sección de PIN |
+| `src/pages/local/SchedulesPage.tsx` | Usar nuevo InlineScheduleEditor |
+| `src/components/local/team/EmployeeDataModal.tsx` | Mejorar texto de hire_date |
+
+## Archivos a Eliminar (Deprecar)
+
+| Archivo | Razón |
+|---------|-------|
+| `src/components/hr/CreateScheduleWizard.tsx` | Reemplazado por edición inline |
+| `src/components/cuenta/BranchPinCard.tsx` | Integrado en PinManagementModal |
 
 ---
 
-## Flujo de Coaching
+## Orden de Implementación
 
-```text
-ENCARGADO                          EMPLEADO
-    |                                   |
-    |  1. Abre CoachingPage             |
-    |                                   |
-    |  2. Selecciona empleado           |
-    |                                   |
-    |  3. Completa formulario:          |
-    |     - Estaciones trabajadas       |
-    |     - Competencias (1-4)          |
-    |     - Notas cualitativas          |
-    |     - Cambios de nivel            |
-    |                                   |
-    |  4. Guarda coaching               |
-    |                                   |
-    |---------------------------------->|
-    |                                   |  5. Ve coaching en Mi Cuenta
-    |                                   |
-    |                                   |  6. Confirma lectura
-    |<----------------------------------|
-    |                                   |
-    |  7. Ve confirmación               |
+1. **Fase A: PIN de Fichaje** (más urgente - afecta onboarding)
+   - Crear PinManagementModal
+   - Modificar CuentaDashboard
+   - Limpiar CuentaPerfil
+
+2. **Fase B: Fecha de Ingreso**
+   - Pequeño ajuste de texto en EmployeeDataModal
+
+3. **Fase C: Horarios Inline**
+   - Crear InlineScheduleEditor
+   - Crear ScheduleCellPopover
+   - Crear SaveScheduleDialog
+   - Integrar en SchedulesPage
+
+4. **Fase D: Cobertura por Turno**
+   - Crear ShiftCoverageBar
+   - Integrar en InlineScheduleEditor
+
+---
+
+## Detalles Técnicos
+
+### Query para Cobertura
+
+```typescript
+// Clasificar un horario según branch_shifts
+function getShiftForTime(startTime: string, branchShifts: BranchShift[]): string | null {
+  const [hours] = startTime.split(':').map(Number);
+  
+  for (const shift of branchShifts) {
+    const [shiftStart] = shift.start_time.split(':').map(Number);
+    const [shiftEnd] = shift.end_time.split(':').map(Number);
+    
+    // Manejar cruce de medianoche
+    if (shiftEnd < shiftStart) {
+      if (hours >= shiftStart || hours < shiftEnd) return shift.name;
+    } else {
+      if (hours >= shiftStart && hours < shiftEnd) return shift.name;
+    }
+  }
+  return null;
+}
 ```
 
----
+### Hook para Turnos de Sucursal
 
-## Tiempo Estimado
-
-| Fase | Descripción | Tiempo |
-|------|-------------|--------|
-| 1 | Base de datos y tipos | 1-2 días |
-| 2 | Hooks y servicios | 1-2 días |
-| 3 | UI de Coaching | 3-4 días |
-| 4 | Sistema de Ayuda | 1 día |
-| **Total** | | **6-9 días** |
-
----
-
-## Recomendación de Implementación
-
-1. **Aprobar este plan**
-2. **Implementar Fase 1** - Base de datos (aprobar migración)
-3. **Verificar** que las tablas y datos se crearon correctamente
-4. **Implementar Fase 2** - Hooks
-5. **Implementar Fase 3** - UI (más extensa, puede dividirse)
-6. **Implementar Fase 4** - Ayuda contextual
-7. **Testear** flujo completo end-to-end
-
----
-
-## Próximo Paso
-
-¿Deseas que comience con la **Fase 1: Base de Datos**?
-
-Esto incluirá:
-- Actualizar `workPosition.ts` (remover barista)
-- Crear migración SQL con todas las tablas
-- Insertar datos iniciales de estaciones y competencias
-- Crear funciones y políticas RLS
-
+```typescript
+export function useBranchShifts(branchId: string | undefined) {
+  return useQuery({
+    queryKey: ['branch-shifts', branchId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('branch_shifts')
+        .select('*')
+        .eq('branch_id', branchId)
+        .eq('is_active', true)
+        .order('sort_order');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!branchId,
+  });
+}
+```
