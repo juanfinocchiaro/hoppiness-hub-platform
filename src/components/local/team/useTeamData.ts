@@ -13,7 +13,7 @@ export function useTeamData(branchId: string | undefined) {
       // 1. Get users with local roles for this branch from user_branch_roles
       const { data: roles, error: rolesError } = await supabase
         .from('user_branch_roles')
-        .select('id, user_id, local_role, is_active, created_at')
+        .select('id, user_id, local_role, default_position, is_active, created_at')
         .eq('branch_id', branchId)
         .eq('is_active', true);
 
@@ -127,6 +127,7 @@ export function useTeamData(branchId: string | undefined) {
           email: profile?.email || '',
           phone: profile?.phone || null,
           local_role: role.local_role as LocalRole,
+          default_position: (role as any).default_position || null,
           hire_date: role.created_at,
           hours_this_month: hoursMap.get(role.user_id) || 0,
           monthly_hours_target: empData?.monthly_hours_target || 160,
