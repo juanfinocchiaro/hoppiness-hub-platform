@@ -2127,6 +2127,14 @@ export type Database = {
         | { Args: { _user_id: string }; Returns: boolean }
       is_staff_member: { Args: { _user_id: string }; Returns: boolean }
       is_superadmin: { Args: { _user_id: string }; Returns: boolean }
+      sync_orphan_users: {
+        Args: never
+        Returns: {
+          synced_action: string
+          synced_email: string
+          synced_user_id: string
+        }[]
+      }
       user_has_branch_access: {
         Args: { p_branch_id: string }
         Returns: boolean
