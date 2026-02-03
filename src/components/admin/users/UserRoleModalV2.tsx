@@ -214,10 +214,29 @@ export function UserRoleModalV2({ user, branches, open, onOpenChange, onSuccess 
                   if (br.toDelete) return null;
                   const branchName = branches.find(b => b.id === br.branch_id)?.name || 'Sucursal';
                   
-                  return (
+                    return (
                     <div key={`${br.branch_id}-${index}`} className="border rounded-lg p-3 space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm">{branchName}</span>
+                        {/* Branch selector at top if new, otherwise show name */}
+                        {!br.existing_id ? (
+                          <Select 
+                            value={br.branch_id} 
+                            onValueChange={(v) => updateBranchRole(index, { branch_id: v })}
+                          >
+                            <SelectTrigger className="h-8 w-48 font-medium text-sm">
+                              <SelectValue placeholder="Seleccionar sucursal" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {[...availableBranches, branches.find(b => b.id === br.branch_id)!]
+                                .filter(Boolean)
+                                .map(b => (
+                                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <span className="font-medium text-sm">{branchName}</span>
+                        )}
                         <Button
                           type="button"
                           variant="ghost"
@@ -252,7 +271,7 @@ export function UserRoleModalV2({ user, branches, open, onOpenChange, onSuccess 
                           <Select 
                             value={br.default_position || 'none'} 
                             onValueChange={(v) => updateBranchRole(index, { 
-                              default_position: v === 'none' ? null : v 
+                               default_position: v === 'none' ? null : v 
                             })}
                           >
                             <SelectTrigger className="h-9">
@@ -267,28 +286,6 @@ export function UserRoleModalV2({ user, branches, open, onOpenChange, onSuccess 
                           </Select>
                         </div>
                       </div>
-
-                      {/* Branch selector if new */}
-                      {!br.existing_id && (
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Sucursal</Label>
-                          <Select 
-                            value={br.branch_id} 
-                            onValueChange={(v) => updateBranchRole(index, { branch_id: v })}
-                          >
-                            <SelectTrigger className="h-9">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {[...availableBranches, branches.find(b => b.id === br.branch_id)!]
-                                .filter(Boolean)
-                                .map(b => (
-                                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
                     </div>
                   );
                 })}
