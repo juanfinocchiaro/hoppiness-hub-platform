@@ -40,14 +40,18 @@ const TYPE_ICONS = {
   celebration: PartyPopper,
 };
 
-export default function MyCommunicationsCard() {
+interface MyCommunicationsCardProps {
+  showOnlyBrand?: boolean;
+}
+
+export default function MyCommunicationsCard({ showOnlyBrand = false }: MyCommunicationsCardProps) {
   const { data, isLoading } = useUserCommunications();
   const markAsRead = useMarkAsRead();
   const confirmMutation = useConfirmCommunication();
   const [selectedComm, setSelectedComm] = useState<CommunicationWithSource | null>(null);
 
   const brandComms = data?.brand || [];
-  const localComms = data?.local || [];
+  const localComms = showOnlyBrand ? [] : (data?.local || []);
   const brandUnread = brandComms.filter(c => !c.is_read).length;
   const localUnread = localComms.filter(c => !c.is_read).length;
 
@@ -171,7 +175,7 @@ export default function MyCommunicationsCard() {
           {hasAny ? (
             <div className="space-y-4">
               {renderCommList(brandComms, <Megaphone className="w-4 h-4" />, "De la Marca", brandUnread)}
-              {renderCommList(localComms, <MessageSquare className="w-4 h-4" />, "De tu Encargado", localUnread)}
+              {!showOnlyBrand && renderCommList(localComms, <MessageSquare className="w-4 h-4" />, "De tu Encargado", localUnread)}
             </div>
           ) : (
             <p className="text-center text-muted-foreground py-4">

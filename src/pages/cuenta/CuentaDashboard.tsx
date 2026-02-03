@@ -70,21 +70,39 @@ export default function CuentaDashboard() {
   });
 
 
-  // Fetch urgent unread communications
+  // Detect if user only has franquiciado role (no operational roles)
+  const isOnlyFranquiciado = branchRoles.length > 0 && 
+    branchRoles.every(r => r.local_role === 'franquiciado');
+
+  // Dynamic help page ID based on user type
+  const helpPageId = isOnlyFranquiciado ? 'cuenta-dashboard-franquiciado' : 'cuenta-dashboard';
+
+  // Fetch urgent unread communications - with target_roles filter
   const { data: urgentUnread = [] } = useQuery({
-    queryKey: ['urgent-unread', effectiveUserId],
+    queryKey: ['urgent-unread', effectiveUserId, branchRoles],
     queryFn: async () => {
       if (!effectiveUserId) return [];
       
-      // Get urgent communications
+      // Get user's local roles
+      const userLocalRoles = new Set<string>(
+        branchRoles.map(r => r.local_role).filter(Boolean)
+      );
+      
+      // Get urgent communications with target_roles
       const { data: urgentComms, error: commsError } = await supabase
         .from('communications')
-        .select('id, title')
+        .select('id, title, target_roles')
         .eq('type', 'urgent')
         .eq('is_published', true);
       
       if (commsError) throw commsError;
       if (!urgentComms?.length) return [];
+      
+      // Filter by target_roles (null = everyone, or must include user's role)
+      const filteredComms = urgentComms.filter(c => {
+        if (!c.target_roles || c.target_roles.length === 0) return true;
+        return c.target_roles.some((role: string) => userLocalRoles.has(role));
+      });
       
       // Get user's reads
       const { data: reads } = await supabase
@@ -94,7 +112,7 @@ export default function CuentaDashboard() {
       
       const readIds = new Set(reads?.map(r => r.communication_id) || []);
       
-      return urgentComms.filter(c => !readIds.has(c.id));
+      return filteredComms.filter(c => !readIds.has(c.id));
     },
     enabled: !!effectiveUserId,
     staleTime: 60000,
@@ -110,7 +128,7 @@ export default function CuentaDashboard() {
       
       <main className="flex-1 container mx-auto px-4 py-6 md:py-8">
         <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
-          <PageHelp pageId="cuenta-dashboard" />
+          <PageHelp pageId={helpPageId} />
           
           {/* Welcome - responsive */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -203,17 +221,21 @@ export default function CuentaDashboard() {
                 ))}
               </div>
 
-              {/* Employee Cards - responsive grid */}
-              <div className="grid gap-3 md:gap-4">
-                <MyCommunicationsCard />
-                <MyRegulationsCard />
-                <MyCoachingsCard />
-                <MyScheduleCard />
-                <MyRequestsCard />
-                <MyClockInsCard />
-                <MySalaryAdvancesCard />
-                <MyWarningsCard />
-              </div>
+              {/* Communications - show only brand for franquiciados */}
+              <MyCommunicationsCard showOnlyBrand={isOnlyFranquiciado} />
+
+              {/* Operational Cards - only for employees, NOT franquiciados */}
+              {!isOnlyFranquiciado && (
+                <div className="grid gap-3 md:gap-4">
+                  <MyRegulationsCard />
+                  <MyCoachingsCard />
+                  <MyScheduleCard />
+                  <MyRequestsCard />
+                  <MyClockInsCard />
+                  <MySalaryAdvancesCard />
+                  <MyWarningsCard />
+                </div>
+              )}
             </>
           )}
 

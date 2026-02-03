@@ -225,6 +225,16 @@ export const HELP_CONFIG: Record<string, HelpConfig> = {
       'Tu historial de fichajes y adelantos está disponible',
     ],
   },
+  'cuenta-dashboard-franquiciado': {
+    pageId: 'cuenta-dashboard-franquiciado',
+    title: 'Mi Cuenta',
+    description: 'Acceso rápido a la gestión de tus sucursales.',
+    tips: [
+      'Entrá a "Mi Local" para ver toda la operación de tu sucursal',
+      'Los comunicados de marca aparecen aquí',
+      'Podés actualizar tu información personal en "Mi Perfil"',
+    ],
+  },
   'cuenta-profile': {
     pageId: 'cuenta-profile',
     title: 'Mi Perfil',
