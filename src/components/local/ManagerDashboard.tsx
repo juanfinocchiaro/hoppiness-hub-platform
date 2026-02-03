@@ -278,9 +278,8 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
         </CardContent>
       </Card>
 
-      {/* EQUIPO AHORA - Solo para encargados/franquiciados */}
-      {!isCajero && (
-        <Card>
+      {/* EQUIPO AHORA - Visible para todos (cajeros incluidos) */}
+      <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center justify-between text-base">
               <div className="flex items-center gap-2">
@@ -329,8 +328,7 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
               </Button>
             </Link>
           </CardContent>
-        </Card>
-      )}
+      </Card>
 
       {/* PENDIENTES - Solo para encargados/franquiciados */}
       {!isCajero && (
