@@ -10,9 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Calendar, Info } from 'lucide-react';
+import { Calendar, Info, Briefcase } from 'lucide-react';
 import type { EmployeeData, LOCAL_ROLE_LABELS } from './types';
 import type { LocalRole } from '@/hooks/usePermissionsV2';
+import type { WorkPositionType } from '@/types/workPosition';
+import { useWorkPositions } from '@/hooks/useWorkPositions';
 
 const ROLE_OPTIONS: { value: LocalRole; label: string }[] = [
   { value: 'encargado', label: 'Encargado' },
@@ -27,13 +29,15 @@ interface EmployeeDataModalProps {
   existingData: EmployeeData | null | undefined;
   currentRole: LocalRole;
   roleId: string;
+  currentDefaultPosition?: WorkPositionType | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
 }
 
-export function EmployeeDataModal({ userId, branchId, existingData, currentRole, roleId, open, onOpenChange, onSuccess }: EmployeeDataModalProps) {
+export function EmployeeDataModal({ userId, branchId, existingData, currentRole, roleId, currentDefaultPosition, open, onOpenChange, onSuccess }: EmployeeDataModalProps) {
   const queryClient = useQueryClient();
+  const { data: workPositions = [] } = useWorkPositions();
   
   // Personal data
   const [dni, setDni] = useState('');
@@ -51,6 +55,7 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
   // Labor data
   const [selectedRole, setSelectedRole] = useState<LocalRole>(currentRole);
   const [hireDate, setHireDate] = useState('');
+  const [defaultPosition, setDefaultPosition] = useState<string>(currentDefaultPosition || '');
   
   useEffect(() => {
     if (existingData) {
@@ -69,7 +74,8 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
 
   useEffect(() => {
     setSelectedRole(currentRole);
-  }, [currentRole]);
+    setDefaultPosition(currentDefaultPosition || '');
+  }, [currentRole, currentDefaultPosition]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -102,13 +108,22 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
         if (error) throw error;
       }
 
-      // Save role if changed
-      if (selectedRole !== currentRole && roleId) {
-        const { error: roleError } = await supabase
-          .from('user_branch_roles')
-          .update({ local_role: selectedRole })
-          .eq('id', roleId);
-        if (roleError) throw roleError;
+      // Save role and default position if changed
+      if (roleId) {
+        const roleUpdates: { local_role?: LocalRole; default_position?: string | null } = {};
+        if (selectedRole !== currentRole) {
+          roleUpdates.local_role = selectedRole;
+        }
+        if (defaultPosition !== (currentDefaultPosition || '')) {
+          roleUpdates.default_position = defaultPosition || null;
+        }
+        if (Object.keys(roleUpdates).length > 0) {
+          const { error: roleError } = await supabase
+            .from('user_branch_roles')
+            .update(roleUpdates)
+            .eq('id', roleId);
+          if (roleError) throw roleError;
+        }
       }
     },
     onSuccess: () => {
@@ -244,6 +259,33 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
                 </p>
               </div>
             )}
+
+            {/* Default Position */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Briefcase className="h-4 w-4" />
+                Posición predefinida
+              </Label>
+              <Select
+                value={defaultPosition || 'none'}
+                onValueChange={(v) => setDefaultPosition(v === 'none' ? '' : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar posición..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin posición predefinida</SelectItem>
+                  {workPositions.map((pos) => (
+                    <SelectItem key={pos.key} value={pos.key}>
+                      {pos.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Posición habitual del empleado. Se usará como valor por defecto al crear horarios.
+              </p>
+            </div>
 
             <Separator />
 

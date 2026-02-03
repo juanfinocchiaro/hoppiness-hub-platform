@@ -358,56 +358,56 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
         ) : (
           <Card>
             <ScrollArea className="w-full">
-              <div className="min-w-max">
-                {/* Generate all days horizontally */}
+              <div className="min-w-[800px]">
+                {/* Header row */}
+                <div className="grid grid-cols-[140px_repeat(7,1fr)] border-b bg-muted/50">
+                  <div className="p-2 font-medium text-sm">Empleado</div>
+                  {dayNames.map((day) => (
+                    <div key={day} className="p-2 text-center text-sm font-medium">
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Calendar by weeks */}
                 {(() => {
                   const firstDayOfMonth = getDay(monthDays[0]);
                   const paddedDays = [...Array(firstDayOfMonth).fill(null), ...monthDays];
                   const weeks: (Date | null)[][] = [];
                   for (let i = 0; i < paddedDays.length; i += 7) {
-                    const weekDays = paddedDays.slice(i, i + 7);
-                    while (weekDays.length < 7) weekDays.push(null);
-                    weeks.push(weekDays);
+                    weeks.push(paddedDays.slice(i, i + 7));
                   }
 
-                  // Flatten all days for horizontal layout
-                  const allDays = weeks.flat();
-
-                  return (
-                    <div>
-                      {/* Header row with day names and dates */}
-                      <div className="flex border-b bg-muted/50">
-                        <div className="w-36 shrink-0 p-2 font-medium text-sm">Empleado</div>
-                        {allDays.map((day, idx) => {
-                          if (!day) return (
-                            <div key={idx} className="w-24 shrink-0 p-1 text-center border-r bg-muted/30" />
-                          );
+                  return weeks.map((week, weekIdx) => (
+                    <div key={weekIdx}>
+                      {/* Date row */}
+                      <div className="grid grid-cols-[140px_repeat(7,1fr)] border-b bg-muted/30">
+                        <div className="p-1" />
+                        {week.map((day, dayIdx) => {
+                          if (!day) return <div key={dayIdx} className="p-1" />;
                           const dateStr = format(day, 'yyyy-MM-dd');
                           const isHoliday = holidayDates.has(dateStr);
                           const holidayName = holidayDates.get(dateStr);
-                          const isSunday = day.getDay() === 0;
 
                           return (
                             <div
-                              key={idx}
+                              key={dayIdx}
                               className={cn(
-                                'w-24 shrink-0 p-1 text-center border-r',
-                                isHoliday && 'bg-warning/20',
-                                isSunday && 'bg-muted/50'
+                                'p-1 text-center text-xs',
+                                isHoliday && 'bg-warning/20'
                               )}
                             >
-                              <div className="text-xs text-muted-foreground">{dayNames[day.getDay()]}</div>
-                              <div className={cn('font-medium text-sm', isHoliday && 'text-warning')}>
+                              <span className={cn('font-medium', isHoliday && 'text-warning')}>
                                 {format(day, 'd')}
-                                {isHoliday && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="ml-1">🎉</span>
-                                    </TooltipTrigger>
-                                    <TooltipContent>{holidayName}</TooltipContent>
-                                  </Tooltip>
-                                )}
-                              </div>
+                              </span>
+                              {isHoliday && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="ml-1">🎉</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{holidayName}</TooltipContent>
+                                </Tooltip>
+                              )}
                             </div>
                           );
                         })}
@@ -416,20 +416,22 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                       {/* Employee rows */}
                       {team.map((member) => (
                         <div
-                          key={member.id}
-                          className="flex border-b hover:bg-muted/10"
+                          key={`${weekIdx}-${member.id}`}
+                          className="grid grid-cols-[140px_repeat(7,1fr)] border-b hover:bg-muted/20"
                         >
-                          <div className="w-36 shrink-0 p-2 flex items-center gap-2 border-r bg-card sticky left-0 z-10">
-                            <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
-                              {getInitials(member.full_name)}
-                            </div>
-                            <span className="text-sm truncate">{member.full_name}</span>
+                          <div className="p-2 flex items-center gap-2">
+                            {weekIdx === 0 && (
+                              <>
+                                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
+                                  {getInitials(member.full_name)}
+                                </div>
+                                <span className="text-sm truncate">{member.full_name}</span>
+                              </>
+                            )}
                           </div>
 
-                          {allDays.map((day, idx) => {
-                            if (!day) return (
-                              <div key={idx} className="w-24 shrink-0 p-1 border-r bg-muted/20" />
-                            );
+                          {week.map((day, dayIdx) => {
+                            if (!day) return <div key={dayIdx} className="p-1 border-r" />;
 
                             const dateStr = format(day, 'yyyy-MM-dd');
                             const isHoliday = holidayDates.has(dateStr);
@@ -440,7 +442,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
 
                             return (
                               <ScheduleCellPopover
-                                key={idx}
+                                key={dayIdx}
                                 value={value}
                                 onChange={(newValue) => handleCellChange(member.id, member.full_name, dateStr, newValue)}
                                 disabled={!isEditable}
@@ -449,7 +451,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                               >
                                 <div
                                   className={cn(
-                                    'w-24 shrink-0 p-1 text-center border-r min-h-[40px] flex items-center justify-center cursor-pointer',
+                                    'p-1 text-center border-r last:border-r-0 min-h-[32px] flex items-center justify-center cursor-pointer',
                                     isHoliday && 'bg-warning/10',
                                     isSunday && 'bg-muted/30',
                                     isEditable && 'hover:bg-primary/5 transition-colors'
@@ -477,65 +479,90 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                           })}
                         </div>
                       ))}
-
-                      {/* Coverage rows by time slot */}
-                      <div className="border-t-2 border-primary/20 bg-muted/30">
-                        <div className="flex items-center py-2 px-2 border-b">
-                          <span className="text-xs font-medium text-muted-foreground">📊 Cobertura por franja horaria</span>
-                          <div className="ml-4 flex gap-3 text-xs">
-                            <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-destructive/20" /> &lt;2</span>
-                            <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-amber-100 dark:bg-amber-900/30" /> 2-3</span>
-                            <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-primary/20" /> 4+</span>
-                          </div>
-                        </div>
-                        {TIME_SLOTS.map((slot) => (
-                          <div key={slot.label} className="flex border-b last:border-b-0">
-                            <div className="w-36 shrink-0 p-2 text-xs font-medium text-muted-foreground sticky left-0 bg-muted/30 z-10">
-                              {slot.label}h
-                            </div>
-                            {allDays.map((day, idx) => {
-                              if (!day) return (
-                                <div key={idx} className="w-24 shrink-0 p-1 border-r bg-muted/20" />
-                              );
-                              
-                              const dateStr = format(day, 'yyyy-MM-dd');
-                              const count = schedulesWithPending.filter(s => {
-                                if (!s.schedule_date || s.schedule_date !== dateStr) return false;
-                                if (s.is_day_off) return false;
-                                if (!s.start_time || !s.end_time) return false;
-                                
-                                const [startH] = s.start_time.split(':').map(Number);
-                                const [endH] = s.end_time.split(':').map(Number);
-                                const adjustedEnd = endH < startH ? endH + 24 : endH;
-                                
-                                return startH < slot.end && adjustedEnd > slot.start;
-                              }).length;
-                              
-                              const colorClass = count === 0 
-                                ? 'bg-muted text-muted-foreground' 
-                                : count < 2 
-                                  ? 'bg-destructive/20 text-destructive' 
-                                  : count < 4 
-                                    ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
-                                    : 'bg-primary/20 text-primary';
-
-                              return (
-                                <div key={idx} className="w-24 shrink-0 p-1 border-r flex items-center justify-center">
-                                  <div className={cn('w-8 h-6 rounded text-xs font-medium flex items-center justify-center', colorClass)}>
-                                    {count}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ))}
-                      </div>
                     </div>
-                  );
+                  ));
                 })()}
               </div>
               <ScrollBar orientation="horizontal" />
             </ScrollArea>
+
+            {/* Hourly Coverage Section - Scrollable separately */}
+            <CardContent className="pt-4 border-t">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-medium text-muted-foreground">📊 Cobertura por franja horaria</span>
+                <div className="ml-4 flex gap-3 text-xs">
+                  <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-destructive/20" /> &lt;2</span>
+                  <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-amber-100 dark:bg-amber-900/30" /> 2-3</span>
+                  <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-primary/20" /> 4+</span>
+                </div>
+              </div>
+              
+              <ScrollArea className="w-full">
+                <div className="min-w-max">
+                  {/* Coverage Header */}
+                  <div className="flex border-b bg-muted/50">
+                    <div className="w-20 shrink-0 p-2 text-xs font-medium text-muted-foreground">Franja</div>
+                    {monthDays.map((day) => {
+                      const isHoliday = holidayDates.has(format(day, 'yyyy-MM-dd'));
+                      const isSunday = day.getDay() === 0;
+                      return (
+                        <div
+                          key={day.getTime()}
+                          className={cn(
+                            'w-12 shrink-0 p-1 text-center text-xs border-r',
+                            isHoliday && 'bg-warning/20',
+                            isSunday && 'bg-muted/50'
+                          )}
+                        >
+                          <div className="text-muted-foreground">{dayNames[day.getDay()].slice(0, 2)}</div>
+                          <div className="font-medium">{format(day, 'd')}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Coverage Rows by Time Slot */}
+                  {TIME_SLOTS.map((slot) => (
+                    <div key={slot.label} className="flex border-b last:border-b-0">
+                      <div className="w-20 shrink-0 p-2 text-xs font-medium text-muted-foreground bg-muted/30">
+                        {slot.label}h
+                      </div>
+                      {monthDays.map((day) => {
+                        const dateStr = format(day, 'yyyy-MM-dd');
+                        const count = schedulesWithPending.filter(s => {
+                          if (!s.schedule_date || s.schedule_date !== dateStr) return false;
+                          if (s.is_day_off) return false;
+                          if (!s.start_time || !s.end_time) return false;
+                          
+                          const [startH] = s.start_time.split(':').map(Number);
+                          const [endH] = s.end_time.split(':').map(Number);
+                          const adjustedEnd = endH < startH ? endH + 24 : endH;
+                          
+                          return startH < slot.end && adjustedEnd > slot.start;
+                        }).length;
+                        
+                        const colorClass = count === 0 
+                          ? 'bg-muted text-muted-foreground' 
+                          : count < 2 
+                            ? 'bg-destructive/20 text-destructive' 
+                            : count < 4 
+                              ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                              : 'bg-primary/20 text-primary';
+
+                        return (
+                          <div key={day.getTime()} className="w-12 shrink-0 p-1 border-r flex items-center justify-center">
+                            <div className={cn('w-7 h-5 rounded text-xs font-medium flex items-center justify-center', colorClass)}>
+                              {count}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
+            </CardContent>
           </Card>
         )}
 
