@@ -96,8 +96,8 @@ export default function CreateScheduleWizard({
   const [customEndTime, setCustomEndTime] = useState('23:30');
   const [bulkPosition, setBulkPosition] = useState<WorkPosition | ''>('');
   
-  // Fetch data
-  const { team, loading: loadingTeam } = useTeamData(branchId);
+  // Fetch data - exclude franchise owners from schedule creation
+  const { team, loading: loadingTeam } = useTeamData(branchId, { excludeOwners: true });
   const { data: holidays = [] } = useHolidays(month, year);
   const { data: requests = [] } = useEmployeeScheduleRequests(selectedEmployee?.id, month, year);
   
