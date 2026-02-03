@@ -1,4 +1,4 @@
-import { useAuth } from '@/hooks/useAuth';
+import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,18 +19,18 @@ interface SalaryAdvance {
 }
 
 export default function MySalaryAdvancesCard() {
-  const { user } = useAuth();
+  const { id: userId } = useEffectiveUser();
   
   // Query salary advances directly by user_id (V2 approach)
   const { data: advances, isLoading } = useQuery({
-    queryKey: ['my-salary-advances-v2', user?.id],
+    queryKey: ['my-salary-advances-v2', userId],
     queryFn: async () => {
-      if (!user) return [];
+      if (!userId) return [];
       
       const { data, error } = await supabase
         .from('salary_advances')
         .select('id, amount, status, payment_method, reason, paid_at, created_at')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(10);
       
@@ -40,7 +40,7 @@ export default function MySalaryAdvancesCard() {
       }
       return data as SalaryAdvance[];
     },
-    enabled: !!user,
+    enabled: !!userId,
   });
 
   // Calculate totals

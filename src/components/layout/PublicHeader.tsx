@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { useEffectiveUser } from '@/hooks/useEffectiveUser';
+import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { Button } from '@/components/ui/button';
 import { ShoppingBag, Menu as MenuIcon, LogOut, LayoutDashboard, Store, User, ChevronDown, Package, Phone, Users2, Home } from 'lucide-react';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
@@ -21,15 +22,17 @@ import { useState } from 'react';
 
 export function PublicHeader() {
   const { user, signOut } = useAuth();
-  const { canAccessLocalPanel, canAccessBrandPanel, loading: roleLoading } = usePermissionsV2();
+  const effectiveUser = useEffectiveUser();
+  const { canAccessLocalPanel, canAccessBrandPanel, loading: roleLoading } = usePermissionsWithImpersonation();
   const canUseMiCuenta = !!user;
   const location = useLocation();
   const [open, setOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname.startsWith(path);
 
-  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuario';
-  const userEmail = user?.email || '';
+  // Use effective user for display (impersonated or real)
+  const userName = effectiveUser.full_name || effectiveUser.email?.split('@')[0] || 'Usuario';
+  const userEmail = effectiveUser.email || '';
 
   return (
     <header className="bg-primary text-primary-foreground sticky top-0 z-50">
@@ -101,7 +104,9 @@ export function PublicHeader() {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="text-primary-foreground hover:bg-primary-foreground/10 gap-1"
+                  className={`text-primary-foreground hover:bg-primary-foreground/10 gap-1 ${
+                    effectiveUser.isImpersonated ? 'ring-2 ring-amber-400' : ''
+                  }`}
                 >
                   <User className="w-4 h-4" />
                   <span className="max-w-[100px] truncate">{userName.split(' ')[0]}</span>
@@ -111,8 +116,13 @@ export function PublicHeader() {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{userName}</p>
+                    <p className={`text-sm font-medium leading-none ${effectiveUser.isImpersonated ? 'text-amber-600' : ''}`}>
+                      {userName}
+                    </p>
                     <p className="text-xs leading-none text-muted-foreground">{userEmail}</p>
+                    {effectiveUser.isImpersonated && (
+                      <p className="text-xs text-amber-600 mt-1">👁 Modo impersonación</p>
+                    )}
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -227,8 +237,13 @@ export function PublicHeader() {
                 {user ? (
                   <>
                     <div className="px-4 py-2">
-                      <p className="text-sm font-medium">{userName}</p>
+                      <p className={`text-sm font-medium ${effectiveUser.isImpersonated ? 'text-amber-400' : ''}`}>
+                        {userName}
+                      </p>
                       <p className="text-xs text-primary-foreground/70">{userEmail}</p>
+                      {effectiveUser.isImpersonated && (
+                        <p className="text-xs text-amber-400 mt-1">👁 Modo impersonación</p>
+                      )}
                     </div>
                     
                     {canUseMiCuenta && (

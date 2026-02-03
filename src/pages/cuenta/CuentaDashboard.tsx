@@ -1,5 +1,7 @@
 import { useAuth } from '@/hooks/useAuth';
-import { usePermissionsV2, LOCAL_ROLE_LABELS } from '@/hooks/usePermissionsV2';
+import { useEffectiveUser } from '@/hooks/useEffectiveUser';
+import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
+import { LOCAL_ROLE_LABELS } from '@/hooks/usePermissionsV2';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
@@ -21,8 +23,10 @@ import MyRegulationsCard from '@/components/cuenta/MyRegulationsCard';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 
 export default function CuentaDashboard() {
-  const { user, signOut } = useAuth();
-  const { branchRoles, brandRole, canAccessBrandPanel, canAccessLocalPanel } = usePermissionsV2();
+  const { signOut } = useAuth();
+  const effectiveUser = useEffectiveUser();
+  const effectiveUserId = effectiveUser.id;
+  const { branchRoles, brandRole, canAccessBrandPanel, canAccessLocalPanel } = usePermissionsWithImpersonation();
 
   // Check access levels
   const hasBrandAccess = canAccessBrandPanel;
@@ -32,36 +36,36 @@ export default function CuentaDashboard() {
   // Get branch IDs from roles
   const branchIds = branchRoles.map(r => r.branch_id);
 
-  // Fetch profile data
+  // Fetch profile data using effective user ID
   const { data: profile } = useQuery({
-    queryKey: ['profile', user?.id],
+    queryKey: ['profile', effectiveUserId],
     queryFn: async () => {
-      if (!user) return null;
+      if (!effectiveUserId) return null;
       const result = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', effectiveUserId)
         .single();
       if (result.error) throw result.error;
       return result.data;
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   // Fetch branch roles with clock_pin status to detect missing PINs
   const { data: branchPinData } = useQuery({
-    queryKey: ['user-branch-roles-pins', user?.id],
+    queryKey: ['user-branch-roles-pins', effectiveUserId],
     queryFn: async () => {
-      if (!user) return [];
+      if (!effectiveUserId) return [];
       const { data, error } = await supabase
         .from('user_branch_roles')
         .select('id, branch_id, clock_pin, branches!inner(name)')
-        .eq('user_id', user.id)
+        .eq('user_id', effectiveUserId)
         .eq('is_active', true);
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user && canAccessLocalPanel,
+    enabled: !!effectiveUserId && canAccessLocalPanel,
   });
 
   // Check if ANY branch is missing PIN
@@ -70,9 +74,9 @@ export default function CuentaDashboard() {
 
   // Fetch urgent unread communications
   const { data: urgentUnread = [] } = useQuery({
-    queryKey: ['urgent-unread', user?.id],
+    queryKey: ['urgent-unread', effectiveUserId],
     queryFn: async () => {
-      if (!user) return [];
+      if (!effectiveUserId) return [];
       
       // Get urgent communications
       const { data: urgentComms, error: commsError } = await supabase
@@ -88,17 +92,15 @@ export default function CuentaDashboard() {
       const { data: reads } = await supabase
         .from('communication_reads')
         .select('communication_id')
-        .eq('user_id', user.id);
+        .eq('user_id', effectiveUserId);
       
       const readIds = new Set(reads?.map(r => r.communication_id) || []);
       
       return urgentComms.filter(c => !readIds.has(c.id));
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
     staleTime: 60000,
   });
-
-  // needsPinSetup is now calculated above from branchPinData
 
   // Fetch branch names for employee section
   const { data: employeeBranches } = useQuery({
@@ -118,6 +120,9 @@ export default function CuentaDashboard() {
   // Create a map of branch names
   const branchNameMap = new Map(employeeBranches?.map(b => [b.id, b.name]) || []);
 
+  // Display name: use effective user's name or profile name
+  const displayName = effectiveUser.full_name || profile?.full_name?.split(' ')[0] || 'Usuario';
+
   return (
     <div className="min-h-screen flex flex-col bg-muted/30">
       <ImpersonationBanner />
@@ -129,7 +134,7 @@ export default function CuentaDashboard() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h1 className="text-xl md:text-2xl font-bold">
-                Hola, {profile?.full_name?.split(' ')[0] || 'Usuario'}! 👋
+                Hola, {displayName.split(' ')[0]}! 👋
               </h1>
               <p className="text-sm text-muted-foreground">
                 Bienvenido a tu cuenta
@@ -258,8 +263,8 @@ export default function CuentaDashboard() {
                   <div className="flex items-center gap-4 min-w-0">
                     <User className="w-10 h-10 text-primary flex-shrink-0" />
                     <div className="min-w-0">
-                      <h3 className="font-semibold truncate">{profile?.full_name || 'Mi Perfil'}</h3>
-                      <p className="text-sm text-muted-foreground truncate">{profile?.email}</p>
+                      <h3 className="font-semibold truncate">{profile?.full_name || effectiveUser.full_name || 'Mi Perfil'}</h3>
+                      <p className="text-sm text-muted-foreground truncate">{profile?.email || effectiveUser.email}</p>
                     </div>
                   </div>
                   <ArrowRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />

@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
 import { AdminRoute, LocalRoute } from "@/components/guards";
+import UserFingerprint from "@/components/ui/UserFingerprint";
 
 // Páginas públicas
 import Index from "./pages/Index";
@@ -71,6 +72,7 @@ const App = () => (
         <ImpersonationProvider>
           <Toaster />
           <Sonner />
+          <UserFingerprint />
           <BrowserRouter>
             <Routes>
             {/* Rutas Públicas */}

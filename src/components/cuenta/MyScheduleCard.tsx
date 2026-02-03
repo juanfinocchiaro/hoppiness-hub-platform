@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, Store, ChevronRight } from 'lucide-react';
@@ -24,16 +24,16 @@ interface ScheduleEntry {
 const DAY_NAMES_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 export default function MyScheduleCard() {
-  const { user } = useAuth();
+  const { id: userId } = useEffectiveUser();
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
 
   // Fetch schedules directly by user_id
   const { data: schedules, isLoading } = useQuery({
-    queryKey: ['my-schedules-v2', user?.id, currentMonth, currentYear],
+    queryKey: ['my-schedules-v2', userId, currentMonth, currentYear],
     queryFn: async () => {
-      if (!user) return [];
+      if (!userId) return [];
       
       const { data, error } = await supabase
         .from('employee_schedules')
@@ -47,13 +47,13 @@ export default function MyScheduleCard() {
           schedule_year,
           shift_number
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .or(`schedule_month.is.null,and(schedule_month.eq.${currentMonth},schedule_year.eq.${currentYear})`);
       
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user,
+    enabled: !!userId,
   });
 
   if (isLoading) {

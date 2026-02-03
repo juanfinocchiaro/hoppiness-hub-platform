@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
@@ -14,22 +14,22 @@ import { es } from 'date-fns/locale';
 type LocalRole = Database['public']['Enums']['local_role_type'];
 
 export default function MyRegulationsCard() {
-  const { user } = useAuth();
+  const { id: userId } = useEffectiveUser();
   const [expanded, setExpanded] = useState(false);
 
   // Check if user only has franchisee role (franchisees don't need to sign regulations)
   const { data: userLocalRoles = [] } = useQuery({
-    queryKey: ['my-local-roles', user?.id],
+    queryKey: ['my-local-roles', userId],
     queryFn: async () => {
-      if (!user) return [];
+      if (!userId) return [];
       const { data } = await supabase
         .from('user_branch_roles')
         .select('local_role')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('is_active', true);
       return (data || []).map(r => r.local_role as LocalRole);
     },
-    enabled: !!user,
+    enabled: !!userId,
   });
 
   const isOnlyFranquiciado = userLocalRoles.length > 0 && 
@@ -52,33 +52,33 @@ export default function MyRegulationsCard() {
 
   // Fetch user's signature for latest regulation
   const { data: mySignature } = useQuery({
-    queryKey: ['my-regulation-signature', user?.id, latestRegulation?.id],
+    queryKey: ['my-regulation-signature', userId, latestRegulation?.id],
     queryFn: async () => {
-      if (!user || !latestRegulation) return null;
+      if (!userId || !latestRegulation) return null;
       const { data } = await supabase
         .from('regulation_signatures')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('regulation_id', latestRegulation.id)
         .maybeSingle();
       return data;
     },
-    enabled: !!user && !!latestRegulation,
+    enabled: !!userId && !!latestRegulation,
   });
 
   // Fetch all my signatures history
   const { data: signatureHistory = [] } = useQuery({
-    queryKey: ['my-regulation-history', user?.id],
+    queryKey: ['my-regulation-history', userId],
     queryFn: async () => {
-      if (!user) return [];
+      if (!userId) return [];
       const { data } = await supabase
         .from('regulation_signatures')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('signed_at', { ascending: false });
       return data || [];
     },
-    enabled: !!user && expanded,
+    enabled: !!userId && expanded,
   });
 
   const handleDownloadRegulation = async () => {

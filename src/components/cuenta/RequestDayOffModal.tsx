@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { useEffectiveUser } from '@/hooks/useEffectiveUser';
+import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { toast } from 'sonner';
 import { format, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -29,8 +29,8 @@ interface RequestDayOffModalProps {
 }
 
 export default function RequestDayOffModal({ branchId, trigger }: RequestDayOffModalProps) {
-  const { user } = useAuth();
-  const { branchRoles } = usePermissionsV2();
+  const { id: userId } = useEffectiveUser();
+  const { branchRoles } = usePermissionsWithImpersonation();
   const queryClient = useQueryClient();
   
   const [open, setOpen] = useState(false);
@@ -43,14 +43,14 @@ export default function RequestDayOffModal({ branchId, trigger }: RequestDayOffM
 
   const createRequest = useMutation({
     mutationFn: async () => {
-      if (!user || !targetBranchId || !selectedDate) {
+      if (!userId || !targetBranchId || !selectedDate) {
         throw new Error('Faltan datos requeridos');
       }
 
       const { error } = await supabase
         .from('schedule_requests')
         .insert({
-          user_id: user.id,
+          user_id: userId,
           branch_id: targetBranchId,
           request_type: requestType,
           request_date: format(selectedDate, 'yyyy-MM-dd'),
