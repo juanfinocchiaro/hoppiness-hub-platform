@@ -342,7 +342,7 @@ ${formData.message || 'Sin mensaje adicional'}
       
       setSubmitted(true);
     } catch (error) {
-      console.error('Error sending message:', error);
+      if (import.meta.env.DEV) console.error('Error sending message:', error);
       toast({
         title: 'Error al enviar',
         description: 'Hubo un problema. Por favor intentá de nuevo.',

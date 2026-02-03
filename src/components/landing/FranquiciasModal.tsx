@@ -52,7 +52,7 @@ export function FranquiciasModal({ open, onOpenChange }: FranquiciasModalProps) 
       setSuccess(true);
       toast.success('¡Gracias por tu interés! Te contactaremos pronto.');
     } catch (err) {
-      console.error(err);
+      if (import.meta.env.DEV) console.error(err);
       toast.error('Error al enviar. Intentá de nuevo.');
     } finally {
       setLoading(false);

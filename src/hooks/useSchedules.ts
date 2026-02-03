@@ -383,7 +383,7 @@ async function sendScheduleNotification(input: NotificationInput) {
         },
       });
     } catch (e) {
-      console.error('Failed to send email notification:', e);
+      if (import.meta.env.DEV) console.error('Failed to send email notification:', e);
       // Don't throw - email failure shouldn't block the save
     }
   }

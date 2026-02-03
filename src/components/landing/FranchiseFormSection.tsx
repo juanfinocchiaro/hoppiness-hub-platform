@@ -55,7 +55,7 @@ export function FranchiseFormSection() {
       setSuccess(true);
       toast.success('¡Gracias por tu interés! Te contactaremos en menos de 24hs.');
     } catch (err) {
-      console.error('Error submitting franchise form:', err);
+      if (import.meta.env.DEV) console.error('Error submitting franchise form:', err);
       toast.error('Error al enviar. Intentá de nuevo.');
     } finally {
       setLoading(false);

@@ -59,7 +59,7 @@ export default function RequestDayOffModal({ branchId, trigger }: RequestDayOffM
       .upload(filePath, file);
 
     if (error) {
-      console.error('Error uploading evidence:', error);
+      if (import.meta.env.DEV) console.error('Error uploading evidence:', error);
       return null;
     }
 
@@ -106,7 +106,7 @@ export default function RequestDayOffModal({ branchId, trigger }: RequestDayOffM
       resetForm();
     },
     onError: (error) => {
-      console.error('Error creating request:', error);
+      if (import.meta.env.DEV) console.error('Error creating request:', error);
       toast.error('Error al enviar la solicitud');
     },
   });

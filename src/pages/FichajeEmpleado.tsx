@@ -126,7 +126,7 @@ export default function FichajeEmpleado() {
         videoRef.current.srcObject = mediaStream;
       }
     } catch (err) {
-      console.error('Camera error:', err);
+      if (import.meta.env.DEV) console.error('Camera error:', err);
       toast.error('No se pudo acceder a la cámara');
     }
   }, []);
@@ -190,7 +190,7 @@ export default function FichajeEmpleado() {
         return true; // Allow with warning as per requirement
       }
     } catch (err) {
-      console.error('GPS error:', err);
+      if (import.meta.env.DEV) console.error('GPS error:', err);
       setGpsStatus('warning');
       setGpsMessage('No se pudo obtener ubicación');
       return true; // Allow with warning as per requirement

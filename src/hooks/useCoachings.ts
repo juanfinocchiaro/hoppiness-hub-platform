@@ -293,7 +293,7 @@ export function useCreateCoaching() {
       toast.success('Coaching guardado correctamente');
     },
     onError: (error: Error) => {
-      console.error('Error creating coaching:', error);
+      if (import.meta.env.DEV) console.error('Error creating coaching:', error);
       if (error.message?.includes('unique constraint')) {
         toast.error('Ya existe un coaching para este empleado en este mes');
       } else {
@@ -331,7 +331,7 @@ export function useAcknowledgeCoaching() {
       toast.success('Coaching confirmado');
     },
     onError: (error) => {
-      console.error('Error acknowledging coaching:', error);
+      if (import.meta.env.DEV) console.error('Error acknowledging coaching:', error);
       toast.error('Error al confirmar el coaching');
     },
   });

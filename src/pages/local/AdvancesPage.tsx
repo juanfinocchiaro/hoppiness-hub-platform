@@ -102,7 +102,7 @@ export default function AdvancesPage() {
       setShowNewAdvance(false);
       resetForm();
     } catch (error) {
-      console.error(error);
+      if (import.meta.env.DEV) console.error(error);
     }
   };
 

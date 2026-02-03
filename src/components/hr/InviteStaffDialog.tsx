@@ -102,7 +102,7 @@ export function InviteStaffDialog({
         .maybeSingle();
 
       if (error) {
-        console.error('Error searching profile:', error);
+        if (import.meta.env.DEV) console.error('Error searching profile:', error);
         toast.error('Error al buscar el usuario');
         setSearchStatus('idle');
         return;
@@ -144,7 +144,7 @@ export function InviteStaffDialog({
 
       setSearchStatus('found');
     } catch (error) {
-      console.error('Error searching profile:', error);
+      if (import.meta.env.DEV) console.error('Error searching profile:', error);
       toast.error('Error al buscar el usuario');
       setSearchStatus('idle');
     }
@@ -175,7 +175,7 @@ export function InviteStaffDialog({
       handleClose(false);
       onSuccess?.();
     } catch (error: any) {
-      console.error('Error reactivating user:', error);
+      if (import.meta.env.DEV) console.error('Error reactivating user:', error);
       toast.error(error.message || 'Error al reactivar colaborador');
     } finally {
       setLoading(false);
@@ -231,7 +231,7 @@ export function InviteStaffDialog({
       onSuccess?.();
 
     } catch (error: any) {
-      console.error('Error processing request:', error);
+      if (import.meta.env.DEV) console.error('Error processing request:', error);
       toast.error(error.message || 'Error al procesar la solicitud');
     } finally {
       setLoading(false);

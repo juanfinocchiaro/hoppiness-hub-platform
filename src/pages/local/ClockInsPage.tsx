@@ -276,7 +276,7 @@ export default function ClockInsPage() {
       `);
       printWindow.document.close();
     } catch (e) {
-      console.error(e);
+      if (import.meta.env.DEV) console.error(e);
       toast.error('Error al generar la impresión del QR');
     }
   };
