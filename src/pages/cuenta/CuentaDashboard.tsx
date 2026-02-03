@@ -21,6 +21,7 @@ import MissingPinBanner from '@/components/cuenta/MissingPinBanner';
 import MyRequestsCard from '@/components/cuenta/MyRequestsCard';
 import MyRegulationsCard from '@/components/cuenta/MyRegulationsCard';
 import { MyCoachingsCard } from '@/components/cuenta/MyCoachingsCard';
+import { PageHelp } from '@/components/ui/PageHelp';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 
 export default function CuentaDashboard() {
@@ -131,6 +132,8 @@ export default function CuentaDashboard() {
       
       <main className="flex-1 container mx-auto px-4 py-6 md:py-8">
         <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
+          <PageHelp pageId="cuenta-dashboard" />
+          
           {/* Welcome - responsive */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>

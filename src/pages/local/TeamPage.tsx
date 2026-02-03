@@ -9,6 +9,7 @@ import { TeamTable, TeamCardList, useTeamData } from '@/components/local/team';
 import { InviteStaffDialog } from '@/components/hr/InviteStaffDialog';
 import MonthlyHoursSummary from '@/components/local/MonthlyHoursSummary';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { PageHelp } from '@/components/ui/PageHelp';
 import type { Tables } from '@/integrations/supabase/types';
 
 interface OutletContext {
@@ -40,6 +41,7 @@ export default function TeamPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-4">
+      <PageHelp pageId="local-team" />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
