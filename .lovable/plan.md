@@ -1,220 +1,290 @@
 
-# Plan: Sistema de Copiar y Pegar Horarios
+# Plan Completo: Solo Lectura para Franquiciados + Mejoras de Horarios
 
-## Resumen
+## Resumen de Problemas Detectados
 
-Se implementará una funcionalidad para copiar y pegar horarios de forma eficiente. La idea es permitir copiar el horario de un día (o semana) y pegarlo en otro lugar para acelerar la carga repetitiva.
+Se identificaron 5 problemas principales:
 
----
-
-## Opciones de UX
-
-### Opción A: Copiar/Pegar por Día Individual
-- Click derecho (o botón "Copiar" en el popover) copia el horario de una celda
-- Luego click en otra celda y "Pegar" aplica el mismo horario
-- Simple pero tedioso si querés copiar semanas enteras
-
-### Opcion B: Copiar Semana Completa (Recomendada)
-- Un botón "Copiar semana" que copia los 7 días de un empleado (ej: Lun-Dom)
-- Luego un botón "Pegar semana" que aplica esos 7 días a partir de la fecha que elijas
-- Ideal para patrones semanales repetitivos
-
-### Opción C: Híbrido (La más flexible)
-- Copiar celda individual
-- Copiar semana de un empleado
-- Pegar en cualquier lugar (aplica al mismo día de la semana)
-
-**Recomendación:** Opción B (Copiar Semana) porque:
-1. Los horarios gastronómicos suelen seguir patrones semanales
-2. Copiar día por día es muy tedioso para 31 días
-3. Permite llenar un mes completo en 4 clicks
+| # | Problema | Causa |
+|---|----------|-------|
+| 1 | Franquiciado puede modificar todo | `usePermissionsV2.ts` le da mismos permisos que Encargado |
+| 2 | "Mi Horario" en Mi Cuenta muestra datos incorrectos | Query usa `day_of_week` en lugar de `schedule_date` |
+| 3 | "Ver horario completo" lleva a Mi Local | Empleado debería ver su propio horario, no el panel de gestión |
+| 4 | Notificaciones no se envían | `InlineScheduleEditor` no llama a `sendScheduleNotification` |
+| 5 | Luca ve "Franco" pero no tiene horarios | Bug de sincronización + caché de queries |
 
 ---
 
-## Diseño de la Solución (Opción B)
+## PARTE 1: Modo Solo Lectura para Franquiciados
 
-### Flujo de Trabajo
+### Cambios en `usePermissionsV2.ts`
 
-```text
-1. Usuario ve la grilla de horarios del mes
-2. Hace click en botón "Copiar semana" al lado de un empleado
-3. Se abre selector: ¿Qué semana copiar? (Semana 1, 2, 3, 4...)
-4. Sistema guarda en clipboard los 7 días de esa semana
-5. Aparece banner "Semana copiada - Selecciona dónde pegar"
-6. Usuario hace click en "Pegar" en la fila del mismo o diferente empleado
-7. Se despliega selector: ¿A partir de qué fecha pegar?
-8. Sistema aplica los 7 días (Lun->Lun, Mar->Mar, etc.) como cambios pendientes
-9. Usuario puede ajustar celdas individuales si hace falta
-10. Finalmente guarda todos los cambios
-```
-
-### Nuevos Elementos de UI
-
-1. **Botón "Copiar semana"** en cada fila de empleado
-   - Ícono: Copy o ClipboardCopy
-   - Al lado del nombre del empleado o como acción flotante
-
-2. **Banner de clipboard activo**
-   - "Semana de [Empleado] copiada (Lun-Dom)"
-   - Botón "Cancelar" para limpiar clipboard
-   - Se muestra fijo debajo del header
-
-3. **Botón "Pegar" condicional**
-   - Aparece en cada fila solo cuando hay algo en el clipboard
-   - Abre modal de selección de semana destino
-
-4. **Modal de selección de semana**
-   - Lista las semanas del mes (Semana 1: 1-7 Feb, Semana 2: 8-14 Feb, etc.)
-   - Preview de qué días se van a modificar
-   - Confirmación antes de aplicar
-
----
-
-## Cambios Técnicos
-
-### Nuevos Estados en InlineScheduleEditor.tsx
+Se agregarán permisos granulares para acciones operativas que excluyen al franquiciado:
 
 ```typescript
-// Clipboard state
-const [clipboard, setClipboard] = useState<{
-  sourceUserId: string;
-  sourceUserName: string;
-  weekData: Map<number, ScheduleValue>; // dayOfWeek (0-6) -> schedule
-} | null>(null);
+// Nuevos permisos en localPermissions:
+canCreateSalaryAdvance: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+canCancelSalaryAdvance: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+canCreateWarning: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+canUploadSignature: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+canDoCoaching: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+canSendLocalCommunication: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+
+// Modificar permisos existentes:
+canEditSchedules: hasCurrentBranchAccess && (isSuperadmin || isEncargado), // Antes incluía franquiciado
+canEnterSales: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero), // Antes incluía franquiciado
+canInviteEmployees: hasCurrentBranchAccess && (isSuperadmin || isEncargado), // Antes incluía franquiciado
+canDeactivateEmployees: hasCurrentBranchAccess && (isSuperadmin || isEncargado), // Antes incluía franquiciado
 ```
 
-### Funciones Nuevas
+### Componentes a Modificar
+
+| Archivo | Cambio |
+|---------|--------|
+| `ManagerDashboard.tsx` | Ocultar botón "Cargar ventas" y "Hacer coaching" si `!local.canEnterSales` / `!local.canDoCoaching` |
+| `AdvancesPage.tsx` | Ocultar "Registrar Adelanto" y "Cancelar" si `!local.canCreateSalaryAdvance` |
+| `WarningsPage.tsx` | Ocultar "Nuevo Apercibimiento" si `!local.canCreateWarning` |
+| `CoachingPage.tsx` | Ocultar formulario de evaluación si `!local.canDoCoaching` |
+| `RegulationSignaturesPanel.tsx` | Ocultar "Subir firma" y "Hoja firma" si `!local.canUploadSignature` |
+| `LocalCommunicationsPage.tsx` | Ocultar "Nuevo Mensaje" y "Eliminar" si `!local.canSendLocalCommunication` |
+| `TeamPage.tsx` | Ocultar "Invitar empleado" si `!local.canInviteEmployees` |
+| `InlineScheduleEditor.tsx` | Modo solo lectura si `!local.canEditSchedules` (sin copiar/pegar/editar celdas) |
+
+---
+
+## PARTE 2: Corregir "Mi Horario" en Mi Cuenta
+
+### Problema Actual
+
+El componente `MyScheduleCard.tsx` busca por `day_of_week`:
+```typescript
+const daySchedules = schedules?.filter(s => s.day_of_week === dayOfWeek) || [];
+```
+
+Pero los horarios se guardan con `schedule_date`. Entonces si no hay horarios para el mes, muestra "Franco" para todos basándose en el `day_of_week` de registros antiguos o inexistentes.
+
+### Solución
+
+Reescribir `MyScheduleCard.tsx` para:
+1. Usar `schedule_date` en el query, no `day_of_week`
+2. Agregar navegación mes a mes
+3. Priorizar visualización: HOY → Semana → Mes
+4. Mostrar posición de trabajo asignada
+5. Si no hay horarios, mostrar "Sin horario publicado"
+
+### Nueva Estructura de MyScheduleCard
 
 ```typescript
-// Copiar semana de un empleado
-const handleCopyWeek = (userId: string, userName: string, weekStart: Date) => {
-  const weekData = new Map<number, ScheduleValue>();
-  
-  for (let i = 0; i < 7; i++) {
-    const day = addDays(weekStart, i);
-    const dateStr = format(day, 'yyyy-MM-dd');
-    const value = getEffectiveValue(userId, dateStr);
-    weekData.set(day.getDay(), value);
-  }
-  
-  setClipboard({ sourceUserId: userId, sourceUserName: userName, weekData });
-  toast.info(`Semana de ${userName} copiada`);
-};
-
-// Pegar semana en otro empleado
-const handlePasteWeek = (targetUserId: string, targetUserName: string, targetWeekStart: Date) => {
-  if (!clipboard) return;
-  
-  for (let i = 0; i < 7; i++) {
-    const day = addDays(targetWeekStart, i);
-    const dateStr = format(day, 'yyyy-MM-dd');
-    const dayOfWeek = day.getDay();
-    const value = clipboard.weekData.get(dayOfWeek);
+// Query corregido usando schedule_date
+const { data: schedules } = useQuery({
+  queryKey: ['my-schedules-v2', userId, currentMonth, currentYear],
+  queryFn: async () => {
+    const startDate = format(new Date(year, month - 1, 1), 'yyyy-MM-dd');
+    const endDate = format(endOfMonth(new Date(year, month - 1, 1)), 'yyyy-MM-dd');
     
-    if (value) {
-      handleCellChange(targetUserId, targetUserName, dateStr, value);
+    const { data } = await supabase
+      .from('employee_schedules')
+      .select('id, schedule_date, start_time, end_time, is_day_off, work_position')
+      .eq('user_id', userId)
+      .gte('schedule_date', startDate)
+      .lte('schedule_date', endDate);
+    return data || [];
+  },
+});
+
+// Crear mapa por fecha para lookup eficiente
+const schedulesByDate = useMemo(() => {
+  const map = new Map<string, ScheduleEntry>();
+  schedules?.forEach(s => map.set(s.schedule_date, s));
+  return map;
+}, [schedules]);
+```
+
+### Nuevo UI para "Mi Horario"
+
+```
+┌──────────────────────────────────────────────────────┐
+│ 📅 Mi Horario                          < Feb 2026 > │
+├──────────────────────────────────────────────────────┤
+│                                                      │
+│  ┌────────────────────────────────────────────────┐ │
+│  │ HOY - Martes 3                                 │ │
+│  │ 🔥 Sandwichero                                 │ │
+│  │ ⏰ 19:00 - 00:00                    [Trabajás] │ │
+│  └────────────────────────────────────────────────┘ │
+│                                                      │
+│  Esta semana:                                        │
+│  ┌────┬────┬────┬────┬────┬────┬────┐               │
+│  │ L  │ M  │ X  │ J  │ V  │ S  │ D  │               │
+│  │3✓ │ 4  │ 5  │ 6  │ 7F │ 8F │ 9  │               │
+│  └────┴────┴────┴────┴────┴────┴────┘               │
+│                                                      │
+│  [Ver mes completo ▼]                               │
+│                                                      │
+│  (Expandible: calendario del mes con horarios)     │
+│                                                      │
+└──────────────────────────────────────────────────────┘
+```
+
+### Cambios en comportamiento
+
+- "Ver horario completo" ahora expande un calendario inline en lugar de navegar a Mi Local
+- Cada día muestra: horario + posición asignada
+- Indicador visual para Francos (F) y días trabajados (✓)
+- Si no hay horarios publicados: "Tu encargado aún no publicó los horarios de este mes"
+
+---
+
+## PARTE 3: Página Propia de Horarios para Empleados
+
+### Problema
+
+"Ver horario completo" lleva a `/milocal` pero un empleado sin acceso a Mi Local no puede verlo.
+
+### Solución
+
+Crear nueva página `/cuenta/horario` para vista personal del empleado:
+
+| Ruta | Acceso | Contenido |
+|------|--------|-----------|
+| `/milocal/:id/equipo/horarios` | Encargado | Grilla de edición de todo el equipo |
+| `/cuenta/horario` | Empleado | Solo su horario personal (solo lectura) |
+
+### Archivo Nuevo: `src/pages/cuenta/MiHorarioPage.tsx`
+
+```typescript
+// Componente que muestra:
+// - Calendario mensual completo del empleado
+// - Navegación mes a mes
+// - Vista de semana con detalle por día
+// - Indicador de hoy prominente
+// - Sin capacidad de edición
+```
+
+### Modificar Router
+
+Agregar ruta protegida:
+```typescript
+<Route path="/cuenta/horario" element={<RequireAuth><MiHorarioPage /></RequireAuth>} />
+```
+
+### Modificar `MyScheduleCard.tsx`
+
+Cambiar el link:
+```typescript
+// Antes
+<Link to="/milocal">
+
+// Después  
+<Link to="/cuenta/horario">
+```
+
+---
+
+## PARTE 4: Arreglar Notificaciones de Horarios
+
+### Problema
+
+`InlineScheduleEditor` guarda horarios con una mutation inline que **NO llama** a `sendScheduleNotification`. Las notificaciones solo se envían si se usa `useSaveMonthlySchedule` del hook.
+
+### Solución
+
+Modificar el `onSuccess` de la mutation en `InlineScheduleEditor` para:
+
+1. Después de guardar, llamar a `sendScheduleNotification` por cada usuario afectado si `notifyEmail` o `notifyCommunication` están activados
+2. También invalidar el query `my-schedules-v2` que usa `MyScheduleCard`
+
+```typescript
+// En InlineScheduleEditor.tsx saveMutation.onSuccess:
+onSuccess: async (_, { notifyEmail, notifyCommunication }) => {
+  // Enviar notificaciones a cada empleado afectado
+  if (notifyEmail || notifyCommunication) {
+    for (const employee of affectedEmployees) {
+      await sendScheduleNotification({
+        user_id: employee.id,
+        branch_id: branchId,
+        month,
+        year,
+        is_modification: false, // o detectar si es modificación
+        notify_email: notifyEmail,
+        notify_communication: notifyCommunication,
+        sender_id: currentUserId,
+      });
     }
   }
   
-  toast.success(`Horario pegado para ${targetUserName}`);
-};
-```
-
-### Nuevo Componente: CopyPasteControls.tsx
-
-```typescript
-interface CopyPasteControlsProps {
-  member: TeamMember;
-  month: number;
-  year: number;
-  clipboard: ClipboardData | null;
-  onCopyWeek: (weekStart: Date) => void;
-  onPasteWeek: (weekStart: Date) => void;
-  onClearClipboard: () => void;
+  // Invalidar todos los queries relacionados
+  queryClient.invalidateQueries({ queryKey: ['monthly-schedules'] });
+  queryClient.invalidateQueries({ queryKey: ['my-schedules-v2'] });
+  queryClient.invalidateQueries({ queryKey: ['employee-schedule'] });
+  // ...
 }
 ```
 
-Este componente renderiza:
-- Botón "Copiar" con dropdown de semanas
-- Botón "Pegar" (solo si hay clipboard) con dropdown de semanas destino
+### Exportar función helper
+
+Mover `sendScheduleNotification` de `useSchedules.ts` a un archivo separado o exportarlo para que `InlineScheduleEditor` pueda usarlo.
 
 ---
 
-## Archivos a Modificar
+## PARTE 5: Arreglar Bug de Sincronización de Horarios
+
+### Problema
+
+`MyScheduleCard` muestra horarios que no existen en la DB porque:
+1. El query no invalida correctamente al guardar/eliminar
+2. El staleTime de 30s mantiene datos viejos
+
+### Solución
+
+1. En `useDeleteMonthSchedule`, agregar invalidación del query `my-schedules-v2`:
+```typescript
+onSuccess: (_, variables) => {
+  queryClient.invalidateQueries({ queryKey: ['monthly-schedules', variables.branchId] });
+  queryClient.invalidateQueries({ queryKey: ['employee-schedule', variables.userId] });
+  queryClient.invalidateQueries({ queryKey: ['my-schedules-v2', variables.userId] });
+  queryClient.invalidateQueries({ queryKey: ['has-published-schedule', variables.userId] });
+},
+```
+
+2. Reducir staleTime a 10s o usar `refetchOnWindowFocus: true` para datos más frescos
+
+---
+
+## Resumen de Archivos a Modificar
 
 | Archivo | Cambios |
-|---------|---------|
-| `InlineScheduleEditor.tsx` | Agregar estado clipboard, funciones copy/paste, UI de botones |
-| `ScheduleCellPopover.tsx` | (Opcional) Agregar botón "Copiar celda" para copy individual |
+|---------|--------|
+| `src/hooks/usePermissionsV2.ts` | Agregar permisos granulares, excluir franquiciado de edición |
+| `src/components/local/ManagerDashboard.tsx` | Condicionar botones de acción |
+| `src/pages/local/AdvancesPage.tsx` | Condicionar botones de acción |
+| `src/pages/local/WarningsPage.tsx` | Condicionar botones de acción |
+| `src/pages/local/CoachingPage.tsx` | Modo solo lectura para franquiciado |
+| `src/components/local/RegulationSignaturesPanel.tsx` | Condicionar botones de firma |
+| `src/pages/local/LocalCommunicationsPage.tsx` | Condicionar botones de acción |
+| `src/pages/local/TeamPage.tsx` | Condicionar invitación |
+| `src/components/hr/InlineScheduleEditor.tsx` | 1) Modo solo lectura. 2) Llamar sendScheduleNotification. 3) Invalidar queries |
+| `src/components/cuenta/MyScheduleCard.tsx` | Reescribir con schedule_date, navegación mes, vista expandible |
+| `src/pages/cuenta/MiHorarioPage.tsx` | **NUEVO** - Página personal de horarios del empleado |
+| `src/hooks/useSchedules.ts` | Exportar sendScheduleNotification, invalidar my-schedules-v2 |
+| `src/App.tsx` | Agregar ruta /cuenta/horario |
 
 ---
 
-## UI Propuesta
+## Resultado Esperado
 
-### Vista Normal (sin clipboard)
+### Para María Eugenia (Franquiciada)
+- Ve todo en Mi Local pero no puede modificar nada
+- No ve botones de "Cargar", "Hacer Coaching", "Registrar", "Invitar"
+- Los horarios se muestran solo lectura sin controles de copiar/pegar
 
-```text
-┌─────────────────┬───────┬───────┬───────┬───────┐
-│ Juan Pérez  [📋]│ Lun 3 │ Mar 4 │ Mié 5 │ Jue 6 │ ...
-├─────────────────┼───────┼───────┼───────┼───────┤
-│ María López [📋]│ 19-23 │ 19-23 │Franco │ 19-00 │ ...
-└─────────────────┴───────┴───────┴───────┴───────┘
+### Para Luca Lipiñski (Empleado)
+- "Mi Horario" en Mi Cuenta muestra datos reales de la DB
+- Si no hay horarios publicados, ve mensaje informativo
+- "Ver horario completo" abre su página personal `/cuenta/horario`
+- Recibe notificaciones cuando le publican o modifican horarios
+- Ve su posición asignada (ej: "Sandwichero") en cada turno
 
-[📋] = Botón "Copiar semana" (dropdown con semanas)
-```
-
-### Vista con Clipboard Activo
-
-```text
-┌────────────────────────────────────────────────────────────┐
-│ 📋 Semana de Juan Pérez copiada (Lun-Dom)  [✕ Cancelar]   │
-└────────────────────────────────────────────────────────────┘
-
-┌─────────────────────┬───────┬───────┬───────┬───────┐
-│ Juan Pérez  [📋][📥]│ Lun 3 │ Mar 4 │ Mié 5 │ Jue 6 │ ...
-├─────────────────────┼───────┼───────┼───────┼───────┤
-│ María López [📋][📥]│ 19-23 │ 19-23 │Franco │ 19-00 │ ...
-└─────────────────────┴───────┴───────┴───────┴───────┘
-
-[📥] = Botón "Pegar" (dropdown con semanas destino)
-```
-
----
-
-## Consideraciones
-
-1. **El clipboard no persiste** - Se pierde al cambiar de mes o refrescar
-2. **Se puede pegar múltiples veces** - Útil para llenar un mes completo
-3. **Respeta feriados** - Al pegar, los días feriados se saltan o se pegan vacíos
-4. **Validación sigue activa** - El sistema sigue validando 7 días consecutivos
-
----
-
-## Complejidad Estimada
-
-**Dificultad: Media**
-- No requiere cambios en base de datos
-- Es todo lógica de UI local
-- Usa el sistema existente de `pendingChanges`
-- Estimado: 200-300 líneas de código nuevo
-
----
-
-## Alternativa Simplificada
-
-Si preferís empezar simple:
-
-**Solo copiar la semana actual y pegarla en las siguientes del mismo empleado**
-
-```text
-[Botón] "Repetir semana 1 → resto del mes"
-```
-
-Esto llenaría automáticamente las semanas 2, 3, 4 con el mismo patrón de la semana 1. 
-Un solo botón, sin dropdowns, muy directo.
-
----
-
-¿Cuál opción preferís?
-- **Opción B completa**: Copiar cualquier semana, pegar en cualquier empleado
-- **Opción simplificada**: Un botón "Repetir semana" por empleado
+### Para el Encargado
+- Las notificaciones se envían correctamente al guardar horarios
+- Los cambios se reflejan inmediatamente en el dashboard del empleado
