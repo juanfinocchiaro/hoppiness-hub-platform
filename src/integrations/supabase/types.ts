@@ -1738,9 +1738,7 @@ export type Database = {
           branch_id: string
           clock_pin: string | null
           created_at: string | null
-          default_position:
-            | Database["public"]["Enums"]["work_position_type"]
-            | null
+          default_position: string | null
           id: string
           is_active: boolean | null
           local_role: Database["public"]["Enums"]["local_role_type"]
@@ -1752,9 +1750,7 @@ export type Database = {
           branch_id: string
           clock_pin?: string | null
           created_at?: string | null
-          default_position?:
-            | Database["public"]["Enums"]["work_position_type"]
-            | null
+          default_position?: string | null
           id?: string
           is_active?: boolean | null
           local_role: Database["public"]["Enums"]["local_role_type"]
@@ -1766,9 +1762,7 @@ export type Database = {
           branch_id?: string
           clock_pin?: string | null
           created_at?: string | null
-          default_position?:
-            | Database["public"]["Enums"]["work_position_type"]
-            | null
+          default_position?: string | null
           id?: string
           is_active?: boolean | null
           local_role?: Database["public"]["Enums"]["local_role_type"]
