@@ -357,6 +357,7 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
           existingData={employeeData}
           currentRole={member.local_role}
           roleId={member.role_id}
+          currentDefaultPosition={member.default_position}
           open={showEditModal}
           onOpenChange={setShowEditModal}
           onSuccess={() => {

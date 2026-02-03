@@ -50,7 +50,7 @@ function calculateShiftHours(start: string, end: string): number {
   return (endMinutes - startMinutes) / 60;
 }
 
-// Calculate default break time (1 hour, starting halfway through the shift)
+// Calculate default break time (30 min, starting halfway through the shift)
 function calculateDefaultBreak(start: string, end: string): { breakStart: string; breakEnd: string } {
   const [startH, startM] = start.split(':').map(Number);
   const [endH, endM] = end.split(':').map(Number);
@@ -65,7 +65,7 @@ function calculateDefaultBreak(start: string, end: string): { breakStart: string
   // Break starts at the middle of the shift
   const midpoint = startMinutes + (endMinutes - startMinutes) / 2;
   const breakStartMinutes = Math.floor(midpoint / 30) * 30; // Round to nearest 30 min
-  const breakEndMinutes = breakStartMinutes + 60; // 1 hour break
+  const breakEndMinutes = breakStartMinutes + 30; // 30 min break
   
   const formatTime = (minutes: number) => {
     const normalizedMinutes = minutes % (24 * 60);
@@ -235,7 +235,7 @@ export function ScheduleCellPopover({
             <div className="bg-muted/50 rounded-lg p-3 space-y-2">
               <div className="flex items-center gap-2 text-xs font-medium">
                 <Coffee className="w-4 h-4 text-primary" />
-                <span>Break obligatorio (1h)</span>
+                <span>Break obligatorio (30min)</span>
               </div>
               <div className="flex gap-2 items-center">
                 <div className="flex-1">
