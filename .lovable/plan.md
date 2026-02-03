@@ -1,107 +1,120 @@
 
-# Plan: Sidebar Footer Consistente
+# Plan: Sincronizar Usuarios Huérfanos y Prevenir Futuros Problemas
 
-## Problema
-El footer del sidebar de "Mi Local" cambia de estructura según los permisos del usuario:
-- Con acceso a Mi Marca: muestra dropdown de sucursal + "Cambiar a Mi Marca" + "Volver al Inicio" + "Salir"
-- Sin acceso a Mi Marca: muestra texto estático de sucursal + "Volver al Inicio" + "Salir"
+## Problema Identificado
 
-Esto hace que los elementos "salten" de posición, lo cual es poco profesional.
+El usuario `isanfundaro@gmail.com` existe en `auth.users` (confirmado por el error "ya está registrado") pero **no existe en `profiles`**, por lo que no aparece en la lista de usuarios del panel de administración.
 
-## Solución: Layout Fijo con 3 Zonas
+El sistema actual:
+1. Tiene un trigger `on_auth_user_created` que DEBERÍA crear el perfil automáticamente
+2. El trigger está correctamente configurado (SECURITY DEFINER, owner postgres)
+3. Los 30 usuarios existentes fueron creados correctamente con este sistema
 
-Reorganizar el footer en 3 zonas con altura fija/reservada:
+Sin embargo, hay al menos un usuario "huérfano" que no tiene su perfil correspondiente.
 
-```text
-+----------------------------------+
-|  ZONA 1: Selector de Sucursal    |  <- Siempre ocupa espacio fijo
-|  [Manantiales         v]         |
-+----------------------------------+
-|  ZONA 2: Cambio de Panel         |  <- Espacio reservado (aunque vacío)
-|  [Cambiar a Mi Marca]  (o vacío) |
-+----------------------------------+
-|  ZONA 3: Acciones Fijas          |  <- Siempre igual
-|  [Volver al Inicio]              |
-|  [Salir]                         |
-+----------------------------------+
+---
+
+## Solución Propuesta
+
+### Parte 1: Sincronización Inmediata (One-time fix)
+
+Crear una función administrativa que sincronice todos los usuarios huérfanos:
+
+```sql
+-- Función para sincronizar usuarios de auth.users que no tienen profile
+CREATE OR REPLACE FUNCTION sync_orphan_users()
+RETURNS TABLE(user_id uuid, email text, action text)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN QUERY
+  INSERT INTO profiles (id, email, full_name, created_at)
+  SELECT 
+    au.id,
+    au.email,
+    COALESCE(au.raw_user_meta_data->>'full_name', au.email),
+    au.created_at
+  FROM auth.users au
+  WHERE NOT EXISTS (
+    SELECT 1 FROM profiles p WHERE p.id = au.id
+  )
+  ON CONFLICT (id) DO NOTHING
+  RETURNING id, email, 'created'::text;
+END;
+$$;
 ```
 
-## Cambios Técnicos
+### Parte 2: Ejecutar la Sincronización
 
-### 1. Zona de Sucursal Consistente
+Una vez creada la función, ejecutar:
 
-**Actual**: Si hay 1 sola sucursal, muestra texto estático. Si hay varias, muestra dropdown.
-
-**Nuevo**: SIEMPRE mostrar el componente Select, pero deshabilitado si solo hay una sucursal.
-
-```tsx
-// Antes (líneas 472-493)
-{accessibleBranches.length > 1 && (
-  <Select ... />
-)}
-{accessibleBranches.length === 1 && (
-  <div className="...">...</div>
-)}
-
-// Después
-<Select 
-  value={branchId} 
-  onValueChange={handleBranchChange}
-  disabled={accessibleBranches.length <= 1}  // Deshabilitar si solo hay una
->
-  <SelectTrigger className="w-full">
-    <div className="flex items-center gap-2">
-      <Store className="w-4 h-4 text-primary" />
-      <SelectValue placeholder="Seleccionar local" />
-    </div>
-  </SelectTrigger>
-  <SelectContent>
-    {accessibleBranches.map(branch => (
-      <SelectItem key={branch.id} value={branch.id}>
-        {branch.name}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
+```sql
+SELECT * FROM sync_orphan_users();
 ```
 
-### 2. Espacio Reservado para Cambio de Panel
+Esto creará perfiles para todos los usuarios huérfanos, incluyendo `isanfundaro@gmail.com`.
 
-**Actual**: El botón "Cambiar a Mi Marca" aparece/desaparece condicionalmente.
+### Parte 3: Hacer el Trigger Más Robusto
 
-**Nuevo**: Reservar un espacio fijo (min-height) para esta zona. Si no tiene acceso, simplemente queda vacío pero el espacio se mantiene.
+Modificar el trigger para que maneje errores de forma más elegante y tenga logging:
 
-```tsx
-{/* Zona 2: Cambio de Panel - altura reservada */}
-<div className="min-h-[40px]">
-  {canAccessAdmin && !isEmbedded && (
-    <ExternalLink to="/mimarca">
-      <Button variant="ghost" className="w-full justify-start">
-        <Building2 className="w-4 h-4 mr-3" />
-        Cambiar a Mi Marca
-      </Button>
-    </ExternalLink>
-  )}
-</div>
+```sql
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.profiles (id, full_name, email, created_at)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
+    NEW.email,
+    NEW.created_at
+  )
+  ON CONFLICT (id) DO NOTHING;  -- Prevenir errores si ya existe
+  
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  -- Log el error pero no fallar el signup
+  RAISE WARNING 'handle_new_user failed for %: %', NEW.id, SQLERRM;
+  RETURN NEW;
+END;
+$$;
 ```
 
-### 3. Acciones Fijas al Final
-
-No cambian - siempre están en la misma posición.
+---
 
 ## Archivos a Modificar
 
-| Archivo | Cambios |
-|---------|---------|
-| `src/pages/local/BranchLayout.tsx` | Refactorizar footer del sidebar (desktop líneas 469-519, mobile líneas 395-442) |
+Ninguno - todo es cambio en base de datos via migración SQL.
+
+---
+
+## Pasos de Implementación
+
+1. **Crear migración SQL** con:
+   - Función `sync_orphan_users()`
+   - Actualización del trigger `handle_new_user` con manejo de errores
+   
+2. **Ejecutar sincronización** llamando a `sync_orphan_users()` una vez
+
+3. **Verificar** que `isanfundaro@gmail.com` aparece en la lista de usuarios
+
+---
 
 ## Beneficios
 
-1. **Consistencia visual**: Los botones siempre están en la misma posición
-2. **Previsibilidad**: El usuario sabe dónde encontrar cada acción
-3. **Profesionalismo**: Sin elementos que "saltan"
-4. **Mejor UX**: La memoria muscular funciona para todos los usuarios
+- Soluciona el problema inmediato de usuarios huérfanos
+- Previene problemas futuros con manejo de errores robusto
+- No requiere cambios en el código frontend
+- Es idempotente (se puede ejecutar múltiples veces sin efectos secundarios)
 
-## Consideración Adicional
+---
 
-También aplicar el mismo patrón al BrandLayout.tsx para consistencia entre ambos paneles, donde el botón "Cambiar a Mi Local" también aparece/desaparece según permisos.
+## Riesgo
+
+Bajo - La función usa `ON CONFLICT DO NOTHING` para evitar duplicados y el trigger mejorado tiene manejo de excepciones.
