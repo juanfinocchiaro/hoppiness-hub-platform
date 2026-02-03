@@ -132,26 +132,6 @@ export function ScheduleCellPopover({
           </Button>
         </div>
 
-        {/* Day off and clear */}
-        <div className="flex gap-2 mb-3">
-          <Button
-            variant="secondary"
-            size="sm"
-            className="flex-1"
-            onClick={handleDayOff}
-          >
-            Franco
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-destructive"
-            onClick={handleClear}
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-
         {/* Custom time */}
         <div className="space-y-3 pt-2 border-t">
           <Label className="text-xs font-medium">Horario personalizado</Label>
