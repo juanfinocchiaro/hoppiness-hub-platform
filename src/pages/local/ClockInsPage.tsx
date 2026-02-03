@@ -44,7 +44,7 @@ export default function ClockInsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('branches')
-        .select('id, name, clock_code, allowed_ips')
+        .select('id, name, clock_code')
         .eq('id', branchId)
         .single();
       

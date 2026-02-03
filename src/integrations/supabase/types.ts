@@ -150,156 +150,84 @@ export type Database = {
           admin_force_channels: Json | null
           admin_force_message: string | null
           admin_force_state: string | null
-          allowed_ips: string[] | null
-          auto_invoice_integrations: boolean
           city: string
           clock_code: string | null
           closing_time: string | null
           created_at: string
-          delivery_enabled: boolean | null
-          dine_in_enabled: boolean | null
           email: string | null
           enforce_labor_law: boolean
-          estimated_prep_time_min: number | null
           expense_pin_threshold: number | null
-          facturante_api_key: string | null
-          facturante_cuit: string | null
-          facturante_enabled: boolean | null
-          facturante_punto_venta: number | null
-          fiscal_data: Json | null
           id: string
-          invoice_provider: string | null
           is_active: boolean
           is_open: boolean | null
-          kitchen_type: string | null
           latitude: number | null
           local_open_state: boolean | null
           longitude: number | null
-          mercadopago_access_token: string | null
-          mercadopago_delivery_enabled: boolean | null
-          mercadopago_public_key: string | null
-          mp_delivery_store_id: string | null
           name: string
           opening_time: string | null
-          pedidosya_api_key: string | null
-          pedidosya_enabled: boolean | null
-          pedidosya_restaurant_id: string | null
           phone: string | null
           public_hours: Json | null
           public_status: string | null
-          rappi_api_key: string | null
-          rappi_enabled: boolean | null
-          rappi_store_id: string | null
           shifts_morning_enabled: boolean | null
           shifts_overnight_enabled: boolean | null
           slug: string | null
-          takeaway_enabled: boolean | null
           updated_at: string
-          webhook_api_key: string | null
         }
         Insert: {
           address: string
           admin_force_channels?: Json | null
           admin_force_message?: string | null
           admin_force_state?: string | null
-          allowed_ips?: string[] | null
-          auto_invoice_integrations?: boolean
           city: string
           clock_code?: string | null
           closing_time?: string | null
           created_at?: string
-          delivery_enabled?: boolean | null
-          dine_in_enabled?: boolean | null
           email?: string | null
           enforce_labor_law?: boolean
-          estimated_prep_time_min?: number | null
           expense_pin_threshold?: number | null
-          facturante_api_key?: string | null
-          facturante_cuit?: string | null
-          facturante_enabled?: boolean | null
-          facturante_punto_venta?: number | null
-          fiscal_data?: Json | null
           id?: string
-          invoice_provider?: string | null
           is_active?: boolean
           is_open?: boolean | null
-          kitchen_type?: string | null
           latitude?: number | null
           local_open_state?: boolean | null
           longitude?: number | null
-          mercadopago_access_token?: string | null
-          mercadopago_delivery_enabled?: boolean | null
-          mercadopago_public_key?: string | null
-          mp_delivery_store_id?: string | null
           name: string
           opening_time?: string | null
-          pedidosya_api_key?: string | null
-          pedidosya_enabled?: boolean | null
-          pedidosya_restaurant_id?: string | null
           phone?: string | null
           public_hours?: Json | null
           public_status?: string | null
-          rappi_api_key?: string | null
-          rappi_enabled?: boolean | null
-          rappi_store_id?: string | null
           shifts_morning_enabled?: boolean | null
           shifts_overnight_enabled?: boolean | null
           slug?: string | null
-          takeaway_enabled?: boolean | null
           updated_at?: string
-          webhook_api_key?: string | null
         }
         Update: {
           address?: string
           admin_force_channels?: Json | null
           admin_force_message?: string | null
           admin_force_state?: string | null
-          allowed_ips?: string[] | null
-          auto_invoice_integrations?: boolean
           city?: string
           clock_code?: string | null
           closing_time?: string | null
           created_at?: string
-          delivery_enabled?: boolean | null
-          dine_in_enabled?: boolean | null
           email?: string | null
           enforce_labor_law?: boolean
-          estimated_prep_time_min?: number | null
           expense_pin_threshold?: number | null
-          facturante_api_key?: string | null
-          facturante_cuit?: string | null
-          facturante_enabled?: boolean | null
-          facturante_punto_venta?: number | null
-          fiscal_data?: Json | null
           id?: string
-          invoice_provider?: string | null
           is_active?: boolean
           is_open?: boolean | null
-          kitchen_type?: string | null
           latitude?: number | null
           local_open_state?: boolean | null
           longitude?: number | null
-          mercadopago_access_token?: string | null
-          mercadopago_delivery_enabled?: boolean | null
-          mercadopago_public_key?: string | null
-          mp_delivery_store_id?: string | null
           name?: string
           opening_time?: string | null
-          pedidosya_api_key?: string | null
-          pedidosya_enabled?: boolean | null
-          pedidosya_restaurant_id?: string | null
           phone?: string | null
           public_hours?: Json | null
           public_status?: string | null
-          rappi_api_key?: string | null
-          rappi_enabled?: boolean | null
-          rappi_store_id?: string | null
           shifts_morning_enabled?: boolean | null
           shifts_overnight_enabled?: boolean | null
           slug?: string | null
-          takeaway_enabled?: boolean | null
           updated_at?: string
-          webhook_api_key?: string | null
         }
         Relationships: []
       }
@@ -1945,77 +1873,59 @@ export type Database = {
         Row: {
           address: string | null
           city: string | null
+          clock_code: string | null
           closing_time: string | null
-          delivery_enabled: boolean | null
-          dine_in_enabled: boolean | null
           email: string | null
-          estimated_prep_time_min: number | null
           id: string | null
           is_active: boolean | null
           is_open: boolean | null
           latitude: number | null
           local_open_state: boolean | null
           longitude: number | null
-          mercadopago_delivery_enabled: boolean | null
           name: string | null
           opening_time: string | null
-          pedidosya_enabled: boolean | null
           phone: string | null
           public_hours: Json | null
           public_status: string | null
-          rappi_enabled: boolean | null
           slug: string | null
-          takeaway_enabled: boolean | null
         }
         Insert: {
           address?: string | null
           city?: string | null
+          clock_code?: string | null
           closing_time?: string | null
-          delivery_enabled?: boolean | null
-          dine_in_enabled?: boolean | null
           email?: string | null
-          estimated_prep_time_min?: number | null
           id?: string | null
           is_active?: boolean | null
           is_open?: boolean | null
           latitude?: number | null
           local_open_state?: boolean | null
           longitude?: number | null
-          mercadopago_delivery_enabled?: boolean | null
           name?: string | null
           opening_time?: string | null
-          pedidosya_enabled?: boolean | null
           phone?: string | null
           public_hours?: Json | null
           public_status?: string | null
-          rappi_enabled?: boolean | null
           slug?: string | null
-          takeaway_enabled?: boolean | null
         }
         Update: {
           address?: string | null
           city?: string | null
+          clock_code?: string | null
           closing_time?: string | null
-          delivery_enabled?: boolean | null
-          dine_in_enabled?: boolean | null
           email?: string | null
-          estimated_prep_time_min?: number | null
           id?: string | null
           is_active?: boolean | null
           is_open?: boolean | null
           latitude?: number | null
           local_open_state?: boolean | null
           longitude?: number | null
-          mercadopago_delivery_enabled?: boolean | null
           name?: string | null
           opening_time?: string | null
-          pedidosya_enabled?: boolean | null
           phone?: string | null
           public_hours?: Json | null
           public_status?: string | null
-          rappi_enabled?: boolean | null
           slug?: string | null
-          takeaway_enabled?: boolean | null
         }
         Relationships: []
       }
