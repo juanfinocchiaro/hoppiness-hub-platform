@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import { useTeamData } from '@/components/local/team/useTeamData';
 import { useHolidays } from '@/hooks/useHolidays';
 import { useMonthlySchedules, type ScheduleEntry, type DaySchedule } from '@/hooks/useSchedules';
+import { sendBulkScheduleNotifications } from '@/hooks/useScheduleNotifications';
 import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import { ScheduleCellPopover, type ScheduleValue } from './ScheduleCellPopover';
@@ -319,10 +320,32 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
         }
       }
     },
-    onSuccess: () => {
+    onSuccess: async (_, { notifyEmail, notifyCommunication }) => {
+      // Send notifications to affected employees
+      if ((notifyEmail || notifyCommunication) && affectedEmployees.length > 0) {
+        await sendBulkScheduleNotifications(
+          affectedEmployees.map(e => ({ id: e.id, name: e.name })),
+          {
+            branch_id: branchId,
+            month,
+            year,
+            is_modification: false,
+            notify_email: notifyEmail,
+            notify_communication: notifyCommunication,
+            sender_id: currentUserId || '',
+          }
+        );
+      }
+      
       setPendingChanges(new Map());
       setSaveDialogOpen(false);
-      queryClient.invalidateQueries({ queryKey: ['monthly-schedules', branchId, month, year] });
+      
+      // Invalidate all related queries including employee's personal schedule view
+      queryClient.invalidateQueries({ queryKey: ['monthly-schedules', branchId] });
+      queryClient.invalidateQueries({ queryKey: ['my-schedules-v2'] });
+      queryClient.invalidateQueries({ queryKey: ['employee-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['has-published-schedule'] });
+      
       refetch();
       toast.success('Horarios publicados');
     },

@@ -321,6 +321,8 @@ export function useDeleteMonthSchedule() {
       queryClient.invalidateQueries({ queryKey: ['monthly-schedules', variables.branchId] });
       queryClient.invalidateQueries({ queryKey: ['employee-schedule', variables.userId] });
       queryClient.invalidateQueries({ queryKey: ['has-published-schedule', variables.userId] });
+      queryClient.invalidateQueries({ queryKey: ['my-schedules-v2', variables.userId] });
+      queryClient.invalidateQueries({ queryKey: ['my-schedules-v2'] }); // Invalidate all
     },
   });
 }
