@@ -20,6 +20,7 @@ import MyCommunicationsCard from '@/components/cuenta/MyCommunicationsCard';
 import MissingPinBanner from '@/components/cuenta/MissingPinBanner';
 import MyRequestsCard from '@/components/cuenta/MyRequestsCard';
 import MyRegulationsCard from '@/components/cuenta/MyRegulationsCard';
+import { MyCoachingsCard } from '@/components/cuenta/MyCoachingsCard';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 
 export default function CuentaDashboard() {
@@ -246,6 +247,7 @@ export default function CuentaDashboard() {
               <div className="grid gap-3 md:gap-4">
                 <MyCommunicationsCard />
                 <MyRegulationsCard />
+                <MyCoachingsCard />
                 <MyScheduleCard />
                 <MyRequestsCard />
                 <MyClockInsCard />

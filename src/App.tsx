@@ -32,6 +32,7 @@ import WarningsPage from "./pages/local/WarningsPage";
 import RegulationsPage from "./pages/local/RegulationsPage";
 import FichajeQRDisplay from "./pages/local/FichajeQRDisplay";
 import ShiftConfigPage from "./pages/local/ShiftConfigPage";
+import CoachingPage from "./pages/local/CoachingPage";
 
 // Mi Marca
 import BrandLayout from "./pages/admin/BrandLayout";
@@ -110,6 +111,7 @@ const App = () => (
               <Route path="equipo/apercibimientos" element={<WarningsPage />} />
               <Route path="equipo/reglamentos" element={<RegulationsPage />} />
               <Route path="equipo/comunicados" element={<LocalCommunicationsPage />} />
+              <Route path="equipo/coaching" element={<CoachingPage />} />
               
               {/* Configuración */}
               

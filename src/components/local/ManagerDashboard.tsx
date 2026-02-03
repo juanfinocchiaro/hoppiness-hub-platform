@@ -25,12 +25,14 @@ import {
   FileText,
   CalendarX,
   ChevronRight,
+  ClipboardList,
 } from 'lucide-react';
 import { format, differenceInMinutes } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useTodayClosures, useEnabledShifts } from '@/hooks/useShiftClosures';
 import { ShiftClosureModal } from '@/components/local/closure/ShiftClosureModal';
 import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { CoachingPendingCard } from '@/components/coaching';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
@@ -389,6 +391,14 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
         )}
       </CardContent>
     </Card>
+  )}
+
+  {/* COACHING DEL MES - Solo para encargados/franquiciados */}
+  {!isCajero && (
+    <CoachingPendingCard 
+      branchId={branch.id}
+      onStartCoaching={() => window.location.href = `/milocal/${branch.id}/equipo/coaching`}
+    />
   )}
 
 
