@@ -1,15 +1,13 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
-import { LOCAL_ROLE_LABELS } from '@/hooks/usePermissionsV2';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { User, Store, ArrowRight, Briefcase, Building2, AlertTriangle } from 'lucide-react';
+import { User, ArrowRight, Briefcase, Building2, AlertTriangle } from 'lucide-react';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import MyScheduleCard from '@/components/cuenta/MyScheduleCard';
@@ -23,6 +21,7 @@ import MyRegulationsCard from '@/components/cuenta/MyRegulationsCard';
 import { MyCoachingsCard } from '@/components/cuenta/MyCoachingsCard';
 import { PageHelp } from '@/components/ui/PageHelp';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
+import { BranchWorkCard } from '@/components/cuenta/BranchWorkCard';
 
 export default function CuentaDashboard() {
   const { signOut } = useAuth();
@@ -61,17 +60,18 @@ export default function CuentaDashboard() {
       if (!effectiveUserId) return [];
       const { data, error } = await supabase
         .from('user_branch_roles')
-        .select('id, branch_id, clock_pin, branches!inner(name)')
+        .select('id, branch_id, local_role, clock_pin, branches!inner(id, name)')
         .eq('user_id', effectiveUserId)
         .eq('is_active', true);
       if (error) throw error;
       return data || [];
     },
-    enabled: !!effectiveUserId && canAccessLocalPanel,
+    enabled: !!effectiveUserId,
   });
 
-  // Check if ANY branch is missing PIN
-  const branchesMissingPin = branchPinData?.filter(r => !r.clock_pin) || [];
+  // Check if ANY branch is missing PIN - only count branches where user actually has a role
+  const branchesMissingPin = branchPinData?.filter(r => r.local_role && !r.clock_pin) || [];
+  const totalBranchesWithRole = branchPinData?.filter(r => r.local_role) || [];
   const needsPinSetup = branchesMissingPin.length > 0;
 
   // Fetch urgent unread communications
@@ -103,24 +103,6 @@ export default function CuentaDashboard() {
     enabled: !!effectiveUserId,
     staleTime: 60000,
   });
-
-  // Fetch branch names for employee section
-  const { data: employeeBranches } = useQuery({
-    queryKey: ['employee-branches', branchIds.join(',')],
-    queryFn: async () => {
-      if (branchIds.length === 0) return [];
-      const result = await supabase
-        .from('branches')
-        .select('id, name')
-        .in('id', branchIds);
-      if (result.error) throw result.error;
-      return result.data as { id: string; name: string }[];
-    },
-    enabled: branchIds.length > 0,
-  });
-
-  // Create a map of branch names
-  const branchNameMap = new Map(employeeBranches?.map(b => [b.id, b.name]) || []);
 
   // Display name: use effective user's name or profile name
   const displayName = effectiveUser.full_name || profile?.full_name?.split(' ')[0] || 'Usuario';
@@ -214,35 +196,24 @@ export default function CuentaDashboard() {
                   <div className="mb-3">
                     <MissingPinBanner 
                       missingCount={branchesMissingPin.length}
-                      totalCount={branchPinData?.length || 0}
+                      totalCount={totalBranchesWithRole.length}
                     />
                   </div>
                 )}
               </div>
 
-              {/* Branch Cards with specific role per branch */}
+              {/* Branch Cards with PIN management integrated */}
               <div className="grid gap-3">
-                {branchRoles.map((ubr) => (
-                  <Card key={ubr.branch_id} className="hover:shadow-sm transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <Store className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                          <span className="font-medium truncate">
-                            {branchNameMap.get(ubr.branch_id) || 'Sucursal'}
-                          </span>
-                          <Badge variant="outline" className="flex-shrink-0">
-                            {LOCAL_ROLE_LABELS[ubr.local_role || ''] || ubr.local_role}
-                          </Badge>
-                        </div>
-                        <Link to={`/milocal/${ubr.branch_id}`}>
-                          <Button variant="outline" size="sm" className="min-h-[36px]">
-                            <ArrowRight className="w-4 h-4" />
-                          </Button>
-                        </Link>
-                      </div>
-                    </CardContent>
-                  </Card>
+                {branchPinData?.filter(r => r.local_role).map((ubr: any) => (
+                  <BranchWorkCard
+                    key={ubr.branch_id}
+                    branchId={ubr.branch_id}
+                    branchName={ubr.branches?.name || 'Sucursal'}
+                    localRole={ubr.local_role || 'empleado'}
+                    clockPin={ubr.clock_pin}
+                    roleId={ubr.id}
+                    userId={effectiveUserId || ''}
+                  />
                 ))}
               </div>
 
