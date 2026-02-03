@@ -93,15 +93,13 @@ export default function FichajeEmpleado() {
   const { data: branch, isLoading: loadingBranch, error: branchError } = useQuery({
     queryKey: ['branch-by-code', branchCode],
     queryFn: async () => {
+      // Use secure RPC function instead of direct table access
       const { data, error } = await supabase
-        .from('branches')
-        .select('id, name, clock_code, latitude, longitude')
-        .eq('clock_code', branchCode)
-        .eq('is_active', true)
-        .maybeSingle();
+        .rpc('get_branch_for_clock', { _clock_code: branchCode });
       
       if (error) throw error;
-      return data as BranchData | null;
+      if (!data || data.length === 0) return null;
+      return data[0] as BranchData;
     },
     enabled: !!branchCode,
   });

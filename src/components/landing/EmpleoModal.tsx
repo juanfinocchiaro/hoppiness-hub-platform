@@ -37,9 +37,8 @@ export function EmpleoModal({ open, onOpenChange }: EmpleoModalProps) {
   useEffect(() => {
     const fetchBranches = async () => {
       const { data } = await supabase
-        .from('branches')
+        .from('branches_public')
         .select('id, name')
-        .eq('is_active', true)
         .order('name');
       
       if (data) setBranches(data);
