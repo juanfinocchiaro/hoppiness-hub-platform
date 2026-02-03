@@ -88,6 +88,22 @@ export function getHighestRole(brandRole: BrandRole, branchRoles: BranchRoleInfo
   return 'staff';
 }
 
+/**
+ * Verifica si un usuario TIENE un rol específico (en marca o en cualquier local)
+ * Útil para filtrado inclusivo (no solo por rol más alto)
+ */
+export function userHasRole(
+  brandRole: BrandRole, 
+  branchRoles: BranchRoleInfo[], 
+  targetRole: string
+): boolean {
+  // Chequear rol de marca
+  if (brandRole === targetRole) return true;
+  
+  // Chequear cualquier rol local
+  return branchRoles.some(br => br.local_role === targetRole);
+}
+
 // Compatibilidad con código viejo
 export function getHighestRoleLegacy(brandRole: BrandRole, localRole: LocalRole): string {
   const brandPriority = brandRole ? ROLE_PRIORITY[brandRole] || 0 : 0;
