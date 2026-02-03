@@ -40,6 +40,11 @@ interface ScheduleCellPopoverProps {
 function calculateShiftHours(start: string, end: string): number {
   if (!start || !end) return 0;
   
+  // Treat "00:00" to "00:00" as unconfigured (not a 24h shift)
+  const isUnconfigured = (start === '00:00' || start === '00:00:00') && 
+                         (end === '00:00' || end === '00:00:00');
+  if (isUnconfigured) return 0;
+  
   const [startH, startM] = start.split(':').map(Number);
   const [endH, endM] = end.split(':').map(Number);
   
