@@ -450,13 +450,13 @@ export default function BranchLayout() {
 
       <div className="flex">
         <aside className={`hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 bg-card border-r ${isImpersonating ? 'lg:top-[52px]' : ''}`}>
-          {/* Header - Logo and title only */}
-          <div className="p-6 border-b">
+          {/* Header - Logo and title only - altura fija para evitar saltos */}
+          <div className="p-6 border-b h-[88px] flex items-center">
             <div className="flex items-center gap-3">
               <img 
                 src={logoHoppinessBlue} 
                 alt="Hoppiness" 
-                className="w-14 h-14 rounded-xl object-contain bg-white p-1"
+                className="w-14 h-14 rounded-xl object-contain bg-white p-1 flex-shrink-0"
               />
               <span className="text-lg font-bold">Mi Local</span>
             </div>
