@@ -135,18 +135,17 @@ export default function ClockInsPage() {
 
   const printQR = () => {
     try {
-      // Get the QR SVG element from the modal
       const qrSvg = document.querySelector('#print-qr-svg') as SVGElement | null;
       if (!qrSvg) {
         toast.error('No se pudo generar el QR para imprimir');
         return;
       }
 
-      // Serialize SVG and embed it directly in the print HTML (more reliable than Blob URLs)
+      // Clone and set proper dimensions without forcing viewBox
       const svgClone = qrSvg.cloneNode(true) as SVGElement;
-      svgClone.setAttribute('width', '300');
-      svgClone.setAttribute('height', '300');
-      svgClone.setAttribute('viewBox', '0 0 200 200');
+      svgClone.setAttribute('width', '280');
+      svgClone.setAttribute('height', '280');
+      svgClone.removeAttribute('id');
 
       const svgData = new XMLSerializer().serializeToString(svgClone);
 
@@ -157,40 +156,120 @@ export default function ClockInsPage() {
       }
 
       printWindow.document.write(`
+        <!DOCTYPE html>
         <html>
           <head>
             <title>QR Fichaje - ${branch?.name}</title>
             <style>
+              @page { margin: 1.5cm; }
+              * { box-sizing: border-box; }
               body {
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
                 min-height: 100vh;
-                font-family: system-ui;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
                 margin: 0;
-                padding: 24px;
+                padding: 40px 20px;
+                background: #fff;
+                color: #1a1a1a;
               }
-              h1 { margin: 0 0 16px; font-size: 24px; }
-              p { color: #666; margin: 16px 0 0; }
+              .card {
+                background: #fff;
+                border: 2px solid #e5e7eb;
+                border-radius: 24px;
+                padding: 48px 40px;
+                max-width: 420px;
+                width: 100%;
+                text-align: center;
+              }
+              .logo {
+                font-size: 32px;
+                font-weight: 800;
+                letter-spacing: -1px;
+                color: #1a1a1a;
+                margin-bottom: 8px;
+              }
+              .logo span {
+                color: #f59e0b;
+              }
+              .subtitle {
+                font-size: 14px;
+                color: #6b7280;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                margin-bottom: 24px;
+              }
+              .branch-name {
+                display: inline-block;
+                background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+                padding: 10px 28px;
+                border-radius: 24px;
+                font-size: 18px;
+                font-weight: 700;
+                color: #92400e;
+                margin-bottom: 32px;
+              }
               .qr-container {
-                background: white;
+                background: #fff;
                 padding: 20px;
-                border-radius: 8px;
-                border: 1px solid #e5e7eb;
+                border: 3px solid #1a1a1a;
+                border-radius: 16px;
+                display: inline-block;
+                margin-bottom: 28px;
               }
-              svg { display: block; }
-              .url { font-size: 12px; color: #999; margin-top: 12px; word-break: break-all; text-align: center; max-width: 420px; }
+              .qr-container svg {
+                display: block;
+              }
+              .instructions {
+                margin-bottom: 8px;
+              }
+              .instructions h2 {
+                font-size: 22px;
+                font-weight: 700;
+                margin: 0 0 4px;
+                color: #1a1a1a;
+              }
+              .instructions p {
+                font-size: 16px;
+                color: #6b7280;
+                margin: 0;
+              }
+              .divider {
+                width: 60px;
+                height: 3px;
+                background: #f59e0b;
+                margin: 24px auto;
+                border-radius: 2px;
+              }
+              .url {
+                font-size: 11px;
+                color: #9ca3af;
+                word-break: break-all;
+                font-family: monospace;
+              }
+              @media print {
+                body { padding: 0; }
+                .card { border: none; box-shadow: none; }
+              }
             </style>
           </head>
           <body>
-            <h1>Fichaje - ${branch?.name}</h1>
-            <div class="qr-container">${svgData}</div>
-            <p>Escaneá para fichar</p>
-            <div class="url">${clockUrl}</div>
+            <div class="card">
+              <div class="logo">HOPPI<span>NESS</span></div>
+              <div class="subtitle">Control de Asistencia</div>
+              <div class="branch-name">${branch?.name || 'Local'}</div>
+              <div class="qr-container">${svgData}</div>
+              <div class="instructions">
+                <h2>Escaneá para fichar</h2>
+                <p>Ingreso / Egreso</p>
+              </div>
+              <div class="divider"></div>
+              <div class="url">${clockUrl}</div>
+            </div>
             <script>
-              // Print on next tick to ensure DOM is painted
-              setTimeout(() => { window.print(); }, 200);
+              setTimeout(() => { window.print(); }, 250);
             </script>
           </body>
         </html>
