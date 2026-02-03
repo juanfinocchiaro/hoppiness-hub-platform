@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useMyPendingCoachings } from '@/hooks/useCoachingStats';
 import { useAcknowledgeCoaching, useEmployeeCoachings } from '@/hooks/useCoachings';
-import { useAuth } from '@/hooks/useAuth';
+import { useEffectiveUser } from '@/hooks/useEffectiveUser';
+import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ClipboardCheck, Star, CheckCircle, AlertCircle } from 'lucide-react';
@@ -20,11 +21,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 
 export function MyCoachingsCard() {
-  const { user } = useAuth();
+  const { id: effectiveUserId } = useEffectiveUser();
+  const { branchRoles } = usePermissionsWithImpersonation();
   const { data: pendingCoachings, isLoading: loadingPending } = useMyPendingCoachings();
-  const { data: recentCoachings, isLoading: loadingRecent } = useEmployeeCoachings(user?.id || null, null);
+  const { data: recentCoachings, isLoading: loadingRecent } = useEmployeeCoachings(effectiveUserId, null);
   const acknowledgeCoaching = useAcknowledgeCoaching();
-
+  
   const [selectedCoaching, setSelectedCoaching] = useState<{
     id: string;
     month: string;
@@ -33,8 +35,16 @@ export function MyCoachingsCard() {
     areas: string | null;
   } | null>(null);
   const [acknowledgeNotes, setAcknowledgeNotes] = useState('');
+  
+  // Los encargados son evaluados por coordinadores/superadmins, no ven sus coachings aquí
+  const isManager = branchRoles.some(r => r.local_role === 'encargado');
 
   const isLoading = loadingPending || loadingRecent;
+
+  // Si es encargado, no mostrar este card (son evaluados por coordinadores)
+  if (isManager) {
+    return null;
+  }
 
   if (isLoading) {
     return (
