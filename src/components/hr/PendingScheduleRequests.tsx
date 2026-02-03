@@ -16,11 +16,15 @@ import {
   Clock,
   Loader2,
   User,
+  FileWarning,
+  ExternalLink,
+  FileText,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { useState } from 'react';
+import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -30,14 +34,19 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 
+type RequestType = 'day_off' | 'shift_change' | 'absence_justification' | 'other';
+type AbsenceType = 'medical' | 'personal' | 'emergency' | 'other';
+
 interface PendingRequest {
   id: string;
   user_id: string;
-  request_type: 'day_off' | 'shift_change' | 'other';
+  request_type: RequestType;
   request_date: string;
   reason: string | null;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
+  evidence_url: string | null;
+  absence_type: AbsenceType | null;
   profile?: {
     full_name: string;
     avatar_url: string | null;
@@ -67,7 +76,9 @@ export default function PendingScheduleRequests({ branchId }: PendingScheduleReq
           request_date,
           reason,
           status,
-          created_at
+          created_at,
+          evidence_url,
+          absence_type
         `)
         .eq('branch_id', branchId)
         .eq('status', 'pending')
@@ -125,20 +136,32 @@ export default function PendingScheduleRequests({ branchId }: PendingScheduleReq
     },
   });
 
-  const getTypeIcon = (type: string) => {
+  const getTypeIcon = (type: RequestType) => {
     switch (type) {
       case 'day_off': return CalendarOff;
       case 'shift_change': return RefreshCw;
+      case 'absence_justification': return FileWarning;
       default: return HelpCircle;
     }
   };
 
-  const getTypeLabel = (type: string) => {
+  const getTypeLabel = (type: RequestType) => {
     switch (type) {
       case 'day_off': return 'Día libre';
       case 'shift_change': return 'Cambio turno';
+      case 'absence_justification': return 'Justificativo';
       case 'other': return 'Otro';
       default: return type;
+    }
+  };
+
+  const getAbsenceTypeLabel = (type: AbsenceType | null) => {
+    switch (type) {
+      case 'medical': return '🏥 Médico';
+      case 'personal': return '👤 Personal';
+      case 'emergency': return '🚨 Emergencia';
+      case 'other': return '📋 Otro';
+      default: return null;
     }
   };
 
@@ -192,40 +215,71 @@ export default function PendingScheduleRequests({ branchId }: PendingScheduleReq
         <CardContent className="space-y-3">
           {requests.map((request) => {
             const TypeIcon = getTypeIcon(request.request_type);
+            const isJustification = request.request_type === 'absence_justification';
+            const absenceLabel = getAbsenceTypeLabel(request.absence_type);
             
             return (
               <div 
                 key={request.id}
-                className="flex items-center justify-between p-4 rounded-lg border bg-background"
+                className={cn(
+                  'flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border bg-background gap-4',
+                  isJustification && 'border-amber-200 dark:border-amber-800'
+                )}
               >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-muted">
-                    <TypeIcon className="w-4 h-4 text-muted-foreground" />
+                <div className="flex items-start gap-3">
+                  <div className={cn(
+                    'p-2 rounded-full',
+                    isJustification ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-muted'
+                  )}>
+                    <TypeIcon className={cn(
+                      'w-4 h-4',
+                      isJustification ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'
+                    )} />
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium">
                         {request.profile?.full_name || 'Usuario'}
                       </span>
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant={isJustification ? 'outline' : 'secondary'} className={cn(
+                        'text-xs',
+                        isJustification && 'border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-400'
+                      )}>
                         {getTypeLabel(request.request_type)}
                       </Badge>
+                      {absenceLabel && (
+                        <Badge variant="outline" className="text-xs">
+                          {absenceLabel}
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {format(new Date(request.request_date), "EEEE d 'de' MMMM", { locale: es })}
                     </p>
                     {request.reason && (
-                      <p className="text-sm text-muted-foreground italic mt-1">
+                      <p className="text-sm text-muted-foreground italic">
                         "{request.reason}"
                       </p>
                     )}
-                    <p className="text-xs text-muted-foreground mt-1">
+                    {request.evidence_url && (
+                      <a 
+                        href={request.evidence_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                      >
+                        <FileText className="w-3 h-3" />
+                        Ver justificativo
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                    <p className="text-xs text-muted-foreground">
                       Solicitado {format(new Date(request.created_at), "d MMM", { locale: es })}
                     </p>
                   </div>
                 </div>
                 
-                <div className="flex gap-2">
+                <div className="flex gap-2 sm:flex-shrink-0">
                   <Button
                     size="sm"
                     variant="outline"
@@ -233,7 +287,7 @@ export default function PendingScheduleRequests({ branchId }: PendingScheduleReq
                     onClick={() => handleAction(request, 'reject')}
                   >
                     <XCircle className="w-4 h-4 mr-1" />
-                    Rechazar
+                    {isJustification ? 'Rechazar' : 'Rechazar'}
                   </Button>
                   <Button
                     size="sm"
@@ -241,7 +295,7 @@ export default function PendingScheduleRequests({ branchId }: PendingScheduleReq
                     onClick={() => handleAction(request, 'approve')}
                   >
                     <CheckCircle2 className="w-4 h-4 mr-1" />
-                    Aprobar
+                    {isJustification ? 'Justificar' : 'Aprobar'}
                   </Button>
                 </div>
               </div>
@@ -253,37 +307,70 @@ export default function PendingScheduleRequests({ branchId }: PendingScheduleReq
       {/* Confirmation Dialog */}
       <Dialog open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
         <DialogContent className="sm:max-w-md">
-          {selectedRequest && (
-            <>
-              <DialogHeader>
-                <DialogTitle>
-                  {actionType === 'approve' ? 'Aprobar solicitud' : 'Rechazar solicitud'}
-                </DialogTitle>
-                <DialogDescription>
-                  {selectedRequest.profile?.full_name} - {getTypeLabel(selectedRequest.request_type)} para el{' '}
-                  {format(new Date(selectedRequest.request_date), "EEEE d 'de' MMMM", { locale: es })}
-                </DialogDescription>
-              </DialogHeader>
+          {selectedRequest && (() => {
+            const isJustification = selectedRequest.request_type === 'absence_justification';
+            const absenceLabel = getAbsenceTypeLabel(selectedRequest.absence_type);
+            
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle>
+                    {isJustification 
+                      ? (actionType === 'approve' ? 'Justificar falta' : 'Rechazar justificativo')
+                      : (actionType === 'approve' ? 'Aprobar solicitud' : 'Rechazar solicitud')
+                    }
+                  </DialogTitle>
+                  <DialogDescription>
+                    {selectedRequest.profile?.full_name} - {getTypeLabel(selectedRequest.request_type)} 
+                    {absenceLabel && ` (${absenceLabel})`} para el{' '}
+                    {format(new Date(selectedRequest.request_date), "EEEE d 'de' MMMM", { locale: es })}
+                  </DialogDescription>
+                </DialogHeader>
 
-              <div className="space-y-4 pt-4">
-                {selectedRequest.reason && (
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="text-sm text-muted-foreground">Motivo del empleado:</p>
-                    <p className="text-sm font-medium">"{selectedRequest.reason}"</p>
-                  </div>
-                )}
+                <div className="space-y-4 pt-4">
+                  {selectedRequest.reason && (
+                    <div className="p-3 bg-muted rounded-lg">
+                      <p className="text-sm text-muted-foreground">
+                        {isJustification ? 'Explicación del empleado:' : 'Motivo del empleado:'}
+                      </p>
+                      <p className="text-sm font-medium">"{selectedRequest.reason}"</p>
+                    </div>
+                  )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="responseNote">
-                    {actionType === 'reject' ? 'Motivo del rechazo (recomendado)' : 'Nota (opcional)'}
-                  </Label>
-                  <Textarea
-                    id="responseNote"
-                    value={responseNote}
-                    onChange={(e) => setResponseNote(e.target.value)}
-                    placeholder={actionType === 'reject' ? 'Ej: No hay cobertura para ese día' : 'Nota adicional...'}
-                    rows={3}
-                  />
+                  {selectedRequest.evidence_url && (
+                    <div className="p-3 bg-muted rounded-lg">
+                      <p className="text-sm text-muted-foreground mb-2">Justificativo adjunto:</p>
+                      <a 
+                        href={selectedRequest.evidence_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-sm text-primary hover:underline font-medium"
+                      >
+                        <FileText className="w-4 h-4" />
+                        Ver documento
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="responseNote">
+                      {actionType === 'reject' 
+                        ? (isJustification ? 'Motivo del rechazo (recomendado)' : 'Motivo del rechazo (recomendado)')
+                        : 'Nota (opcional)'
+                      }
+                    </Label>
+                    <Textarea
+                      id="responseNote"
+                      value={responseNote}
+                      onChange={(e) => setResponseNote(e.target.value)}
+                      placeholder={
+                        actionType === 'reject' 
+                          ? (isJustification ? 'Ej: El certificado no es válido' : 'Ej: No hay cobertura para ese día')
+                          : 'Nota adicional...'
+                      }
+                      rows={3}
+                    />
                 </div>
 
                 <div className="flex gap-3 pt-2">
@@ -307,12 +394,16 @@ export default function PendingScheduleRequests({ branchId }: PendingScheduleReq
                     ) : (
                       <XCircle className="w-4 h-4 mr-2" />
                     )}
-                    {actionType === 'approve' ? 'Confirmar aprobación' : 'Confirmar rechazo'}
+                    {isJustification 
+                      ? (actionType === 'approve' ? 'Justificar falta' : 'Rechazar justificativo')
+                      : (actionType === 'approve' ? 'Confirmar aprobación' : 'Confirmar rechazo')
+                    }
                   </Button>
                 </div>
               </div>
             </>
-          )}
+          );
+        })()}
         </DialogContent>
       </Dialog>
     </>

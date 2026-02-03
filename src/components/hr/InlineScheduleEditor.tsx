@@ -8,9 +8,9 @@
  * - Same day columns width for perfect alignment
  */
 import { useState, useMemo, useCallback } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -82,6 +82,32 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
   const { team, loading: loadingTeam } = useTeamData(branchId, { excludeOwners: true });
   const { data: holidays = [] } = useHolidays(month, year);
   const { data: schedules = [], isLoading: loadingSchedules, refetch } = useMonthlySchedules(branchId, month, year);
+
+  // Fetch birthdays from employee_data
+  const { data: birthdayData = [] } = useQuery({
+    queryKey: ['employee-birthdays', branchId],
+    queryFn: async () => {
+      if (!branchId) return [];
+      const { data } = await supabase
+        .from('employee_data')
+        .select('user_id, birth_date')
+        .eq('branch_id', branchId);
+      return data || [];
+    },
+    enabled: !!branchId,
+  });
+
+  // Map of user_id -> birth month (1-12)
+  const birthdayMonthMap = useMemo(() => {
+    const map = new Map<string, number>();
+    birthdayData.forEach(e => {
+      if (e.birth_date) {
+        const birthMonth = new Date(e.birth_date).getMonth() + 1;
+        map.set(e.user_id, birthMonth);
+      }
+    });
+    return map;
+  }, [birthdayData]);
 
   // Generate days of the month
   const monthDays = useMemo(() => {
@@ -301,6 +327,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
       is_day_off: boolean;
       user_id: string;
       user_name: string;
+      work_position?: string | null;
     }> = [];
     
     // Get team member names map
@@ -316,6 +343,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
           is_day_off: pendingChange.isDayOff,
           user_id: s.user_id!,
           user_name: teamNameMap.get(s.user_id!) || 'Empleado',
+          work_position: pendingChange.position,
         });
       } else {
         result.push({
@@ -325,6 +353,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
           is_day_off: s.is_day_off || false,
           user_id: s.user_id!,
           user_name: teamNameMap.get(s.user_id!) || 'Empleado',
+          work_position: (s as any).work_position,
         });
       }
     });
@@ -339,12 +368,24 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
           is_day_off: change.isDayOff,
           user_id: change.userId,
           user_name: change.userName,
+          work_position: change.position,
         });
       }
     });
     
     return result;
   }, [schedules, pendingChanges, team]);
+
+  // Detect if employee already used birthday day off this month
+  const birthdayUsedMap = useMemo(() => {
+    const used = new Map<string, boolean>();
+    schedulesWithPending.forEach(s => {
+      if (s.work_position === 'cumple') {
+        used.set(s.user_id, true);
+      }
+    });
+    return used;
+  }, [schedulesWithPending]);
 
   // Validación: máximo 6 días consecutivos sin franco (Ley 11.544 Art 6)
   const consecutiveDaysViolations = useMemo(() => {
@@ -453,6 +494,15 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
 
   // Render schedule cell content
   const renderCellContent = (value: ScheduleValue, isPending: boolean, isHoliday: boolean) => {
+    // Birthday day off shows with cake emoji
+    if (value.isDayOff && (value.isBirthdayOff || value.position === 'cumple')) {
+      return (
+        <Badge variant="secondary" className={cn('text-[10px] px-1.5 bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300', isPending && 'ring-2 ring-primary ring-offset-1')}>
+          🎂 Cumple
+        </Badge>
+      );
+    }
+    
     if (value.isDayOff) {
       return (
         <Badge variant="secondary" className={cn('text-[10px] px-1.5', isPending && 'ring-2 ring-primary ring-offset-1')}>
@@ -729,28 +779,34 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                             const isPending = hasPendingChange(member.id, dateStr);
                             const isEditable = canManageSchedules && !isHoliday;
 
-                            return (
-                              <ScheduleCellPopover
-                                key={dateStr}
-                                value={value}
-                                onChange={(newValue) => handleCellChange(member.id, member.full_name, dateStr, newValue)}
-                                disabled={!isEditable}
-                                employeeName={member.full_name}
-                                dateLabel={format(day, "EEEE d 'de' MMMM", { locale: es })}
-                              >
-                                <div
-                                  style={{ width: DAY_WIDTH, height: SCHEDULE_ROW_HEIGHT }}
-                                  className={cn(
-                                    'shrink-0 flex items-center justify-center border-r cursor-pointer transition-colors',
-                                    isHoliday && 'bg-warning/10',
-                                    isSunday && 'bg-muted/30',
-                                    isEditable && 'hover:bg-primary/5'
-                                  )}
+                              const hasBirthdayThisMonth = birthdayMonthMap.get(member.id) === month;
+                              const birthdayUsed = birthdayUsedMap.get(member.id) || false;
+
+                              return (
+                                <ScheduleCellPopover
+                                  key={dateStr}
+                                  value={value}
+                                  onChange={(newValue) => handleCellChange(member.id, member.full_name, dateStr, newValue)}
+                                  disabled={!isEditable}
+                                  employeeName={member.full_name}
+                                  dateLabel={format(day, "EEEE d 'de' MMMM", { locale: es })}
+                                  defaultPosition={member.default_position}
+                                  hasBirthdayThisMonth={hasBirthdayThisMonth}
+                                  birthdayUsedThisMonth={birthdayUsed}
                                 >
-                                  {renderCellContent(value, isPending, isHoliday)}
-                                </div>
-                              </ScheduleCellPopover>
-                            );
+                                  <div
+                                    style={{ width: DAY_WIDTH, height: SCHEDULE_ROW_HEIGHT }}
+                                    className={cn(
+                                      'shrink-0 flex items-center justify-center border-r cursor-pointer transition-colors',
+                                      isHoliday && 'bg-warning/10',
+                                      isSunday && 'bg-muted/30',
+                                      isEditable && 'hover:bg-primary/5'
+                                    )}
+                                  >
+                                    {renderCellContent(value, isPending, isHoliday)}
+                                  </div>
+                                </ScheduleCellPopover>
+                              );
                           })}
                         </div>
                       ))

@@ -1426,8 +1426,10 @@ export type Database = {
       }
       schedule_requests: {
         Row: {
+          absence_type: string | null
           branch_id: string
           created_at: string | null
+          evidence_url: string | null
           id: string
           reason: string | null
           request_date: string
@@ -1439,8 +1441,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          absence_type?: string | null
           branch_id: string
           created_at?: string | null
+          evidence_url?: string | null
           id?: string
           reason?: string | null
           request_date: string
@@ -1452,8 +1456,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          absence_type?: string | null
           branch_id?: string
           created_at?: string | null
+          evidence_url?: string | null
           id?: string
           reason?: string | null
           request_date?: string
