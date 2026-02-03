@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
-import { UsersFilters, UsersTable, useUsersData, getHighestRole } from '@/components/admin/users';
+import { UsersFilters, UsersTable, useUsersData, userHasRole } from '@/components/admin/users';
 
 export default function UsersPage() {
   const { isSuperadmin, loading: permLoading } = usePermissionsV2();
@@ -23,12 +23,11 @@ export default function UsersPage() {
         }
       }
 
-      // Role filter - usa nueva arquitectura
+      // Role filter - buscar si TIENE el rol (inclusivo)
       if (roleFilter !== 'all') {
-        const highestRole = getHighestRole(user.brand_role, user.branch_roles);
         if (roleFilter === 'sin_rol') {
           if (user.brand_role || user.hasLocalAccess) return false;
-        } else if (highestRole !== roleFilter) {
+        } else if (!userHasRole(user.brand_role, user.branch_roles, roleFilter)) {
           return false;
         }
       }
