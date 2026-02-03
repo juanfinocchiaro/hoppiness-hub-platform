@@ -55,7 +55,18 @@ export function useUserCommunications() {
     queryFn: async () => {
       if (!userId) return { brand: [], local: [] };
       
-      // Get all published communications (RLS handles filtering)
+      // Get user's branch IDs from user_branch_roles
+      const { data: userBranches, error: branchError } = await supabase
+        .from('user_branch_roles')
+        .select('branch_id')
+        .eq('user_id', userId)
+        .eq('is_active', true);
+      
+      if (branchError) throw branchError;
+      
+      const userBranchIds = new Set(userBranches?.map(b => b.branch_id) || []);
+      
+      // Get all published communications (RLS handles basic filtering)
       const { data: comms, error: commsError } = await supabase
         .from('communications')
         .select('*, branches:source_branch_id(name)')
@@ -87,7 +98,13 @@ export function useUserCommunications() {
       
       // Separate by source
       const brand = allComms.filter(c => c.source_type === 'brand');
-      const local = allComms.filter(c => c.source_type === 'local');
+      
+      // Filter local communications: only show those from user's branches
+      const local = allComms.filter(c => 
+        c.source_type === 'local' && 
+        c.source_branch_id && 
+        userBranchIds.has(c.source_branch_id)
+      );
       
       return { brand, local };
     },
