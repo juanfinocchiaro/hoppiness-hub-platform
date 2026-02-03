@@ -1,254 +1,155 @@
 
-# Plan de Mejoras: PIN de Fichaje, Fecha de Ingreso, y Sistema de Horarios
+# Plan: Sistema de Posiciones de Trabajo Configurables
 
-## Resumen de Cambios Solicitados
+## Resumen del Problema
 
-1. **PIN de Fichaje en Mi Cuenta**
-   - El banner "Configura tu PIN" aparece aunque el PIN ya existe (bug)
-   - Mover la gestión de PIN de /cuenta/perfil a /cuenta directamente
-   - Mostrar PIN con botón "ver" y "modificar" en modal independiente
+Actualmente las posiciones de trabajo (Cajero, Cocinero, Runner, Lavacopas) están:
+1. **Hardcodeadas en el frontend** (`src/types/workPosition.ts`)
+2. **Definidas como ENUM fijo en PostgreSQL** (`work_position_type`)
 
-2. **Editar Fecha de Ingreso**
-   - Los encargados deben poder editar la fecha de ingreso (hire_date)
-   - Ya existe en EmployeeDataModal pero verificar que funcione correctamente
+El usuario necesita:
+- Renombrar "Cocinero/a" a "Sandwichero"
+- Agregar "Encargado" como posición operativa
+- Agregar "Cafetero" como nueva posición
 
-3. **UI de Horarios Simplificada**
-   - Eliminar el wizard de 3 pasos
-   - Edición inline tipo Excel directamente en el calendario
-   - Al guardar, mostrar confirmación antes de notificar
+## Solución Propuesta
 
-4. **Visualización de Cobertura por Turno**
-   - Mostrar cuántos empleados hay por hora/turno del día
-   - Barra o resumen debajo del calendario
+Migrar de un ENUM fijo a una **tabla configurable** `work_positions`, similar al patrón usado en `brand_closure_config`.
 
 ---
 
-## CAMBIO 1: Sistema de PIN de Fichaje Mejorado
+## Cambios en Base de Datos
 
-### 1.1 Problema Actual
+### 1. Nueva Tabla: `work_positions`
 
-El banner `MissingPinBanner` aparece cuando `branchPinData?.filter(r => !r.clock_pin)` encuentra registros sin PIN. Sin embargo:
-- El PIN existe en `user_branch_roles.clock_pin`
-- Pero la query puede no estar trayendo el dato correctamente
-- Además, la gestión de PIN está en `/cuenta/perfil`, muy enterrado
-
-### 1.2 Nueva Arquitectura
-
-**Mover PIN a CuentaDashboard con modal:**
-
-| Elemento | Ubicación Actual | Ubicación Nueva |
-|----------|------------------|-----------------|
-| BranchPinCard | CuentaPerfil.tsx | CuentaDashboard.tsx (como modal) |
-| MissingPinBanner | CuentaDashboard.tsx | Mantener pero corregir lógica |
-
-### 1.3 Archivos a Modificar
-
-**`src/pages/cuenta/CuentaDashboard.tsx`:**
-- Agregar estado para modal de PIN abierto
-- Crear nuevo componente inline `PinManagementModal`
-- Mostrar PIN por sucursal con botones "Ver" / "Modificar"
-- Corregir la lógica de detección de PIN faltante
-
-**`src/pages/cuenta/CuentaPerfil.tsx`:**
-- Remover toda la sección de PIN de fichaje
-- Mantener solo: avatar, nombre, teléfono, fecha nacimiento, contraseña
-
-### 1.4 Nuevo Componente: PinManagementModal
-
-```
-src/components/cuenta/PinManagementModal.tsx
+```sql
+CREATE TABLE public.work_positions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  key text UNIQUE NOT NULL,        -- Identificador interno (ej: 'sandwichero')
+  label text NOT NULL,             -- Etiqueta visible (ej: 'Sandwichero')
+  sort_order integer DEFAULT 0,    -- Orden de aparición
+  is_active boolean DEFAULT true,  -- Activo/Inactivo
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
 ```
 
-**Funcionalidad:**
-- Lista de sucursales asignadas
-- Por cada sucursal:
-  - Si tiene PIN: mostrar "••••" + botón "Ver" + botón "Modificar"
-  - Si no tiene PIN: mostrar "Sin PIN" + botón "Crear"
-- Al hacer clic en "Ver": mostrar PIN durante 3 segundos
-- Al hacer clic en "Modificar" o "Crear": formulario inline con validación
+### 2. Datos Iniciales
 
-### 1.5 UI en CuentaDashboard
+Insertar las posiciones actuales + nuevas:
 
-Dentro de la sección "Mi Trabajo", agregar debajo de cada card de sucursal:
+| key | label | sort_order |
+|-----|-------|------------|
+| cajero | Cajero/a | 1 |
+| sandwichero | Sandwichero | 2 |
+| cafetero | Cafetero | 3 |
+| runner | Runner | 4 |
+| lavacopas | Lavacopas | 5 |
+| encargado | Encargado | 6 |
 
+### 3. Modificar `employee_schedules`
+
+Actualmente usa el ENUM `work_position_type`. Necesitamos:
+- Cambiar `work_position` de ENUM a `text` (o referencia a `work_positions.key`)
+- Migrar datos existentes
+
+```sql
+-- Cambiar tipo de columna
+ALTER TABLE employee_schedules 
+  ALTER COLUMN work_position TYPE text;
 ```
-┌─────────────────────────────────────────────┐
-│ 📍 Manantiales                              │
-│ └─ PIN: •••• [Ver] [Modificar]              │
-│                                    [Entrar] │
-└─────────────────────────────────────────────┘
-```
 
-O como alternativa más limpia:
+### 4. RLS para `work_positions`
 
-```
-┌─────────────────────────────────────────────┐
-│ 📍 Manantiales          [👤 Encargado]      │
-│ 🔑 PIN configurado ✓    [Gestionar PIN]     │
-└─────────────────────────────────────────────┘
+```sql
+-- Solo superadmin puede modificar
+ALTER TABLE work_positions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "work_positions_read" ON work_positions
+  FOR SELECT TO authenticated
+  USING (true);
+
+CREATE POLICY "work_positions_admin" ON work_positions
+  FOR ALL TO authenticated
+  USING (is_superadmin(auth.uid()));
 ```
 
 ---
 
-## CAMBIO 2: Editar Fecha de Ingreso (Verificación)
+## Cambios en Frontend
 
-### 2.1 Estado Actual
-
-El modal `EmployeeDataModal.tsx` ya tiene:
-- Campo `hire_date` en la pestaña "Laboral" (línea 335-349)
-- Input tipo date que se guarda en `employee_data.hire_date`
-
-### 2.2 Verificación Necesaria
-
-La fecha de ingreso ya es editable. El único ajuste necesario es:
-- Agregar texto explicativo más claro: "Fecha real de inicio en la empresa (puede ser anterior al registro en el sistema)"
-- Posiblemente hacer el campo más prominente
-
-### 2.3 Modificación Menor
-
-En `EmployeeDataModal.tsx`, actualizar el texto descriptivo del campo hire_date.
-
----
-
-## CAMBIO 3: UI de Horarios Tipo Excel
-
-### 3.1 Problema Actual
-
-El flujo actual requiere:
-1. Clic en "Crear Horario" → abre wizard
-2. Paso 1: Seleccionar empleado
-3. Paso 2: Revisar solicitudes
-4. Paso 3: Configurar días con selección múltiple y presets
-5. Guardar → notificaciones
-
-**Demasiados pasos para ediciones simples.**
-
-### 3.2 Nuevo Flujo Propuesto
-
-**Edición inline directamente en el calendario:**
-
-1. El calendario muestra TODOS los empleados con sus celdas
-2. Clic en celda vacía → aparece popover rápido con opciones
-3. Clic en celda con horario → aparece popover de edición
-4. Los cambios se acumulan localmente (estado "dirty")
-5. Botón flotante "Guardar cambios (N pendientes)" aparece cuando hay cambios
-6. Al guardar → modal de confirmación: "Se notificará a X empleados"
-
-### 3.3 Componentes a Crear/Modificar
-
-**Nuevo: `src/components/hr/InlineScheduleEditor.tsx`**
-- Reemplaza a MonthlyScheduleView + CreateScheduleWizard
-- Grid editable con todas las celdas interactivas
-- Estado local para cambios pendientes
-- Botón flotante de guardar
-
-**Nuevo: `src/components/hr/ScheduleCellPopover.tsx`**
-- Popover que aparece al hacer clic en una celda
-- Presets de turno: Mañana, Tarde, Noche, Franco
-- Input de hora personalizada
-- Selector de posición (opcional)
-- Botón "Aplicar"
-
-**Nuevo: `src/components/hr/SaveScheduleDialog.tsx`**
-- Modal de confirmación antes de guardar
-- Lista de empleados afectados
-- Checkboxes de notificación (email/comunicado)
-- Botón "Publicar horarios"
-
-**Modificar: `src/pages/local/SchedulesPage.tsx`**
-- Reemplazar `MonthlyScheduleView` por `InlineScheduleEditor`
-- Eliminar referencia a CreateScheduleWizard
-
-### 3.4 Flujo Visual del Nuevo Sistema
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ Horarios de Febrero 2026                    [< Mes] [Mes >] │
-├─────────────────────────────────────────────────────────────┤
-│         │ Lun 1 │ Mar 2 │ Mié 3 │ Jue 4 │ Vie 5 │ Sab 6 │   │
-├─────────┼───────┼───────┼───────┼───────┼───────┼───────┤   │
-│ Juan P  │ 19:30 │ 19:30 │   L   │ 12:00 │ 19:30 │ 19:30 │   │
-│ María G │ 12:00 │ 12:00 │ 12:00 │   L   │ 12:00 │ 19:30 │   │
-│ Pedro L │   -   │   -   │ 19:30*│ 19:30 │   -   │   -   │   │
-└─────────────────────────────────────────────────────────────┘
-                                    * = modificado sin guardar
-
-┌─────────────────────────────────────────────────────────────┐
-│ 3 cambios pendientes                    [Descartar] [Guardar]│
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 3.5 Estructura de Estado
+### 1. Nuevo Hook: `src/hooks/useWorkPositions.ts`
 
 ```typescript
-interface PendingChange {
-  userId: string;
-  date: string;
-  startTime: string | null;
-  endTime: string | null;
-  isDayOff: boolean;
-  position: WorkPositionType | null;
-  action: 'create' | 'update' | 'delete';
+// Obtiene posiciones dinámicas desde la DB
+export function useWorkPositions() {
+  return useQuery({
+    queryKey: ['work-positions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('work_positions')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order');
+      if (error) throw error;
+      return data;
+    },
+  });
 }
 
-// Estado local en el componente
-const [pendingChanges, setPendingChanges] = useState<Map<string, PendingChange>>();
+// Mutaciones para CRUD (solo superadmin)
+export function useUpdateWorkPosition() { ... }
+export function useCreateWorkPosition() { ... }
 ```
 
----
+### 2. Modificar `src/types/workPosition.ts`
 
-## CAMBIO 4: Visualización de Cobertura por Turno
+Cambiar de tipos fijos a dinámicos:
 
-### 4.1 Problema
+```typescript
+// Mantener tipo genérico para compatibilidad
+export type WorkPositionType = string;
 
-El encargado quiere ver rápidamente:
-- ¿Cuántas personas trabajan en cada turno del día?
-- ¿Hay días con poca gente?
-
-### 4.2 Solución: Barra de Resumen por Día
-
-Debajo del calendario, agregar una fila de resumen:
-
-```
-│ Día     │ Lun 1 │ Mar 2 │ Mié 3 │ Jue 4 │ Vie 5 │ Sab 6 │
-│─────────┼───────┼───────┼───────┼───────┼───────┼───────│
-│ 👥 Total│   5   │   4   │   3   │   6   │   5   │   7   │
-│ ☀️ Med  │   2   │   2   │   1   │   3   │   2   │   3   │
-│ 🌙 Noche│   3   │   2   │   2   │   3   │   3   │   4   │
+// Eliminar WORK_POSITIONS y WORK_POSITION_LABELS hardcodeados
+// Ahora vendrán del hook useWorkPositions()
 ```
 
-Con indicadores de color:
-- **Rojo**: Menos de 2 personas en un turno
-- **Amarillo**: 2-3 personas
-- **Verde**: 4+ personas
+### 3. Actualizar `src/components/hr/ScheduleCellPopover.tsx`
 
-### 4.3 Componente Nuevo: ShiftCoverageBar
+Usar el hook en lugar de constantes:
 
+```typescript
+import { useWorkPositions } from '@/hooks/useWorkPositions';
+
+// Dentro del componente:
+const { data: positions = [] } = useWorkPositions();
+
+// En el Select:
+<SelectContent>
+  <SelectItem value="none">Sin posición</SelectItem>
+  {positions.map((pos) => (
+    <SelectItem key={pos.key} value={pos.key}>
+      {pos.label}
+    </SelectItem>
+  ))}
+</SelectContent>
 ```
-src/components/hr/ShiftCoverageBar.tsx
-```
 
-**Props:**
-- `schedules: ScheduleEntry[]`
-- `branchShifts: BranchShift[]` (para saber los turnos configurados)
-- `monthDays: Date[]`
+### 4. Nueva Página de Configuración: `/mimarca/posiciones`
 
-**Lógica:**
-1. Agrupar schedules por fecha
-2. Para cada fecha, contar cuántos en cada franja horaria
-3. Clasificar según `branch_shifts` del local (Mediodía: 12:00-17:00, Noche: 17:00-00:00)
+Para que el superadmin pueda:
+- Ver lista de posiciones
+- Agregar nuevas
+- Renombrar existentes
+- Activar/desactivar
+- Reordenar
 
-### 4.4 Integración
+### 5. Actualizar Otros Componentes
 
-Agregar al final del grid en `InlineScheduleEditor.tsx`:
-
-```jsx
-<ShiftCoverageBar 
-  schedules={allSchedules}
-  branchShifts={branchShifts}
-  monthDays={monthDays}
-/>
-```
+- `InlineScheduleEditor.tsx` - Para mostrar etiqueta correcta
+- `CreateScheduleWizard.tsx` - Usar hook dinámico
+- `TeamTable.tsx` / `TeamCardList.tsx` - Mostrar posición del empleado
+- `EmployeeDataModal.tsx` - Selector de posición default
 
 ---
 
@@ -256,93 +157,70 @@ Agregar al final del grid en `InlineScheduleEditor.tsx`:
 
 | Archivo | Descripción |
 |---------|-------------|
-| `src/components/cuenta/PinManagementModal.tsx` | Modal para gestionar PINs |
-| `src/components/hr/InlineScheduleEditor.tsx` | Editor de horarios tipo Excel |
-| `src/components/hr/ScheduleCellPopover.tsx` | Popover de edición de celda |
-| `src/components/hr/SaveScheduleDialog.tsx` | Dialog de confirmación al guardar |
-| `src/components/hr/ShiftCoverageBar.tsx` | Barra de resumen de cobertura |
+| `src/hooks/useWorkPositions.ts` | Hook para CRUD de posiciones |
+| `src/pages/admin/WorkPositionsPage.tsx` | Página de configuración |
+| `src/components/admin/WorkPositionsManager.tsx` | Componente de gestión |
 
 ## Archivos a Modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/pages/cuenta/CuentaDashboard.tsx` | Agregar gestión de PIN inline + modal |
-| `src/pages/cuenta/CuentaPerfil.tsx` | Remover sección de PIN |
-| `src/pages/local/SchedulesPage.tsx` | Usar nuevo InlineScheduleEditor |
-| `src/components/local/team/EmployeeDataModal.tsx` | Mejorar texto de hire_date |
-
-## Archivos a Eliminar (Deprecar)
-
-| Archivo | Razón |
-|---------|-------|
-| `src/components/hr/CreateScheduleWizard.tsx` | Reemplazado por edición inline |
-| `src/components/cuenta/BranchPinCard.tsx` | Integrado en PinManagementModal |
+| `src/types/workPosition.ts` | Simplificar a tipo string dinámico |
+| `src/components/hr/ScheduleCellPopover.tsx` | Usar hook dinámico |
+| `src/components/hr/InlineScheduleEditor.tsx` | Usar hook para etiquetas |
+| `src/components/hr/CreateScheduleWizard.tsx` | Usar hook dinámico |
+| `src/pages/admin/BrandLayout.tsx` | Agregar link a nueva página |
 
 ---
 
 ## Orden de Implementación
 
-1. **Fase A: PIN de Fichaje** (más urgente - afecta onboarding)
-   - Crear PinManagementModal
-   - Modificar CuentaDashboard
-   - Limpiar CuentaPerfil
+1. **Fase A: Base de Datos**
+   - Crear tabla `work_positions`
+   - Insertar datos iniciales (con las nuevas posiciones)
+   - Modificar columna en `employee_schedules`
+   - Configurar RLS
 
-2. **Fase B: Fecha de Ingreso**
-   - Pequeño ajuste de texto en EmployeeDataModal
+2. **Fase B: Hook y Tipos**
+   - Crear `useWorkPositions.ts`
+   - Actualizar `workPosition.ts`
 
-3. **Fase C: Horarios Inline**
-   - Crear InlineScheduleEditor
-   - Crear ScheduleCellPopover
-   - Crear SaveScheduleDialog
-   - Integrar en SchedulesPage
+3. **Fase C: Componentes de Horarios**
+   - Actualizar ScheduleCellPopover
+   - Actualizar InlineScheduleEditor
+   - Actualizar CreateScheduleWizard
 
-4. **Fase D: Cobertura por Turno**
-   - Crear ShiftCoverageBar
-   - Integrar en InlineScheduleEditor
+4. **Fase D: Página de Configuración**
+   - Crear WorkPositionsPage
+   - Agregar a sidebar de Mi Marca
 
 ---
 
 ## Detalles Técnicos
 
-### Query para Cobertura
+### Compatibilidad Hacia Atrás
 
-```typescript
-// Clasificar un horario según branch_shifts
-function getShiftForTime(startTime: string, branchShifts: BranchShift[]): string | null {
-  const [hours] = startTime.split(':').map(Number);
-  
-  for (const shift of branchShifts) {
-    const [shiftStart] = shift.start_time.split(':').map(Number);
-    const [shiftEnd] = shift.end_time.split(':').map(Number);
-    
-    // Manejar cruce de medianoche
-    if (shiftEnd < shiftStart) {
-      if (hours >= shiftStart || hours < shiftEnd) return shift.name;
-    } else {
-      if (hours >= shiftStart && hours < shiftEnd) return shift.name;
-    }
-  }
-  return null;
-}
+Los valores existentes (`cajero`, `cocinero`, etc.) seguirán funcionando porque se mantendrán las mismas `key`. Solo se renombrará la `label` de "Cocinero/a" a "Sandwichero".
+
+### Migración de Datos
+
+```sql
+-- Actualizar registros existentes de 'cocinero' si hubiera
+-- (No es necesario si simplemente renombramos la etiqueta)
+UPDATE employee_schedules 
+SET work_position = 'sandwichero' 
+WHERE work_position = 'cocinero';
 ```
 
-### Hook para Turnos de Sucursal
+O simplemente mantener `cocinero` como key y cambiar solo el label a "Sandwichero".
 
-```typescript
-export function useBranchShifts(branchId: string | undefined) {
-  return useQuery({
-    queryKey: ['branch-shifts', branchId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('branch_shifts')
-        .select('*')
-        .eq('branch_id', branchId)
-        .eq('is_active', true)
-        .order('sort_order');
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!branchId,
-  });
-}
-```
+### Posiciones Finales Propuestas
+
+| Key | Label | Orden |
+|-----|-------|-------|
+| cajero | Cajero/a | 1 |
+| sandwichero | Sandwichero | 2 |
+| cafetero | Cafetero | 3 |
+| runner | Runner | 4 |
+| lavacopas | Lavacopas | 5 |
+| encargado_turno | Encargado de Turno | 6 |
