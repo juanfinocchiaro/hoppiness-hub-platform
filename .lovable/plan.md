@@ -1,177 +1,220 @@
 
+# Plan: Sistema de Copiar y Pegar Horarios
 
-# Plan: Flujo Simplificado para Franquiciados + Fix Bugs
+## Resumen
 
-## Resumen de Cambios
-
-Se van a corregir 3 problemas:
-1. **Bug del contador de urgentes** - Dice "2 comunicados urgentes" pero solo hay 1 visible
-2. **Card de ayuda genérica** - Muestra tips de empleados a franquiciados
-3. **Duplicación de información** - El franquiciado no necesita ver cards operativas en Mi Cuenta
+Se implementará una funcionalidad para copiar y pegar horarios de forma eficiente. La idea es permitir copiar el horario de un día (o semana) y pegarlo en otro lugar para acelerar la carga repetitiva.
 
 ---
 
-## Parte 1: Corregir Contador de Urgentes
+## Opciones de UX
 
-### Problema
-El banner dice "2 comunicados urgentes sin leer" pero la card de comunicados solo muestra 1 porque:
-- La card filtra por `target_roles` ✅
-- El banner **NO** filtra por `target_roles` ❌
+### Opción A: Copiar/Pegar por Día Individual
+- Click derecho (o botón "Copiar" en el popover) copia el horario de una celda
+- Luego click en otra celda y "Pegar" aplica el mismo horario
+- Simple pero tedioso si querés copiar semanas enteras
 
-### Solución
-Modificar el query `urgent-unread` en `CuentaDashboard.tsx` para que también filtre por los roles del usuario.
+### Opcion B: Copiar Semana Completa (Recomendada)
+- Un botón "Copiar semana" que copia los 7 días de un empleado (ej: Lun-Dom)
+- Luego un botón "Pegar semana" que aplica esos 7 días a partir de la fecha que elijas
+- Ideal para patrones semanales repetitivos
 
-**Archivo:** `src/pages/cuenta/CuentaDashboard.tsx` (líneas 73-101)
+### Opción C: Híbrido (La más flexible)
+- Copiar celda individual
+- Copiar semana de un empleado
+- Pegar en cualquier lugar (aplica al mismo día de la semana)
 
-Se agregará:
-1. Fetch de los `local_role` del usuario desde `user_branch_roles`
-2. Filtro de comunicados donde `target_roles` sea null O incluya algún rol del usuario
-
----
-
-## Parte 2: Card de Ayuda Adaptativa
-
-### Problema Actual
-La card de ayuda muestra:
-- "Podés ver tus próximos horarios programados" ← No aplica a franquiciado
-- "Solicitá días libres desde la card de solicitudes" ← No aplica a franquiciado
-- "Tu historial de fichajes y adelantos está disponible" ← No aplica a franquiciado
-
-### Solución
-Crear configuraciones de ayuda diferenciadas por tipo de usuario.
-
-**Archivo:** `src/lib/helpConfig.ts`
-
-Agregar nueva entrada:
-```typescript
-'cuenta-dashboard-franquiciado': {
-  pageId: 'cuenta-dashboard-franquiciado',
-  title: 'Mi Cuenta',
-  description: 'Acceso rápido a la gestión de tus sucursales.',
-  tips: [
-    'Entrá a "Mi Local" para ver toda la operación de tu sucursal',
-    'Los comunicados de marca aparecen aquí',
-    'Podés actualizar tu información personal en "Mi Perfil"',
-  ],
-},
-```
-
-**Archivo:** `src/pages/cuenta/CuentaDashboard.tsx`
-
-Cambiar el `PageHelp` para que use un pageId dinámico:
-```typescript
-const isOnlyFranquiciado = branchRoles.length > 0 && 
-  branchRoles.every(r => r.local_role === 'franquiciado');
-
-const helpPageId = isOnlyFranquiciado ? 'cuenta-dashboard-franquiciado' : 'cuenta-dashboard';
-
-// En el render:
-<PageHelp pageId={helpPageId} />
-```
+**Recomendación:** Opción B (Copiar Semana) porque:
+1. Los horarios gastronómicos suelen seguir patrones semanales
+2. Copiar día por día es muy tedioso para 31 días
+3. Permite llenar un mes completo en 4 clicks
 
 ---
 
-## Parte 3: Simplificar Mi Cuenta para Franquiciados
+## Diseño de la Solución (Opción B)
 
-### Principio de Diseño
-- **Mi Cuenta** = Acceso rápido a sucursales + comunicados de marca + perfil
-- **Mi Local** = Toda la información operativa (en modo lectura para dueños)
+### Flujo de Trabajo
 
-### Lo que verá un Franquiciado en Mi Cuenta
-
-| Sección | ¿Mostrar? | Motivo |
-|---------|-----------|--------|
-| Card de ayuda | ✅ Con tips específicos | Contextual |
-| Card sucursal(es) | ✅ Sin PIN | Acceso a Mi Local |
-| Comunicados | ✅ Solo de marca | Evitar duplicación con Mi Local |
-| Mi Perfil | ✅ | Editar datos personales |
-| Cards operativas | ❌ | Aplican solo a empleados |
-
-### Archivos a Modificar
-
-#### `src/pages/cuenta/CuentaDashboard.tsx`
-- Detectar si el usuario solo tiene rol `franquiciado`
-- Ocultar las cards operativas (horarios, fichajes, adelantos, etc.)
-- Pasar prop `showOnlyBrand` a `MyCommunicationsCard`
-
-```typescript
-const isOnlyFranquiciado = branchRoles.length > 0 && 
-  branchRoles.every(r => r.local_role === 'franquiciado');
-
-// En el render - Solo para empleados operativos:
-{!isOnlyFranquiciado && (
-  <div className="grid gap-3 md:gap-4">
-    <MyRegulationsCard />
-    <MyCoachingsCard />
-    <MyScheduleCard />
-    <MyRequestsCard />
-    <MyClockInsCard />
-    <MySalaryAdvancesCard />
-    <MyWarningsCard />
-  </div>
-)}
-
-// Comunicados solo de marca para franquiciados:
-<MyCommunicationsCard showOnlyBrand={isOnlyFranquiciado} />
+```text
+1. Usuario ve la grilla de horarios del mes
+2. Hace click en botón "Copiar semana" al lado de un empleado
+3. Se abre selector: ¿Qué semana copiar? (Semana 1, 2, 3, 4...)
+4. Sistema guarda en clipboard los 7 días de esa semana
+5. Aparece banner "Semana copiada - Selecciona dónde pegar"
+6. Usuario hace click en "Pegar" en la fila del mismo o diferente empleado
+7. Se despliega selector: ¿A partir de qué fecha pegar?
+8. Sistema aplica los 7 días (Lun->Lun, Mar->Mar, etc.) como cambios pendientes
+9. Usuario puede ajustar celdas individuales si hace falta
+10. Finalmente guarda todos los cambios
 ```
 
-#### `src/components/cuenta/MyCommunicationsCard.tsx`
-Agregar prop `showOnlyBrand` para ocultar sección "De tu Encargado":
+### Nuevos Elementos de UI
+
+1. **Botón "Copiar semana"** en cada fila de empleado
+   - Ícono: Copy o ClipboardCopy
+   - Al lado del nombre del empleado o como acción flotante
+
+2. **Banner de clipboard activo**
+   - "Semana de [Empleado] copiada (Lun-Dom)"
+   - Botón "Cancelar" para limpiar clipboard
+   - Se muestra fijo debajo del header
+
+3. **Botón "Pegar" condicional**
+   - Aparece en cada fila solo cuando hay algo en el clipboard
+   - Abre modal de selección de semana destino
+
+4. **Modal de selección de semana**
+   - Lista las semanas del mes (Semana 1: 1-7 Feb, Semana 2: 8-14 Feb, etc.)
+   - Preview de qué días se van a modificar
+   - Confirmación antes de aplicar
+
+---
+
+## Cambios Técnicos
+
+### Nuevos Estados en InlineScheduleEditor.tsx
 
 ```typescript
-interface MyCommunicationsCardProps {
-  showOnlyBrand?: boolean;
-}
+// Clipboard state
+const [clipboard, setClipboard] = useState<{
+  sourceUserId: string;
+  sourceUserName: string;
+  weekData: Map<number, ScheduleValue>; // dayOfWeek (0-6) -> schedule
+} | null>(null);
+```
 
-export default function MyCommunicationsCard({ showOnlyBrand = false }: ...) {
-  // Si showOnlyBrand, no mostrar comunicados locales
-  const displayLocalComms = showOnlyBrand ? [] : localComms;
+### Funciones Nuevas
+
+```typescript
+// Copiar semana de un empleado
+const handleCopyWeek = (userId: string, userName: string, weekStart: Date) => {
+  const weekData = new Map<number, ScheduleValue>();
   
-  // En render: condicionar sección "De tu Encargado"
-  {!showOnlyBrand && renderCommList(localComms, ...)}
+  for (let i = 0; i < 7; i++) {
+    const day = addDays(weekStart, i);
+    const dateStr = format(day, 'yyyy-MM-dd');
+    const value = getEffectiveValue(userId, dateStr);
+    weekData.set(day.getDay(), value);
+  }
+  
+  setClipboard({ sourceUserId: userId, sourceUserName: userName, weekData });
+  toast.info(`Semana de ${userName} copiada`);
+};
+
+// Pegar semana en otro empleado
+const handlePasteWeek = (targetUserId: string, targetUserName: string, targetWeekStart: Date) => {
+  if (!clipboard) return;
+  
+  for (let i = 0; i < 7; i++) {
+    const day = addDays(targetWeekStart, i);
+    const dateStr = format(day, 'yyyy-MM-dd');
+    const dayOfWeek = day.getDay();
+    const value = clipboard.weekData.get(dayOfWeek);
+    
+    if (value) {
+      handleCellChange(targetUserId, targetUserName, dateStr, value);
+    }
+  }
+  
+  toast.success(`Horario pegado para ${targetUserName}`);
+};
+```
+
+### Nuevo Componente: CopyPasteControls.tsx
+
+```typescript
+interface CopyPasteControlsProps {
+  member: TeamMember;
+  month: number;
+  year: number;
+  clipboard: ClipboardData | null;
+  onCopyWeek: (weekStart: Date) => void;
+  onPasteWeek: (weekStart: Date) => void;
+  onClearClipboard: () => void;
 }
 ```
 
+Este componente renderiza:
+- Botón "Copiar" con dropdown de semanas
+- Botón "Pegar" (solo si hay clipboard) con dropdown de semanas destino
+
 ---
 
-## Resumen de Archivos a Modificar
+## Archivos a Modificar
 
 | Archivo | Cambios |
 |---------|---------|
-| `src/pages/cuenta/CuentaDashboard.tsx` | 1. Corregir query urgentes. 2. PageHelp dinámico. 3. Ocultar cards operativas para franquiciados |
-| `src/lib/helpConfig.ts` | Agregar entrada `cuenta-dashboard-franquiciado` con tips específicos |
-| `src/components/cuenta/MyCommunicationsCard.tsx` | Agregar prop `showOnlyBrand` |
+| `InlineScheduleEditor.tsx` | Agregar estado clipboard, funciones copy/paste, UI de botones |
+| `ScheduleCellPopover.tsx` | (Opcional) Agregar botón "Copiar celda" para copy individual |
 
 ---
 
-## Vista Final para Maria Eugenia (Franquiciada)
+## UI Propuesta
 
-### Antes
+### Vista Normal (sin clipboard)
+
 ```text
-MI CUENTA
-├── Card ayuda (tips de empleados) ← Irrelevante
-├── Banner "2 urgentes" ← Bug
-├── Card Villa Allende
-├── Comunicados (De la Marca + De tu Encargado)
-├── Cards operativas vacías ← Innecesarias
-└── Mi Perfil
+┌─────────────────┬───────┬───────┬───────┬───────┐
+│ Juan Pérez  [📋]│ Lun 3 │ Mar 4 │ Mié 5 │ Jue 6 │ ...
+├─────────────────┼───────┼───────┼───────┼───────┤
+│ María López [📋]│ 19-23 │ 19-23 │Franco │ 19-00 │ ...
+└─────────────────┴───────┴───────┴───────┴───────┘
+
+[📋] = Botón "Copiar semana" (dropdown con semanas)
 ```
 
-### Después
+### Vista con Clipboard Activo
+
 ```text
-MI CUENTA
-├── Card ayuda (tips de franquiciado) ← Relevante
-├── Banner "1 urgente" ← Correcto
-├── Card Villa Allende (sin PIN)
-├── Comunicados (Solo de marca)
-└── Mi Perfil
+┌────────────────────────────────────────────────────────────┐
+│ 📋 Semana de Juan Pérez copiada (Lun-Dom)  [✕ Cancelar]   │
+└────────────────────────────────────────────────────────────┘
+
+┌─────────────────────┬───────┬───────┬───────┬───────┐
+│ Juan Pérez  [📋][📥]│ Lun 3 │ Mar 4 │ Mié 5 │ Jue 6 │ ...
+├─────────────────────┼───────┼───────┼───────┼───────┤
+│ María López [📋][📥]│ 19-23 │ 19-23 │Franco │ 19-00 │ ...
+└─────────────────────┴───────┴───────┴───────┴───────┘
+
+[📥] = Botón "Pegar" (dropdown con semanas destino)
 ```
 
-El franquiciado accede a **Mi Local** para ver:
-- Dashboard de ventas (solo ver)
-- Equipo completo (solo ver)
-- Horarios (solo ver)
-- Fichajes (solo ver)
-- Adelantos (solo ver)
-- Comunicados del local (solo ver)
+---
 
+## Consideraciones
+
+1. **El clipboard no persiste** - Se pierde al cambiar de mes o refrescar
+2. **Se puede pegar múltiples veces** - Útil para llenar un mes completo
+3. **Respeta feriados** - Al pegar, los días feriados se saltan o se pegan vacíos
+4. **Validación sigue activa** - El sistema sigue validando 7 días consecutivos
+
+---
+
+## Complejidad Estimada
+
+**Dificultad: Media**
+- No requiere cambios en base de datos
+- Es todo lógica de UI local
+- Usa el sistema existente de `pendingChanges`
+- Estimado: 200-300 líneas de código nuevo
+
+---
+
+## Alternativa Simplificada
+
+Si preferís empezar simple:
+
+**Solo copiar la semana actual y pegarla en las siguientes del mismo empleado**
+
+```text
+[Botón] "Repetir semana 1 → resto del mes"
+```
+
+Esto llenaría automáticamente las semanas 2, 3, 4 con el mismo patrón de la semana 1. 
+Un solo botón, sin dropdowns, muy directo.
+
+---
+
+¿Cuál opción preferís?
+- **Opción B completa**: Copiar cualquier semana, pegar en cualquier empleado
+- **Opción simplificada**: Un botón "Repetir semana" por empleado
