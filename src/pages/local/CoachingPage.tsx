@@ -23,6 +23,7 @@ import {
 import { useCoachingStats, useHasCoachingThisMonth } from '@/hooks/useCoachingStats';
 import { useTeamCertifications } from '@/hooks/useCertifications';
 import { useWorkStations } from '@/hooks/useStationCompetencies';
+import { PageHelp } from '@/components/ui/PageHelp';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { ClipboardList, Users, Award, CheckCircle, Clock, Plus } from 'lucide-react';
@@ -98,8 +99,9 @@ export default function CoachingPage() {
   };
 
   if (loadingTeam) {
-    return (
-      <div className="p-6 space-y-6">
+  return (
+    <div className="p-6 space-y-6">
+      <PageHelp pageId="local-coaching" />
         <Skeleton className="h-8 w-48" />
         <div className="grid gap-4 md:grid-cols-3">
           <Skeleton className="h-32" />

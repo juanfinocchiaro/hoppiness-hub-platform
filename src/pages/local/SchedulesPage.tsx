@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import HolidaysManager from '@/components/hr/HolidaysManager';
 import MonthlyScheduleView from '@/components/hr/MonthlyScheduleView';
 import PendingScheduleRequests from '@/components/hr/PendingScheduleRequests';
+import { PageHelp } from '@/components/ui/PageHelp';
 import { CalendarDays, CalendarCheck, ClipboardList } from 'lucide-react';
 
 export default function SchedulesPage() {
@@ -24,6 +25,7 @@ export default function SchedulesPage() {
 
   return (
     <div className="space-y-6">
+      <PageHelp pageId="local-schedules" />
       <div>
         <h1 className="text-2xl font-bold">Horarios</h1>
         <p className="text-muted-foreground">
