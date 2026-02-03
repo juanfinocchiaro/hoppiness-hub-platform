@@ -52,6 +52,7 @@ import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
 // Mi Cuenta
 import CuentaDashboard from "./pages/cuenta/CuentaDashboard";
 import CuentaPerfil from "./pages/cuenta/CuentaPerfil";
+import MiHorarioPage from "./pages/cuenta/MiHorarioPage";
 
 import NotFound from "./pages/NotFound";
 import { RequireAuth } from "./components/guards/RequireAuth";
@@ -92,6 +93,7 @@ const App = () => (
             {/* Mi Cuenta */}
             <Route path="/cuenta" element={<RequireAuth><CuentaDashboard /></RequireAuth>} />
             <Route path="/cuenta/perfil" element={<RequireAuth><CuentaPerfil /></RequireAuth>} />
+            <Route path="/cuenta/horario" element={<RequireAuth><MiHorarioPage /></RequireAuth>} />
             
             {/* QR de Fichaje Estático */}
             <Route path="/fichaje-qr/:branchId" element={<LocalRoute><FichajeQRDisplay /></LocalRoute>} />
