@@ -1,4 +1,5 @@
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
+import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +21,11 @@ interface SalaryAdvance {
 
 export default function MySalaryAdvancesCard() {
   const { id: userId } = useEffectiveUser();
+  const { branchRoles } = usePermissionsWithImpersonation();
+  
+  // Franquiciados don't receive salary advances - hide if only has that role
+  const hasOnlyFranquiciado = branchRoles.length > 0 && 
+    branchRoles.every(r => r.local_role === 'franquiciado');
   
   // Query salary advances directly by user_id (V2 approach)
   const { data: advances, isLoading } = useQuery({
@@ -95,8 +101,8 @@ export default function MySalaryAdvancesCard() {
     );
   }
 
-  // Don't show card if no advances ever
-  if (!advances || advances.length === 0) {
+  // Don't show card for franchisees or if no advances ever
+  if (hasOnlyFranquiciado || !advances || advances.length === 0) {
     return null;
   }
 

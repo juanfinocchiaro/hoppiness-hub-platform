@@ -3,6 +3,7 @@
  * Fase 6: Con descarga de documento firmado
  */
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
+import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,7 +36,12 @@ const WARNING_TYPE_LABELS: Record<string, { label: string; color: string }> = {
 
 export default function MyWarningsCard() {
   const { id: userId } = useEffectiveUser();
+  const { branchRoles } = usePermissionsWithImpersonation();
   const queryClient = useQueryClient();
+  
+  // Franquiciados don't receive warnings - hide if only has that role
+  const hasOnlyFranquiciado = branchRoles.length > 0 && 
+    branchRoles.every(r => r.local_role === 'franquiciado');
   
   const { data: warnings, isLoading } = useQuery({
     queryKey: ['my-warnings', userId],
@@ -125,7 +131,8 @@ export default function MyWarningsCard() {
     );
   }
 
-  if (!warnings || warnings.length === 0) {
+  // Don't show for franchisees or if no warnings
+  if (hasOnlyFranquiciado || !warnings || warnings.length === 0) {
     return null;
   }
 

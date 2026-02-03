@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
+import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,7 +22,11 @@ interface ScheduleRequest {
 
 export default function MyRequestsCard() {
   const { id: userId } = useEffectiveUser();
+  const { branchRoles } = usePermissionsWithImpersonation();
 
+  // Franquiciados no solicitan días libres - ocultar si solo tiene ese rol
+  const hasOnlyFranquiciado = branchRoles.length > 0 && 
+    branchRoles.every(r => r.local_role === 'franquiciado');
   const { data: requests, isLoading } = useQuery({
     queryKey: ['my-schedule-requests', userId],
     queryFn: async () => {
@@ -84,6 +89,11 @@ export default function MyRequestsCard() {
       default: return type;
     }
   };
+
+  // Franquiciados don't request days off
+  if (hasOnlyFranquiciado) {
+    return null;
+  }
 
   if (isLoading) {
     return (
