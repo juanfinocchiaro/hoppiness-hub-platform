@@ -494,16 +494,16 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
               </div>
             </CardHeader>
             
-            {/* Scrollable container with max height */}
-            <CardContent className="p-0 max-h-[calc(100vh-320px)] overflow-auto">
-              <div className="flex min-w-max">
+            {/* Scrollable container with max height - contained scroll */}
+            <CardContent className="p-0 max-h-[calc(100vh-320px)] overflow-auto relative">
+              <div className="flex">
                 {/* Fixed Left Column - sticky */}
                 <div 
                   className="shrink-0 border-r bg-card z-20 sticky left-0" 
                   style={{ width: EMPLOYEE_COL_WIDTH }}
                 >
                   {/* Header cell */}
-                  <div className="h-12 border-b bg-muted/50 flex items-center px-3">
+                  <div className="h-12 border-b bg-muted/50 flex items-center px-3 sticky top-0 z-10 bg-card">
                     <span className="text-xs font-medium text-muted-foreground">Empleado</span>
                   </div>
                   
@@ -511,7 +511,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                   {team.map((member) => (
                     <div 
                       key={member.id} 
-                      className="border-b flex items-center gap-2 px-3"
+                      className="border-b flex items-center gap-2 px-3 bg-card"
                       style={{ height: SCHEDULE_ROW_HEIGHT }}
                     >
                       <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary shrink-0">
@@ -550,7 +550,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                   ref={gridScrollRef}
                   className="flex-1"
                 >
-                  <div style={{ width: gridWidth, minWidth: gridWidth }}>
+                  <div style={{ width: gridWidth }}>
                     {/* Day headers */}
                     <div className="h-12 border-b bg-muted/50 flex">
                       {monthDays.map((day) => {
