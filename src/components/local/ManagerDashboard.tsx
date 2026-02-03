@@ -35,6 +35,7 @@ import { es } from 'date-fns/locale';
 import { useTodayClosures, useEnabledShifts } from '@/hooks/useShiftClosures';
 import { ShiftClosureModal } from '@/components/local/closure/ShiftClosureModal';
 import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { getClockInUrl } from '@/lib/constants';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
@@ -414,7 +415,7 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
             variant="outline" 
             size="sm"
             onClick={() => {
-              const url = `${window.location.origin}/fichaje/${branch.clock_code}`;
+              const url = getClockInUrl(branch.clock_code!);
               navigator.clipboard.writeText(url);
               toast.success('Link copiado al portapapeles');
             }}
