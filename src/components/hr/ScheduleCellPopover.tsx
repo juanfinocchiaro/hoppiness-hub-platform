@@ -5,6 +5,7 @@
  * - Clean modern design with proper close button
  * - Automatic break for shifts over 6 hours
  * - Position selection
+ * - Clear UX separation: X = close, Delete = destructive action with confirmation
  */
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Coffee, X, Check, Calendar, Clock } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Coffee, X, Check, Calendar, Clock, Trash2 } from 'lucide-react';
 import { useWorkPositions } from '@/hooks/useWorkPositions';
 import type { WorkPositionType } from '@/types/workPosition';
 
@@ -89,6 +91,7 @@ export function ScheduleCellPopover({
   dateLabel,
 }: ScheduleCellPopoverProps) {
   const [open, setOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [customStart, setCustomStart] = useState(value.startTime || '19:30');
   const [customEnd, setCustomEnd] = useState(value.endTime || '23:30');
   const [position, setPosition] = useState<string>(value.position || '');
@@ -99,6 +102,9 @@ export function ScheduleCellPopover({
 
   const shiftHours = useMemo(() => calculateShiftHours(customStart, customEnd), [customStart, customEnd]);
   const requiresBreak = shiftHours > 6;
+  
+  // Check if there's an existing shift (not empty)
+  const hasExistingShift = value.startTime || value.endTime || value.isDayOff;
 
   useEffect(() => {
     if (requiresBreak && customStart && customEnd) {
@@ -132,7 +138,7 @@ export function ScheduleCellPopover({
     setOpen(false);
   };
 
-  const handleClear = () => {
+  const handleDeleteShift = () => {
     onChange({
       startTime: null,
       endTime: null,
@@ -141,6 +147,7 @@ export function ScheduleCellPopover({
       breakStart: null,
       breakEnd: null,
     });
+    setShowDeleteConfirm(false);
     setOpen(false);
   };
 
@@ -159,158 +166,192 @@ export function ScheduleCellPopover({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild disabled={disabled}>
-        {children}
-      </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="center" sideOffset={8}>
-        {/* Header with close button */}
-        <div className="relative bg-primary/5 border-b px-4 py-3">
-          <button
-            onClick={() => setOpen(false)}
-            className="absolute right-2 top-2 p-1.5 rounded-full hover:bg-muted transition-colors"
-            aria-label="Cerrar"
-          >
-            <X className="w-4 h-4 text-muted-foreground" />
-          </button>
-          
-          <div className="pr-8">
-            <p className="font-semibold text-sm text-foreground">{employeeName}</p>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-              <Calendar className="w-3 h-3" />
-              {dateLabel}
+    <>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild disabled={disabled}>
+          {children}
+        </PopoverTrigger>
+        <PopoverContent className="w-80 p-0" align="center" sideOffset={8}>
+          {/* Header with close button */}
+          <div className="relative bg-primary/5 border-b px-4 py-3">
+            <button
+              onClick={() => setOpen(false)}
+              className="absolute right-2 top-2 p-1.5 rounded-full hover:bg-muted transition-colors"
+              aria-label="Cerrar"
+            >
+              <X className="w-4 h-4 text-muted-foreground" />
+            </button>
+            
+            <div className="pr-8">
+              <p className="font-semibold text-sm text-foreground">{employeeName}</p>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                <Calendar className="w-3 h-3" />
+                {dateLabel}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="p-4 space-y-4">
-          {/* Quick actions */}
-          <div className="flex gap-2">
+          <div className="p-4 space-y-4">
+            {/* Quick action: Day off */}
             <Button
               variant="outline"
               size="sm"
-              className="flex-1 h-9"
+              className="w-full h-9"
               onClick={handleDayOff}
             >
               Franco (día libre)
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-9 text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={handleClear}
-            >
-              Borrar
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-popover px-2 text-xs text-muted-foreground">o definir horario</span>
+              </div>
+            </div>
+
+            {/* Time inputs */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  Entrada
+                </Label>
+                <Input
+                  type="time"
+                  value={customStart}
+                  onChange={(e) => setCustomStart(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  Salida
+                </Label>
+                <Input
+                  type="time"
+                  value={customEnd}
+                  onChange={(e) => setCustomEnd(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+            </div>
+
+            {/* Duration badge */}
+            <div className="flex items-center justify-center">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-muted rounded-full text-xs font-medium">
+                <Clock className="w-3 h-3" />
+                {shiftHours.toFixed(1)} horas
+                {requiresBreak && (
+                  <span className="text-primary"> · incluye break</span>
+                )}
+              </span>
+            </div>
+
+            {/* Break section */}
+            {requiresBreak && (
+              <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 space-y-2 border border-amber-200 dark:border-amber-800">
+                <div className="flex items-center gap-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+                  <Coffee className="w-4 h-4" />
+                  Break obligatorio (30 min)
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Inicio</Label>
+                    <Input
+                      type="time"
+                      value={breakStart}
+                      onChange={(e) => setBreakStart(e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Fin</Label>
+                    <Input
+                      type="time"
+                      value={breakEnd}
+                      onChange={(e) => setBreakEnd(e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Position selector */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Posición</Label>
+              <Select 
+                value={position || 'none'} 
+                onValueChange={(v) => setPosition(v === 'none' ? '' : v)}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Sin posición asignada" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin posición</SelectItem>
+                  {workPositions.map((pos) => (
+                    <SelectItem key={pos.key} value={pos.key}>
+                      {pos.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Apply button */}
+            <Button className="w-full h-10" onClick={handleCustomApply}>
+              <Check className="w-4 h-4 mr-2" />
+              Aplicar horario
             </Button>
-          </div>
 
-          {/* Divider */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center">
-              <span className="bg-popover px-2 text-xs text-muted-foreground">o definir horario</span>
-            </div>
-          </div>
-
-          {/* Time inputs */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                Entrada
-              </Label>
-              <Input
-                type="time"
-                value={customStart}
-                onChange={(e) => setCustomStart(e.target.value)}
-                className="h-9"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                Salida
-              </Label>
-              <Input
-                type="time"
-                value={customEnd}
-                onChange={(e) => setCustomEnd(e.target.value)}
-                className="h-9"
-              />
-            </div>
-          </div>
-
-          {/* Duration badge */}
-          <div className="flex items-center justify-center">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-muted rounded-full text-xs font-medium">
-              <Clock className="w-3 h-3" />
-              {shiftHours.toFixed(1)} horas
-              {requiresBreak && (
-                <span className="text-primary"> · incluye break</span>
-              )}
-            </span>
-          </div>
-
-          {/* Break section */}
-          {requiresBreak && (
-            <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 space-y-2 border border-amber-200 dark:border-amber-800">
-              <div className="flex items-center gap-2 text-xs font-medium text-amber-700 dark:text-amber-400">
-                <Coffee className="w-4 h-4" />
-                Break obligatorio (30 min)
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-[10px] text-muted-foreground">Inicio</Label>
-                  <Input
-                    type="time"
-                    value={breakStart}
-                    onChange={(e) => setBreakStart(e.target.value)}
-                    className="h-8 text-xs"
-                  />
+            {/* Delete shift - only visible if there's an existing shift */}
+            {hasExistingShift && (
+              <>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-dashed" />
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-[10px] text-muted-foreground">Fin</Label>
-                  <Input
-                    type="time"
-                    value={breakEnd}
-                    onChange={(e) => setBreakEnd(e.target.value)}
-                    className="h-8 text-xs"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full h-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Eliminar turno
+                </Button>
+              </>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
 
-          {/* Position selector */}
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Posición</Label>
-            <Select 
-              value={position || 'none'} 
-              onValueChange={(v) => setPosition(v === 'none' ? '' : v)}
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar turno de {employeeName}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará el turno asignado para el {dateLabel}. 
+              El cambio quedará pendiente hasta que guardes los horarios.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteShift}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Sin posición asignada" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sin posición</SelectItem>
-                {workPositions.map((pos) => (
-                  <SelectItem key={pos.key} value={pos.key}>
-                    {pos.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Apply button */}
-          <Button className="w-full h-10" onClick={handleCustomApply}>
-            <Check className="w-4 h-4 mr-2" />
-            Aplicar horario
-          </Button>
-        </div>
-      </PopoverContent>
-    </Popover>
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
