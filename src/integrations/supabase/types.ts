@@ -399,6 +399,164 @@ export type Database = {
           },
         ]
       }
+      coaching_competency_scores: {
+        Row: {
+          coaching_id: string
+          competency_id: string
+          competency_type: string
+          created_at: string
+          id: string
+          notes: string | null
+          score: number
+        }
+        Insert: {
+          coaching_id: string
+          competency_id: string
+          competency_type: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          score: number
+        }
+        Update: {
+          coaching_id?: string
+          competency_id?: string
+          competency_type?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coaching_competency_scores_coaching_id_fkey"
+            columns: ["coaching_id"]
+            isOneToOne: false
+            referencedRelation: "coachings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coaching_station_scores: {
+        Row: {
+          coaching_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          score: number
+          station_id: string
+        }
+        Insert: {
+          coaching_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          score: number
+          station_id: string
+        }
+        Update: {
+          coaching_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          score?: number
+          station_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coaching_station_scores_coaching_id_fkey"
+            columns: ["coaching_id"]
+            isOneToOne: false
+            referencedRelation: "coachings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaching_station_scores_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "work_stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coachings: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_notes: string | null
+          action_plan: string | null
+          areas_to_improve: string | null
+          branch_id: string
+          coaching_date: string
+          coaching_month: number
+          coaching_year: number
+          created_at: string
+          evaluated_by: string
+          general_score: number | null
+          id: string
+          manager_notes: string | null
+          overall_score: number | null
+          station_score: number | null
+          strengths: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_notes?: string | null
+          action_plan?: string | null
+          areas_to_improve?: string | null
+          branch_id: string
+          coaching_date?: string
+          coaching_month: number
+          coaching_year: number
+          created_at?: string
+          evaluated_by: string
+          general_score?: number | null
+          id?: string
+          manager_notes?: string | null
+          overall_score?: number | null
+          station_score?: number | null
+          strengths?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_notes?: string | null
+          action_plan?: string | null
+          areas_to_improve?: string | null
+          branch_id?: string
+          coaching_date?: string
+          coaching_month?: number
+          coaching_year?: number
+          created_at?: string
+          evaluated_by?: string
+          general_score?: number | null
+          id?: string
+          manager_notes?: string | null
+          overall_score?: number | null
+          station_score?: number | null
+          strengths?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coachings_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coachings_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       communication_reads: {
         Row: {
           communication_id: string
@@ -631,6 +789,67 @@ export type Database = {
           },
         ]
       }
+      employee_certifications: {
+        Row: {
+          branch_id: string
+          certified_at: string | null
+          certified_by: string | null
+          created_at: string
+          id: string
+          level: number
+          notes: string | null
+          station_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          branch_id: string
+          certified_at?: string | null
+          certified_by?: string | null
+          created_at?: string
+          id?: string
+          level?: number
+          notes?: string | null
+          station_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          branch_id?: string
+          certified_at?: string | null
+          certified_by?: string | null
+          created_at?: string
+          id?: string
+          level?: number
+          notes?: string | null
+          station_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_certifications_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_certifications_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_certifications_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "work_stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_data: {
         Row: {
           alias: string | null
@@ -801,6 +1020,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      general_competencies: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          key: string
+          name: string
+          sort_order: number
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key: string
+          name: string
+          sort_order?: number
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key?: string
+          name?: string
+          sort_order?: number
+          weight?: number
+        }
+        Relationships: []
+      }
+      manager_competencies: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          key: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
       }
       permission_config: {
         Row: {
@@ -1415,6 +1697,47 @@ export type Database = {
           },
         ]
       }
+      station_competencies: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          key: string
+          name: string
+          sort_order: number
+          station_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key: string
+          name: string
+          sort_order?: number
+          station_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key?: string
+          name?: string
+          sort_order?: number
+          station_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "station_competencies_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "work_stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_branch_roles: {
         Row: {
           authorization_pin_hash: string | null
@@ -1568,6 +1891,36 @@ export type Database = {
           },
         ]
       }
+      work_stations: {
+        Row: {
+          created_at: string
+          icon: string
+          id: string
+          is_active: boolean
+          key: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          key: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          key?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       branches_public: {
@@ -1676,6 +2029,14 @@ export type Database = {
     Functions: {
       can_access_branch: {
         Args: { _branch_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_manage_coaching: {
+        Args: { _branch_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_view_coaching: {
+        Args: { _coaching_id: string; _user_id: string }
         Returns: boolean
       }
       get_brand_role: {
