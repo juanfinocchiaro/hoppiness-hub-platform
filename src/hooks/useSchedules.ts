@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO } from 'date-fns';
+import type { WorkPositionType } from '@/types/workPosition';
 
 export interface ScheduleEntry {
   id: string;
@@ -38,6 +39,7 @@ export interface DaySchedule {
   holiday_description?: string;
   is_approved_request?: boolean;
   request_reason?: string;
+  work_position?: WorkPositionType | null;
 }
 
 export interface SaveScheduleInput {
@@ -174,6 +176,7 @@ export function useSaveMonthlySchedule() {
         start_time: day.is_day_off ? '00:00:00' : day.start_time,
         end_time: day.is_day_off ? '00:00:00' : day.end_time,
         is_day_off: day.is_day_off,
+        work_position: day.work_position || null,
         published_at: now,
         published_by: user.id,
         shift_number: 1, // Default shift

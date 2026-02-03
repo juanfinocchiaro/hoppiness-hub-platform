@@ -3,7 +3,7 @@
  * 
  * Step 1: Select employee (shows pending requests count)
  * Step 2: Review requests & holidays
- * Step 3: Monthly schedule grid
+ * Step 3: Monthly schedule grid with position assignment
  */
 import { useState, useMemo, useCallback } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameDay, parseISO } from 'date-fns';
@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils';
 import { 
   ChevronLeft, ChevronRight, User, Calendar, AlertCircle, 
   Check, X, Clock, Wand2, Save, Mail, MessageSquare,
-  CalendarCheck, CalendarX
+  CalendarCheck, CalendarX, Briefcase
 } from 'lucide-react';
 import { useTeamData } from '@/components/local/team/useTeamData';
 import { useHolidays } from '@/hooks/useHolidays';
@@ -36,6 +36,9 @@ import {
   type DaySchedule 
 } from '@/hooks/useSchedules';
 import { LOCAL_ROLE_LABELS } from '@/hooks/usePermissionsV2';
+import { WORK_POSITION_LABELS, WORK_POSITIONS, type WorkPositionType } from '@/types/workPosition';
+
+type WorkPosition = WorkPositionType;
 
 interface CreateScheduleWizardProps {
   branchId: string;
@@ -52,6 +55,7 @@ interface SelectedEmployee {
   id: string;
   name: string;
   role: string;
+  defaultPosition?: WorkPosition | null;
 }
 
 // Common shift presets
@@ -90,6 +94,7 @@ export default function CreateScheduleWizard({
   const [bulkPreset, setBulkPreset] = useState<string>('');
   const [customStartTime, setCustomStartTime] = useState('19:30');
   const [customEndTime, setCustomEndTime] = useState('23:30');
+  const [bulkPosition, setBulkPosition] = useState<WorkPosition | ''>('');
   
   // Fetch data
   const { team, loading: loadingTeam } = useTeamData(branchId);
@@ -181,7 +186,7 @@ export default function CreateScheduleWizard({
     setScheduleData(prev => ({
       ...prev,
       [dateStr]: {
-        ...(prev[dateStr] || { date: dateStr, start_time: null, end_time: null, is_day_off: false }),
+        ...(prev[dateStr] || { date: dateStr, start_time: null, end_time: null, is_day_off: false, work_position: selectedEmployee?.defaultPosition || null }),
         ...updates,
       },
     }));
@@ -191,6 +196,9 @@ export default function CreateScheduleWizard({
   const applyPresetToSelected = () => {
     const preset = SHIFT_PRESETS.find(p => p.label === bulkPreset);
     if (!preset || selectedDays.size === 0) return;
+    
+    // Use bulk position or fallback to employee's default position
+    const positionToApply = bulkPosition || selectedEmployee?.defaultPosition || null;
     
     const newData = { ...scheduleData };
     selectedDays.forEach(dateStr => {
@@ -202,6 +210,7 @@ export default function CreateScheduleWizard({
             start_time: customStartTime,
             end_time: customEndTime,
             is_day_off: false,
+            work_position: positionToApply,
           };
         } else {
           newData[dateStr] = {
@@ -209,6 +218,7 @@ export default function CreateScheduleWizard({
             start_time: preset.start,
             end_time: preset.end,
             is_day_off: preset.isDayOff || false,
+            work_position: preset.isDayOff ? null : positionToApply,
           };
         }
       }
@@ -357,6 +367,7 @@ export default function CreateScheduleWizard({
                   id: member.id,
                   name: member.full_name,
                   role: member.local_role || 'empleado',
+                  defaultPosition: (member as any).default_position || null,
                 })}
               >
                 <CardContent className="p-4">
@@ -367,9 +378,16 @@ export default function CreateScheduleWizard({
                       </div>
                       <div>
                         <p className="font-medium">{member.full_name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {LOCAL_ROLE_LABELS[member.local_role || ''] || member.local_role}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">
+                            {LOCAL_ROLE_LABELS[member.local_role || ''] || member.local_role}
+                          </span>
+                          {(member as any).default_position && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              {WORK_POSITION_LABELS[(member as any).default_position as WorkPosition]}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                     
@@ -547,6 +565,30 @@ export default function CreateScheduleWizard({
             </>
           )}
           
+          {/* Position selector */}
+          <div className="space-y-1">
+            <Label className="text-xs flex items-center gap-1">
+              <Briefcase className="w-3 h-3" />
+              Posición
+            </Label>
+            <Select 
+              value={bulkPosition} 
+              onValueChange={(v) => setBulkPosition(v as WorkPosition | '')}
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder={selectedEmployee?.defaultPosition ? WORK_POSITION_LABELS[selectedEmployee.defaultPosition] : 'Por defecto'} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Por defecto</SelectItem>
+                {WORK_POSITIONS.map((pos) => (
+                  <SelectItem key={pos.value} value={pos.value}>
+                    {pos.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
           <Button
             variant="outline"
             size="sm"
@@ -616,13 +658,20 @@ export default function CreateScheduleWizard({
                     
                     {/* Schedule display */}
                     {!isHoliday && schedule && (
-                      <div className="mt-1">
+                      <div className="mt-1 space-y-0.5">
                         {schedule.is_day_off ? (
                           <span className="text-xs text-muted-foreground">Franco</span>
                         ) : schedule.start_time && schedule.end_time ? (
-                          <span className="text-xs font-medium">
-                            {schedule.start_time.slice(0, 5)}-{schedule.end_time.slice(0, 5)}
-                          </span>
+                          <>
+                            <span className="text-xs font-medium block">
+                              {schedule.start_time.slice(0, 5)}-{schedule.end_time.slice(0, 5)}
+                            </span>
+                            {schedule.work_position && (
+                              <span className="text-[10px] text-muted-foreground">
+                                {WORK_POSITION_LABELS[schedule.work_position]}
+                              </span>
+                            )}
+                          </>
                         ) : null}
                       </div>
                     )}

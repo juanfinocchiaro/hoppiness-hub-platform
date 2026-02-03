@@ -43,6 +43,7 @@ import CommunicationsPage from "./pages/admin/CommunicationsPage";
 import BrandRegulationsPage from "./pages/admin/BrandRegulationsPage";
 import ClosureConfigPage from "./pages/admin/ClosureConfigPage";
 import ContactMessagesPage from "./pages/admin/ContactMessagesPage";
+import PermissionsConfigPage from "./pages/admin/PermissionsConfigPage";
 
 // Mi Local - Comunicaciones
 import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
@@ -135,6 +136,7 @@ const App = () => (
               {/* Configuración */}
               <Route path="reglamentos" element={<BrandRegulationsPage />} />
               <Route path="configuracion/cierres" element={<ClosureConfigPage />} />
+              <Route path="configuracion/permisos" element={<PermissionsConfigPage />} />
             </Route>
             
               <Route path="*" element={<NotFound />} />

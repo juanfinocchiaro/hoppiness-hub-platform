@@ -1,4 +1,5 @@
 import type { LocalRole } from '@/hooks/usePermissionsV2';
+import type { WorkPositionType } from '@/types/workPosition';
 
 export interface TeamMember {
   id: string;
@@ -7,6 +8,7 @@ export interface TeamMember {
   email: string;
   phone: string | null;
   local_role: LocalRole;
+  default_position: WorkPositionType | null;
   hire_date: string;
   hours_this_month: number;
   monthly_hours_target: number;

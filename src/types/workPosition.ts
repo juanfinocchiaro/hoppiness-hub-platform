@@ -13,6 +13,9 @@ export type WorkPositionType =
   | 'runner'
   | 'lavacopas';
 
+// Alias for convenience
+export type WorkPosition = WorkPositionType;
+
 export const WORK_POSITION_LABELS: Record<WorkPositionType, string> = {
   cajero: 'Cajero/a',
   cocinero: 'Cocinero/a',
