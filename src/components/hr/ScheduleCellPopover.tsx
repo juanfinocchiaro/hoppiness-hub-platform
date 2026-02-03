@@ -22,6 +22,7 @@ export interface ScheduleValue {
   startTime: string | null;
   endTime: string | null;
   isDayOff: boolean;
+  isBirthdayOff?: boolean;
   position: WorkPositionType | null;
   breakStart?: string | null;
   breakEnd?: string | null;
@@ -34,6 +35,12 @@ interface ScheduleCellPopoverProps {
   disabled?: boolean;
   employeeName?: string;
   dateLabel?: string;
+  /** Employee's default position to pre-populate */
+  defaultPosition?: string | null;
+  /** Whether this employee has their birthday in the current month */
+  hasBirthdayThisMonth?: boolean;
+  /** Whether this employee has already used their birthday day off this month */
+  birthdayUsedThisMonth?: boolean;
 }
 
 // Helper to calculate shift duration in hours
@@ -94,12 +101,15 @@ export function ScheduleCellPopover({
   disabled = false,
   employeeName,
   dateLabel,
+  defaultPosition,
+  hasBirthdayThisMonth = false,
+  birthdayUsedThisMonth = false,
 }: ScheduleCellPopoverProps) {
   const [open, setOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [customStart, setCustomStart] = useState(value.startTime || '19:30');
   const [customEnd, setCustomEnd] = useState(value.endTime || '23:30');
-  const [position, setPosition] = useState<string>(value.position || '');
+  const [position, setPosition] = useState<string>(value.position || defaultPosition || '');
   const [breakStart, setBreakStart] = useState(value.breakStart || '');
   const [breakEnd, setBreakEnd] = useState(value.breakEnd || '');
   
@@ -125,18 +135,33 @@ export function ScheduleCellPopover({
     if (open) {
       setCustomStart(value.startTime || '19:30');
       setCustomEnd(value.endTime || '23:30');
-      setPosition(value.position || '');
+      // Use existing position if set, otherwise use employee's default position
+      setPosition(value.position || defaultPosition || '');
       setBreakStart(value.breakStart || '');
       setBreakEnd(value.breakEnd || '');
     }
-  }, [open, value]);
+  }, [open, value, defaultPosition]);
 
   const handleDayOff = () => {
     onChange({
       startTime: null,
       endTime: null,
       isDayOff: true,
+      isBirthdayOff: false,
       position: null,
+      breakStart: null,
+      breakEnd: null,
+    });
+    setOpen(false);
+  };
+
+  const handleBirthdayOff = () => {
+    onChange({
+      startTime: null,
+      endTime: null,
+      isDayOff: true,
+      isBirthdayOff: true,
+      position: 'cumple',
       breakStart: null,
       breakEnd: null,
     });
@@ -197,15 +222,30 @@ export function ScheduleCellPopover({
           </div>
 
           <div className="p-4 space-y-4">
-            {/* Quick action: Day off */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full h-9"
-              onClick={handleDayOff}
-            >
-              Franco (día libre)
-            </Button>
+            {/* Quick actions: Day off and Birthday */}
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full h-9"
+                onClick={handleDayOff}
+              >
+                Franco (día libre)
+              </Button>
+
+              {/* Birthday day off - only if birthday month and not used */}
+              {hasBirthdayThisMonth && !birthdayUsedThisMonth && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full h-9 text-pink-600 border-pink-200 hover:bg-pink-50 dark:text-pink-400 dark:border-pink-800 dark:hover:bg-pink-950/50"
+                  onClick={handleBirthdayOff}
+                >
+                  <span className="mr-2">🎂</span>
+                  Cumple (franco mensual)
+                </Button>
+              )}
+            </div>
 
             {/* Divider */}
             <div className="relative">
