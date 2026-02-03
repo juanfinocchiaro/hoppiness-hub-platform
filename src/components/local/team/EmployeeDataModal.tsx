@@ -336,7 +336,7 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                Fecha de ingreso
+                Fecha de ingreso al trabajo
               </Label>
               <Input 
                 type="date"
@@ -344,7 +344,9 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
                 onChange={(e) => setHireDate(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Fecha en que el colaborador comenzó a trabajar en la empresa.
+                Fecha real en que el colaborador comenzó a trabajar en la empresa.
+                <br />
+                <span className="text-primary">Puede ser anterior al registro en el sistema</span> (para empleados antiguos).
               </p>
             </div>
 

@@ -9,7 +9,7 @@ import { useParams } from 'react-router-dom';
 import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import HolidaysManager from '@/components/hr/HolidaysManager';
-import MonthlyScheduleView from '@/components/hr/MonthlyScheduleView';
+import InlineScheduleEditor from '@/components/hr/InlineScheduleEditor';
 import PendingScheduleRequests from '@/components/hr/PendingScheduleRequests';
 import { PageHelp } from '@/components/ui/PageHelp';
 import { CalendarDays, CalendarCheck, ClipboardList } from 'lucide-react';
@@ -54,7 +54,7 @@ export default function SchedulesPage() {
         </TabsContent>
 
         <TabsContent value="calendario">
-          <MonthlyScheduleView branchId={branchId} />
+          <InlineScheduleEditor branchId={branchId} />
         </TabsContent>
 
         <TabsContent value="solicitudes">

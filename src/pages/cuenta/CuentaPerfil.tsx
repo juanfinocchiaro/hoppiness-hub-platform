@@ -1,5 +1,4 @@
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
-import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
@@ -7,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Save, Loader2, Key, Lock, Eye, EyeOff, Fingerprint, Camera, User, Calendar as CalendarIcon } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Lock, Eye, EyeOff, Camera, User, Calendar as CalendarIcon } from 'lucide-react';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
@@ -17,14 +16,12 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, parse } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { BranchPinCard } from '@/components/cuenta/BranchPinCard';
 
 export default function CuentaPerfil() {
   const { id: effectiveUserId, email: effectiveEmail } = useEffectiveUser();
-  const { canAccessLocalPanel } = usePermissionsWithImpersonation();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -56,30 +53,6 @@ export default function CuentaPerfil() {
     },
     enabled: !!effectiveUserId,
   });
-
-  // Fetch user branch roles for PIN management
-  const { data: branchRoles, isLoading: loadingRoles } = useQuery({
-    queryKey: ['user-branch-roles', effectiveUserId],
-    queryFn: async () => {
-      if (!effectiveUserId) return [];
-      const { data, error } = await supabase
-        .from('user_branch_roles')
-        .select(`
-          id,
-          branch_id,
-          clock_pin,
-          local_role,
-          branches!inner(id, name)
-        `)
-        .eq('user_id', effectiveUserId)
-        .eq('is_active', true);
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!effectiveUserId,
-  });
-
-  const isEmployee = canAccessLocalPanel || (branchRoles && branchRoles.length > 0);
 
   // Initialize form with profile data
   useEffect(() => {
@@ -391,54 +364,6 @@ export default function CuentaPerfil() {
                   </CardContent>
                 </Card>
               </form>
-
-              {/* PIN de fichaje - Uno por cada sucursal del usuario */}
-              {isEmployee && (
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center gap-2">
-                      <Fingerprint className="w-5 h-5 text-primary" />
-                      <CardTitle>Mi PIN de Fichaje</CardTitle>
-                    </div>
-                    <CardDescription>
-                      {branchRoles && branchRoles.length === 1
-                        ? 'Tu PIN de 4 dígitos para fichar entrada y salida'
-                        : branchRoles && branchRoles.length > 1
-                        ? 'Configurá un PIN para cada sucursal donde trabajás'
-                        : 'PIN de 4 dígitos para fichar entrada y salida'}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {loadingRoles ? (
-                      <div className="flex justify-center py-4">
-                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : branchRoles && branchRoles.length > 0 ? (
-                      <div className="space-y-3">
-                        {branchRoles.map((role: any) => {
-                          const branchName = role.branches?.name || 'Sucursal';
-                          // No renderizar si faltan datos críticos
-                          if (!role.id || !role.branch_id || !effectiveUserId) return null;
-                          return (
-                            <BranchPinCard
-                              key={role.id}
-                              branchName={branchName}
-                              branchId={role.branch_id}
-                              roleId={role.id}
-                              currentPin={role.clock_pin}
-                              userId={effectiveUserId}
-                            />
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        No tenés sucursales asignadas
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
 
               {/* Cambiar contraseña */}
               <Card>
