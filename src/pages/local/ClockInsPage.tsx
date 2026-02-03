@@ -134,6 +134,19 @@ export default function ClockInsPage() {
   };
 
   const printQR = () => {
+    // Get the QR SVG element from the modal
+    const qrSvg = document.querySelector('#print-qr-svg');
+    if (!qrSvg) {
+      toast.error('No se pudo generar el QR para imprimir');
+      return;
+    }
+    
+    // Clone and serialize the SVG
+    const svgClone = qrSvg.cloneNode(true) as SVGElement;
+    const svgData = new XMLSerializer().serializeToString(svgClone);
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const svgUrl = URL.createObjectURL(svgBlob);
+    
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(`
@@ -141,25 +154,42 @@ export default function ClockInsPage() {
           <head>
             <title>QR Fichaje - ${branch?.name}</title>
             <style>
-              body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: system-ui; }
-              h1 { margin-bottom: 20px; }
-              p { color: #666; }
+              body { 
+                display: flex; 
+                flex-direction: column; 
+                align-items: center; 
+                justify-content: center; 
+                height: 100vh; 
+                font-family: system-ui;
+                margin: 0;
+              }
+              h1 { margin-bottom: 20px; font-size: 24px; }
+              p { color: #666; margin-top: 20px; }
+              .qr-container { 
+                background: white; 
+                padding: 20px; 
+                border-radius: 8px;
+              }
+              img { display: block; }
             </style>
           </head>
           <body>
             <h1>Fichaje - ${branch?.name}</h1>
-            <div id="qr"></div>
-            <p style="margin-top: 20px;">Escaneá para fichar</p>
-            <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+            <div class="qr-container">
+              <img src="${svgUrl}" width="300" height="300" alt="QR Code" />
+            </div>
+            <p>Escaneá para fichar</p>
+            <p style="font-size: 12px; color: #999;">${clockUrl}</p>
             <script>
-              QRCode.toCanvas(document.createElement('canvas'), '${clockUrl}', { width: 300 }, function(err, canvas) {
-                document.getElementById('qr').appendChild(canvas);
-                setTimeout(() => { window.print(); window.close(); }, 500);
-              });
+              // Wait for image to load then print
+              document.querySelector('img').onload = function() {
+                setTimeout(() => { window.print(); }, 300);
+              };
             </script>
           </body>
         </html>
       `);
+      printWindow.document.close();
     }
   };
 
@@ -208,7 +238,7 @@ export default function ClockInsPage() {
                       </DialogHeader>
                       <div className="flex flex-col items-center gap-4 py-4">
                         <div className="bg-white p-4 rounded-lg">
-                          <QRCodeSVG value={clockUrl} size={200} />
+                          <QRCodeSVG id="print-qr-svg" value={clockUrl} size={200} />
                         </div>
                         <p className="text-muted-foreground text-sm">Escaneá para fichar</p>
                         <div className="flex gap-2">
