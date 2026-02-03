@@ -6,9 +6,10 @@
  * - Single scrollable container shared between tabs (scroll position preserved)
  * - Sticky left column and sticky header in both views
  * - Same day columns width for perfect alignment
+ * - Week copy/paste functionality for faster schedule entry
  */
 import { useState, useMemo, useCallback } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,6 +28,7 @@ import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import { ScheduleCellPopover, type ScheduleValue } from './ScheduleCellPopover';
 import { SaveScheduleDialog } from './SaveScheduleDialog';
+import { ScheduleCopyButton, SchedulePasteButton, ClipboardBanner, type ClipboardData } from './ScheduleCopyPasteControls';
 import type { WorkPositionType } from '@/types/workPosition';
 
 interface InlineScheduleEditorProps {
@@ -57,7 +59,7 @@ const POSITION_ICONS: Record<string, { icon: React.ComponentType<any>; color: st
 const changeKey = (userId: string, date: string) => `${userId}:${date}`;
 
 const DAY_WIDTH = 80;
-const EMPLOYEE_COL_WIDTH = 180;
+const EMPLOYEE_COL_WIDTH = 200; // Increased to fit copy/paste buttons
 const SCHEDULE_ROW_HEIGHT = 56;
 const COVERAGE_ROW_HEIGHT = 32;
 
@@ -72,6 +74,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [activeView, setActiveView] = useState<ViewType>('personas');
   const [hourRange, setHourRange] = useState<HourRangeType>('all');
+  const [clipboard, setClipboard] = useState<ClipboardData | null>(null);
   const queryClient = useQueryClient();
   const { id: currentUserId } = useEffectiveUser();
 
@@ -214,6 +217,54 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
     toast.info('Cambios descartados');
   };
 
+  // Copy week from an employee
+  const handleCopyWeek = useCallback((userId: string, userName: string, weekStart: Date) => {
+    const weekData = new Map<number, ScheduleValue>();
+    
+    for (let i = 0; i < 7; i++) {
+      const day = addDays(weekStart, i);
+      const dateStr = format(day, 'yyyy-MM-dd');
+      const value = getEffectiveValue(userId, dateStr);
+      weekData.set(day.getDay(), value);
+    }
+    
+    setClipboard({ 
+      sourceUserId: userId, 
+      sourceUserName: userName, 
+      weekStartDate: format(weekStart, 'yyyy-MM-dd'),
+      weekData 
+    });
+    toast.info(`Semana de ${userName.split(' ')[0]} copiada`);
+  }, [getEffectiveValue]);
+
+  // Paste week to an employee
+  const handlePasteWeek = useCallback((targetUserId: string, targetUserName: string, targetWeekStart: Date) => {
+    if (!clipboard) return;
+    
+    let pastedCount = 0;
+    for (let i = 0; i < 7; i++) {
+      const day = addDays(targetWeekStart, i);
+      const dateStr = format(day, 'yyyy-MM-dd');
+      const dayOfWeek = day.getDay();
+      const value = clipboard.weekData.get(dayOfWeek);
+      
+      // Only paste if within the current month
+      if (day.getMonth() + 1 === month && day.getFullYear() === year) {
+        if (value) {
+          handleCellChange(targetUserId, targetUserName, dateStr, value);
+          pastedCount++;
+        }
+      }
+    }
+    
+    toast.success(`Horario pegado para ${targetUserName.split(' ')[0]} (${pastedCount} días)`);
+  }, [clipboard, handleCellChange, month, year]);
+
+  // Clear clipboard
+  const handleClearClipboard = () => {
+    setClipboard(null);
+  };
+
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async ({ notifyEmail, notifyCommunication }: { notifyEmail: boolean; notifyCommunication: boolean }) => {
@@ -302,6 +353,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
     setMonth(prev.getMonth() + 1);
     setYear(prev.getFullYear());
     setPendingChanges(new Map());
+    setClipboard(null); // Clear clipboard when changing months
   };
 
   const goToNextMonth = () => {
@@ -309,6 +361,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
     setMonth(next.getMonth() + 1);
     setYear(next.getFullYear());
     setPendingChanges(new Map());
+    setClipboard(null); // Clear clipboard when changing months
   };
 
   const getInitials = (name: string) => {
@@ -612,6 +665,11 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
           )}
         </div>
 
+        {/* Clipboard Banner */}
+        {clipboard && (
+          <ClipboardBanner clipboard={clipboard} onClear={handleClearClipboard} />
+        )}
+
         {/* Main Content */}
         {loading ? (
           <Card>
@@ -702,13 +760,34 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                     team.map((member) => (
                       <div 
                         key={member.id} 
-                        className="border-b flex items-center gap-2 px-3 bg-card"
+                        className="border-b flex items-center gap-1 px-2 bg-card"
                         style={{ height: SCHEDULE_ROW_HEIGHT }}
                       >
-                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary shrink-0">
+                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-medium text-primary shrink-0">
                           {getInitials(member.full_name)}
                         </div>
-                        <span className="text-sm truncate">{member.full_name}</span>
+                        <span className="text-xs truncate flex-1 min-w-0">{member.full_name.split(' ')[0]}</span>
+                        
+                        {/* Copy/Paste controls */}
+                        {canManageSchedules && (
+                          <div className="flex items-center shrink-0">
+                            <ScheduleCopyButton
+                              userId={member.id}
+                              userName={member.full_name}
+                              month={month}
+                              year={year}
+                              onCopyWeek={handleCopyWeek}
+                            />
+                            {clipboard && (
+                              <SchedulePasteButton
+                                clipboard={clipboard}
+                                month={month}
+                                year={year}
+                                onPasteWeek={(weekStart) => handlePasteWeek(member.id, member.full_name, weekStart)}
+                              />
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))
                   ) : (
