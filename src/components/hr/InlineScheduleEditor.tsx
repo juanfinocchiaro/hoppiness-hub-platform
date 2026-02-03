@@ -1,25 +1,23 @@
 /**
- * InlineScheduleEditor - Excel-like schedule editing
+ * InlineScheduleEditor - Excel-like schedule editing with proper scroll isolation
  * 
  * Features:
  * - Horizontal grid with sticky employee names
- * - Direct cell editing with popovers
- * - Pending changes tracking
- * - Batch save with confirmation
- * - Hourly coverage visualization (hour by hour)
+ * - Synchronized day headers between schedule and coverage
+ * - Only shows hours with actual coverage
+ * - Shows position icons and break times
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { ChevronLeft, ChevronRight, User, Save, Undo2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, Save, Undo2, AlertCircle, Coffee, Utensils, CreditCard, Flame, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTeamData } from '@/components/local/team/useTeamData';
 import { useHolidays } from '@/hooks/useHolidays';
@@ -47,8 +45,19 @@ interface PendingChange {
   originalValue: ScheduleEntry | null;
 }
 
-// Key for pending changes map
+// Position icons mapping
+const POSITION_ICONS: Record<string, { icon: React.ComponentType<any>; color: string; label: string }> = {
+  sandwichero: { icon: Flame, color: 'text-orange-500', label: 'Sandwichero' },
+  cajero: { icon: CreditCard, color: 'text-blue-500', label: 'Cajero' },
+  delivery: { icon: Package, color: 'text-green-500', label: 'Delivery' },
+  limpieza: { icon: Utensils, color: 'text-purple-500', label: 'Limpieza' },
+};
+
 const changeKey = (userId: string, date: string) => `${userId}:${date}`;
+
+const DAY_WIDTH = 80; // Fixed width for each day column
+const EMPLOYEE_COL_WIDTH = 160; // Fixed width for employee column
+const HOUR_COL_WIDTH = 60; // Fixed width for hour column
 
 export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorProps) {
   const now = new Date();
@@ -58,6 +67,10 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const queryClient = useQueryClient();
   const { id: currentUserId } = useEffectiveUser();
+  
+  // Refs for synchronized scrolling
+  const scheduleScrollRef = useRef<HTMLDivElement>(null);
+  const coverageScrollRef = useRef<HTMLDivElement>(null);
 
   const { isSuperadmin, isFranquiciado, isEncargado, local } = usePermissionsV2(branchId);
   const canManageSchedules = isSuperadmin || isFranquiciado || isEncargado || local.canEditSchedules;
@@ -66,6 +79,19 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
   const { team, loading: loadingTeam } = useTeamData(branchId, { excludeOwners: true });
   const { data: holidays = [] } = useHolidays(month, year);
   const { data: schedules = [], isLoading: loadingSchedules, refetch } = useMonthlySchedules(branchId, month, year);
+
+  // Synchronized scroll handler
+  const handleScheduleScroll = useCallback(() => {
+    if (scheduleScrollRef.current && coverageScrollRef.current) {
+      coverageScrollRef.current.scrollLeft = scheduleScrollRef.current.scrollLeft;
+    }
+  }, []);
+
+  const handleCoverageScroll = useCallback(() => {
+    if (scheduleScrollRef.current && coverageScrollRef.current) {
+      scheduleScrollRef.current.scrollLeft = coverageScrollRef.current.scrollLeft;
+    }
+  }, []);
 
   // Generate days of the month
   const monthDays = useMemo(() => {
@@ -94,7 +120,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
     return map;
   }, [schedules]);
 
-  // Get effective value (pending change or existing schedule)
+  // Get effective value
   const getEffectiveValue = useCallback((userId: string, dateStr: string): ScheduleValue => {
     const key = changeKey(userId, dateStr);
     const pending = pendingChanges.get(key);
@@ -104,6 +130,8 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
         endTime: pending.endTime,
         isDayOff: pending.isDayOff,
         position: pending.position,
+        breakStart: pending.breakStart,
+        breakEnd: pending.breakEnd,
       };
     }
 
@@ -114,6 +142,8 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
         endTime: schedule.end_time || null,
         isDayOff: schedule.is_day_off || false,
         position: (schedule as any).work_position || null,
+        breakStart: (schedule as any).break_start || null,
+        breakEnd: (schedule as any).break_end || null,
       };
     }
 
@@ -130,7 +160,6 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
     const key = changeKey(userId, dateStr);
     const originalSchedule = schedulesByUser.get(userId)?.get(dateStr) || null;
 
-    // Check if value is same as original
     const isSameAsOriginal =
       (originalSchedule?.start_time || null) === value.startTime &&
       (originalSchedule?.end_time || null) === value.endTime &&
@@ -138,14 +167,12 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
       ((originalSchedule as any)?.work_position || null) === value.position;
 
     if (isSameAsOriginal) {
-      // Remove pending change if it matches original
       setPendingChanges(prev => {
         const next = new Map(prev);
         next.delete(key);
         return next;
       });
     } else {
-      // Add/update pending change
       setPendingChanges(prev => {
         const next = new Map(prev);
         next.set(key, {
@@ -156,6 +183,8 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
           endTime: value.endTime,
           isDayOff: value.isDayOff,
           position: value.position,
+          breakStart: value.breakStart,
+          breakEnd: value.breakEnd,
           originalValue: originalSchedule,
         });
         return next;
@@ -163,7 +192,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
     }
   }, [schedulesByUser]);
 
-  // Discard all changes
+  // Discard changes
   const handleDiscardChanges = () => {
     setPendingChanges(new Map());
     toast.info('Cambios descartados');
@@ -172,7 +201,6 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async ({ notifyEmail, notifyCommunication }: { notifyEmail: boolean; notifyCommunication: boolean }) => {
-      // Group changes by user
       const changesByUser = new Map<string, PendingChange[]>();
       pendingChanges.forEach((change) => {
         if (!changesByUser.has(change.userId)) {
@@ -181,7 +209,6 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
         changesByUser.get(change.userId)!.push(change);
       });
 
-      // Save each user's changes
       for (const [userId, userChanges] of changesByUser) {
         const days: DaySchedule[] = userChanges.map(change => ({
           date: change.date,
@@ -191,7 +218,6 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
           work_position: change.position,
         }));
 
-        // Upsert schedules
         for (const day of days) {
           const existingSchedule = schedulesByUser.get(userId)?.get(day.date);
           
@@ -238,7 +264,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
     },
   });
 
-  // Affected employees for save dialog
+  // Affected employees
   const affectedEmployees = useMemo(() => {
     const byUser = new Map<string, { name: string; count: number }>();
     pendingChanges.forEach((change) => {
@@ -268,21 +294,6 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
     setPendingChanges(new Map());
   };
 
-  // Format schedule display
-  const formatScheduleDisplay = (value: ScheduleValue) => {
-    if (value.isDayOff) return 'F';
-    if (value.startTime && value.endTime) {
-      const base = `${value.startTime.slice(0, 5)}-${value.endTime.slice(0, 5)}`;
-      if (value.breakStart && value.breakEnd) {
-        return `${base} ☕`;
-      }
-      return base;
-    }
-    if (value.startTime) return value.startTime.slice(0, 5);
-    return '-';
-  };
-
-  // Get initials
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
@@ -290,11 +301,10 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
   const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
   const loading = loadingTeam || loadingSchedules;
 
-  // Schedules including pending changes for coverage calculation
+  // Schedules with pending changes for coverage
   const schedulesWithPending = useMemo(() => {
     const result: Array<{ schedule_date: string; start_time: string | null; end_time: string | null; is_day_off: boolean }> = [];
     
-    // Add existing schedules
     schedules.forEach(s => {
       const pendingChange = pendingChanges.get(changeKey(s.user_id!, s.schedule_date!));
       if (pendingChange) {
@@ -314,7 +324,6 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
       }
     });
     
-    // Add new pending changes (not in existing schedules)
     pendingChanges.forEach((change, key) => {
       const existing = schedules.find(s => changeKey(s.user_id!, s.schedule_date!) === key);
       if (!existing) {
@@ -330,37 +339,29 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
     return result;
   }, [schedules, pendingChanges]);
 
-  // Calculate hourly range based on all schedules
-  const hourlyRange = useMemo(() => {
-    let minHour = 24;
-    let maxHour = 0;
+  // Calculate hours with coverage (only show hours where at least 1 employee is working)
+  const hoursWithCoverage = useMemo(() => {
+    const hourSet = new Set<number>();
     
     schedulesWithPending.forEach(s => {
       if (s.is_day_off || !s.start_time || !s.end_time) return;
       
       const [startH] = s.start_time.split(':').map(Number);
       const [endH] = s.end_time.split(':').map(Number);
+      const adjustedEnd = endH < startH ? endH + 24 : endH;
       
-      minHour = Math.min(minHour, startH);
-      maxHour = Math.max(maxHour, endH < startH ? 24 : endH);
+      for (let h = startH; h < adjustedEnd; h++) {
+        hourSet.add(h % 24);
+      }
     });
     
-    // Default range if no schedules
-    if (minHour > maxHour) {
-      minHour = 11;
-      maxHour = 23;
-    }
+    if (hourSet.size === 0) return [];
     
-    // Generate hour slots
-    const hours: number[] = [];
-    for (let h = minHour; h <= maxHour; h++) {
-      hours.push(h);
-    }
-    
+    const hours = Array.from(hourSet).sort((a, b) => a - b);
     return hours;
   }, [schedulesWithPending]);
 
-  // Count employees at a specific hour for a specific date
+  // Count employees at hour
   const countEmployeesAtHour = useCallback((dateStr: string, hour: number) => {
     return schedulesWithPending.filter(s => {
       if (s.schedule_date !== dateStr) return false;
@@ -371,12 +372,10 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
       const [endH] = s.end_time.split(':').map(Number);
       const adjustedEnd = endH < startH ? endH + 24 : endH;
       
-      // Employee is working if hour falls within their shift
       return startH <= hour && hour < adjustedEnd;
     }).length;
   }, [schedulesWithPending]);
 
-  // Get color class based on count
   const getCoverageColor = (count: number): string => {
     if (count === 0) return 'bg-muted text-muted-foreground';
     if (count < 2) return 'bg-destructive/20 text-destructive';
@@ -384,10 +383,67 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
     return 'bg-primary/20 text-primary';
   };
 
+  // Render schedule cell content
+  const renderCellContent = (value: ScheduleValue, isPending: boolean, isHoliday: boolean) => {
+    if (value.isDayOff) {
+      return (
+        <Badge variant="secondary" className={cn('text-[10px] px-1.5', isPending && 'ring-2 ring-primary ring-offset-1')}>
+          Franco
+        </Badge>
+      );
+    }
+    
+    if (!value.startTime || !value.endTime) {
+      return <span className="text-xs text-muted-foreground">{isHoliday ? '🎉' : '-'}</span>;
+    }
+
+    const positionConfig = value.position ? POSITION_ICONS[value.position] : null;
+    const PositionIcon = positionConfig?.icon;
+    const hasBreak = value.breakStart && value.breakEnd;
+
+    return (
+      <div className={cn(
+        'flex flex-col items-center gap-0.5 p-1 rounded text-[10px]',
+        isPending && 'ring-2 ring-primary ring-offset-1 bg-primary/5'
+      )}>
+        {/* Time range */}
+        <div className="font-medium text-foreground">
+          {value.startTime.slice(0, 5)}-{value.endTime.slice(0, 5)}
+        </div>
+        
+        {/* Position & Break indicators */}
+        <div className="flex items-center gap-1">
+          {PositionIcon && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PositionIcon className={cn('w-3 h-3', positionConfig.color)} />
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                {positionConfig.label}
+              </TooltipContent>
+            </Tooltip>
+          )}
+          {hasBreak && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Coffee className="w-3 h-3 text-amber-600" />
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                Break: {value.breakStart?.slice(0, 5)}-{value.breakEnd?.slice(0, 5)}
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const gridWidth = monthDays.length * DAY_WIDTH;
+
   return (
     <TooltipProvider>
       <div className="space-y-4">
-        {/* Header */}
+        {/* Header - Always visible */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={goToPrevMonth}>
@@ -402,22 +458,23 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
           </div>
 
           {/* Legend */}
-          <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-orange-100 dark:bg-orange-950 border border-orange-300" />
-              Feriado
+              <Flame className="w-3 h-3 text-orange-500" /> Sandwichero
             </span>
-            <span><strong>F</strong> = Franco</span>
-            <span><strong>HH:MM-HH:MM</strong> = Entrada-Salida</span>
-            <span>☕ = Con break</span>
             <span className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded border-2 border-primary border-dashed" />
-              Modificado
+              <CreditCard className="w-3 h-3 text-blue-500" /> Cajero
+            </span>
+            <span className="flex items-center gap-1">
+              <Coffee className="w-3 h-3 text-amber-600" /> Break
+            </span>
+            <span className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded border-2 border-primary border-dashed" /> Modificado
             </span>
           </div>
         </div>
 
-        {/* Calendar Grid */}
+        {/* Main Content */}
         {loading ? (
           <Card>
             <CardContent className="py-12 flex items-center justify-center">
@@ -432,72 +489,67 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
             </CardContent>
           </Card>
         ) : (
-          <Card>
-            <CardContent className="p-0">
-              {/* Main Grid Container */}
-              <div className="relative">
-                <ScrollArea className="w-full">
-                  <div className="flex">
-                    {/* Sticky Employee Column */}
-                    <div className="sticky left-0 z-20 bg-card border-r shadow-sm">
-                      {/* Empty cell for header alignment */}
-                      <div className="h-[52px] border-b bg-muted/50 flex items-center px-3">
-                        <span className="text-sm font-medium text-muted-foreground">Empleado</span>
-                      </div>
-                      
-                      {/* Employee names */}
-                      {team.map((member) => (
-                        <div
-                          key={member.id}
-                          className="h-10 border-b flex items-center gap-2 px-3 hover:bg-muted/20"
-                        >
-                          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary shrink-0">
-                            {getInitials(member.full_name)}
-                          </div>
-                          <span className="text-sm truncate max-w-[120px]">{member.full_name}</span>
-                        </div>
-                      ))}
+          <div className="space-y-4">
+            {/* Schedule Grid Card */}
+            <Card>
+              <CardHeader className="py-3 px-4 border-b">
+                <CardTitle className="text-sm font-medium">📅 Horarios del Equipo</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="flex">
+                  {/* Fixed Employee Column */}
+                  <div className="shrink-0 border-r bg-card z-10" style={{ width: EMPLOYEE_COL_WIDTH }}>
+                    {/* Header */}
+                    <div className="h-12 border-b bg-muted/50 flex items-center px-3">
+                      <span className="text-xs font-medium text-muted-foreground">Empleado</span>
                     </div>
+                    {/* Employee rows */}
+                    {team.map((member) => (
+                      <div key={member.id} className="h-14 border-b flex items-center gap-2 px-3">
+                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary shrink-0">
+                          {getInitials(member.full_name)}
+                        </div>
+                        <span className="text-sm truncate">{member.full_name}</span>
+                      </div>
+                    ))}
+                  </div>
 
-                    {/* Scrollable Days Grid */}
-                    <div className="flex-1">
-                      {/* Header row with days */}
-                      <div className="flex border-b bg-muted/50">
+                  {/* Scrollable Days */}
+                  <div 
+                    ref={scheduleScrollRef}
+                    onScroll={handleScheduleScroll}
+                    className="flex-1 overflow-x-auto"
+                  >
+                    <div style={{ width: gridWidth }}>
+                      {/* Day headers */}
+                      <div className="flex h-12 border-b bg-muted/50">
                         {monthDays.map((day) => {
                           const dateStr = format(day, 'yyyy-MM-dd');
                           const isHoliday = holidayDates.has(dateStr);
-                          const holidayName = holidayDates.get(dateStr);
                           const isSunday = day.getDay() === 0;
 
                           return (
                             <div
                               key={dateStr}
+                              style={{ width: DAY_WIDTH }}
                               className={cn(
-                                'w-24 shrink-0 p-2 text-center border-r',
+                                'shrink-0 flex flex-col items-center justify-center border-r',
                                 isHoliday && 'bg-warning/20',
-                                isSunday && 'bg-muted/50'
+                                isSunday && 'bg-muted/60'
                               )}
                             >
-                              <div className="text-xs text-muted-foreground">{dayNames[day.getDay()]}</div>
-                              <div className={cn('text-sm font-medium', isHoliday && 'text-warning')}>
+                              <span className="text-[10px] text-muted-foreground">{dayNames[day.getDay()]}</span>
+                              <span className={cn('text-sm font-medium', isHoliday && 'text-warning')}>
                                 {format(day, 'd')}
-                                {isHoliday && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="ml-1">🎉</span>
-                                    </TooltipTrigger>
-                                    <TooltipContent>{holidayName}</TooltipContent>
-                                  </Tooltip>
-                                )}
-                              </div>
+                              </span>
                             </div>
                           );
                         })}
                       </div>
 
-                      {/* Employee schedule rows */}
+                      {/* Schedule rows */}
                       {team.map((member) => (
-                        <div key={member.id} className="flex border-b hover:bg-muted/10">
+                        <div key={member.id} className="flex h-14 border-b">
                           {monthDays.map((day) => {
                             const dateStr = format(day, 'yyyy-MM-dd');
                             const isHoliday = holidayDates.has(dateStr);
@@ -516,29 +568,15 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                                 dateLabel={format(day, "EEEE d 'de' MMMM", { locale: es })}
                               >
                                 <div
+                                  style={{ width: DAY_WIDTH }}
                                   className={cn(
-                                    'w-24 shrink-0 h-10 flex items-center justify-center border-r cursor-pointer transition-colors',
+                                    'shrink-0 h-14 flex items-center justify-center border-r cursor-pointer transition-colors',
                                     isHoliday && 'bg-warning/10',
                                     isSunday && 'bg-muted/30',
                                     isEditable && 'hover:bg-primary/5'
                                   )}
                                 >
-                                  {value.startTime || value.isDayOff ? (
-                                    <Badge
-                                      variant={value.isDayOff ? 'secondary' : 'default'}
-                                      className={cn(
-                                        'text-xs',
-                                        value.isDayOff && 'bg-muted text-muted-foreground',
-                                        isPending && 'ring-2 ring-primary ring-offset-1'
-                                      )}
-                                    >
-                                      {formatScheduleDisplay(value)}
-                                    </Badge>
-                                  ) : isHoliday ? (
-                                    <span className="text-xs text-warning">-</span>
-                                  ) : (
-                                    <span className="text-xs text-muted-foreground">-</span>
-                                  )}
+                                  {renderCellContent(value, isPending, isHoliday)}
                                 </div>
                               </ScheduleCellPopover>
                             );
@@ -547,93 +585,113 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                       ))}
                     </div>
                   </div>
-                  <ScrollBar orientation="horizontal" />
-                </ScrollArea>
-              </div>
+                </div>
+              </CardContent>
+            </Card>
 
-              {/* Hourly Coverage Section */}
-              <div className="border-t">
-                <div className="p-3 border-b bg-muted/30">
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs font-medium text-muted-foreground">📊 Cobertura por hora</span>
+            {/* Coverage Grid Card */}
+            {hoursWithCoverage.length > 0 && (
+              <Card>
+                <CardHeader className="py-3 px-4 border-b">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-medium">📊 Cobertura por Hora</CardTitle>
                     <div className="flex gap-3 text-xs">
-                      <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-destructive/20" /> &lt;2</span>
-                      <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-amber-100 dark:bg-amber-900/30" /> 2-3</span>
-                      <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-primary/20" /> 4+</span>
+                      <span className="flex items-center gap-1">
+                        <div className="w-3 h-3 rounded bg-destructive/20" /> &lt;2
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <div className="w-3 h-3 rounded bg-amber-100 dark:bg-amber-900/30" /> 2-3
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <div className="w-3 h-3 rounded bg-primary/20" /> 4+
+                      </span>
                     </div>
                   </div>
-                </div>
-                
-                <ScrollArea className="w-full">
+                </CardHeader>
+                <CardContent className="p-0">
                   <div className="flex">
-                    {/* Sticky Hour Column */}
-                    <div className="sticky left-0 z-20 bg-card border-r shadow-sm">
-                      <div className="h-[28px] border-b bg-muted/50 flex items-center px-3">
+                    {/* Fixed Hour Column */}
+                    <div className="shrink-0 border-r bg-card z-10" style={{ width: HOUR_COL_WIDTH }}>
+                      {/* Header */}
+                      <div className="h-8 border-b bg-muted/50 flex items-center px-2">
                         <span className="text-xs font-medium text-muted-foreground">Hora</span>
                       </div>
-                      {hourlyRange.map((hour) => (
-                        <div key={hour} className="h-6 border-b flex items-center px-3 bg-muted/30">
+                      {/* Hour rows */}
+                      {hoursWithCoverage.map((hour) => (
+                        <div key={hour} className="h-7 border-b flex items-center px-2 bg-muted/20">
                           <span className="text-xs font-medium text-muted-foreground">{hour}:00</span>
                         </div>
                       ))}
                     </div>
 
-                    {/* Coverage Grid */}
-                    <div className="flex-1">
-                      {/* Day headers */}
-                      <div className="flex border-b bg-muted/50">
-                        {monthDays.map((day) => {
-                          const dateStr = format(day, 'yyyy-MM-dd');
-                          const isHoliday = holidayDates.has(dateStr);
-                          const isSunday = day.getDay() === 0;
-                          
-                          return (
-                            <div
-                              key={dateStr}
-                              className={cn(
-                                'w-24 shrink-0 h-[28px] flex items-center justify-center border-r text-xs',
-                                isHoliday && 'bg-warning/20',
-                                isSunday && 'bg-muted/50'
-                              )}
-                            >
-                              <span className="text-muted-foreground">{dayNames[day.getDay()].slice(0, 2)}</span>
-                              <span className="ml-1 font-medium">{format(day, 'd')}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Hourly coverage rows */}
-                      {hourlyRange.map((hour) => (
-                        <div key={hour} className="flex border-b">
+                    {/* Scrollable Coverage */}
+                    <div 
+                      ref={coverageScrollRef}
+                      onScroll={handleCoverageScroll}
+                      className="flex-1 overflow-x-auto"
+                    >
+                      <div style={{ width: gridWidth }}>
+                        {/* Day headers - aligned with schedule */}
+                        <div className="flex h-8 border-b bg-muted/50">
                           {monthDays.map((day) => {
                             const dateStr = format(day, 'yyyy-MM-dd');
-                            const count = countEmployeesAtHour(dateStr, hour);
-                            
+                            const isHoliday = holidayDates.has(dateStr);
+                            const isSunday = day.getDay() === 0;
+
                             return (
-                              <Tooltip key={dateStr}>
-                                <TooltipTrigger asChild>
-                                  <div className="w-24 shrink-0 h-6 flex items-center justify-center border-r">
-                                    <div className={cn('w-8 h-5 rounded text-xs font-medium flex items-center justify-center', getCoverageColor(count))}>
-                                      {count}
-                                    </div>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-xs">{format(day, 'd MMM', { locale: es })} a las {hour}:00 - {count} empleado{count !== 1 ? 's' : ''}</p>
-                                </TooltipContent>
-                              </Tooltip>
+                              <div
+                                key={dateStr}
+                                style={{ width: DAY_WIDTH }}
+                                className={cn(
+                                  'shrink-0 flex items-center justify-center border-r text-xs',
+                                  isHoliday && 'bg-warning/20',
+                                  isSunday && 'bg-muted/60'
+                                )}
+                              >
+                                <span className="text-muted-foreground">{dayNames[day.getDay()].slice(0, 2)}</span>
+                                <span className="ml-1 font-medium">{format(day, 'd')}</span>
+                              </div>
                             );
                           })}
                         </div>
-                      ))}
+
+                        {/* Hourly coverage rows */}
+                        {hoursWithCoverage.map((hour) => (
+                          <div key={hour} className="flex h-7 border-b">
+                            {monthDays.map((day) => {
+                              const dateStr = format(day, 'yyyy-MM-dd');
+                              const count = countEmployeesAtHour(dateStr, hour);
+
+                              return (
+                                <Tooltip key={dateStr}>
+                                  <TooltipTrigger asChild>
+                                    <div 
+                                      style={{ width: DAY_WIDTH }}
+                                      className="shrink-0 h-7 flex items-center justify-center border-r"
+                                    >
+                                      <div className={cn(
+                                        'w-8 h-5 rounded text-xs font-medium flex items-center justify-center',
+                                        getCoverageColor(count)
+                                      )}>
+                                        {count}
+                                      </div>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="text-xs">
+                                    {format(day, 'd MMM', { locale: es })} {hour}:00 — {count} empleado{count !== 1 ? 's' : ''}
+                                  </TooltipContent>
+                                </Tooltip>
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                  <ScrollBar orientation="horizontal" />
-                </ScrollArea>
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         )}
 
         {/* Pending Changes Bar */}
