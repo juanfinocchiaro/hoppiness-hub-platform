@@ -1,8 +1,8 @@
 /**
  * ScheduleCellPopover - Quick edit popover for schedule cells
  * 
- * Allows selecting presets or custom times directly in the cell
- * Now supports break times within the schedule
+ * Allows custom time selection and Franco/day off marking.
+ * Supports break times within the schedule.
  */
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -11,16 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Clock, Sun, Moon, Coffee, X, Check } from 'lucide-react';
+import { Coffee, X, Check } from 'lucide-react';
 import { WORK_POSITION_LABELS, WORK_POSITIONS, type WorkPositionType } from '@/types/workPosition';
-
-// Shift presets
-const SHIFT_PRESETS = [
-  { id: 'morning', label: 'Mañana', start: '09:00', end: '17:00', icon: Sun },
-  { id: 'afternoon', label: 'Tarde', start: '14:00', end: '22:00', icon: Coffee },
-  { id: 'night', label: 'Noche', start: '18:00', end: '02:00', icon: Moon },
-  { id: 'midday', label: 'Mediodía', start: '11:00', end: '15:00', icon: Clock },
-] as const;
 
 export interface ScheduleValue {
   startTime: string | null;
@@ -67,18 +59,6 @@ export function ScheduleCellPopover({
       setBreakEnd(value.breakEnd || '16:00');
     }
   }, [open, value]);
-
-  const handlePresetSelect = (preset: typeof SHIFT_PRESETS[number]) => {
-    onChange({
-      startTime: preset.start,
-      endTime: preset.end,
-      isDayOff: false,
-      position: (position || null) as WorkPositionType | null,
-      breakStart: null,
-      breakEnd: null,
-    });
-    setOpen(false);
-  };
 
   const handleDayOff = () => {
     onChange({
@@ -132,20 +112,24 @@ export function ScheduleCellPopover({
           </div>
         )}
 
-        {/* Quick presets */}
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          {SHIFT_PRESETS.map((preset) => (
-            <Button
-              key={preset.id}
-              variant="outline"
-              size="sm"
-              className="justify-start gap-2 h-9"
-              onClick={() => handlePresetSelect(preset)}
-            >
-              <preset.icon className="w-3.5 h-3.5" />
-              <span className="text-xs">{preset.label}</span>
-            </Button>
-          ))}
+        {/* Day off and clear */}
+        <div className="flex gap-2 mb-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="flex-1"
+            onClick={handleDayOff}
+          >
+            Franco
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive"
+            onClick={handleClear}
+          >
+            <X className="w-4 h-4" />
+          </Button>
         </div>
 
         {/* Day off and clear */}

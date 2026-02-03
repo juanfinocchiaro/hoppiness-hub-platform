@@ -11,7 +11,9 @@ import {
   CertificationMatrix, 
   CoachingForm, 
   CertificationBadgeRow,
+  CertificationLegend,
 } from '@/components/coaching';
+import { useAuth } from '@/hooks/useAuth';
 import { useCoachingStats } from '@/hooks/useCoachingStats';
 import { useTeamCertifications } from '@/hooks/useCertifications';
 import { useWorkStations } from '@/hooks/useStationCompetencies';
@@ -31,15 +33,17 @@ interface TeamMember {
 
 export default function CoachingPage() {
   const { branchId } = useParams<{ branchId: string }>();
+  const { user } = useAuth();
   const [expandedEmployeeId, setExpandedEmployeeId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('team');
   
   const { isSuperadmin, isCoordinador } = usePermissionsV2(branchId);
   const canEvaluateManagers = isSuperadmin || isCoordinador;
+  const currentUserId = user?.id;
 
   // Fetch team members - include encargados if user is coordinator or superadmin
   const { data: teamMembers, isLoading: loadingTeam, refetch: refetchTeam } = useQuery({
-    queryKey: ['team-members-coaching', branchId, canEvaluateManagers],
+    queryKey: ['team-members-coaching', branchId, canEvaluateManagers, currentUserId],
     queryFn: async (): Promise<TeamMember[]> => {
       if (!branchId) return [];
 
@@ -57,7 +61,8 @@ export default function CoachingPage() {
 
       if (rolesError) throw rolesError;
 
-      const userIds = roles?.map(r => r.user_id) ?? [];
+      // Exclude current user from the list (can't evaluate yourself)
+      const userIds = roles?.map(r => r.user_id).filter(id => id !== currentUserId) ?? [];
       if (userIds.length === 0) return [];
 
       const { data: profiles, error: profilesError } = await supabase
@@ -328,7 +333,12 @@ export default function CoachingPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="matrix" className="mt-4">
+        <TabsContent value="matrix" className="mt-4 space-y-4">
+          {/* Certification legend */}
+          <Card className="p-4">
+            <CertificationLegend />
+          </Card>
+          
           {branchId && teamMembers && (
             <CertificationMatrix 
               branchId={branchId} 

@@ -9,7 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { KeyRound, Check, X, Calendar } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Calendar, Info } from 'lucide-react';
 import type { EmployeeData, LOCAL_ROLE_LABELS } from './types';
 import type { LocalRole } from '@/hooks/usePermissionsV2';
 
@@ -51,56 +52,6 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
   const [selectedRole, setSelectedRole] = useState<LocalRole>(currentRole);
   const [hireDate, setHireDate] = useState('');
   
-  // Clock PIN (stored in user_branch_roles)
-  const [clockPin, setClockPin] = useState('');
-  const [pinError, setPinError] = useState('');
-  const [pinAvailable, setPinAvailable] = useState<boolean | null>(null);
-  const [checkingPin, setCheckingPin] = useState(false);
-
-  // Fetch current clock_pin from user_branch_roles
-  const { data: roleData } = useQuery({
-    queryKey: ['branch-role-clock-pin', roleId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('user_branch_roles')
-        .select('clock_pin')
-        .eq('id', roleId)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    enabled: open && !!roleId,
-  });
-
-  useEffect(() => {
-    if (roleData?.clock_pin) {
-      setClockPin(roleData.clock_pin);
-    }
-  }, [roleData]);
-
-  // Check PIN availability in this branch
-  const checkPinAvailability = async (pin: string) => {
-    if (pin.length !== 4) {
-      setPinAvailable(null);
-      return;
-    }
-    setCheckingPin(true);
-    try {
-      const { data, error } = await supabase.rpc('is_clock_pin_available', {
-        _branch_id: branchId,
-        _pin: pin,
-        _exclude_user_id: userId,
-      });
-      if (error) throw error;
-      setPinAvailable(data);
-    } catch (error) {
-      console.error('Error checking PIN:', error);
-      setPinAvailable(null);
-    } finally {
-      setCheckingPin(false);
-    }
-  };
-
   useEffect(() => {
     if (existingData) {
       setDni(existingData.dni || '');
@@ -120,23 +71,8 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
     setSelectedRole(currentRole);
   }, [currentRole]);
 
-  const validatePin = (pin: string): boolean => {
-    if (!pin) return true; // Empty is valid (optional)
-    if (!/^\d{4}$/.test(pin)) {
-      setPinError('El PIN debe ser de 4 dígitos');
-      return false;
-    }
-    setPinError('');
-    return true;
-  };
-
   const saveMutation = useMutation({
     mutationFn: async () => {
-      // Validate PIN
-      if (clockPin && !validatePin(clockPin)) {
-        throw new Error('PIN inválido');
-      }
-
       const data = {
         user_id: userId,
         branch_id: branchId,
@@ -174,31 +110,10 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
           .eq('id', roleId);
         if (roleError) throw roleError;
       }
-
-      // Save clock_pin to user_branch_roles (only if changed)
-      if (clockPin !== (roleData?.clock_pin || '')) {
-        // Check availability first
-        if (clockPin) {
-          const { data: available, error: checkError } = await supabase.rpc('is_clock_pin_available', {
-            _branch_id: branchId,
-            _pin: clockPin,
-            _exclude_user_id: userId,
-          });
-          if (checkError) throw checkError;
-          if (!available) throw new Error('Este PIN ya está en uso en esta sucursal');
-        }
-
-        const { error: pinError } = await supabase
-          .from('user_branch_roles')
-          .update({ clock_pin: clockPin || null })
-          .eq('id', roleId);
-        if (pinError) throw pinError;
-      }
     },
     onSuccess: () => {
       toast.success('Datos guardados');
       queryClient.invalidateQueries({ queryKey: ['employee-data', userId, branchId] });
-      queryClient.invalidateQueries({ queryKey: ['branch-role-clock-pin', roleId] });
       queryClient.invalidateQueries({ queryKey: ['branch-team', branchId] });
       onSuccess();
       onOpenChange(false);
@@ -350,44 +265,13 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
               </p>
             </div>
 
-            <Separator />
-
-            {/* Clock PIN */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <KeyRound className="h-4 w-4" />
-                PIN de Fichaje
-              </Label>
-              <div className="flex gap-2 items-center">
-                <Input 
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={4}
-                  value={clockPin}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '');
-                    setClockPin(val);
-                    if (val && val.length === 4) {
-                      setPinError('');
-                    }
-                  }}
-                  placeholder="4 dígitos"
-                  className="max-w-32 text-center text-lg tracking-widest"
-                />
-                {clockPin.length === 4 && (
-                  <Check className="h-5 w-5 text-green-500" />
-                )}
-                {pinError && (
-                  <X className="h-5 w-5 text-destructive" />
-                )}
-              </div>
-              {pinError && (
-                <p className="text-sm text-destructive">{pinError}</p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Este PIN es necesario para fichar entrada/salida con el código QR de la sucursal.
-              </p>
-            </div>
+            {/* Info about PIN */}
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                El PIN de fichaje lo configura cada empleado desde su propio perfil en "Mi Cuenta".
+              </AlertDescription>
+            </Alert>
           </TabsContent>
         </Tabs>
 
