@@ -9,6 +9,11 @@ interface CoachingStats {
   completionRate: number;
   averageScore: number | null;
   employeesWithoutCoaching: string[];
+  // Stats para encargados (solo visible para supervisores)
+  totalManagers: number;
+  managersWithCoaching: number;
+  pendingManagerCoachings: number;
+  managersWithoutCoaching: string[];
 }
 
 /**
@@ -30,23 +35,30 @@ export function useCoachingStats(branchId: string | null) {
           completionRate: 0,
           averageScore: null,
           employeesWithoutCoaching: [],
+          totalManagers: 0,
+          managersWithCoaching: 0,
+          pendingManagerCoachings: 0,
+          managersWithoutCoaching: [],
         };
       }
 
-      // 1. Obtener empleados activos del local
-      const { data: branchRoles, error: rolesError } = await supabase
+      // 1. Obtener empleados activos del local (solo empleados y cajeros)
+      const { data: employeeRoles, error: rolesError } = await supabase
         .from('user_branch_roles')
-        .select('user_id')
+        .select('user_id, local_role')
         .eq('branch_id', branchId)
         .eq('is_active', true)
-        .in('local_role', ['empleado', 'cajero']);
+        .in('local_role', ['empleado', 'cajero', 'encargado']);
 
       if (rolesError) throw rolesError;
 
-      const employeeIds = branchRoles?.map(r => r.user_id) ?? [];
+      // Separar empleados/cajeros de encargados
+      const employeeIds = employeeRoles?.filter(r => r.local_role !== 'encargado').map(r => r.user_id) ?? [];
+      const managerIds = employeeRoles?.filter(r => r.local_role === 'encargado').map(r => r.user_id) ?? [];
       const totalEmployees = employeeIds.length;
+      const totalManagers = managerIds.length;
 
-      if (totalEmployees === 0) {
+      if (totalEmployees === 0 && totalManagers === 0) {
         return {
           totalEmployees: 0,
           coachingsThisMonth: 0,
@@ -55,6 +67,10 @@ export function useCoachingStats(branchId: string | null) {
           completionRate: 0,
           averageScore: null,
           employeesWithoutCoaching: [],
+          totalManagers: 0,
+          managersWithCoaching: 0,
+          pendingManagerCoachings: 0,
+          managersWithoutCoaching: [],
         };
       }
 
@@ -68,14 +84,24 @@ export function useCoachingStats(branchId: string | null) {
 
       if (coachingsError) throw coachingsError;
 
-      const coachingsThisMonth = coachings?.length ?? 0;
-      const employeesWithCoaching = new Set(coachings?.map(c => c.user_id) ?? []);
+      // Separar coachings de empleados/cajeros vs encargados
+      const employeeCoachings = coachings?.filter(c => employeeIds.includes(c.user_id)) ?? [];
+      const managerCoachings = coachings?.filter(c => managerIds.includes(c.user_id)) ?? [];
+      
+      const coachingsThisMonth = employeeCoachings.length;
+      const employeesWithCoaching = new Set(employeeCoachings.map(c => c.user_id));
       const employeesWithoutCoaching = employeeIds.filter(id => !employeesWithCoaching.has(id));
       const pendingCoachings = employeesWithoutCoaching.length;
-      const pendingAcknowledgments = coachings?.filter(c => !c.acknowledged_at).length ?? 0;
+      const pendingAcknowledgments = employeeCoachings.filter(c => !c.acknowledged_at).length;
 
-      // Calcular promedio de scores
-      const scoresWithValues = coachings?.filter(c => c.overall_score !== null) ?? [];
+      // Stats de managers
+      const managersWithCoaching = managerCoachings.length;
+      const managersWithCoachingSet = new Set(managerCoachings.map(c => c.user_id));
+      const managersWithoutCoaching = managerIds.filter(id => !managersWithCoachingSet.has(id));
+      const pendingManagerCoachings = managersWithoutCoaching.length;
+
+      // Calcular promedio de scores (solo empleados/cajeros)
+      const scoresWithValues = employeeCoachings.filter(c => c.overall_score !== null);
       const averageScore = scoresWithValues.length > 0
         ? scoresWithValues.reduce((sum, c) => sum + (c.overall_score || 0), 0) / scoresWithValues.length
         : null;
@@ -92,6 +118,10 @@ export function useCoachingStats(branchId: string | null) {
         completionRate,
         averageScore: averageScore ? Number(averageScore.toFixed(2)) : null,
         employeesWithoutCoaching,
+        totalManagers,
+        managersWithCoaching,
+        pendingManagerCoachings,
+        managersWithoutCoaching,
       };
     },
     enabled: !!branchId,
