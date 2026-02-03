@@ -140,6 +140,14 @@ export interface PermissionsV2 {
     canViewSalaryAdvances: boolean;
     canViewWarnings: boolean;
     
+    // Acciones operativas (solo Superadmin/Encargado - NO Franquiciado)
+    canCreateSalaryAdvance: boolean;
+    canCancelSalaryAdvance: boolean;
+    canCreateWarning: boolean;
+    canUploadSignature: boolean;
+    canDoCoaching: boolean;
+    canSendLocalCommunication: boolean;
+    
     // Reportes
     canViewSalesReports: boolean;
     canViewLocalPnL: boolean;
@@ -353,28 +361,35 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     
     // Stock
     canViewStock: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
-    canOrderFromSupplier: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
-    canDoInventoryCount: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+    canOrderFromSupplier: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+    canDoInventoryCount: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
     
     // Compras - Incluye contador_local
-    canUploadInvoice: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado || isFranquiciado),
+    canUploadInvoice: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado),
     canViewSuppliers: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado || isFranquiciado),
     canViewSupplierAccounts: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado || isFranquiciado),
-    canPaySupplier: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isFranquiciado),
+    canPaySupplier: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal),
     canViewPurchaseHistory: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado || isFranquiciado),
     
-    // Equipo - Contador también ve horas, adelantos y apercibimientos
-    // Superadmin puede operar aunque no tenga localRole explícito asignado por sucursal.
+    // Equipo - Franquiciado puede VER pero NO editar
     canClockInOut: hasCurrentBranchAccess && (isSuperadmin || !!localRole),
     canViewAllClockIns: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
     canViewTeam: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
-    canEditSchedules: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+    canEditSchedules: hasCurrentBranchAccess && (isSuperadmin || isEncargado), // NO franquiciado
     canViewMonthlyHours: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
     canViewPayroll: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
-    canInviteEmployees: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
-    canDeactivateEmployees: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+    canInviteEmployees: hasCurrentBranchAccess && (isSuperadmin || isEncargado), // NO franquiciado
+    canDeactivateEmployees: hasCurrentBranchAccess && (isSuperadmin || isEncargado), // NO franquiciado
     canViewSalaryAdvances: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
     canViewWarnings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
+    
+    // Acciones operativas - SOLO Superadmin y Encargado (Franquiciado es solo lectura)
+    canCreateSalaryAdvance: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+    canCancelSalaryAdvance: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+    canCreateWarning: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+    canUploadSignature: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+    canDoCoaching: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+    canSendLocalCommunication: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
     
     // Reportes
     canViewSalesReports: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
@@ -387,8 +402,8 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     canConfigPrinters: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
     canConfigShifts: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado),
     
-    // Carga manual de ventas
-    canEnterSales: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero),
+    // Carga manual de ventas - NO franquiciado
+    canEnterSales: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
   };
   
   // Refetch combinado

@@ -42,6 +42,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+
 const TYPES = [
   { value: 'info', label: 'Información', icon: Info, color: 'bg-blue-500/10 text-blue-600' },
   { value: 'warning', label: 'Aviso', icon: AlertTriangle, color: 'bg-yellow-500/10 text-yellow-600' },
@@ -52,6 +54,7 @@ const TYPES = [
 export default function LocalCommunicationsPage() {
   const { branchId } = useParams();
   const { user } = useAuth();
+  const { local } = usePermissionsV2(branchId);
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -189,13 +192,14 @@ export default function LocalCommunicationsPage() {
           </p>
         </div>
         
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Nuevo Mensaje
-            </Button>
-          </DialogTrigger>
+        {local.canSendLocalCommunication && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Nuevo Mensaje
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Mensaje para el Equipo</DialogTitle>
@@ -296,6 +300,7 @@ export default function LocalCommunicationsPage() {
             </div>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {isLoading ? (
@@ -329,13 +334,15 @@ export default function LocalCommunicationsPage() {
                         )}
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteMutation.mutate(comm.id)}
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
+                    {local.canSendLocalCommunication && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteMutation.mutate(comm.id)}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

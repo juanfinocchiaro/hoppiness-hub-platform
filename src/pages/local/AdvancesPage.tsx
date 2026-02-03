@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useSalaryAdvances, useCreateAdvance, useCancelAdvance } from '@/hooks/useSalaryAdvances';
 import { useAuth } from '@/hooks/useAuth';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,7 @@ export default function AdvancesPage() {
   const { branchId } = useParams();
   const { branch } = useOutletContext<{ branch: Branch }>();
   const { user } = useAuth();
+  const { local } = usePermissionsV2(branchId);
   
   const [showNewAdvance, setShowNewAdvance] = useState(false);
   const [selectedUser, setSelectedUser] = useState('');
@@ -154,7 +156,8 @@ export default function AdvancesPage() {
           <p className="text-muted-foreground">{branch?.name}</p>
         </div>
         
-        <Dialog open={showNewAdvance} onOpenChange={setShowNewAdvance}>
+        {local.canCreateSalaryAdvance && (
+          <Dialog open={showNewAdvance} onOpenChange={setShowNewAdvance}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -251,6 +254,7 @@ export default function AdvancesPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {/* Month Navigator */}
@@ -331,7 +335,7 @@ export default function AdvancesPage() {
                     {advance.reason || '-'}
                   </TableCell>
                   <TableCell>
-                    {advance.status !== 'cancelled' && (
+                    {local.canCancelSalaryAdvance && advance.status !== 'cancelled' && (
                       <Button
                         size="sm"
                         variant="ghost"

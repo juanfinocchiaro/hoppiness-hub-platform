@@ -7,6 +7,7 @@ import { useParams, useOutletContext } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,6 +67,7 @@ export default function WarningsPage() {
   const { branchId } = useParams();
   const { branch } = useOutletContext<{ branch: Branch }>();
   const { user } = useAuth();
+  const { local } = usePermissionsV2(branchId);
   const queryClient = useQueryClient();
   
   const [showNewWarning, setShowNewWarning] = useState(false);
@@ -281,13 +283,14 @@ export default function WarningsPage() {
           <p className="text-muted-foreground">{branch?.name}</p>
         </div>
         
-        <Dialog open={showNewWarning} onOpenChange={setShowNewWarning}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Nuevo Apercibimiento
-            </Button>
-          </DialogTrigger>
+        {local.canCreateWarning && (
+          <Dialog open={showNewWarning} onOpenChange={setShowNewWarning}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Apercibimiento
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Registrar Apercibimiento</DialogTitle>
@@ -365,6 +368,7 @@ export default function WarningsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {/* Stats by type */}
@@ -451,7 +455,7 @@ export default function WarningsPage() {
                         Ver
                         <ExternalLink className="h-3 w-3" />
                       </Button>
-                    ) : (
+                    ) : local.canUploadSignature ? (
                       <Button
                         variant="outline"
                         size="sm"
@@ -462,6 +466,8 @@ export default function WarningsPage() {
                         <Upload className="h-4 w-4" />
                         Subir firma
                       </Button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Pendiente</span>
                     )}
                   </TableCell>
                 </TableRow>

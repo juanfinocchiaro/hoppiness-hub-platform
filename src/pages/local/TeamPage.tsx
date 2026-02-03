@@ -9,6 +9,7 @@ import { TeamTable, TeamCardList, useTeamData } from '@/components/local/team';
 import { InviteStaffDialog } from '@/components/hr/InviteStaffDialog';
 import LaborHoursSummary from '@/components/local/LaborHoursSummary';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { PageHelp } from '@/components/ui/PageHelp';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -19,6 +20,7 @@ interface OutletContext {
 export default function TeamPage() {
   const { branch } = useOutletContext<OutletContext>();
   const { team, loading, refetch } = useTeamData(branch?.id);
+  const { local } = usePermissionsV2(branch?.id);
   const isMobile = useIsMobile();
   
   const [search, setSearch] = useState('');
@@ -55,13 +57,15 @@ export default function TeamPage() {
             {franchisees.length > 0 && ` · ${franchisees.length} propietario${franchisees.length !== 1 ? 's' : ''}`}
           </p>
         </div>
-        <Button 
-          onClick={() => setShowInviteDialog(true)}
-          className="w-full sm:w-auto min-h-[44px]"
-        >
-          <UserPlus className="h-4 w-4 mr-2" />
-          Invitar empleado
-        </Button>
+        {local.canInviteEmployees && (
+          <Button 
+            onClick={() => setShowInviteDialog(true)}
+            className="w-full sm:w-auto min-h-[44px]"
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Invitar empleado
+          </Button>
+        )}
       </div>
 
       {/* Tabs: Personal / Horas del Mes */}
