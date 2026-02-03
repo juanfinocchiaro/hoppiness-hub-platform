@@ -289,29 +289,60 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
         for (const day of days) {
           const existingSchedule = schedulesByUser.get(userId)?.get(day.date);
           
-          const scheduleData = {
-            user_id: userId,
-            employee_id: userId,
-            branch_id: branchId,
-            schedule_date: day.date,
-            schedule_month: month,
-            schedule_year: year,
-            day_of_week: new Date(day.date).getDay(),
-            start_time: day.start_time || '00:00',
-            end_time: day.end_time || '00:00',
-            is_day_off: day.is_day_off,
-            work_position: day.work_position,
-            published_at: new Date().toISOString(),
-            published_by: currentUserId,
-          };
-
+          // Skip empty entries (no start time and not a day off)
+          const hasValidSchedule = day.start_time || day.is_day_off;
+          
           if (existingSchedule?.id) {
-            const { error } = await supabase
-              .from('employee_schedules')
-              .update(scheduleData)
-              .eq('id', existingSchedule.id);
-            if (error) throw error;
-          } else if (day.start_time || day.is_day_off) {
+            // If existing schedule exists
+            if (hasValidSchedule) {
+              // Update with new values
+              const scheduleData = {
+                user_id: userId,
+                employee_id: userId,
+                branch_id: branchId,
+                schedule_date: day.date,
+                schedule_month: month,
+                schedule_year: year,
+                day_of_week: new Date(day.date).getDay(),
+                start_time: day.is_day_off ? '00:00' : day.start_time,
+                end_time: day.is_day_off ? '00:00' : day.end_time,
+                is_day_off: day.is_day_off,
+                work_position: day.work_position,
+                published_at: new Date().toISOString(),
+                published_by: currentUserId,
+              };
+              
+              const { error } = await supabase
+                .from('employee_schedules')
+                .update(scheduleData)
+                .eq('id', existingSchedule.id);
+              if (error) throw error;
+            } else {
+              // Delete empty schedule (user cleared it)
+              const { error } = await supabase
+                .from('employee_schedules')
+                .delete()
+                .eq('id', existingSchedule.id);
+              if (error) throw error;
+            }
+          } else if (hasValidSchedule) {
+            // Insert new schedule
+            const scheduleData = {
+              user_id: userId,
+              employee_id: userId,
+              branch_id: branchId,
+              schedule_date: day.date,
+              schedule_month: month,
+              schedule_year: year,
+              day_of_week: new Date(day.date).getDay(),
+              start_time: day.is_day_off ? '00:00' : day.start_time,
+              end_time: day.is_day_off ? '00:00' : day.end_time,
+              is_day_off: day.is_day_off,
+              work_position: day.work_position,
+              published_at: new Date().toISOString(),
+              published_by: currentUserId,
+            };
+            
             const { error } = await supabase
               .from('employee_schedules')
               .insert(scheduleData);

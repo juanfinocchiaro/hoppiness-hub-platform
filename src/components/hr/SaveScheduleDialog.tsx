@@ -39,7 +39,8 @@ export function SaveScheduleDialog({
   onConfirm,
   isPending = false,
 }: SaveScheduleDialogProps) {
-  const [notifyEmail, setNotifyEmail] = useState(true);
+  // Email disabled until hoppiness.com.ar domain is verified in Resend
+  const [notifyEmail, setNotifyEmail] = useState(false);
   const [notifyCommunication, setNotifyCommunication] = useState(true);
 
   const handleConfirm = async () => {
@@ -95,6 +96,7 @@ export function SaveScheduleDialog({
           <div className="space-y-3 pt-2 border-t">
             <Label className="text-xs text-muted-foreground">Notificaciones</Label>
             
+            {/* Email option hidden until domain is verified
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="notify-email"
@@ -109,6 +111,7 @@ export function SaveScheduleDialog({
                 Enviar email a cada empleado
               </label>
             </div>
+            */}
 
             <div className="flex items-center space-x-2">
               <Checkbox
