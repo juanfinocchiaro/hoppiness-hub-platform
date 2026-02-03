@@ -16,12 +16,11 @@ import {
 import { useCoachingStats } from '@/hooks/useCoachingStats';
 import { useTeamCertifications } from '@/hooks/useCertifications';
 import { useWorkStations } from '@/hooks/useStationCompetencies';
-import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import { PageHelp } from '@/components/ui/PageHelp';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ClipboardList, Users, Award, CheckCircle, Clock, ChevronDown, ChevronRight, X, UserCog } from 'lucide-react';
+import { ClipboardList, Users, Award, CheckCircle, Clock, ChevronDown, ChevronRight, X } from 'lucide-react';
 import type { CertificationLevel } from '@/types/coaching';
 
 interface TeamMember {
@@ -36,23 +35,13 @@ export default function CoachingPage() {
   const { id: currentUserId } = useEffectiveUser();
   const [expandedEmployeeId, setExpandedEmployeeId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('team');
-  
-  const { 
-    isSuperadmin, 
-    isCoordinador, 
-  } = usePermissionsWithImpersonation(branchId);
-  
-  // Solo coordinadores y superadmins pueden evaluar encargados
-  // Los franquiciados rara vez están capacitados para esto
-  const canEvaluateManagers = isSuperadmin || isCoordinador;
 
-  // Fetch empleados y cajeros (SIEMPRE sin encargados)
+  // Fetch empleados y cajeros (solo staff, sin encargados)
   const { data: teamMembers, isLoading: loadingTeam, refetch: refetchTeam } = useQuery({
     queryKey: ['team-members-coaching', branchId, currentUserId],
     queryFn: async (): Promise<TeamMember[]> => {
       if (!branchId) return [];
 
-      // Siempre solo empleados y cajeros para este tab
       const { data: roles, error: rolesError } = await supabase
         .from('user_branch_roles')
         .select('user_id, local_role')
@@ -81,40 +70,6 @@ export default function CoachingPage() {
     enabled: !!branchId,
   });
 
-  // Fetch encargados (solo si el usuario puede evaluarlos)
-  const { data: managers, isLoading: loadingManagers, refetch: refetchManagers } = useQuery({
-    queryKey: ['branch-managers-coaching', branchId, currentUserId],
-    queryFn: async (): Promise<TeamMember[]> => {
-      if (!branchId) return [];
-
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_branch_roles')
-        .select('user_id, local_role')
-        .eq('branch_id', branchId)
-        .eq('is_active', true)
-        .eq('local_role', 'encargado');
-
-      if (rolesError) throw rolesError;
-
-      // Exclude current user
-      const userIds = roles?.map(r => r.user_id).filter(id => id !== currentUserId) ?? [];
-      if (userIds.length === 0) return [];
-
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, full_name, avatar_url')
-        .in('id', userIds);
-
-      if (profilesError) throw profilesError;
-
-      return profiles?.map(p => ({
-        ...p,
-        local_role: 'encargado',
-      })) ?? [];
-    },
-    enabled: !!branchId && canEvaluateManagers,
-  });
-
   const { data: stats } = useCoachingStats(branchId || null);
   const { data: certData } = useTeamCertifications(branchId || null);
   const { data: stations } = useWorkStations();
@@ -138,10 +93,6 @@ export default function CoachingPage() {
     return !stats?.employeesWithoutCoaching.includes(userId);
   };
 
-  const hasManagerCoachingThisMonth = (userId: string) => {
-    return !stats?.managersWithoutCoaching.includes(userId);
-  };
-
   const handleToggleEmployee = (employeeId: string) => {
     setExpandedEmployeeId(prev => prev === employeeId ? null : employeeId);
   };
@@ -149,13 +100,9 @@ export default function CoachingPage() {
   const handleCoachingSuccess = () => {
     setExpandedEmployeeId(null);
     refetchTeam();
-    refetchManagers();
   };
 
   const getRoleBadge = (role: string) => {
-    if (role === 'encargado') {
-      return <Badge variant="secondary" className="text-xs">Encargado</Badge>;
-    }
     if (role === 'cajero') {
       return <Badge variant="outline" className="text-xs">Cajero</Badge>;
     }
@@ -262,7 +209,7 @@ export default function CoachingPage() {
     );
   };
 
-  if (loadingTeam || (canEvaluateManagers && loadingManagers)) {
+  if (loadingTeam) {
     return (
       <div className="p-6 space-y-6">
         <PageHelp pageId="local-coaching" />
@@ -291,8 +238,8 @@ export default function CoachingPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      {stats && (stats.totalEmployees > 0 || stats.totalManagers > 0) && (
+      {/* Stats Cards - Solo del staff */}
+      {stats && stats.totalEmployees > 0 && (
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
             <CardContent className="p-4">
@@ -354,24 +301,13 @@ export default function CoachingPage() {
         </div>
       )}
 
-      {/* Tabs */}
+      {/* Tabs - Solo Equipo y Certificaciones */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="team" className="gap-2">
             <Users className="h-4 w-4" />
             Equipo
           </TabsTrigger>
-          {canEvaluateManagers && (
-            <TabsTrigger value="managers" className="gap-2">
-              <UserCog className="h-4 w-4" />
-              Encargados
-              {stats && stats.pendingManagerCoachings > 0 && (
-                <Badge variant="secondary" className="ml-1 text-xs">
-                  {stats.pendingManagerCoachings}
-                </Badge>
-              )}
-            </TabsTrigger>
-          )}
           <TabsTrigger value="matrix" className="gap-2">
             <Award className="h-4 w-4" />
             Certificaciones
@@ -397,31 +333,6 @@ export default function CoachingPage() {
           </Card>
         </TabsContent>
 
-        {/* Tab Encargados - Solo para supervisores */}
-        {canEvaluateManagers && (
-          <TabsContent value="managers" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <UserCog className="h-5 w-5" />
-                  Encargados del Local
-                </CardTitle>
-                <CardDescription>
-                  Como {isSuperadmin ? 'superadmin' : 'coordinador'}, 
-                  podés evaluar a los encargados de esta sucursal
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {renderMemberList(
-                  managers,
-                  hasManagerCoachingThisMonth,
-                  'No hay encargados activos en este local'
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-
         <TabsContent value="matrix" className="mt-4 space-y-4">
           {/* Certification legend */}
           <Card className="p-4">
@@ -431,7 +342,7 @@ export default function CoachingPage() {
           {branchId && teamMembers && (
             <CertificationMatrix 
               branchId={branchId} 
-              employees={[...(teamMembers || []), ...(managers || [])]}
+              employees={teamMembers}
             />
           )}
         </TabsContent>
