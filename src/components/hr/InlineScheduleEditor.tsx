@@ -522,7 +522,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
             </CardContent>
           </Card>
         ) : (
-          <Card className="overflow-hidden">
+          <Card className="w-full max-w-full overflow-hidden">
             <CardHeader className="py-3 px-4 border-b bg-muted/30">
               <div className="flex items-center justify-between gap-4">
                 {/* Segmented Control */}
@@ -569,9 +569,14 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
               </div>
             </CardHeader>
             
-            {/* Single Scrollable container - preserves scroll position between tabs */}
-            <CardContent className="p-0 max-h-[calc(100vh-320px)] overflow-auto relative">
-              <div className="flex">
+            {/* CalendarViewport - contained scroll area for the grid only */}
+            <CardContent className="p-0 max-h-[calc(100vh-320px)] overflow-y-auto overflow-x-hidden relative">
+              {/* Inner wrapper that handles horizontal scroll */}
+              <div className="w-full overflow-x-auto">
+                <div 
+                  className="flex"
+                  style={{ minWidth: EMPLOYEE_COL_WIDTH + gridWidth }}
+                >
                 {/* Fixed Left Column - sticky */}
                 <div 
                   className="shrink-0 border-r bg-card z-20 sticky left-0" 
@@ -760,6 +765,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                     )}
                   </div>
                 </div>
+              </div>
               </div>
             </CardContent>
           </Card>

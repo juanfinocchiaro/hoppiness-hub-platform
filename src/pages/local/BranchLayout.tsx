@@ -520,9 +520,9 @@ export default function BranchLayout() {
           </div>
         </aside>
 
-        {/* Main content */}
-        <main className="flex-1 lg:ml-72">
-          <div className="p-6">
+        {/* Main content - overflow-x hidden to prevent horizontal page scroll */}
+        <main className="flex-1 lg:ml-72 overflow-x-hidden">
+          <div className="p-6 max-w-full">
             {renderContent()}
           </div>
         </main>
