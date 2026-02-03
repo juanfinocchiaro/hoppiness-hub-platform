@@ -28,6 +28,7 @@ import { Copy, ExternalLink, QrCode, Clock, LogIn, LogOut, User, Calendar, Print
 import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { QRCodeSVG } from 'qrcode.react';
+import { getClockInUrl } from '@/lib/constants';
 
 export default function ClockInsPage() {
   const { branchId } = useParams<{ branchId: string }>();
@@ -124,7 +125,7 @@ export default function ClockInsPage() {
   if (!branchId) return null;
 
   const clockUrl = branch?.clock_code 
-    ? `${window.location.origin}/fichaje/${branch.clock_code}`
+    ? getClockInUrl(branch.clock_code)
     : '';
 
   const copyLink = () => {

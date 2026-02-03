@@ -10,9 +10,10 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { Clock, Users, Loader2, AlertCircle, QrCode } from 'lucide-react';
+import { Clock, Loader2, AlertCircle, QrCode } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import logoHoppiness from '@/assets/logo-hoppiness-white.png';
+import { getClockInUrl } from '@/lib/constants';
 
 export default function FichajeQRDisplay() {
   const { branchId } = useParams();
@@ -91,7 +92,7 @@ export default function FichajeQRDisplay() {
     );
   }
 
-  const qrUrl = `${window.location.origin}/fichaje/${branch.clock_code}`;
+  const qrUrl = getClockInUrl(branch.clock_code);
 
   return (
     <div className="min-h-screen bg-primary flex flex-col items-center justify-center p-8">
