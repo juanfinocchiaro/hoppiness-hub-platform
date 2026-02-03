@@ -99,27 +99,32 @@ export default function AdminDashboard() {
                 <span className="text-lg font-bold">Mi Marca</span>
               </div>
               <AdminSidebar avatarInfo={avatarInfo} />
-              {hasLocalPanelAccess && !isEmbedded && (
-                <div className="mt-4 pt-4 border-t">
-                  <ExternalLink to={`/milocal/${accessibleBranches[0].id}`}>
+              {/* Footer - Layout fijo de 2 zonas (sin selector de sucursal) */}
+              <div className="absolute bottom-4 left-4 right-4 space-y-3">
+                {/* ZONA 1: Cambio de Panel - altura reservada */}
+                <div className="min-h-[40px] border-t pt-3">
+                  {hasLocalPanelAccess && !isEmbedded && (
+                    <ExternalLink to={`/milocal/${accessibleBranches[0].id}`}>
+                      <Button variant="ghost" className="w-full justify-start">
+                        <Building2 className="w-4 h-4 mr-3" />
+                        Cambiar a Mi Local
+                      </Button>
+                    </ExternalLink>
+                  )}
+                </div>
+                {/* ZONA 2: Acciones Fijas */}
+                <div className="space-y-1">
+                  <ExternalLink to="/">
                     <Button variant="ghost" className="w-full justify-start">
-                      <Building2 className="w-4 h-4 mr-3" />
-                      Cambiar a Mi Local
+                      <Home className="w-4 h-4 mr-3" />
+                      Volver al Inicio
                     </Button>
                   </ExternalLink>
-                </div>
-              )}
-              <div className="absolute bottom-4 left-4 right-4 space-y-1">
-                <ExternalLink to="/">
-                  <Button variant="ghost" className="w-full justify-start">
-                    <Home className="w-4 h-4 mr-3" />
-                    Volver al Inicio
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={signOut}>
+                    <LogOut className="w-4 h-4 mr-3" />
+                    Salir
                   </Button>
-                </ExternalLink>
-                <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={signOut}>
-                  <LogOut className="w-4 h-4 mr-3" />
-                  Salir
-                </Button>
+                </div>
               </div>
             </SheetContent>
           </Sheet>
@@ -146,25 +151,32 @@ export default function AdminDashboard() {
             <AdminSidebar avatarInfo={avatarInfo} />
           </div>
 
-          <div className="p-4 border-t space-y-1">
-            {hasLocalPanelAccess && !isEmbedded && (
-              <ExternalLink to={`/milocal/${accessibleBranches[0].id}`}>
+          {/* Footer - Layout fijo de 2 zonas */}
+          <div className="p-4 border-t space-y-3">
+            {/* ZONA 1: Cambio de Panel - altura reservada */}
+            <div className="min-h-[40px]">
+              {hasLocalPanelAccess && !isEmbedded && (
+                <ExternalLink to={`/milocal/${accessibleBranches[0].id}`}>
+                  <Button variant="ghost" className="w-full justify-start">
+                    <Building2 className="w-4 h-4 mr-3" />
+                    Cambiar a Mi Local
+                  </Button>
+                </ExternalLink>
+              )}
+            </div>
+            {/* ZONA 2: Acciones Fijas */}
+            <div className="space-y-1">
+              <ExternalLink to="/">
                 <Button variant="ghost" className="w-full justify-start">
-                  <Building2 className="w-4 h-4 mr-3" />
-                  Cambiar a Mi Local
+                  <Home className="w-4 h-4 mr-3" />
+                  Volver al Inicio
                 </Button>
               </ExternalLink>
-            )}
-            <ExternalLink to="/">
-              <Button variant="ghost" className="w-full justify-start">
-                <Home className="w-4 h-4 mr-3" />
-                Volver al Inicio
+              <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={signOut}>
+                <LogOut className="w-4 h-4 mr-3" />
+                Salir
               </Button>
-            </ExternalLink>
-            <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={signOut}>
-              <LogOut className="w-4 h-4 mr-3" />
-              Salir
-            </Button>
+            </div>
           </div>
         </aside>
 

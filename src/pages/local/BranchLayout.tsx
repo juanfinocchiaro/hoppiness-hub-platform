@@ -392,34 +392,31 @@ export default function BranchLayout() {
                 <NavContent />
               </div>
               
-              {/* Footer with branch selector + actions */}
+              {/* Footer with branch selector + actions - Layout fijo de 3 zonas */}
               <div className="pt-4 border-t space-y-3">
-                {/* Branch Selector */}
-                {accessibleBranches.length > 1 && (
-                  <Select value={branchId} onValueChange={handleBranchChange}>
-                    <SelectTrigger className="w-full">
+                {/* ZONA 1: Selector de Sucursal - siempre visible */}
+                <Select 
+                  value={branchId} 
+                  onValueChange={handleBranchChange}
+                  disabled={accessibleBranches.length <= 1}
+                >
+                  <SelectTrigger className="w-full">
+                    <div className="flex items-center gap-2">
+                      <Store className="w-4 h-4 text-primary" />
                       <SelectValue placeholder="Seleccionar local" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {accessibleBranches.map(branch => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                
-                {/* Single branch display */}
-                {accessibleBranches.length === 1 && selectedBranch && (
-                  <div className="flex items-center gap-2 text-sm px-2 py-1.5 bg-muted/50 rounded-md">
-                    <Store className="w-4 h-4 text-primary" />
-                    <span className="font-medium">{selectedBranch.name}</span>
-                  </div>
-                )}
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accessibleBranches.map(branch => (
+                      <SelectItem key={branch.id} value={branch.id}>
+                        {branch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-                {/* Actions */}
-                <div className="space-y-1">
+                {/* ZONA 2: Cambio de Panel - altura reservada */}
+                <div className="min-h-[40px]">
                   {canAccessAdmin && !isEmbedded && (
                     <ExternalLink to="/mimarca">
                       <Button variant="ghost" className="w-full justify-start">
@@ -428,6 +425,10 @@ export default function BranchLayout() {
                       </Button>
                     </ExternalLink>
                   )}
+                </div>
+
+                {/* ZONA 3: Acciones Fijas */}
+                <div className="space-y-1">
                   <ExternalLink to="/">
                     <Button variant="ghost" className="w-full justify-start">
                       <Home className="w-4 h-4 mr-3" />
@@ -466,34 +467,31 @@ export default function BranchLayout() {
             <NavContent />
           </div>
 
-          {/* Footer - Branch selector + actions */}
+          {/* Footer - Layout fijo de 3 zonas */}
           <div className="p-4 border-t space-y-3">
-            {/* Branch Selector */}
-            {accessibleBranches.length > 1 && (
-              <Select value={branchId} onValueChange={handleBranchChange}>
-                <SelectTrigger className="w-full">
+            {/* ZONA 1: Selector de Sucursal - siempre visible */}
+            <Select 
+              value={branchId} 
+              onValueChange={handleBranchChange}
+              disabled={accessibleBranches.length <= 1}
+            >
+              <SelectTrigger className="w-full">
+                <div className="flex items-center gap-2">
+                  <Store className="w-4 h-4 text-primary" />
                   <SelectValue placeholder="Seleccionar local" />
-                </SelectTrigger>
-                <SelectContent>
-                  {accessibleBranches.map(branch => (
-                    <SelectItem key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                {accessibleBranches.map(branch => (
+                  <SelectItem key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            {/* Single branch display */}
-            {accessibleBranches.length === 1 && selectedBranch && (
-              <div className="flex items-center gap-2 text-sm px-2 py-1.5 bg-muted/50 rounded-md">
-                <Store className="w-4 h-4 text-primary" />
-                <span className="font-medium">{selectedBranch.name}</span>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="space-y-1">
+            {/* ZONA 2: Cambio de Panel - altura reservada */}
+            <div className="min-h-[40px]">
               {canAccessAdmin && !isEmbedded && (
                 <ExternalLink to="/mimarca">
                   <Button variant="ghost" className="w-full justify-start">
@@ -502,6 +500,10 @@ export default function BranchLayout() {
                   </Button>
                 </ExternalLink>
               )}
+            </div>
+
+            {/* ZONA 3: Acciones Fijas */}
+            <div className="space-y-1">
               <ExternalLink to="/">
                 <Button variant="ghost" className="w-full justify-start">
                   <Home className="w-4 h-4 mr-3" />
