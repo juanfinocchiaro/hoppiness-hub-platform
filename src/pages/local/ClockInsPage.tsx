@@ -134,62 +134,71 @@ export default function ClockInsPage() {
   };
 
   const printQR = () => {
-    // Get the QR SVG element from the modal
-    const qrSvg = document.querySelector('#print-qr-svg');
-    if (!qrSvg) {
-      toast.error('No se pudo generar el QR para imprimir');
-      return;
-    }
-    
-    // Clone and serialize the SVG
-    const svgClone = qrSvg.cloneNode(true) as SVGElement;
-    const svgData = new XMLSerializer().serializeToString(svgClone);
-    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-    const svgUrl = URL.createObjectURL(svgBlob);
-    
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
+    try {
+      // Get the QR SVG element from the modal
+      const qrSvg = document.querySelector('#print-qr-svg') as SVGElement | null;
+      if (!qrSvg) {
+        toast.error('No se pudo generar el QR para imprimir');
+        return;
+      }
+
+      // Serialize SVG and embed it directly in the print HTML (more reliable than Blob URLs)
+      const svgClone = qrSvg.cloneNode(true) as SVGElement;
+      svgClone.setAttribute('width', '300');
+      svgClone.setAttribute('height', '300');
+      svgClone.setAttribute('viewBox', '0 0 200 200');
+
+      const svgData = new XMLSerializer().serializeToString(svgClone);
+
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast.error('El navegador bloqueó la ventana de impresión');
+        return;
+      }
+
       printWindow.document.write(`
         <html>
           <head>
             <title>QR Fichaje - ${branch?.name}</title>
             <style>
-              body { 
-                display: flex; 
-                flex-direction: column; 
-                align-items: center; 
-                justify-content: center; 
-                height: 100vh; 
+              body {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
                 font-family: system-ui;
                 margin: 0;
+                padding: 24px;
               }
-              h1 { margin-bottom: 20px; font-size: 24px; }
-              p { color: #666; margin-top: 20px; }
-              .qr-container { 
-                background: white; 
-                padding: 20px; 
+              h1 { margin: 0 0 16px; font-size: 24px; }
+              p { color: #666; margin: 16px 0 0; }
+              .qr-container {
+                background: white;
+                padding: 20px;
                 border-radius: 8px;
+                border: 1px solid #e5e7eb;
               }
-              img { display: block; }
+              svg { display: block; }
+              .url { font-size: 12px; color: #999; margin-top: 12px; word-break: break-all; text-align: center; max-width: 420px; }
             </style>
           </head>
           <body>
             <h1>Fichaje - ${branch?.name}</h1>
-            <div class="qr-container">
-              <img src="${svgUrl}" width="300" height="300" alt="QR Code" />
-            </div>
+            <div class="qr-container">${svgData}</div>
             <p>Escaneá para fichar</p>
-            <p style="font-size: 12px; color: #999;">${clockUrl}</p>
+            <div class="url">${clockUrl}</div>
             <script>
-              // Wait for image to load then print
-              document.querySelector('img').onload = function() {
-                setTimeout(() => { window.print(); }, 300);
-              };
+              // Print on next tick to ensure DOM is painted
+              setTimeout(() => { window.print(); }, 200);
             </script>
           </body>
         </html>
       `);
       printWindow.document.close();
+    } catch (e) {
+      console.error(e);
+      toast.error('Error al generar la impresión del QR');
     }
   };
 
