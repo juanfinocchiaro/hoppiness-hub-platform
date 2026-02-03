@@ -2,13 +2,15 @@
  * ScheduleCellPopover - Quick edit popover for schedule cells
  * 
  * Allows selecting presets or custom times directly in the cell
+ * Now supports break times within the schedule
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Clock, Sun, Moon, Coffee, X, Check } from 'lucide-react';
 import { WORK_POSITION_LABELS, WORK_POSITIONS, type WorkPositionType } from '@/types/workPosition';
 
@@ -25,6 +27,8 @@ export interface ScheduleValue {
   endTime: string | null;
   isDayOff: boolean;
   position: WorkPositionType | null;
+  breakStart?: string | null;
+  breakEnd?: string | null;
 }
 
 interface ScheduleCellPopoverProps {
@@ -48,6 +52,21 @@ export function ScheduleCellPopover({
   const [customStart, setCustomStart] = useState(value.startTime || '19:30');
   const [customEnd, setCustomEnd] = useState(value.endTime || '23:30');
   const [position, setPosition] = useState<WorkPositionType | ''>(value.position || '');
+  const [hasBreak, setHasBreak] = useState(!!value.breakStart);
+  const [breakStart, setBreakStart] = useState(value.breakStart || '15:00');
+  const [breakEnd, setBreakEnd] = useState(value.breakEnd || '16:00');
+
+  // Reset state when popover opens
+  useEffect(() => {
+    if (open) {
+      setCustomStart(value.startTime || '19:30');
+      setCustomEnd(value.endTime || '23:30');
+      setPosition(value.position || '');
+      setHasBreak(!!value.breakStart);
+      setBreakStart(value.breakStart || '15:00');
+      setBreakEnd(value.breakEnd || '16:00');
+    }
+  }, [open, value]);
 
   const handlePresetSelect = (preset: typeof SHIFT_PRESETS[number]) => {
     onChange({
@@ -55,6 +74,8 @@ export function ScheduleCellPopover({
       endTime: preset.end,
       isDayOff: false,
       position: (position || null) as WorkPositionType | null,
+      breakStart: null,
+      breakEnd: null,
     });
     setOpen(false);
   };
@@ -65,6 +86,8 @@ export function ScheduleCellPopover({
       endTime: null,
       isDayOff: true,
       position: null,
+      breakStart: null,
+      breakEnd: null,
     });
     setOpen(false);
   };
@@ -75,6 +98,8 @@ export function ScheduleCellPopover({
       endTime: null,
       isDayOff: false,
       position: null,
+      breakStart: null,
+      breakEnd: null,
     });
     setOpen(false);
   };
@@ -86,6 +111,8 @@ export function ScheduleCellPopover({
         endTime: customEnd,
         isDayOff: false,
         position: (position || null) as WorkPositionType | null,
+        breakStart: hasBreak ? breakStart : null,
+        breakEnd: hasBreak ? breakEnd : null,
       });
       setOpen(false);
     }
@@ -96,7 +123,7 @@ export function ScheduleCellPopover({
       <PopoverTrigger asChild disabled={disabled}>
         {children}
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-3" align="center">
+      <PopoverContent className="w-80 p-3" align="center">
         {/* Header */}
         {(employeeName || dateLabel) && (
           <div className="mb-3 pb-2 border-b">
@@ -142,23 +169,66 @@ export function ScheduleCellPopover({
         </div>
 
         {/* Custom time */}
-        <div className="space-y-2 pt-2 border-t">
-          <Label className="text-xs">Horario personalizado</Label>
+        <div className="space-y-3 pt-2 border-t">
+          <Label className="text-xs font-medium">Horario personalizado</Label>
           <div className="flex gap-2 items-center">
-            <Input
-              type="time"
-              value={customStart}
-              onChange={(e) => setCustomStart(e.target.value)}
-              className="h-8 text-sm"
-            />
-            <span className="text-muted-foreground">a</span>
-            <Input
-              type="time"
-              value={customEnd}
-              onChange={(e) => setCustomEnd(e.target.value)}
-              className="h-8 text-sm"
+            <div className="flex-1">
+              <Label className="text-xs text-muted-foreground">Entrada</Label>
+              <Input
+                type="time"
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="h-8 text-sm"
+              />
+            </div>
+            <span className="text-muted-foreground mt-5">→</span>
+            <div className="flex-1">
+              <Label className="text-xs text-muted-foreground">Salida</Label>
+              <Input
+                type="time"
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="h-8 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Break toggle */}
+          <div className="flex items-center justify-between py-2">
+            <div className="flex items-center gap-2">
+              <Coffee className="w-4 h-4 text-muted-foreground" />
+              <Label className="text-xs">Incluir break/descanso</Label>
+            </div>
+            <Switch
+              checked={hasBreak}
+              onCheckedChange={setHasBreak}
             />
           </div>
+
+          {/* Break times */}
+          {hasBreak && (
+            <div className="flex gap-2 items-center pl-6 pb-2">
+              <div className="flex-1">
+                <Label className="text-xs text-muted-foreground">Inicio break</Label>
+                <Input
+                  type="time"
+                  value={breakStart}
+                  onChange={(e) => setBreakStart(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <span className="text-muted-foreground mt-5">→</span>
+              <div className="flex-1">
+                <Label className="text-xs text-muted-foreground">Fin break</Label>
+                <Input
+                  type="time"
+                  value={breakEnd}
+                  onChange={(e) => setBreakEnd(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Position selector */}
           <Select value={position} onValueChange={(v) => setPosition(v as WorkPositionType)}>

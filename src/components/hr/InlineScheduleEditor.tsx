@@ -42,6 +42,8 @@ interface PendingChange {
   endTime: string | null;
   isDayOff: boolean;
   position: WorkPositionType | null;
+  breakStart?: string | null;
+  breakEnd?: string | null;
   originalValue: ScheduleEntry | null;
 }
 
@@ -284,9 +286,17 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
     setPendingChanges(new Map());
   };
 
-  // Format schedule display
+  // Format schedule display - show entry and exit times or F for day off
   const formatScheduleDisplay = (value: ScheduleValue) => {
-    if (value.isDayOff) return 'L';
+    if (value.isDayOff) return 'F';
+    if (value.startTime && value.endTime) {
+      const base = `${value.startTime.slice(0, 5)}-${value.endTime.slice(0, 5)}`;
+      // Add break indicator if present
+      if (value.breakStart && value.breakEnd) {
+        return `${base} ☕`;
+      }
+      return base;
+    }
     if (value.startTime) return value.startTime.slice(0, 5);
     return '-';
   };
@@ -336,7 +346,9 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
               <div className="w-3 h-3 rounded bg-orange-100 dark:bg-orange-950 border border-orange-300" />
               Feriado
             </span>
-            <span><strong>L</strong> = Franco</span>
+            <span><strong>F</strong> = Franco</span>
+            <span><strong>HH:MM-HH:MM</strong> = Entrada-Salida</span>
+            <span>☕ = Con break</span>
             <span className="flex items-center gap-1">
               <div className="w-3 h-3 rounded border-2 border-primary border-dashed" />
               Modificado

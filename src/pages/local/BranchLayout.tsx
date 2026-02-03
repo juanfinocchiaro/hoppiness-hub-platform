@@ -45,6 +45,7 @@ import {
   AlertTriangle,
   DollarSign,
   MessageSquare,
+  ClipboardList,
 } from 'lucide-react';
 import {
   Sheet,
@@ -198,6 +199,7 @@ export default function BranchLayout() {
       show: lp.canViewTeam || lp.canViewAllClockIns,
       items: [
         { to: 'equipo', label: 'Mi Equipo', icon: Users, show: lp.canViewTeam },
+        { to: 'equipo/coaching', label: 'Coaching', icon: ClipboardList, show: lp.canViewTeam },
         { to: 'equipo/horarios', label: 'Horarios', icon: Clock, show: lp.canEditSchedules },
         { to: 'equipo/fichajes', label: 'Fichajes', icon: Clock, show: lp.canViewAllClockIns },
         { to: 'equipo/adelantos', label: 'Adelantos', icon: DollarSign, show: lp.canViewTeam },
