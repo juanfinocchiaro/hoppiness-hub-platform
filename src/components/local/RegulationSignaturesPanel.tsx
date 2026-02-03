@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { FileText, Upload, CheckCircle, AlertCircle, Clock, Camera, User, Printer, Eye, ExternalLink } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
@@ -301,67 +300,65 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
             </div>
           )}
 
-          {/* Team list */}
-          <ScrollArea className="h-[300px]">
-            <div className="space-y-2">
-              {teamSignatures.map((member) => (
-                <div 
-                  key={member.user_id} 
-                  className={`flex items-center justify-between p-3 rounded-lg border ${
+          {/* Team list - no scroll if few items */}
+          <div className="space-y-2">
+            {teamSignatures.map((member) => (
+              <div 
+                key={member.user_id} 
+                className={`flex items-center justify-between p-3 rounded-lg border ${
+                  member.signature 
+                    ? 'bg-green-50/50 border-green-200 dark:bg-green-900/10 dark:border-green-800' 
+                    : 'bg-muted/50'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                     member.signature 
-                      ? 'bg-green-50/50 border-green-200 dark:bg-green-900/10 dark:border-green-800' 
-                      : 'bg-muted/50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      member.signature 
-                        ? 'bg-green-100 text-green-600 dark:bg-green-900/30' 
-                        : 'bg-muted text-muted-foreground'
-                    }`}>
-                      {member.signature ? <CheckCircle className="w-4 h-4" /> : <User className="w-4 h-4" />}
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">{member.full_name}</p>
-                      <p className="text-xs text-muted-foreground">{getRoleLabel(member.local_role)}</p>
-                    </div>
+                      ? 'bg-green-100 text-green-600 dark:bg-green-900/30' 
+                      : 'bg-muted text-muted-foreground'
+                  }`}>
+                    {member.signature ? <CheckCircle className="w-4 h-4" /> : <User className="w-4 h-4" />}
                   </div>
-
-                  {member.signature ? (
-                    <div className="text-right">
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Firmado
-                      </Badge>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {format(new Date(member.signature.signed_at), 'd/MM/yyyy')}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => setPreviewFor(member)}
-                        title="Generar hoja de firma para imprimir"
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        Hoja firma
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="default"
-                        onClick={() => setUploadingFor(member)}
-                      >
-                        <Camera className="w-4 h-4 mr-1" />
-                        Subir firma
-                      </Button>
-                    </div>
-                  )}
+                  <div>
+                    <p className="font-medium text-sm">{member.full_name}</p>
+                    <p className="text-xs text-muted-foreground">{getRoleLabel(member.local_role)}</p>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </ScrollArea>
+
+                {member.signature ? (
+                  <div className="text-right">
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Firmado
+                    </Badge>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {format(new Date(member.signature.signed_at), 'd/MM/yyyy')}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => setPreviewFor(member)}
+                      title="Generar hoja de firma para imprimir"
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      Hoja firma
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="default"
+                      onClick={() => setUploadingFor(member)}
+                    >
+                      <Camera className="w-4 h-4 mr-1" />
+                      Subir firma
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
 

@@ -1,8 +1,10 @@
 /**
- * ScheduleCellPopover - Quick edit popover for schedule cells
+ * ScheduleCellPopover - Modern schedule editing popover
  * 
- * Allows custom time selection and Franco/day off marking.
- * Break is automatically applied for shifts over 6 hours.
+ * Features:
+ * - Clean modern design with proper close button
+ * - Automatic break for shifts over 6 hours
+ * - Position selection
  */
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
@@ -10,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Coffee, X, Check, Info } from 'lucide-react';
+import { Coffee, X, Check, Calendar, Clock } from 'lucide-react';
 import { useWorkPositions } from '@/hooks/useWorkPositions';
 import type { WorkPositionType } from '@/types/workPosition';
 
@@ -42,7 +44,6 @@ function calculateShiftHours(start: string, end: string): number {
   let startMinutes = startH * 60 + startM;
   let endMinutes = endH * 60 + endM;
   
-  // Handle overnight shifts (e.g., 19:00 - 02:00)
   if (endMinutes <= startMinutes) {
     endMinutes += 24 * 60;
   }
@@ -62,10 +63,9 @@ function calculateDefaultBreak(start: string, end: string): { breakStart: string
     endMinutes += 24 * 60;
   }
   
-  // Break starts at the middle of the shift
   const midpoint = startMinutes + (endMinutes - startMinutes) / 2;
-  const breakStartMinutes = Math.floor(midpoint / 30) * 30; // Round to nearest 30 min
-  const breakEndMinutes = breakStartMinutes + 30; // 30 min break
+  const breakStartMinutes = Math.floor(midpoint / 30) * 30;
+  const breakEndMinutes = breakStartMinutes + 30;
   
   const formatTime = (minutes: number) => {
     const normalizedMinutes = minutes % (24 * 60);
@@ -95,18 +95,14 @@ export function ScheduleCellPopover({
   const [breakStart, setBreakStart] = useState(value.breakStart || '');
   const [breakEnd, setBreakEnd] = useState(value.breakEnd || '');
   
-  // Fetch work positions dynamically
   const { data: workPositions = [] } = useWorkPositions();
 
-  // Calculate if break is required (shift > 6 hours)
   const shiftHours = useMemo(() => calculateShiftHours(customStart, customEnd), [customStart, customEnd]);
   const requiresBreak = shiftHours > 6;
 
-  // Update break times when shift times change and break is required
   useEffect(() => {
     if (requiresBreak && customStart && customEnd) {
       const defaultBreak = calculateDefaultBreak(customStart, customEnd);
-      // Only set default if no break is currently set
       if (!breakStart || !breakEnd) {
         setBreakStart(defaultBreak.breakStart);
         setBreakEnd(defaultBreak.breakEnd);
@@ -114,7 +110,6 @@ export function ScheduleCellPopover({
     }
   }, [requiresBreak, customStart, customEnd]);
 
-  // Reset state when popover opens
   useEffect(() => {
     if (open) {
       setCustomStart(value.startTime || '19:30');
@@ -168,93 +163,120 @@ export function ScheduleCellPopover({
       <PopoverTrigger asChild disabled={disabled}>
         {children}
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-3" align="center">
-        {/* Header */}
-        {(employeeName || dateLabel) && (
-          <div className="mb-3 pb-2 border-b">
-            <p className="text-sm font-medium">{employeeName}</p>
-            <p className="text-xs text-muted-foreground">{dateLabel}</p>
+      <PopoverContent className="w-80 p-0" align="center" sideOffset={8}>
+        {/* Header with close button */}
+        <div className="relative bg-primary/5 border-b px-4 py-3">
+          <button
+            onClick={() => setOpen(false)}
+            className="absolute right-2 top-2 p-1.5 rounded-full hover:bg-muted transition-colors"
+            aria-label="Cerrar"
+          >
+            <X className="w-4 h-4 text-muted-foreground" />
+          </button>
+          
+          <div className="pr-8">
+            <p className="font-semibold text-sm text-foreground">{employeeName}</p>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+              <Calendar className="w-3 h-3" />
+              {dateLabel}
+            </div>
           </div>
-        )}
-
-        {/* Day off and clear */}
-        <div className="flex gap-2 mb-3">
-          <Button
-            variant="secondary"
-            size="sm"
-            className="flex-1"
-            onClick={handleDayOff}
-          >
-            Franco
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-destructive"
-            onClick={handleClear}
-          >
-            <X className="w-4 h-4" />
-          </Button>
         </div>
 
-        {/* Custom time */}
-        <div className="space-y-3 pt-2 border-t">
-          <Label className="text-xs font-medium">Horario personalizado</Label>
-          <div className="flex gap-2 items-center">
-            <div className="flex-1">
-              <Label className="text-xs text-muted-foreground">Entrada</Label>
+        <div className="p-4 space-y-4">
+          {/* Quick actions */}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 h-9"
+              onClick={handleDayOff}
+            >
+              Franco (día libre)
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={handleClear}
+            >
+              Borrar
+            </Button>
+          </div>
+
+          {/* Divider */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-popover px-2 text-xs text-muted-foreground">o definir horario</span>
+            </div>
+          </div>
+
+          {/* Time inputs */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                Entrada
+              </Label>
               <Input
                 type="time"
                 value={customStart}
                 onChange={(e) => setCustomStart(e.target.value)}
-                className="h-8 text-sm"
+                className="h-9"
               />
             </div>
-            <span className="text-muted-foreground mt-5">→</span>
-            <div className="flex-1">
-              <Label className="text-xs text-muted-foreground">Salida</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                Salida
+              </Label>
               <Input
                 type="time"
                 value={customEnd}
                 onChange={(e) => setCustomEnd(e.target.value)}
-                className="h-8 text-sm"
+                className="h-9"
               />
             </div>
           </div>
 
-          {/* Shift duration info */}
-          <div className="text-xs text-muted-foreground">
-            Duración: {shiftHours.toFixed(1)} horas
-            {requiresBreak && (
-              <span className="text-primary ml-1">(incluye break obligatorio)</span>
-            )}
+          {/* Duration badge */}
+          <div className="flex items-center justify-center">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-muted rounded-full text-xs font-medium">
+              <Clock className="w-3 h-3" />
+              {shiftHours.toFixed(1)} horas
+              {requiresBreak && (
+                <span className="text-primary"> · incluye break</span>
+              )}
+            </span>
           </div>
 
-          {/* Break times - only shown when required (>6h) */}
+          {/* Break section */}
           {requiresBreak && (
-            <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-medium">
-                <Coffee className="w-4 h-4 text-primary" />
-                <span>Break obligatorio (30min)</span>
+            <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 space-y-2 border border-amber-200 dark:border-amber-800">
+              <div className="flex items-center gap-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+                <Coffee className="w-4 h-4" />
+                Break obligatorio (30 min)
               </div>
-              <div className="flex gap-2 items-center">
-                <div className="flex-1">
-                  <Label className="text-xs text-muted-foreground">Inicio</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-[10px] text-muted-foreground">Inicio</Label>
                   <Input
                     type="time"
                     value={breakStart}
                     onChange={(e) => setBreakStart(e.target.value)}
-                    className="h-8 text-sm"
+                    className="h-8 text-xs"
                   />
                 </div>
-                <span className="text-muted-foreground mt-5">→</span>
-                <div className="flex-1">
-                  <Label className="text-xs text-muted-foreground">Fin</Label>
+                <div>
+                  <Label className="text-[10px] text-muted-foreground">Fin</Label>
                   <Input
                     type="time"
                     value={breakEnd}
                     onChange={(e) => setBreakEnd(e.target.value)}
-                    className="h-8 text-sm"
+                    className="h-8 text-xs"
                   />
                 </div>
               </div>
@@ -262,26 +284,30 @@ export function ScheduleCellPopover({
           )}
 
           {/* Position selector */}
-          <Select 
-            value={position || 'none'} 
-            onValueChange={(v) => setPosition(v === 'none' ? '' : v)}
-          >
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="Posición (opcional)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Sin posición</SelectItem>
-              {workPositions.map((pos) => (
-                <SelectItem key={pos.key} value={pos.key}>
-                  {pos.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Posición</Label>
+            <Select 
+              value={position || 'none'} 
+              onValueChange={(v) => setPosition(v === 'none' ? '' : v)}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Sin posición asignada" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin posición</SelectItem>
+                {workPositions.map((pos) => (
+                  <SelectItem key={pos.key} value={pos.key}>
+                    {pos.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Button size="sm" className="w-full" onClick={handleCustomApply}>
-            <Check className="w-4 h-4 mr-1" />
-            Aplicar
+          {/* Apply button */}
+          <Button className="w-full h-10" onClick={handleCustomApply}>
+            <Check className="w-4 h-4 mr-2" />
+            Aplicar horario
           </Button>
         </div>
       </PopoverContent>
