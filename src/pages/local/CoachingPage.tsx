@@ -1,32 +1,25 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   CertificationMatrix, 
   CoachingForm, 
   CertificationBadgeRow,
-  CoachingPendingCard 
 } from '@/components/coaching';
-import { useCoachingStats, useHasCoachingThisMonth } from '@/hooks/useCoachingStats';
+import { useCoachingStats } from '@/hooks/useCoachingStats';
 import { useTeamCertifications } from '@/hooks/useCertifications';
 import { useWorkStations } from '@/hooks/useStationCompetencies';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { PageHelp } from '@/components/ui/PageHelp';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ClipboardList, Users, Award, CheckCircle, Clock, Plus } from 'lucide-react';
+import { ClipboardList, Users, Award, CheckCircle, Clock, ChevronDown, ChevronRight, X } from 'lucide-react';
 import type { CertificationLevel } from '@/types/coaching';
 
 interface TeamMember {
@@ -38,22 +31,29 @@ interface TeamMember {
 
 export default function CoachingPage() {
   const { branchId } = useParams<{ branchId: string }>();
-  const navigate = useNavigate();
-  const [selectedEmployee, setSelectedEmployee] = useState<TeamMember | null>(null);
+  const [expandedEmployeeId, setExpandedEmployeeId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('team');
+  
+  const { isSuperadmin, isCoordinador } = usePermissionsV2(branchId);
+  const canEvaluateManagers = isSuperadmin || isCoordinador;
 
-  // Fetch team members
-  const { data: teamMembers, isLoading: loadingTeam } = useQuery({
-    queryKey: ['team-members-coaching', branchId],
+  // Fetch team members - include encargados if user is coordinator or superadmin
+  const { data: teamMembers, isLoading: loadingTeam, refetch: refetchTeam } = useQuery({
+    queryKey: ['team-members-coaching', branchId, canEvaluateManagers],
     queryFn: async (): Promise<TeamMember[]> => {
       if (!branchId) return [];
+
+      // Roles to evaluate: employees and cajeros always, encargados only if coordinator
+      const rolesToEvaluate = canEvaluateManagers 
+        ? ['empleado', 'cajero', 'encargado'] as const
+        : ['empleado', 'cajero'] as const;
 
       const { data: roles, error: rolesError } = await supabase
         .from('user_branch_roles')
         .select('user_id, local_role')
         .eq('branch_id', branchId)
         .eq('is_active', true)
-        .in('local_role', ['empleado', 'cajero']);
+        .in('local_role', [...rolesToEvaluate]);
 
       if (rolesError) throw rolesError;
 
@@ -98,10 +98,29 @@ export default function CoachingPage() {
     return !stats?.employeesWithoutCoaching.includes(userId);
   };
 
+  const handleToggleEmployee = (employeeId: string) => {
+    setExpandedEmployeeId(prev => prev === employeeId ? null : employeeId);
+  };
+
+  const handleCoachingSuccess = () => {
+    setExpandedEmployeeId(null);
+    refetchTeam();
+  };
+
+  const getRoleBadge = (role: string) => {
+    if (role === 'encargado') {
+      return <Badge variant="secondary" className="text-xs">Encargado</Badge>;
+    }
+    if (role === 'cajero') {
+      return <Badge variant="outline" className="text-xs">Cajero</Badge>;
+    }
+    return null;
+  };
+
   if (loadingTeam) {
-  return (
-    <div className="p-6 space-y-6">
-      <PageHelp pageId="local-coaching" />
+    return (
+      <div className="p-6 space-y-6">
+        <PageHelp pageId="local-coaching" />
         <Skeleton className="h-8 w-48" />
         <div className="grid gap-4 md:grid-cols-3">
           <Skeleton className="h-32" />
@@ -147,7 +166,7 @@ export default function CoachingPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-green-100">
+                <div className="p-2 rounded-full bg-green-100 dark:bg-green-950">
                   <CheckCircle className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
@@ -161,7 +180,7 @@ export default function CoachingPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-amber-100">
+                <div className="p-2 rounded-full bg-amber-100 dark:bg-amber-950">
                   <Clock className="h-5 w-5 text-amber-600" />
                 </div>
                 <div>
@@ -175,7 +194,7 @@ export default function CoachingPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-blue-100">
+                <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-950">
                   <Award className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
@@ -208,7 +227,12 @@ export default function CoachingPage() {
             <CardHeader>
               <CardTitle>Empleados del Local</CardTitle>
               <CardDescription>
-                Selecciona un empleado para realizar su coaching mensual
+                Seleccioná un empleado para realizar su coaching mensual
+                {canEvaluateManagers && (
+                  <span className="block text-primary text-sm mt-1">
+                    Como coordinador, también podés evaluar a los encargados
+                  </span>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -217,46 +241,85 @@ export default function CoachingPage() {
                   No hay empleados activos en este local
                 </p>
               ) : (
-                <div className="divide-y">
+                <div className="space-y-2">
                   {teamMembers.map(member => {
                     const hasCoaching = hasCoachingThisMonth(member.id);
                     const certs = getEmployeeCertifications(member.id);
+                    const isExpanded = expandedEmployeeId === member.id;
                     
                     return (
-                      <div 
+                      <Collapsible
                         key={member.id}
-                        className="flex items-center justify-between py-3"
+                        open={isExpanded}
+                        onOpenChange={() => !hasCoaching && handleToggleEmployee(member.id)}
                       >
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarImage src={member.avatar_url || undefined} />
-                            <AvatarFallback>{getInitials(member.full_name)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{member.full_name}</p>
-                            <div className="flex items-center gap-2">
-                              <CertificationBadgeRow certifications={certs} size="sm" />
+                        <div className={`border rounded-lg transition-colors ${isExpanded ? 'border-primary bg-muted/50' : ''}`}>
+                          {/* Employee row */}
+                          <CollapsibleTrigger asChild disabled={hasCoaching}>
+                            <div className={`flex items-center justify-between p-4 ${!hasCoaching ? 'cursor-pointer hover:bg-muted/30' : ''}`}>
+                              <div className="flex items-center gap-3">
+                                <Avatar>
+                                  <AvatarImage src={member.avatar_url || undefined} />
+                                  <AvatarFallback>{getInitials(member.full_name)}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-medium">{member.full_name}</p>
+                                    {getRoleBadge(member.local_role)}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <CertificationBadgeRow certifications={certs} size="sm" />
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                {hasCoaching ? (
+                                  <Badge variant="secondary" className="gap-1">
+                                    <CheckCircle className="h-3 w-3" />
+                                    Completado
+                                  </Badge>
+                                ) : (
+                                  <>
+                                    <span className="text-sm text-muted-foreground">
+                                      {isExpanded ? 'Cerrar' : 'Evaluar'}
+                                    </span>
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
+                                    )}
+                                  </>
+                                )}
+                              </div>
                             </div>
-                          </div>
+                          </CollapsibleTrigger>
+
+                          {/* Expanded coaching form */}
+                          <CollapsibleContent>
+                            <div className="border-t p-4 bg-background">
+                              <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-semibold">Coaching de {member.full_name}</h3>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setExpandedEmployeeId(null)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              {branchId && (
+                                <CoachingForm
+                                  employee={member}
+                                  branchId={branchId}
+                                  onSuccess={handleCoachingSuccess}
+                                  onCancel={() => setExpandedEmployeeId(null)}
+                                />
+                              )}
+                            </div>
+                          </CollapsibleContent>
                         </div>
-                        
-                        <div className="flex items-center gap-2">
-                          {hasCoaching ? (
-                            <Badge variant="secondary" className="gap-1">
-                              <CheckCircle className="h-3 w-3" />
-                              Completado
-                            </Badge>
-                          ) : (
-                            <Button 
-                              size="sm"
-                              onClick={() => setSelectedEmployee(member)}
-                            >
-                              <Plus className="h-4 w-4 mr-1" />
-                              Coaching
-                            </Button>
-                          )}
-                        </div>
-                      </div>
+                      </Collapsible>
                     );
                   })}
                 </div>
@@ -274,29 +337,6 @@ export default function CoachingPage() {
           )}
         </TabsContent>
       </Tabs>
-
-      {/* Sheet para hacer coaching */}
-      <Sheet open={!!selectedEmployee} onOpenChange={() => setSelectedEmployee(null)}>
-        <SheetContent className="sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Nuevo Coaching</SheetTitle>
-            <SheetDescription>
-              Evalúa el desempeño del empleado este mes
-            </SheetDescription>
-          </SheetHeader>
-          
-          {selectedEmployee && branchId && (
-            <div className="mt-6">
-              <CoachingForm
-                employee={selectedEmployee}
-                branchId={branchId}
-                onSuccess={() => setSelectedEmployee(null)}
-                onCancel={() => setSelectedEmployee(null)}
-              />
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }
