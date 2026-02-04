@@ -21,35 +21,82 @@ export default function ResetPassword() {
   const [isValidSession, setIsValidSession] = useState<boolean | null>(null);
 
   useEffect(() => {
+    // IMPORTANT: Set up listener BEFORE checking session
+    // This ensures we catch the PASSWORD_RECOVERY event from Supabase
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth event:', event, 'Session:', !!session);
+      
+      if (event === 'PASSWORD_RECOVERY') {
+        console.log('Password recovery event received');
+        setIsValidSession(true);
+      } else if (event === 'SIGNED_IN' && session) {
+        // User might already be signed in from recovery link
+        setIsValidSession(true);
+      }
+    });
+
     // Check if we have a valid recovery session
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      // Small delay to allow onAuthStateChange to process first
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      // The user should have a session after clicking the reset link
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Session check:', !!session);
+      
+      // If session exists, the user clicked the recovery link
       if (session) {
         setIsValidSession(true);
-      } else {
-        // Check URL hash for recovery token (Supabase sends it in the hash)
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        return;
+      }
+      
+      // Check URL hash for recovery token (Supabase sends it in the hash)
+      const hash = window.location.hash;
+      if (hash) {
+        const hashParams = new URLSearchParams(hash.substring(1));
         const accessToken = hashParams.get('access_token');
         const type = hashParams.get('type');
+        const error = hashParams.get('error');
+        const errorDescription = hashParams.get('error_description');
+        
+        console.log('Hash params:', { accessToken: !!accessToken, type, error });
+        
+        if (error) {
+          console.error('Auth error:', error, errorDescription);
+          toast.error(errorDescription || 'El link es inválido o expiró');
+          setIsValidSession(false);
+          return;
+        }
         
         if (accessToken && type === 'recovery') {
-          setIsValidSession(true);
-        } else {
-          setIsValidSession(false);
+          // Try to set the session manually
+          try {
+            const refreshToken = hashParams.get('refresh_token');
+            if (refreshToken) {
+              const { error: sessionError } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+              
+              if (!sessionError) {
+                setIsValidSession(true);
+                // Clean up the URL
+                window.history.replaceState(null, '', window.location.pathname);
+                return;
+              }
+            }
+          } catch (err) {
+            console.error('Error setting session:', err);
+          }
         }
+      }
+      
+      // Only mark as invalid if we haven't already set it as valid
+      if (isValidSession === null) {
+        setIsValidSession(false);
       }
     };
 
     checkSession();
-
-    // Listen for auth state changes (recovery flow)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsValidSession(true);
-      }
-    });
 
     return () => subscription.unsubscribe();
   }, []);
@@ -104,7 +151,10 @@ export default function ResetPassword() {
       <div className="min-h-screen bg-background flex flex-col">
         <PublicHeader />
         <main className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Verificando link...</p>
+          </div>
         </main>
         <PublicFooter />
       </div>
