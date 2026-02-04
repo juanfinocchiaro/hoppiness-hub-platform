@@ -127,13 +127,24 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
       }
     },
     onSuccess: () => {
-      toast.success('Datos guardados');
+      toast.success('Datos guardados correctamente');
       queryClient.invalidateQueries({ queryKey: ['employee-data', userId, branchId] });
       queryClient.invalidateQueries({ queryKey: ['branch-team', branchId] });
       onSuccess();
       onOpenChange(false);
     },
-    onError: (error) => toast.error(error instanceof Error ? error.message : 'Error al guardar'),
+    onError: (error) => {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Detectar errores de permisos RLS
+      if (errorMessage.includes('row-level security') || errorMessage.includes('policy')) {
+        toast.error('No tenés permisos para editar estos datos. Contactá al administrador.');
+      } else if (errorMessage.includes('duplicate') || errorMessage.includes('unique')) {
+        toast.error('Ya existe un registro con estos datos.');
+      } else {
+        toast.error(`Error al guardar: ${errorMessage}`);
+      }
+    },
   });
 
   return (
