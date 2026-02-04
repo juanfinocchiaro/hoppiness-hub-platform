@@ -17,7 +17,7 @@ import { EmployeeClockInsModal } from './EmployeeClockInsModal';
 import { EmployeeScheduleModal } from './EmployeeScheduleModal';
 import type { TeamMember, NoteEntry } from './types';
 import { WARNING_TYPE_LABELS, calculateAge } from './types';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 interface EmployeeExpandedRowProps {
@@ -166,7 +166,7 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <span>
-                {format(new Date(employeeData.birth_date), "dd/MM/yyyy", { locale: es })}
+                {format(parseISO(employeeData.birth_date), "dd/MM/yyyy", { locale: es })}
                 {age && <span className="text-muted-foreground"> ({age} años)</span>}
               </span>
             </div>
