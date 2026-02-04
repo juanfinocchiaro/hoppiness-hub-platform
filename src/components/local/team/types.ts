@@ -98,7 +98,9 @@ export function formatClockIn(dateStr: string | null): string {
 export function calculateAge(birthDate: string | null): number | null {
   if (!birthDate) return null;
   const today = new Date();
-  const birth = new Date(birthDate);
+  // Parse as local date to avoid timezone issues (YYYY-MM-DD)
+  const [year, month, day] = birthDate.split('-').map(Number);
+  const birth = new Date(year, month - 1, day);
   let age = today.getFullYear() - birth.getFullYear();
   const m = today.getMonth() - birth.getMonth();
   if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
