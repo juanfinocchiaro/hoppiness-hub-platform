@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { ChevronLeft, ChevronRight, User, Save, Undo2, AlertCircle, Coffee, Utensils, CreditCard, Flame, Package, Users, BarChart3, MousePointer2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, Save, Undo2, AlertCircle, Coffee, Utensils, CreditCard, Flame, Package, Users, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTeamData } from '@/components/local/team/useTeamData';
 import { useHolidays } from '@/hooks/useHolidays';
@@ -647,20 +647,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
             </Button>
           </div>
 
-          {/* Legend - only for Personas view */}
-          {activeView === 'personas' && (
-            <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <MousePointer2 className="w-3 h-3" /> Ctrl+Click: Multiselección
-              </span>
-              <span className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded bg-primary/20 border-2 border-primary" /> Seleccionado
-              </span>
-              <span className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded border-2 border-primary border-dashed" /> Modificado
-              </span>
-            </div>
-          )}
+          {/* Empty space for balance - legend removed for cleaner UI */}
 
           {/* Legend - for Cobertura view */}
           {activeView === 'cobertura' && (
@@ -781,9 +768,9 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                 </div>
               </div>
 
-              {/* Row 2: Selection toolbar or hints - ALWAYS present with fixed height */}
-              <div className="min-h-[36px] flex items-center border-t border-border/50 pt-2 mt-2">
-                {selection.hasSelection && activeView === 'personas' ? (
+              {/* Row 2: Selection toolbar - ONLY visible when there's a selection */}
+              {selection.hasSelection && activeView === 'personas' && (
+                <div className="min-h-[36px] flex items-center border-t border-border/50 pt-2 mt-2">
                   <SelectionToolbar
                     selectionCount={selection.selectedCells.size}
                     clipboard={selection.clipboard}
@@ -791,19 +778,10 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                     onPaste={selection.handlePaste}
                     onClear={selection.handleClearCells}
                     onApplyDayOff={selection.handleApplyDayOff}
-                    onApplyQuickSchedule={selection.handleApplyQuickSchedule}
                     onDeselect={selection.clearSelection}
                   />
-                ) : canManageSchedules && activeView === 'personas' ? (
-                  <div className="text-xs text-muted-foreground flex items-center gap-4">
-                    <span>Click para editar • Ctrl+Click: multiselección • Shift+Click: rango • F: Franco</span>
-                  </div>
-                ) : activeView === 'cobertura' ? (
-                  <div className="text-xs text-muted-foreground flex items-center gap-4">
-                    <span>Vista de solo lectura: muestra empleados por franja horaria</span>
-                  </div>
-                ) : null}
-              </div>
+                </div>
+              )}
             </CardHeader>
             
             {/* CalendarViewport - scroll horizontal solo aquí dentro */}
@@ -948,17 +926,9 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                                   hasBirthdayThisMonth={hasBirthdayThisMonth}
                                   birthdayUsedThisMonth={birthdayUsed}
                                 >
-                                  <div 
-                                    className="w-full h-full flex items-center justify-center"
-                                    onClick={(e) => {
-                                      // Normal click: opens popover
-                                      // Shift/Ctrl click: handled by parent div
-                                      if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
-                                        // Single click: also select the cell
-                                        selection.handleCellClick(member.id, dateStr, e);
-                                      }
-                                    }}
-                                  >
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    {/* Normal click: opens popover only (no selection) */}
+                                    {/* Ctrl/Shift click: handled by parent div for selection */}
                                     {renderCellContent(value, isPending, isHoliday, isSelected)}
                                   </div>
                                 </ScheduleCellPopover>
