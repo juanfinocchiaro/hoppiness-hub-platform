@@ -694,50 +694,92 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
           </Card>
         ) : (
           <Card className="w-full max-w-full overflow-hidden">
-            <CardHeader className="py-3 px-4 border-b bg-muted/30">
+            <CardHeader className="py-2 px-4 border-b bg-muted/30 space-y-2">
+              {/* Row 1: View toggle + Actions */}
               <div className="flex items-center justify-between gap-4">
                 {/* Segmented Control */}
-                <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
-                  <button
-                    className={cn(
-                      'px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2',
-                      activeView === 'personas' 
-                        ? 'bg-background shadow-sm text-foreground' 
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}
-                    onClick={() => setActiveView('personas')}
-                  >
-                    <Users className="w-4 h-4" />
-                    <span className="hidden sm:inline">Personas</span>
-                  </button>
-                  <button
-                    className={cn(
-                      'px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2',
-                      activeView === 'cobertura' 
-                        ? 'bg-background shadow-sm text-foreground' 
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}
-                    onClick={() => setActiveView('cobertura')}
-                  >
-                    <BarChart3 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Cobertura</span>
-                  </button>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
+                    <button
+                      className={cn(
+                        'px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2',
+                        activeView === 'personas' 
+                          ? 'bg-background shadow-sm text-foreground' 
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                      onClick={() => setActiveView('personas')}
+                    >
+                      <Users className="w-4 h-4" />
+                      <span className="hidden sm:inline">Personas</span>
+                    </button>
+                    <button
+                      className={cn(
+                        'px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2',
+                        activeView === 'cobertura' 
+                          ? 'bg-background shadow-sm text-foreground' 
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                      onClick={() => setActiveView('cobertura')}
+                    >
+                      <BarChart3 className="w-4 h-4" />
+                      <span className="hidden sm:inline">Cobertura</span>
+                    </button>
+                  </div>
+
+                  {/* Hour range filter - only for Cobertura view */}
+                  {activeView === 'cobertura' && (
+                    <Select value={hourRange} onValueChange={(v) => setHourRange(v as HourRangeType)}>
+                      <SelectTrigger className="w-[140px] h-8 text-xs">
+                        <SelectValue placeholder="Rango horario" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas las horas</SelectItem>
+                        <SelectItem value="12-00">12:00 - 00:00</SelectItem>
+                        <SelectItem value="18-00">18:00 - 00:00</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
 
-                {/* Hour range filter - only for Cobertura view */}
-                {activeView === 'cobertura' && (
-                  <Select value={hourRange} onValueChange={(v) => setHourRange(v as HourRangeType)}>
-                    <SelectTrigger className="w-[140px] h-8 text-xs">
-                      <SelectValue placeholder="Rango horario" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas las horas</SelectItem>
-                      <SelectItem value="12-00">12:00 - 00:00</SelectItem>
-                      <SelectItem value="18-00">18:00 - 00:00</SelectItem>
-                    </SelectContent>
-                  </Select>
+                {/* Actions area: Save/Discard when pending changes */}
+                {pendingChanges.size > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="gap-1 text-xs">
+                      <AlertCircle className="w-3 h-3" />
+                      {pendingChanges.size} pendiente{pendingChanges.size !== 1 ? 's' : ''}
+                    </Badge>
+                    <Button variant="ghost" size="sm" onClick={handleDiscardChanges} className="h-8 text-xs">
+                      <Undo2 className="w-3.5 h-3.5 mr-1" />
+                      Descartar
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      onClick={() => setSaveDialogOpen(true)}
+                      disabled={hasLaborViolations}
+                      className="h-8 text-xs"
+                      title={hasLaborViolations ? 'Corrige las violaciones laborales antes de guardar' : ''}
+                    >
+                      <Save className="w-3.5 h-3.5 mr-1" />
+                      Guardar
+                    </Button>
+                  </div>
                 )}
               </div>
+
+              {/* Row 2: Selection toolbar (only when cells are selected) */}
+              {selection.hasSelection && activeView === 'personas' && (
+                <SelectionToolbar
+                  selectionCount={selection.selectedCells.size}
+                  clipboard={selection.clipboard}
+                  onCopy={selection.handleCopy}
+                  onPaste={selection.handlePaste}
+                  onClear={selection.handleClearCells}
+                  onApplyDayOff={selection.handleApplyDayOff}
+                  onApplyQuickSchedule={selection.handleApplyQuickSchedule}
+                  onDeselect={selection.clearSelection}
+                  onClearClipboard={selection.clearClipboard}
+                />
+              )}
             </CardHeader>
             
             {/* CalendarViewport - scroll horizontal solo aquí dentro */}
@@ -975,66 +1017,18 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
           </Card>
         )}
 
-        {/* Selection Toolbar */}
-        {activeView === 'personas' && (
-          <SelectionToolbar
-            selectionCount={selection.selectionCount}
-            clipboard={selection.clipboard}
-            onCopy={selection.handleCopy}
-            onPaste={selection.handlePaste}
-            onClear={selection.handleClearCells}
-            onApplyDayOff={selection.handleApplyDayOff}
-            onApplyQuickSchedule={selection.handleApplyQuickSchedule}
-            onDeselect={selection.clearSelection}
-            onClearClipboard={selection.clearClipboard}
-          />
-        )}
-
-        {/* Labor violations warning */}
-        {hasLaborViolations && !selection.hasSelection && (
-          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40">
-            <Card className="shadow-lg border-destructive bg-destructive/10">
-              <CardContent className="p-3">
-                <div className="flex items-center gap-2 text-destructive">
-                  <AlertCircle className="w-4 h-4" />
-                  <span className="text-sm font-medium">
-                    ⚠️ {consecutiveDaysViolations.map(v => v.userName).join(', ')} tiene(n) 7+ días consecutivos sin franco (Ley 11.544)
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Pending Changes Bar */}
-        {pendingChanges.size > 0 && !selection.hasSelection && (
-          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40">
-            <Card className="shadow-lg border-primary/30">
-              <CardContent className="p-3 flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-medium">
-                    {pendingChanges.size} {pendingChanges.size === 1 ? 'cambio pendiente' : 'cambios pendientes'}
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={handleDiscardChanges}>
-                    <Undo2 className="w-4 h-4 mr-1" />
-                    Descartar
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    onClick={() => setSaveDialogOpen(true)}
-                    disabled={hasLaborViolations}
-                    title={hasLaborViolations ? 'Corrige las violaciones laborales antes de guardar' : ''}
-                  >
-                    <Save className="w-4 h-4 mr-1" />
-                    Guardar
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        {/* Labor violations warning - show as banner at top when saving */}
+        {hasLaborViolations && (
+          <Card className="border-destructive bg-destructive/10">
+            <CardContent className="py-3 px-4">
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span className="text-sm font-medium">
+                  ⚠️ {consecutiveDaysViolations.map(v => v.userName).join(', ')} tiene(n) 7+ días consecutivos sin franco (Ley 11.544)
+                </span>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Save Dialog */}

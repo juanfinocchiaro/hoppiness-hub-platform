@@ -1,22 +1,23 @@
 /**
- * SelectionToolbar - Floating action bar when cells are selected
+ * SelectionToolbar - Inline action bar when cells are selected
  * 
  * Shows:
  * - Selection count
  * - Copy/Paste/Clear buttons
  * - Quick schedule presets
  * - Keyboard shortcut hints
+ * 
+ * Integrated within the editor header, not floating
  */
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Separator } from '@/components/ui/separator';
 import { 
   Copy, 
   ClipboardPaste, 
   Trash2, 
   X,
-  Calendar,
   Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -59,147 +60,138 @@ export function SelectionToolbar({
 
   return (
     <div className={cn(
-      'fixed bottom-4 left-1/2 -translate-x-1/2 z-50',
+      'flex items-center gap-2 flex-wrap',
       className
     )}>
-      <Card className="shadow-xl border-primary/30 bg-background/95 backdrop-blur-sm">
-        <CardContent className="py-3 px-4">
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            {/* Selection count */}
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="gap-1.5 py-1">
-                <Calendar className="w-3.5 h-3.5" />
-                {selectionCount} celda{selectionCount !== 1 ? 's' : ''}
-              </Badge>
-            </div>
+      {/* Selection count badge */}
+      <Badge variant="secondary" className="gap-1 text-xs h-7 px-2">
+        {selectionCount} celda{selectionCount !== 1 ? 's' : ''}
+      </Badge>
 
-            {/* Divider */}
-            <div className="hidden sm:block w-px h-6 bg-border" />
+      <Separator orientation="vertical" className="h-5" />
 
-            {/* Main actions */}
-            <div className="flex items-center gap-1.5">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={onCopy}
-                    className="gap-1.5"
-                  >
-                    <Copy className="w-4 h-4" />
-                    <span className="hidden sm:inline">Copiar</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Ctrl+C</TooltipContent>
-              </Tooltip>
+      {/* Main actions */}
+      <div className="flex items-center gap-1">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={onCopy}
+              className="h-7 gap-1 px-2 text-xs"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Copiar</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Ctrl+C</TooltipContent>
+        </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={onPaste}
-                    disabled={!clipboard}
-                    className={cn(
-                      'gap-1.5',
-                      clipboard && 'text-primary border-primary/50'
-                    )}
-                  >
-                    <ClipboardPaste className="w-4 h-4" />
-                    <span className="hidden sm:inline">Pegar</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {clipboard 
-                    ? `Ctrl+V • ${clipboard.sourceInfo}` 
-                    : 'Nada copiado'
-                  }
-                </TooltipContent>
-              </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={onPaste}
+              disabled={!clipboard}
+              className={cn(
+                'h-7 gap-1 px-2 text-xs',
+                clipboard && 'text-primary'
+              )}
+            >
+              <ClipboardPaste className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Pegar</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            {clipboard 
+              ? `Ctrl+V • ${clipboard.sourceInfo}` 
+              : 'Nada copiado'
+            }
+          </TooltipContent>
+        </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={onClear}
-                    className="gap-1.5 text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Limpiar</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Delete</TooltipContent>
-              </Tooltip>
-            </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={onClear}
+              className="h-7 gap-1 px-2 text-xs text-destructive hover:text-destructive"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Limpiar</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Delete</TooltipContent>
+        </Tooltip>
+      </div>
 
-            {/* Divider */}
-            <div className="hidden sm:block w-px h-6 bg-border" />
+      <Separator orientation="vertical" className="h-5" />
 
-            {/* Quick schedules */}
-            <div className="flex items-center gap-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="secondary" 
-                    size="sm" 
-                    onClick={onApplyDayOff}
-                    className="gap-1 text-xs px-2"
-                  >
-                    Franco
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Tecla F</TooltipContent>
-              </Tooltip>
+      {/* Quick schedules */}
+      <div className="flex items-center gap-0.5">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="secondary" 
+              size="sm" 
+              onClick={onApplyDayOff}
+              className="h-7 text-xs px-2"
+            >
+              Franco
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Tecla F</TooltipContent>
+        </Tooltip>
 
-              {QUICK_SCHEDULES.slice(0, 3).map((qs) => (
-                <Button
-                  key={qs.label}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onApplyQuickSchedule(qs.start, qs.end)}
-                  className="text-xs px-2 h-8"
-                >
-                  <Clock className="w-3 h-3 mr-1" />
-                  {qs.label}
-                </Button>
-              ))}
-            </div>
+        {QUICK_SCHEDULES.slice(0, 3).map((qs) => (
+          <Button
+            key={qs.label}
+            variant="ghost"
+            size="sm"
+            onClick={() => onApplyQuickSchedule(qs.start, qs.end)}
+            className="h-7 text-xs px-2"
+          >
+            <Clock className="w-3 h-3 mr-1" />
+            {qs.label}
+          </Button>
+        ))}
+      </div>
 
-            {/* Divider */}
-            <div className="hidden sm:block w-px h-6 bg-border" />
+      <Separator orientation="vertical" className="h-5" />
 
-            {/* Deselect */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={onDeselect}
-                  className="h-8 w-8 text-muted-foreground"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Escape</TooltipContent>
-            </Tooltip>
-          </div>
+      {/* Deselect */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onDeselect}
+            className="h-7 w-7 text-muted-foreground"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Escape</TooltipContent>
+      </Tooltip>
 
-          {/* Clipboard indicator */}
-          {clipboard && (
-            <div className="flex items-center justify-center gap-2 mt-2 pt-2 border-t text-xs text-muted-foreground">
-              <Copy className="w-3 h-3" />
-              <span>{clipboard.sourceInfo} en portapapeles</span>
-              <button 
-                onClick={onClearClipboard}
-                className="text-primary hover:underline"
-              >
-                limpiar
-              </button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Clipboard indicator */}
+      {clipboard && (
+        <>
+          <Separator orientation="vertical" className="h-5" />
+          <span className="text-xs text-muted-foreground flex items-center gap-1">
+            <Copy className="w-3 h-3" />
+            {clipboard.sourceInfo}
+            <button 
+              onClick={onClearClipboard}
+              className="text-primary hover:underline ml-1"
+            >
+              limpiar
+            </button>
+          </span>
+        </>
+      )}
     </div>
   );
 }
