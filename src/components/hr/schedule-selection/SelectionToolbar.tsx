@@ -18,7 +18,6 @@ import {
   ClipboardPaste, 
   Trash2, 
   X,
-  Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ClipboardDataV2 } from './types';
@@ -30,18 +29,9 @@ interface SelectionToolbarProps {
   onPaste: () => void;
   onClear: () => void;
   onApplyDayOff: () => void;
-  onApplyQuickSchedule: (start: string, end: string) => void;
   onDeselect: () => void;
   className?: string;
 }
-
-// Quick schedule presets
-const QUICK_SCHEDULES = [
-  { label: '18-00', start: '18:00', end: '00:00' },
-  { label: '12-18', start: '12:00', end: '18:00' },
-  { label: '12-00', start: '12:00', end: '00:00' },
-  { label: '19-23', start: '19:00', end: '23:00' },
-];
 
 export function SelectionToolbar({
   selectionCount,
@@ -50,7 +40,6 @@ export function SelectionToolbar({
   onPaste,
   onClear,
   onApplyDayOff,
-  onApplyQuickSchedule,
   onDeselect,
   className,
 }: SelectionToolbarProps) {
@@ -127,35 +116,20 @@ export function SelectionToolbar({
 
       <Separator orientation="vertical" className="h-5" />
 
-      {/* Quick schedules */}
-      <div className="flex items-center gap-0.5">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              onClick={onApplyDayOff}
-              className="h-7 text-xs px-2"
-            >
-              Franco
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">Tecla F</TooltipContent>
-        </Tooltip>
-
-        {QUICK_SCHEDULES.slice(0, 3).map((qs) => (
-          <Button
-            key={qs.label}
-            variant="ghost"
-            size="sm"
-            onClick={() => onApplyQuickSchedule(qs.start, qs.end)}
+      {/* Franco button */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            onClick={onApplyDayOff}
             className="h-7 text-xs px-2"
           >
-            <Clock className="w-3 h-3 mr-1" />
-            {qs.label}
+            Franco
           </Button>
-        ))}
-      </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Tecla F</TooltipContent>
+      </Tooltip>
 
       <Separator orientation="vertical" className="h-5" />
 
