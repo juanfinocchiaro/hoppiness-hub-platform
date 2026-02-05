@@ -290,6 +290,7 @@ export default function RegistroStaff() {
       toast.success('¡Registro completado! Revisá tu email para confirmar la cuenta.');
       navigate('/ingresar?registered=true');
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       handleError(error, { userMessage: error.message || 'Error al completar el registro', context: 'RegistroStaff.handleSubmit' });
     } finally {

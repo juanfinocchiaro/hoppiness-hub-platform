@@ -247,6 +247,7 @@ export function calcularDiferenciasApps(ventasApps: VentasAppsData): {
 } {
   const apps: Array<keyof VentasAppsData> = ['mas_delivery', 'rappi', 'pedidosya', 'mp_delivery'];
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const porApp = {} as any;
   let totalNucleo = 0;
   let totalPaneles = 0;
@@ -351,6 +352,7 @@ export function getDefaultArqueoCaja(): ArqueoCaja {
 }
 
 // Migration helper: convert old VentasAppsData to new format
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function migrateVentasApps(data: any): VentasAppsData {
   // Handle old format that had 'app' instead of 'vales' and no 'total_panel'
   return {
@@ -376,6 +378,7 @@ export function migrateVentasApps(data: any): VentasAppsData {
 }
 
 // Migration helper: ensure VentasLocalData has comparacion_posnet
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function migrateVentasLocal(data: any): VentasLocalData {
   return {
     salon: data?.salon || { efectivo: 0, debito: 0, credito: 0, qr: 0, transferencia: 0 },

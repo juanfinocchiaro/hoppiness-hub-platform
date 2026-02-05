@@ -344,6 +344,7 @@ export default function CommunicationsPage() {
             const typeInfo = getTypeInfo(comm.type);
             const TypeIcon = typeInfo.icon;
             const readCount = comm.communication_reads?.length || 0;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const confirmedCount = comm.communication_reads?.filter((r: any) => r.confirmed_at).length || 0;
 
             return (

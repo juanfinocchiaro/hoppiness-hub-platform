@@ -71,6 +71,7 @@ export default function HolidaysManager({ className }: HolidaysManagerProps) {
       setIsAddOpen(false);
       setSelectedDate(undefined);
       setDescription('');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       toast.error(e.message || 'Error al agregar feriado');
     }
@@ -80,6 +81,7 @@ export default function HolidaysManager({ className }: HolidaysManagerProps) {
     try {
       await deleteHoliday.mutateAsync(id);
       toast.success('Feriado eliminado');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       toast.error(e.message || 'Error al eliminar');
     }
@@ -90,6 +92,7 @@ export default function HolidaysManager({ className }: HolidaysManagerProps) {
     try {
       await createBulk.mutateAsync(holidays);
       toast.success(`${holidays.length} feriados importados para ${currentYear}`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       toast.error(e.message || 'Error al importar');
     }

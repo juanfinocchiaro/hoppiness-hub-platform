@@ -355,7 +355,7 @@ async function sendScheduleNotification(input: NotificationInput) {
       ? `📅 Tu horario de ${monthName} fue modificado`
       : `📅 Tu horario de ${monthName} ya está disponible`;
     
-    let body = input.is_modification
+    const body = input.is_modification
       ? `Tu encargado modificó tu horario. ${input.modification_reason ? `Motivo: ${input.modification_reason}` : ''} Revisalo en 'Mi Horario'.`
       : `Tu encargado publicó el horario del mes. Revisalo en 'Mi Horario'.`;
     

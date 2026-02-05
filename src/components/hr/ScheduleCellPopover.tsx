@@ -55,7 +55,7 @@ function calculateShiftHours(start: string, end: string): number {
   const [startH, startM] = start.split(':').map(Number);
   const [endH, endM] = end.split(':').map(Number);
   
-  let startMinutes = startH * 60 + startM;
+  const startMinutes = startH * 60 + startM;
   let endMinutes = endH * 60 + endM;
   
   if (endMinutes <= startMinutes) {
@@ -70,7 +70,7 @@ function calculateDefaultBreak(start: string, end: string): { breakStart: string
   const [startH, startM] = start.split(':').map(Number);
   const [endH, endM] = end.split(':').map(Number);
   
-  let startMinutes = startH * 60 + startM;
+  const startMinutes = startH * 60 + startM;
   let endMinutes = endH * 60 + endM;
   
   if (endMinutes <= startMinutes) {

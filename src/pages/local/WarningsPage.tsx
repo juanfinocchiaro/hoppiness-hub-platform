@@ -133,7 +133,7 @@ export default function WarningsPage() {
         ...(data?.map(w => w.issued_by).filter(Boolean) || [])
       ])];
       
-      let profileMap: Record<string, string> = {};
+      const profileMap: Record<string, string> = {};
       if (userIds.length > 0) {
         // profiles.id = user_id after migration
         const { data: profiles } = await supabase

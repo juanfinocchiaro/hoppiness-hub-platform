@@ -164,6 +164,7 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
       toast.success('Documento firmado subido correctamente');
       queryClient.invalidateQueries({ queryKey: ['employee-warnings', userId, branchId] });
       handleClose();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast.error('Error al subir el documento: ' + error.message);
     } finally {

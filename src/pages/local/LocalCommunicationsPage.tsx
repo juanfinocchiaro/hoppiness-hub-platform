@@ -127,6 +127,7 @@ export default function LocalCommunicationsPage() {
     mutationFn: async () => {
       if (!user || !branchId) throw new Error('No autenticado');
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const insertData: any = {
         title: formData.title,
         body: formData.body,

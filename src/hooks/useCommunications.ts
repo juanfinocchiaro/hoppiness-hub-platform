@@ -96,6 +96,7 @@ export function useUserCommunications() {
           ...c,
           is_read: !!readRecord,
           is_confirmed: !!readRecord?.confirmed_at,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           branch_name: (c.branches as any)?.name || null,
         };
       }) as CommunicationWithSource[];

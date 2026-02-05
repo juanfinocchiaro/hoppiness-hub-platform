@@ -105,6 +105,7 @@ export default function CuentaPerfil() {
       setConfirmPassword('');
       setShowPasswordSection(false);
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
       toast.error(error.message || 'Error al cambiar la contraseña');
     },

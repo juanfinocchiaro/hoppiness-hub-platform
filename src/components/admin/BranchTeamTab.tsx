@@ -188,6 +188,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
     mutationFn: async ({ userId, position }: { userId: string; position: string | null }) => {
       const { error } = await supabase
         .from('user_branch_roles')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .update({ default_position: position as any, updated_at: new Date().toISOString() })
         .eq('user_id', userId)
         .eq('branch_id', branchId);
@@ -209,8 +210,10 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
           user_id: userId,
           branch_id: branchId,
           local_role: role,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           default_position: position as any,
           is_active: true,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any);
 
       if (error) throw error;
@@ -223,6 +226,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
       setSearchEmail('');
       setSelectedPosition('none');
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
       if (error.message?.includes('duplicate')) {
         toast.error('Este usuario ya está en el equipo');

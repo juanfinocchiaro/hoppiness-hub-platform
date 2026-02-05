@@ -33,6 +33,7 @@ interface BranchSalesData {
   veggies: number;
   ultrasmash: number;
   extras: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   closures: any[];
   hasAlert: boolean;
 }
@@ -93,6 +94,7 @@ export function BrandDailySalesTable() {
         const branchClosures = closuresData.filter(c => c.branch_id === branch.id);
         
         const totals = branchClosures.reduce((acc, c) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const h = c.hamburguesas as any || {};
           return {
             vendido: acc.vendido + Number(c.total_vendido || 0),

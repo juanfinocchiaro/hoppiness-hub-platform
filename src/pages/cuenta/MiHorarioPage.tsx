@@ -39,6 +39,7 @@ interface ScheduleEntry {
   work_position: string | null;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const POSITION_CONFIG: Record<string, { icon: React.ComponentType<any>; color: string; bgColor: string; label: string }> = {
   sandwichero: { icon: Flame, color: 'text-orange-600', bgColor: 'bg-orange-50', label: 'Sandwichero' },
   cajero: { icon: CreditCard, color: 'text-blue-600', bgColor: 'bg-blue-50', label: 'Cajero' },
@@ -117,7 +118,7 @@ export default function MiHorarioPage() {
         const [startH, startM] = s.start_time.split(':').map(Number);
         const [endH, endM] = s.end_time.split(':').map(Number);
         
-        let startMins = startH * 60 + startM;
+        const startMins = startH * 60 + startM;
         let endMins = endH * 60 + endM;
         
         // Handle overnight shifts
@@ -166,7 +167,7 @@ export default function MiHorarioPage() {
     const [startH, startM] = start.split(':').map(Number);
     const [endH, endM] = end.split(':').map(Number);
     
-    let startMins = startH * 60 + startM;
+    const startMins = startH * 60 + startM;
     let endMins = endH * 60 + endM;
     
     if (endMins <= startMins) endMins += 24 * 60;

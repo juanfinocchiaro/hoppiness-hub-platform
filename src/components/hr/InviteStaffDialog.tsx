@@ -174,6 +174,7 @@ export function InviteStaffDialog({
       toast.success(`${foundUser.full_name} reactivado en el equipo`);
       handleClose(false);
       onSuccess?.();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       if (import.meta.env.DEV) console.error('Error reactivating user:', error);
       toast.error(error.message || 'Error al reactivar colaborador');
@@ -230,6 +231,7 @@ export function InviteStaffDialog({
       handleClose(false);
       onSuccess?.();
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       if (import.meta.env.DEV) console.error('Error processing request:', error);
       toast.error(error.message || 'Error al procesar la solicitud');

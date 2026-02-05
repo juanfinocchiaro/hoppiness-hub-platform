@@ -19,6 +19,7 @@ import type {
 import * as closureCalcs from '@/types/shiftClosure';
 
 // Helper to parse JSONB fields from DB
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function parseShiftClosure(row: any): ShiftClosure {
   return {
     ...row,

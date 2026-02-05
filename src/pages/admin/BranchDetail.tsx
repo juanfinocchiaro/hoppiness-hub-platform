@@ -58,6 +58,7 @@ export default function BranchDetail() {
     );
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const publicStatus = ((branch as any).public_status as PublicStatus) || 'active';
   const config = statusConfig[publicStatus] || statusConfig.active;
 

@@ -208,7 +208,8 @@ export default function CuentaDashboard() {
 
               {/* Branch Cards with PIN management integrated */}
               <div className="grid gap-3">
-                {branchPinData?.filter(r => r.local_role).map((ubr: any) => (
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {branchPinData?.filter((r: any) => r.local_role).map((ubr: any) => (
                   <BranchWorkCard
                     key={ubr.branch_id}
                     branchId={ubr.branch_id}

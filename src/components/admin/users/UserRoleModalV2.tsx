@@ -129,6 +129,7 @@ export function UserRoleModalV2({ user, branches, open, onOpenChange, onSuccess 
             .from('user_branch_roles')
             .update({
               local_role: br.local_role,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               default_position: br.default_position as any,
             })
             .eq('id', br.existing_id);
@@ -141,8 +142,10 @@ export function UserRoleModalV2({ user, branches, open, onOpenChange, onSuccess 
               user_id: user.user_id!,
               branch_id: br.branch_id,
               local_role: br.local_role,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               default_position: br.default_position as any,
               is_active: true,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } as any);
           if (error) throw error;
         }

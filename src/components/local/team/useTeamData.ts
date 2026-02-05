@@ -141,6 +141,7 @@ export function useTeamData(branchId: string | undefined, options?: UseTeamDataO
           email: profile?.email || '',
           phone: profile?.phone || null,
           local_role: role.local_role as LocalRole,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           default_position: (role as any).default_position || null,
           hire_date: role.created_at,
           hours_this_month: hoursMap.get(role.user_id) || 0,

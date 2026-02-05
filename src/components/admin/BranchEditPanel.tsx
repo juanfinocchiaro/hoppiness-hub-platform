@@ -31,16 +31,20 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
   const [city, setCity] = useState(branch.city || '');
   const [phone, setPhone] = useState(branch.phone || '');
   const [email, setEmail] = useState(branch.email || '');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [latitude, setLatitude] = useState((branch as any).latitude?.toString() || '');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [longitude, setLongitude] = useState((branch as any).longitude?.toString() || '');
   
   // Estado público (nuevo sistema)
   const [publicStatus, setPublicStatus] = useState<PublicStatus>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ((branch as any).public_status as PublicStatus) || 'active'
   );
   
   // Horarios públicos por día
   const [publicHours, setPublicHours] = useState<PublicHours | null>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (branch as any).public_hours || null
   );
   
@@ -64,6 +68,7 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
           public_hours: publicHours,
           latitude: latitude ? parseFloat(latitude) : null,
           longitude: longitude ? parseFloat(longitude) : null,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any)
         .eq('id', branch.id);
 

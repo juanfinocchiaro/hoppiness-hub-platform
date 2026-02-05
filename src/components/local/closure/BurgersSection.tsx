@@ -20,9 +20,12 @@ export function BurgersSection({ data, onChange, totalHamburguesas }: BurgersSec
     const newData = { ...data };
     
     if (parts.length === 1) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (newData as any)[parts[0]] = value;
     } else if (parts.length === 2) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (newData as any)[parts[0]] = {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ...(newData as any)[parts[0]],
         [parts[1]]: value,
       };

@@ -7,6 +7,7 @@ import { toast } from '@/hooks/use-toast';
 import type { ClosureConfigItem, BranchClosureConfig, ConfigTipo } from '@/types/shiftClosure';
 
 // Helper to cast DB row to typed item
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toClosureConfigItem(row: any): ClosureConfigItem {
   return {
     id: row.id,
@@ -102,6 +103,7 @@ export function useBranchClosureConfig(branchId: string) {
       
       // Override with branch-specific config
       (branchConfig || []).forEach(bc => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const raw = bc.brand_closure_config as any;
         if (raw && raw.tipo === 'app_delivery') {
           enabledApps.set(raw.clave, bc.habilitado);

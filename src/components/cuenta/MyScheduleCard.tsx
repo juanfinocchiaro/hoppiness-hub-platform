@@ -32,6 +32,7 @@ interface ScheduleEntry {
   work_position: string | null;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const POSITION_ICONS: Record<string, { icon: React.ComponentType<any>; color: string; label: string }> = {
   sandwichero: { icon: Flame, color: 'text-orange-500', label: 'Sandwichero' },
   cajero: { icon: CreditCard, color: 'text-blue-500', label: 'Cajero' },

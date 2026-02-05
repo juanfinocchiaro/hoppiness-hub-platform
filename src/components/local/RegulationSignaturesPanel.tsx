@@ -155,6 +155,7 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
       queryClient.invalidateQueries({ queryKey: ['team-regulation-signatures'] });
       setUploadingFor(null);
       setSelectedFile(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast.error('Error al subir la firma: ' + error.message);
     } finally {

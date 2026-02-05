@@ -68,7 +68,7 @@ export function useSalaryAdvances(branchId: string | undefined, selectedMonth?: 
         ...(data?.map(a => a.authorized_by).filter(Boolean) || [])
       ])];
       
-      let profileMap: Record<string, string> = {};
+      const profileMap: Record<string, string> = {};
       if (userIds.length > 0) {
         // profiles.id = user_id after migration
         const { data: profiles } = await supabase
@@ -109,7 +109,7 @@ export function useMyAdvances(userId: string | undefined) {
       
       // Get authorizer names
       const authorizerIds = [...new Set(data?.map(a => a.authorized_by).filter(Boolean) || [])];
-      let profileMap: Record<string, string> = {};
+      const profileMap: Record<string, string> = {};
       
       if (authorizerIds.length > 0) {
         // profiles.id = user_id after migration
@@ -154,7 +154,7 @@ export function useShiftAdvances(shiftId: string | undefined) {
         ...(data?.map(a => a.authorized_by).filter(Boolean) || [])
       ])];
       
-      let profileMap: Record<string, string> = {};
+      const profileMap: Record<string, string> = {};
       if (userIds.length > 0) {
         // profiles.id = user_id after migration
         const { data: profiles } = await supabase
@@ -196,7 +196,7 @@ export function usePendingTransferAdvances(branchId: string | undefined) {
       
       // Get user names
       const userIds = data?.map(a => a.user_id).filter(Boolean) || [];
-      let profileMap: Record<string, string> = {};
+      const profileMap: Record<string, string> = {};
       
       if (userIds.length > 0) {
         // profiles.id = user_id after migration

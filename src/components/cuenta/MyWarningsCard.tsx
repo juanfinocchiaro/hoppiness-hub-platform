@@ -68,7 +68,7 @@ export default function MyWarningsCard() {
       
       // Fetch issuer names
       const issuerIds = [...new Set(data?.map(w => w.issued_by).filter(Boolean))];
-      let issuerMap: Record<string, string> = {};
+      const issuerMap: Record<string, string> = {};
       
       if (issuerIds.length > 0) {
         const { data: issuers } = await supabase

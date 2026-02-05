@@ -112,6 +112,7 @@ export default function RegulationsManager() {
       setNewTitle('');
       setNewDescription('');
       setSelectedFile(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast.error('Error al publicar: ' + error.message);
     } finally {

@@ -51,6 +51,7 @@ interface PendingChange {
 }
 
 // Position icons mapping
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const POSITION_ICONS: Record<string, { icon: React.ComponentType<any>; color: string; label: string }> = {
   sandwichero: { icon: Flame, color: 'text-orange-500', label: 'Sandwichero' },
   cajero: { icon: CreditCard, color: 'text-blue-500', label: 'Cajero' },
@@ -169,8 +170,11 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
         startTime: schedule.start_time || null,
         endTime: schedule.end_time || null,
         isDayOff: schedule.is_day_off || false,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         position: (schedule as any).work_position || null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         breakStart: (schedule as any).break_start || null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         breakEnd: (schedule as any).break_end || null,
       };
     }
@@ -192,6 +196,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
       (originalSchedule?.start_time || null) === value.startTime &&
       (originalSchedule?.end_time || null) === value.endTime &&
       (originalSchedule?.is_day_off || false) === value.isDayOff &&
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ((originalSchedule as any)?.work_position || null) === value.position;
 
     if (isSameAsOriginal) {
@@ -423,6 +428,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
           is_day_off: s.is_day_off || false,
           user_id: s.user_id!,
           user_name: teamNameMap.get(s.user_id!) || 'Empleado',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           work_position: (s as any).work_position,
         });
       }
