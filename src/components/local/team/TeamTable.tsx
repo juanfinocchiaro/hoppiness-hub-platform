@@ -7,6 +7,7 @@ import type { TeamMember } from './types';
 import { LOCAL_ROLE_LABELS, formatHours, formatClockIn } from './types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useWorkPositions } from '@/hooks/useWorkPositions';
 
 interface TeamTableProps {
   team: TeamMember[];
@@ -16,6 +17,14 @@ interface TeamTableProps {
 
 export function TeamTable({ team, branchId, onMemberUpdated }: TeamTableProps) {
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
+  const { data: positions = [] } = useWorkPositions();
+
+  // Helper para obtener label de posición
+  const getPositionLabel = (key: string | null): string => {
+    if (!key) return '-';
+    const position = positions.find(p => p.key === key);
+    return position?.label || key;
+  };
 
   // Separate franchisees from employees (franchisees are owners, not employees)
   const employees = team.filter(m => m.local_role !== 'franquiciado');
@@ -53,16 +62,18 @@ export function TeamTable({ team, branchId, onMemberUpdated }: TeamTableProps) {
                 <TableHead className="w-[90px]">Ingreso</TableHead>
                 <TableHead className="min-w-[150px]">Nombre</TableHead>
                 <TableHead className="min-w-[180px]">Email</TableHead>
-                <TableHead className="w-[100px]">Rol</TableHead>
-                <TableHead className="w-[100px] text-right">Horas mes</TableHead>
-                <TableHead className="w-[120px]">Últ. fichaje</TableHead>
-                <TableHead className="w-[120px]">Estado</TableHead>
+                <TableHead className="w-[100px]">Permisos</TableHead>
+                <TableHead className="w-[100px]">Posición</TableHead>
+                <TableHead className="w-[90px] text-right">Horas mes</TableHead>
+                <TableHead className="w-[110px]">Últ. fichaje</TableHead>
+                <TableHead className="w-[100px]">Estado</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {employees.map((member) => {
                 const isExpanded = expandedMemberId === member.id;
-                const roleLabel = LOCAL_ROLE_LABELS[member.local_role || ''] || 'Empleado';
+                const permissionLabel = LOCAL_ROLE_LABELS[member.local_role || ''] || 'Empleado';
+                const positionLabel = getPositionLabel(member.default_position);
                 
                 return (
                   <>
@@ -96,11 +107,14 @@ export function TeamTable({ team, branchId, onMemberUpdated }: TeamTableProps) {
                           member.local_role === 'encargado' && "text-green-600",
                           (member.local_role === 'cajero' || member.local_role === 'empleado') && "text-slate-600"
                         )}>
-                          {roleLabel}
+                          {permissionLabel}
                         </span>
                       </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {positionLabel}
+                      </TableCell>
                       <TableCell className="text-right text-sm">
-                        {formatHours(member.hours_this_month)}h
+                        {formatHours(member.hours_this_month)}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {formatClockIn(member.last_clock_in)}
@@ -112,7 +126,7 @@ export function TeamTable({ team, branchId, onMemberUpdated }: TeamTableProps) {
                     
                     {isExpanded && (
                       <TableRow key={`${member.id}-expanded`}>
-                        <TableCell colSpan={7} className="p-0 bg-muted/30">
+                        <TableCell colSpan={8} className="p-0 bg-muted/30">
                           <EmployeeExpandedRow 
                             member={member}
                             branchId={branchId}
@@ -127,7 +141,7 @@ export function TeamTable({ team, branchId, onMemberUpdated }: TeamTableProps) {
               })}
               {employees.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     No hay empleados en este local
                   </TableCell>
                 </TableRow>
