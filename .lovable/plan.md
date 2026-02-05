@@ -1,149 +1,77 @@
 
-# Plan: Corregir Scroll Containment en la Grilla de Horarios
+# Plan: Ocultar "Pendientes" para Franquiciados en el Dashboard
 
-## Problema Raíz
+## Problema Identificado
 
-El scroll horizontal y vertical de la tabla de horarios "bleeds" (se escapa) al `body`, causando que toda la página se mueva en lugar de solo la tabla. Esto sucede porque:
+Actualmente en `ManagerDashboard.tsx` línea 334, la condición para mostrar la sección "Pendientes" es:
 
-1. **WorkShell no contiene overflow**: El layout usa `min-h-screen` pero no tiene `overflow-hidden`
-2. **Cadena de containment rota**: Entre el componente `InlineScheduleEditor` y el root, hay múltiples contenedores sin restricción de altura
-3. **Cálculo relativo incorrecto**: `max-h-[calc(100vh-320px)]` asume una altura conocida pero ignora los elementos acumulados (header, tabs, padding)
-
-```
-Actual (ROTO):
-┌──────────────────────────────────────────┐
-│ Body (scrollable)                        │ ← scroll se escapa aquí
-│  ├─ WorkShell                            │
-│  │   └─ main.p-6                         │
-│  │       └─ SchedulesPage                │
-│  │           └─ Tabs                     │
-│  │               └─ InlineScheduleEditor │
-│  │                   └─ overflow-auto    │ ← debería scrollear aquí
-└──────────────────────────────────────────┘
-
-Correcto (OBJETIVO):
-┌──────────────────────────────────────────┐
-│ Body (NO scroll / overflow-hidden)       │
-│  ├─ WorkShell (h-screen, overflow-hidden)│
-│  │   └─ main (flex-1, overflow-hidden)   │
-│  │       └─ Content (flex-1, overflow-y) │
-│  │           └─ Table (overflow-x-auto)  │ ← scroll horizontal aquí
-└──────────────────────────────────────────┘
-```
-
-## Solución: Containment Correcto en Múltiples Capas
-
-### 1. Modificar WorkShell.tsx
-
-Agregar `h-screen overflow-hidden` al root y `overflow-auto` al main content para que TODO el scroll quede contenido.
-
-**Antes:**
 ```tsx
-<div className="min-h-screen bg-background">
-  ...
-  <main className="flex-1 lg:ml-72">
-    <div className="p-6">{children}</div>
-  </main>
-</div>
+{!isCajero && (
+  <Card> {/* PENDIENTES */} ...
+)}
 ```
 
-**Después:**
+Esto permite que los **Franquiciados** vean los pendientes, pero según los requisitos:
+- Los pendientes son tareas **operativas** que debe gestionar el **Encargado**
+- El Franquiciado tiene rol de **solo lectura** según la memoria del sistema
+- Las tareas como "Solicitudes de día libre" y "Firmas de reglamento" requieren **acción del encargado**, no del dueño
+
+## Solución
+
+Cambiar la condición para que solo **Encargados** y **Superadmins** vean la sección "Pendientes":
+
 ```tsx
-<div className="h-screen overflow-hidden bg-background flex flex-col">
-  ...
-  <div className="flex flex-1 overflow-hidden">
-    {/* Sidebar */}
-    <aside className="... h-full overflow-y-auto">...</aside>
-    
-    {/* Main - scroll interno */}
-    <main className="flex-1 lg:ml-72 overflow-y-auto">
-      <div className="p-6">{children}</div>
-    </main>
-  </div>
-</div>
+// ANTES (línea 334)
+{!isCajero && (
+
+// DESPUÉS
+{(isEncargado || isSuperadmin) && (
 ```
 
-### 2. Modificar InlineScheduleEditor.tsx
+## Cambio Técnico
 
-Simplificar el contenedor de scroll ya que WorkShell ahora controla el overflow vertical:
+### Archivo: `src/components/local/ManagerDashboard.tsx`
 
-**Antes:**
+| Línea | Cambio |
+|-------|--------|
+| 151 | Desestructurar `isEncargado` y `isSuperadmin` del hook de permisos |
+| 334 | Cambiar condición de `!isCajero` a `(isEncargado \|\| isSuperadmin)` |
+
+**Código específico:**
+
 ```tsx
-<CardContent className="p-0 overflow-hidden">
-  <div className="max-h-[calc(100vh-320px)] overflow-auto">
+// Línea 151 - agregar isEncargado e isSuperadmin
+const { isCajero, isEncargado, isSuperadmin, local } = usePermissionsWithImpersonation(branch.id);
+
+// Línea 334 - cambiar condición
+{(isEncargado || isSuperadmin) && (
+  <Card>
+    <CardHeader className="pb-2">
+      <CardTitle className="flex items-center justify-between text-base">
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4" />
+          Pendientes
+        </div>
+        ...
+      </CardTitle>
+    </CardHeader>
     ...
-  </div>
-</CardContent>
+  </Card>
+)}
 ```
-
-**Después:**
-```tsx
-<CardContent className="p-0">
-  <div className="overflow-auto" style={{ maxHeight: 'calc(100vh - 380px)' }}>
-    {/* Contenido con scroll interno */}
-  </div>
-</CardContent>
-```
-
-Alternativamente, usar un approach más robusto con CSS Grid:
-
-```tsx
-<CardContent className="p-0 overflow-hidden">
-  <div className="overflow-x-auto overscroll-x-contain">
-    {/* Scroll SOLO horizontal aquí */}
-    <div className="max-h-[60vh] overflow-y-auto overscroll-y-contain">
-      {/* Scroll SOLO vertical aquí */}
-      <table>...</table>
-    </div>
-  </div>
-</CardContent>
-```
-
-### 3. Agregar `overscroll-behavior: contain`
-
-Esto previene que el scroll se propague al padre cuando llega al límite:
-
-```tsx
-<div className="overflow-auto overscroll-contain">
-```
-
-## Cambios Técnicos Específicos
-
-### WorkShell.tsx
-
-| Línea | Cambio |
-|-------|--------|
-| 46 | `min-h-screen` → `h-screen overflow-hidden flex flex-col` |
-| 92 | Envolver sidebar + main en `<div className="flex flex-1 overflow-hidden">` |
-| 122 | `main.flex-1` → agregar `overflow-y-auto` |
-
-### InlineScheduleEditor.tsx
-
-| Línea | Cambio |
-|-------|--------|
-| 788-790 | Simplificar contenedor de scroll, agregar `overscroll-contain` |
-| 789 | Mantener `max-h` pero asegurar que el padre tenga `overflow-hidden` |
-
-## Archivos a Modificar
-
-| Archivo | Cambio Principal |
-|---------|------------------|
-| `src/components/layout/WorkShell.tsx` | Agregar containment con `h-screen overflow-hidden` |
-| `src/components/hr/InlineScheduleEditor.tsx` | Agregar `overscroll-contain` y revisar `max-h` |
 
 ## Resultado Esperado
 
-1. El scroll horizontal de la tabla queda contenido DENTRO de la grilla
-2. El header, tabs y sidebar permanecen fijos mientras se scrollea
-3. La columna "Empleado" permanece sticky a la izquierda
-4. Los headers de días permanecen sticky arriba
-5. No hay "scroll bleed" hacia el body
+| Rol | Ve "Pendientes" |
+|-----|-----------------|
+| Superadmin | ✅ Sí |
+| Encargado | ✅ Sí |
+| Franquiciado | ❌ No |
+| Cajero | ❌ No |
+| Empleado | ❌ No |
 
-## Testing
+## Archivos a Modificar
 
-Después de implementar, verificar:
-- [ ] Scroll horizontal: solo mueve días, no el sidebar
-- [ ] Scroll vertical: solo mueve filas, no el header de página
-- [ ] Columna sticky: "Empleado" siempre visible a la izquierda
-- [ ] Header sticky: días siempre visibles arriba
-- [ ] Mobile: funciona igual en móvil
+| Archivo | Cambio |
+|---------|--------|
+| `src/components/local/ManagerDashboard.tsx` | Ajustar condición de visibilidad de "Pendientes" |
