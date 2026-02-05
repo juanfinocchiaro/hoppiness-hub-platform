@@ -148,7 +148,7 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
   const [selectedShift, setSelectedShift] = useState<string>('mediodía');
 
   // Permisos - verificar rol para vista limitada (con soporte de impersonación)
-  const { isCajero, local } = usePermissionsWithImpersonation(branch.id);
+  const { isCajero, isFranquiciado, local } = usePermissionsWithImpersonation(branch.id);
 
   // Enabled shifts for this branch
   const { data: enabledShifts, isLoading: loadingShifts } = useEnabledShifts(branch.id);
@@ -330,8 +330,8 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
           </CardContent>
       </Card>
 
-      {/* PENDIENTES - Solo para encargados/franquiciados */}
-      {!isCajero && (
+      {/* PENDIENTES - Solo para encargados (no franquiciados ni cajeros) */}
+      {!isCajero && !isFranquiciado && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center justify-between text-base">
