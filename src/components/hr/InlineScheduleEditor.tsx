@@ -6,6 +6,7 @@
  * - Single scrollable container shared between tabs (scroll position preserved)
  * - Sticky left column and sticky header in both views
  * - Same day columns width for perfect alignment
+ * - Multi-cell selection with keyboard shortcuts (Ctrl+C/V, Delete, F, Escape)
  * - Week copy/paste functionality for faster schedule entry
  */
 import { useState, useMemo, useCallback } from 'react';
@@ -14,12 +15,12 @@ import { es } from 'date-fns/locale';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { ChevronLeft, ChevronRight, User, Save, Undo2, AlertCircle, Coffee, Utensils, CreditCard, Flame, Package, Users, BarChart3 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, Save, Undo2, AlertCircle, Coffee, Utensils, CreditCard, Flame, Package, Users, BarChart3, MousePointer2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTeamData } from '@/components/local/team/useTeamData';
 import { useHolidays } from '@/hooks/useHolidays';
@@ -29,7 +30,7 @@ import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import { ScheduleCellPopover, type ScheduleValue } from './ScheduleCellPopover';
 import { SaveScheduleDialog } from './SaveScheduleDialog';
-import { ScheduleCopyButton, SchedulePasteButton, ClipboardBanner, type ClipboardData } from './ScheduleCopyPasteControls';
+import { useScheduleSelection, SelectionToolbar } from './schedule-selection';
 import type { WorkPositionType } from '@/types/workPosition';
 
 interface InlineScheduleEditorProps {
@@ -60,7 +61,7 @@ const POSITION_ICONS: Record<string, { icon: React.ComponentType<any>; color: st
 const changeKey = (userId: string, date: string) => `${userId}:${date}`;
 
 const DAY_WIDTH = 80;
-const EMPLOYEE_COL_WIDTH = 200; // Increased to fit copy/paste buttons
+const EMPLOYEE_COL_WIDTH = 160;
 const SCHEDULE_ROW_HEIGHT = 56;
 const COVERAGE_ROW_HEIGHT = 32;
 
@@ -75,11 +76,10 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [activeView, setActiveView] = useState<ViewType>('personas');
   const [hourRange, setHourRange] = useState<HourRangeType>('all');
-  const [clipboard, setClipboard] = useState<ClipboardData | null>(null);
   const queryClient = useQueryClient();
   const { id: currentUserId } = useEffectiveUser();
 
-  const { isSuperadmin, isFranquiciado, isEncargado, local } = usePermissionsV2(branchId);
+  const { local } = usePermissionsV2(branchId);
   const canManageSchedules = local.canEditSchedules;
 
   // Fetch data
@@ -119,6 +119,14 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
     const end = endOfMonth(start);
     return eachDayOfInterval({ start, end });
   }, [month, year]);
+
+  // Team member IDs array for selection
+  const teamMemberIds = useMemo(() => team.map(m => m.id), [team]);
+
+  // Team member name lookup
+  const getTeamMemberName = useCallback((userId: string) => {
+    return team.find(m => m.id === userId)?.full_name || 'Empleado';
+  }, [team]);
 
   // Holiday dates set
   const holidayDates = useMemo(() => {
@@ -212,58 +220,21 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
     }
   }, [schedulesByUser]);
 
+  // Selection system
+  const selection = useScheduleSelection({
+    monthDays,
+    teamMemberIds,
+    getEffectiveValue,
+    onCellChange: handleCellChange,
+    getTeamMemberName,
+    enabled: canManageSchedules && activeView === 'personas',
+  });
+
   // Discard changes
   const handleDiscardChanges = () => {
     setPendingChanges(new Map());
+    selection.clearSelection();
     toast.info('Cambios descartados');
-  };
-
-  // Copy week from an employee
-  const handleCopyWeek = useCallback((userId: string, userName: string, weekStart: Date) => {
-    const weekData = new Map<number, ScheduleValue>();
-    
-    for (let i = 0; i < 7; i++) {
-      const day = addDays(weekStart, i);
-      const dateStr = format(day, 'yyyy-MM-dd');
-      const value = getEffectiveValue(userId, dateStr);
-      weekData.set(day.getDay(), value);
-    }
-    
-    setClipboard({ 
-      sourceUserId: userId, 
-      sourceUserName: userName, 
-      weekStartDate: format(weekStart, 'yyyy-MM-dd'),
-      weekData 
-    });
-    toast.info(`Semana de ${userName.split(' ')[0]} copiada`);
-  }, [getEffectiveValue]);
-
-  // Paste week to an employee
-  const handlePasteWeek = useCallback((targetUserId: string, targetUserName: string, targetWeekStart: Date) => {
-    if (!clipboard) return;
-    
-    let pastedCount = 0;
-    for (let i = 0; i < 7; i++) {
-      const day = addDays(targetWeekStart, i);
-      const dateStr = format(day, 'yyyy-MM-dd');
-      const dayOfWeek = day.getDay();
-      const value = clipboard.weekData.get(dayOfWeek);
-      
-      // Only paste if within the current month
-      if (day.getMonth() + 1 === month && day.getFullYear() === year) {
-        if (value) {
-          handleCellChange(targetUserId, targetUserName, dateStr, value);
-          pastedCount++;
-        }
-      }
-    }
-    
-    toast.success(`Horario pegado para ${targetUserName.split(' ')[0]} (${pastedCount} días)`);
-  }, [clipboard, handleCellChange, month, year]);
-
-  // Clear clipboard
-  const handleClearClipboard = () => {
-    setClipboard(null);
   };
 
   // Save mutation
@@ -289,13 +260,10 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
         for (const day of days) {
           const existingSchedule = schedulesByUser.get(userId)?.get(day.date);
           
-          // Skip empty entries (no start time and not a day off)
           const hasValidSchedule = day.start_time || day.is_day_off;
           
           if (existingSchedule?.id) {
-            // If existing schedule exists
             if (hasValidSchedule) {
-              // Update with new values
               const scheduleData = {
                 user_id: userId,
                 employee_id: userId,
@@ -318,7 +286,6 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                 .eq('id', existingSchedule.id);
               if (error) throw error;
             } else {
-              // Delete empty schedule (user cleared it)
               const { error } = await supabase
                 .from('employee_schedules')
                 .delete()
@@ -326,7 +293,6 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
               if (error) throw error;
             }
           } else if (hasValidSchedule) {
-            // Insert new schedule
             const scheduleData = {
               user_id: userId,
               employee_id: userId,
@@ -352,7 +318,6 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
       }
     },
     onSuccess: async (_, { notifyEmail, notifyCommunication }) => {
-      // Send notifications to affected employees
       if ((notifyEmail || notifyCommunication) && affectedEmployees.length > 0) {
         await sendBulkScheduleNotifications(
           affectedEmployees.map(e => ({ id: e.id, name: e.name })),
@@ -370,8 +335,8 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
       
       setPendingChanges(new Map());
       setSaveDialogOpen(false);
+      selection.clearSelection();
       
-      // Invalidate all related queries including employee's personal schedule view
       queryClient.invalidateQueries({ queryKey: ['monthly-schedules', branchId] });
       queryClient.invalidateQueries({ queryKey: ['my-schedules-v2'] });
       queryClient.invalidateQueries({ queryKey: ['employee-schedule'] });
@@ -400,14 +365,13 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
     }));
   }, [pendingChanges]);
 
-
   // Month navigation
   const goToPrevMonth = () => {
     const prev = subMonths(new Date(year, month - 1), 1);
     setMonth(prev.getMonth() + 1);
     setYear(prev.getFullYear());
     setPendingChanges(new Map());
-    setClipboard(null); // Clear clipboard when changing months
+    selection.clearSelection();
   };
 
   const goToNextMonth = () => {
@@ -415,7 +379,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
     setMonth(next.getMonth() + 1);
     setYear(next.getFullYear());
     setPendingChanges(new Map());
-    setClipboard(null); // Clear clipboard when changing months
+    selection.clearSelection();
   };
 
   const getInitials = (name: string) => {
@@ -437,7 +401,6 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
       work_position?: string | null;
     }> = [];
     
-    // Get team member names map
     const teamNameMap = new Map(team.map(t => [t.id, t.full_name]));
     
     schedules.forEach(s => {
@@ -494,7 +457,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
     return used;
   }, [schedulesWithPending]);
 
-  // Validación: máximo 6 días consecutivos sin franco (Ley 11.544 Art 6)
+  // Labor law validation
   const consecutiveDaysViolations = useMemo(() => {
     const violations: { userId: string; userName: string; consecutiveDays: number }[] = [];
     
@@ -600,7 +563,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
   };
 
   // Render schedule cell content
-  const renderCellContent = (value: ScheduleValue, isPending: boolean, isHoliday: boolean) => {
+  const renderCellContent = (value: ScheduleValue, isPending: boolean, isHoliday: boolean, isSelected: boolean) => {
     // Birthday day off shows with cake emoji
     if (value.isDayOff && (value.isBirthdayOff || value.position === 'cumple')) {
       return (
@@ -618,7 +581,6 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
       );
     }
     
-    // Treat "00:00" as empty (default value when no schedule set)
     const isEmptySchedule = !value.startTime || !value.endTime || 
       (value.startTime === '00:00' && value.endTime === '00:00') ||
       (value.startTime === '00:00:00' && value.endTime === '00:00:00');
@@ -689,13 +651,10 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
           {activeView === 'personas' && (
             <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
-                <Flame className="w-3 h-3 text-orange-500" /> Sandwichero
+                <MousePointer2 className="w-3 h-3" /> Ctrl+Click: Multiselección
               </span>
               <span className="flex items-center gap-1">
-                <CreditCard className="w-3 h-3 text-blue-500" /> Cajero
-              </span>
-              <span className="flex items-center gap-1">
-                <Coffee className="w-3 h-3 text-amber-600" /> Break
+                <div className="w-3 h-3 rounded bg-primary/20 border-2 border-primary" /> Seleccionado
               </span>
               <span className="flex items-center gap-1">
                 <div className="w-3 h-3 rounded border-2 border-primary border-dashed" /> Modificado
@@ -718,11 +677,6 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
             </div>
           )}
         </div>
-
-        {/* Clipboard Banner */}
-        {clipboard && (
-          <ClipboardBanner clipboard={clipboard} onClear={handleClearClipboard} />
-        )}
 
         {/* Main Content */}
         {loading ? (
@@ -814,34 +768,15 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                     team.map((member) => (
                       <div 
                         key={member.id} 
-                        className="border-b flex items-center gap-1 px-2 bg-card"
+                        className="border-b flex items-center gap-2 px-2 bg-card hover:bg-muted/50 cursor-pointer"
                         style={{ height: SCHEDULE_ROW_HEIGHT }}
+                        onClick={() => canManageSchedules && selection.handleRowSelect(member.id)}
+                        title="Click para seleccionar toda la fila"
                       >
                         <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-medium text-primary shrink-0">
                           {getInitials(member.full_name)}
                         </div>
                         <span className="text-xs truncate flex-1 min-w-0">{member.full_name.split(' ')[0]}</span>
-                        
-                        {/* Copy/Paste controls */}
-                        {canManageSchedules && (
-                          <div className="flex items-center shrink-0">
-                            <ScheduleCopyButton
-                              userId={member.id}
-                              userName={member.full_name}
-                              month={month}
-                              year={year}
-                              onCopyWeek={handleCopyWeek}
-                            />
-                            {clipboard && (
-                              <SchedulePasteButton
-                                clipboard={clipboard}
-                                month={month}
-                                year={year}
-                                onPasteWeek={(weekStart) => handlePasteWeek(member.id, member.full_name, weekStart)}
-                              />
-                            )}
-                          </div>
-                        )}
                       </div>
                     ))
                   ) : (
@@ -881,10 +816,12 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                             key={dateStr}
                             style={{ width: DAY_WIDTH }}
                             className={cn(
-                              'shrink-0 flex flex-col items-center justify-center border-r',
+                              'shrink-0 flex flex-col items-center justify-center border-r cursor-pointer hover:bg-primary/5',
                               isHoliday && 'bg-warning/20',
                               isSunday && 'bg-muted/60'
                             )}
+                            onClick={() => canManageSchedules && activeView === 'personas' && selection.handleColumnSelect(dateStr)}
+                            title="Click para seleccionar toda la columna"
                           >
                             <span className="text-[10px] text-muted-foreground">{dayNames[day.getDay()]}</span>
                             <span className={cn('text-sm font-medium', isHoliday && 'text-warning')}>
@@ -911,13 +848,31 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                             const value = getEffectiveValue(member.id, dateStr);
                             const isPending = hasPendingChange(member.id, dateStr);
                             const isEditable = canManageSchedules && !isHoliday;
+                            const isSelected = selection.isCellSelected(member.id, dateStr);
 
-                              const hasBirthdayThisMonth = birthdayMonthMap.get(member.id) === month;
-                              const birthdayUsed = birthdayUsedMap.get(member.id) || false;
+                            const hasBirthdayThisMonth = birthdayMonthMap.get(member.id) === month;
+                            const birthdayUsed = birthdayUsedMap.get(member.id) || false;
 
-                              return (
+                            return (
+                              <div
+                                key={dateStr}
+                                style={{ width: DAY_WIDTH, height: SCHEDULE_ROW_HEIGHT }}
+                                className={cn(
+                                  'shrink-0 flex items-center justify-center border-r cursor-pointer transition-all',
+                                  isHoliday && 'bg-warning/10',
+                                  isSunday && 'bg-muted/30',
+                                  isEditable && 'hover:bg-primary/5',
+                                  isSelected && 'bg-primary/20 ring-2 ring-primary ring-inset'
+                                )}
+                                onClick={(e) => {
+                                  if (e.shiftKey || e.ctrlKey || e.metaKey) {
+                                    e.preventDefault();
+                                    selection.handleCellClick(member.id, dateStr, e);
+                                  }
+                                }}
+                              >
+                                {/* Use popover for single click editing */}
                                 <ScheduleCellPopover
-                                  key={dateStr}
                                   value={value}
                                   onChange={(newValue) => handleCellChange(member.id, member.full_name, dateStr, newValue)}
                                   disabled={!isEditable}
@@ -927,19 +882,22 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                                   hasBirthdayThisMonth={hasBirthdayThisMonth}
                                   birthdayUsedThisMonth={birthdayUsed}
                                 >
-                                  <div
-                                    style={{ width: DAY_WIDTH, height: SCHEDULE_ROW_HEIGHT }}
-                                    className={cn(
-                                      'shrink-0 flex items-center justify-center border-r cursor-pointer transition-colors',
-                                      isHoliday && 'bg-warning/10',
-                                      isSunday && 'bg-muted/30',
-                                      isEditable && 'hover:bg-primary/5'
-                                    )}
+                                  <div 
+                                    className="w-full h-full flex items-center justify-center"
+                                    onClick={(e) => {
+                                      // Normal click: opens popover
+                                      // Shift/Ctrl click: handled by parent div
+                                      if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+                                        // Single click: also select the cell
+                                        selection.handleCellClick(member.id, dateStr, e);
+                                      }
+                                    }}
                                   >
-                                    {renderCellContent(value, isPending, isHoliday)}
+                                    {renderCellContent(value, isPending, isHoliday, isSelected)}
                                   </div>
                                 </ScheduleCellPopover>
-                              );
+                              </div>
+                            );
                           })}
                         </div>
                       ))
@@ -1017,9 +975,24 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
           </Card>
         )}
 
+        {/* Selection Toolbar */}
+        {activeView === 'personas' && (
+          <SelectionToolbar
+            selectionCount={selection.selectionCount}
+            clipboard={selection.clipboard}
+            onCopy={selection.handleCopy}
+            onPaste={selection.handlePaste}
+            onClear={selection.handleClearCells}
+            onApplyDayOff={selection.handleApplyDayOff}
+            onApplyQuickSchedule={selection.handleApplyQuickSchedule}
+            onDeselect={selection.clearSelection}
+            onClearClipboard={selection.clearClipboard}
+          />
+        )}
+
         {/* Labor violations warning */}
-        {hasLaborViolations && (
-          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50">
+        {hasLaborViolations && !selection.hasSelection && (
+          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40">
             <Card className="shadow-lg border-destructive bg-destructive/10">
               <CardContent className="p-3">
                 <div className="flex items-center gap-2 text-destructive">
@@ -1034,8 +1007,8 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
         )}
 
         {/* Pending Changes Bar */}
-        {pendingChanges.size > 0 && (
-          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
+        {pendingChanges.size > 0 && !selection.hasSelection && (
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40">
             <Card className="shadow-lg border-primary/30">
               <CardContent className="p-3 flex items-center gap-4">
                 <div className="flex items-center gap-2">
