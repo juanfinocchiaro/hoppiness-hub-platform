@@ -257,6 +257,7 @@ export default function BranchLayout() {
               canViewAllClockIns: lp.canViewAllClockIns,
               canDoCoaching: lp.canDoCoaching,
               canConfigPrinters: lp.canConfigPrinters,
+              canViewWarnings: lp.canViewWarnings,
             }}
           />
         ) : null

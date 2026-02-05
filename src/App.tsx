@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
-import { AdminRoute, LocalRoute } from "@/components/guards";
+import { AdminRoute, LocalRoute, RequireQRAccess, RequireAuth } from "@/components/guards";
 import UserFingerprint from "@/components/ui/UserFingerprint";
 
 // Páginas públicas
@@ -55,7 +55,6 @@ import CuentaPerfil from "./pages/cuenta/CuentaPerfil";
 import MiHorarioPage from "./pages/cuenta/MiHorarioPage";
 
 import NotFound from "./pages/NotFound";
-import { RequireAuth } from "./components/guards/RequireAuth";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -95,8 +94,14 @@ const App = () => (
             <Route path="/cuenta/perfil" element={<RequireAuth><CuentaPerfil /></RequireAuth>} />
             <Route path="/cuenta/horario" element={<RequireAuth><MiHorarioPage /></RequireAuth>} />
             
-            {/* QR de Fichaje Estático */}
-            <Route path="/fichaje-qr/:branchId" element={<LocalRoute><FichajeQRDisplay /></LocalRoute>} />
+            {/* QR de Fichaje Estático - Solo encargados/franquiciados/superadmin */}
+            <Route path="/fichaje-qr/:branchId" element={
+              <RequireAuth>
+                <RequireQRAccess>
+                  <FichajeQRDisplay />
+                </RequireQRAccess>
+              </RequireAuth>
+            } />
             
             {/* Mi Local - /milocal */}
             <Route path="/milocal" element={<LocalRoute><BranchLayout /></LocalRoute>}>

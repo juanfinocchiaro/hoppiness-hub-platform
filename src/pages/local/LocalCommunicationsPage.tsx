@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -34,6 +35,7 @@ import {
   Info,
   MessageSquare,
   Users,
+  Inbox,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -41,8 +43,8 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-
 import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { useUserCommunications, useMarkAsRead } from '@/hooks/useCommunications';
 
 const TYPES = [
   { value: 'info', label: 'Información', icon: Info, color: 'bg-blue-500/10 text-blue-600' },
@@ -179,187 +181,264 @@ export default function LocalCommunicationsPage() {
     );
   };
 
+  // Get brand communications for this user
+  const { data: userComms } = useUserCommunications();
+  const brandCommsForMe = userComms?.brand || [];
+  const unreadBrandCount = brandCommsForMe.filter(c => !c.is_read).length;
+  const markAsRead = useMarkAsRead();
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <MessageSquare className="w-6 h-6" />
-            Comunicados del Local
+            Comunicados
           </h1>
           <p className="text-muted-foreground">
-            Mensajes para tu equipo en {branch?.name}
+            {branch?.name}
           </p>
         </div>
-        
-        {local.canSendLocalCommunication && (
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Nuevo Mensaje
-              </Button>
-            </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Mensaje para el Equipo</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Título</Label>
-                <Input
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Título del mensaje"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Mensaje</Label>
-                <Textarea
-                  value={formData.body}
-                  onChange={(e) => setFormData(prev => ({ ...prev, body: e.target.value }))}
-                  placeholder="Escribe el mensaje para tu equipo..."
-                  rows={4}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tipo</Label>
-                <Select
-                  value={formData.type}
-                  onValueChange={(v) => setFormData(prev => ({ ...prev, type: v as typeof formData.type }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TYPES.map(t => (
-                      <SelectItem key={t.value} value={t.value}>
-                        <div className="flex items-center gap-2">
-                          <t.icon className="w-4 h-4" />
-                          {t.label}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Recipients Selector */}
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  Destinatarios
-                </Label>
-                <RadioGroup value={targetType} onValueChange={(v) => setTargetType(v as 'all' | 'selected')}>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="all" id="all" />
-                    <label htmlFor="all" className="text-sm">Todo el equipo</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="selected" id="selected" />
-                    <label htmlFor="selected" className="text-sm">Seleccionar empleados</label>
-                  </div>
-                </RadioGroup>
-
-                {targetType === 'selected' && (
-                  <ScrollArea className="h-40 border rounded-md p-2">
-                    <div className="space-y-2">
-                      {teamMembers?.map(member => (
-                        <div key={member.user_id} className="flex items-center gap-2">
-                          <Checkbox
-                            id={member.user_id!}
-                            checked={selectedUsers.includes(member.user_id!)}
-                            onCheckedChange={() => toggleUserSelection(member.user_id!)}
-                          />
-                          <label htmlFor={member.user_id!} className="text-sm cursor-pointer">
-                            {member.full_name || 'Sin nombre'}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                )}
-                
-                {targetType === 'selected' && selectedUsers.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    {selectedUsers.length} empleado(s) seleccionado(s)
-                  </p>
-                )}
-              </div>
-
-              <Button 
-                className="w-full" 
-                onClick={() => createMutation.mutate()}
-                disabled={!formData.title || !formData.body || createMutation.isPending || (targetType === 'selected' && selectedUsers.length === 0)}
-              >
-                <Send className="w-4 h-4 mr-2" />
-                Enviar al Equipo
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-        )}
       </div>
 
-      {isLoading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="h-24" />)}
-        </div>
-      ) : communications && communications.length > 0 ? (
-        <div className="space-y-4">
-          {communications.map(comm => {
-            const typeInfo = getTypeInfo(comm.type);
-            const TypeIcon = typeInfo.icon;
-            const readCount = comm.communication_reads?.length || 0;
+      <Tabs defaultValue="sent" className="w-full">
+        <TabsList>
+          <TabsTrigger value="sent" className="gap-2">
+            <Send className="h-4 w-4" />
+            Mis Mensajes al Equipo
+          </TabsTrigger>
+          <TabsTrigger value="received" className="gap-2">
+            <Inbox className="h-4 w-4" />
+            De la Marca
+            {unreadBrandCount > 0 && (
+              <Badge variant="destructive" className="ml-1 h-5 min-w-5 p-0 text-xs flex items-center justify-center">
+                {unreadBrandCount}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-            return (
-              <Card key={comm.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-4">
-                    <div className={`p-2 rounded-lg ${typeInfo.color}`}>
-                      <TypeIcon className="w-5 h-5" />
+        <TabsContent value="sent" className="mt-4">
+          {/* New message button */}
+          {local.canSendLocalCommunication && (
+            <div className="flex justify-end mb-4">
+              <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Nuevo Mensaje
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Mensaje para el Equipo</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Título</Label>
+                      <Input
+                        value={formData.title}
+                        onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                        placeholder="Título del mensaje"
+                      />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold truncate mb-1">{comm.title}</h3>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{comm.body}</p>
-                      <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                        <span>{format(new Date(comm.published_at), "d MMM yyyy HH:mm", { locale: es })}</span>
-                        <span>👁 {readCount} lecturas</span>
-                        {comm.target_roles && comm.target_roles.length > 0 && (
-                          <Badge variant="outline" className="text-xs">
-                            {comm.target_roles.length} destinatarios
-                          </Badge>
+
+                    <div className="space-y-2">
+                      <Label>Mensaje</Label>
+                      <Textarea
+                        value={formData.body}
+                        onChange={(e) => setFormData(prev => ({ ...prev, body: e.target.value }))}
+                        placeholder="Escribe el mensaje para tu equipo..."
+                        rows={4}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Tipo</Label>
+                      <Select
+                        value={formData.type}
+                        onValueChange={(v) => setFormData(prev => ({ ...prev, type: v as typeof formData.type }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TYPES.map(t => (
+                            <SelectItem key={t.value} value={t.value}>
+                              <div className="flex items-center gap-2">
+                                <t.icon className="w-4 h-4" />
+                                {t.label}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Recipients Selector */}
+                    <div className="space-y-3">
+                      <Label className="flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        Destinatarios
+                      </Label>
+                      <RadioGroup value={targetType} onValueChange={(v) => setTargetType(v as 'all' | 'selected')}>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="all" id="all" />
+                          <label htmlFor="all" className="text-sm">Todo el equipo</label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="selected" id="selected" />
+                          <label htmlFor="selected" className="text-sm">Seleccionar empleados</label>
+                        </div>
+                      </RadioGroup>
+
+                      {targetType === 'selected' && (
+                        <ScrollArea className="h-40 border rounded-md p-2">
+                          <div className="space-y-2">
+                            {teamMembers?.map(member => (
+                              <div key={member.user_id} className="flex items-center gap-2">
+                                <Checkbox
+                                  id={member.user_id!}
+                                  checked={selectedUsers.includes(member.user_id!)}
+                                  onCheckedChange={() => toggleUserSelection(member.user_id!)}
+                                />
+                                <label htmlFor={member.user_id!} className="text-sm cursor-pointer">
+                                  {member.full_name || 'Sin nombre'}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      )}
+                      
+                      {targetType === 'selected' && selectedUsers.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          {selectedUsers.length} empleado(s) seleccionado(s)
+                        </p>
+                      )}
+                    </div>
+
+                    <Button 
+                      className="w-full" 
+                      onClick={() => createMutation.mutate()}
+                      disabled={!formData.title || !formData.body || createMutation.isPending || (targetType === 'selected' && selectedUsers.length === 0)}
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      Enviar al Equipo
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map(i => <Skeleton key={i} className="h-24" />)}
+            </div>
+          ) : communications && communications.length > 0 ? (
+            <div className="space-y-4">
+              {communications.map(comm => {
+                const typeInfo = getTypeInfo(comm.type);
+                const TypeIcon = typeInfo.icon;
+                const readCount = comm.communication_reads?.length || 0;
+
+                return (
+                  <Card key={comm.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-4">
+                        <div className={`p-2 rounded-lg ${typeInfo.color}`}>
+                          <TypeIcon className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold truncate mb-1">{comm.title}</h3>
+                          <p className="text-sm text-muted-foreground line-clamp-2">{comm.body}</p>
+                          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                            <span>{format(new Date(comm.published_at), "d MMM yyyy HH:mm", { locale: es })}</span>
+                            <span>👁 {readCount} lecturas</span>
+                            {comm.target_roles && comm.target_roles.length > 0 && (
+                              <Badge variant="outline" className="text-xs">
+                                {comm.target_roles.length} destinatarios
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        {local.canSendLocalCommunication && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteMutation.mutate(comm.id)}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
                         )}
                       </div>
-                    </div>
-                    {local.canSendLocalCommunication && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteMutation.mutate(comm.id)}
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <MessageSquare className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No hay mensajes para tu equipo</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Los comunicados que envíes solo serán visibles para el personal de esta sucursal
-            </p>
-          </CardContent>
-        </Card>
-      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <MessageSquare className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No hay mensajes para tu equipo</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Los comunicados que envíes solo serán visibles para el personal de esta sucursal
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="received" className="mt-4">
+          {brandCommsForMe.length > 0 ? (
+            <div className="space-y-4">
+              {brandCommsForMe.map(comm => {
+                const typeInfo = getTypeInfo(comm.type);
+                const TypeIcon = typeInfo.icon;
+                
+                return (
+                  <Card 
+                    key={comm.id}
+                    className={!comm.is_read ? 'border-primary/30 bg-primary/5' : ''}
+                    onClick={() => !comm.is_read && markAsRead.mutate(comm.id)}
+                  >
+                    <CardContent className="p-4 cursor-pointer">
+                      <div className="flex items-start gap-4">
+                        <div className={`p-2 rounded-lg ${typeInfo.color}`}>
+                          <TypeIcon className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold truncate">{comm.title}</h3>
+                            {!comm.is_read && (
+                              <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {comm.body}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {format(new Date(comm.published_at), "d MMM yyyy HH:mm", { locale: es })}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Inbox className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No hay comunicados de la marca</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

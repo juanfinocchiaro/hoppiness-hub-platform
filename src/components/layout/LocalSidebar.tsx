@@ -17,6 +17,7 @@ import {
   MessageSquare,
   ClipboardList,
   Settings,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -34,6 +35,7 @@ interface LocalSidebarProps {
     canViewAllClockIns: boolean;
     canDoCoaching: boolean;
     canConfigPrinters: boolean;
+    canViewWarnings?: boolean;
   };
 }
 
@@ -42,7 +44,7 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
   const basePath = `/milocal/${branchId}`;
   
   // Check if team section has any active item
-  const teamPaths = ['equipo', 'equipo/coaching', 'equipo/horarios', 'equipo/fichajes', 'equipo/adelantos', 'equipo/reglamentos', 'equipo/comunicados'];
+  const teamPaths = ['equipo', 'equipo/coaching', 'equipo/horarios', 'equipo/fichajes', 'equipo/adelantos', 'equipo/apercibimientos', 'equipo/reglamentos', 'equipo/comunicados'];
   const isTeamActive = teamPaths.some(path => {
     const fullPath = `${basePath}/${path}`;
     return location.pathname === fullPath || location.pathname.startsWith(`${fullPath}/`);
@@ -51,7 +53,7 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
   // Check if config section has any active item
   const isConfigActive = location.pathname.startsWith(`${basePath}/config`);
 
-  const { canViewDashboard, canViewTeam, canEditSchedules, canViewAllClockIns, canDoCoaching, canConfigPrinters } = permissions;
+  const { canViewDashboard, canViewTeam, canEditSchedules, canViewAllClockIns, canDoCoaching, canConfigPrinters, canViewWarnings } = permissions;
 
   return (
     <WorkSidebarNav>
@@ -87,6 +89,9 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
           )}
           {canViewTeam && (
             <NavItemButton to={`${basePath}/equipo/adelantos`} icon={DollarSign} label="Adelantos" />
+          )}
+          {canViewWarnings && (
+            <NavItemButton to={`${basePath}/equipo/apercibimientos`} icon={AlertTriangle} label="Apercibimientos" />
           )}
           {canEditSchedules && (
             <NavItemButton to={`${basePath}/equipo/reglamentos`} icon={FileText} label="Firmas Reglamento" />
