@@ -4,7 +4,25 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils';
 import { UserExpandedRow } from './UserExpandedRow';
 import type { UserWithStats, Branch } from './types';
-import { getHighestRole, formatShortDate, ROLE_LABELS } from './types';
+import { formatShortDate, ROLE_LABELS } from './types';
+import { useWorkPositions } from '@/hooks/useWorkPositions';
+
+// Labels específicos para roles de marca
+const BRAND_ROLE_LABELS: Record<string, string> = {
+  superadmin: 'Superadmin',
+  coordinador: 'Coordinador',
+  contador_marca: 'Contador',
+  informes: 'Informes',
+};
+
+// Labels específicos para roles locales
+const LOCAL_ROLE_LABELS: Record<string, string> = {
+  franquiciado: 'Franquiciado',
+  encargado: 'Encargado',
+  contador_local: 'Contador',
+  cajero: 'Cajero',
+  empleado: 'Empleado',
+};
 
 interface UsersTableProps {
   users: UserWithStats[];
@@ -14,6 +32,35 @@ interface UsersTableProps {
 
 export function UsersTable({ users, branches, onUserUpdated }: UsersTableProps) {
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const { data: positions = [] } = useWorkPositions();
+
+  // Helper para obtener label de posición
+  const getPositionLabel = (key: string | null): string => {
+    if (!key) return '-';
+    const position = positions.find(p => p.key === key);
+    return position?.label || key;
+  };
+
+  // Obtener la posición del usuario (primera que tenga en cualquier local)
+  const getUserPosition = (user: UserWithStats): string => {
+    for (const br of user.branch_roles) {
+      if (br.default_position) {
+        return getPositionLabel(br.default_position);
+      }
+    }
+    return '-';
+  };
+
+  // Formatear conteo de sucursales
+  const getBranchesLabel = (user: UserWithStats): string => {
+    // Si es superadmin, tiene acceso a todas
+    if (user.brand_role === 'superadmin') return 'Todas';
+    
+    const count = user.branch_roles.length;
+    if (count === 0) return '-';
+    if (count === 1) return '1 local';
+    return `${count} locales`;
+  };
 
   const handleRowClick = (userId: string) => {
     setExpandedUserId(prev => prev === userId ? null : userId);
@@ -28,17 +75,19 @@ export function UsersTable({ users, branches, onUserUpdated }: UsersTableProps) 
               <TableHead className="w-[90px]">Registro</TableHead>
               <TableHead className="min-w-[150px]">Nombre</TableHead>
               <TableHead className="min-w-[180px]">Email</TableHead>
-              <TableHead className="w-[110px]">Rol</TableHead>
-              <TableHead className="w-[80px] text-center">Mi Marca</TableHead>
-              <TableHead className="w-[100px] text-center">Sucursales</TableHead>
+              <TableHead className="w-[100px]">Mi Marca</TableHead>
+              <TableHead className="w-[100px]">Mi Local</TableHead>
+              <TableHead className="w-[100px]">Posición</TableHead>
+              <TableHead className="w-[90px]">Sucursales</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {users.map((user) => {
               const isExpanded = expandedUserId === user.id;
-              const highestRole = getHighestRole(user.brand_role, user.branch_roles);
-              const roleLabel = ROLE_LABELS[highestRole] || 'Sin rol';
-              const branchCount = user.branch_roles.length;
+              const brandLabel = user.brand_role ? BRAND_ROLE_LABELS[user.brand_role] || user.brand_role : '-';
+              const localLabel = user.primaryLocalRole ? LOCAL_ROLE_LABELS[user.primaryLocalRole] || user.primaryLocalRole : '-';
+              const positionLabel = getUserPosition(user);
+              const branchesLabel = getBranchesLabel(user);
               
               return (
                 <>
@@ -68,34 +117,43 @@ export function UsersTable({ users, branches, onUserUpdated }: UsersTableProps) 
                     </TableCell>
                     <TableCell>
                       <span className={cn(
-                        "text-sm font-medium",
-                        highestRole === 'superadmin' && "text-purple-600",
-                        highestRole === 'coordinador' && "text-blue-600",
-                        highestRole === 'franquiciado' && "text-amber-600",
-                        highestRole === 'encargado' && "text-green-600",
-                        (highestRole === 'cajero' || highestRole === 'empleado') && "text-slate-600",
-                        highestRole === 'staff' && "text-muted-foreground"
+                        "text-sm",
+                        user.brand_role === 'superadmin' && "font-medium text-purple-600",
+                        user.brand_role === 'coordinador' && "font-medium text-blue-600",
+                        user.brand_role && !['superadmin', 'coordinador'].includes(user.brand_role) && "text-slate-600",
+                        !user.brand_role && "text-muted-foreground"
                       )}>
-                        {roleLabel}
+                        {brandLabel}
                       </span>
                     </TableCell>
-                    <TableCell className="text-center">
-                      <AccessIndicator hasAccess={!!user.brand_role} />
+                    <TableCell>
+                      <span className={cn(
+                        "text-sm",
+                        user.primaryLocalRole === 'franquiciado' && "font-medium text-amber-600",
+                        user.primaryLocalRole === 'encargado' && "font-medium text-green-600",
+                        user.primaryLocalRole && !['franquiciado', 'encargado'].includes(user.primaryLocalRole) && "text-slate-600",
+                        !user.primaryLocalRole && "text-muted-foreground"
+                      )}>
+                        {localLabel}
+                      </span>
                     </TableCell>
-                    <TableCell className="text-center">
-                      {branchCount > 0 ? (
-                        <span className="text-sm font-medium text-green-600">
-                          {branchCount} local{branchCount > 1 ? 'es' : ''}
-                        </span>
-                      ) : (
-                        <AccessIndicator hasAccess={false} />
-                      )}
+                    <TableCell className="text-sm text-muted-foreground">
+                      {positionLabel}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      <span className={cn(
+                        user.brand_role === 'superadmin' && "text-purple-600 font-medium",
+                        user.branch_roles.length > 0 && user.brand_role !== 'superadmin' && "text-green-600",
+                        user.branch_roles.length === 0 && user.brand_role !== 'superadmin' && "text-muted-foreground"
+                      )}>
+                        {branchesLabel}
+                      </span>
                     </TableCell>
                   </TableRow>
                   
                   {isExpanded && (
                     <TableRow key={`${user.id}-expanded`}>
-                      <TableCell colSpan={6} className="p-0 bg-muted/30">
+                      <TableCell colSpan={7} className="p-0 bg-muted/30">
                         <UserExpandedRow 
                           user={user} 
                           branches={branches}
@@ -112,17 +170,5 @@ export function UsersTable({ users, branches, onUserUpdated }: UsersTableProps) 
         </Table>
       </div>
     </div>
-  );
-}
-
-function AccessIndicator({ hasAccess }: { hasAccess: boolean }) {
-  return (
-    <span 
-      className={cn(
-        "inline-block w-2.5 h-2.5 rounded-full",
-        hasAccess ? "bg-green-500" : "bg-gray-300"
-      )}
-      title={hasAccess ? "Con acceso" : "Sin acceso"}
-    />
   );
 }
