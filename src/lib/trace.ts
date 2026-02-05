@@ -22,7 +22,6 @@ export function traceLog(flow: string, step: string, data?: unknown) {
 
   // Console in dev (keeps prod quieter)
   if (import.meta.env.DEV) {
-    // eslint-disable-next-line no-console
     console.log(`[trace:${flow}] ${step}`, data ?? '');
   }
 
