@@ -1,6 +1,7 @@
 /**
  * WarningsPage - Gestión de apercibimientos de empleados
  * Fase 6: Migrado a user_id, con upload de documento firmado
+ * V2: Con tabs Todos / Por Empleado / Informes
  */
 import { useState, useRef } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
@@ -17,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -32,9 +34,12 @@ import {
   Search,
   Upload,
   Image,
-  ExternalLink
+  ExternalLink,
+  User,
+  BarChart3
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
+import { EmployeeWarningsHistory, WarningsReport } from '@/components/warnings';
 
 type Branch = Tables<'branches'>;
 
@@ -371,111 +376,142 @@ export default function WarningsPage() {
         )}
       </div>
 
-      {/* Stats by type */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {warningsByType.map(type => (
-          <Card key={type.value} className={type.count > 0 ? '' : 'opacity-50'}>
-            <CardContent className="p-4 text-center">
-              <type.icon className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
-              <p className="text-2xl font-bold">{type.count}</p>
-              <p className="text-xs text-muted-foreground truncate">{type.label}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Tabs */}
+      <Tabs defaultValue="all" className="w-full">
+        <TabsList>
+          <TabsTrigger value="all" className="gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            Todos
+          </TabsTrigger>
+          <TabsTrigger value="by-employee" className="gap-2">
+            <User className="h-4 w-4" />
+            Por Empleado
+          </TabsTrigger>
+          <TabsTrigger value="reports" className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Informes
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por empleado o descripción..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+        <TabsContent value="all" className="mt-4 space-y-4">
+          {/* Stats by type */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {warningsByType.map(type => (
+              <Card key={type.value} className={type.count > 0 ? '' : 'opacity-50'}>
+                <CardContent className="p-4 text-center">
+                  <type.icon className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-2xl font-bold">{type.count}</p>
+                  <p className="text-xs text-muted-foreground truncate">{type.label}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
-      {/* Warnings Table */}
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Empleado</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Descripción</TableHead>
-              <TableHead>Registrado por</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Documento</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredWarnings.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                  <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  No hay apercibimientos registrados
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredWarnings.map(warning => (
-                <TableRow key={warning.id}>
-                  <TableCell className="whitespace-nowrap">
-                    {format(new Date(warning.warning_date), "dd/MM/yy", { locale: es })}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {warning.employee_name}
-                  </TableCell>
-                  <TableCell>{getWarningTypeBadge(warning.warning_type)}</TableCell>
-                  <TableCell className="max-w-[200px]">
-                    <p className="truncate">{warning.description}</p>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {warning.issuer_name}
-                  </TableCell>
-                  <TableCell>
-                    {warning.acknowledged_at ? (
-                      <Badge variant="outline" className="gap-1 text-primary">
-                        <CheckCircle className="h-3 w-3" />
-                        Visto
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">Pendiente</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {warning.signed_document_url ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-1 text-primary"
-                        onClick={() => window.open(warning.signed_document_url!, '_blank')}
-                      >
-                        <Image className="h-4 w-4" />
-                        Ver
-                        <ExternalLink className="h-3 w-3" />
-                      </Button>
-                    ) : local.canUploadSignature ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1"
-                        onClick={() => handleFileSelect(warning.id)}
-                        disabled={uploadSignedDocument.isPending && uploadingWarningId === warning.id}
-                      >
-                        <Upload className="h-4 w-4" />
-                        Subir firma
-                      </Button>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Pendiente</span>
-                    )}
-                  </TableCell>
+          {/* Search */}
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por empleado o descripción..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {/* Warnings Table */}
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Empleado</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Descripción</TableHead>
+                  <TableHead>Registrado por</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Documento</TableHead>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {filteredWarnings.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      No hay apercibimientos registrados
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredWarnings.map(warning => (
+                    <TableRow key={warning.id}>
+                      <TableCell className="whitespace-nowrap">
+                        {format(new Date(warning.warning_date), "dd/MM/yy", { locale: es })}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {warning.employee_name}
+                      </TableCell>
+                      <TableCell>{getWarningTypeBadge(warning.warning_type)}</TableCell>
+                      <TableCell className="max-w-[200px]">
+                        <p className="truncate">{warning.description}</p>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {warning.issuer_name}
+                      </TableCell>
+                      <TableCell>
+                        {warning.acknowledged_at ? (
+                          <Badge variant="outline" className="gap-1 text-primary">
+                            <CheckCircle className="h-3 w-3" />
+                            Visto
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">Pendiente</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {warning.signed_document_url ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1 text-primary"
+                            onClick={() => window.open(warning.signed_document_url!, '_blank')}
+                          >
+                            <Image className="h-4 w-4" />
+                            Ver
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                        ) : local.canUploadSignature ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => handleFileSelect(warning.id)}
+                            disabled={uploadSignedDocument.isPending && uploadingWarningId === warning.id}
+                          >
+                            <Upload className="h-4 w-4" />
+                            Subir firma
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Pendiente</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="by-employee" className="mt-4">
+          <EmployeeWarningsHistory 
+            teamMembers={teamMembers?.map(m => ({ user_id: m.user_id!, full_name: m.full_name || '' }))}
+            warnings={warnings}
+          />
+        </TabsContent>
+
+        <TabsContent value="reports" className="mt-4">
+          <WarningsReport warnings={warnings} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
