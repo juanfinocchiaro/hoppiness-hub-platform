@@ -241,6 +241,9 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
   const branchIdsKey = branchIdsFromRoles.join(',');
   
   // Query para obtener sucursales accesibles
+  // IMPORTANTE: Esperar a que terminen las queries de roles antes de calcular sucursales
+  const rolesLoaded = !loadingBrandRole && !loadingBranchRoles;
+  
   const { 
     data: branches = [], 
     isLoading: loadingBranches 
@@ -272,7 +275,8 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
       
       return [];
     },
-    enabled: !!user?.id && (!!brandRoleData || branchRolesData.length > 0),
+    // Solo ejecutar cuando ya cargaron los roles (evita bucle infinito)
+    enabled: !!user?.id && rolesLoaded,
     staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
   });
