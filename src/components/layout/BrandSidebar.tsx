@@ -163,6 +163,7 @@ export function BrandSidebar() {
       <ImpersonationSelector
         open={showImpersonationSelector}
         onOpenChange={setShowImpersonationSelector}
+        mode="brand"
       />
     </>
   );
