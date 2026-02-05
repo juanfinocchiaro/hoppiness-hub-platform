@@ -12,6 +12,7 @@ import {
   CoachingForm, 
   CertificationBadgeRow,
   CertificationLegend,
+  CoachingHistoryTab,
 } from '@/components/coaching';
 import { useCoachingStats } from '@/hooks/useCoachingStats';
 import { useTeamCertifications } from '@/hooks/useCertifications';
@@ -21,7 +22,7 @@ import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { PageHelp } from '@/components/ui/PageHelp';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ClipboardList, Users, Award, CheckCircle, Clock, ChevronDown, ChevronRight, X } from 'lucide-react';
+import { ClipboardList, Users, Award, CheckCircle, Clock, ChevronDown, ChevronRight, X, History } from 'lucide-react';
 import type { CertificationLevel } from '@/types/coaching';
 
 interface TeamMember {
@@ -308,7 +309,7 @@ export default function CoachingPage() {
         </div>
       )}
 
-      {/* Tabs - Solo Equipo y Certificaciones */}
+      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="team" className="gap-2">
@@ -318,6 +319,10 @@ export default function CoachingPage() {
           <TabsTrigger value="matrix" className="gap-2">
             <Award className="h-4 w-4" />
             Certificaciones
+          </TabsTrigger>
+          <TabsTrigger value="history" className="gap-2">
+            <History className="h-4 w-4" />
+            Historial
           </TabsTrigger>
         </TabsList>
 
@@ -352,6 +357,11 @@ export default function CoachingPage() {
               employees={teamMembers}
             />
           )}
+        </TabsContent>
+
+        {/* Tab Historial */}
+        <TabsContent value="history" className="mt-4">
+          {branchId && <CoachingHistoryTab branchId={branchId} />}
         </TabsContent>
       </Tabs>
     </div>

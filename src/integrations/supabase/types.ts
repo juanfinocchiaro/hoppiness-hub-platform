@@ -423,6 +423,7 @@ export type Database = {
           id: string
           manager_notes: string | null
           overall_score: number | null
+          previous_action_review: string | null
           station_score: number | null
           strengths: string | null
           updated_at: string
@@ -443,6 +444,7 @@ export type Database = {
           id?: string
           manager_notes?: string | null
           overall_score?: number | null
+          previous_action_review?: string | null
           station_score?: number | null
           strengths?: string | null
           updated_at?: string
@@ -463,6 +465,7 @@ export type Database = {
           id?: string
           manager_notes?: string | null
           overall_score?: number | null
+          previous_action_review?: string | null
           station_score?: number | null
           strengths?: string | null
           updated_at?: string

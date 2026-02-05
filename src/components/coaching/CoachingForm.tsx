@@ -6,11 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Save, Star } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Loader2, Save, Star, FileText } from 'lucide-react';
 import { CoachingStationSection } from './CoachingStationSection';
 import { CoachingGeneralSection } from './CoachingGeneralSection';
 import { useCompetencyConfig } from '@/hooks/useStationCompetencies';
-import { useCreateCoaching } from '@/hooks/useCoachings';
+import { useCreateCoaching, useEmployeeCoachings } from '@/hooks/useCoachings';
 import type { CoachingFormData, CertificationLevel } from '@/types/coaching';
 
 interface Employee {
@@ -40,6 +41,10 @@ interface GeneralScore {
 export function CoachingForm({ employee, branchId, onSuccess, onCancel }: CoachingFormProps) {
   const { stations, competenciesByStation, generalCompetencies, isLoading: loadingConfig } = useCompetencyConfig();
   const createCoaching = useCreateCoaching();
+  
+  // Obtener coachings anteriores para mostrar el plan de acción previo
+  const { data: previousCoachings } = useEmployeeCoachings(employee.id, branchId);
+  const previousCoaching = previousCoachings?.[0]; // El más reciente
 
   // State
   const [selectedStations, setSelectedStations] = useState<string[]>([]);
@@ -49,6 +54,7 @@ export function CoachingForm({ employee, branchId, onSuccess, onCancel }: Coachi
   const [areasToImprove, setAreasToImprove] = useState('');
   const [actionPlan, setActionPlan] = useState('');
   const [managerNotes, setManagerNotes] = useState('');
+  const [previousActionReview, setPreviousActionReview] = useState('');
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -119,7 +125,7 @@ export function CoachingForm({ employee, branchId, onSuccess, onCancel }: Coachi
 
   // Submit
   const handleSubmit = async () => {
-    const formData: CoachingFormData = {
+    const formData = {
       userId: employee.id,
       branchId,
       coachingDate: new Date(),
@@ -130,6 +136,7 @@ export function CoachingForm({ employee, branchId, onSuccess, onCancel }: Coachi
       actionPlan,
       managerNotes,
       certificationChanges: [], // TODO: Implementar cambios de certificación
+      previousActionReview,
     };
 
     await createCoaching.mutateAsync(formData);
@@ -202,6 +209,34 @@ export function CoachingForm({ employee, branchId, onSuccess, onCancel }: Coachi
 
           <Separator />
 
+          {/* Seguimiento del plan anterior */}
+          {previousCoaching?.action_plan && (
+            <>
+              <Alert className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+                <FileText className="h-4 w-4 text-blue-600" />
+                <AlertTitle className="text-blue-800 dark:text-blue-200">
+                  Plan de Acción del mes anterior
+                </AlertTitle>
+                <AlertDescription className="text-blue-700 dark:text-blue-300">
+                  {previousCoaching.action_plan}
+                </AlertDescription>
+              </Alert>
+              
+              <div className="space-y-2">
+                <Label htmlFor="previousReview">¿Cómo fue el seguimiento del plan anterior?</Label>
+                <Textarea
+                  id="previousReview"
+                  placeholder="¿Se cumplió? ¿Qué avances hubo? ¿Qué quedó pendiente?"
+                  value={previousActionReview}
+                  onChange={(e) => setPreviousActionReview(e.target.value)}
+                  rows={2}
+                />
+              </div>
+              
+              <Separator />
+            </>
+          )}
+
           {/* Notas cualitativas */}
           <div className="space-y-4">
             <Label className="text-base font-semibold">Feedback Cualitativo</Label>
@@ -231,7 +266,7 @@ export function CoachingForm({ employee, branchId, onSuccess, onCancel }: Coachi
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="actionPlan">Plan de Acción</Label>
+              <Label htmlFor="actionPlan">Plan de Acción para el próximo mes</Label>
               <Textarea
                 id="actionPlan"
                 placeholder="Acciones concretas para el próximo mes..."
