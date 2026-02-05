@@ -1,114 +1,149 @@
 
-# Plan: Simplificar Interfaz del Editor de Horarios
+# Plan: Corregir Scroll Containment en la Grilla de Horarios
 
-## Problema
-1. Al hacer click en una celda aparecen **dos cosas**: el popover de edición Y la celda se marca como seleccionada, mostrando la barra de herramientas
-2. Los "horarios predeterminados" (18-00, 12-18, 12-00) en la barra de selección son innecesarios
-3. Demasiada información visual: leyendas, hints, toolbar - todo junto abruma
+## Problema Raíz
 
-## Solución: Un Solo Modo de Interacción
+El scroll horizontal y vertical de la tabla de horarios "bleeds" (se escapa) al `body`, causando que toda la página se mueva en lugar de solo la tabla. Esto sucede porque:
 
-### Nuevo Flujo
-- **Click simple**: Abre popover de edición (SIN seleccionar la celda)
-- **Ctrl+Click / Shift+Click**: Selección múltiple (sin popover)
-- La barra de herramientas SOLO aparece cuando hay multiselección (2+ celdas)
+1. **WorkShell no contiene overflow**: El layout usa `min-h-screen` pero no tiene `overflow-hidden`
+2. **Cadena de containment rota**: Entre el componente `InlineScheduleEditor` y el root, hay múltiples contenedores sin restricción de altura
+3. **Cálculo relativo incorrecto**: `max-h-[calc(100vh-320px)]` asume una altura conocida pero ignora los elementos acumulados (header, tabs, padding)
 
-### Diagrama de Interacción
+```
+Actual (ROTO):
+┌──────────────────────────────────────────┐
+│ Body (scrollable)                        │ ← scroll se escapa aquí
+│  ├─ WorkShell                            │
+│  │   └─ main.p-6                         │
+│  │       └─ SchedulesPage                │
+│  │           └─ Tabs                     │
+│  │               └─ InlineScheduleEditor │
+│  │                   └─ overflow-auto    │ ← debería scrollear aquí
+└──────────────────────────────────────────┘
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                         CLICK NORMAL                        │
-│                              ↓                              │
-│                    Abre Popover de edición                  │
-│                    (Franco, Horario, Posición)              │
-│                              ↓                              │
-│                    Guardar → Pendiente                      │
-└─────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────┐
-│                    CTRL/SHIFT + CLICK                       │
-│                              ↓                              │
-│                    Selección múltiple                       │
-│                              ↓                              │
-│              Toolbar aparece (solo multiselección)          │
-│              [N celdas] [Copiar] [Pegar] [Franco] [×]       │
-└─────────────────────────────────────────────────────────────┘
+Correcto (OBJETIVO):
+┌──────────────────────────────────────────┐
+│ Body (NO scroll / overflow-hidden)       │
+│  ├─ WorkShell (h-screen, overflow-hidden)│
+│  │   └─ main (flex-1, overflow-hidden)   │
+│  │       └─ Content (flex-1, overflow-y) │
+│  │           └─ Table (overflow-x-auto)  │ ← scroll horizontal aquí
+└──────────────────────────────────────────┘
 ```
 
-## Cambios Técnicos
+## Solución: Containment Correcto en Múltiples Capas
 
-### 1. InlineScheduleEditor.tsx
+### 1. Modificar WorkShell.tsx
 
-**Separar comportamientos de click:**
+Agregar `h-screen overflow-hidden` al root y `overflow-auto` al main content para que TODO el scroll quede contenido.
+
+**Antes:**
 ```tsx
-// Líneas 933-964 - Cambiar el handler de click
-onClick={(e) => {
-  // Solo Shift/Ctrl activa selección
-  if (e.shiftKey || e.ctrlKey || e.metaKey) {
-    e.preventDefault();
-    e.stopPropagation(); // Evitar que abra popover
-    selection.handleCellClick(member.id, dateStr, e);
-  }
-  // Click normal NO selecciona - solo abre popover
-}}
-
-// El div interno del popover NO debe llamar handleCellClick
-<div className="w-full h-full flex items-center justify-center">
-  {renderCellContent(value, isPending, isHoliday, false)}
+<div className="min-h-screen bg-background">
+  ...
+  <main className="flex-1 lg:ml-72">
+    <div className="p-6">{children}</div>
+  </main>
 </div>
 ```
 
-**Simplificar el header - Row 2:**
-- Eliminar hint de atajos cuando no hay selección (solo ocupa espacio)
-- Solo mostrar toolbar cuando `selectedCells.size >= 1` (pero simplificado)
-
-**Eliminar leyenda duplicada:**
-- Eliminar la leyenda de colores que está arriba del Card (líneas 650-663)
-- O convertirla en tooltip de un botón de ayuda
-
-### 2. SelectionToolbar.tsx
-
-**Eliminar horarios predeterminados:**
+**Después:**
 ```tsx
-// ELIMINAR líneas 38-44 y 146-157
-const QUICK_SCHEDULES = [...] // DELETE
-
-// ELIMINAR del JSX:
-{QUICK_SCHEDULES.slice(0, 3).map((qs) => (
-  <Button ... />
-))}
+<div className="h-screen overflow-hidden bg-background flex flex-col">
+  ...
+  <div className="flex flex-1 overflow-hidden">
+    {/* Sidebar */}
+    <aside className="... h-full overflow-y-auto">...</aside>
+    
+    {/* Main - scroll interno */}
+    <main className="flex-1 lg:ml-72 overflow-y-auto">
+      <div className="p-6">{children}</div>
+    </main>
+  </div>
+</div>
 ```
 
-**Resultado - Toolbar simplificado:**
-```text
-[3 celdas] | [Copiar] [Pegar] [Limpiar] | [Franco] | [×]
+### 2. Modificar InlineScheduleEditor.tsx
+
+Simplificar el contenedor de scroll ya que WorkShell ahora controla el overflow vertical:
+
+**Antes:**
+```tsx
+<CardContent className="p-0 overflow-hidden">
+  <div className="max-h-[calc(100vh-320px)] overflow-auto">
+    ...
+  </div>
+</CardContent>
 ```
 
-### 3. Limpieza Visual
-
-**Eliminar información redundante:**
-- Quitar la sección de leyenda fuera del Card (Ctrl+Click, Seleccionado, Modificado)
-- Quitar la Row 2 de hints cuando no hay selección - dejar vacío o colapsado
-
-**Header final:**
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ [Personas][Cobertura]     [📋 copiado]      [Guardar]       │
-├─────────────────────────────────────────────────────────────┤
-│ [3 celdas] | [Copiar][Pegar][Limpiar] | [Franco] | [×]      │  ← Solo si hay selección
-└─────────────────────────────────────────────────────────────┘
+**Después:**
+```tsx
+<CardContent className="p-0">
+  <div className="overflow-auto" style={{ maxHeight: 'calc(100vh - 380px)' }}>
+    {/* Contenido con scroll interno */}
+  </div>
+</CardContent>
 ```
+
+Alternativamente, usar un approach más robusto con CSS Grid:
+
+```tsx
+<CardContent className="p-0 overflow-hidden">
+  <div className="overflow-x-auto overscroll-x-contain">
+    {/* Scroll SOLO horizontal aquí */}
+    <div className="max-h-[60vh] overflow-y-auto overscroll-y-contain">
+      {/* Scroll SOLO vertical aquí */}
+      <table>...</table>
+    </div>
+  </div>
+</CardContent>
+```
+
+### 3. Agregar `overscroll-behavior: contain`
+
+Esto previene que el scroll se propague al padre cuando llega al límite:
+
+```tsx
+<div className="overflow-auto overscroll-contain">
+```
+
+## Cambios Técnicos Específicos
+
+### WorkShell.tsx
+
+| Línea | Cambio |
+|-------|--------|
+| 46 | `min-h-screen` → `h-screen overflow-hidden flex flex-col` |
+| 92 | Envolver sidebar + main en `<div className="flex flex-1 overflow-hidden">` |
+| 122 | `main.flex-1` → agregar `overflow-y-auto` |
+
+### InlineScheduleEditor.tsx
+
+| Línea | Cambio |
+|-------|--------|
+| 788-790 | Simplificar contenedor de scroll, agregar `overscroll-contain` |
+| 789 | Mantener `max-h` pero asegurar que el padre tenga `overflow-hidden` |
 
 ## Archivos a Modificar
 
-| Archivo | Cambio |
-|---------|--------|
-| InlineScheduleEditor.tsx | Separar click normal de multiselección, eliminar leyenda |
-| SelectionToolbar.tsx | Eliminar QUICK_SCHEDULES y simplificar |
+| Archivo | Cambio Principal |
+|---------|------------------|
+| `src/components/layout/WorkShell.tsx` | Agregar containment con `h-screen overflow-hidden` |
+| `src/components/hr/InlineScheduleEditor.tsx` | Agregar `overscroll-contain` y revisar `max-h` |
 
 ## Resultado Esperado
 
-1. **Click = Editar**: Un click abre el popover directamente para editar
-2. **Ctrl/Shift+Click = Multiselección**: Para operaciones masivas
-3. **Toolbar limpio**: Solo [Copiar][Pegar][Limpiar][Franco][×]
-4. **Menos ruido visual**: Sin leyendas ni hints redundantes
+1. El scroll horizontal de la tabla queda contenido DENTRO de la grilla
+2. El header, tabs y sidebar permanecen fijos mientras se scrollea
+3. La columna "Empleado" permanece sticky a la izquierda
+4. Los headers de días permanecen sticky arriba
+5. No hay "scroll bleed" hacia el body
+
+## Testing
+
+Después de implementar, verificar:
+- [ ] Scroll horizontal: solo mueve días, no el sidebar
+- [ ] Scroll vertical: solo mueve filas, no el header de página
+- [ ] Columna sticky: "Empleado" siempre visible a la izquierda
+- [ ] Header sticky: días siempre visibles arriba
+- [ ] Mobile: funciona igual en móvil
