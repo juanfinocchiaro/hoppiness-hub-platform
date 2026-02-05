@@ -10,7 +10,6 @@
  */
 import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Menu } from 'lucide-react';
@@ -37,13 +36,11 @@ export function WorkShell({
   children,
   className,
 }: WorkShellProps) {
-  const { isImpersonating } = useImpersonation();
-  
   const panelLabel = mode === 'brand' ? 'Mi Marca' : 'Mi Local';
   const displayMobileTitle = mobileTitle || title || panelLabel;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen overflow-hidden bg-background flex flex-col">
       {/* Offline Banner */}
       <OfflineBanner />
       
@@ -53,8 +50,7 @@ export function WorkShell({
       {/* Mobile Header */}
       <header 
         className={cn(
-          'lg:hidden sticky z-50 bg-primary text-primary-foreground',
-          isImpersonating ? 'top-[52px]' : 'top-0'
+          'lg:hidden shrink-0 z-50 bg-primary text-primary-foreground'
         )}
       >
         <div className="flex items-center justify-between p-4">
@@ -89,16 +85,16 @@ export function WorkShell({
         </div>
       </header>
 
-      <div className="flex">
+      {/* Main Layout Container - flex-1 takes remaining height */}
+      <div className="flex flex-1 overflow-hidden">
         {/* Desktop Sidebar */}
         <aside
           className={cn(
-            'hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 bg-card border-r',
-            isImpersonating && 'lg:top-[52px]'
+            'hidden lg:flex lg:flex-col lg:w-72 lg:shrink-0 bg-card border-r h-full overflow-hidden'
           )}
         >
           {/* Header - Logo and panel label */}
-          <div className="p-6 border-b h-[88px] flex items-center">
+          <div className="p-6 border-b h-[88px] flex items-center shrink-0">
             <div className="flex items-center gap-3">
               <img
                 src={logoHoppinessBlue}
@@ -109,17 +105,17 @@ export function WorkShell({
             </div>
           </div>
 
-          {/* Navigation */}
+          {/* Navigation - scrollable */}
           <div className="flex-1 overflow-y-auto p-4">{sidebar}</div>
 
           {/* Footer */}
           {footer && (
-            <div className="p-4 border-t space-y-3">{footer}</div>
+            <div className="p-4 border-t space-y-3 shrink-0">{footer}</div>
           )}
         </aside>
 
-        {/* Main Content */}
-        <main className={cn('flex-1 lg:ml-72', className)}>
+        {/* Main Content - overflow-y-auto for page scroll */}
+        <main className={cn('flex-1 overflow-y-auto', className)}>
           <div className="p-6">{children}</div>
         </main>
       </div>

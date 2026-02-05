@@ -784,11 +784,11 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
               )}
             </CardHeader>
             
-            {/* CalendarViewport - scroll horizontal solo aquí dentro */}
+            {/* CalendarViewport - scroll contenido solo aquí dentro */}
             <CardContent className="p-0 overflow-hidden">
               <div 
-                className="max-h-[calc(100vh-320px)] overflow-auto"
-                style={{ maxWidth: '100%' }}
+                className="overflow-auto overscroll-contain"
+                style={{ maxHeight: 'calc(100vh - 340px)', maxWidth: '100%' }}
               >
                 <div 
                   className="flex"
