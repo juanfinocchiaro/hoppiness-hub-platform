@@ -5,3 +5,7 @@ export { CoachingHistory } from './CoachingHistory';
 export { CoachingStationSection } from './CoachingStationSection';
 export { CoachingGeneralSection } from './CoachingGeneralSection';
 export { CoachingForm } from './CoachingForm';
+export { CoachingDetailModal } from './CoachingDetailModal';
+export { EmployeeCoachingCard } from './EmployeeCoachingCard';
+export { CoachingHistoryTab } from './CoachingHistoryTab';
+export { ScoreEvolutionChart, calculateTrend } from './ScoreEvolutionChart';

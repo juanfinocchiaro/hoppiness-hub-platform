@@ -84,6 +84,9 @@ export interface Coaching {
   action_plan: string | null;
   manager_notes: string | null;
   
+  // Seguimiento del plan anterior
+  previous_action_review: string | null;
+  
   // Confirmación del empleado
   acknowledged_at: string | null;
   acknowledged_notes: string | null;

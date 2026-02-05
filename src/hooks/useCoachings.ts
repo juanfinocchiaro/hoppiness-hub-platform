@@ -167,7 +167,7 @@ export function useCreateCoaching() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (formData: CoachingFormData) => {
+    mutationFn: async (formData: CoachingFormData & { previousActionReview?: string }) => {
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.user) {
         throw new Error('No autenticado');
@@ -207,6 +207,7 @@ export function useCreateCoaching() {
           areas_to_improve: formData.areasToImprove || null,
           action_plan: formData.actionPlan || null,
           manager_notes: formData.managerNotes || null,
+          previous_action_review: formData.previousActionReview || null,
         })
         .select()
         .single();
