@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
 import { useEmbedMode } from '@/hooks/useEmbedMode';
+import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { ExternalLink } from '@/components/ui/ExternalLink';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,12 +24,14 @@ import {
   Home,
   AlertCircle,
   Building2,
+  Eye,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import ManagerDashboard from '@/components/local/ManagerDashboard';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { WorkShell } from '@/components/layout/WorkShell';
 import { LocalSidebar } from '@/components/layout/LocalSidebar';
+import ImpersonationSelector from '@/components/admin/ImpersonationSelector';
 
 type Branch = Tables<'branches'>;
 
@@ -39,10 +42,12 @@ export default function BranchLayout() {
   const permissions = usePermissionsWithImpersonation(branchId);
   const { canAccessLocal, canAccessAdmin } = useRoleLandingV2();
   const { isEmbedded } = useEmbedMode();
+  const { canImpersonate, isImpersonating } = useImpersonation();
   const navigate = useNavigate();
   const location = useLocation();
   
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
+  const [showImpersonationSelector, setShowImpersonationSelector] = useState(false);
 
   const { accessibleBranches, loading: permLoading, local: lp } = permissions;
 
@@ -213,7 +218,19 @@ export default function BranchLayout() {
         </SelectContent>
       </Select>
 
-      {/* ZONA 2: Cambio de Panel */}
+      {/* ZONA 2: Ver como (solo superadmin) */}
+      {canImpersonate && (
+        <Button
+          variant={isImpersonating ? 'secondary' : 'ghost'}
+          className={`w-full justify-start ${isImpersonating ? 'bg-amber-100 text-amber-900 hover:bg-amber-200' : ''}`}
+          onClick={() => setShowImpersonationSelector(true)}
+        >
+          <Eye className="w-4 h-4 mr-3" />
+          Ver como...
+        </Button>
+      )}
+
+      {/* ZONA 3: Cambio de Panel */}
       <div className="min-h-[40px]">
         {canAccessAdmin && !isEmbedded && (
           <ExternalLink to="/mimarca">
@@ -225,7 +242,7 @@ export default function BranchLayout() {
         )}
       </div>
 
-      {/* ZONA 3: Acciones Fijas */}
+      {/* ZONA 4: Acciones Fijas */}
       <div className="space-y-1">
         <ExternalLink to="/">
           <Button variant="ghost" className="w-full justify-start">
@@ -265,6 +282,15 @@ export default function BranchLayout() {
       footer={footer}
     >
       {renderContent()}
+
+      {/* Impersonation Selector Modal */}
+      <ImpersonationSelector
+        open={showImpersonationSelector}
+        onOpenChange={setShowImpersonationSelector}
+        mode="local"
+        branchId={branchId}
+        branchName={selectedBranch?.name}
+      />
     </WorkShell>
   );
 }
