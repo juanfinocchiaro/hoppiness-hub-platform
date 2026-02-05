@@ -1,106 +1,114 @@
 
-# Plan: Barra de Herramientas Fija para Editor de Horarios
+# Plan: Simplificar Interfaz del Editor de Horarios
 
-## Problema Actual
-La interfaz tiene elementos que aparecen/desaparecen dinámicamente:
-- Botones Guardar/Descartar solo visibles con cambios pendientes
-- SelectionToolbar en segunda fila solo visible con celdas seleccionadas
-- Esto causa que el layout "salte" y rompa la experiencia
+## Problema
+1. Al hacer click en una celda aparecen **dos cosas**: el popover de edición Y la celda se marca como seleccionada, mostrando la barra de herramientas
+2. Los "horarios predeterminados" (18-00, 12-18, 12-00) en la barra de selección son innecesarios
+3. Demasiada información visual: leyendas, hints, toolbar - todo junto abruma
 
-## Solución: Header de Dos Filas Fijo
+## Solución: Un Solo Modo de Interacción
 
-Reorganizar el `CardHeader` con dos filas **siempre presentes**:
+### Nuevo Flujo
+- **Click simple**: Abre popover de edición (SIN seleccionar la celda)
+- **Ctrl+Click / Shift+Click**: Selección múltiple (sin popover)
+- La barra de herramientas SOLO aparece cuando hay multiselección (2+ celdas)
 
+### Diagrama de Interacción
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                         CLICK NORMAL                        │
+│                              ↓                              │
+│                    Abre Popover de edición                  │
+│                    (Franco, Horario, Posición)              │
+│                              ↓                              │
+│                    Guardar → Pendiente                      │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                    CTRL/SHIFT + CLICK                       │
+│                              ↓                              │
+│                    Selección múltiple                       │
+│                              ↓                              │
+│              Toolbar aparece (solo multiselección)          │
+│              [N celdas] [Copiar] [Pegar] [Franco] [×]       │
+└─────────────────────────────────────────────────────────────┘
 ```
-+----------------------------------------------------------+
-| [Personas][Cobertura]  |  [📋 clipboard]  |  [Guardar]   |  ← Fila 1
-+----------------------------------------------------------+
-| [3 celdas] | [Copiar][Pegar][Limpiar] | [Franco][18-00]  |  ← Fila 2
-+----------------------------------------------------------+
-```
-
-### Fila 1 (Siempre visible)
-- Izquierda: Toggle Personas/Cobertura + filtro horario (cobertura)
-- Centro: Indicador de clipboard (si hay algo copiado)
-- Derecha: Acciones de guardado (aparecen cuando hay cambios)
-
-### Fila 2 (Siempre presente, contenido dinámico)
-- Cuando hay selección: muestra SelectionToolbar completo
-- Cuando no hay selección: muestra hint de atajos o queda vacío con altura mínima
-- Altura fija de ~40px para evitar saltos
 
 ## Cambios Técnicos
 
-### 1. Modificar `CardHeader` en InlineScheduleEditor.tsx
+### 1. InlineScheduleEditor.tsx
 
+**Separar comportamientos de click:**
 ```tsx
-<CardHeader className="py-2 px-4 border-b bg-muted/30">
-  {/* Fila 1: Toggle + Clipboard + Actions - SIEMPRE */}
-  <div className="flex items-center justify-between gap-4 min-h-[40px]">
-    {/* Izq: Toggle vistas */}
-    <div className="flex items-center gap-2">
-      {/* Toggle Personas/Cobertura */}
-      {/* Filtro horario si cobertura */}
-    </div>
-    
-    {/* Centro: Indicador clipboard */}
-    {selection.clipboard && (
-      <div className="hidden md:flex items-center gap-1 text-xs text-muted-foreground">
-        <Copy className="w-3 h-3" />
-        {selection.clipboard.sourceInfo}
-        <button onClick={selection.clearClipboard}>×</button>
-      </div>
-    )}
-    
-    {/* Der: Acciones guardar */}
-    <div className="flex items-center gap-2">
-      {pendingChanges.size > 0 && (
-        <>
-          <Badge>N pendientes</Badge>
-          <Button onClick={handleDiscardChanges}>Descartar</Button>
-          <Button onClick={() => setSaveDialogOpen(true)}>Guardar</Button>
-        </>
-      )}
-    </div>
-  </div>
-  
-  {/* Fila 2: Toolbar selección - SIEMPRE presente */}
-  <div className="min-h-[36px] flex items-center">
-    {selection.hasSelection && activeView === 'personas' ? (
-      <SelectionToolbar ... /> {/* Sin clipboard indicator */}
-    ) : canManageSchedules && activeView === 'personas' ? (
-      {/* Hint de atajos cuando no hay selección */}
-      <div className="text-xs text-muted-foreground flex items-center gap-4">
-        <span>Click para editar • Ctrl+Click: multiselección • Shift+Click: rango</span>
-      </div>
-    ) : null}
-  </div>
-</CardHeader>
+// Líneas 933-964 - Cambiar el handler de click
+onClick={(e) => {
+  // Solo Shift/Ctrl activa selección
+  if (e.shiftKey || e.ctrlKey || e.metaKey) {
+    e.preventDefault();
+    e.stopPropagation(); // Evitar que abra popover
+    selection.handleCellClick(member.id, dateStr, e);
+  }
+  // Click normal NO selecciona - solo abre popover
+}}
+
+// El div interno del popover NO debe llamar handleCellClick
+<div className="w-full h-full flex items-center justify-center">
+  {renderCellContent(value, isPending, isHoliday, false)}
+</div>
 ```
 
-### 2. Modificar SelectionToolbar.tsx
+**Simplificar el header - Row 2:**
+- Eliminar hint de atajos cuando no hay selección (solo ocupa espacio)
+- Solo mostrar toolbar cuando `selectedCells.size >= 1` (pero simplificado)
 
-Remover el indicador de clipboard del toolbar (ya estará en Fila 1):
+**Eliminar leyenda duplicada:**
+- Eliminar la leyenda de colores que está arriba del Card (líneas 650-663)
+- O convertirla en tooltip de un botón de ayuda
 
-- Eliminar la sección `{clipboard && (...)}` al final del componente
-- Eliminar prop `onClearClipboard` 
-- Mantener solo: conteo, copy/paste/clear, quick schedules, deselect
+### 2. SelectionToolbar.tsx
 
-### 3. Mover leyenda de colores
+**Eliminar horarios predeterminados:**
+```tsx
+// ELIMINAR líneas 38-44 y 146-157
+const QUICK_SCHEDULES = [...] // DELETE
 
-La leyenda actual (Ctrl+Click, Seleccionado, Modificado) está arriba del Card.
-Moverla dentro del header o convertirla en tooltip sobre botón de ayuda.
+// ELIMINAR del JSX:
+{QUICK_SCHEDULES.slice(0, 3).map((qs) => (
+  <Button ... />
+))}
+```
+
+**Resultado - Toolbar simplificado:**
+```text
+[3 celdas] | [Copiar] [Pegar] [Limpiar] | [Franco] | [×]
+```
+
+### 3. Limpieza Visual
+
+**Eliminar información redundante:**
+- Quitar la sección de leyenda fuera del Card (Ctrl+Click, Seleccionado, Modificado)
+- Quitar la Row 2 de hints cuando no hay selección - dejar vacío o colapsado
+
+**Header final:**
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ [Personas][Cobertura]     [📋 copiado]      [Guardar]       │
+├─────────────────────────────────────────────────────────────┤
+│ [3 celdas] | [Copiar][Pegar][Limpiar] | [Franco] | [×]      │  ← Solo si hay selección
+└─────────────────────────────────────────────────────────────┘
+```
 
 ## Archivos a Modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/components/hr/InlineScheduleEditor.tsx` | Reestructurar CardHeader con 2 filas fijas |
-| `src/components/hr/schedule-selection/SelectionToolbar.tsx` | Remover sección clipboard |
+| InlineScheduleEditor.tsx | Separar click normal de multiselección, eliminar leyenda |
+| SelectionToolbar.tsx | Eliminar QUICK_SCHEDULES y simplificar |
 
-## Beneficios
+## Resultado Esperado
 
-1. **Layout estable**: No hay saltos cuando aparecen/desaparecen elementos
-2. **Guardar siempre accesible**: El botón siempre está en la misma posición
-3. **Clipboard visible**: El usuario siempre sabe si tiene algo copiado
-4. **Hints útiles**: Cuando no hay selección, el usuario ve atajos disponibles
+1. **Click = Editar**: Un click abre el popover directamente para editar
+2. **Ctrl/Shift+Click = Multiselección**: Para operaciones masivas
+3. **Toolbar limpio**: Solo [Copiar][Pegar][Limpiar][Franco][×]
+4. **Menos ruido visual**: Sin leyendas ni hints redundantes
