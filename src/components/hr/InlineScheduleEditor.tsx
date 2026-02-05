@@ -694,10 +694,10 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
           </Card>
         ) : (
           <Card className="w-full max-w-full overflow-hidden">
-            <CardHeader className="py-2 px-4 border-b bg-muted/30 space-y-2">
-              {/* Row 1: View toggle + Actions */}
-              <div className="flex items-center justify-between gap-4">
-                {/* Segmented Control */}
+            <CardHeader className="py-2 px-4 border-b bg-muted/30 space-y-0">
+              {/* Row 1: View toggle + Clipboard indicator + Actions - ALWAYS */}
+              <div className="flex items-center justify-between gap-4 min-h-[40px]">
+                {/* Left: Segmented Control + hour filter */}
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
                     <button
@@ -741,45 +741,69 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                   )}
                 </div>
 
-                {/* Actions area: Save/Discard when pending changes */}
-                {pendingChanges.size > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="gap-1 text-xs">
-                      <AlertCircle className="w-3 h-3" />
-                      {pendingChanges.size} pendiente{pendingChanges.size !== 1 ? 's' : ''}
-                    </Badge>
-                    <Button variant="ghost" size="sm" onClick={handleDiscardChanges} className="h-8 text-xs">
-                      <Undo2 className="w-3.5 h-3.5 mr-1" />
-                      Descartar
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      onClick={() => setSaveDialogOpen(true)}
-                      disabled={hasLaborViolations}
-                      className="h-8 text-xs"
-                      title={hasLaborViolations ? 'Corrige las violaciones laborales antes de guardar' : ''}
+                {/* Center: Clipboard indicator (when something is copied) */}
+                {selection.clipboard && (
+                  <div className="hidden md:flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                    <span>📋 {selection.clipboard.sourceInfo}</span>
+                    <button 
+                      onClick={selection.clearClipboard}
+                      className="text-primary hover:underline ml-1"
                     >
-                      <Save className="w-3.5 h-3.5 mr-1" />
-                      Guardar
-                    </Button>
+                      ×
+                    </button>
                   </div>
                 )}
+
+                {/* Right: Actions area (Save/Discard) - space reserved even when empty */}
+                <div className="flex items-center gap-2 min-w-[180px] justify-end">
+                  {pendingChanges.size > 0 && (
+                    <>
+                      <Badge variant="outline" className="gap-1 text-xs">
+                        <AlertCircle className="w-3 h-3" />
+                        {pendingChanges.size} pendiente{pendingChanges.size !== 1 ? 's' : ''}
+                      </Badge>
+                      <Button variant="ghost" size="sm" onClick={handleDiscardChanges} className="h-8 text-xs">
+                        <Undo2 className="w-3.5 h-3.5 mr-1" />
+                        Descartar
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        onClick={() => setSaveDialogOpen(true)}
+                        disabled={hasLaborViolations}
+                        className="h-8 text-xs"
+                        title={hasLaborViolations ? 'Corrige las violaciones laborales antes de guardar' : ''}
+                      >
+                        <Save className="w-3.5 h-3.5 mr-1" />
+                        Guardar
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
 
-              {/* Row 2: Selection toolbar (only when cells are selected) */}
-              {selection.hasSelection && activeView === 'personas' && (
-                <SelectionToolbar
-                  selectionCount={selection.selectedCells.size}
-                  clipboard={selection.clipboard}
-                  onCopy={selection.handleCopy}
-                  onPaste={selection.handlePaste}
-                  onClear={selection.handleClearCells}
-                  onApplyDayOff={selection.handleApplyDayOff}
-                  onApplyQuickSchedule={selection.handleApplyQuickSchedule}
-                  onDeselect={selection.clearSelection}
-                  onClearClipboard={selection.clearClipboard}
-                />
-              )}
+              {/* Row 2: Selection toolbar or hints - ALWAYS present with fixed height */}
+              <div className="min-h-[36px] flex items-center border-t border-border/50 pt-2 mt-2">
+                {selection.hasSelection && activeView === 'personas' ? (
+                  <SelectionToolbar
+                    selectionCount={selection.selectedCells.size}
+                    clipboard={selection.clipboard}
+                    onCopy={selection.handleCopy}
+                    onPaste={selection.handlePaste}
+                    onClear={selection.handleClearCells}
+                    onApplyDayOff={selection.handleApplyDayOff}
+                    onApplyQuickSchedule={selection.handleApplyQuickSchedule}
+                    onDeselect={selection.clearSelection}
+                  />
+                ) : canManageSchedules && activeView === 'personas' ? (
+                  <div className="text-xs text-muted-foreground flex items-center gap-4">
+                    <span>Click para editar • Ctrl+Click: multiselección • Shift+Click: rango • F: Franco</span>
+                  </div>
+                ) : activeView === 'cobertura' ? (
+                  <div className="text-xs text-muted-foreground flex items-center gap-4">
+                    <span>Vista de solo lectura: muestra empleados por franja horaria</span>
+                  </div>
+                ) : null}
+              </div>
             </CardHeader>
             
             {/* CalendarViewport - scroll horizontal solo aquí dentro */}

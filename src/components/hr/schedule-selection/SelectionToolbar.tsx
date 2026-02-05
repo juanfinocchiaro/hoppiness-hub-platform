@@ -32,7 +32,6 @@ interface SelectionToolbarProps {
   onApplyDayOff: () => void;
   onApplyQuickSchedule: (start: string, end: string) => void;
   onDeselect: () => void;
-  onClearClipboard: () => void;
   className?: string;
 }
 
@@ -53,7 +52,6 @@ export function SelectionToolbar({
   onApplyDayOff,
   onApplyQuickSchedule,
   onDeselect,
-  onClearClipboard,
   className,
 }: SelectionToolbarProps) {
   if (selectionCount === 0) return null;
@@ -176,22 +174,6 @@ export function SelectionToolbar({
         <TooltipContent side="bottom">Escape</TooltipContent>
       </Tooltip>
 
-      {/* Clipboard indicator */}
-      {clipboard && (
-        <>
-          <Separator orientation="vertical" className="h-5" />
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <Copy className="w-3 h-3" />
-            {clipboard.sourceInfo}
-            <button 
-              onClick={onClearClipboard}
-              className="text-primary hover:underline ml-1"
-            >
-              limpiar
-            </button>
-          </span>
-        </>
-      )}
     </div>
   );
 }
