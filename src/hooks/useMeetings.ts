@@ -107,6 +107,90 @@ export function useUnreadMeetingsCount(branchId?: string) {
   });
 }
 
+// Fetch ALL meetings for brand view (coordinators/superadmins)
+export function useBrandMeetings() {
+  return useQuery({
+    queryKey: ['brand-meetings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('meetings')
+        .select(`
+          *,
+          branches(id, name, slug),
+          participants:meeting_participants(id, user_id, attended, read_at)
+        `)
+        .order('date', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
+}
+
+// Fetch brand meetings stats for dashboard metrics
+export function useBrandMeetingsStats() {
+  return useQuery({
+    queryKey: ['brand-meetings-stats'],
+    queryFn: async () => {
+      // Get start of current month
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      
+      const { data: meetings, error } = await supabase
+        .from('meetings')
+        .select(`
+          id,
+          branch_id,
+          branches(id, name),
+          participants:meeting_participants(id, read_at)
+        `)
+        .gte('date', startOfMonth.toISOString());
+      
+      if (error) throw error;
+      
+      const totalMeetings = meetings?.length || 0;
+      
+      // Calculate read percentage
+      let totalParticipants = 0;
+      let readParticipants = 0;
+      
+      // Track pending by branch
+      const pendingByBranch: Record<string, { name: string; pending: number }> = {};
+      
+      meetings?.forEach(meeting => {
+        const participants = meeting.participants || [];
+        totalParticipants += participants.length;
+        
+        const readCount = participants.filter((p: any) => p.read_at).length;
+        readParticipants += readCount;
+        
+        const pendingCount = participants.length - readCount;
+        if (pendingCount > 0 && meeting.branch_id && meeting.branches) {
+          const branchName = (meeting.branches as any).name;
+          if (!pendingByBranch[meeting.branch_id]) {
+            pendingByBranch[meeting.branch_id] = { name: branchName, pending: 0 };
+          }
+          pendingByBranch[meeting.branch_id].pending += pendingCount;
+        }
+      });
+      
+      const readPercentage = totalParticipants > 0 
+        ? Math.round((readParticipants / totalParticipants) * 100) 
+        : 100;
+      
+      const alertCount = Object.keys(pendingByBranch).length;
+      
+      return {
+        totalMeetings,
+        readPercentage,
+        alertCount,
+        pendingByBranch,
+      };
+    },
+  });
+}
+
 // Fetch meeting detail with all relations
 export function useMeetingDetail(meetingId: string | undefined) {
   return useQuery({

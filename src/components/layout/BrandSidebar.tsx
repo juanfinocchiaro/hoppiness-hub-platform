@@ -30,6 +30,7 @@ import {
   ClipboardList,
   BarChart3,
   CalendarDays,
+  Calendar,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -62,7 +63,7 @@ export function BrandSidebar() {
   const isSucursalesActive = location.pathname.includes('/mimarca/locales');
   const isCoachingActive = location.pathname.includes('/mimarca/coaching');
   const isPersonasActive = location.pathname.includes('/mimarca/usuarios') || location.pathname.includes('/mimarca/equipo-central');
-  const isComunicacionActive = location.pathname.includes('/mimarca/mensajes') || location.pathname.includes('/mimarca/comunicados');
+  const isComunicacionActive = location.pathname.includes('/mimarca/mensajes') || location.pathname.includes('/mimarca/comunicados') || location.pathname.includes('/mimarca/reuniones');
   const isConfigActive = location.pathname.includes('/mimarca/reglamentos') || location.pathname.includes('/mimarca/configuracion');
 
   return (
@@ -137,6 +138,7 @@ export function BrandSidebar() {
             badgeVariant="warning"
           />
           <NavItemButton to="/mimarca/comunicados" icon={Megaphone} label="Comunicados" />
+          <NavItemButton to="/mimarca/reuniones" icon={Calendar} label="Reuniones" />
         </NavSectionGroup>
 
         {/* Configuración Section */}
