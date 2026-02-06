@@ -32,7 +32,7 @@ import { es } from 'date-fns/locale';
 import { useTodayClosures, useEnabledShifts } from '@/hooks/useShiftClosures';
 import { ShiftClosureModal } from '@/components/local/closure/ShiftClosureModal';
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
-import { CoachingPendingCard, DashboardCoachingAlert } from '@/components/coaching';
+import { CoachingPendingCard } from '@/components/coaching';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
@@ -190,10 +190,6 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
 
   return (
     <div className="space-y-4">
-      {/* Coaching Alert - Solo para encargados */}
-      {local.canDoCoaching && (
-        <DashboardCoachingAlert branchId={branch.id} />
-      )}
 
       {/* Header */}
       <div className="flex items-center justify-between">
