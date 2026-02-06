@@ -4,10 +4,8 @@ import { Search, UserPlus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TeamTable, TeamCardList, useTeamData } from '@/components/local/team';
 import { InviteStaffDialog } from '@/components/hr/InviteStaffDialog';
-import LaborHoursSummary from '@/components/local/LaborHoursSummary';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { PageHelp } from '@/components/ui/PageHelp';
@@ -68,45 +66,31 @@ export default function TeamPage() {
         )}
       </div>
 
-      {/* Tabs: Personal / Horas del Mes */}
-      <Tabs defaultValue="team" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
-          <TabsTrigger value="team">Personal</TabsTrigger>
-          <TabsTrigger value="hours">Horas del Mes</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="team" className="space-y-4 mt-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nombre o email..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 min-h-[44px]"
-            />
-          </div>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por nombre o email..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-10 min-h-[44px]"
+        />
+      </div>
 
-          {/* Team list */}
-          {isMobile ? (
-            <TeamCardList 
-              team={filteredTeam} 
-              branchId={branch?.id}
-              onMemberUpdated={refetch}
-            />
-          ) : (
-            <TeamTable 
-              team={filteredTeam} 
-              branchId={branch?.id}
-              onMemberUpdated={refetch}
-            />
-          )}
-        </TabsContent>
-        
-        <TabsContent value="hours" className="mt-4">
-          <LaborHoursSummary branchId={branch?.id} />
-        </TabsContent>
-      </Tabs>
+      {/* Team list */}
+      {isMobile ? (
+        <TeamCardList 
+          team={filteredTeam} 
+          branchId={branch?.id}
+          onMemberUpdated={refetch}
+        />
+      ) : (
+        <TeamTable 
+          team={filteredTeam} 
+          branchId={branch?.id}
+          onMemberUpdated={refetch}
+        />
+      )}
 
       <InviteStaffDialog
         open={showInviteDialog}
