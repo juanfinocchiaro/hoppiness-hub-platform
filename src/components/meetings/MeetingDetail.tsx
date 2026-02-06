@@ -38,6 +38,7 @@ import { MeetingExecutionForm } from './MeetingExecutionForm';
 import { useMarkMeetingAsRead, useStartMeeting, useCancelMeeting } from '@/hooks/useMeetings';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import { toast } from 'sonner';
+import { generateGoogleCalendarLink } from '@/lib/calendarLinks';
 
 interface MeetingDetailProps {
   meeting: MeetingWithDetails;
@@ -219,35 +220,55 @@ function ConvocadaContent({
   meeting: MeetingWithDetails;
   pendingParticipants: MeetingWithDetails['participants'];
 }) {
+  const areaLabel = MEETING_AREAS.find(a => a.value === meeting.area)?.label;
+  const calendarUrl = generateGoogleCalendarLink({
+    title: meeting.title,
+    date: meeting.scheduled_at || meeting.date,
+    area: areaLabel,
+    branchName: meeting.branches?.name,
+    participantCount: pendingParticipants.length,
+  });
+
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center justify-between text-base">
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            Convocados
-          </div>
-          <span className="text-sm font-normal text-muted-foreground">
-            {pendingParticipants.length} participantes
-          </span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-2">
-          {pendingParticipants.map(p => (
-            <div key={p.id} className="flex items-center gap-2 bg-muted/50 px-2 py-1 rounded-md">
-              <Avatar className="h-6 w-6">
-                <AvatarImage src={p.profile?.avatar_url} />
-                <AvatarFallback className="text-xs">
-                  {p.profile?.full_name?.charAt(0) || '?'}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-sm">{p.profile?.full_name || 'Usuario'}</span>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center justify-between text-base">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Convocados
             </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+            <span className="text-sm font-normal text-muted-foreground">
+              {pendingParticipants.length} participantes
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {pendingParticipants.map(p => (
+              <div key={p.id} className="flex items-center gap-2 bg-muted/50 px-2 py-1 rounded-md">
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={p.profile?.avatar_url} />
+                  <AvatarFallback className="text-xs">
+                    {p.profile?.full_name?.charAt(0) || '?'}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm">{p.profile?.full_name || 'Usuario'}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Button
+        variant="outline"
+        className="w-full sm:w-auto"
+        onClick={() => window.open(calendarUrl, '_blank')}
+      >
+        <Calendar className="w-4 h-4 mr-2" />
+        Agregar a mi Google Calendar
+      </Button>
+    </div>
   );
 }
 
