@@ -12,7 +12,7 @@ import { WorkShell } from '@/components/layout/WorkShell';
 import { CuentaSidebar } from '@/components/layout/CuentaSidebar';
 import { PanelSwitcher } from '@/components/layout/PanelSwitcher';
 import { Button } from '@/components/ui/button';
-import { LogOut, User, Home } from 'lucide-react';
+import { LogOut, Home } from 'lucide-react';
 import { ExternalLink } from '@/components/ui/ExternalLink';
 import { useEffect } from 'react';
 
@@ -51,12 +51,6 @@ export default function CuentaLayout() {
       
       {/* Fixed Actions */}
       <div className="space-y-1 pt-2 border-t">
-        <Link to="/cuenta/perfil">
-          <Button variant="ghost" className="w-full justify-start">
-            <User className="w-4 h-4 mr-3" />
-            Mi Perfil
-          </Button>
-        </Link>
         <ExternalLink to="/">
           <Button variant="ghost" className="w-full justify-start">
             <Home className="w-4 h-4 mr-3" />

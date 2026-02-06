@@ -19,6 +19,7 @@ import {
   FileCheck,
   CalendarDays,
   DollarSign,
+  User,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -56,6 +57,9 @@ export function CuentaSidebar() {
         icon={Home}
         label="Inicio"
       />
+      
+      {/* Mi Perfil - Always visible */}
+      <NavItemButton to="/cuenta/perfil" icon={User} label="Mi Perfil" />
       
       {/* Mi Trabajo - Only for operational staff */}
       {isOperationalStaff && (

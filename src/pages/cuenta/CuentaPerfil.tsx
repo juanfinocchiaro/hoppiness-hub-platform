@@ -1,15 +1,12 @@
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Save, Loader2, Lock, Eye, EyeOff, User, Calendar as CalendarIcon } from 'lucide-react';
+import { Save, Loader2, Lock, Eye, EyeOff, User, Calendar as CalendarIcon } from 'lucide-react';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
-import { PublicHeader } from '@/components/layout/PublicHeader';
-import { PublicFooter } from '@/components/layout/PublicFooter';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
@@ -19,6 +16,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { PageHeader } from '@/components/ui/page-header';
 
 export default function CuentaPerfil() {
   const { id: effectiveUserId, email: effectiveEmail } = useEffectiveUser();
@@ -142,29 +140,17 @@ export default function CuentaPerfil() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-muted/30">
-      <PublicHeader />
-      
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="max-w-xl mx-auto space-y-6">
-          {/* Header */}
-          <div className="flex items-center gap-4">
-            <Link to="/cuenta">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
-            <h1 className="text-2xl font-bold">Mi Perfil</h1>
-          </div>
+    <div className="space-y-6">
+      <PageHeader title="Mi Perfil" />
 
-          {isLoading ? (
-            <Card>
-              <CardContent className="p-8 flex justify-center">
-                <HoppinessLoader size="md" />
-              </CardContent>
-            </Card>
-          ) : (
-            <>
+      {isLoading ? (
+        <Card>
+          <CardContent className="p-8 flex justify-center">
+            <HoppinessLoader size="md" />
+          </CardContent>
+        </Card>
+      ) : (
+        <>
               {/* Datos personales */}
               <form onSubmit={handleSubmit}>
                 <Card>
@@ -366,14 +352,9 @@ export default function CuentaPerfil() {
                     </form>
                   </CardContent>
                 )}
-              </Card>
-
-            </>
-          )}
-        </div>
-      </main>
-      
-      <PublicFooter />
+          </Card>
+        </>
+      )}
     </div>
   );
 }
