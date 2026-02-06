@@ -20,6 +20,7 @@ import {
 import { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MEETING_AREAS } from '@/types/meeting';
+import { generateGoogleCalendarLink } from '@/lib/calendarLinks';
 
 export function MyMeetingsCard() {
   const { data: meetings = [], isLoading } = useMyMeetings();
@@ -145,12 +146,30 @@ export function MyMeetingsCard() {
 
                 {/* Status-specific content */}
                 {selectedMeeting.status === 'convocada' && (
-                  <div className="bg-muted/50 p-4 rounded-lg text-center">
-                    <Clock className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-sm font-medium">Estás convocado a esta reunión</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      El encargado tomará asistencia el día de la reunión
-                    </p>
+                  <div className="space-y-3">
+                    <div className="bg-muted/50 p-4 rounded-lg text-center">
+                      <Clock className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm font-medium">Estás convocado a esta reunión</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        El encargado tomará asistencia el día de la reunión
+                      </p>
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => window.open(
+                        generateGoogleCalendarLink({
+                          title: selectedMeeting.title,
+                          date: selectedMeeting.date,
+                          area: MEETING_AREAS.find(a => a.value === selectedMeeting.area)?.label,
+                        }),
+                        '_blank'
+                      )}
+                    >
+                      <Calendar className="w-4 h-4 mr-2" />
+                      Agregar a Google Calendar
+                    </Button>
                   </div>
                 )}
 
