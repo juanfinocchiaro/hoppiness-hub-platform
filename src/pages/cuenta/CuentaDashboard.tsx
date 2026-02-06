@@ -225,12 +225,14 @@ export default function CuentaDashboard() {
               {/* Communications - show only brand for franquiciados */}
               <MyCommunicationsCard showOnlyBrand={isOnlyFranquiciado} />
 
+              {/* Reuniones - TODOS los que tienen rol local las ven (incluye franquiciados) */}
+              <MyMeetingsCard />
+
               {/* Operational Cards - only for employees, NOT franquiciados */}
               {!isOnlyFranquiciado && (
                 <div className="grid gap-3 md:gap-4">
                   <MyRegulationsCard />
                   <MyCoachingsCardEnhanced />
-                  <MyMeetingsCard />
                   <MyScheduleCard />
                   <MyRequestsCard />
                   <MyClockInsCard />
