@@ -1,137 +1,111 @@
 
-# Plan: Sistema de Seguimiento de Coachings
+# Plan de Mejoras para el Sistema de Coaching
 
-## Situacion Actual
+## Diagnóstico del Estado Actual
 
-El sistema actual de coaching tiene estas limitaciones:
-- **CoachingPage** solo muestra el mes actual y permite hacer evaluaciones
-- **CoachingHistory** existe pero solo se usa en Mi Cuenta (vista empleado) 
-- No hay forma de ver el detalle completo de un coaching pasado
-- No hay visualizacion de evolucion/tendencias a lo largo del tiempo
-- El **action_plan** (plan de accion) se guarda pero no hay seguimiento de si se cumplio
-- No hay comparativa entre empleados o periodos
+Tras analizar los archivos del sistema, identifico **6 áreas de mejora** que optimizarían significativamente la experiencia de uso del módulo de coaching.
 
-## Solucion Propuesta
+---
 
-Agregar una nueva pestana **Historial** en la pagina de Coaching que permita:
+## 1. Panel de Resumen para el Empleado (Mi Cuenta)
 
-1. Ver todos los coachings anteriores por empleado
-2. Visualizar evolucion de scores con grafico de lineas
-3. Ver detalle completo de cualquier coaching pasado
-4. Revisar planes de accion anteriores y su cumplimiento
+**Problema**: El card `MyCoachingsCard` en Mi Cuenta es muy básico. Solo muestra si hay pendientes y el último score, sin contexto de evolución.
 
-```text
-+----------------------------------------------------------+
-|                    COACHING DEL EQUIPO                    |
-|----------------------------------------------------------|
-| [Equipo]  [Certificaciones]  [Historial] <-- NUEVA TAB   |
-+----------------------------------------------------------+
-```
+**Mejora Propuesta**: Enriquecer la vista del empleado con:
+- Mini gráfico de evolución (últimos 6 meses)
+- Comparación con promedio del equipo
+- Insignias de logro por mejoras consecutivas
+- Acceso directo al detalle completo de su último coaching
 
-## Nuevos Componentes
+**Impacto**: Los empleados entienden mejor su progreso y se motivan con feedback visual.
 
-### 1. CoachingDetailModal
-Modal para ver el detalle completo de un coaching pasado.
+---
 
-| Seccion | Contenido |
-|---------|-----------|
-| Header | Empleado, fecha, score, evaluador, estado confirmacion |
-| Scores | Desglose por estacion y competencias generales |
-| Feedback | Fortalezas, Areas de mejora, Plan de accion |
-| Confirmacion | Fecha de lectura, notas del empleado |
+## 2. Vista Comparativa en Mi Local
 
-### 2. EmployeeCoachingCard
-Tarjeta expandible por empleado mostrando:
-- Score promedio historico
-- Tendencia (subiendo/bajando/estable)
-- Lista de coachings con acceso al detalle
-- Grafico de evolucion
+**Problema**: El encargado ve empleados individualmente pero no tiene una vista comparativa rápida del desempeño general del equipo.
 
-```text
-+-----------------------------------------------------------+
-| [Avatar] Juan Perez         Promedio: 3.2/4  [Trend Up]   |
-|-----------------------------------------------------------|
-| [Grafico de lineas: Ene 2.8 - Feb 3.0 - Mar 3.2 - ...]   |
-|-----------------------------------------------------------|
-| Feb 2026  | 3.2/4 | Por: Dalma        | [Ver Detalle]    |
-| Ene 2026  | 3.0/4 | Por: Dalma        | [Ver Detalle]    |
-| Dic 2025  | 2.8/4 | Por: Coordinador  | [Ver Detalle]    |
-+-----------------------------------------------------------+
-```
+**Mejora Propuesta**: Agregar un tab "Análisis" en CoachingPage con:
+- Ranking de empleados por score promedio
+- Matriz de competencias débiles vs fuertes del equipo
+- Identificación de "campeones" por estación (quién tiene mejor score en cada área)
+- Alertas de empleados con tendencia negativa
 
-### 3. CoachingHistoryTab
-Nueva pestana en CoachingPage con:
-- Filtros por empleado y rango de fechas
-- Lista de empleados con sus historiales individuales
-- Estadisticas agregadas del equipo
+**Impacto**: Permite decisiones informadas sobre entrenamiento y asignación de turnos.
 
-## Modificaciones a Archivos Existentes
+---
 
-### hooks/useCoachings.ts
-Nuevo hook `useCoachingHistory` para obtener historiales completos con paginacion.
+## 3. Recordatorios y Seguimiento Automático
 
-### hooks/useCoachingStats.ts
-El hook `useEmployeeScoreHistory` ya existe pero no se usa. Integrarlo en la nueva vista.
+**Problema**: No hay sistema de notificación cuando:
+- Se acerca fin de mes y faltan coachings por hacer
+- Un empleado no confirma su coaching después de X días
+- El plan de acción del mes anterior debería revisarse
 
-### pages/local/CoachingPage.tsx
-Agregar tercera pestana "Historial" al TabsList existente.
+**Mejora Propuesta**: 
+- Badge con contador en sidebar cuando hay pendientes
+- Alerta en Dashboard de Mi Local con "Faltan X coachings"
+- Notificación visual en fila de empleado si no confirmó en 5+ días
 
-### types/coaching.ts
-Agregar interface para tendencias y estadisticas historicas.
+**Impacto**: Asegura que el proceso de coaching se complete consistentemente.
 
-## Flujo de Seguimiento de Action Plan
+---
 
-Para el seguimiento del plan de accion del mes anterior:
+## 4. Plantillas y Sugerencias Inteligentes
 
-1. Al crear un nuevo coaching, mostrar el `action_plan` del coaching anterior (si existe)
-2. Agregar campo opcional "Seguimiento del plan anterior" en el formulario
-3. Guardar en un nuevo campo `previous_action_review`
+**Problema**: El formulario de coaching parte de cero cada vez. El encargado escribe fortalezas, áreas de mejora y plan de acción manualmente.
 
-Esto requiere:
-- Migracion DB: agregar columna `previous_action_review TEXT` a tabla `coachings`
-- Modificar CoachingForm para mostrar el plan anterior
+**Mejora Propuesta**:
+- Sugerencias de texto basadas en scores (ej: si score < 2 en atención, sugerir "Mejorar comunicación con clientes")
+- Plantillas de planes de acción reutilizables
+- Autocompletado con frases comunes usadas anteriormente
 
-## Archivos a Crear
+**Impacto**: Reduce tiempo de evaluación y mejora consistencia del feedback.
 
-| Archivo | Descripcion |
-|---------|-------------|
-| `src/components/coaching/CoachingDetailModal.tsx` | Modal con detalle completo del coaching |
-| `src/components/coaching/EmployeeCoachingCard.tsx` | Card expandible con historial del empleado |
-| `src/components/coaching/CoachingHistoryTab.tsx` | Nueva pestana con vista historica |
-| `src/components/coaching/ScoreEvolutionChart.tsx` | Grafico de evolucion usando Recharts |
+---
 
-## Archivos a Modificar
+## 5. Modo Rápido de Evaluación
 
-| Archivo | Cambio |
-|---------|--------|
-| `src/pages/local/CoachingPage.tsx` | Agregar tab "Historial" |
-| `src/hooks/useCoachings.ts` | Agregar hook para historial paginado |
-| `src/components/coaching/CoachingForm.tsx` | Mostrar plan anterior si existe |
-| `src/components/coaching/index.ts` | Exportar nuevos componentes |
+**Problema**: El formulario actual requiere expandir secciones, hacer scroll extenso. Para locales con muchos empleados es tedioso.
 
-## Migracion de Base de Datos
+**Mejora Propuesta**: 
+- Modal de "Coaching Express" con solo puntuaciones numéricas
+- Opción de copiar estructura del mes anterior como base
+- Guardar como borrador para completar después
 
-```sql
-ALTER TABLE coachings 
-ADD COLUMN previous_action_review TEXT;
+**Impacto**: Reduce fricción para encargados ocupados.
 
-COMMENT ON COLUMN coachings.previous_action_review IS 
-'Revision del cumplimiento del plan de accion del mes anterior';
-```
+---
 
-## Resultado Esperado
+## 6. Exportación y Reportes
 
-| Funcionalidad | Antes | Despues |
-|---------------|-------|---------|
-| Ver coachings pasados | Solo mes actual | Historial completo |
-| Evolucion del empleado | No disponible | Grafico + tendencia |
-| Detalle de coaching | Solo score basico | Desglose completo |
-| Seguimiento action plan | No existe | Review en siguiente coaching |
-| Comparativa temporal | No disponible | Visual con graficos |
+**Problema**: No hay manera de exportar datos de coaching para análisis externo o archivo.
 
-## Consideraciones de UI/UX
+**Mejora Propuesta**:
+- Botón "Exportar Historial" en CSV/PDF
+- Reporte mensual consolidado por sucursal
+- Gráfico de evolución exportable para reuniones
 
-- Usar el mismo estilo visual que el resto del sistema
-- El grafico de evolucion usa Recharts (ya instalado)
-- Cards expandibles para no sobrecargar la vista inicial
-- Colores consistentes: verde=positivo, rojo=negativo, amarillo=neutral
+**Impacto**: Facilita auditorías y presentaciones a franquiciados.
+
+---
+
+## Priorización Sugerida
+
+| Prioridad | Mejora | Esfuerzo | Impacto |
+|-----------|--------|----------|---------|
+| 🔴 Alta | Recordatorios y alertas de pendientes | Bajo | Alto |
+| 🔴 Alta | Vista comparativa del equipo | Medio | Alto |
+| 🟡 Media | Panel mejorado en Mi Cuenta | Bajo | Medio |
+| 🟡 Media | Modo rápido de evaluación | Medio | Medio |
+| 🟢 Baja | Plantillas y sugerencias | Alto | Medio |
+| 🟢 Baja | Exportación y reportes | Medio | Bajo |
+
+---
+
+## Próximos Pasos
+
+Elegí cuál(es) de estas mejoras querés implementar primero y las desarrollo en detalle con plan técnico específico.
+
+También puedo combinar varias mejoras en un solo desarrollo si tienen sentido juntas (por ejemplo: "Recordatorios" + "Vista comparativa" forman un dashboard de coaching más completo).
+
