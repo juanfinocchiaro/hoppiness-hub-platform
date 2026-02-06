@@ -1,73 +1,191 @@
 
-
-# Plan: Simplificar Vista de Equipo en Mi Marca
+# Plan: Sistema de Visibilidad Jerárquica de Coaching
 
 ## Problema Identificado
 
-La vista de **Equipo** dentro de `/mimarca/locales/:slug` muestra información de coaching que es redundante porque ya existen páginas dedicadas:
+Actualmente hay dos issues principales:
 
-| Función | Página Dedicada | Redundancia en Equipo |
-|---------|-----------------|----------------------|
-| Evaluar encargados | `/mimarca/coaching/encargados` | Botón "Evaluar" + badge "Pendiente" |
-| Ver coachings staff | `/mimarca/coaching/red` | Contadores 0/3, 0/2 |
-| Estado mensual | Ambas páginas | Card "Coachings del mes: 0/5" |
+### Issue 1: Bug de Tab Duplicado
+En `CoachingPage.tsx` (líneas 365-378), hay DOS tabs con el mismo `value="team"`:
+```tsx
+{(isEncargado || isSuperadmin) && (
+  <TabsTrigger value="team">Equipo</TabsTrigger>
+)}
+{isFranquiciado && (
+  <TabsTrigger value="team">Empleados</TabsTrigger>
+)}
+```
+Esto causa que aparezcan fusionados como "Equipo Empleados".
+
+### Issue 2: Sidebar Oculto para Franquiciado
+En `LocalSidebar.tsx`, el item de Coaching solo aparece si `canDoCoaching` es `true`. Para Franquiciado esto es `false` (correctamente), pero el Franquiciado SÍ debe ver la página de Coaching (solo lectura).
+
+### Issue 3: Falta de Visibilidad Jerárquica
+Según el documento del usuario:
+
+| Rol | Ve coachings de... |
+|-----|---------------------|
+| Marca | Encargados (los que hizo) + Empleados de TODA la red (solo lectura) |
+| Franquiciado | SU encargado (hecho por marca) + Empleados de SU local (solo lectura) |
+| Encargado | SU propia evaluación (hecha por marca) + Empleados que él evaluó |
+| Empleado | Solo SU propia evaluación |
+
+---
 
 ## Solución Propuesta
 
-Simplificar `BranchTeamTab.tsx` para que sea únicamente una vista de **gestión de personal** (altas/bajas/roles), similar a `TeamPage.tsx` de Mi Local.
+### 1. Agregar Permiso de Visualización
 
-### Cambios en `BranchTeamTab.tsx`
-
-| Elemento Actual | Acción |
-|-----------------|--------|
-| Card "Coachings del mes: X/X completados" | **Eliminar** |
-| Badge con contadores 0/2, 0/3 en headers | **Eliminar** |
-| Badge "Pendiente" en cada miembro | **Eliminar** |
-| Botón "Evaluar" | **Eliminar** |
-| Botón "Ver" coaching | **Eliminar** |
-| Consulta de tabla `coachings` | **Eliminar** |
-| Mes/año en header | **Eliminar** |
-
-### Vista Resultante (Solo Gestión)
-
-```text
-┌─────────────────────────────────────────────────┐
-│  Equipo de Nueva Córdoba                        │
-│  ┌───────────────────────────────────────────┐  │
-│  │ 🔍 Buscar por email para agregar...       │  │
-│  └───────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────┐
-│ 🏠 Propietarios                                 │
-├─────────────────────────────────────────────────┤
-│ I  Ismael Sanchez                 [Franquiciado]│
-│    isanfundaro@gmail.com                        │
-└─────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────┐
-│ 💼 Encargados                                   │
-├─────────────────────────────────────────────────┤
-│ G  Guadalupe Malizia    [Encargado/a] [Editar ▾]│
-│ L  Lucía Aste           [Encargado/a] [Editar ▾]│
-└─────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────┐
-│ 👥 Equipo                                       │
-├─────────────────────────────────────────────────┤
-│ F  Francisco Pavón      [Cajero]      [Editar ▾]│
-│ A  Agustin Gomez        [Empleado]    [Editar ▾]│
-│ C  Carolina Medina      [Empleado]    [Editar ▾]│
-└─────────────────────────────────────────────────┘
+**En `usePermissionsV2.ts`**, agregar nuevo permiso:
+```typescript
+// Coaching
+canDoCoaching: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+canViewCoaching: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
 ```
 
-### Funcionalidades que Permanecen
+### 2. Actualizar Sidebar
 
-1. Buscar usuarios por email para agregar
-2. Listar miembros agrupados por rol
-3. Editar rol/posición (expandir fila)
-4. Dar de baja miembro
-5. Modal para agregar nuevo miembro
+**En `LocalSidebar.tsx`**, cambiar la condición:
+```tsx
+// Antes
+{canDoCoaching && (
+  <NavItemButton to={`${basePath}/equipo/coaching`} icon={ClipboardList} label="Coaching" />
+)}
+
+// Después
+{canViewCoaching && (
+  <NavItemButton to={`${basePath}/equipo/coaching`} icon={ClipboardList} label="Coaching" />
+)}
+```
+
+### 3. Corregir Tabs en CoachingPage
+
+**En `CoachingPage.tsx`**, unificar la lógica:
+
+```tsx
+<Tabs value={activeTab} onValueChange={setActiveTab}>
+  <TabsList className="flex-wrap h-auto gap-1">
+    {/* Tab Mi Encargado - Solo Franquiciado */}
+    {isFranquiciado && (
+      <TabsTrigger value="manager" className="gap-2">
+        <User className="h-4 w-4" />
+        Mi Encargado
+      </TabsTrigger>
+    )}
+    
+    {/* Tab Mi Evaluación - Solo Encargado */}
+    {isEncargado && (
+      <TabsTrigger value="own" className="gap-2">
+        <Star className="h-4 w-4" />
+        Mi Evaluación
+      </TabsTrigger>
+    )}
+    
+    {/* Tab Equipo - Todos los que pueden ver coaching */}
+    {local.canViewCoaching && (
+      <TabsTrigger value="team" className="gap-2">
+        <Users className="h-4 w-4" />
+        Equipo
+      </TabsTrigger>
+    )}
+    
+    {/* Resto de tabs... */}
+  </TabsList>
+</Tabs>
+```
+
+### 4. Actualizar Tab "Equipo" con Vista de Solo Lectura
+
+**En `CoachingPage.tsx`**, modificar el contenido del tab "team":
+
+```tsx
+<TabsContent value="team" className="mt-4">
+  <Card>
+    <CardHeader>
+      <CardTitle>Empleados del Local</CardTitle>
+      <CardDescription>
+        {local.canDoCoaching 
+          ? 'Seleccioná un empleado para realizar su coaching mensual'
+          : 'Coachings realizados a los empleados del local'}
+      </CardDescription>
+    </CardHeader>
+    <CardContent>
+      {/* Banner de solo lectura para Franquiciado */}
+      {isFranquiciado && (
+        <Alert className="mb-4" variant="info">
+          <Eye className="h-4 w-4" />
+          <AlertTitle>Modo lectura</AlertTitle>
+          <AlertDescription>
+            Los coachings son realizados por el Encargado. 
+            Aquí podés ver el estado de las evaluaciones.
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {renderMemberList(
+        teamMembers, 
+        hasCoachingThisMonth,
+        'No hay empleados activos en este local'
+      )}
+    </CardContent>
+  </Card>
+</TabsContent>
+```
+
+### 5. Actualizar renderMemberList para Solo Lectura
+
+Modificar `renderMemberList` para que Franquiciado vea coachings completados pero no pueda evaluar:
+
+```tsx
+const renderMemberList = (...) => {
+  // ...
+  return (
+    <div className="space-y-2">
+      {members.map(member => {
+        const hasCoaching = checkHasCoaching(member.id);
+        
+        return (
+          <Collapsible
+            key={member.id}
+            open={isExpanded}
+            // Solo expandible si puede hacer coaching Y no tiene coaching
+            onOpenChange={() => !hasCoaching && local.canDoCoaching && handleToggleEmployee(member.id)}
+          >
+            {/* Row */}
+            <CollapsibleTrigger asChild disabled={hasCoaching || !local.canDoCoaching}>
+              <div className={...}>
+                {/* Avatar y nombre */}
+                
+                {/* Estado */}
+                {hasCoaching ? (
+                  <Badge variant="secondary" className="gap-1">
+                    <CheckCircle className="h-3 w-3" />
+                    Completado
+                  </Badge>
+                ) : local.canDoCoaching ? (
+                  <span>Evaluar</span>
+                ) : (
+                  <Badge variant="outline" className="gap-1">
+                    <Clock className="h-3 w-3" />
+                    Pendiente
+                  </Badge>
+                )}
+              </div>
+            </CollapsibleTrigger>
+            
+            {/* Form solo si puede hacer coaching */}
+            {local.canDoCoaching && (
+              <CollapsibleContent>
+                <CoachingForm ... />
+              </CollapsibleContent>
+            )}
+          </Collapsible>
+        );
+      })}
+    </div>
+  );
+};
+```
 
 ---
 
@@ -75,37 +193,20 @@ Simplificar `BranchTeamTab.tsx` para que sea únicamente una vista de **gestión
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/components/admin/BranchTeamTab.tsx` | Eliminar coaching, simplificar UI |
-| `src/components/admin/BranchTeamMemberRow.tsx` | **Eliminar** (ya no se usa) |
-| `src/components/admin/BranchCoachingPreview.tsx` | **Eliminar** (ya no se usa) |
+| `src/hooks/usePermissionsV2.ts` | Agregar `canViewCoaching` |
+| `src/components/layout/LocalSidebar.tsx` | Usar `canViewCoaching` en lugar de `canDoCoaching` |
+| `src/pages/local/BranchLayout.tsx` | Pasar nuevo permiso al sidebar |
+| `src/pages/local/CoachingPage.tsx` | Corregir tabs duplicados, agregar banner solo lectura |
 
 ---
 
-## Detalle Técnico
+## Resumen de Permisos Resultantes
 
-### En `BranchTeamTab.tsx`:
+| Rol | canDoCoaching | canViewCoaching | Acceso |
+|-----|---------------|-----------------|--------|
+| Superadmin | ✅ | ✅ | Puede hacer coaching + ver todo |
+| Encargado | ✅ | ✅ | Puede hacer coaching + ver su evaluación |
+| Franquiciado | ❌ | ✅ | Solo lectura (ve encargado + empleados) |
+| Cajero/Empleado | ❌ | ❌ | Sin acceso a Mi Local |
 
-**Query simplificada** (líneas 65-131):
-- Eliminar consulta a tabla `coachings`
-- Eliminar lógica de `coachingMap`
-- Solo obtener `user_branch_roles` + `profiles`
-
-**Eliminar elementos UI**:
-- Card con estadísticas de coaching (líneas 306-318)
-- Badge con mes/año (línea 302)
-- Contadores en headers de sección (líneas 401-404, 436-439)
-- Reemplazar `BranchTeamMemberRow` por filas simples tipo `TeamCardList`
-
-**Agregar funcionalidad de edición**:
-- Botón "Editar" que expande para cambiar rol/posición
-- Botón "Dar de baja" con confirmación
-
----
-
-## Resultado
-
-- Vista limpia enfocada en **gestión de personal**
-- Sin duplicación de funcionalidades de coaching
-- Coaching se gestiona únicamente desde las rutas dedicadas:
-  - `/mimarca/coaching/encargados`
-  - `/mimarca/coaching/red`
+Esta arquitectura implementa exactamente la "visibilidad jerárquica" solicitada, donde cada rol ve lo que corresponde según su nivel.
