@@ -841,17 +841,17 @@ export function useBranchTeamMembers(branchId: string | undefined) {
     queryFn: async () => {
       if (!branchId) return [];
       
-      // Get users with roles in this branch
-      const { data: roles, error: rError } = await supabase
-        .from('user_roles_v2')
+      // Get users with roles in this branch from user_branch_roles
+      const { data: branchRoles, error: rError } = await supabase
+        .from('user_branch_roles')
         .select('user_id, local_role')
-        .contains('branch_ids', [branchId])
+        .eq('branch_id', branchId)
         .eq('is_active', true);
       
       if (rError) throw rError;
-      if (!roles?.length) return [];
+      if (!branchRoles?.length) return [];
       
-      const userIds = roles.map(r => r.user_id);
+      const userIds = branchRoles.map(r => r.user_id);
       
       // Get profiles
       const { data: profiles, error: pError } = await supabase
@@ -861,7 +861,7 @@ export function useBranchTeamMembers(branchId: string | undefined) {
       
       if (pError) throw pError;
       
-      const roleMap = new Map(roles.map(r => [r.user_id, r.local_role]));
+      const roleMap = new Map(branchRoles.map(r => [r.user_id, r.local_role]));
       
       return (profiles || []).map(p => ({
         ...p,
@@ -877,17 +877,16 @@ export function useNetworkMembers() {
   return useQuery({
     queryKey: ['network-members'],
     queryFn: async () => {
-      // Get all users with local roles
-      const { data: roles, error: rError } = await supabase
-        .from('user_roles_v2')
-        .select('user_id, local_role, branch_ids')
-        .eq('is_active', true)
-        .not('local_role', 'is', null);
+      // Get all users with local roles from user_branch_roles
+      const { data: branchRoles, error: rError } = await supabase
+        .from('user_branch_roles')
+        .select('user_id, branch_id, local_role')
+        .eq('is_active', true);
       
       if (rError) throw rError;
-      if (!roles?.length) return [];
+      if (!branchRoles?.length) return [];
       
-      const userIds = [...new Set(roles.map(r => r.user_id))];
+      const userIds = [...new Set(branchRoles.map(r => r.user_id))];
       
       // Get profiles
       const { data: profiles, error: pError } = await supabase
@@ -906,20 +905,17 @@ export function useNetworkMembers() {
       
       // Build member list with branch info
       const members: TeamMember[] = [];
-      roles.forEach(role => {
+      branchRoles.forEach(role => {
         const profile = profiles?.find(p => p.id === role.user_id);
         if (!profile) return;
         
-        const branchIds = role.branch_ids || [];
-        branchIds.forEach((branchId: string) => {
-          members.push({
-            id: profile.id,
-            full_name: profile.full_name,
-            avatar_url: profile.avatar_url || undefined,
-            local_role: role.local_role || undefined,
-            branch_id: branchId,
-            branch_name: branchMap.get(branchId),
-          });
+        members.push({
+          id: profile.id,
+          full_name: profile.full_name,
+          avatar_url: profile.avatar_url || undefined,
+          local_role: role.local_role || undefined,
+          branch_id: role.branch_id,
+          branch_name: branchMap.get(role.branch_id),
         });
       });
       
