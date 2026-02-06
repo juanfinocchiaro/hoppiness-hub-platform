@@ -51,6 +51,7 @@ import PermissionsConfigPage from "./pages/admin/PermissionsConfigPage";
 import CoachingManagersPage from "./pages/admin/CoachingManagersPage";
 import CoachingNetworkPage from "./pages/admin/CoachingNetworkPage";
 import LaborCalendarPage from "./pages/admin/LaborCalendarPage";
+import BrandMeetingsPage from "./pages/admin/BrandMeetingsPage";
 
 // Mi Local - Comunicaciones
 import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
@@ -151,6 +152,9 @@ const App = () => (
               
               {/* Mensajes de Contacto */}
               <Route path="mensajes" element={<ContactMessagesPage />} />
+              
+              {/* Reuniones de la Red */}
+              <Route path="reuniones" element={<BrandMeetingsPage />} />
               
               {/* Coaching */}
               <Route path="coaching/encargados" element={<CoachingManagersPage />} />
