@@ -18,7 +18,7 @@ import { OfflineBanner } from '@/components/ui/offline-banner';
 import logoHoppinessBlue from '@/assets/logo-hoppiness-blue.png';
 
 interface WorkShellProps {
-  mode: 'brand' | 'local';
+  mode: 'brand' | 'local' | 'cuenta';
   title: string;
   mobileTitle?: string;
   sidebar: ReactNode;
@@ -36,7 +36,10 @@ export function WorkShell({
   children,
   className,
 }: WorkShellProps) {
-  const panelLabel = mode === 'brand' ? 'Mi Marca' : 'Mi Local';
+  const panelLabel = 
+    mode === 'brand' ? 'Mi Marca' : 
+    mode === 'local' ? 'Mi Local' : 
+    'Mi Cuenta';
   const displayMobileTitle = mobileTitle || title || panelLabel;
 
   return (
