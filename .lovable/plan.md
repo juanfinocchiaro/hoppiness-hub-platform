@@ -1,119 +1,153 @@
 
 
-# Plan: Corregir Query de Miembros de Red para Reuniones
+# Plan: Corregir Políticas RLS para Reuniones de Red + Visibilidad en Mi Cuenta
 
-## Problema Identificado
+## Diagnóstico
 
-El hook `useNetworkMembers` en `src/hooks/useMeetings.ts` consulta la tabla `user_roles_v2` buscando el campo `local_role`, pero según la arquitectura actual del sistema:
+### Problemas Identificados
 
-- **`user_roles_v2`**: Almacena únicamente el `brand_role` (Superadmin, Coordinador, etc.)
-- **`user_branch_roles`**: Almacena los roles locales por sucursal (Encargado, Franquiciado, Cajero, Empleado)
+| Problema | Impacto |
+|----------|---------|
+| Política `meeting_participants_insert` falla para reuniones de red (`branch_id = NULL`) | No se pueden agregar participantes a reuniones de red |
+| Política `meeting_participants_select` falla para reuniones de red | Los participantes no pueden ver sus reuniones de red |
+| `MyMeetingsCard` solo muestra reuniones **CERRADAS** con notas | Los convocados no ven reuniones pendientes |
 
-Esto causa que el selector de participantes en "Nueva Reunión de Red" siempre muestre 0 personas disponibles.
+### Estado Actual del Código
 
-### Datos en la Base de Datos
+1. **`MyMeetingsCard`** está correctamente integrado en `CuentaDashboard.tsx` (línea 233)
+2. **Pero solo para empleados operativos** (excluye franquiciados - línea 229)
+3. **El hook `useMyMeetings`** filtra solo reuniones **CERRADAS** (las que tienen notas)
 
-Hay 6 encargados registrados correctamente en `user_branch_roles`:
+---
 
-| Nombre | Sucursal | Rol |
-|--------|----------|-----|
-| Lucía Aste | Nueva Córdoba | encargado |
-| guadalupe malizia | Nueva Córdoba | encargado |
-| Gaston Lopez | Villa Carlos Paz | encargado |
-| Dalma ledesma | Manantiales | encargado |
-| Lipiñski Luca | Villa Allende | encargado |
-| Valentina Reginelli | General Paz | encargado |
+## Cambios Requeridos
 
-## Solución
+### 1. Corregir Políticas RLS de `meeting_participants`
 
-Modificar `useNetworkMembers` para consultar `user_branch_roles` en lugar de `user_roles_v2`, siguiendo el mismo patrón que `useUsersData`.
+```sql
+-- INSERT: Permitir para reuniones de red (creador o superadmin/coordinador)
+DROP POLICY IF EXISTS meeting_participants_insert ON meeting_participants;
+CREATE POLICY "meeting_participants_insert" ON meeting_participants
+FOR INSERT TO authenticated
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM meetings m
+    WHERE m.id = meeting_participants.meeting_id
+    AND (
+      -- Reuniones de sucursal: HR del local
+      (m.branch_id IS NOT NULL AND is_hr_role(auth.uid(), m.branch_id))
+      OR
+      -- Reuniones de red: creador, superadmin o coordinador
+      (m.branch_id IS NULL AND (
+        m.created_by = auth.uid() 
+        OR is_superadmin(auth.uid()) 
+        OR get_brand_role(auth.uid()) = 'coordinador'
+      ))
+    )
+  )
+);
 
-## Archivo a Modificar
+-- SELECT: Incluir reuniones de red
+DROP POLICY IF EXISTS meeting_participants_select ON meeting_participants;
+CREATE POLICY "meeting_participants_select" ON meeting_participants
+FOR SELECT TO authenticated
+USING (
+  user_id = auth.uid()
+  OR is_superadmin(auth.uid())
+  OR EXISTS (
+    SELECT 1 FROM meetings m
+    WHERE m.id = meeting_participants.meeting_id
+    AND (
+      (m.branch_id IS NOT NULL AND is_hr_role(auth.uid(), m.branch_id))
+      OR 
+      (m.branch_id IS NULL AND (
+        m.created_by = auth.uid() 
+        OR get_brand_role(auth.uid()) IN ('coordinador', 'informes', 'contador_marca')
+      ))
+    )
+  )
+);
 
-**`src/hooks/useMeetings.ts`** - Líneas 876-929
-
-### Código Actual (Incorrecto)
-
-```typescript
-export function useNetworkMembers() {
-  return useQuery({
-    queryKey: ['network-members'],
-    queryFn: async () => {
-      // Consulta INCORRECTA a user_roles_v2
-      const { data: roles, error: rError } = await supabase
-        .from('user_roles_v2')
-        .select('user_id, local_role, branch_ids')
-        .eq('is_active', true)
-        .not('local_role', 'is', null);
-      // ...
-    },
-  });
-}
+-- UPDATE: Lo mismo para actualizar
+DROP POLICY IF EXISTS meeting_participants_update ON meeting_participants;
+CREATE POLICY "meeting_participants_update" ON meeting_participants
+FOR UPDATE TO authenticated
+USING (
+  user_id = auth.uid()
+  OR is_superadmin(auth.uid())
+  OR EXISTS (
+    SELECT 1 FROM meetings m
+    WHERE m.id = meeting_participants.meeting_id
+    AND (
+      (m.branch_id IS NOT NULL AND is_hr_role(auth.uid(), m.branch_id))
+      OR 
+      (m.branch_id IS NULL AND m.created_by = auth.uid())
+    )
+  )
+);
 ```
 
-### Código Corregido
+### 2. Actualizar `MyMeetingsCard` para Mostrar Todos los Estados
+
+El componente actual solo muestra reuniones con notas (cerradas). Debemos mostrar:
+
+- **Reuniones CONVOCADAS**: Mostrar "Estás convocado para [fecha]"
+- **Reuniones CERRADAS sin leer**: Mostrar "Confirmar lectura"
 
 ```typescript
-export function useNetworkMembers() {
-  return useQuery({
-    queryKey: ['network-members'],
-    queryFn: async () => {
-      // Consultar user_branch_roles (fuente de verdad para roles locales)
-      const { data: branchRoles, error: rError } = await supabase
-        .from('user_branch_roles')
-        .select('user_id, branch_id, local_role')
-        .eq('is_active', true);
-      
-      if (rError) throw rError;
-      if (!branchRoles?.length) return [];
-      
-      const userIds = [...new Set(branchRoles.map(r => r.user_id))];
-      
-      // Obtener perfiles
-      const { data: profiles, error: pError } = await supabase
-        .from('profiles')
-        .select('id, full_name, avatar_url')
-        .in('id', userIds);
-      
-      if (pError) throw pError;
-      
-      // Obtener nombres de sucursales
-      const { data: branches } = await supabase
-        .from('branches')
-        .select('id, name');
-      
-      const branchMap = new Map(branches?.map(b => [b.id, b.name]) || []);
-      
-      // Construir lista de miembros
-      const members: TeamMember[] = [];
-      branchRoles.forEach(role => {
-        const profile = profiles?.find(p => p.id === role.user_id);
-        if (!profile) return;
-        
-        members.push({
-          id: profile.id,
-          full_name: profile.full_name,
-          avatar_url: profile.avatar_url || undefined,
-          local_role: role.local_role || undefined,
-          branch_id: role.branch_id,
-          branch_name: branchMap.get(role.branch_id),
-        });
-      });
-      
-      return members;
-    },
-  });
-}
+// MyMeetingsCard.tsx - Cambiar lógica de filtrado
+
+// Reuniones pendientes: convocadas (futuras) + cerradas sin leer
+const pendingMeetings = meetings.filter(m => 
+  m.status === 'convocada' || 
+  (m.status === 'cerrada' && !m.myParticipation?.read_at)
+);
+
+// Mostrar badge diferente según estado
+{meeting.status === 'convocada' ? (
+  <Badge variant="outline">Convocado</Badge>
+) : (
+  <Badge variant="destructive">Sin leer</Badge>
+)}
 ```
 
-## Archivo Adicional a Corregir
+### 3. Mostrar `MyMeetingsCard` También a Franquiciados
 
-El hook `useBranchTeamMembers` (líneas 838-872) tiene el mismo problema y también debe corregirse para consultar `user_branch_roles`.
+Actualmente está excluido (línea 229). Los franquiciados de red también deben ver sus reuniones:
 
-## Resumen de Cambios
+```typescript
+// CuentaDashboard.tsx - Mover MyMeetingsCard fuera del bloque de empleados
+
+{/* Communications - show only brand for franquiciados */}
+<MyCommunicationsCard showOnlyBrand={isOnlyFranquiciado} />
+
+{/* Reuniones - TODOS los que tienen rol local las ven */}
+<MyMeetingsCard />
+
+{/* Operational Cards - only for employees, NOT franquiciados */}
+{!isOnlyFranquiciado && (
+  <div className="grid gap-3 md:gap-4">
+    <MyRegulationsCard />
+    ...
+  </div>
+)}
+```
+
+---
+
+## Resumen de Archivos
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/hooks/useMeetings.ts` | Corregir `useNetworkMembers` para usar `user_branch_roles` |
-| `src/hooks/useMeetings.ts` | Corregir `useBranchTeamMembers` para usar `user_branch_roles` |
+| Nueva migración SQL | Corregir políticas RLS de `meeting_participants` |
+| `src/components/cuenta/MyMeetingsCard.tsx` | Mostrar reuniones convocadas + cerradas, con badges dinámicos |
+| `src/pages/cuenta/CuentaDashboard.tsx` | Mover `MyMeetingsCard` para que franquiciados también lo vean |
+
+---
+
+## Orden de Implementación
+
+1. Migración SQL para corregir políticas RLS
+2. Actualizar `MyMeetingsCard` con lógica para ambos estados
+3. Mover componente en `CuentaDashboard` para incluir franquiciados
 
