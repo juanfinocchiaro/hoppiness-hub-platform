@@ -56,7 +56,7 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
     return location.pathname === fullPath || location.pathname.startsWith(`${fullPath}/`);
   });
 
-  const tiempoPaths = ['equipo/horarios', 'equipo/fichajes', 'tiempo/liquidacion'];
+  const tiempoPaths = ['equipo/horarios', 'equipo/fichajes', 'tiempo/liquidacion', 'tiempo/solicitudes'];
   const isTiempoActive = tiempoPaths.some(path => {
     const fullPath = `${basePath}/${path}`;
     return location.pathname === fullPath || location.pathname.startsWith(`${fullPath}/`);
@@ -119,6 +119,9 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
         >
           {canEditSchedules && (
             <NavItemButton to={`${basePath}/equipo/horarios`} icon={Clock} label="Horarios" />
+          )}
+          {canEditSchedules && (
+            <NavItemButton to={`${basePath}/tiempo/solicitudes`} icon={ClipboardList} label="Solicitudes" />
           )}
           {canViewAllClockIns && (
             <NavItemButton to={`${basePath}/equipo/fichajes`} icon={Clock} label="Fichajes" />

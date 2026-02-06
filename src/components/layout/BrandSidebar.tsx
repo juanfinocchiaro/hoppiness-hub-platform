@@ -29,6 +29,7 @@ import {
   Shield,
   ClipboardList,
   BarChart3,
+  CalendarDays,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -145,6 +146,7 @@ export function BrandSidebar() {
           icon={Settings}
           forceOpen={isConfigActive}
         >
+          <NavItemButton to="/mimarca/configuracion/calendario" icon={CalendarDays} label="Calendario Laboral" />
           <NavItemButton to="/mimarca/reglamentos" icon={FileText} label="Reglamentos" />
           <NavItemButton to="/mimarca/configuracion/cierres" icon={FileText} label="Cierre de Turno" />
           <NavItemButton to="/mimarca/configuracion/permisos" icon={Shield} label="Permisos" />

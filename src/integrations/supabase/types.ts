@@ -416,6 +416,7 @@ export type Database = {
           branch_id: string
           coaching_date: string
           coaching_month: number
+          coaching_type: string | null
           coaching_year: number
           created_at: string
           evaluated_by: string
@@ -437,6 +438,7 @@ export type Database = {
           branch_id: string
           coaching_date?: string
           coaching_month: number
+          coaching_type?: string | null
           coaching_year: number
           created_at?: string
           evaluated_by: string
@@ -458,6 +460,7 @@ export type Database = {
           branch_id?: string
           coaching_date?: string
           coaching_month?: number
+          coaching_type?: string | null
           coaching_year?: number
           created_at?: string
           evaluated_by?: string

@@ -26,6 +26,7 @@ import BranchLayout from "./pages/local/BranchLayout";
 import TeamPage from "./pages/local/TeamPage";
 import ClockInsPage from "./pages/local/ClockInsPage";
 import SchedulesPage from "./pages/local/SchedulesPage";
+import RequestsPage from "./pages/local/RequestsPage";
 
 import AdvancesPage from "./pages/local/AdvancesPage";
 import WarningsPage from "./pages/local/WarningsPage";
@@ -48,6 +49,7 @@ import ContactMessagesPage from "./pages/admin/ContactMessagesPage";
 import PermissionsConfigPage from "./pages/admin/PermissionsConfigPage";
 import CoachingManagersPage from "./pages/admin/CoachingManagersPage";
 import CoachingNetworkPage from "./pages/admin/CoachingNetworkPage";
+import LaborCalendarPage from "./pages/admin/LaborCalendarPage";
 
 // Mi Local - Comunicaciones
 import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
@@ -125,6 +127,7 @@ const App = () => (
               
               {/* Tiempo */}
               <Route path="tiempo/liquidacion" element={<LiquidacionPage />} />
+              <Route path="tiempo/solicitudes" element={<RequestsPage />} />
               
               {/* Configuración */}
               <Route path="config/turnos" element={<ShiftConfigPage />} />
@@ -153,6 +156,7 @@ const App = () => (
               
               {/* Configuración */}
               <Route path="reglamentos" element={<BrandRegulationsPage />} />
+              <Route path="configuracion/calendario" element={<LaborCalendarPage />} />
               <Route path="configuracion/cierres" element={<ClosureConfigPage />} />
               <Route path="configuracion/permisos" element={<PermissionsConfigPage />} />
             </Route>

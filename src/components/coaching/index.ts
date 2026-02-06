@@ -4,6 +4,7 @@ export { CoachingPendingCard } from './CoachingPendingCard';
 export { CoachingHistory } from './CoachingHistory';
 export { CoachingStationSection } from './CoachingStationSection';
 export { CoachingGeneralSection } from './CoachingGeneralSection';
+export { CoachingManagerSection } from './CoachingManagerSection';
 export { CoachingForm } from './CoachingForm';
 export { CoachingDetailModal } from './CoachingDetailModal';
 export { EmployeeCoachingCard } from './EmployeeCoachingCard';
