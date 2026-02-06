@@ -4,6 +4,7 @@
  * Estructura reorganizada:
  * - Dashboard
  * - Sucursales (antes "Mis Locales")
+ * - Coaching: Encargados, Red
  * - Personas: Equipo de Marca, Usuarios
  * - Comunicación: Bandeja de Entrada, Comunicados
  * - Configuración: Reglamentos, Cierre de Turno, Permisos
@@ -26,6 +27,8 @@ import {
   MessageSquare,
   FileText,
   Shield,
+  ClipboardList,
+  BarChart3,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -56,6 +59,7 @@ export function BrandSidebar() {
 
   // Check active sections
   const isSucursalesActive = location.pathname.includes('/mimarca/locales');
+  const isCoachingActive = location.pathname.includes('/mimarca/coaching');
   const isPersonasActive = location.pathname.includes('/mimarca/usuarios') || location.pathname.includes('/mimarca/equipo-central');
   const isComunicacionActive = location.pathname.includes('/mimarca/mensajes') || location.pathname.includes('/mimarca/comunicados');
   const isConfigActive = location.pathname.includes('/mimarca/reglamentos') || location.pathname.includes('/mimarca/configuracion');
@@ -92,6 +96,17 @@ export function BrandSidebar() {
               label={branch.name}
             />
           ))}
+        </NavSectionGroup>
+
+        {/* Coaching Section - NUEVO */}
+        <NavSectionGroup
+          id="coaching"
+          label="Coaching"
+          icon={ClipboardList}
+          forceOpen={isCoachingActive}
+        >
+          <NavItemButton to="/mimarca/coaching/encargados" icon={Users} label="Encargados" />
+          <NavItemButton to="/mimarca/coaching/red" icon={BarChart3} label="Red" />
         </NavSectionGroup>
 
         {/* Personas Section */}

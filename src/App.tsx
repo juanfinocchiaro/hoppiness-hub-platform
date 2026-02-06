@@ -46,6 +46,8 @@ import BrandRegulationsPage from "./pages/admin/BrandRegulationsPage";
 import ClosureConfigPage from "./pages/admin/ClosureConfigPage";
 import ContactMessagesPage from "./pages/admin/ContactMessagesPage";
 import PermissionsConfigPage from "./pages/admin/PermissionsConfigPage";
+import CoachingManagersPage from "./pages/admin/CoachingManagersPage";
+import CoachingNetworkPage from "./pages/admin/CoachingNetworkPage";
 
 // Mi Local - Comunicaciones
 import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
@@ -144,6 +146,10 @@ const App = () => (
               
               {/* Mensajes de Contacto */}
               <Route path="mensajes" element={<ContactMessagesPage />} />
+              
+              {/* Coaching */}
+              <Route path="coaching/encargados" element={<CoachingManagersPage />} />
+              <Route path="coaching/red" element={<CoachingNetworkPage />} />
               
               {/* Configuración */}
               <Route path="reglamentos" element={<BrandRegulationsPage />} />

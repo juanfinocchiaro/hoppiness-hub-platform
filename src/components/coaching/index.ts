@@ -14,3 +14,5 @@ export { CoachingAlertBadge } from './CoachingAlertBadge';
 export { DashboardCoachingAlert } from './DashboardCoachingAlert';
 export { CoachingExpressModal } from './CoachingExpressModal';
 export { CoachingExportButton } from './CoachingExportButton';
+export { MyManagerCoachingTab } from './MyManagerCoachingTab';
+export { MyOwnCoachingTab } from './MyOwnCoachingTab';

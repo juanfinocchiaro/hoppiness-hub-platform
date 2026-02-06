@@ -16,6 +16,8 @@ import {
   TeamAnalysisTab,
   CoachingExpressModal,
   CoachingExportButton,
+  MyManagerCoachingTab,
+  MyOwnCoachingTab,
 } from '@/components/coaching';
 import { useCoachingStats } from '@/hooks/useCoachingStats';
 import { useTeamCertifications } from '@/hooks/useCertifications';
@@ -25,7 +27,7 @@ import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { PageHelp } from '@/components/ui/PageHelp';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ClipboardList, Users, Award, CheckCircle, Clock, ChevronDown, ChevronRight, X, History, BarChart3, Zap } from 'lucide-react';
+import { ClipboardList, Users, Award, CheckCircle, Clock, ChevronDown, ChevronRight, X, History, BarChart3, Zap, User, Star } from 'lucide-react';
 import type { CertificationLevel } from '@/types/coaching';
 import { useQuery as useReactQuery } from '@tanstack/react-query';
 
@@ -39,9 +41,16 @@ interface TeamMember {
 export default function CoachingPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const { id: currentUserId } = useEffectiveUser();
-  const { local } = usePermissionsV2(branchId);
+  const { local, isFranquiciado, isEncargado, isSuperadmin } = usePermissionsV2(branchId);
   const [expandedEmployeeId, setExpandedEmployeeId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('team');
+  
+  // Tab inicial según rol
+  const getDefaultTab = () => {
+    if (isFranquiciado) return 'manager';
+    if (isEncargado) return 'own';
+    return 'team';
+  };
+  const [activeTab, setActiveTab] = useState(getDefaultTab());
   const [expressModalOpen, setExpressModalOpen] = useState(false);
   const [expressEmployee, setExpressEmployee] = useState<TeamMember | null>(null);
 
@@ -335,11 +344,39 @@ export default function CoachingPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="team" className="gap-2">
-            <Users className="h-4 w-4" />
-            Equipo
-          </TabsTrigger>
+        <TabsList className="flex-wrap h-auto gap-1">
+          {/* Tab Mi Encargado - Solo Franquiciado */}
+          {isFranquiciado && (
+            <TabsTrigger value="manager" className="gap-2">
+              <User className="h-4 w-4" />
+              Mi Encargado
+            </TabsTrigger>
+          )}
+          
+          {/* Tab Mi Evaluación - Solo Encargado */}
+          {isEncargado && (
+            <TabsTrigger value="own" className="gap-2">
+              <Star className="h-4 w-4" />
+              Mi Evaluación
+            </TabsTrigger>
+          )}
+          
+          {/* Tab Equipo - Encargados y Superadmin */}
+          {(isEncargado || isSuperadmin) && (
+            <TabsTrigger value="team" className="gap-2">
+              <Users className="h-4 w-4" />
+              Equipo
+            </TabsTrigger>
+          )}
+          
+          {/* Tab Empleados (solo lectura) - Franquiciado */}
+          {isFranquiciado && (
+            <TabsTrigger value="team" className="gap-2">
+              <Users className="h-4 w-4" />
+              Empleados
+            </TabsTrigger>
+          )}
+          
           <TabsTrigger value="analysis" className="gap-2">
             <BarChart3 className="h-4 w-4" />
             Análisis
@@ -353,6 +390,20 @@ export default function CoachingPage() {
             Historial
           </TabsTrigger>
         </TabsList>
+
+        {/* Tab Mi Encargado - Solo Franquiciado */}
+        {isFranquiciado && branchId && (
+          <TabsContent value="manager" className="mt-4">
+            <MyManagerCoachingTab branchId={branchId} />
+          </TabsContent>
+        )}
+
+        {/* Tab Mi Evaluación - Solo Encargado */}
+        {isEncargado && branchId && (
+          <TabsContent value="own" className="mt-4">
+            <MyOwnCoachingTab branchId={branchId} />
+          </TabsContent>
+        )}
 
         {/* Tab Equipo - Empleados y Cajeros */}
         <TabsContent value="team" className="mt-4">
