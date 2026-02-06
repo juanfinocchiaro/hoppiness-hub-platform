@@ -23,6 +23,7 @@ import {
   UserCheck,
   CalendarClock,
   Briefcase,
+  Calculator,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -55,7 +56,7 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
     return location.pathname === fullPath || location.pathname.startsWith(`${fullPath}/`);
   });
 
-  const tiempoPaths = ['equipo/horarios', 'equipo/fichajes'];
+  const tiempoPaths = ['equipo/horarios', 'equipo/fichajes', 'tiempo/liquidacion'];
   const isTiempoActive = tiempoPaths.some(path => {
     const fullPath = `${basePath}/${path}`;
     return location.pathname === fullPath || location.pathname.startsWith(`${fullPath}/`);
@@ -121,6 +122,9 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
           )}
           {canViewAllClockIns && (
             <NavItemButton to={`${basePath}/equipo/fichajes`} icon={Clock} label="Fichajes" />
+          )}
+          {canViewAllClockIns && (
+            <NavItemButton to={`${basePath}/tiempo/liquidacion`} icon={Calculator} label="Liquidación" />
           )}
         </NavSectionGroup>
       )}
