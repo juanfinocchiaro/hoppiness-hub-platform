@@ -1,18 +1,18 @@
 /**
  * BrandSidebar - Navegación específica para Mi Marca usando WorkSidebar
  * 
- * Dominios:
+ * Estructura reorganizada:
  * - Dashboard
- * - Mis Locales (dinámico)
- * - Usuarios
- * - Comunicación
- * - Configuración
+ * - Sucursales (antes "Mis Locales")
+ * - Personas: Equipo de Marca, Usuarios
+ * - Comunicación: Bandeja de Entrada, Comunicados
+ * - Configuración: Reglamentos, Cierre de Turno, Permisos
+ * - [Footer] Ver como... (solo superadmins)
  */
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useLocation } from 'react-router-dom';
-import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { useUnreadMessagesCount } from '@/hooks/useContactMessages';
 import {
   LayoutDashboard,
@@ -23,13 +23,10 @@ import {
   MapPin,
   Plus,
   Building2,
-  Search,
   MessageSquare,
   FileText,
   Shield,
-  Eye,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
   WorkSidebarNav,
   NavSectionGroup,
@@ -38,15 +35,12 @@ import {
   NavActionButton,
 } from './WorkSidebar';
 import NewBranchModal from '@/components/admin/NewBranchModal';
-import ImpersonationSelector from '@/components/admin/ImpersonationSelector';
 
 export function BrandSidebar() {
   const location = useLocation();
-  const { canImpersonate, isImpersonating } = useImpersonation();
   const { data: unreadCount } = useUnreadMessagesCount();
   
   const [showNewBranchModal, setShowNewBranchModal] = useState(false);
-  const [showImpersonationSelector, setShowImpersonationSelector] = useState(false);
 
   // Fetch branches for dynamic menu
   const { data: branches, refetch: refetchBranches } = useQuery({
@@ -61,7 +55,7 @@ export function BrandSidebar() {
   });
 
   // Check active sections
-  const isLocalesActive = location.pathname.includes('/mimarca/locales');
+  const isSucursalesActive = location.pathname.includes('/mimarca/locales');
   const isPersonasActive = location.pathname.includes('/mimarca/usuarios') || location.pathname.includes('/mimarca/equipo-central');
   const isComunicacionActive = location.pathname.includes('/mimarca/mensajes') || location.pathname.includes('/mimarca/comunicados');
   const isConfigActive = location.pathname.includes('/mimarca/reglamentos') || location.pathname.includes('/mimarca/configuracion');
@@ -76,25 +70,13 @@ export function BrandSidebar() {
           label="Dashboard"
         />
 
-        {/* Impersonation button - Only for superadmins */}
-        {canImpersonate && (
-          <Button
-            variant={isImpersonating ? 'secondary' : 'ghost'}
-            className={`w-full justify-start ${isImpersonating ? 'bg-amber-100 text-amber-900 hover:bg-amber-200' : ''}`}
-            onClick={() => setShowImpersonationSelector(true)}
-          >
-            <Eye className="w-4 h-4 mr-3" />
-            Ver como...
-          </Button>
-        )}
-
-        {/* Mis Locales Section */}
+        {/* Sucursales Section (antes "Mis Locales") */}
         <NavSectionGroup
-          id="locales"
-          label="Mis Locales"
+          id="sucursales"
+          label="Sucursales"
           icon={Store}
           defaultOpen
-          forceOpen={isLocalesActive}
+          forceOpen={isSucursalesActive}
         >
           <NavActionButton
             icon={Plus}
@@ -112,16 +94,16 @@ export function BrandSidebar() {
           ))}
         </NavSectionGroup>
 
-        {/* Usuarios Section */}
+        {/* Personas Section */}
         <NavSectionGroup
           id="personas"
-          label="Usuarios"
+          label="Personas"
           icon={Users}
           defaultOpen
           forceOpen={isPersonasActive}
         >
-          <NavItemButton to="/mimarca/equipo-central" icon={Building2} label="Equipo Central" />
-          <NavItemButton to="/mimarca/usuarios" icon={Search} label="Todos los Usuarios" />
+          <NavItemButton to="/mimarca/equipo-central" icon={Building2} label="Equipo de Marca" />
+          <NavItemButton to="/mimarca/usuarios" icon={Users} label="Usuarios" />
         </NavSectionGroup>
 
         {/* Comunicación Section */}
@@ -134,7 +116,7 @@ export function BrandSidebar() {
           <NavItemButton
             to="/mimarca/mensajes"
             icon={MessageSquare}
-            label="Mensajes de Contacto"
+            label="Bandeja de Entrada"
             badge={unreadCount || undefined}
             badgeVariant="warning"
           />
@@ -159,11 +141,6 @@ export function BrandSidebar() {
         open={showNewBranchModal}
         onOpenChange={setShowNewBranchModal}
         onCreated={refetchBranches}
-      />
-      <ImpersonationSelector
-        open={showImpersonationSelector}
-        onOpenChange={setShowImpersonationSelector}
-        mode="brand"
       />
     </>
   );
