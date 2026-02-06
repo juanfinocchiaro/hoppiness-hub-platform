@@ -21,18 +21,34 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { Label } from '@/components/ui/label';
-import { Search, UserPlus, Trash2, Users, Home, Briefcase, UsersRound, Star, Clock, CheckCircle } from 'lucide-react';
+import { Search, UserPlus, Users, Home, Briefcase, UsersRound, ChevronDown, ChevronUp, UserMinus } from 'lucide-react';
 import { toast } from 'sonner';
-import { LOCAL_ROLE_LABELS, type LocalRole } from '@/hooks/usePermissionsV2';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { type LocalRole } from '@/hooks/usePermissionsV2';
 import { useWorkPositions } from '@/hooks/useWorkPositions';
-import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
-import { BranchTeamMemberRow, type TeamMemberData, type CoachingInfo } from './BranchTeamMemberRow';
 import type { WorkPositionType } from '@/types/workPosition';
 
 interface BranchTeamTabProps {
   branchId: string;
   branchName: string;
+}
+
+interface TeamMember {
+  user_id: string;
+  local_role: string;
+  default_position: WorkPositionType | null;
+  profile: {
+    id: string;
+    full_name: string;
+    email: string;
+    avatar_url: string | null;
+  } | null;
 }
 
 const AVAILABLE_ROLES: { value: LocalRole; label: string }[] = [
@@ -49,23 +65,21 @@ const getRoleLabel = (role: string): string => {
 
 export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabProps) {
   const queryClient = useQueryClient();
-  const { isSuperadmin, isCoordinador } = usePermissionsWithImpersonation();
   const [searchEmail, setSearchEmail] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<{ user_id: string; full_name: string; email: string } | null>(null);
   const [selectedRole, setSelectedRole] = useState<LocalRole>('empleado');
   const [selectedPosition, setSelectedPosition] = useState<string>('none');
-
-  const canEvaluateManagers = isSuperadmin || isCoordinador;
+  const [expandedMember, setExpandedMember] = useState<string | null>(null);
+  const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null);
 
   // Fetch work positions dynamically
   const { data: workPositions = [] } = useWorkPositions();
 
-  // Fetch team members with coaching data
-  const { data: teamData, isLoading } = useQuery({
-    queryKey: ['branch-team-with-coaching', branchId],
+  // Simplified query: only team members, no coaching data
+  const { data: team = [], isLoading } = useQuery({
+    queryKey: ['branch-team', branchId],
     queryFn: async () => {
-      // 1. Get team members
       const { data: teamRoles, error: teamError } = await supabase
         .from('user_branch_roles')
         .select('user_id, local_role, default_position')
@@ -73,47 +87,18 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
         .eq('is_active', true);
 
       if (teamError) throw teamError;
-      if (!teamRoles?.length) return { team: [], coachings: [], profiles: {} };
+      if (!teamRoles?.length) return [];
 
-      // 2. Get current month coachings
-      const currentMonth = new Date().getMonth() + 1;
-      const currentYear = new Date().getFullYear();
+      const userIds = teamRoles.map(t => t.user_id);
 
-      const { data: coachings } = await supabase
-        .from('coachings')
-        .select('id, user_id, overall_score, coaching_date, evaluated_by, acknowledged_at')
-        .eq('branch_id', branchId)
-        .eq('coaching_month', currentMonth)
-        .eq('coaching_year', currentYear);
-
-      // 3. Gather all user IDs (team + evaluators)
-      const evaluatorIds = coachings?.map(c => c.evaluated_by).filter(Boolean) || [];
-      const allUserIds = [...new Set([...teamRoles.map(t => t.user_id), ...evaluatorIds])];
-
-      // 4. Get profiles
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name, email, avatar_url')
-        .in('id', allUserIds);
+        .in('id', userIds);
 
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
-      // 5. Map coachings to team members
-      const coachingMap = new Map<string, CoachingInfo>();
-      coachings?.forEach(c => {
-        const evaluatorProfile = profileMap.get(c.evaluated_by);
-        coachingMap.set(c.user_id, {
-          id: c.id,
-          overall_score: c.overall_score,
-          coaching_date: c.coaching_date,
-          evaluated_by: c.evaluated_by,
-          acknowledged_at: c.acknowledged_at,
-          evaluator_name: evaluatorProfile?.full_name || 'Desconocido',
-        });
-      });
-
-      // 6. Build team members with coaching info
-      const team: TeamMemberData[] = teamRoles.map(t => ({
+      return teamRoles.map(t => ({
         user_id: t.user_id,
         local_role: t.local_role,
         default_position: t.default_position as WorkPositionType | null,
@@ -123,15 +108,10 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
           email: profileMap.get(t.user_id)!.email,
           avatar_url: profileMap.get(t.user_id)!.avatar_url,
         } : null,
-        coaching: coachingMap.get(t.user_id) || null,
-      }));
-
-      return { team, profileMap };
+      })) as TeamMember[];
     },
     enabled: !!branchId,
   });
-
-  const team = teamData?.team || [];
 
   // Group team by role
   const grouped = {
@@ -139,12 +119,6 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
     encargados: team.filter(m => m.local_role === 'encargado'),
     staff: team.filter(m => ['cajero', 'empleado', 'contador_local'].includes(m.local_role)),
   };
-
-  // Calculate stats
-  const encargadosWithCoaching = grouped.encargados.filter(m => m.coaching).length;
-  const staffWithCoaching = grouped.staff.filter(m => m.coaching).length;
-  const totalEvaluable = grouped.encargados.length + grouped.staff.length;
-  const totalEvaluated = encargadosWithCoaching + staffWithCoaching;
 
   // Search for users to add
   const { data: searchResults = [], isFetching: searching } = useQuery({
@@ -178,8 +152,9 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['branch-team-with-coaching', branchId] });
+      queryClient.invalidateQueries({ queryKey: ['branch-team', branchId] });
       toast.success('Rol actualizado');
+      setExpandedMember(null);
     },
     onError: () => toast.error('Error al actualizar rol'),
   });
@@ -195,7 +170,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['branch-team-with-coaching', branchId] });
+      queryClient.invalidateQueries({ queryKey: ['branch-team', branchId] });
       toast.success('Posición actualizada');
     },
     onError: () => toast.error('Error al actualizar posición'),
@@ -216,7 +191,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['branch-team-with-coaching', branchId] });
+      queryClient.invalidateQueries({ queryKey: ['branch-team', branchId] });
       toast.success('Miembro agregado al equipo');
       setShowAddModal(false);
       setSelectedUser(null);
@@ -243,10 +218,11 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['branch-team-with-coaching', branchId] });
-      toast.success('Miembro removido del equipo');
+      queryClient.invalidateQueries({ queryKey: ['branch-team', branchId] });
+      toast.success('Miembro dado de baja');
+      setMemberToRemove(null);
     },
-    onError: () => toast.error('Error al remover miembro'),
+    onError: () => toast.error('Error al dar de baja'),
   });
 
   const handleSelectUser = (user: typeof searchResults[0]) => {
@@ -264,8 +240,138 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
     }
   };
 
-  const handleCoachingSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ['branch-team-with-coaching', branchId] });
+  const getPositionLabel = (key: string | null) => {
+    if (!key) return 'Sin definir';
+    return workPositions.find(p => p.key === key)?.label || key;
+  };
+
+  // Member row component for staff
+  const MemberRow = ({ member, canEdit = true }: { member: TeamMember; canEdit?: boolean }) => {
+    const isExpanded = expandedMember === member.user_id;
+    const [editRole, setEditRole] = useState<LocalRole>(member.local_role as LocalRole);
+    const [editPosition, setEditPosition] = useState<string>(member.default_position || 'none');
+
+    const handleSave = () => {
+      if (editRole !== member.local_role) {
+        updateRoleMutation.mutate({ userId: member.user_id, newRole: editRole });
+      }
+      if ((editPosition === 'none' ? null : editPosition) !== member.default_position) {
+        updatePositionMutation.mutate({ 
+          userId: member.user_id, 
+          position: editPosition === 'none' ? null : editPosition 
+        });
+      }
+      setExpandedMember(null);
+    };
+
+    return (
+      <Collapsible 
+        open={isExpanded} 
+        onOpenChange={(open) => setExpandedMember(open ? member.user_id : null)}
+      >
+        <div className="rounded-lg border bg-card overflow-hidden">
+          <div className="flex items-center gap-3 p-3">
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={member.profile?.avatar_url || ''} />
+              <AvatarFallback>
+                {member.profile?.full_name?.charAt(0).toUpperCase() || '?'}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="flex-1 min-w-0">
+              <p className="font-medium truncate">{member.profile?.full_name || 'Usuario'}</p>
+              <p className="text-sm text-muted-foreground truncate">{member.profile?.email}</p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">{getRoleLabel(member.local_role)}</Badge>
+              
+              {member.default_position && (
+                <Badge variant="outline" className="hidden sm:flex">
+                  {getPositionLabel(member.default_position)}
+                </Badge>
+              )}
+
+              {canEdit && (
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    Editar
+                    {isExpanded ? (
+                      <ChevronUp className="h-4 w-4 ml-1" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 ml-1" />
+                    )}
+                  </Button>
+                </CollapsibleTrigger>
+              )}
+            </div>
+          </div>
+
+          <CollapsibleContent>
+            <div className="border-t p-4 bg-muted/30 space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Rol</Label>
+                  <Select value={editRole} onValueChange={(v) => setEditRole(v as LocalRole)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AVAILABLE_ROLES.filter(r => r.value !== 'franquiciado').map((role) => (
+                        <SelectItem key={role.value} value={role.value!}>
+                          {role.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Posición habitual</Label>
+                  <Select value={editPosition} onValueChange={setEditPosition}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin definir</SelectItem>
+                      {workPositions.map((pos) => (
+                        <SelectItem key={pos.key} value={pos.key}>
+                          {pos.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex justify-between">
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => setMemberToRemove(member)}
+                >
+                  <UserMinus className="h-4 w-4 mr-1" />
+                  Dar de baja
+                </Button>
+                
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setExpandedMember(null)}>
+                    Cancelar
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={handleSave}
+                    disabled={updateRoleMutation.isPending || updatePositionMutation.isPending}
+                  >
+                    Guardar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
+    );
   };
 
   if (isLoading) {
@@ -286,37 +392,18 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
     );
   }
 
-  const currentMonth = new Date().toLocaleString('es-AR', { month: 'long', year: 'numeric' });
-
   return (
     <>
       <div className="space-y-6">
-        {/* Header with stats */}
+        {/* Header with search */}
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Equipo de {branchName}
-              </CardTitle>
-              <span className="text-sm text-muted-foreground capitalize">{currentMonth}</span>
-            </div>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Equipo de {branchName}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Coaching Stats */}
-            <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg mb-4">
-              <Star className="h-5 w-5 text-primary" />
-              <span className="text-sm font-medium">
-                Coachings del mes: {totalEvaluated}/{totalEvaluable} completados
-              </span>
-              {totalEvaluated === totalEvaluable && totalEvaluable > 0 && (
-                <Badge variant="default">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Completo
-                </Badge>
-              )}
-            </div>
-
             {/* Search to add */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -393,16 +480,10 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
         {/* Encargados Section */}
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Briefcase className="h-4 w-4" />
-                Encargados
-              </CardTitle>
-              <Badge variant={encargadosWithCoaching === grouped.encargados.length ? 'default' : 'outline'}>
-                {encargadosWithCoaching}/{grouped.encargados.length}
-                {encargadosWithCoaching === grouped.encargados.length && grouped.encargados.length > 0 && ' ✓'}
-              </Badge>
-            </div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Briefcase className="h-4 w-4" />
+              Encargados
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {grouped.encargados.length === 0 ? (
@@ -411,15 +492,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
               </p>
             ) : (
               grouped.encargados.map((member) => (
-                <BranchTeamMemberRow
-                  key={member.user_id}
-                  member={member}
-                  branchId={branchId}
-                  canEvaluate={canEvaluateManagers}
-                  canViewCoaching={true}
-                  roleLabel="Encargado/a"
-                  onCoachingSuccess={handleCoachingSuccess}
-                />
+                <MemberRow key={member.user_id} member={member} />
               ))
             )}
           </CardContent>
@@ -428,16 +501,10 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
         {/* Staff Section */}
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <UsersRound className="h-4 w-4" />
-                Equipo
-              </CardTitle>
-              <Badge variant={staffWithCoaching === grouped.staff.length ? 'default' : 'outline'}>
-                {staffWithCoaching}/{grouped.staff.length}
-                {staffWithCoaching === grouped.staff.length && grouped.staff.length > 0 && ' ✓'}
-              </Badge>
-            </div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <UsersRound className="h-4 w-4" />
+              Equipo
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {grouped.staff.length === 0 ? (
@@ -446,15 +513,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
               </p>
             ) : (
               grouped.staff.map((member) => (
-                <BranchTeamMemberRow
-                  key={member.user_id}
-                  member={member}
-                  branchId={branchId}
-                  canEvaluate={false} // Coordinador NO evalúa staff, solo ve
-                  canViewCoaching={true}
-                  roleLabel={getRoleLabel(member.local_role)}
-                  onCoachingSuccess={handleCoachingSuccess}
-                />
+                <MemberRow key={member.user_id} member={member} />
               ))
             )}
           </CardContent>
@@ -533,6 +592,17 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Confirm remove member */}
+      <ConfirmDialog
+        open={!!memberToRemove}
+        onOpenChange={(open) => !open && setMemberToRemove(null)}
+        title="Dar de baja"
+        description={`¿Estás seguro de que deseas dar de baja a ${memberToRemove?.profile?.full_name || 'este usuario'}? Ya no tendrá acceso a este local.`}
+        confirmLabel="Dar de baja"
+        onConfirm={() => memberToRemove && removeMemberMutation.mutate(memberToRemove.user_id)}
+        variant="destructive"
+      />
     </>
   );
 }
