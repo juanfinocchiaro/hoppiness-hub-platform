@@ -1012,6 +1012,153 @@ export type Database = {
         }
         Relationships: []
       }
+      meeting_agreement_assignees: {
+        Row: {
+          agreement_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          agreement_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          agreement_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_agreement_assignees_agreement_id_fkey"
+            columns: ["agreement_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_agreements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_agreements: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          meeting_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          meeting_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          meeting_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_agreements_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_participants: {
+        Row: {
+          attended: boolean
+          created_at: string
+          id: string
+          meeting_id: string
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          attended?: boolean
+          created_at?: string
+          id?: string
+          meeting_id: string
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          attended?: boolean
+          created_at?: string
+          id?: string
+          meeting_id?: string
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_participants_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meetings: {
+        Row: {
+          area: string
+          branch_id: string
+          created_at: string
+          created_by: string
+          date: string
+          id: string
+          notes: string
+          status: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          area?: string
+          branch_id: string
+          created_at?: string
+          created_by: string
+          date: string
+          id?: string
+          notes: string
+          status?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          area?: string
+          branch_id?: string
+          created_at?: string
+          created_by?: string
+          date?: string
+          id?: string
+          notes?: string
+          status?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meetings_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permission_config: {
         Row: {
           allowed_roles: string[]

@@ -35,6 +35,7 @@ import FichajeQRDisplay from "./pages/local/FichajeQRDisplay";
 import ShiftConfigPage from "./pages/local/ShiftConfigPage";
 import CoachingPage from "./pages/local/CoachingPage";
 import LiquidacionPage from "./pages/local/LiquidacionPage";
+import MeetingsPage from "./pages/local/MeetingsPage";
 
 // Mi Marca
 import BrandLayout from "./pages/admin/BrandLayout";
@@ -124,6 +125,7 @@ const App = () => (
               <Route path="equipo/reglamentos" element={<RegulationsPage />} />
               <Route path="equipo/comunicados" element={<LocalCommunicationsPage />} />
               <Route path="equipo/coaching" element={<CoachingPage />} />
+              <Route path="equipo/reuniones" element={<MeetingsPage />} />
               
               {/* Tiempo */}
               <Route path="tiempo/liquidacion" element={<LiquidacionPage />} />
