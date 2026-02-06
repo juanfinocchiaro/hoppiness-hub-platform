@@ -9,7 +9,6 @@ import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImper
 import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
 import { useEmbedMode } from '@/hooks/useEmbedMode';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
-import { ExternalLink } from '@/components/ui/ExternalLink';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -23,7 +22,6 @@ import {
   Store,
   Home,
   AlertCircle,
-  Building2,
   Eye,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
@@ -31,7 +29,9 @@ import ManagerDashboard from '@/components/local/ManagerDashboard';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { WorkShell } from '@/components/layout/WorkShell';
 import { LocalSidebar } from '@/components/layout/LocalSidebar';
+import { PanelSwitcher } from '@/components/layout/PanelSwitcher';
 import ImpersonationSelector from '@/components/admin/ImpersonationSelector';
+import { ExternalLink } from '@/components/ui/ExternalLink';
 
 type Branch = Tables<'branches'>;
 
@@ -230,20 +230,11 @@ export default function BranchLayout() {
         </Button>
       )}
 
-      {/* ZONA 3: Cambio de Panel */}
-      <div className="min-h-[40px]">
-        {canAccessAdmin && !isEmbedded && (
-          <ExternalLink to="/mimarca">
-            <Button variant="ghost" className="w-full justify-start">
-              <Building2 className="w-4 h-4 mr-3" />
-              Cambiar a Mi Marca
-            </Button>
-          </ExternalLink>
-        )}
-      </div>
+      {/* ZONA 3: Cambio de Panel (usando PanelSwitcher) */}
+      <PanelSwitcher currentPanel="local" localBranchId={branchId} />
 
       {/* ZONA 4: Acciones Fijas */}
-      <div className="space-y-1">
+      <div className="space-y-1 pt-2 border-t">
         <ExternalLink to="/">
           <Button variant="ghost" className="w-full justify-start">
             <Home className="w-4 h-4 mr-3" />

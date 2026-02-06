@@ -12,13 +12,14 @@ import { Button } from '@/components/ui/button';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { WorkShell } from '@/components/layout/WorkShell';
 import { BrandSidebar } from '@/components/layout/BrandSidebar';
+import { PanelSwitcher } from '@/components/layout/PanelSwitcher';
 import ImpersonationSelector from '@/components/admin/ImpersonationSelector';
 import {
   LogOut,
-  Building2,
   AlertCircle,
   Home,
   Eye,
+  Building2,
 } from 'lucide-react';
 
 export default function BrandLayout() {
@@ -76,33 +77,22 @@ export default function BrandLayout() {
   const footer = (
     <>
       {/* ZONA 1: Herramientas (Ver como...) */}
-      <div className="min-h-[40px]">
-        {canImpersonate && (
-          <Button
-            variant={isImpersonating ? 'secondary' : 'ghost'}
-            className={`w-full justify-start ${isImpersonating ? 'bg-amber-100 text-amber-900 hover:bg-amber-200' : ''}`}
-            onClick={() => setShowImpersonationSelector(true)}
-          >
-            <Eye className="w-4 h-4 mr-3" />
-            Ver como...
-          </Button>
-        )}
-      </div>
+      {canImpersonate && (
+        <Button
+          variant={isImpersonating ? 'secondary' : 'ghost'}
+          className={`w-full justify-start ${isImpersonating ? 'bg-amber-100 text-amber-900 hover:bg-amber-200' : ''}`}
+          onClick={() => setShowImpersonationSelector(true)}
+        >
+          <Eye className="w-4 h-4 mr-3" />
+          Ver como...
+        </Button>
+      )}
       
-      {/* ZONA 2: Cambio de Panel */}
-      <div className="min-h-[40px]">
-        {hasLocalPanelAccess && !isEmbedded && (
-          <ExternalLink to={`/milocal/${accessibleBranches[0].id}`}>
-            <Button variant="ghost" className="w-full justify-start">
-              <Building2 className="w-4 h-4 mr-3" />
-              Cambiar a Mi Local
-            </Button>
-          </ExternalLink>
-        )}
-      </div>
+      {/* ZONA 2: Cambio de Panel (usando PanelSwitcher) */}
+      <PanelSwitcher currentPanel="marca" />
       
       {/* ZONA 3: Acciones Fijas */}
-      <div className="space-y-1">
+      <div className="space-y-1 pt-2 border-t">
         <ExternalLink to="/">
           <Button variant="ghost" className="w-full justify-start">
             <Home className="w-4 h-4 mr-3" />

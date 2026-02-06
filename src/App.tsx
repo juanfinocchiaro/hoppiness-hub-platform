@@ -57,9 +57,17 @@ import BrandMeetingsPage from "./pages/admin/BrandMeetingsPage";
 import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
 
 // Mi Cuenta
-import CuentaDashboard from "./pages/cuenta/CuentaDashboard";
+import CuentaLayout from "./pages/cuenta/CuentaLayout";
+import CuentaHome from "./pages/cuenta/CuentaHome";
 import CuentaPerfil from "./pages/cuenta/CuentaPerfil";
 import MiHorarioPage from "./pages/cuenta/MiHorarioPage";
+import MisFichajesPage from "./pages/cuenta/MisFichajesPage";
+import MisCoachingsPage from "./pages/cuenta/MisCoachingsPage";
+import MisReunionesPage from "./pages/cuenta/MisReunionesPage";
+import MisSolicitudesPage from "./pages/cuenta/MisSolicitudesPage";
+import MisAdelantosPage from "./pages/cuenta/MisAdelantosPage";
+import MisComunicadosPage from "./pages/cuenta/MisComunicadosPage";
+import MiReglamentoPage from "./pages/cuenta/MiReglamentoPage";
 
 import NotFound from "./pages/NotFound";
 
@@ -96,10 +104,19 @@ const App = () => (
             <Route path="/registro-staff" element={<RegistroStaff />} />
             <Route path="/fichaje/:branchCode" element={<FichajeEmpleado />} />
             
-            {/* Mi Cuenta */}
-            <Route path="/cuenta" element={<RequireAuth><CuentaDashboard /></RequireAuth>} />
-            <Route path="/cuenta/perfil" element={<RequireAuth><CuentaPerfil /></RequireAuth>} />
-            <Route path="/cuenta/horario" element={<RequireAuth><MiHorarioPage /></RequireAuth>} />
+            {/* Mi Cuenta - con CuentaLayout usando WorkShell */}
+            <Route path="/cuenta" element={<RequireAuth><CuentaLayout /></RequireAuth>}>
+              <Route index element={<CuentaHome />} />
+              <Route path="perfil" element={<CuentaPerfil />} />
+              <Route path="horario" element={<MiHorarioPage />} />
+              <Route path="fichajes" element={<MisFichajesPage />} />
+              <Route path="coachings" element={<MisCoachingsPage />} />
+              <Route path="reuniones" element={<MisReunionesPage />} />
+              <Route path="solicitudes" element={<MisSolicitudesPage />} />
+              <Route path="adelantos" element={<MisAdelantosPage />} />
+              <Route path="comunicados" element={<MisComunicadosPage />} />
+              <Route path="reglamento" element={<MiReglamentoPage />} />
+            </Route>
             
             {/* QR de Fichaje Estático - Solo encargados/franquiciados/superadmin */}
             <Route path="/fichaje-qr/:branchId" element={
