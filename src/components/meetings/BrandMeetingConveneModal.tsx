@@ -1,8 +1,9 @@
 /**
  * BrandMeetingConveneModal - Modal para convocar reuniones de red desde Mi Marca
  * Permite seleccionar participantes de múltiples sucursales
+ * Incluye validación de conflictos de horario
  */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Select,
   SelectContent,
@@ -24,11 +26,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Calendar, Clock, Users, Send, Building2 } from 'lucide-react';
-import { useConveneMeeting, useNetworkMembers } from '@/hooks/useMeetings';
+import { Calendar, Clock, Users, Send, Building2, AlertTriangle } from 'lucide-react';
+import { useConveneMeeting, useNetworkMembers, useCheckMeetingConflicts, type MeetingConflict } from '@/hooks/useMeetings';
 import { MEETING_AREAS, type MeetingArea, type MeetingConveneData } from '@/types/meeting';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface BrandMeetingConveneModalProps {
   open: boolean;
@@ -51,9 +54,40 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [branchFilter, setBranchFilter] = useState<string>('all');
+  const [conflicts, setConflicts] = useState<MeetingConflict[]>([]);
+  const [checkingConflicts, setCheckingConflicts] = useState(false);
   
   const conveneMeeting = useConveneMeeting();
+  const checkConflicts = useCheckMeetingConflicts();
   const { data: networkMembers = [], isLoading: loadingMembers } = useNetworkMembers();
+
+  // Check for conflicts when date, time, or participants change
+  useEffect(() => {
+    if (!open || selectedIds.length === 0) {
+      setConflicts([]);
+      return;
+    }
+    
+    const checkForConflicts = async () => {
+      setCheckingConflicts(true);
+      try {
+        const result = await checkConflicts.mutateAsync({
+          date: new Date(date),
+          time,
+          participantIds: selectedIds,
+        });
+        setConflicts(result);
+      } catch (error) {
+        console.error('Error checking conflicts:', error);
+      } finally {
+        setCheckingConflicts(false);
+      }
+    };
+    
+    // Debounce the check
+    const timeout = setTimeout(checkForConflicts, 500);
+    return () => clearTimeout(timeout);
+  }, [open, date, time, selectedIds]);
 
   // Get unique branches for filter
   const branches = useMemo(() => {
@@ -105,6 +139,7 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
     setSelectedIds([]);
     setRoleFilter('all');
     setBranchFilter('all');
+    setConflicts([]);
     onOpenChange(false);
   };
 
@@ -323,6 +358,24 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
               )}
             </ScrollArea>
           </div>
+          
+          {/* Conflict Warning */}
+          {conflicts.length > 0 && (
+            <Alert variant="destructive" className="bg-warning/10 border-warning/30 text-warning">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="text-sm">
+                <strong>Conflictos de horario detectados:</strong>
+                <ul className="mt-1 ml-4 list-disc text-xs">
+                  {conflicts.map(c => (
+                    <li key={c.userId}>
+                      <strong>{c.userName}</strong> ya tiene "{c.meetingTitle}" a las{' '}
+                      {format(parseISO(c.meetingTime), 'HH:mm', { locale: es })}
+                    </li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
 
         <DialogFooter>
@@ -331,10 +384,10 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={!canSubmit || conveneMeeting.isPending}
+            disabled={!canSubmit || conveneMeeting.isPending || checkingConflicts}
           >
             <Send className="w-4 h-4 mr-1" />
-            {conveneMeeting.isPending ? 'Convocando...' : 'Convocar'}
+            {conveneMeeting.isPending ? 'Convocando...' : conflicts.length > 0 ? 'Convocar de todos modos' : 'Convocar'}
           </Button>
         </DialogFooter>
       </DialogContent>

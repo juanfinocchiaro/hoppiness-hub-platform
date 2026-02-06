@@ -220,6 +220,7 @@ export default function BrandMeetingsPage() {
                 <SelectItem value="convocada">Convocada</SelectItem>
                 <SelectItem value="en_curso">En Curso</SelectItem>
                 <SelectItem value="cerrada">Cerrada</SelectItem>
+                <SelectItem value="cancelada">Cancelada</SelectItem>
               </SelectContent>
             </Select>
             
