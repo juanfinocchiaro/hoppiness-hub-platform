@@ -13,6 +13,9 @@ import {
   CertificationBadgeRow,
   CertificationLegend,
   CoachingHistoryTab,
+  TeamAnalysisTab,
+  CoachingExpressModal,
+  CoachingExportButton,
 } from '@/components/coaching';
 import { useCoachingStats } from '@/hooks/useCoachingStats';
 import { useTeamCertifications } from '@/hooks/useCertifications';
@@ -22,8 +25,9 @@ import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { PageHelp } from '@/components/ui/PageHelp';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ClipboardList, Users, Award, CheckCircle, Clock, ChevronDown, ChevronRight, X, History } from 'lucide-react';
+import { ClipboardList, Users, Award, CheckCircle, Clock, ChevronDown, ChevronRight, X, History, BarChart3, Zap } from 'lucide-react';
 import type { CertificationLevel } from '@/types/coaching';
+import { useQuery as useReactQuery } from '@tanstack/react-query';
 
 interface TeamMember {
   id: string;
@@ -38,6 +42,23 @@ export default function CoachingPage() {
   const { local } = usePermissionsV2(branchId);
   const [expandedEmployeeId, setExpandedEmployeeId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('team');
+  const [expressModalOpen, setExpressModalOpen] = useState(false);
+  const [expressEmployee, setExpressEmployee] = useState<TeamMember | null>(null);
+
+  // Fetch branch name for export
+  const { data: branchData } = useReactQuery({
+    queryKey: ['branch-name', branchId],
+    queryFn: async () => {
+      if (!branchId) return null;
+      const { data } = await supabase
+        .from('branches')
+        .select('name')
+        .eq('id', branchId)
+        .single();
+      return data;
+    },
+    enabled: !!branchId,
+  });
 
   // Fetch empleados y cajeros (solo staff, sin encargados)
   const { data: teamMembers, isLoading: loadingTeam, refetch: refetchTeam } = useQuery({
@@ -244,6 +265,9 @@ export default function CoachingPage() {
             Evaluaciones de {currentMonth}
           </p>
         </div>
+        {branchId && branchData?.name && (
+          <CoachingExportButton branchId={branchId} branchName={branchData.name} />
+        )}
       </div>
 
       {/* Stats Cards - Solo del staff */}
@@ -316,6 +340,10 @@ export default function CoachingPage() {
             <Users className="h-4 w-4" />
             Equipo
           </TabsTrigger>
+          <TabsTrigger value="analysis" className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Análisis
+          </TabsTrigger>
           <TabsTrigger value="matrix" className="gap-2">
             <Award className="h-4 w-4" />
             Certificaciones
@@ -343,6 +371,11 @@ export default function CoachingPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Tab Análisis - Vista comparativa */}
+        <TabsContent value="analysis" className="mt-4">
+          {branchId && <TeamAnalysisTab branchId={branchId} />}
         </TabsContent>
 
         <TabsContent value="matrix" className="mt-4 space-y-4">

@@ -9,3 +9,8 @@ export { CoachingDetailModal } from './CoachingDetailModal';
 export { EmployeeCoachingCard } from './EmployeeCoachingCard';
 export { CoachingHistoryTab } from './CoachingHistoryTab';
 export { ScoreEvolutionChart, calculateTrend } from './ScoreEvolutionChart';
+export { TeamAnalysisTab } from './TeamAnalysisTab';
+export { CoachingAlertBadge } from './CoachingAlertBadge';
+export { DashboardCoachingAlert } from './DashboardCoachingAlert';
+export { CoachingExpressModal } from './CoachingExpressModal';
+export { CoachingExportButton } from './CoachingExportButton';
