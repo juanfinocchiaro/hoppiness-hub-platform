@@ -1,153 +1,68 @@
 
 
-# Plan: Corregir Políticas RLS para Reuniones de Red + Visibilidad en Mi Cuenta
+# Plan: Permitir que Roles de Marca Vean Todos los Empleados de la Red
 
-## Diagnóstico
+## Problema Identificado
 
-### Problemas Identificados
+Ismael (Coordinador de Marca) solo puede ver a los empleados de Nueva Córdoba en el selector de participantes para reuniones de red, cuando debería ver a **todos los empleados de todas las sucursales**.
 
-| Problema | Impacto |
-|----------|---------|
-| Política `meeting_participants_insert` falla para reuniones de red (`branch_id = NULL`) | No se pueden agregar participantes a reuniones de red |
-| Política `meeting_participants_select` falla para reuniones de red | Los participantes no pueden ver sus reuniones de red |
-| `MyMeetingsCard` solo muestra reuniones **CERRADAS** con notas | Los convocados no ven reuniones pendientes |
+### Causa Raíz
 
-### Estado Actual del Código
+Las políticas RLS de `user_branch_roles` solo permiten acceso a:
 
-1. **`MyMeetingsCard`** está correctamente integrado en `CuentaDashboard.tsx` (línea 233)
-2. **Pero solo para empleados operativos** (excluye franquiciados - línea 229)
-3. **El hook `useMyMeetings`** filtra solo reuniones **CERRADAS** (las que tienen notas)
+| Rol | Acceso |
+|-----|--------|
+| Superadmin | Todo |
+| Branch managers (encargado/franquiciado) | Solo su sucursal |
+| Usuarios | Solo sus propios roles |
 
----
+**Falta una política para roles de marca** (`coordinador`, `informes`, `contador_marca`) que les permita leer todos los registros para funciones de supervisión de red.
 
-## Cambios Requeridos
+### Datos del Usuario Afectado
 
-### 1. Corregir Políticas RLS de `meeting_participants`
+Ismael tiene:
+- `brand_role = 'coordinador'` → Debería ver toda la red
+- `local_role = 'franquiciado'` en Nueva Córdoba → Solo ve esta sucursal
+
+El sistema actualmente usa la política `ubr_managers_read` que lo limita a Nueva Córdoba.
+
+## Solución
+
+Agregar una nueva política RLS que permita a los roles de marca leer todos los registros de `user_branch_roles`.
+
+## Migración SQL
 
 ```sql
--- INSERT: Permitir para reuniones de red (creador o superadmin/coordinador)
-DROP POLICY IF EXISTS meeting_participants_insert ON meeting_participants;
-CREATE POLICY "meeting_participants_insert" ON meeting_participants
-FOR INSERT TO authenticated
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM meetings m
-    WHERE m.id = meeting_participants.meeting_id
-    AND (
-      -- Reuniones de sucursal: HR del local
-      (m.branch_id IS NOT NULL AND is_hr_role(auth.uid(), m.branch_id))
-      OR
-      -- Reuniones de red: creador, superadmin o coordinador
-      (m.branch_id IS NULL AND (
-        m.created_by = auth.uid() 
-        OR is_superadmin(auth.uid()) 
-        OR get_brand_role(auth.uid()) = 'coordinador'
-      ))
-    )
-  )
-);
-
--- SELECT: Incluir reuniones de red
-DROP POLICY IF EXISTS meeting_participants_select ON meeting_participants;
-CREATE POLICY "meeting_participants_select" ON meeting_participants
-FOR SELECT TO authenticated
-USING (
-  user_id = auth.uid()
-  OR is_superadmin(auth.uid())
-  OR EXISTS (
-    SELECT 1 FROM meetings m
-    WHERE m.id = meeting_participants.meeting_id
-    AND (
-      (m.branch_id IS NOT NULL AND is_hr_role(auth.uid(), m.branch_id))
-      OR 
-      (m.branch_id IS NULL AND (
-        m.created_by = auth.uid() 
-        OR get_brand_role(auth.uid()) IN ('coordinador', 'informes', 'contador_marca')
-      ))
-    )
-  )
-);
-
--- UPDATE: Lo mismo para actualizar
-DROP POLICY IF EXISTS meeting_participants_update ON meeting_participants;
-CREATE POLICY "meeting_participants_update" ON meeting_participants
-FOR UPDATE TO authenticated
-USING (
-  user_id = auth.uid()
-  OR is_superadmin(auth.uid())
-  OR EXISTS (
-    SELECT 1 FROM meetings m
-    WHERE m.id = meeting_participants.meeting_id
-    AND (
-      (m.branch_id IS NOT NULL AND is_hr_role(auth.uid(), m.branch_id))
-      OR 
-      (m.branch_id IS NULL AND m.created_by = auth.uid())
-    )
-  )
-);
+-- Permitir que roles de marca lean todos los user_branch_roles
+-- Necesario para funciones de supervisión de red (reuniones, reportes, etc.)
+CREATE POLICY "ubr_brand_roles_read" ON user_branch_roles
+  FOR SELECT TO authenticated
+  USING (
+    get_brand_role(auth.uid()) IN ('coordinador', 'informes', 'contador_marca')
+  );
 ```
 
-### 2. Actualizar `MyMeetingsCard` para Mostrar Todos los Estados
+Esta política:
+- Es **solo lectura** (SELECT) - los roles de marca no pueden modificar asignaciones de sucursal
+- Usa la función existente `get_brand_role()` para verificar el rol de marca
+- Complementa la política de superadmin sin reemplazarla
 
-El componente actual solo muestra reuniones con notas (cerradas). Debemos mostrar:
-
-- **Reuniones CONVOCADAS**: Mostrar "Estás convocado para [fecha]"
-- **Reuniones CERRADAS sin leer**: Mostrar "Confirmar lectura"
-
-```typescript
-// MyMeetingsCard.tsx - Cambiar lógica de filtrado
-
-// Reuniones pendientes: convocadas (futuras) + cerradas sin leer
-const pendingMeetings = meetings.filter(m => 
-  m.status === 'convocada' || 
-  (m.status === 'cerrada' && !m.myParticipation?.read_at)
-);
-
-// Mostrar badge diferente según estado
-{meeting.status === 'convocada' ? (
-  <Badge variant="outline">Convocado</Badge>
-) : (
-  <Badge variant="destructive">Sin leer</Badge>
-)}
-```
-
-### 3. Mostrar `MyMeetingsCard` También a Franquiciados
-
-Actualmente está excluido (línea 229). Los franquiciados de red también deben ver sus reuniones:
-
-```typescript
-// CuentaDashboard.tsx - Mover MyMeetingsCard fuera del bloque de empleados
-
-{/* Communications - show only brand for franquiciados */}
-<MyCommunicationsCard showOnlyBrand={isOnlyFranquiciado} />
-
-{/* Reuniones - TODOS los que tienen rol local las ven */}
-<MyMeetingsCard />
-
-{/* Operational Cards - only for employees, NOT franquiciados */}
-{!isOnlyFranquiciado && (
-  <div className="grid gap-3 md:gap-4">
-    <MyRegulationsCard />
-    ...
-  </div>
-)}
-```
-
----
-
-## Resumen de Archivos
+## Archivo a Modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| Nueva migración SQL | Corregir políticas RLS de `meeting_participants` |
-| `src/components/cuenta/MyMeetingsCard.tsx` | Mostrar reuniones convocadas + cerradas, con badges dinámicos |
-| `src/pages/cuenta/CuentaDashboard.tsx` | Mover `MyMeetingsCard` para que franquiciados también lo vean |
+| Nueva migración SQL | Agregar política `ubr_brand_roles_read` |
 
----
+## Resultado Esperado
 
-## Orden de Implementación
+Después de aplicar la migración:
+- Ismael (coordinador) podrá ver todos los empleados de todas las sucursales
+- El selector de "Nueva Reunión de Red" mostrará las 6 sucursales y todos sus empleados
+- La seguridad de escritura se mantiene intacta (solo superadmin puede modificar)
 
-1. Migración SQL para corregir políticas RLS
-2. Actualizar `MyMeetingsCard` con lógica para ambos estados
-3. Mover componente en `CuentaDashboard` para incluir franquiciados
+## Notas de Seguridad
+
+- Solo se otorga permiso de **lectura**
+- Los roles de marca ya tienen acceso conceptual a toda la red por diseño
+- Esta política alinea RLS con la arquitectura documentada de permisos
 
