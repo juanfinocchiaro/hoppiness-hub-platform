@@ -1,26 +1,41 @@
 /**
- * MeetingDetail - Vista detalle de reunión
+ * MeetingDetail - Vista detalle de reunión refactorizada para v2.0
+ * Renderiza diferentes UIs según el estado: convocada, en_curso, cerrada
  */
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Calendar,
   Users,
   FileText,
   CheckCircle2,
   XCircle,
-  Clock,
   ArrowLeft,
   User,
   Target,
+  Play,
+  Trash2,
+  Edit,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { MEETING_AREAS, type MeetingWithDetails } from '@/types/meeting';
-import { useMarkMeetingAsRead } from '@/hooks/useMeetings';
+import { MeetingStatusBadge } from './MeetingStatusBadge';
+import { MeetingExecutionForm } from './MeetingExecutionForm';
+import { useMarkMeetingAsRead, useStartMeeting, useCancelMeeting } from '@/hooks/useMeetings';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import { toast } from 'sonner';
 
@@ -28,17 +43,23 @@ interface MeetingDetailProps {
   meeting: MeetingWithDetails;
   onBack: () => void;
   canTrackReads?: boolean;
+  canManage?: boolean;
 }
 
-export function MeetingDetail({ meeting, onBack, canTrackReads = false }: MeetingDetailProps) {
+export function MeetingDetail({ meeting, onBack, canTrackReads = false, canManage = false }: MeetingDetailProps) {
   const effectiveUser = useEffectiveUser();
   const markAsRead = useMarkMeetingAsRead();
+  const startMeeting = useStartMeeting();
+  const cancelMeeting = useCancelMeeting();
+  
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   
   const areaLabel = MEETING_AREAS.find(a => a.value === meeting.area)?.label || meeting.area;
+  const meetingDate = meeting.scheduled_at || meeting.date;
   
   // Find current user's participation
   const myParticipation = meeting.participants.find(p => p.user_id === effectiveUser.id);
-  const isUnread = myParticipation && !myParticipation.read_at;
+  const isUnread = myParticipation && !myParticipation.read_at && meeting.status === 'cerrada';
   
   const handleMarkAsRead = async () => {
     try {
@@ -49,8 +70,29 @@ export function MeetingDetail({ meeting, onBack, canTrackReads = false }: Meetin
     }
   };
 
-  const attendedParticipants = meeting.participants.filter(p => p.attended);
-  const absentParticipants = meeting.participants.filter(p => !p.attended);
+  const handleStartMeeting = async () => {
+    try {
+      await startMeeting.mutateAsync(meeting.id);
+      toast.success('Reunión iniciada');
+    } catch (error) {
+      toast.error('Error al iniciar la reunión');
+    }
+  };
+
+  const handleCancelMeeting = async () => {
+    try {
+      await cancelMeeting.mutateAsync(meeting.id);
+      toast.success('Reunión cancelada');
+      onBack();
+    } catch (error) {
+      toast.error('Error al cancelar la reunión');
+    }
+  };
+
+  // Participants stats
+  const presentParticipants = meeting.participants.filter(p => p.was_present === true);
+  const absentParticipants = meeting.participants.filter(p => p.was_present === false);
+  const pendingParticipants = meeting.participants.filter(p => p.was_present === null);
   const readCount = meeting.participants.filter(p => p.read_at).length;
 
   return (
@@ -64,23 +106,45 @@ export function MeetingDetail({ meeting, onBack, canTrackReads = false }: Meetin
       {/* Header */}
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-bold">{meeting.title}</h1>
-            <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl font-bold">{meeting.title}</h1>
+              <MeetingStatusBadge status={meeting.status} />
+            </div>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
-                <span>{format(new Date(meeting.date), "EEEE d 'de' MMMM, HH:mm", { locale: es })}</span>
+                <span>{format(new Date(meetingDate), "EEEE d 'de' MMMM, HH:mm", { locale: es })}</span>
               </div>
               <Badge variant="secondary">{areaLabel}</Badge>
+              {meeting.branches && (
+                <Badge variant="outline">{meeting.branches.name}</Badge>
+              )}
             </div>
           </div>
           
-          {isUnread && (
-            <Button size="sm" onClick={handleMarkAsRead} disabled={markAsRead.isPending}>
-              <CheckCircle2 className="w-4 h-4 mr-1" />
-              Marcar leído
-            </Button>
-          )}
+          {/* Actions based on status */}
+          <div className="flex items-center gap-2">
+            {meeting.status === 'convocada' && canManage && (
+              <>
+                <Button variant="outline" size="sm" onClick={() => setShowCancelDialog(true)}>
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Cancelar
+                </Button>
+                <Button size="sm" onClick={handleStartMeeting} disabled={startMeeting.isPending}>
+                  <Play className="w-4 h-4 mr-1" />
+                  {startMeeting.isPending ? 'Iniciando...' : 'Iniciar Reunión'}
+                </Button>
+              </>
+            )}
+            
+            {meeting.status === 'cerrada' && isUnread && (
+              <Button size="sm" onClick={handleMarkAsRead} disabled={markAsRead.isPending}>
+                <CheckCircle2 className="w-4 h-4 mr-1" />
+                Marcar leído
+              </Button>
+            )}
+          </div>
         </div>
 
         {meeting.creator && (
@@ -90,20 +154,135 @@ export function MeetingDetail({ meeting, onBack, canTrackReads = false }: Meetin
         )}
       </div>
 
-      {/* Notes */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <FileText className="w-4 h-4" />
-            Notas de la Reunión
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="prose prose-sm max-w-none text-muted-foreground whitespace-pre-wrap">
-            {meeting.notes}
+      {/* Content based on status */}
+      {meeting.status === 'convocada' && (
+        <ConvocadaContent 
+          meeting={meeting} 
+          pendingParticipants={pendingParticipants}
+        />
+      )}
+
+      {meeting.status === 'en_curso' && canManage && (
+        <MeetingExecutionForm meeting={meeting} onClose={onBack} />
+      )}
+
+      {meeting.status === 'en_curso' && !canManage && (
+        <Card>
+          <CardContent className="py-8 text-center text-muted-foreground">
+            <Play className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <p>Esta reunión está en curso.</p>
+            <p className="text-sm">Los detalles estarán disponibles cuando finalice.</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {meeting.status === 'cerrada' && (
+        <CerradaContent 
+          meeting={meeting}
+          presentParticipants={presentParticipants}
+          absentParticipants={absentParticipants}
+          readCount={readCount}
+          canTrackReads={canTrackReads}
+        />
+      )}
+
+      {/* Cancel Dialog */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cancelar reunión?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará la reunión y notificará a los participantes. 
+              Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Mantener</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleCancelMeeting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Sí, cancelar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+// Sub-component for CONVOCADA status
+function ConvocadaContent({ 
+  meeting, 
+  pendingParticipants 
+}: { 
+  meeting: MeetingWithDetails;
+  pendingParticipants: MeetingWithDetails['participants'];
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center justify-between text-base">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Convocados
           </div>
-        </CardContent>
-      </Card>
+          <span className="text-sm font-normal text-muted-foreground">
+            {pendingParticipants.length} participantes
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap gap-2">
+          {pendingParticipants.map(p => (
+            <div key={p.id} className="flex items-center gap-2 bg-muted/50 px-2 py-1 rounded-md">
+              <Avatar className="h-6 w-6">
+                <AvatarImage src={p.profile?.avatar_url} />
+                <AvatarFallback className="text-xs">
+                  {p.profile?.full_name?.charAt(0) || '?'}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-sm">{p.profile?.full_name || 'Usuario'}</span>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Sub-component for CERRADA status
+function CerradaContent({ 
+  meeting, 
+  presentParticipants,
+  absentParticipants,
+  readCount,
+  canTrackReads,
+}: { 
+  meeting: MeetingWithDetails;
+  presentParticipants: MeetingWithDetails['participants'];
+  absentParticipants: MeetingWithDetails['participants'];
+  readCount: number;
+  canTrackReads: boolean;
+}) {
+  return (
+    <>
+      {/* Notes */}
+      {meeting.notes && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FileText className="w-4 h-4" />
+              Notas de la Reunión
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="prose prose-sm max-w-none text-muted-foreground whitespace-pre-wrap">
+              {meeting.notes}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Attendance */}
       <Card>
@@ -114,17 +293,17 @@ export function MeetingDetail({ meeting, onBack, canTrackReads = false }: Meetin
               Asistencia
             </div>
             <span className="text-sm font-normal text-muted-foreground">
-              {attendedParticipants.length}/{meeting.participants.length} presentes
+              {presentParticipants.length}/{meeting.participants.length} presentes
             </span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {/* Present */}
-          {attendedParticipants.length > 0 && (
+          {presentParticipants.length > 0 && (
             <div>
               <p className="text-xs font-medium text-muted-foreground mb-2">Presentes</p>
               <div className="flex flex-wrap gap-2">
-                {attendedParticipants.map(p => (
+                {presentParticipants.map(p => (
                   <div key={p.id} className="flex items-center gap-2 bg-success/10 px-2 py-1 rounded-md">
                     <CheckCircle2 className="w-3 h-3 text-success" />
                     <span className="text-sm">{p.profile?.full_name || 'Usuario'}</span>
@@ -214,6 +393,6 @@ export function MeetingDetail({ meeting, onBack, canTrackReads = false }: Meetin
           </CardContent>
         </Card>
       )}
-    </div>
+    </>
   );
 }

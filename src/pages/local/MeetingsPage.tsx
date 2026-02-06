@@ -1,14 +1,15 @@
 /**
- * MeetingsPage - Página principal de reuniones
+ * MeetingsPage - Página principal de reuniones v2.0
  */
 import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageHelp } from '@/components/ui/PageHelp';
 import { Calendar } from 'lucide-react';
-import { MeetingsList, MeetingDetail, MeetingWizard } from '@/components/meetings';
+import { MeetingsList, MeetingDetail, MeetingConveneModal } from '@/components/meetings';
 import { useBranchMeetings, useMeetingDetail } from '@/hooks/useMeetings';
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
+import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import type { Tables } from '@/integrations/supabase/types';
 import type { Meeting } from '@/types/meeting';
 
@@ -21,11 +22,13 @@ interface OutletContext {
 export default function MeetingsPage() {
   const { branch } = useOutletContext<OutletContext>();
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
-  const [showWizard, setShowWizard] = useState(false);
+  const [showConveneModal, setShowConveneModal] = useState(false);
 
-  const { isEncargado, isSuperadmin } = usePermissionsWithImpersonation(branch.id);
-  const canCreate = isEncargado || isSuperadmin;
-  const canTrackReads = isEncargado || isSuperadmin;
+  const effectiveUser = useEffectiveUser();
+  const { isEncargado, isSuperadmin, isFranquiciado } = usePermissionsWithImpersonation(branch.id);
+  const canCreate = isEncargado || isSuperadmin || isFranquiciado;
+  const canManage = isEncargado || isSuperadmin || isFranquiciado;
+  const canTrackReads = isEncargado || isSuperadmin || isFranquiciado;
 
   const { data: meetings = [], isLoading } = useBranchMeetings(branch.id);
   const { data: selectedMeeting } = useMeetingDetail(selectedMeetingId || undefined);
@@ -42,7 +45,7 @@ export default function MeetingsPage() {
     <div className="space-y-4">
       <PageHeader
         title="Reuniones"
-        subtitle="Registro de reuniones del equipo"
+        subtitle="Registro y seguimiento de reuniones del equipo"
       />
       <PageHelp pageId="meetings" />
 
@@ -51,21 +54,23 @@ export default function MeetingsPage() {
           meeting={selectedMeeting}
           onBack={handleBack}
           canTrackReads={canTrackReads}
+          canManage={canManage}
         />
       ) : (
         <MeetingsList
           meetings={meetings}
           isLoading={isLoading}
           onSelectMeeting={handleSelectMeeting}
-          onCreateMeeting={() => setShowWizard(true)}
+          onCreateMeeting={() => setShowConveneModal(true)}
           showReadStatus={canTrackReads}
           canCreate={canCreate}
+          currentUserId={effectiveUser.id}
         />
       )}
 
-      <MeetingWizard
-        open={showWizard}
-        onOpenChange={setShowWizard}
+      <MeetingConveneModal
+        open={showConveneModal}
+        onOpenChange={setShowConveneModal}
         branchId={branch.id}
       />
     </div>

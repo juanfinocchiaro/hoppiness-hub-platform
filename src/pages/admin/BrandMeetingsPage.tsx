@@ -1,40 +1,36 @@
 /**
- * BrandMeetingsPage - Vista consolidada de reuniones de toda la red
+ * BrandMeetingsPage - Vista consolidada de reuniones de toda la red v2.0
  * 
  * Permite a Superadmins y Coordinadores:
  * - Ver todas las reuniones de todas las sucursales
- * - Filtrar por sucursal, área y fecha
+ * - Filtrar por sucursal, área, estado y fecha
  * - Ver métricas: total mes, % lectura, alertas pendientes
+ * - Crear reuniones de red
  */
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar, Users, CheckCircle, AlertTriangle, MapPin, ChevronRight, Filter } from 'lucide-react';
+import { Calendar, Users, CheckCircle, AlertTriangle, MapPin, ChevronRight, Filter, Plus, Building2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/ui/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useBrandMeetings, useBrandMeetingsStats, useMeetingDetail } from '@/hooks/useMeetings';
-import { MeetingDetail } from '@/components/meetings';
+import { MeetingDetail, MeetingStatusBadge } from '@/components/meetings';
+import { BrandMeetingConveneModal } from '@/components/meetings/BrandMeetingConveneModal';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
-
-const AREA_OPTIONS = [
-  { value: 'all', label: 'Todas las áreas' },
-  { value: 'general', label: 'General' },
-  { value: 'cocina', label: 'Cocina' },
-  { value: 'salon', label: 'Salón' },
-  { value: 'delivery', label: 'Delivery' },
-  { value: 'limpieza', label: 'Limpieza' },
-];
+import { MEETING_AREAS, type MeetingStatus } from '@/types/meeting';
 
 export default function BrandMeetingsPage() {
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
   const [selectedArea, setSelectedArea] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
+  const [showConveneModal, setShowConveneModal] = useState(false);
   
   // Fetch branches for filter
   const { data: branches } = useQuery({
@@ -58,22 +54,29 @@ export default function BrandMeetingsPage() {
     if (!meetings) return [];
     
     return meetings.filter(meeting => {
-      if (selectedBranch !== 'all' && meeting.branch_id !== selectedBranch) {
-        return false;
+      if (selectedBranch !== 'all') {
+        if (selectedBranch === 'network') {
+          if (meeting.branch_id !== null) return false;
+        } else if (meeting.branch_id !== selectedBranch) {
+          return false;
+        }
       }
       if (selectedArea !== 'all' && meeting.area !== selectedArea) {
         return false;
       }
+      if (selectedStatus !== 'all' && meeting.status !== selectedStatus) {
+        return false;
+      }
       return true;
     });
-  }, [meetings, selectedBranch, selectedArea]);
+  }, [meetings, selectedBranch, selectedArea, selectedStatus]);
   
   // Group meetings by date for display
   const groupedMeetings = useMemo(() => {
     const groups: Record<string, typeof filteredMeetings> = {};
     
     filteredMeetings.forEach(meeting => {
-      const dateKey = format(parseISO(meeting.date), 'yyyy-MM-dd');
+      const dateKey = format(parseISO(meeting.scheduled_at || meeting.date), 'yyyy-MM-dd');
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
@@ -91,13 +94,19 @@ export default function BrandMeetingsPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <PageHeader
-        title="Reuniones de la Red"
-        subtitle="Vista consolidada de todas las reuniones de las sucursales"
-      />
+      <div className="flex items-center justify-between">
+        <PageHeader
+          title="Reuniones de la Red"
+          subtitle="Vista consolidada de todas las reuniones"
+        />
+        <Button onClick={() => setShowConveneModal(true)}>
+          <Plus className="w-4 h-4 mr-1" />
+          Nueva Reunión de Red
+        </Button>
+      </div>
       
       {/* Metrics Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -109,6 +118,30 @@ export default function BrandMeetingsPage() {
                   {loadingStats ? <Skeleton className="h-8 w-12" /> : stats?.totalMeetings || 0}
                 </p>
                 <p className="text-sm text-muted-foreground">reuniones este mes</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/10">
+                <Users className="w-5 h-5 text-amber-600" />
+              </div>
+              <div className="flex gap-3">
+                <div>
+                  <p className="text-lg font-bold text-amber-600">
+                    {loadingStats ? <Skeleton className="h-6 w-8" /> : stats?.convocadas || 0}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Convocadas</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-blue-600">
+                    {loadingStats ? <Skeleton className="h-6 w-8" /> : stats?.enCurso || 0}
+                  </p>
+                  <p className="text-xs text-muted-foreground">En curso</p>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -141,7 +174,7 @@ export default function BrandMeetingsPage() {
                   {loadingStats ? <Skeleton className="h-8 w-12" /> : stats?.alertCount || 0}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {stats?.alertCount === 1 ? 'sucursal con pendientes' : 'sucursales con pendientes'}
+                  {stats?.alertCount === 1 ? 'sucursal pendiente' : 'sucursales pendientes'}
                 </p>
               </div>
             </div>
@@ -159,11 +192,17 @@ export default function BrandMeetingsPage() {
             </div>
             
             <Select value={selectedBranch} onValueChange={setSelectedBranch}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Todas las sucursales" />
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Sucursal" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las sucursales</SelectItem>
+                <SelectItem value="network">
+                  <div className="flex items-center gap-1">
+                    <Building2 className="w-3 h-3" />
+                    Reuniones de Red
+                  </div>
+                </SelectItem>
                 {branches?.map(branch => (
                   <SelectItem key={branch.id} value={branch.id}>
                     {branch.name}
@@ -172,26 +211,40 @@ export default function BrandMeetingsPage() {
               </SelectContent>
             </Select>
             
-            <Select value={selectedArea} onValueChange={setSelectedArea}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Todas las áreas" />
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Estado" />
               </SelectTrigger>
               <SelectContent>
-                {AREA_OPTIONS.map(option => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="convocada">Convocada</SelectItem>
+                <SelectItem value="en_curso">En Curso</SelectItem>
+                <SelectItem value="cerrada">Cerrada</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={selectedArea} onValueChange={setSelectedArea}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Área" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las áreas</SelectItem>
+                {MEETING_AREAS.map(area => (
+                  <SelectItem key={area.value} value={area.value}>
+                    {area.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             
-            {(selectedBranch !== 'all' || selectedArea !== 'all') && (
+            {(selectedBranch !== 'all' || selectedArea !== 'all' || selectedStatus !== 'all') && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
                   setSelectedBranch('all');
                   setSelectedArea('all');
+                  setSelectedStatus('all');
                 }}
               >
                 Limpiar filtros
@@ -229,10 +282,12 @@ export default function BrandMeetingsPage() {
               
               {group.meetings.map(meeting => {
                 const participants = meeting.participants || [];
-                const attendedCount = participants.filter((p: any) => p.attended).length;
+                const presentCount = participants.filter((p: any) => p.was_present === true).length;
                 const readCount = participants.filter((p: any) => p.read_at).length;
                 const pendingCount = participants.length - readCount;
                 const branch = meeting.branches as { id: string; name: string; slug: string } | null;
+                const isNetworkMeeting = !meeting.branch_id;
+                const status = (meeting.status || 'cerrada') as MeetingStatus;
                 
                 return (
                   <Card
@@ -243,39 +298,67 @@ export default function BrandMeetingsPage() {
                     <CardContent className="py-4">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                            <MapPin className="w-3.5 h-3.5" />
-                            <span>{branch?.name || 'Sin sucursal'}</span>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1 flex-wrap">
+                            {isNetworkMeeting ? (
+                              <Badge variant="default" className="text-xs">
+                                <Building2 className="w-3 h-3 mr-1" />
+                                Red
+                              </Badge>
+                            ) : (
+                              <>
+                                <MapPin className="w-3.5 h-3.5" />
+                                <span>{branch?.name || 'Sin sucursal'}</span>
+                              </>
+                            )}
                             <span>•</span>
                             <span className="capitalize">{meeting.area}</span>
                             <span>•</span>
-                            <span>{format(parseISO(meeting.date), 'HH:mm')}</span>
+                            <span>{format(parseISO(meeting.scheduled_at || meeting.date), 'HH:mm')}</span>
                           </div>
                           
-                          <h4 className="font-medium truncate">{meeting.title}</h4>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-medium truncate">{meeting.title}</h4>
+                            <MeetingStatusBadge status={status} />
+                          </div>
                           
-                          <div className="flex items-center gap-4 mt-2 text-sm">
-                            <span className="text-muted-foreground">
-                              {attendedCount}/{participants.length} presentes
-                            </span>
-                            <span className="text-muted-foreground">•</span>
-                            <span className="text-muted-foreground">
-                              {readCount}/{participants.length} confirmaron lectura
-                            </span>
+                          <div className="flex items-center gap-4 text-sm">
+                            {status === 'cerrada' && (
+                              <>
+                                <span className="text-muted-foreground">
+                                  {presentCount}/{participants.length} presentes
+                                </span>
+                                <span className="text-muted-foreground">•</span>
+                                <span className="text-muted-foreground">
+                                  {readCount}/{participants.length} confirmaron lectura
+                                </span>
+                              </>
+                            )}
+                            {status === 'convocada' && (
+                              <span className="text-muted-foreground">
+                                {participants.length} convocados
+                              </span>
+                            )}
+                            {status === 'en_curso' && (
+                              <span className="text-blue-600">
+                                Reunión en progreso
+                              </span>
+                            )}
                           </div>
                         </div>
                         
                         <div className="flex items-center gap-3">
-                          {pendingCount > 0 ? (
-                            <Badge variant="outline" className="text-warning border-warning/30 bg-warning/10">
-                              <AlertTriangle className="w-3 h-3 mr-1" />
-                              {pendingCount} pendientes
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-success border-success/30 bg-success/10">
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              Todos leyeron
-                            </Badge>
+                          {status === 'cerrada' && (
+                            pendingCount > 0 ? (
+                              <Badge variant="outline" className="text-warning border-warning/30 bg-warning/10">
+                                <AlertTriangle className="w-3 h-3 mr-1" />
+                                {pendingCount} pendientes
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-success border-success/30 bg-success/10">
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                Todos leyeron
+                              </Badge>
+                            )
                           )}
                           <ChevronRight className="w-5 h-5 text-muted-foreground" />
                         </div>
@@ -301,11 +384,18 @@ export default function BrandMeetingsPage() {
                 meeting={meetingDetail} 
                 onBack={() => setSelectedMeetingId(null)} 
                 canTrackReads={true}
+                canManage={true}
               />
             </div>
           )}
         </SheetContent>
       </Sheet>
+      
+      {/* Convene Modal */}
+      <BrandMeetingConveneModal 
+        open={showConveneModal} 
+        onOpenChange={setShowConveneModal} 
+      />
     </div>
   );
 }
