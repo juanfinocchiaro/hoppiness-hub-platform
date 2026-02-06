@@ -2204,6 +2204,10 @@ export type Database = {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
       }
+      is_meeting_participant: {
+        Args: { _meeting_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_staff:
         | { Args: never; Returns: boolean }
         | { Args: { _user_id: string }; Returns: boolean }
