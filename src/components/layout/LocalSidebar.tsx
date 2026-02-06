@@ -40,6 +40,7 @@ interface LocalSidebarProps {
     canEditSchedules: boolean;
     canViewAllClockIns: boolean;
     canDoCoaching: boolean;
+    canViewCoaching: boolean;
     canConfigPrinters: boolean;
     canViewWarnings?: boolean;
   };
@@ -70,7 +71,7 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
 
   const isConfigActive = location.pathname.startsWith(`${basePath}/config`);
 
-  const { canViewDashboard, canViewTeam, canEditSchedules, canViewAllClockIns, canDoCoaching, canConfigPrinters, canViewWarnings } = permissions;
+  const { canViewDashboard, canViewTeam, canEditSchedules, canViewAllClockIns, canDoCoaching, canViewCoaching, canConfigPrinters, canViewWarnings } = permissions;
 
   // Determine if user can see Personal section
   const canSeePersonal = canViewTeam || canDoCoaching;
@@ -102,7 +103,7 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
           {canViewTeam && (
             <NavItemButton to={`${basePath}/equipo`} icon={Users} label="Equipo" exact />
           )}
-          {canDoCoaching && (
+          {canViewCoaching && (
             <NavItemButton to={`${basePath}/equipo/coaching`} icon={ClipboardList} label="Coaching" />
           )}
         </NavSectionGroup>

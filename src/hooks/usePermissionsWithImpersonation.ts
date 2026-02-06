@@ -107,6 +107,7 @@ export function usePermissionsWithImpersonation(currentBranchId?: string): Permi
       canCreateWarning: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
       canUploadSignature: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
       canDoCoaching: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+      canViewCoaching: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
       canSendLocalCommunication: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
       canViewSalesReports: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
       canViewLocalPnL: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isFranquiciado),

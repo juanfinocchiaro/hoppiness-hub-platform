@@ -146,6 +146,7 @@ export interface PermissionsV2 {
     canCreateWarning: boolean;
     canUploadSignature: boolean;
     canDoCoaching: boolean;
+    canViewCoaching: boolean;
     canSendLocalCommunication: boolean;
     
     // Reportes
@@ -393,6 +394,7 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     canCreateWarning: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
     canUploadSignature: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
     canDoCoaching: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+    canViewCoaching: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
     canSendLocalCommunication: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
     
     // Reportes

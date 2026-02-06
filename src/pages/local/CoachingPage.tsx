@@ -27,7 +27,8 @@ import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { PageHelp } from '@/components/ui/PageHelp';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ClipboardList, Users, Award, CheckCircle, Clock, ChevronDown, ChevronRight, X, History, BarChart3, Zap, User, Star } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ClipboardList, Users, Award, CheckCircle, Clock, ChevronDown, ChevronRight, X, History, BarChart3, Zap, User, Star, Eye } from 'lucide-react';
 import type { CertificationLevel } from '@/types/coaching';
 import { useQuery as useReactQuery } from '@tanstack/react-query';
 
@@ -361,19 +362,12 @@ export default function CoachingPage() {
             </TabsTrigger>
           )}
           
-          {/* Tab Equipo - Encargados y Superadmin */}
-          {(isEncargado || isSuperadmin) && (
+          
+          {/* Tab Equipo - Todos los que pueden ver coaching */}
+          {local.canViewCoaching && (
             <TabsTrigger value="team" className="gap-2">
               <Users className="h-4 w-4" />
               Equipo
-            </TabsTrigger>
-          )}
-          
-          {/* Tab Empleados (solo lectura) - Franquiciado */}
-          {isFranquiciado && (
-            <TabsTrigger value="team" className="gap-2">
-              <Users className="h-4 w-4" />
-              Empleados
             </TabsTrigger>
           )}
           
@@ -411,10 +405,24 @@ export default function CoachingPage() {
             <CardHeader>
               <CardTitle>Empleados del Local</CardTitle>
               <CardDescription>
-                Seleccioná un empleado para realizar su coaching mensual
+                {local.canDoCoaching 
+                  ? 'Seleccioná un empleado para realizar su coaching mensual'
+                  : 'Coachings realizados a los empleados del local'}
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Banner de solo lectura para Franquiciado */}
+              {isFranquiciado && (
+                <Alert className="mb-4">
+                  <Eye className="h-4 w-4" />
+                  <AlertTitle>Modo lectura</AlertTitle>
+                  <AlertDescription>
+                    Los coachings son realizados por el Encargado. 
+                    Aquí podés ver el estado de las evaluaciones.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               {renderMemberList(
                 teamMembers, 
                 hasCoachingThisMonth,
