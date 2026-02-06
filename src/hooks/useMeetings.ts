@@ -428,22 +428,19 @@ export function useUpdateConvokedMeeting() {
   });
 }
 
-// Cancelar reunión CONVOCADA
+// Cancelar reunión CONVOCADA (cambiar a estado cancelada)
 export function useCancelMeeting() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (meetingId: string) => {
-      // First delete participants
-      await supabase
-        .from('meeting_participants')
-        .delete()
-        .eq('meeting_id', meetingId);
-      
-      // Then delete meeting
+      // Update meeting status to cancelled instead of deleting
       const { error } = await supabase
         .from('meetings')
-        .delete()
+        .update({
+          status: 'cancelada',
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', meetingId)
         .eq('status', 'convocada'); // Solo se puede cancelar si está convocada
       
@@ -920,6 +917,105 @@ export function useNetworkMembers() {
       });
       
       return members;
+    },
+  });
+}
+
+// ============================================
+// QUERIES - Conflict Detection
+// ============================================
+
+export interface MeetingConflict {
+  userId: string;
+  userName: string;
+  meetingTitle: string;
+  meetingTime: string;
+}
+
+// Check for schedule conflicts when convening a meeting
+export function useCheckMeetingConflicts() {
+  return useMutation({
+    mutationFn: async ({ 
+      date, 
+      time, 
+      participantIds 
+    }: { 
+      date: Date; 
+      time: string; 
+      participantIds: string[] 
+    }): Promise<MeetingConflict[]> => {
+      if (participantIds.length === 0) return [];
+      
+      // Build the meeting datetime
+      const [hours, minutes] = time.split(':').map(Number);
+      const meetingDate = new Date(date);
+      meetingDate.setHours(hours, minutes, 0, 0);
+      
+      // Get meetings scheduled on the same date (within 2 hours window)
+      const startWindow = new Date(meetingDate);
+      startWindow.setHours(startWindow.getHours() - 2);
+      
+      const endWindow = new Date(meetingDate);
+      endWindow.setHours(endWindow.getHours() + 2);
+      
+      // Find meetings in this time window that are still active (convocada or en_curso)
+      const { data: existingMeetings, error: mError } = await supabase
+        .from('meetings')
+        .select(`
+          id,
+          title,
+          scheduled_at,
+          participants:meeting_participants(user_id)
+        `)
+        .in('status', ['convocada', 'en_curso'])
+        .gte('scheduled_at', startWindow.toISOString())
+        .lte('scheduled_at', endWindow.toISOString());
+      
+      if (mError) throw mError;
+      if (!existingMeetings?.length) return [];
+      
+      // Check which participants have conflicts
+      const conflictingUserIds = new Set<string>();
+      const conflictMap = new Map<string, { meetingTitle: string; meetingTime: string }>();
+      
+      existingMeetings.forEach(meeting => {
+        const meetingParticipantIds = (meeting.participants || []).map((p: any) => p.user_id);
+        
+        participantIds.forEach(participantId => {
+          if (meetingParticipantIds.includes(participantId)) {
+            conflictingUserIds.add(participantId);
+            conflictMap.set(participantId, {
+              meetingTitle: meeting.title,
+              meetingTime: meeting.scheduled_at,
+            });
+          }
+        });
+      });
+      
+      if (conflictingUserIds.size === 0) return [];
+      
+      // Get names for conflicting users
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', Array.from(conflictingUserIds));
+      
+      const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
+      
+      const conflicts: MeetingConflict[] = [];
+      conflictingUserIds.forEach(userId => {
+        const conflict = conflictMap.get(userId);
+        if (conflict) {
+          conflicts.push({
+            userId,
+            userName: profileMap.get(userId) || 'Usuario desconocido',
+            meetingTitle: conflict.meetingTitle,
+            meetingTime: conflict.meetingTime,
+          });
+        }
+      });
+      
+      return conflicts;
     },
   });
 }

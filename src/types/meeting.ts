@@ -4,7 +4,7 @@
  */
 
 // Estados de reunión
-export type MeetingStatus = 'convocada' | 'en_curso' | 'cerrada';
+export type MeetingStatus = 'convocada' | 'en_curso' | 'cerrada' | 'cancelada';
 
 // Origen de la reunión
 export type MeetingSource = 'mi_local' | 'mi_marca';
@@ -178,5 +178,10 @@ export const MEETING_STATUS_CONFIG = {
     label: 'Cerrada',
     variant: 'validated' as const,
     description: 'Reunión finalizada y documentada',
+  },
+  cancelada: {
+    label: 'Cancelada',
+    variant: 'blocked' as const,
+    description: 'Reunión cancelada',
   },
 } as const;
