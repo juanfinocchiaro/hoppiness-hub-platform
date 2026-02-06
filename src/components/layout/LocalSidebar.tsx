@@ -24,6 +24,7 @@ import {
   CalendarClock,
   Briefcase,
   Calculator,
+  Calendar,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -51,7 +52,7 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
   const basePath = `/milocal/${branchId}`;
   
   // Check if sections have active items
-  const personalPaths = ['equipo', 'equipo/coaching'];
+  const personalPaths = ['equipo', 'equipo/coaching', 'equipo/reuniones'];
   const isPersonalActive = personalPaths.some(path => {
     const fullPath = `${basePath}/${path}`;
     return location.pathname === fullPath || location.pathname.startsWith(`${fullPath}/`);
@@ -105,6 +106,9 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
           )}
           {canViewCoaching && (
             <NavItemButton to={`${basePath}/equipo/coaching`} icon={ClipboardList} label="Coaching" />
+          )}
+          {canViewTeam && (
+            <NavItemButton to={`${basePath}/equipo/reuniones`} icon={Calendar} label="Reuniones" />
           )}
         </NavSectionGroup>
       )}
