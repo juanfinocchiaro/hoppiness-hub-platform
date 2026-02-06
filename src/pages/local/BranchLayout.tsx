@@ -265,16 +265,17 @@ export default function BranchLayout() {
       mobileTitle={selectedBranch?.name || 'Mi Local'}
       sidebar={
         branchId ? (
-          <LocalSidebar
-            branchId={branchId}
-            permissions={{
-              canViewDashboard: lp.canViewDashboard,
-              canViewTeam: lp.canViewTeam,
-              canEditSchedules: lp.canEditSchedules,
-              canViewAllClockIns: lp.canViewAllClockIns,
-              canDoCoaching: lp.canDoCoaching,
-              canConfigPrinters: lp.canConfigPrinters,
-              canViewWarnings: lp.canViewWarnings,
+            <LocalSidebar
+              branchId={branchId}
+              permissions={{
+                canViewDashboard: lp.canViewDashboard,
+                canViewTeam: lp.canViewTeam,
+                canEditSchedules: lp.canEditSchedules,
+                canViewAllClockIns: lp.canViewAllClockIns,
+                canDoCoaching: lp.canDoCoaching,
+                canViewCoaching: lp.canViewCoaching,
+                canConfigPrinters: lp.canConfigPrinters,
+                canViewWarnings: lp.canViewWarnings,
             }}
           />
         ) : null
