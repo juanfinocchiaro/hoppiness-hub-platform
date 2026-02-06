@@ -1,68 +1,142 @@
 
 
-# Plan: Permitir que Roles de Marca Vean Todos los Empleados de la Red
+# Plan: Agregar Botón "Google Calendar" para Convocantes y Participantes
 
-## Problema Identificado
+## Ubicaciones del Botón
 
-Ismael (Coordinador de Marca) solo puede ver a los empleados de Nueva Córdoba en el selector de participantes para reuniones de red, cuando debería ver a **todos los empleados de todas las sucursales**.
+| Usuario | Dónde lo ve | Componente |
+|---------|-------------|------------|
+| **Participante convocado** | Mi Cuenta → Card de Reuniones → Dialog | `MyMeetingsCard.tsx` |
+| **Encargado/Coordinador que convoca** | Mi Local/Mi Marca → Reuniones → Detalle | `MeetingDetail.tsx` |
 
-### Causa Raíz
-
-Las políticas RLS de `user_branch_roles` solo permiten acceso a:
-
-| Rol | Acceso |
-|-----|--------|
-| Superadmin | Todo |
-| Branch managers (encargado/franquiciado) | Solo su sucursal |
-| Usuarios | Solo sus propios roles |
-
-**Falta una política para roles de marca** (`coordinador`, `informes`, `contador_marca`) que les permita leer todos los registros para funciones de supervisión de red.
-
-### Datos del Usuario Afectado
-
-Ismael tiene:
-- `brand_role = 'coordinador'` → Debería ver toda la red
-- `local_role = 'franquiciado'` en Nueva Córdoba → Solo ve esta sucursal
-
-El sistema actualmente usa la política `ubr_managers_read` que lo limita a Nueva Córdoba.
-
-## Solución
-
-Agregar una nueva política RLS que permita a los roles de marca leer todos los registros de `user_branch_roles`.
-
-## Migración SQL
-
-```sql
--- Permitir que roles de marca lean todos los user_branch_roles
--- Necesario para funciones de supervisión de red (reuniones, reportes, etc.)
-CREATE POLICY "ubr_brand_roles_read" ON user_branch_roles
-  FOR SELECT TO authenticated
-  USING (
-    get_brand_role(auth.uid()) IN ('coordinador', 'informes', 'contador_marca')
-  );
+```text
+┌─ MeetingDetail.tsx (para encargados) ────────────────────┐
+│                                                          │
+│  Reunión: Operaciones            [Cancelar] [Iniciar]    │
+│  📅 Jueves 6 de febrero, 16:00                           │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐    │
+│  │  👥 Convocados (5 participantes)                 │    │
+│  │  [Avatar] Juan  [Avatar] María  [Avatar] Pedro   │    │
+│  └──────────────────────────────────────────────────┘    │
+│                                                          │
+│  [📅 Agregar a mi Google Calendar]  ← NUEVO              │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
 ```
 
-Esta política:
-- Es **solo lectura** (SELECT) - los roles de marca no pueden modificar asignaciones de sucursal
-- Usa la función existente `get_brand_role()` para verificar el rol de marca
-- Complementa la política de superadmin sin reemplazarla
+## Cambios Técnicos
 
-## Archivo a Modificar
+### 1. Crear función utilitaria
+
+```typescript
+// src/lib/calendarLinks.ts
+export function generateGoogleCalendarLink(meeting: {
+  title: string;
+  date: string;
+  area?: string;
+  branchName?: string;
+  participantCount?: number;
+}): string {
+  const startDate = new Date(meeting.date);
+  const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // +1 hora
+  
+  // Formato requerido por Google: YYYYMMDDTHHmmssZ
+  const formatDate = (d: Date) => 
+    d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  
+  const details = [
+    `Reunión de ${meeting.area || 'equipo'} - Hoppiness Club`,
+    meeting.participantCount ? `${meeting.participantCount} participantes convocados` : '',
+  ].filter(Boolean).join('\n');
+  
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: meeting.title,
+    dates: `${formatDate(startDate)}/${formatDate(endDate)}`,
+    details,
+    location: meeting.branchName || 'Hoppiness Club',
+  });
+  
+  return `https://www.google.com/calendar/render?${params.toString()}`;
+}
+```
+
+### 2. Agregar botón en `MeetingDetail.tsx`
+
+En el sub-componente `ConvocadaContent`, agregar el botón después de la lista de convocados:
+
+```tsx
+function ConvocadaContent({ meeting, pendingParticipants }: Props) {
+  const calendarUrl = generateGoogleCalendarLink({
+    title: meeting.title,
+    date: meeting.scheduled_at || meeting.date,
+    area: MEETING_AREAS.find(a => a.value === meeting.area)?.label,
+    branchName: meeting.branches?.name,
+    participantCount: pendingParticipants.length,
+  });
+
+  return (
+    <>
+      <Card>
+        {/* ... lista de convocados existente ... */}
+      </Card>
+      
+      <Button
+        variant="outline"
+        className="w-full sm:w-auto"
+        onClick={() => window.open(calendarUrl, '_blank')}
+      >
+        <Calendar className="w-4 h-4 mr-2" />
+        Agregar a mi Google Calendar
+      </Button>
+    </>
+  );
+}
+```
+
+### 3. Agregar botón en `MyMeetingsCard.tsx`
+
+En el dialog de reunión convocada:
+
+```tsx
+{selectedMeeting.status === 'convocada' && (
+  <div className="space-y-3">
+    <div className="bg-muted/50 p-4 rounded-lg text-center">
+      {/* ... mensaje existente ... */}
+    </div>
+    
+    <Button
+      variant="outline"
+      className="w-full"
+      onClick={() => window.open(
+        generateGoogleCalendarLink({
+          title: selectedMeeting.title,
+          date: selectedMeeting.date,
+          area: MEETING_AREAS.find(a => a.value === selectedMeeting.area)?.label,
+        }),
+        '_blank'
+      )}
+    >
+      <Calendar className="w-4 h-4 mr-2" />
+      Agregar a mi Google Calendar
+    </Button>
+  </div>
+)}
+```
+
+## Archivos a Modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| Nueva migración SQL | Agregar política `ubr_brand_roles_read` |
+| `src/lib/calendarLinks.ts` | **Crear** - Función `generateGoogleCalendarLink` |
+| `src/components/meetings/MeetingDetail.tsx` | Agregar botón en `ConvocadaContent` |
+| `src/components/cuenta/MyMeetingsCard.tsx` | Agregar botón en dialog de reunión convocada |
 
-## Resultado Esperado
+## Resultado
 
-Después de aplicar la migración:
-- Ismael (coordinador) podrá ver todos los empleados de todas las sucursales
-- El selector de "Nueva Reunión de Red" mostrará las 6 sucursales y todos sus empleados
-- La seguridad de escritura se mantiene intacta (solo superadmin puede modificar)
-
-## Notas de Seguridad
-
-- Solo se otorga permiso de **lectura**
-- Los roles de marca ya tienen acceso conceptual a toda la red por diseño
-- Esta política alinea RLS con la arquitectura documentada de permisos
+- **Encargados/Coordinadores**: Ven el botón en la vista de detalle de la reunión convocada
+- **Participantes**: Ven el botón en el dialog de Mi Cuenta
+- **Sin OAuth**: Funciona con cualquier cuenta de Google, sin autenticación adicional
+- **Pre-llenado**: El evento aparece listo para guardar con título, fecha, duración y ubicación
 
