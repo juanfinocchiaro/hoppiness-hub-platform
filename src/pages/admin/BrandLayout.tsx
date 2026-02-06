@@ -1,28 +1,34 @@
 /**
  * BrandLayout - Panel "Mi Marca" usando WorkShell unificado
  */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
 import { useEmbedMode } from '@/hooks/useEmbedMode';
+import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { ExternalLink } from '@/components/ui/ExternalLink';
 import { Button } from '@/components/ui/button';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { WorkShell } from '@/components/layout/WorkShell';
 import { BrandSidebar } from '@/components/layout/BrandSidebar';
+import ImpersonationSelector from '@/components/admin/ImpersonationSelector';
 import {
   LogOut,
   Building2,
   AlertCircle,
   Home,
+  Eye,
 } from 'lucide-react';
 
 export default function BrandLayout() {
   const { user, signOut, loading } = useAuth();
   const { canAccessAdmin, canAccessLocal, accessibleBranches, loading: permLoading } = useRoleLandingV2();
   const { isEmbedded } = useEmbedMode();
+  const { canImpersonate, isImpersonating } = useImpersonation();
   const navigate = useNavigate();
+  
+  const [showImpersonationSelector, setShowImpersonationSelector] = useState(false);
 
   useEffect(() => {
     if (!loading && !permLoading && !user) {
@@ -69,7 +75,21 @@ export default function BrandLayout() {
   // Footer con acciones
   const footer = (
     <>
-      {/* ZONA 1: Cambio de Panel */}
+      {/* ZONA 1: Herramientas (Ver como...) */}
+      <div className="min-h-[40px]">
+        {canImpersonate && (
+          <Button
+            variant={isImpersonating ? 'secondary' : 'ghost'}
+            className={`w-full justify-start ${isImpersonating ? 'bg-amber-100 text-amber-900 hover:bg-amber-200' : ''}`}
+            onClick={() => setShowImpersonationSelector(true)}
+          >
+            <Eye className="w-4 h-4 mr-3" />
+            Ver como...
+          </Button>
+        )}
+      </div>
+      
+      {/* ZONA 2: Cambio de Panel */}
       <div className="min-h-[40px]">
         {hasLocalPanelAccess && !isEmbedded && (
           <ExternalLink to={`/milocal/${accessibleBranches[0].id}`}>
@@ -80,7 +100,8 @@ export default function BrandLayout() {
           </ExternalLink>
         )}
       </div>
-      {/* ZONA 2: Acciones Fijas */}
+      
+      {/* ZONA 3: Acciones Fijas */}
       <div className="space-y-1">
         <ExternalLink to="/">
           <Button variant="ghost" className="w-full justify-start">
@@ -97,13 +118,21 @@ export default function BrandLayout() {
   );
 
   return (
-    <WorkShell
-      mode="brand"
-      title="Mi Marca"
-      sidebar={<BrandSidebar />}
-      footer={footer}
-    >
-      <Outlet />
-    </WorkShell>
+    <>
+      <WorkShell
+        mode="brand"
+        title="Mi Marca"
+        sidebar={<BrandSidebar />}
+        footer={footer}
+      >
+        <Outlet />
+      </WorkShell>
+      
+      <ImpersonationSelector
+        open={showImpersonationSelector}
+        onOpenChange={setShowImpersonationSelector}
+        mode="brand"
+      />
+    </>
   );
 }
