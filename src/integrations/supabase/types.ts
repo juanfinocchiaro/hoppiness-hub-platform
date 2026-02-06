@@ -1076,24 +1076,33 @@ export type Database = {
           created_at: string
           id: string
           meeting_id: string
+          notified_at: string | null
           read_at: string | null
+          reminder_count: number | null
           user_id: string
+          was_present: boolean | null
         }
         Insert: {
           attended?: boolean
           created_at?: string
           id?: string
           meeting_id: string
+          notified_at?: string | null
           read_at?: string | null
+          reminder_count?: number | null
           user_id: string
+          was_present?: boolean | null
         }
         Update: {
           attended?: boolean
           created_at?: string
           id?: string
           meeting_id?: string
+          notified_at?: string | null
           read_at?: string | null
+          reminder_count?: number | null
           user_id?: string
+          was_present?: boolean | null
         }
         Relationships: [
           {
@@ -1108,36 +1117,48 @@ export type Database = {
       meetings: {
         Row: {
           area: string
-          branch_id: string
+          branch_id: string | null
+          closed_at: string | null
           created_at: string
           created_by: string
           date: string
           id: string
-          notes: string
+          notes: string | null
+          scheduled_at: string | null
+          source: string | null
+          started_at: string | null
           status: string
           title: string
           updated_at: string | null
         }
         Insert: {
           area?: string
-          branch_id: string
+          branch_id?: string | null
+          closed_at?: string | null
           created_at?: string
           created_by: string
           date: string
           id?: string
-          notes: string
+          notes?: string | null
+          scheduled_at?: string | null
+          source?: string | null
+          started_at?: string | null
           status?: string
           title: string
           updated_at?: string | null
         }
         Update: {
           area?: string
-          branch_id?: string
+          branch_id?: string | null
+          closed_at?: string | null
           created_at?: string
           created_by?: string
           date?: string
           id?: string
-          notes?: string
+          notes?: string | null
+          scheduled_at?: string | null
+          source?: string | null
+          started_at?: string | null
           status?: string
           title?: string
           updated_at?: string | null
