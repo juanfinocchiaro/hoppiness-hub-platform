@@ -18,7 +18,7 @@ import MyCommunicationsCard from '@/components/cuenta/MyCommunicationsCard';
 
 import MyRequestsCard from '@/components/cuenta/MyRequestsCard';
 import MyRegulationsCard from '@/components/cuenta/MyRegulationsCard';
-import { MyCoachingsCard } from '@/components/cuenta/MyCoachingsCard';
+import { MyCoachingsCardEnhanced } from '@/components/cuenta/MyCoachingsCardEnhanced';
 import { PageHelp } from '@/components/ui/PageHelp';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 import { BranchWorkCard } from '@/components/cuenta/BranchWorkCard';
@@ -228,7 +228,7 @@ export default function CuentaDashboard() {
               {!isOnlyFranquiciado && (
                 <div className="grid gap-3 md:gap-4">
                   <MyRegulationsCard />
-                  <MyCoachingsCard />
+                  <MyCoachingsCardEnhanced />
                   <MyScheduleCard />
                   <MyRequestsCard />
                   <MyClockInsCard />
