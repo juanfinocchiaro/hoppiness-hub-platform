@@ -1,315 +1,192 @@
 
-# Plan de Corrección Integral - Hoppiness Hub
+# Plan: Mejoras al Sistema de Coaching - Escala y UX
 
 ## Resumen Ejecutivo
-
-Este plan aborda **10 tipos de errores recurrentes** identificados en la auditoría técnica. La migración RLS anterior (v3) se ejecutó correctamente, pero quedan tareas pendientes de integración y limpieza.
-
----
-
-## Estado Actual Post-Migración
-
-### ✅ Verificado como Resuelto
-- `can_close_shift()` - Función creada, cajeros pueden cerrar turnos
-- `can_access_branch()` - Migrada a usar `user_branch_roles`
-- Políticas RLS v3 aplicadas en 6 tablas críticas
-- **[COMPLETADO] Fase 1.1** - 10 permisos insertados en `permission_config`
-- **[COMPLETADO] Fase 1.2** - 15 archivos migrados a `useDynamicPermissions`
-
-### ✅ Todo Resuelto
-
-| Área | Problema | Severidad | Estado |
-|------|----------|-----------|--------|
-| **Permisos** | `useDynamicPermissions` solo usado en guards (1 archivo) | Medio | ✅ Resuelto |
-| **Permisos** | 15 páginas usan `usePermissionsV2` hardcodeado | Medio | ✅ Resuelto |
-| **DB Config** | Faltan permisos en `permission_config` | Alto | ✅ Resuelto |
-| **Notificaciones** | 0 Edge Functions para notificar | Alto | ✅ Resuelto |
-| **RLS** | Linter detecta 1 Security Definer View | Bajo | ✅ Resuelto |
-| **Errores** | 642 usos de `toast.error` vs 2 usos de `handleError()` | Medio | ✅ Resuelto (parcial) |
-| **Queries** | 235 usos de `.single()` sin fallback | Bajo | ✅ Resuelto (parcial) |
-| **Performance** | Queries sin límite | Bajo | ✅ Resuelto |
-| **RLS Duplicadas** | ~30 políticas redundantes (v2/v3/hr) | Medio | ✅ Resuelto |
-| **React Warnings** | Keys faltantes en PermissionsConfigPage | Bajo | ✅ Resuelto |
-| **Hooks** | Lógica duplicada usePermissionsWithImpersonation | Bajo | ✅ Resuelto |
+Implementar las mejoras solicitadas por Ismael para el sistema de coaching:
+1. Cambiar la escala de puntuación de 1-4 a **1-5**
+2. Mejorar las descripciones de cada nivel para que sean claras
+3. Mover la leyenda de puntuación **arriba del formulario** para que se lea primero
+4. Corregir el problema de navegación donde al clickear un puntaje te lleva a otra pantalla
 
 ---
 
-## Fases de Implementación
+## Análisis del Problema Actual
 
-### Fase 1: Sincronizar Sistema de Permisos (Prioridad Alta)
-**Objetivo**: Que los cambios en `/mimarca/configuracion/permisos` tengan efecto real.
+### Problema 1: Escala limitada (1-4)
+La escala actual tiene 4 niveles:
+- 1 = Necesita mejorar
+- 2 = En desarrollo  
+- 3 = Cumple expectativas
+- 4 = Supera expectativas
 
-**1.1 Agregar permisos faltantes a `permission_config`**
+**Limitación**: No hay un nivel que represente la excelencia máxima ("DIOS en ese tema")
 
-Migración SQL para insertar:
+### Problema 2: Leyenda al final
+La leyenda explicativa está **al final** de cada sección, cuando debería verse **antes** de empezar a evaluar.
+
+### Problema 3: Navegación rota
+Al clickear en los botones de score dentro del Collapsible de un empleado, el evento de click se propaga al trigger del Collapsible, cerrando el panel.
+
+---
+
+## Nueva Escala de Puntuación (1-5)
+
+| Nivel | Nombre | Descripción |
+|-------|--------|-------------|
+| 1 | Aprendiz | Recién empieza, necesita supervisión constante |
+| 2 | En Desarrollo | Está aprendiendo, comete errores pero mejora |
+| 3 | Competente | Cumple bien, trabaja solo sin problemas |
+| 4 | Destacado | Supera lo esperado, muy confiable |
+| 5 | Referente | Experto total, puede enseñar y resolver cualquier problema |
+
+El nivel **5 (Referente)** representa a alguien que:
+- "Es literalmente DIOS en ese tema"
+- Puede solucionar absolutamente cualquier problema
+- Puede enseñar a otros sobre esa área
+- Es la persona a la que todos recurren
+
+---
+
+## Cambios Técnicos
+
+### Archivos a Modificar
+
 ```text
-BRAND (4 nuevos):
-- brand.viewMeetings      → Ver Reuniones
-- brand.createMeetings    → Convocar Reuniones  
-- brand.viewCoaching      → Ver Coaching Red
-- brand.viewClosureConfig → Ver Config Cierres
-
-LOCAL (6 nuevos):
-- local.viewMeetings      → Ver Reuniones
-- local.createMeetings    → Convocar Reuniones
-- local.closeMeetings     → Cerrar Reuniones
-- local.viewClosures      → Ver Cierres
-- local.closeShifts       → Cerrar Turnos
-- local.viewPayroll       → Ver Liquidación
+src/components/coaching/CoachingGeneralSection.tsx    # Sección competencias generales
+src/components/coaching/CoachingStationSection.tsx    # Sección estaciones de trabajo
+src/components/coaching/CoachingManagerSection.tsx    # Sección competencias de encargado
+src/components/coaching/CoachingDetailModal.tsx       # Modal de detalle (para mostrar /5)
+src/components/coaching/EmployeeCoachingCard.tsx      # Cards de historial
+src/components/coaching/ScoreEvolutionChart.tsx       # Gráfico de evolución
+src/components/coaching/MyOwnCoachingTab.tsx          # Tab "Mi Evaluación"
+src/lib/coachingSuggestions.ts                        # Sugerencias inteligentes
 ```
 
-**1.2 Migrar páginas a `useDynamicPermissions`**
+### 1. Actualizar scoreLabels en cada archivo
 
-Archivos a actualizar (15):
-```text
-src/pages/local/
-├── WarningsPage.tsx
-├── TeamPage.tsx
-├── SchedulesPage.tsx
-├── AdvancesPage.tsx
-├── CoachingPage.tsx
-├── ClockInsPage.tsx
-├── LocalCommunicationsPage.tsx
-└── RequestsPage.tsx
+Cambiar la definición de escala en los 3 componentes principales:
 
-src/pages/admin/
-├── UsersPage.tsx
-├── LaborCalendarPage.tsx
-└── PermissionsConfigPage.tsx
+```typescript
+// Antes (1-4)
+const scoreLabels = [
+  { value: 1, label: 'Necesita mejorar', ... },
+  { value: 2, label: 'En desarrollo', ... },
+  { value: 3, label: 'Cumple', ... },
+  { value: 4, label: 'Supera', ... },
+];
 
-src/components/
-├── local/RegulationSignaturesPanel.tsx
-├── hr/InlineScheduleEditor.tsx
-├── hr/HolidaysManager.tsx
-└── coaching/MyManagerCoachingTab.tsx
+// Después (1-5)
+const scoreLabels = [
+  { value: 1, label: 'Aprendiz', description: 'Necesita supervisión constante', color: '...' },
+  { value: 2, label: 'En Desarrollo', description: 'Mejorando, comete errores', color: '...' },
+  { value: 3, label: 'Competente', description: 'Trabaja bien solo', color: '...' },
+  { value: 4, label: 'Destacado', description: 'Supera expectativas', color: '...' },
+  { value: 5, label: 'Referente', description: 'Experto total, enseña', color: '...' },
+];
 ```
 
-**Cambio en cada archivo**:
+### 2. Mover la leyenda arriba de cada sección
+
 ```tsx
-// ANTES
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
-const { local } = usePermissionsV2(branchId);
+// Antes: Leyenda al final
+<Card>...</Card>
+<div className="leyenda">...</div>
 
-// DESPUÉS  
-import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
-const { local } = useDynamicPermissions(branchId);
+// Después: Leyenda arriba
+<ScoreLegend /> {/* Nuevo componente reutilizable */}
+<Card>...</Card>
 ```
 
----
+### 3. Corregir propagación de eventos en scores
 
-### Fase 2: Edge Functions de Notificación (Prioridad Alta)
-**Objetivo**: Completar flujos rotos donde se guarda data pero no se notifica.
+El problema ocurre porque los botones de score están dentro de un `CollapsibleTrigger`. Al hacer click, el evento burbujea y cierra el panel.
 
-**2.1 Crear `send-meeting-notification`**
-
-Funcionalidad:
-- Se dispara al convocar reunión (`status = 'convocada'`)
-- Envía email a todos los participantes con fecha/hora/lugar
-- Actualiza `meetings.notified_at`
-
-Flujo:
-```text
-1. Usuario crea reunión → meetings INSERT
-2. Edge function detecta → Envía emails
-3. Actualiza meetings.notified_at
-```
-
-**2.2 Crear `send-warning-notification`**
-
-Funcionalidad:
-- Se dispara al crear apercibimiento
-- Notifica al empleado por email
-- Incluye link para firmar acuse de recibo
-
-**2.3 Crear `send-meeting-minutes-notification`**
-
-Funcionalidad:
-- Se dispara al cerrar reunión (`status = 'cerrada'`)
-- Envía minuta y acuerdos a participantes
-- Requiere confirmación de lectura
-
----
-
-### Fase 3: Limpieza de Código (Prioridad Media)
-**Objetivo**: Estandarizar manejo de errores y mejorar resiliencia.
-
-**3.1 Reemplazar `toast.error` manual por `handleError()`**
-
-Patrón actual en 54 archivos:
 ```tsx
-// PROBLEMA: Inconsistente, sin contexto
-} catch (error) {
-  console.error('Error:', error);
-  toast.error('Ocurrió un error');
+// Agregar stopPropagation en los handlers de score
+<div onClick={(e) => e.stopPropagation()}>
+  <RadioGroup
+    onValueChange={(value) => {
+      e.stopPropagation(); // Prevenir cierre del Collapsible
+      onScoreChange(comp.id, parseInt(value));
+    }}
+  />
+</div>
+```
+
+### 4. Crear componente reutilizable ScoreLegend
+
+Nuevo archivo `src/components/coaching/ScoreLegend.tsx`:
+
+```tsx
+export function ScoreLegend({ compact = false }) {
+  return (
+    <Card className="mb-4 bg-muted/30">
+      <CardContent className="p-4">
+        <h4 className="text-sm font-medium mb-3">Guía de Puntuación</h4>
+        <div className="grid grid-cols-5 gap-2">
+          {scoreLabels.map(s => (
+            <div key={s.value} className="text-center">
+              <Badge className={s.color}>{s.value}</Badge>
+              <p className="text-xs font-medium mt-1">{s.label}</p>
+              <p className="text-[10px] text-muted-foreground">{s.description}</p>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 ```
 
-Patrón objetivo:
-```tsx
-// SOLUCIÓN: Centralizado con contexto
-import { handleError } from '@/lib/errorHandler';
+### 5. Actualizar cálculos de promedio
 
-} catch (error) {
-  handleError(error, { 
-    userMessage: 'Error al guardar',
-    context: 'ComponentName.action'
-  });
-}
-```
+Cambiar todas las referencias de `/4` a `/5`:
+- `CoachingForm.tsx`: línea 179-182 (score display)
+- `CoachingDetailModal.tsx`: líneas 25, 37, 219, 314, etc.
+- `EmployeeCoachingCard.tsx`: cálculos de promedio
+- `ScoreEvolutionChart.tsx`: escala del gráfico
 
-**Archivos prioritarios** (más errores):
-1. `InviteStaffDialog.tsx` - 6 instancias
-2. `BranchTeamTab.tsx` - 4 instancias
-3. `CuentaPerfil.tsx` - 4 instancias
+### 6. Actualizar sugerencias inteligentes
 
-**3.2 Agregar fallback a queries con `.single()`**
+Ajustar rangos en `coachingSuggestions.ts`:
 
-Patrón actual:
-```tsx
-const { data, error } = await supabase
-  .from('branches')
-  .select('*')
-  .eq('id', branchId)
-  .single(); // CRASH si no existe
-```
+```typescript
+// Antes (escala 1-4)
+{ minScore: 0, maxScore: 2, ... }
+{ minScore: 2, maxScore: 3, ... }
+{ minScore: 3, maxScore: 4, ... }
 
-Patrón objetivo:
-```tsx
-const { data, error } = await supabase
-  .from('branches')
-  .select('*')
-  .eq('id', branchId)
-  .maybeSingle(); // NULL si no existe
-
-if (!data) {
-  // Manejar caso gracefully
-}
+// Después (escala 1-5)
+{ minScore: 0, maxScore: 2, ... }    // Crítico
+{ minScore: 2, maxScore: 3, ... }    // En desarrollo
+{ minScore: 3, maxScore: 4, ... }    // Competente
+{ minScore: 4, maxScore: 5, ... }    // Destacado/Referente
 ```
 
 ---
 
-### Fase 4: Optimización de Queries (Prioridad Baja)
-**Objetivo**: Prevenir problemas de performance a escala.
+## Impacto en Base de Datos
 
-**4.1 Agregar límites a queries sin bound**
-
-Hooks afectados:
-```tsx
-// useBranchMeetings - Sin límite
-.from('meetings').select('*').eq('branch_id', branchId)
-
-// useCommunications - Sin límite  
-.from('communications').select('*').order('published_at')
-```
-
-Cambio:
-```tsx
-.from('meetings')
-.select('*')
-.eq('branch_id', branchId)
-.limit(100) // Agregar límite
-.order('scheduled_at', { ascending: false });
-```
-
-**4.2 Implementar paginación en tablas grandes**
-
-Candidatos:
-- Lista de reuniones (`/milocal/:id/equipo/reuniones`)
-- Lista de comunicados (`/cuenta/comunicados`)
-- Lista de fichajes (`/milocal/:id/equipo/fichajes`)
+**NO se requieren cambios en la base de datos**. Los scores existentes (1-4) seguirán siendo válidos, simplemente se amplía el rango máximo a 5.
 
 ---
 
-### Fase 5: Seguridad RLS (Prioridad Baja)
-**Objetivo**: Resolver warning del linter de Supabase.
+## Testing Recomendado
 
-**5.1 Convertir Security Definer View**
-
-El linter detectó una vista con `SECURITY DEFINER`. Esto significa que ejecuta con privilegios del creador, bypasseando RLS.
-
-Acción: Identificar la vista y evaluar si es necesario, o convertirla a `SECURITY INVOKER`.
-
----
-
-## Secuencia de Implementación
-
-```text
-┌─────────────────────────────────────────────────────────┐
-│ SEMANA 1: Permisos                                      │
-├─────────────────────────────────────────────────────────┤
-│ Día 1-2: Migración SQL con permisos faltantes           │
-│ Día 3-5: Migrar 15 archivos a useDynamicPermissions     │
-└─────────────────────────────────────────────────────────┘
-           │
-           ▼
-┌─────────────────────────────────────────────────────────┐
-│ SEMANA 2: Edge Functions                                │
-├─────────────────────────────────────────────────────────┤
-│ Día 1-2: send-meeting-notification                      │
-│ Día 3-4: send-warning-notification                      │
-│ Día 5: send-meeting-minutes-notification                │
-└─────────────────────────────────────────────────────────┘
-           │
-           ▼
-┌─────────────────────────────────────────────────────────┐
-│ SEMANA 3: Código                                        │
-├─────────────────────────────────────────────────────────┤
-│ Día 1-3: Migrar toast.error → handleError (54 archivos) │
-│ Día 4-5: Agregar fallbacks a .single() (28 archivos)    │
-└─────────────────────────────────────────────────────────┘
-           │
-           ▼
-┌─────────────────────────────────────────────────────────┐
-│ SEMANA 4: Performance + Seguridad                       │
-├─────────────────────────────────────────────────────────┤
-│ Día 1-2: Agregar límites a queries                      │
-│ Día 3-4: Implementar paginación básica                  │
-│ Día 5: Resolver Security Definer View                   │
-└─────────────────────────────────────────────────────────┘
-```
+1. Verificar que la leyenda aparece arriba en cada sección
+2. Probar clickear puntajes sin que cierre el formulario
+3. Verificar que el score 5 se puede seleccionar
+4. Revisar que los gráficos de evolución escalan correctamente
+5. Confirmar que el modal de detalle muestra `/5`
 
 ---
 
-## Métricas de Éxito
+## Resumen de Entregables
 
-| Métrica | Antes | Después |
-|---------|-------|---------|
-| Archivos usando `useDynamicPermissions` | 1 | 16 |
-| Permisos en `permission_config` | 23 | 33 |
-| Edge Functions de notificación | 0 | 3 |
-| `handleError()` vs `toast.error` | 2 vs 642 | ~200 vs ~444 |
-| Queries con `.limit()` | Parcial | Completo |
-| Warnings del linter | 1 | 0 |
-
----
-
-## Archivos a Crear
-
-```text
-supabase/functions/
-├── send-meeting-notification/index.ts
-├── send-warning-notification/index.ts
-└── send-meeting-minutes-notification/index.ts
-```
-
-## Archivos a Modificar
-
-```text
-15 archivos: Migrar usePermissionsV2 → useDynamicPermissions
-54 archivos: Estandarizar error handling
-28 archivos: Agregar fallbacks a .single()
-~10 hooks: Agregar .limit() a queries
-```
-
-## Migraciones SQL
-
-```text
-1. INSERT permisos faltantes en permission_config
-2. (Opcional) DROP security definer view
-```
-
----
-
-## Próximo Paso Recomendado
-
-Comenzar con **Fase 1.1**: Ejecutar la migración SQL para agregar los 10 permisos faltantes a `permission_config`. Esto es un cambio aditivo sin riesgo que habilita la configuración desde el tablero de permisos.
+| Ítem | Descripción |
+|------|-------------|
+| Escala 1-5 | Nueva escala con 5 niveles claros |
+| Leyenda arriba | Guía visible antes de evaluar |
+| Fix navegación | Scores clickeables sin cerrar panel |
+| Descripciones claras | Cada nivel bien explicado |
+| Nivel "Referente" | El 5 = DIOS en ese tema |
