@@ -1,294 +1,192 @@
 
-# Plan de Implementación: 4 Mejoras al Sistema de Horarios
+# Plan de Implementación: Editor de Horarios v2 "Estilo Excel"
 
-## Resumen de Cambios
-
-| # | Problema | Solución |
-|---|----------|----------|
-| 1a | Falta opción "Vacaciones" | Agregar botón 🏖️ Vacaciones que marca `position: 'vacaciones'` |
-| 1b | No permite horarios cortados | Agregar soporte para segundo turno con campos opcionales |
-| 1c | Alerta falsa de "7+ días" | Revisar y corregir lógica de validación |
-| 2 | Empleado edita nombre | ✅ Ya funciona en `/cuenta/perfil` |
-| 3 | "Error desconocido" al guardar | Mejorar captura y visualización del error |
-| 4 | Copiar/pegar confuso | Simplificar: copiar 1 horario → pegar en N celdas |
+## Objetivo Principal
+Transformar el editor de horarios actual en una experiencia idéntica a Excel, donde:
+- **Click simple = Seleccionar** (no abre popover)
+- **Doble-click = Editar** (abre popover)
+- **Click-drag = Seleccionar rango** rectangular
+- **Toolbar siempre visible** con inputs de hora para edición rápida
 
 ---
 
-## 1. Agregar Opción "Vacaciones"
+## Fase 0: Limpieza y Preparación de Base de Datos
 
-**Archivo:** `src/components/hr/ScheduleCellPopover.tsx`
+### 0.1 Eliminar código muerto
+| Archivo | Acción |
+|---------|--------|
+| `src/components/hr/ScheduleCopyPasteControls.tsx` | Eliminar (204 líneas no usadas) |
+| `src/components/hr/ScheduleQuickActions.tsx` | Eliminar (98 líneas no usadas) |
 
-Agregar un botón "Vacaciones" debajo de "Franco":
+### 0.2 Migración: agregar columnas de break
+La tabla `employee_schedules` actualmente no persiste los campos de break. Se agregaran las columnas:
 
-```tsx
-<Button
-  variant="outline"
-  size="sm"
-  className="w-full h-9 text-cyan-600 border-cyan-200 hover:bg-cyan-50"
-  onClick={handleVacation}
->
-  <span className="mr-2">🏖️</span>
-  Vacaciones
-</Button>
-```
-
-La función `handleVacation`:
-```tsx
-const handleVacation = () => {
-  onChange({
-    startTime: null,
-    endTime: null,
-    isDayOff: true,
-    position: 'vacaciones',
-    breakStart: null,
-    breakEnd: null,
-  });
-  setOpen(false);
-};
-```
-
----
-
-## 2. Soporte para Horarios Cortados (Turno Doble)
-
-**Migración de Base de Datos:**
 ```sql
 ALTER TABLE employee_schedules 
-  ADD COLUMN IF NOT EXISTS start_time_2 TIME,
-  ADD COLUMN IF NOT EXISTS end_time_2 TIME;
+  ADD COLUMN IF NOT EXISTS break_start TIME,
+  ADD COLUMN IF NOT EXISTS break_end TIME;
 ```
 
-**Archivo:** `src/components/hr/ScheduleCellPopover.tsx`
-
-Agregar toggle y campos para segundo turno:
-
-```tsx
-// Estado
-const [hasSplitShift, setHasSplitShift] = useState(false);
-const [customStart2, setCustomStart2] = useState('');
-const [customEnd2, setCustomEnd2] = useState('');
-
-// UI - debajo del primer turno
-{!requiresBreak && (
-  <div className="flex items-center gap-2">
-    <input 
-      type="checkbox" 
-      checked={hasSplitShift}
-      onChange={(e) => setHasSplitShift(e.target.checked)}
-    />
-    <Label className="text-xs">Turno cortado (doble jornada)</Label>
-  </div>
-)}
-
-{hasSplitShift && (
-  <div className="grid grid-cols-2 gap-3 p-3 bg-muted/50 rounded-lg">
-    <div className="space-y-1.5">
-      <Label className="text-xs">2° Entrada</Label>
-      <Input type="time" value={customStart2} onChange={...} />
-    </div>
-    <div className="space-y-1.5">
-      <Label className="text-xs">2° Salida</Label>
-      <Input type="time" value={customEnd2} onChange={...} />
-    </div>
-  </div>
-)}
-```
-
-**Nota:** Los turnos cortados no son compatibles con el break automático (turnos > 6hs).
+### 0.3 Actualizar save mutation
+Modificar `InlineScheduleEditor.tsx` para incluir `break_start` y `break_end` en los INSERT/UPDATE.
 
 ---
 
-## 3. Corregir Validación de Días Consecutivos
+## Fase 1: Click = Seleccionar (Cambio de paradigma)
 
-**Archivo:** `src/components/hr/InlineScheduleEditor.tsx` (líneas 460-505)
+Este es el cambio más importante de todo el plan.
 
-El problema actual es que la validación cuenta como "día trabajado" cualquier día que tenga un registro en `schedulesWithPending`, incluso si el horario está vacío (00:00-00:00).
+### 1.1 Nuevo modelo de interacción
+| Gesto | Comportamiento Actual | Comportamiento Nuevo |
+|-------|----------------------|---------------------|
+| Click simple | Abre popover | **Selecciona la celda** |
+| Ctrl/Cmd + Click | Selecciona celda | Toggle celda en selección |
+| Shift + Click | Selecciona rango | Extiende selección |
+| Click-drag | No existe | **Selecciona rango rectangular** |
+| Doble-click | No definido | **Abre popover de edición** |
 
-Corrección en la lógica:
+### 1.2 Cambios en `InlineScheduleEditor.tsx`
+1. Separar el `ScheduleCellPopover` del click simple
+2. El click simple ahora llama `selection.handleCellClick()` sin requerir Ctrl
+3. El popover se abre solo con doble-click (controlado con estado `editingCell`)
+4. Implementar drag-select:
+   - `onMouseDown` en celda: iniciar selección, marcar `dragStartCell`
+   - `onMouseMove` en contenedor: si hay `dragStartCell`, calcular rectángulo de selección
+   - `onMouseUp`: confirmar selección, limpiar `dragStartCell`
 
-```tsx
-// Antes (buggy):
-const isDayOff = s.is_day_off || (!s.start_time && !s.end_time);
+### 1.3 Cambios en `useScheduleSelection.ts`
+- `handleCellClick` ya no requiere modifier keys para selección simple
+- Nuevo estado: `isDragging`, `dragStartCell`, `dragCurrentCell`
+- Nuevas funciones: `handleDragStart`, `handleDragMove`, `handleDragEnd`
+- La selección por arrastre calcula el rectángulo entre celda inicio y celda actual
 
-// Después (corregido):
-const isActuallyWorking = s.start_time && s.end_time && !s.is_day_off &&
-  !(s.start_time === '00:00' && s.end_time === '00:00');
-const isDayOff = !isActuallyWorking;
-```
-
-Además, asegurar que días SIN registro en el schedule sean tratados como francos (no cuenta como día trabajado):
-
-```tsx
-monthDays.forEach(day => {
-  const dateStr = format(day, 'yyyy-MM-dd');
-  const hasSchedule = userScheduleMap.has(dateStr);
-  const isDayOff = userScheduleMap.get(dateStr);
-  
-  // Día es "trabajado" SOLO si tiene schedule Y NO es día libre
-  const isWorkingDay = hasSchedule && isDayOff === false;
-  
-  if (isWorkingDay) {
-    consecutiveWorking++;
-  } else {
-    // Cualquier otro caso (sin schedule, o con franco) → resetear
-    if (consecutiveWorking >= 7) {
-      violations.push({...});
-    }
-    consecutiveWorking = 0;
-  }
-});
-```
+### 1.4 Cambios en `ScheduleCellPopover.tsx`
+- Convertir de Popover con trigger a componente controlado
+- Nuevo prop: `open` y `onOpenChange` (controlado externamente)
+- El componente padre decide cuándo abrir (en doble-click)
 
 ---
 
-## 4. Mejorar Mensaje de Error al Guardar
+## Fase 2: Toolbar Siempre Visible con Edición Inline
 
-**Archivo:** `src/components/hr/InlineScheduleEditor.tsx` (línea 348-350)
+### 2.1 Nuevo diseño del header (dos estados)
 
-Actualmente:
-```tsx
-onError: (error) => {
-  toast.error('Error al guardar: ' + (error instanceof Error ? error.message : 'Error desconocido'));
-}
+**Sin selección:**
+```text
+[ Personas | Cobertura ]              [ Copiar mes anterior ]
 ```
 
-Mejorar para capturar errores de Supabase:
-```tsx
-onError: (error: any) => {
-  console.error('Save error details:', error);
-  
-  let message = 'Error desconocido';
-  if (error instanceof Error) {
-    message = error.message;
-  } else if (error?.message) {
-    message = error.message;
-  } else if (error?.error_description) {
-    message = error.error_description;
-  } else if (typeof error === 'object') {
-    message = JSON.stringify(error);
-  }
-  
-  toast.error('Error al guardar: ' + message);
-}
+**Con selección (ej: 5 celdas):**
+```text
+[ 5 celdas ]  Entrada [__:__]  Salida [__:__]  [Aplicar]  [Franco]  |  [Copiar] [Pegar] [Limpiar]  |  [✕]
 ```
+
+### 2.2 Cambios en `SelectionToolbar.tsx`
+1. Agregar inputs de hora (Entrada/Salida) al centro de la toolbar
+2. Botón "Aplicar" que llama `selection.handleApplyQuickSchedule(start, end)`
+3. Auto-focus: cuando hay selección, el input de Entrada recibe el foco
+4. Tab navega a Salida, Enter aplica el horario
+
+### 2.3 Cambios en `InlineScheduleEditor.tsx`
+1. Toolbar siempre visible (no solo cuando hay selección)
+2. Integrar botón "Copiar mes anterior" en la toolbar principal
+3. Si el mes está vacío, el botón se muestra más prominente
 
 ---
 
-## 5. Simplificar Copiar/Pegar
+## Fase 3: Copiar Mes Anterior
 
-**Archivo:** `src/components/hr/schedule-selection/useScheduleSelection.ts`
+### 3.1 Lógica de mapeo semanal
+No es un mapeo 1:1 por fecha, sino por día de semana:
+1. Tomar la última semana completa (Lun-Dom) del mes anterior como "patrón"
+2. Replicar ese patrón en todas las semanas del mes nuevo
+3. Los cambios se agregan como `pendingChanges` (no se guardan automáticamente)
 
-**Problema actual:** Cuando copiás múltiples celdas, el sistema guarda un array con offsets relativos. Al pegar, depende de cuántas celdas seleccionaste como destino.
-
-**Nueva lógica simplificada:**
-
-```tsx
-// handleCopy - siempre copia la PRIMERA celda seleccionada
-const handleCopy = useCallback(() => {
-  if (selectedCells.size === 0) return;
-
-  // Tomar la primera celda
-  const firstCellKey = Array.from(selectedCells)[0];
-  const { userId, date } = parseCellKey(firstCellKey);
-  const schedule = getEffectiveValue(userId, date);
-
-  // Guardar solo ese horario
-  const clipboardData: ClipboardDataV2 = {
-    type: 'cells',
-    cells: [{ dayOffset: 0, schedule }],
-    sourceInfo: schedule.isDayOff 
-      ? 'Franco' 
-      : schedule.startTime 
-        ? `${schedule.startTime.slice(0,5)}-${schedule.endTime?.slice(0,5)}`
-        : 'Vacío',
-  };
-
-  setClipboard(clipboardData);
-  toast.success(`📋 Copiado: ${clipboardData.sourceInfo}`);
-}, [selectedCells, getEffectiveValue]);
-
-// handlePaste - aplica a TODAS las celdas seleccionadas
-const handlePaste = useCallback(() => {
-  if (!clipboard || selectedCells.size === 0) return;
-
-  const schedule = clipboard.cells[0].schedule;
-  const targetCells = Array.from(selectedCells).map(parseCellKey);
-
-  targetCells.forEach(cell => {
-    const userName = getTeamMemberName(cell.userId);
-    onCellChange(cell.userId, userName, cell.date, schedule);
-  });
-
-  toast.success(`✓ Pegado en ${targetCells.length} celda${targetCells.length > 1 ? 's' : ''}`);
-  setSelectedCells(new Set());
-}, [clipboard, selectedCells, onCellChange, getTeamMemberName]);
-```
-
-**Mejora en SelectionToolbar:** Mostrar claramente qué hay copiado:
-```tsx
-// En el tooltip de Pegar
-<TooltipContent side="bottom">
-  {clipboard 
-    ? `Pegar: ${clipboard.sourceInfo}` 
-    : 'Nada copiado'
-  }
-</TooltipContent>
-```
+### 3.2 Implementación
+- Nueva función en `useSchedules.ts`: `usePreviousMonthSchedules(branchId, month, year)`
+- Diálogo de confirmación antes de aplicar
+- Los horarios se cargan como borrador, el encargado puede ajustar antes de publicar
 
 ---
 
-## 6. Verificar Edición de Nombre (Item 2)
+## Fase 4: Drag-to-Fill (El "cuadradito" de Excel)
 
-El campo de nombre en `CuentaPerfil.tsx` (líneas 196-204) ya está habilitado:
-```tsx
-<Input
-  id="fullName"
-  value={fullName}
-  onChange={(e) => setFullName(e.target.value)}
-  placeholder="Tu nombre"
-/>
-```
-No tiene `disabled` - los empleados ya pueden editar su nombre.
+### 4.1 Comportamiento
+Cuando exactamente 1 celda con contenido está seleccionada:
+1. Mostrar un cuadrado azul (6x6px) en la esquina inferior derecha de la celda
+2. Al arrastrar horizontal: replica el horario a los días siguientes del mismo empleado
+3. Al arrastrar vertical: replica el horario a otros empleados el mismo día
+
+### 4.2 Implementación en `useScheduleSelection.ts`
+- Estado: `fillOriginCell`, `isFilling`, `fillDirection`
+- `handleFillDragStart`: al clickear el cuadradito
+- `handleFillDragMove`: calcular dirección y celdas destino
+- `handleFillDragEnd`: aplicar el valor a todas las celdas del rango
+
+### 4.3 Restricción
+Solo aparece cuando hay 1 celda seleccionada con contenido (no vacía, no rango múltiple).
+
+---
+
+## Fase 5: Mejoras de Visualización
+
+### 5.1 Mostrar nombre y apellido completo
+Actualmente se muestra solo el primer nombre. Cambiar a nombre completo con `text-ellipsis`.
+
+### 5.2 Ordenar empleados jerárquicamente
+Ordenar el array `team` por rol:
+1. Encargados primero
+2. Cajeros/supervisores
+3. Empleados operativos
+
+### 5.3 Fila de headcount (opcional)
+Agregar una fila sticky al fondo del grid que muestre el total de empleados trabajando cada día.
 
 ---
 
 ## Archivos a Modificar
 
-| Archivo | Cambios |
-|---------|---------|
-| `src/components/hr/ScheduleCellPopover.tsx` | Agregar botón Vacaciones + opción turno cortado |
-| `src/components/hr/InlineScheduleEditor.tsx` | Corregir validación + mejor manejo de errores |
-| `src/components/hr/schedule-selection/useScheduleSelection.ts` | Simplificar copiar/pegar |
-| `src/components/hr/schedule-selection/SelectionToolbar.tsx` | Mejorar feedback visual |
-| `src/components/hr/schedule-selection/types.ts` | Actualizar tipo ClipboardDataV2 |
+| Archivo | Cambios | Fase |
+|---------|---------|------|
+| `ScheduleCopyPasteControls.tsx` | ELIMINAR | 0 |
+| `ScheduleQuickActions.tsx` | ELIMINAR | 0 |
+| `useScheduleSelection.ts` | Click sin modifier, drag-select, fill-drag | 1, 4 |
+| `InlineScheduleEditor.tsx` | Click=select, doble-click=edit, drag handlers, toolbar | 1, 2, 3 |
+| `ScheduleCellPopover.tsx` | Convertir a componente controlado | 1 |
+| `SelectionToolbar.tsx` | Inputs de hora, auto-focus, Aplicar | 2 |
 
-## Migración de Base de Datos
-
+### Migración de Base de Datos
 ```sql
--- Soporte para turno cortado (split shift)
 ALTER TABLE employee_schedules 
-  ADD COLUMN IF NOT EXISTS start_time_2 TIME,
-  ADD COLUMN IF NOT EXISTS end_time_2 TIME;
+  ADD COLUMN IF NOT EXISTS break_start TIME,
+  ADD COLUMN IF NOT EXISTS break_end TIME;
 ```
 
 ---
 
-## Flujo de Usuario Mejorado
+## Cronograma Sugerido
 
-### Copiar/Pegar (nuevo comportamiento):
-1. Seleccionar UNA celda (o varias, se toma la primera)
-2. Ctrl+C → Toast: "📋 Copiado: 19:00-02:00"
-3. Seleccionar las celdas destino (Ctrl+Click o Shift+Click)
-4. Ctrl+V → Toast: "✓ Pegado en 5 celdas"
+| Fase | Descripción | Esfuerzo | Prioridad |
+|------|-------------|----------|-----------|
+| 0 | Limpieza + break en DB | 1 hora | Hacer ya |
+| 1 | Click = Seleccionar | 1 día | Hacer ya |
+| 2 | Toolbar con edición inline | 1 día | Hacer ya |
+| 3 | Copiar mes anterior | 0.5 días | Pronto |
+| 4 | Drag-to-fill | 1 día | Pronto |
+| 5 | Mejoras visuales | 0.5 días | Después |
 
-### Vacaciones:
-1. Click en celda vacía
-2. Click en "🏖️ Vacaciones"
-3. Celda muestra "🏖️ Vac"
+**Total estimado: 4 días de desarrollo**
 
-### Turno Cortado:
-1. Click en celda
-2. Ingresar primer turno (ej: 10:00-14:00)
-3. Marcar "Turno cortado"
-4. Ingresar segundo turno (ej: 18:00-22:00)
-5. Celda muestra "10-14 / 18-22"
+---
+
+## Resultado Final Esperado
+
+El encargado podrá:
+1. Abrir el mes vacío → click "Copiar mes anterior" → todo prellenado
+2. Click en una celda para seleccionar, click-drag para seleccionar rango
+3. Tipear horario en la toolbar → Enter → aplicado a todas las celdas seleccionadas
+4. Arrastrar el cuadradito de una celda para replicar hacia la derecha o abajo
+5. Doble-click si necesita configurar posición o break específico
+6. Ver nombre completo de cada empleado, ordenados por jerarquía
+
+**Tiempo de carga de un mes: de 5+ minutos a menos de 1 minuto.**
