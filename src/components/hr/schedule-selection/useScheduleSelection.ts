@@ -1,17 +1,19 @@
 /**
- * useScheduleSelection - Multi-cell selection logic for schedule editor
+ * useScheduleSelection - Excel-style multi-cell selection
  * 
- * SIMPLIFIED MODEL (Jan 2026):
- * - Copy: always copies the FIRST selected cell's schedule
- * - Paste: applies that schedule to ALL selected target cells
+ * V2 (Feb 2026) - Excel-style paradigm:
+ * - Single click = select (not edit)
+ * - Shift+click = range select
+ * - Ctrl/Cmd+click = toggle in selection
+ * - Click-drag = rectangular range select
+ * - Double-click = open edit popover (handled by parent)
  * 
  * Supports:
- * - Single click: select single cell
- * - Shift+click: select range from last clicked
- * - Ctrl/Cmd+click: toggle cell in selection
  * - Keyboard shortcuts: Ctrl+C, Ctrl+V, Delete, Escape, F
+ * - Row/column selection
+ * - Quick schedule apply from toolbar
  */
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { format, min as dateMin, max as dateMax } from 'date-fns';
 import { toast } from 'sonner';
 import type { ScheduleValue } from '../ScheduleCellPopover';
@@ -31,6 +33,12 @@ interface UseScheduleSelectionOptions {
   enabled?: boolean;
 }
 
+interface DragState {
+  isDragging: boolean;
+  startCell: CellKey | null;
+  currentCell: CellKey | null;
+}
+
 export function useScheduleSelection({
   monthDays,
   teamMemberIds,
@@ -42,6 +50,42 @@ export function useScheduleSelection({
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
   const [lastClickedCell, setLastClickedCell] = useState<CellKey | null>(null);
   const [clipboard, setClipboard] = useState<ClipboardDataV2 | null>(null);
+  const [dragState, setDragState] = useState<DragState>({
+    isDragging: false,
+    startCell: null,
+    currentCell: null,
+  });
+
+  // Ref to track if we just finished a drag (to prevent click from clearing)
+  const justFinishedDrag = useRef(false);
+
+  // Calculate rectangular selection between two cells
+  const calculateRectSelection = useCallback((start: CellKey, end: CellKey): Set<string> => {
+    const selection = new Set<string>();
+    
+    const startUserIdx = teamMemberIds.indexOf(start.userId);
+    const endUserIdx = teamMemberIds.indexOf(end.userId);
+    const minUserIdx = Math.min(startUserIdx, endUserIdx);
+    const maxUserIdx = Math.max(startUserIdx, endUserIdx);
+    
+    const startDate = new Date(start.date);
+    const endDate = new Date(end.date);
+    const minDate = dateMin([startDate, endDate]);
+    const maxDate = dateMax([startDate, endDate]);
+    
+    for (let uIdx = minUserIdx; uIdx <= maxUserIdx; uIdx++) {
+      const userId = teamMemberIds[uIdx];
+      if (!userId) continue;
+      
+      for (const day of monthDays) {
+        if (day >= minDate && day <= maxDate) {
+          selection.add(cellKeyString(userId, format(day, 'yyyy-MM-dd')));
+        }
+      }
+    }
+    
+    return selection;
+  }, [teamMemberIds, monthDays]);
 
   // Keyboard shortcuts handler
   useEffect(() => {
@@ -57,7 +101,6 @@ export function useScheduleSelection({
       if (e.key === 'Escape') {
         if (selectedCells.size > 0) {
           setSelectedCells(new Set());
-          toast.info('Selección cancelada');
         }
         return;
       }
@@ -98,7 +141,26 @@ export function useScheduleSelection({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [enabled, selectedCells, clipboard]);
 
-  // Handle cell click with modifiers
+  // Handle mouse up globally to end drag
+  useEffect(() => {
+    if (!enabled) return;
+
+    const handleMouseUp = () => {
+      if (dragState.isDragging && dragState.startCell && dragState.currentCell) {
+        const selection = calculateRectSelection(dragState.startCell, dragState.currentCell);
+        setSelectedCells(selection);
+        setLastClickedCell(dragState.currentCell);
+        justFinishedDrag.current = true;
+        setTimeout(() => { justFinishedDrag.current = false; }, 100);
+      }
+      setDragState({ isDragging: false, startCell: null, currentCell: null });
+    };
+
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => window.removeEventListener('mouseup', handleMouseUp);
+  }, [enabled, dragState, calculateRectSelection]);
+
+  // Handle cell click - Excel paradigm: click = select
   const handleCellClick = useCallback((
     userId: string, 
     date: string, 
@@ -106,37 +168,15 @@ export function useScheduleSelection({
   ) => {
     if (!enabled) return;
 
+    // If we just finished a drag, don't process the click
+    if (justFinishedDrag.current) return;
+
     const cellKey = cellKeyString(userId, date);
     
     // Shift+click: select range from last clicked cell
     if (e.shiftKey && lastClickedCell) {
-      const newSelection = new Set<string>();
-      
-      // Find user index range
-      const lastUserIdx = teamMemberIds.indexOf(lastClickedCell.userId);
-      const currentUserIdx = teamMemberIds.indexOf(userId);
-      const minUserIdx = Math.min(lastUserIdx, currentUserIdx);
-      const maxUserIdx = Math.max(lastUserIdx, currentUserIdx);
-      
-      // Find date range
-      const lastDate = new Date(lastClickedCell.date);
-      const currentDate = new Date(date);
-      const minDate = dateMin([lastDate, currentDate]);
-      const maxDate = dateMax([lastDate, currentDate]);
-      
-      // Select all cells in the rectangular region
-      for (let uIdx = minUserIdx; uIdx <= maxUserIdx; uIdx++) {
-        const uId = teamMemberIds[uIdx];
-        if (!uId) continue;
-        
-        for (const day of monthDays) {
-          if (day >= minDate && day <= maxDate) {
-            newSelection.add(cellKeyString(uId, format(day, 'yyyy-MM-dd')));
-          }
-        }
-      }
-      
-      setSelectedCells(newSelection);
+      const selection = calculateRectSelection(lastClickedCell, { userId, date });
+      setSelectedCells(selection);
     }
     // Ctrl/Cmd+click: toggle cell in selection
     else if (e.ctrlKey || e.metaKey) {
@@ -151,12 +191,41 @@ export function useScheduleSelection({
       });
       setLastClickedCell({ userId, date });
     }
-    // Normal click: single selection
+    // Normal click: single selection (Excel behavior)
     else {
       setSelectedCells(new Set([cellKey]));
       setLastClickedCell({ userId, date });
     }
-  }, [enabled, lastClickedCell, teamMemberIds, monthDays]);
+  }, [enabled, lastClickedCell, calculateRectSelection]);
+
+  // Start drag selection
+  const handleDragStart = useCallback((userId: string, date: string, e: React.MouseEvent) => {
+    if (!enabled) return;
+    // Don't start drag on modified clicks
+    if (e.shiftKey || e.ctrlKey || e.metaKey) return;
+    
+    e.preventDefault();
+    const cell = { userId, date };
+    setDragState({
+      isDragging: true,
+      startCell: cell,
+      currentCell: cell,
+    });
+    setSelectedCells(new Set([cellKeyString(userId, date)]));
+    setLastClickedCell(cell);
+  }, [enabled]);
+
+  // Continue drag selection
+  const handleDragMove = useCallback((userId: string, date: string) => {
+    if (!enabled || !dragState.isDragging || !dragState.startCell) return;
+    
+    const currentCell = { userId, date };
+    setDragState(prev => ({ ...prev, currentCell }));
+    
+    // Update selection preview
+    const selection = calculateRectSelection(dragState.startCell, currentCell);
+    setSelectedCells(selection);
+  }, [enabled, dragState.isDragging, dragState.startCell, calculateRectSelection]);
 
   // Select entire column (all employees for a day)
   const handleColumnSelect = useCallback((date: string) => {
@@ -182,16 +251,14 @@ export function useScheduleSelection({
     toast.info(`Fila seleccionada: ${monthDays.length} celdas`);
   }, [enabled, monthDays]);
 
-  // Copy selected cells - SIMPLIFIED: always copies FIRST cell only
+  // Copy selected cells - always copies FIRST cell only
   const handleCopy = useCallback(() => {
     if (selectedCells.size === 0) return;
 
-    // Take the first selected cell
     const firstCellKey = Array.from(selectedCells)[0];
     const { userId, date } = parseCellKey(firstCellKey);
     const schedule = getEffectiveValue(userId, date);
 
-    // Build descriptive sourceInfo
     let sourceInfo: string;
     if (schedule.isDayOff) {
       if (schedule.position === 'vacaciones') {
@@ -222,7 +289,7 @@ export function useScheduleSelection({
     toast.success(`📋 Copiado: ${sourceInfo}`);
   }, [selectedCells, getEffectiveValue]);
 
-  // Paste clipboard to selection - SIMPLIFIED: applies to ALL selected cells
+  // Paste clipboard to selection
   const handlePaste = useCallback(() => {
     if (!clipboard || selectedCells.size === 0) {
       if (!clipboard) toast.error('No hay nada en el portapapeles');
@@ -282,8 +349,10 @@ export function useScheduleSelection({
     toast.success(`✓ Franco aplicado a ${cells.length} celda${cells.length > 1 ? 's' : ''}`);
   }, [selectedCells, onCellChange, getTeamMemberName]);
 
-  // Apply quick schedule to selection
+  // Apply quick schedule to selection (from toolbar)
   const handleApplyQuickSchedule = useCallback((startTime: string, endTime: string) => {
+    if (selectedCells.size === 0) return;
+    
     const cells = Array.from(selectedCells).map(parseCellKey);
     const scheduleValue: ScheduleValue = {
       startTime,
@@ -300,6 +369,7 @@ export function useScheduleSelection({
     });
 
     toast.success(`✓ ${startTime}-${endTime} aplicado a ${cells.length} celda${cells.length > 1 ? 's' : ''}`);
+    setSelectedCells(new Set());
   }, [selectedCells, onCellChange, getTeamMemberName]);
 
   // Check if cell is selected
@@ -325,9 +395,12 @@ export function useScheduleSelection({
     clipboard,
     hasSelection: selectedCells.size > 0,
     hasClipboard: clipboard !== null,
+    isDragging: dragState.isDragging,
     
     // Cell operations
     handleCellClick,
+    handleDragStart,
+    handleDragMove,
     handleColumnSelect,
     handleRowSelect,
     isCellSelected,

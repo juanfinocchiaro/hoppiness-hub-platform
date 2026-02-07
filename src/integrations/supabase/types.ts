@@ -931,6 +931,8 @@ export type Database = {
       employee_schedules: {
         Row: {
           branch_id: string | null
+          break_end: string | null
+          break_start: string | null
           created_at: string
           day_of_week: number
           employee_id: string
@@ -956,6 +958,8 @@ export type Database = {
         }
         Insert: {
           branch_id?: string | null
+          break_end?: string | null
+          break_start?: string | null
           created_at?: string
           day_of_week: number
           employee_id: string
@@ -981,6 +985,8 @@ export type Database = {
         }
         Update: {
           branch_id?: string | null
+          break_end?: string | null
+          break_start?: string | null
           created_at?: string
           day_of_week?: number
           employee_id?: string
