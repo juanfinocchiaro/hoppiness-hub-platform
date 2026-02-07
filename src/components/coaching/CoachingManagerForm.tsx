@@ -143,7 +143,7 @@ export function CoachingManagerForm({ employee, branchId, onSuccess, onCancel }:
       </Card>
 
       <ScrollArea className="h-[calc(100vh-320px)]">
-        <div className="space-y-6 pr-4">
+        <div className="space-y-6 px-1 py-1">
           {/* Sección de Competencias de Gestión (sin estaciones) */}
           <CoachingManagerSection
             scores={managerScores}
