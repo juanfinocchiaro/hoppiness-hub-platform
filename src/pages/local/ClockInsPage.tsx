@@ -32,7 +32,7 @@ import { getClockInUrl } from '@/lib/constants';
 
 export default function ClockInsPage() {
   const { branchId } = useParams<{ branchId: string }>();
-  const { isSuperadmin, local } = usePermissionsV2();
+  const { isSuperadmin, local } = usePermissionsV2(branchId);
   const [showQRModal, setShowQRModal] = useState(false);
   const [dateFilter, setDateFilter] = useState<Date>(new Date());
 
