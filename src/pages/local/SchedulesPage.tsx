@@ -10,7 +10,7 @@
  * Solicitudes movidas a /milocal/:branchId/tiempo/solicitudes
  */
 import { useParams } from 'react-router-dom';
-import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
+import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import InlineScheduleEditor from '@/components/hr/InlineScheduleEditor';
 import { PageHelp } from '@/components/ui/PageHelp';
@@ -18,7 +18,10 @@ import { Eye } from 'lucide-react';
 
 export default function SchedulesPage() {
   const { branchId } = useParams<{ branchId: string }>();
-  const { isFranquiciado, local } = useDynamicPermissions(branchId);
+  const { isFranquiciado, local, loading } = usePermissionsWithImpersonation(branchId);
+  
+  // Wait for permissions to load to avoid flash
+  if (loading) return null;
   
   const canManageSchedules = local.canEditSchedules;
   const isReadOnly = isFranquiciado || !canManageSchedules;
