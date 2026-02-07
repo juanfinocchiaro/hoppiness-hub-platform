@@ -226,7 +226,7 @@ export function useScheduleSelection({
     // Only left mouse button
     if (e.button !== 0) return;
     
-    e.preventDefault();
+    // Don't preventDefault - let onClick work too
     const cell = { userId, date };
     const cellKey = cellKeyString(userId, date);
     

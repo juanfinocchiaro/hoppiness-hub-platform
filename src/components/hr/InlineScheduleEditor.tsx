@@ -909,9 +909,9 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                 </div>
               </div>
 
-              {/* Row 2: Selection toolbar - ONLY visible when there's a selection */}
-              {selection.hasSelection && activeView === 'personas' && (
-                <div className="min-h-[36px] flex items-center border-t border-border/50 pt-2 mt-2">
+              {/* Row 2: Selection toolbar - ALWAYS visible in Personas view when canManage */}
+              {canManageSchedules && activeView === 'personas' && (
+                <div className="min-h-[40px] flex items-center border-t border-border/50 pt-2 mt-2">
                   <SelectionToolbar
                     selectionCount={selection.selectedCells.size}
                     clipboard={selection.clipboard}

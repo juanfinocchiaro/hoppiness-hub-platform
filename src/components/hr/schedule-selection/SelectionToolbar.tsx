@@ -76,13 +76,20 @@ export function SelectionToolbar({
     }
   };
 
-  if (selectionCount === 0) return null;
+  // Always render, show placeholder when no selection
+  const hasSelection = selectionCount > 0;
 
   return (
     <div className={cn(
-      'flex items-center gap-2 flex-wrap',
+      'flex items-center gap-2 flex-wrap min-h-[32px]',
       className
     )}>
+      {!hasSelection ? (
+        <span className="text-xs text-muted-foreground italic">
+          Click para seleccionar · Shift+click para rango · Arrastrar para selección múltiple
+        </span>
+      ) : (
+        <>
       {/* Selection count badge */}
       <Badge variant="secondary" className="gap-1 text-xs h-7 px-2">
         {selectionCount} celda{selectionCount !== 1 ? 's' : ''}
@@ -211,6 +218,8 @@ export function SelectionToolbar({
         </TooltipTrigger>
         <TooltipContent side="bottom">Escape</TooltipContent>
       </Tooltip>
+        </>
+      )}
     </div>
   );
 }
