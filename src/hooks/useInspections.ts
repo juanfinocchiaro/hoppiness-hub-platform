@@ -402,6 +402,43 @@ export function useCancelInspection() {
 }
 
 // ============================================================================
+// DELETE INSPECTION
+// ============================================================================
+
+export function useDeleteInspection() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (inspectionId: string) => {
+      // First delete items
+      const { error: itemsError } = await supabase
+        .from('inspection_items')
+        .delete()
+        .eq('inspection_id', inspectionId);
+
+      if (itemsError) throw itemsError;
+
+      // Then delete inspection
+      const { error } = await supabase
+        .from('branch_inspections')
+        .delete()
+        .eq('id', inspectionId);
+
+      if (error) throw error;
+      return inspectionId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inspections'] });
+      toast.success('Visita eliminada');
+    },
+    onError: (error) => {
+      console.error('Error deleting inspection:', error);
+      toast.error('Error al eliminar la visita');
+    },
+  });
+}
+
+// ============================================================================
 // UPLOAD PHOTO
 // ============================================================================
 
