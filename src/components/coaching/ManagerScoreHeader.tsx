@@ -37,8 +37,10 @@ function getInitials(name: string) {
 }
 
 export function ManagerScoreHeader({ employee, totalScore, maxScore, previousAverage }: ManagerScoreHeaderProps) {
-  const average = maxScore > 0 ? totalScore / (maxScore / 5) : 0;
-  const percentage = maxScore > 0 ? (totalScore / maxScore) * 100 : 0;
+  // 6 competencias x 5 puntos = 30 máximo
+  const effectiveMax = maxScore > 0 ? maxScore : 30;
+  const average = effectiveMax > 0 ? totalScore / (effectiveMax / 5) : 0;
+  const percentage = effectiveMax > 0 ? (totalScore / effectiveMax) * 100 : 0;
   const level = getScoreLevel(average);
   
   const diff = previousAverage !== undefined ? average - previousAverage : null;
