@@ -1101,6 +1101,41 @@ export type Database = {
           },
         ]
       }
+      inspection_staff_present: {
+        Row: {
+          created_at: string | null
+          id: string
+          inspection_id: string
+          observations: string | null
+          user_id: string
+          was_present: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          inspection_id: string
+          observations?: string | null
+          user_id: string
+          was_present?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          inspection_id?: string
+          observations?: string | null
+          user_id?: string
+          was_present?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_staff_present_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "branch_inspections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inspection_templates: {
         Row: {
           category: string
