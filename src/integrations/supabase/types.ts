@@ -984,30 +984,45 @@ export type Database = {
       }
       manager_competencies: {
         Row: {
+          category: string | null
           created_at: string
           description: string | null
+          icon: string | null
           id: string
           is_active: boolean
           key: string
           name: string
+          rubric_1: string | null
+          rubric_3: string | null
+          rubric_5: string | null
           sort_order: number
         }
         Insert: {
+          category?: string | null
           created_at?: string
           description?: string | null
+          icon?: string | null
           id?: string
           is_active?: boolean
           key: string
           name: string
+          rubric_1?: string | null
+          rubric_3?: string | null
+          rubric_5?: string | null
           sort_order?: number
         }
         Update: {
+          category?: string | null
           created_at?: string
           description?: string | null
+          icon?: string | null
           id?: string
           is_active?: boolean
           key?: string
           name?: string
+          rubric_1?: string | null
+          rubric_3?: string | null
+          rubric_5?: string | null
           sort_order?: number
         }
         Relationships: []

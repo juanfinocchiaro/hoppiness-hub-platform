@@ -42,6 +42,15 @@ export interface GeneralCompetency {
   is_active: boolean;
 }
 
+export type ManagerCompetencyCategory = 'operacion' | 'estandar' | 'negocio' | 'personas';
+
+export const MANAGER_CATEGORY_CONFIG: Record<ManagerCompetencyCategory, { label: string; icon: string }> = {
+  operacion: { label: 'Operación Diaria', icon: '📋' },
+  estandar: { label: 'Estándar de Marca', icon: '🍔' },
+  negocio: { label: 'Negocio y Control', icon: '💰' },
+  personas: { label: 'Personas y Cultura', icon: '👥' },
+};
+
 export interface ManagerCompetency {
   id: string;
   key: string;
@@ -49,6 +58,11 @@ export interface ManagerCompetency {
   description: string | null;
   sort_order: number;
   is_active: boolean;
+  category: ManagerCompetencyCategory | null;
+  icon: string | null;
+  rubric_1: string | null;
+  rubric_3: string | null;
+  rubric_5: string | null;
 }
 
 export interface EmployeeCertification {
