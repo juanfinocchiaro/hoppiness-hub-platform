@@ -49,7 +49,7 @@ export default function SchedulesPage() {
       )}
 
       {/* Schedule Editor */}
-      <InlineScheduleEditor branchId={branchId} />
+      <InlineScheduleEditor branchId={branchId} readOnly={isReadOnly} />
     </div>
   );
 }

@@ -56,37 +56,29 @@ ALTER TABLE employee_schedules
 
 ---
 
-## Fase 3: Copiar Mes Anterior (PENDIENTE)
+## Fase 3: Copiar Mes Anterior ✅ COMPLETADA
 
-### 3.1 Lógica de mapeo semanal
-No es un mapeo 1:1 por fecha, sino por día de semana:
-1. Tomar la última semana completa (Lun-Dom) del mes anterior como "patrón"
-2. Replicar ese patrón en todas las semanas del mes nuevo
-3. Los cambios se agregan como `pendingChanges` (no se guardan automáticamente)
+### 3.1 Lógica de mapeo semanal ✅
+- Hook `usePreviousMonthPattern` busca la última semana completa del mes anterior
+- Función `applyPatternToMonth` mapea el patrón a todos los días del mes actual
+- Los cambios se agregan como `pendingChanges` (borrador)
 
-### 3.2 Implementación
-- Nueva función en `useSchedules.ts`: `usePreviousMonthSchedules(branchId, month, year)`
+### 3.2 Implementación ✅
+- Botón "Copiar mes anterior" en toolbar (prominente cuando el mes está vacío)
 - Diálogo de confirmación antes de aplicar
-- Los horarios se cargan como borrador, el encargado puede ajustar antes de publicar
+- Los horarios se cargan como borrador
 
 ---
 
-## Fase 4: Drag-to-Fill (El "cuadradito" de Excel) (PENDIENTE)
+## Fase 4: Drag-to-Fill ✅ COMPLETADA
 
-### 4.1 Comportamiento
-Cuando exactamente 1 celda con contenido está seleccionada:
-1. Mostrar un cuadrado azul (6x6px) en la esquina inferior derecha de la celda
-2. Al arrastrar horizontal: replica el horario a los días siguientes del mismo empleado
-3. Al arrastrar vertical: replica el horario a otros empleados el mismo día
+### 4.1 Comportamiento ✅
+- Estado `canShowFillHandle` detecta cuando 1 celda con contenido está seleccionada
+- `handleFillDragStart`, `handleFillDragMove` implementados
+- Detecta dirección (horizontal/vertical) automáticamente
 
-### 4.2 Implementación en `useScheduleSelection.ts`
-- Estado: `fillOriginCell`, `isFilling`, `fillDirection`
-- `handleFillDragStart`: al clickear el cuadradito
-- `handleFillDragMove`: calcular dirección y celdas destino
-- `handleFillDragEnd`: aplicar el valor a todas las celdas del rango
-
-### 4.3 Restricción
-Solo aparece cuando hay 1 celda seleccionada con contenido (no vacía, no rango múltiple).
+### 4.2 Restricción ✅
+Solo aparece cuando hay 1 celda seleccionada con contenido.
 
 ---
 
@@ -101,8 +93,9 @@ Array `team` ordenado por rol:
 2. Cajeros (priority 2)
 3. Empleados operativos (priority 3)
 
-### 5.3 Fila de headcount (OPCIONAL - No implementado)
-Agregar una fila sticky al fondo del grid que muestre el total de empleados trabajando cada día.
+### 5.3 Feriados en header ✅
+- Indicador visual (punto naranja) en días feriados
+- Tooltip con nombre del feriado al pasar el mouse
 
 ---
 
@@ -112,11 +105,13 @@ Agregar una fila sticky al fondo del grid que muestre el total de empleados trab
 |---------|---------|--------|
 | `ScheduleCopyPasteControls.tsx` | ELIMINADO | ✅ |
 | `ScheduleQuickActions.tsx` | ELIMINADO | ✅ |
-| `useScheduleSelection.ts` | Click sin modifier, drag-select | ✅ |
+| `useScheduleSelection.ts` | Click sin modifier, drag-select, fill-drag | ✅ |
 | `InlineScheduleEditor.tsx` | Click=select, doble-click=edit, drag handlers, toolbar, ordenamiento | ✅ |
 | `ScheduleCellPopover.tsx` | Componente controlado | ✅ |
 | `SelectionToolbar.tsx` | Inputs de hora, auto-focus, Aplicar | ✅ |
 | `popover.tsx` | Agregado PopoverAnchor export | ✅ |
+| `usePreviousMonthSchedules.ts` | NUEVO - Fase 3 | ✅ |
+| `SchedulesPage.tsx` | Prop readOnly para impersonación | ✅ |
 
 ---
 
@@ -127,18 +122,19 @@ Agregar una fila sticky al fondo del grid que muestre el total de empleados trab
 | 0 | Limpieza + break en DB | ✅ Completada |
 | 1 | Click = Seleccionar | ✅ Completada |
 | 2 | Toolbar con edición inline | ✅ Completada |
-| 3 | Copiar mes anterior | ⏳ Pendiente |
-| 4 | Drag-to-fill | ⏳ Pendiente |
+| 3 | Copiar mes anterior | ✅ Completada |
+| 4 | Drag-to-fill | ✅ Completada |
 | 5 | Mejoras visuales | ✅ Completada |
 
 ---
 
-## Resultado Actual
+## Resultado Final
 
 El encargado ahora puede:
-1. ✅ Click en una celda para seleccionar, click-drag para seleccionar rango
-2. ✅ Tipear horario en la toolbar → Enter → aplicado a todas las celdas seleccionadas
-3. ✅ Doble-click para configurar posición o break específico
-4. ✅ Ver nombre completo de cada empleado, ordenados por jerarquía
-5. ⏳ "Copiar mes anterior" (próxima iteración)
-6. ⏳ Arrastrar el cuadradito de una celda para replicar (próxima iteración)
+1. ✅ Abrir el mes vacío → click "Copiar mes anterior" → todo prellenado
+2. ✅ Click en una celda para seleccionar, click-drag para seleccionar rango
+3. ✅ Tipear horario en la toolbar → Enter → aplicado a todas las celdas seleccionadas
+4. ✅ Arrastrar para replicar horizontalmente o verticalmente (fill-drag)
+5. ✅ Doble-click para configurar posición o break específico
+6. ✅ Ver nombre completo de cada empleado, ordenados por jerarquía
+7. ✅ Ver feriados marcados en el header con tooltip informativo
