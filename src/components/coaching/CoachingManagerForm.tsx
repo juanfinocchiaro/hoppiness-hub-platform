@@ -108,7 +108,8 @@ export function CoachingManagerForm({ employee, branchId, onSuccess, onCancel }:
       <ManagerScoreHeader
         employee={employee}
         totalScore={totalScore}
-        maxScore={maxScore}
+        filledCount={filledScores.length}
+        totalCount={totalCompetencies}
         previousAverage={previousAverage}
       />
 

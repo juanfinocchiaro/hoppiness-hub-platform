@@ -16,7 +16,8 @@ interface Employee {
 interface ManagerScoreHeaderProps {
   employee: Employee;
   totalScore: number;
-  maxScore: number;
+  filledCount: number;
+  totalCount: number;
   previousAverage?: number;
 }
 
@@ -36,11 +37,11 @@ function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 }
 
-export function ManagerScoreHeader({ employee, totalScore, maxScore, previousAverage }: ManagerScoreHeaderProps) {
-  // 6 competencias x 5 puntos = 30 máximo
-  const effectiveMax = maxScore > 0 ? maxScore : 30;
-  const average = effectiveMax > 0 ? totalScore / (effectiveMax / 5) : 0;
-  const percentage = effectiveMax > 0 ? (totalScore / effectiveMax) * 100 : 0;
+export function ManagerScoreHeader({ employee, totalScore, filledCount, totalCount, previousAverage }: ManagerScoreHeaderProps) {
+  // Promedio basado en las competencias realmente puntuadas
+  const maxScore = totalCount * 5;
+  const average = filledCount > 0 ? totalScore / filledCount : 0;
+  const percentage = maxScore > 0 ? (totalScore / maxScore) * 100 : 0;
   const level = getScoreLevel(average);
   
   const diff = previousAverage !== undefined ? average - previousAverage : null;
