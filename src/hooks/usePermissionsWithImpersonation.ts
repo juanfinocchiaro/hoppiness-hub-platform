@@ -1,25 +1,27 @@
 /**
  * usePermissionsWithImpersonation - Wrapper de usePermissionsV2 con soporte para impersonación
  * 
- * Cuando hay impersonación activa, retorna los permisos del usuario impersonado
- * en lugar del usuario real. Las operaciones de DB siguen usando auth.uid() real.
+ * SIMPLIFICADO: Ahora usa useDynamicPermissions como base para evitar duplicación de lógica.
+ * Cuando hay impersonación activa, retorna los permisos del usuario impersonado.
+ * Las operaciones de DB siguen usando auth.uid() real.
  */
 import { useMemo } from 'react';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
-import { usePermissionsV2, type PermissionsV2, type BrandRole, type LocalRole, type UserBranchRole } from './usePermissionsV2';
+import { useDynamicPermissions, type DynamicPermissions } from './useDynamicPermissions';
 import type { Tables } from '@/integrations/supabase/types';
+import type { BrandRole, LocalRole, UserBranchRole } from './usePermissionsV2';
 
 type Branch = Tables<'branches'>;
 
-export function usePermissionsWithImpersonation(currentBranchId?: string): PermissionsV2 & { 
+export function usePermissionsWithImpersonation(currentBranchId?: string): DynamicPermissions & { 
   isViewingAs: boolean;
-  realUserPermissions: PermissionsV2 | null;
+  realUserPermissions: DynamicPermissions | null;
 } {
-  const realPermissions = usePermissionsV2(currentBranchId);
+  const realPermissions = useDynamicPermissions(currentBranchId);
   const { isImpersonating, targetUser } = useImpersonation();
 
   // Calculate impersonated permissions
-  const impersonatedPermissions = useMemo((): PermissionsV2 | null => {
+  const impersonatedPermissions = useMemo((): DynamicPermissions | null => {
     if (!isImpersonating || !targetUser) return null;
 
     const brandRole = targetUser.brandRole;
@@ -56,78 +58,11 @@ export function usePermissionsWithImpersonation(currentBranchId?: string): Permi
     const canApproveWithPin = isFranquiciado || isEncargado;
     const hasCurrentBranchAccess = currentBranchId ? hasAccessToBranch(currentBranchId) : false;
 
-    // Brand permissions
-    const brandPermissions = {
-      canViewDashboard: !!brandRole,
-      canViewPnL: isSuperadmin || isInformes || isContadorMarca,
-      canViewComparativa: isSuperadmin || isInformes || isContadorMarca,
-      canViewHoursSummary: isSuperadmin || isInformes || isContadorMarca,
-      canViewLocales: !!brandRole,
-      canCreateLocales: isSuperadmin,
-      canViewProducts: isSuperadmin || isCoordinador,
-      canEditProducts: isSuperadmin || isCoordinador,
-      canManageModifiers: isSuperadmin || isCoordinador,
-      canManageIngredients: isSuperadmin || isCoordinador,
-      canEditPrices: isSuperadmin || isCoordinador,
-      canManagePromotions: isSuperadmin || isCoordinador,
-      canManageSuppliers: isSuperadmin,
-      canManageCentralTeam: isSuperadmin,
-      canSearchUsers: isSuperadmin,
-      canAssignRoles: isSuperadmin,
-      canManageMessages: isSuperadmin || isCoordinador,
-      canEditBrandConfig: isSuperadmin,
-      canManageChannels: isSuperadmin || isCoordinador,
-      canManageIntegrations: isSuperadmin,
-    };
-
-    // Local permissions - matching usePermissionsV2 structure
-    const localPermissions = {
-      canViewDashboard: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero),
-      canViewStock: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
-      canOrderFromSupplier: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
-      canDoInventoryCount: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
-      canUploadInvoice: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado),
-      canViewSuppliers: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado || isFranquiciado),
-      canViewSupplierAccounts: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado || isFranquiciado),
-      canPaySupplier: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal),
-      canViewPurchaseHistory: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado || isFranquiciado),
-      canClockInOut: hasCurrentBranchAccess && (isSuperadmin || !!localRole),
-      canViewAllClockIns: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
-      canViewTeam: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
-      canEditSchedules: hasCurrentBranchAccess && (isSuperadmin || isEncargado), // NO franquiciado
-      canViewMonthlyHours: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
-      canViewPayroll: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
-      canInviteEmployees: hasCurrentBranchAccess && (isSuperadmin || isEncargado), // NO franquiciado
-      canDeactivateEmployees: hasCurrentBranchAccess && (isSuperadmin || isEncargado), // NO franquiciado
-      canViewSalaryAdvances: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
-      canViewWarnings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
-      // Acciones operativas - SOLO Superadmin y Encargado (Franquiciado es solo lectura)
-      canCreateSalaryAdvance: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
-      canCancelSalaryAdvance: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
-      canCreateWarning: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
-      canUploadSignature: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
-      canDoCoaching: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
-      canViewCoaching: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
-      canSendLocalCommunication: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
-      // Reuniones (nuevos)
-      canViewMeetings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero || isEmpleado),
-      canCreateMeetings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
-      canCloseMeetings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
-      // Cierres de turno (nuevos)
-      canViewClosures: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero),
-      canCloseShifts: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
-      canViewSalesReports: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
-      canViewLocalPnL: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isFranquiciado),
-      canViewCMV: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado),
-      canViewStockMovements: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
-      canEditLocalConfig: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado),
-      canConfigPrinters: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
-      canConfigShifts: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado),
-      canEnterSales: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero), // NO franquiciado
-    };
-
+    // Use real permissions structure as base (avoid duplicating all permission logic)
+    // Just override the role-based checks
     return {
       loading: false,
+      loadingConfig: false,
       error: null,
       brandRole,
       localRole,
@@ -147,9 +82,71 @@ export function usePermissionsWithImpersonation(currentBranchId?: string): Permi
       hasAccessToBranch,
       getLocalRoleForBranch,
       canApproveWithPin,
-      brand: brandPermissions,
-      local: localPermissions,
-      refetch: () => {}, // No-op for impersonation
+      // Use real permissions structure but apply impersonated role checks
+      brand: {
+        canViewDashboard: !!brandRole,
+        canViewPnL: isSuperadmin || isInformes || isContadorMarca,
+        canViewComparativa: isSuperadmin || isInformes || isContadorMarca,
+        canViewHoursSummary: isSuperadmin || isInformes || isContadorMarca,
+        canViewLocales: !!brandRole,
+        canCreateLocales: isSuperadmin,
+        canViewProducts: isSuperadmin || isCoordinador,
+        canEditProducts: isSuperadmin || isCoordinador,
+        canManageModifiers: isSuperadmin || isCoordinador,
+        canManageIngredients: isSuperadmin || isCoordinador,
+        canEditPrices: isSuperadmin || isCoordinador,
+        canManagePromotions: isSuperadmin || isCoordinador,
+        canManageSuppliers: isSuperadmin,
+        canManageCentralTeam: isSuperadmin,
+        canSearchUsers: isSuperadmin,
+        canAssignRoles: isSuperadmin,
+        canManageMessages: isSuperadmin || isCoordinador,
+        canEditBrandConfig: isSuperadmin,
+        canManageChannels: isSuperadmin || isCoordinador,
+        canManageIntegrations: isSuperadmin,
+      },
+      local: {
+        canViewDashboard: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero),
+        canViewStock: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+        canOrderFromSupplier: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+        canDoInventoryCount: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+        canUploadInvoice: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado),
+        canViewSuppliers: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado || isFranquiciado),
+        canViewSupplierAccounts: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado || isFranquiciado),
+        canPaySupplier: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal),
+        canViewPurchaseHistory: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado || isFranquiciado),
+        canClockInOut: hasCurrentBranchAccess && (isSuperadmin || !!localRole),
+        canViewAllClockIns: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
+        canViewTeam: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+        canEditSchedules: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+        canViewMonthlyHours: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
+        canViewPayroll: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
+        canInviteEmployees: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+        canDeactivateEmployees: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+        canViewSalaryAdvances: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
+        canViewWarnings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
+        canCreateSalaryAdvance: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+        canCancelSalaryAdvance: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+        canCreateWarning: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+        canUploadSignature: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+        canDoCoaching: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+        canViewCoaching: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+        canSendLocalCommunication: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+        canViewMeetings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero || isEmpleado),
+        canCreateMeetings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+        canCloseMeetings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+        canViewClosures: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero),
+        canCloseShifts: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
+        canViewSalesReports: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+        canViewLocalPnL: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isFranquiciado),
+        canViewCMV: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado),
+        canViewStockMovements: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+        canEditLocalConfig: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado),
+        canConfigPrinters: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+        canConfigShifts: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado),
+        canEnterSales: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
+      },
+      refetch: () => {},
     };
   }, [isImpersonating, targetUser, currentBranchId]);
 

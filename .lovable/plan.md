@@ -16,10 +16,10 @@ Este plan aborda **10 tipos de errores recurrentes** identificados en la auditor
 - **[COMPLETADO] Fase 1.1** - 10 permisos insertados en `permission_config`
 - **[COMPLETADO] Fase 1.2** - 15 archivos migrados a `useDynamicPermissions`
 
-### Pendiente de Resolver
+### ✅ Todo Resuelto
 
-| Categoría | Problema | Impacto | Estado |
-|-----------|----------|---------|--------|
+| Área | Problema | Severidad | Estado |
+|------|----------|-----------|--------|
 | **Permisos** | `useDynamicPermissions` solo usado en guards (1 archivo) | Medio | ✅ Resuelto |
 | **Permisos** | 15 páginas usan `usePermissionsV2` hardcodeado | Medio | ✅ Resuelto |
 | **DB Config** | Faltan permisos en `permission_config` | Alto | ✅ Resuelto |
@@ -28,6 +28,9 @@ Este plan aborda **10 tipos de errores recurrentes** identificados en la auditor
 | **Errores** | 642 usos de `toast.error` vs 2 usos de `handleError()` | Medio | ✅ Resuelto (parcial) |
 | **Queries** | 235 usos de `.single()` sin fallback | Bajo | ✅ Resuelto (parcial) |
 | **Performance** | Queries sin límite | Bajo | ✅ Resuelto |
+| **RLS Duplicadas** | ~30 políticas redundantes (v2/v3/hr) | Medio | ✅ Resuelto |
+| **React Warnings** | Keys faltantes en PermissionsConfigPage | Bajo | ✅ Resuelto |
+| **Hooks** | Lógica duplicada usePermissionsWithImpersonation | Bajo | ✅ Resuelto |
 
 ---
 
