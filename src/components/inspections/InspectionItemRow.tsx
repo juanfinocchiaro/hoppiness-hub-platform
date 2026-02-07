@@ -1,9 +1,15 @@
 /**
  * InspectionItemRow - Fila individual del checklist de inspección
+ * 
+ * UX simplificado (Feb 2026):
+ * - Solo ✓ (cumple) y ✗ (no cumple), botones más grandes y separados
+ * - Click en activo lo desactiva (vuelve a pendiente)
+ * - Estado "pendiente" visual cuando no se tocó (gris neutro)
+ * - Sin botón de reset (—), el reset es hacer click de nuevo
  */
 
 import { useState } from 'react';
-import { Camera, Check, X, Minus, MessageSquare, Loader2 } from 'lucide-react';
+import { Camera, Check, X, MessageSquare, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -23,12 +29,14 @@ export function InspectionItemRow({ item, inspectionId, readOnly = false }: Insp
   const updateItem = useUpdateInspectionItem();
   const uploadPhoto = useUploadInspectionPhoto();
 
-  const handleComplianceChange = (complies: boolean | null) => {
+  // Toggle logic: if already selected, deselect (null). Otherwise, set value.
+  const handleComplianceToggle = (value: boolean) => {
     if (readOnly) return;
+    const newValue = item.complies === value ? null : value;
     updateItem.mutate({
       itemId: item.id,
       inspectionId,
-      data: { complies, observations },
+      data: { complies: newValue, observations },
     });
   };
 
@@ -59,15 +67,18 @@ export function InspectionItemRow({ item, inspectionId, readOnly = false }: Insp
   };
 
   const isLoading = updateItem.isPending || uploadPhoto.isPending;
+  const isPending = item.complies === null;
 
   return (
     <div className="border-b border-border/50 py-3 last:border-b-0">
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-4">
         {/* Item label */}
         <div className="flex-1 min-w-0">
           <p className={cn(
             "text-sm",
-            item.complies === false && "text-destructive font-medium"
+            item.complies === true && "text-green-700 dark:text-green-400",
+            item.complies === false && "text-destructive font-medium",
+            isPending && "text-muted-foreground"
           )}>
             {item.item_label}
           </p>
@@ -85,58 +96,59 @@ export function InspectionItemRow({ item, inspectionId, readOnly = false }: Insp
           )}
         </div>
 
-        {/* Controls */}
-        <div className="flex items-center gap-1 shrink-0">
+        {/* Controls - larger buttons with more spacing */}
+        <div className="flex items-center gap-2 shrink-0">
           {isLoading ? (
-            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           ) : (
             <>
-              {/* Cumple */}
+              {/* Cumple - toggle on/off */}
               <Button
                 type="button"
                 variant={item.complies === true ? 'default' : 'outline'}
                 size="icon"
                 className={cn(
-                  "h-8 w-8",
-                  item.complies === true && "bg-green-600 hover:bg-green-700"
+                  "h-10 w-10 transition-all",
+                  item.complies === true 
+                    ? "bg-green-600 hover:bg-green-700 text-white shadow-md" 
+                    : "hover:bg-green-50 hover:border-green-300 dark:hover:bg-green-950/30"
                 )}
-                onClick={() => handleComplianceChange(true)}
+                onClick={() => handleComplianceToggle(true)}
                 disabled={readOnly}
+                title="Cumple (click de nuevo para quitar)"
               >
-                <Check className="w-4 h-4" />
+                <Check className="w-5 h-5" />
               </Button>
 
-              {/* No cumple */}
+              {/* No cumple - toggle on/off */}
               <Button
                 type="button"
                 variant={item.complies === false ? 'destructive' : 'outline'}
                 size="icon"
-                className="h-8 w-8"
-                onClick={() => handleComplianceChange(false)}
+                className={cn(
+                  "h-10 w-10 transition-all",
+                  item.complies === false 
+                    ? "shadow-md" 
+                    : "hover:bg-red-50 hover:border-red-300 dark:hover:bg-red-950/30"
+                )}
+                onClick={() => handleComplianceToggle(false)}
                 disabled={readOnly}
+                title="No cumple (click de nuevo para quitar)"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </Button>
 
-              {/* N/A */}
-              <Button
-                type="button"
-                variant={item.complies === null ? 'secondary' : 'outline'}
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => handleComplianceChange(null)}
-                disabled={readOnly}
-              >
-                <Minus className="w-4 h-4" />
-              </Button>
+              {/* Separator */}
+              <div className="w-px h-6 bg-border mx-1" />
 
               {/* Observations toggle */}
               <Button
                 type="button"
-                variant={showObservations ? 'secondary' : 'ghost'}
+                variant={showObservations || observations ? 'secondary' : 'ghost'}
                 size="icon"
-                className="h-8 w-8"
+                className="h-9 w-9"
                 onClick={() => setShowObservations(!showObservations)}
+                title="Agregar observación"
               >
                 <MessageSquare className="w-4 h-4" />
               </Button>
@@ -155,8 +167,9 @@ export function InspectionItemRow({ item, inspectionId, readOnly = false }: Insp
                     type="button"
                     variant={item.photo_url ? 'secondary' : 'ghost'}
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-9 w-9"
                     asChild
+                    title="Subir foto"
                   >
                     <span>
                       <Camera className="w-4 h-4" />
@@ -171,7 +184,7 @@ export function InspectionItemRow({ item, inspectionId, readOnly = false }: Insp
 
       {/* Observations textarea */}
       {showObservations && (
-        <div className="mt-2 ml-0">
+        <div className="mt-3 ml-0">
           <Textarea
             value={observations}
             onChange={(e) => setObservations(e.target.value)}
