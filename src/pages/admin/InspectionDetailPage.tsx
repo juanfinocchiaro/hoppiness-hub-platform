@@ -83,17 +83,19 @@ export default function InspectionDetailPage() {
     enabled: !!inspection?.branch_id,
   });
 
-  // Fetch all team members for action items
+  // Fetch team members for action items (excluding franquiciados - they are owners, not staff)
   const { data: teamMembers } = useQuery({
     queryKey: ['team-members-for-actions', inspection?.branch_id],
     queryFn: async () => {
       if (!inspection?.branch_id) return [];
       
+      // Get roles excluding franquiciado (owners are not operational staff)
       const { data: roles } = await supabase
         .from('user_branch_roles')
         .select('user_id')
         .eq('branch_id', inspection.branch_id)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .neq('local_role', 'franquiciado');
 
       if (!roles?.length) return [];
 
