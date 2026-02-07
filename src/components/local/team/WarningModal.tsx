@@ -129,6 +129,21 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
         .single();
       
       if (error) throw error;
+      
+      // Trigger email notification (fire and forget)
+      supabase.functions.invoke('send-warning-notification', {
+        body: {
+          warning_id: data.id,
+          employee_id: userId,
+          branch_id: branchId,
+          warning_type: type,
+          description,
+          issued_by_name: issuerProfile?.full_name,
+        },
+      }).catch((err) => {
+        console.error('Failed to send warning notification:', err);
+      });
+      
       return data.id;
     },
     onSuccess: (warningId) => {
