@@ -20,12 +20,13 @@ interface CoachingDetailModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Componente para mostrar un score con barra visual
+// Componente para mostrar un score con barra visual (escala 1-5)
 function ScoreBar({ score, label, sublabel }: { score: number; label: string; sublabel?: string }) {
-  const percentage = (score / 4) * 100;
+  const percentage = (score / 5) * 100;
   const getBarColor = () => {
-    if (score >= 3.5) return 'bg-primary';
-    if (score >= 2.5) return 'bg-amber-500';
+    if (score >= 4) return 'bg-primary';
+    if (score >= 3) return 'bg-green-500';
+    if (score >= 2) return 'bg-amber-500';
     return 'bg-destructive';
   };
 
@@ -33,7 +34,7 @@ function ScoreBar({ score, label, sublabel }: { score: number; label: string; su
     <div className="space-y-1">
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">{label}</span>
-        <span className="font-semibold">{score}/4</span>
+        <span className="font-semibold">{score}/5</span>
       </div>
       <div className="h-2 bg-muted rounded-full overflow-hidden">
         <div 
@@ -153,18 +154,20 @@ export function CoachingDetailModal({ coachingId, open, onOpenChange }: Coaching
 
   const getScoreColor = (score: number | null) => {
     if (!score) return 'text-muted-foreground';
+    if (score >= 4.5) return 'text-purple-600';
     if (score >= 3.5) return 'text-primary';
-    if (score >= 2.5) return 'text-amber-600';
+    if (score >= 2.5) return 'text-green-600';
+    if (score >= 1.5) return 'text-amber-600';
     return 'text-destructive';
   };
 
   const getScoreLabel = (score: number | null) => {
     if (!score) return 'Sin evaluar';
-    if (score >= 3.5) return 'Excelente';
-    if (score >= 3) return 'Muy Bueno';
-    if (score >= 2.5) return 'Bueno';
-    if (score >= 2) return 'Regular';
-    return 'Necesita mejorar';
+    if (score >= 4.5) return 'Referente';
+    if (score >= 3.5) return 'Destacado';
+    if (score >= 2.5) return 'Competente';
+    if (score >= 1.5) return 'En Desarrollo';
+    return 'Aprendiz';
   };
 
   if (!open) return null;
@@ -216,9 +219,9 @@ export function CoachingDetailModal({ coachingId, open, onOpenChange }: Coaching
                       <div className={`text-4xl font-bold ${getScoreColor(coaching.overall_score)}`}>
                         {coaching.overall_score?.toFixed(1) || '-'}
                       </div>
-                      <span className="text-sm text-muted-foreground">/ 4</span>
+                      <span className="text-sm text-muted-foreground">/ 5</span>
                       <Badge 
-                        variant={coaching.overall_score && coaching.overall_score >= 3 ? 'default' : 'secondary'}
+                        variant={coaching.overall_score && coaching.overall_score >= 3.5 ? 'default' : 'secondary'}
                         className="mt-2 block"
                       >
                         {getScoreLabel(coaching.overall_score)}
@@ -312,7 +315,7 @@ export function CoachingDetailModal({ coachingId, open, onOpenChange }: Coaching
                     <div className="flex items-center justify-between pt-1">
                       <span className="font-medium">Promedio General</span>
                       <span className={`text-lg font-bold ${getScoreColor(coaching.general_score)}`}>
-                        {coaching.general_score?.toFixed(1) || '-'} / 4
+                        {coaching.general_score?.toFixed(1) || '-'} / 5
                       </span>
                     </div>
                   </CardContent>

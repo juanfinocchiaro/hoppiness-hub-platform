@@ -178,7 +178,7 @@ export function CoachingForm({ employee, branchId, onSuccess, onCancel }: Coachi
                   <Star className="h-5 w-5 text-primary" />
                   {overallAvg.toFixed(1)}
                 </div>
-                <span className="text-xs text-muted-foreground">/ 4</span>
+                <span className="text-xs text-muted-foreground">/ 5</span>
               </div>
             )}
           </div>
