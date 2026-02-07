@@ -1,271 +1,294 @@
 
+# Plan de Implementación: 4 Mejoras al Sistema de Horarios
 
-# Plan: Sistema de Visitas de Supervisión (Coordinadores)
+## Resumen de Cambios
 
-## Resumen
-
-Crear un módulo completo para que el **Coordinador de marca** pueda realizar visitas de supervisión **sorpresa** a sucursales (BOH - Back of House y FOH - Front of House), registrar hallazgos con fotos, generar informes automáticos y notificar a encargados/franquiciados.
-
----
-
-## Cambios respecto al plan anterior
-
-1. **Sin programación**: Las visitas son sorpresa, no se agendan
-   - Se elimina el campo `scheduled_at`
-   - Se elimina el estado `'programada'`
-   - Se elimina la sección "Programadas" del sidebar
-   
-2. **Encargados ven todo**: El encargado ve TODAS las visitas de su local, no solo donde estuvo presente
+| # | Problema | Solución |
+|---|----------|----------|
+| 1a | Falta opción "Vacaciones" | Agregar botón 🏖️ Vacaciones que marca `position: 'vacaciones'` |
+| 1b | No permite horarios cortados | Agregar soporte para segundo turno con campos opcionales |
+| 1c | Alerta falsa de "7+ días" | Revisar y corregir lógica de validación |
+| 2 | Empleado edita nombre | ✅ Ya funciona en `/cuenta/perfil` |
+| 3 | "Error desconocido" al guardar | Mejorar captura y visualización del error |
+| 4 | Copiar/pegar confuso | Simplificar: copiar 1 horario → pegar en N celdas |
 
 ---
 
-## Entidades del Sistema
+## 1. Agregar Opción "Vacaciones"
 
-### Nueva Tabla: `branch_inspections`
+**Archivo:** `src/components/hr/ScheduleCellPopover.tsx`
 
+Agregar un botón "Vacaciones" debajo de "Franco":
+
+```tsx
+<Button
+  variant="outline"
+  size="sm"
+  className="w-full h-9 text-cyan-600 border-cyan-200 hover:bg-cyan-50"
+  onClick={handleVacation}
+>
+  <span className="mr-2">🏖️</span>
+  Vacaciones
+</Button>
+```
+
+La función `handleVacation`:
+```tsx
+const handleVacation = () => {
+  onChange({
+    startTime: null,
+    endTime: null,
+    isDayOff: true,
+    position: 'vacaciones',
+    breakStart: null,
+    breakEnd: null,
+  });
+  setOpen(false);
+};
+```
+
+---
+
+## 2. Soporte para Horarios Cortados (Turno Doble)
+
+**Migración de Base de Datos:**
 ```sql
-branch_inspections
-├── id (UUID)
-├── branch_id (FK branches)
-├── inspection_type (TEXT) → 'boh' | 'foh'
-├── inspector_id (FK auth.users) → El coordinador que hace la visita
-├── started_at (TIMESTAMPTZ) → Cuándo empezó
-├── completed_at (TIMESTAMPTZ) → Cuándo terminó
-├── status (TEXT) → 'en_curso' | 'completada' | 'cancelada'
-├── score_total (INT) → Puntaje total 0-100
-├── present_manager_id (FK auth.users) → El encargado presente durante la visita
-├── general_notes (TEXT) → Observaciones generales
-├── critical_findings (TEXT) → Hallazgos críticos (resumen)
-├── action_items (JSONB) → Acciones y responsables
-├── created_at / updated_at
+ALTER TABLE employee_schedules 
+  ADD COLUMN IF NOT EXISTS start_time_2 TIME,
+  ADD COLUMN IF NOT EXISTS end_time_2 TIME;
 ```
 
-### Nueva Tabla: `inspection_items`
+**Archivo:** `src/components/hr/ScheduleCellPopover.tsx`
 
-```sql
-inspection_items
-├── id (UUID)
-├── inspection_id (FK branch_inspections)
-├── category (TEXT)
-├── item_key (TEXT)
-├── item_label (TEXT)
-├── complies (BOOLEAN | NULL)
-├── observations (TEXT)
-├── photo_url (TEXT)
-├── sort_order (INT)
+Agregar toggle y campos para segundo turno:
+
+```tsx
+// Estado
+const [hasSplitShift, setHasSplitShift] = useState(false);
+const [customStart2, setCustomStart2] = useState('');
+const [customEnd2, setCustomEnd2] = useState('');
+
+// UI - debajo del primer turno
+{!requiresBreak && (
+  <div className="flex items-center gap-2">
+    <input 
+      type="checkbox" 
+      checked={hasSplitShift}
+      onChange={(e) => setHasSplitShift(e.target.checked)}
+    />
+    <Label className="text-xs">Turno cortado (doble jornada)</Label>
+  </div>
+)}
+
+{hasSplitShift && (
+  <div className="grid grid-cols-2 gap-3 p-3 bg-muted/50 rounded-lg">
+    <div className="space-y-1.5">
+      <Label className="text-xs">2° Entrada</Label>
+      <Input type="time" value={customStart2} onChange={...} />
+    </div>
+    <div className="space-y-1.5">
+      <Label className="text-xs">2° Salida</Label>
+      <Input type="time" value={customEnd2} onChange={...} />
+    </div>
+  </div>
+)}
 ```
 
-### Nueva Tabla: `inspection_templates`
+**Nota:** Los turnos cortados no son compatibles con el break automático (turnos > 6hs).
 
-```sql
-inspection_templates
-├── id (UUID)
-├── inspection_type (TEXT) → 'boh' | 'foh'
-├── category (TEXT)
-├── item_key (TEXT)
-├── item_label (TEXT)
-├── sort_order (INT)
-├── is_active (BOOLEAN)
+---
+
+## 3. Corregir Validación de Días Consecutivos
+
+**Archivo:** `src/components/hr/InlineScheduleEditor.tsx` (líneas 460-505)
+
+El problema actual es que la validación cuenta como "día trabajado" cualquier día que tenga un registro en `schedulesWithPending`, incluso si el horario está vacío (00:00-00:00).
+
+Corrección en la lógica:
+
+```tsx
+// Antes (buggy):
+const isDayOff = s.is_day_off || (!s.start_time && !s.end_time);
+
+// Después (corregido):
+const isActuallyWorking = s.start_time && s.end_time && !s.is_day_off &&
+  !(s.start_time === '00:00' && s.end_time === '00:00');
+const isDayOff = !isActuallyWorking;
+```
+
+Además, asegurar que días SIN registro en el schedule sean tratados como francos (no cuenta como día trabajado):
+
+```tsx
+monthDays.forEach(day => {
+  const dateStr = format(day, 'yyyy-MM-dd');
+  const hasSchedule = userScheduleMap.has(dateStr);
+  const isDayOff = userScheduleMap.get(dateStr);
+  
+  // Día es "trabajado" SOLO si tiene schedule Y NO es día libre
+  const isWorkingDay = hasSchedule && isDayOff === false;
+  
+  if (isWorkingDay) {
+    consecutiveWorking++;
+  } else {
+    // Cualquier otro caso (sin schedule, o con franco) → resetear
+    if (consecutiveWorking >= 7) {
+      violations.push({...});
+    }
+    consecutiveWorking = 0;
+  }
+});
 ```
 
 ---
 
-## Checklist de Items
+## 4. Mejorar Mensaje de Error al Guardar
 
-### BOH (Back-of-House) - 17 ítems
+**Archivo:** `src/components/hr/InlineScheduleEditor.tsx` (línea 348-350)
 
-| Categoría | Item |
-|-----------|------|
-| **Heladeras** | Temperatura heladeras (superior e inferior) |
-| | Etiquetado FIFO legible y resistente al frío |
-| | Juntas y burletes sin fugas ni condensación |
-| | Ventiladores y rejillas limpios |
-| | Stock próximo a vencer identificado |
-| **Depósito** | Orden en depósito (carnes, salsas, descartables) |
-| | Iluminación y cableado en depósito |
-| **Cocina** | Limpieza de campanas y paredes de cocina |
-| | Nivel de aceite en freidoras (3/4 cesta) |
-| | Fecha de cambio de aceite actualizada |
-| | Superficie de planchas en buen estado |
-| | Rejillas de desagüe completas |
-| | Calidad de corte de vegetales |
-| **Seguridad** | Certificado de desinfección visible |
-| | Matafuegos cargado y accesible |
-| | Pisos sin grietas peligrosas |
-| | Ausencia de celulares en área operativa |
+Actualmente:
+```tsx
+onError: (error) => {
+  toast.error('Error al guardar: ' + (error instanceof Error ? error.message : 'Error desconocido'));
+}
+```
 
-### FOH (Front-of-House) - 13 ítems
-
-| Categoría | Item |
-|-----------|------|
-| **Mostrador** | Limpieza de mostrador y terminales de pago |
-| | Cartelería actualizada y libre de polvo |
-| | Uniformes del personal limpios y conformes |
-| **Producto** | Tiempo pedido-entrega (< 6 min) |
-| | Presentación del producto |
-| | Punto de cocción de la carne |
-| **Salón** | Limpieza de mesas y sillas |
-| | Estado de iluminación en salón y barra |
-| | Baños: inodoros y lavamanos funcionando |
-| | Suministro de papel y jabón en baños |
-| | Señalética interna legible y sin daños |
-| **Atención** | Saludo y atención |
-| | Claridad de respuestas a preguntas de clientes |
-
----
-
-## Flujo de la Visita (Sorpresa)
-
-```text
-1. INICIAR VISITA
-   ├── Coordinador llega al local
-   ├── Elige tipo: BOH o FOH
-   ├── Selecciona encargado presente
-   └── Estado: "en_curso"
-
-2. EJECUTAR CHECKLIST
-   ├── Para cada ítem: Cumple / No cumple / N/A
-   ├── Observaciones opcionales
-   └── Subir foto si hay hallazgo
-
-3. CERRAR VISITA
-   ├── Agregar observaciones generales
-   ├── Marcar hallazgos críticos
-   ├── Definir acciones con responsable y plazo
-   └── Se calcula puntaje automático
-
-4. NOTIFICAR
-   └── Automático a encargado + franquiciado
+Mejorar para capturar errores de Supabase:
+```tsx
+onError: (error: any) => {
+  console.error('Save error details:', error);
+  
+  let message = 'Error desconocido';
+  if (error instanceof Error) {
+    message = error.message;
+  } else if (error?.message) {
+    message = error.message;
+  } else if (error?.error_description) {
+    message = error.error_description;
+  } else if (typeof error === 'object') {
+    message = JSON.stringify(error);
+  }
+  
+  toast.error('Error al guardar: ' + message);
+}
 ```
 
 ---
 
-## Navegación
+## 5. Simplificar Copiar/Pegar
 
-### En BrandSidebar - Nueva sección
+**Archivo:** `src/components/hr/schedule-selection/useScheduleSelection.ts`
 
-```text
-📋 Supervisión
-├── Nueva Visita (+)
-└── Historial
+**Problema actual:** Cuando copiás múltiples celdas, el sistema guarda un array con offsets relativos. Al pegar, depende de cuántas celdas seleccionaste como destino.
+
+**Nueva lógica simplificada:**
+
+```tsx
+// handleCopy - siempre copia la PRIMERA celda seleccionada
+const handleCopy = useCallback(() => {
+  if (selectedCells.size === 0) return;
+
+  // Tomar la primera celda
+  const firstCellKey = Array.from(selectedCells)[0];
+  const { userId, date } = parseCellKey(firstCellKey);
+  const schedule = getEffectiveValue(userId, date);
+
+  // Guardar solo ese horario
+  const clipboardData: ClipboardDataV2 = {
+    type: 'cells',
+    cells: [{ dayOffset: 0, schedule }],
+    sourceInfo: schedule.isDayOff 
+      ? 'Franco' 
+      : schedule.startTime 
+        ? `${schedule.startTime.slice(0,5)}-${schedule.endTime?.slice(0,5)}`
+        : 'Vacío',
+  };
+
+  setClipboard(clipboardData);
+  toast.success(`📋 Copiado: ${clipboardData.sourceInfo}`);
+}, [selectedCells, getEffectiveValue]);
+
+// handlePaste - aplica a TODAS las celdas seleccionadas
+const handlePaste = useCallback(() => {
+  if (!clipboard || selectedCells.size === 0) return;
+
+  const schedule = clipboard.cells[0].schedule;
+  const targetCells = Array.from(selectedCells).map(parseCellKey);
+
+  targetCells.forEach(cell => {
+    const userName = getTeamMemberName(cell.userId);
+    onCellChange(cell.userId, userName, cell.date, schedule);
+  });
+
+  toast.success(`✓ Pegado en ${targetCells.length} celda${targetCells.length > 1 ? 's' : ''}`);
+  setSelectedCells(new Set());
+}, [clipboard, selectedCells, onCellChange, getTeamMemberName]);
 ```
 
-### Rutas
-
-```text
-/mimarca/supervisiones          → Historial de visitas
-/mimarca/supervisiones/nueva    → Iniciar nueva visita
-/mimarca/supervisiones/:id      → Ejecutar/ver visita
+**Mejora en SelectionToolbar:** Mostrar claramente qué hay copiado:
+```tsx
+// En el tooltip de Pegar
+<TooltipContent side="bottom">
+  {clipboard 
+    ? `Pegar: ${clipboard.sourceInfo}` 
+    : 'Nada copiado'
+  }
+</TooltipContent>
 ```
 
 ---
 
-## Permisos (Actualizado)
+## 6. Verificar Edición de Nombre (Item 2)
 
-| Rol | Puede |
-|-----|-------|
-| `superadmin` | Todo |
-| `coordinador` | Crear/ejecutar visitas, ver todas |
-| `franquiciado` | Ver visitas de su local |
-| `encargado` | **Ver TODAS las visitas de su local** |
-
----
-
-## Archivos a Crear
-
-| Archivo | Descripción |
-|---------|-------------|
-| `src/types/inspection.ts` | Tipos TypeScript |
-| `src/hooks/useInspections.ts` | CRUD de visitas |
-| `src/pages/admin/InspectionsPage.tsx` | Historial con filtros |
-| `src/pages/admin/NewInspectionPage.tsx` | Iniciar visita |
-| `src/pages/admin/InspectionDetailPage.tsx` | Ejecutar/ver visita |
-| `src/components/inspections/InspectionChecklist.tsx` | Formulario checklist |
-| `src/components/inspections/InspectionItemRow.tsx` | Fila individual |
-| `src/components/inspections/InspectionSummary.tsx` | Resumen y puntaje |
-| `src/components/inspections/InspectionPhotoUpload.tsx` | Upload de fotos |
-| `src/components/inspections/InspectionActionItems.tsx` | Acciones a tomar |
-| `src/components/cuenta/MyInspectionsCard.tsx` | Card para Mi Cuenta |
+El campo de nombre en `CuentaPerfil.tsx` (líneas 196-204) ya está habilitado:
+```tsx
+<Input
+  id="fullName"
+  value={fullName}
+  onChange={(e) => setFullName(e.target.value)}
+  placeholder="Tu nombre"
+/>
+```
+No tiene `disabled` - los empleados ya pueden editar su nombre.
 
 ---
 
 ## Archivos a Modificar
 
-| Archivo | Cambio |
-|---------|--------|
-| `App.tsx` | Agregar rutas de supervisiones |
-| `BrandSidebar.tsx` | Nueva sección "Supervisión" |
-| `CuentaDashboard.tsx` | Agregar MyInspectionsCard |
-
----
+| Archivo | Cambios |
+|---------|---------|
+| `src/components/hr/ScheduleCellPopover.tsx` | Agregar botón Vacaciones + opción turno cortado |
+| `src/components/hr/InlineScheduleEditor.tsx` | Corregir validación + mejor manejo de errores |
+| `src/components/hr/schedule-selection/useScheduleSelection.ts` | Simplificar copiar/pegar |
+| `src/components/hr/schedule-selection/SelectionToolbar.tsx` | Mejorar feedback visual |
+| `src/components/hr/schedule-selection/types.ts` | Actualizar tipo ClipboardDataV2 |
 
 ## Migración de Base de Datos
 
-1. Crear tabla `inspection_templates` con 30 ítems predefinidos (BOH + FOH)
-2. Crear tabla `branch_inspections`
-3. Crear tabla `inspection_items`
-4. Crear bucket de storage `inspection-photos`
-5. RLS policies:
-   - Coordinadores/Superadmins: acceso total
-   - Franquiciados: ver visitas de sus locales
-   - **Encargados: ver visitas de su local (sin restricción de presencia)**
-
----
-
-## Edge Function: Notificación
-
-`send-inspection-notification`:
-- Se dispara al completar visita
-- Email al encargado presente + franquiciado del local
-- Incluye: puntaje, hallazgos críticos, acciones pendientes
-
----
-
-## UI del Checklist
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│  🏪 Villa Carlos Paz · FOH · 07/02/26 20:30                │
-│  Coordinador: Ismael Sanchez Fundaro                       │
-│  Encargado presente: [Select...]                           │
-├─────────────────────────────────────────────────────────────┤
-│  MOSTRADOR                                          3/3 ✓  │
-│  ├─ Limpieza mostrador y terminales    [✓] [✗] [N/A] 📷   │
-│  ├─ Cartelería actualizada             [✓] [✗] [N/A] 📷   │
-│  └─ Uniformes del personal             [✓] [✗] [N/A] 📷   │
-│                                                             │
-│  PRODUCTO                                           2/3 ⚠  │
-│  ├─ Tiempo pedido-entrega (< 6 min)    [✓] [✗] [N/A] 📷   │
-│  │    └─ Obs: "8 minutos"                                  │
-│  ├─ Presentación del producto          [✓] [✗] [N/A] 📷   │
-│  └─ Punto de cocción de la carne       [✓] [✗] [N/A] 📷   │
-├─────────────────────────────────────────────────────────────┤
-│  PUNTAJE: 85/100                                           │
-│  [Guardar Borrador]           [Cerrar y Notificar]        │
-└─────────────────────────────────────────────────────────────┘
+```sql
+-- Soporte para turno cortado (split shift)
+ALTER TABLE employee_schedules 
+  ADD COLUMN IF NOT EXISTS start_time_2 TIME,
+  ADD COLUMN IF NOT EXISTS end_time_2 TIME;
 ```
 
 ---
 
-## Vista en Mi Cuenta (Encargados)
+## Flujo de Usuario Mejorado
 
-```text
-📋 Supervisiones de mi Local
-──────────────────────────────
-Última visita: 07/02/26 - FOH - 85/100 ✓
-Ver informe completo →
+### Copiar/Pegar (nuevo comportamiento):
+1. Seleccionar UNA celda (o varias, se toma la primera)
+2. Ctrl+C → Toast: "📋 Copiado: 19:00-02:00"
+3. Seleccionar las celdas destino (Ctrl+Click o Shift+Click)
+4. Ctrl+V → Toast: "✓ Pegado en 5 celdas"
 
-Acciones pendientes:
-• Reparar luz led de barra (vence 14/02)
-```
+### Vacaciones:
+1. Click en celda vacía
+2. Click en "🏖️ Vacaciones"
+3. Celda muestra "🏖️ Vac"
 
----
-
-## Beneficios
-
-1. **Visitas sorpresa**: Sin aviso previo, refleja el estado real
-2. **Trazabilidad**: El encargado ve todo el historial de su local
-3. **Evidencia**: Fotos adjuntas a cada hallazgo
-4. **Accionable**: Acciones con responsable y fecha límite
-5. **Automático**: Notificación inmediata al cerrar
-
+### Turno Cortado:
+1. Click en celda
+2. Ingresar primer turno (ej: 10:00-14:00)
+3. Marcar "Turno cortado"
+4. Ingresar segundo turno (ej: 18:00-22:00)
+5. Celda muestra "10-14 / 18-22"
