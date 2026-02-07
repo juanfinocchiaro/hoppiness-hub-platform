@@ -1,157 +1,129 @@
 
-# Plan: Coaching Específico para Encargados
+# Plan: Agregar Corrector Ortográfico a Coaching y Reuniones
 
-## Problema Identificado
+## Resumen
 
-Actualmente la página **Coaching de Encargados** (`/mimarca/coaching/encargados`) usa el formulario genérico `CoachingForm.tsx` que incluye:
-
-1. **Estaciones de trabajo** (Cocinero, Cajero, Runner, Lavacopas) - **NO CORRESPONDE** para evaluar encargados
-2. **Competencias generales** de empleados (Puntualidad, Presentación, etc.)
-
-Un encargado no debe ser evaluado por si sabe hacer hamburguesas o manejar caja. Debe evaluarse su **capacidad de gestión, liderazgo y resultados operativos**.
+Habilitar la corrección ortográfica nativa del navegador en todos los campos de texto de los formularios de coaching y reuniones. Los navegadores modernos (Chrome, Firefox, Safari, Edge) ya incluyen corrector ortográfico integrado, solo necesitamos activarlo con el atributo HTML `spellCheck="true"`.
 
 ---
 
-## Solución Propuesta
+## ¿Cómo Funciona?
 
-### 1. Crear Formulario Específico para Encargados
-
-Nuevo componente `CoachingManagerForm.tsx` que:
-- **NO muestra** estaciones de trabajo
-- **SOLO evalúa** competencias de gestión (usando `manager_competencies`)
-- Incluye campos cualitativos (fortalezas, áreas de mejora, plan de acción)
-
-### 2. Limpiar y Reorganizar Competencias de Encargado
-
-Actualmente hay **14 competencias duplicadas** en la tabla `manager_competencies`. 
-
-Propuesta de competencias **estilo McDonald's** (7 categorías claras):
-
-| # | Competencia | Descripción | Referencia |
-|---|-------------|-------------|------------|
-| 1 | **Liderazgo de Equipo** | Motiva, delega y desarrolla a su personal | Desarrollo de talento |
-| 2 | **Gestión del Turno** | Organización de posiciones, descansos y flujo | Control operativo |
-| 3 | **Control de Calidad** | Supervisión de estándares de producto y servicio | QSC McDonald's |
-| 4 | **Atención de Crisis** | Manejo de quejas, conflictos y situaciones imprevistas | Resolución de problemas |
-| 5 | **Cumplimiento Operativo** | Fichajes, cierres de turno, reportes a tiempo | Procedimientos |
-| 6 | **Desarrollo del Equipo** | Coachings realizados, entrenamientos, mentoring | Formación |
-| 7 | **Comunicación con Marca** | Respuesta a mensajes, reportes, proactividad | Relación franquicia |
-
-### 3. Escala de Evaluación 1-5 (ya implementada)
-
-| Nivel | Nombre | Descripción |
-|-------|--------|-------------|
-| 1 | Aprendiz | Necesita guía constante en esta área |
-| 2 | En Desarrollo | Mejorando, comete errores pero aprende |
-| 3 | Competente | Cumple bien, trabaja solo sin problemas |
-| 4 | Destacado | Supera lo esperado, muy confiable |
-| 5 | Referente | Experto total, puede enseñar y resolver cualquier problema |
+El navegador automáticamente:
+- Subraya en rojo las palabras mal escritas
+- Ofrece sugerencias al hacer clic derecho
+- Funciona en español si el navegador está configurado en español
 
 ---
 
 ## Cambios Técnicos
 
-### Archivos a Crear
+### 1. Modificar el componente Textarea
 
-```text
-src/components/coaching/CoachingManagerForm.tsx
-  - Formulario específico para encargados
-  - Usa CoachingManagerSection (competencias de gestión)
-  - NO usa CoachingStationSection
-  - Incluye sección de feedback cualitativo
+Agregar `spellCheck="true"` como prop por defecto:
+
+```tsx
+// src/components/ui/textarea.tsx
+const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
+  ({ className, ...props }, ref) => {
+    return (
+      <textarea
+        spellCheck={true}           // ← Habilita corrector ortográfico
+        lang="es"                   // ← Configura idioma español
+        className={cn(...)}
+        ref={ref}
+        {...props}
+      />
+    );
+  }
+);
 ```
 
-### Archivos a Modificar
+### 2. Modificar el componente Input
 
-```text
-src/pages/admin/CoachingManagersPage.tsx
-  - Reemplazar CoachingForm por CoachingManagerForm
-  - Corregir referencia "/4" a "/5" (línea 225)
+Para inputs de texto largo (como acuerdos):
 
-src/components/coaching/CoachingExpressModal.tsx
-  - Detectar si el empleado es encargado
-  - Si es encargado: mostrar competencias de gestión
-  - Si es staff: mostrar estaciones (comportamiento actual)
-
-src/hooks/useCoachings.ts
-  - Agregar soporte para guardar scores de tipo 'manager'
-  - Ajustar cálculo de promedio para coachings de encargados
-
-src/components/coaching/index.ts
-  - Exportar nuevo CoachingManagerForm
-```
-
-### Migración SQL
-
-```sql
--- Limpiar duplicados y reorganizar competencias de encargado
-DELETE FROM manager_competencies;
-
-INSERT INTO manager_competencies (key, name, description, sort_order, is_active) VALUES
-('leadership_team', 'Liderazgo de Equipo', 'Motiva, delega y desarrolla al personal. Genera buen clima laboral.', 1, true),
-('shift_management', 'Gestión del Turno', 'Organiza posiciones, descansos y flujo de trabajo eficientemente.', 2, true),
-('quality_control', 'Control de Calidad', 'Supervisa estándares de producto, servicio y limpieza.', 3, true),
-('crisis_management', 'Atención de Crisis', 'Maneja quejas de clientes, conflictos internos y situaciones imprevistas.', 4, true),
-('operational_compliance', 'Cumplimiento Operativo', 'Realiza fichajes, cierres de turno y reportes a tiempo.', 5, true),
-('team_development', 'Desarrollo del Equipo', 'Realiza coachings mensuales, entrena y mentoriza al staff.', 6, true),
-('brand_communication', 'Comunicación con Marca', 'Responde mensajes, genera reportes y es proactivo con la central.', 7, true);
+```tsx
+// src/components/ui/input.tsx
+const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
+  ({ className, type, ...props }, ref) => {
+    return (
+      <input
+        type={type}
+        spellCheck={type === 'text' ? true : undefined}  // ← Solo para texto
+        lang="es"
+        className={cn(...)}
+        ref={ref}
+        {...props}
+      />
+    );
+  }
+);
 ```
 
 ---
 
-## Diagrama del Nuevo Flujo
+## Campos que se Beneficiarán
 
-```text
-EVALUACIÓN DE ENCARGADOS (desde Mi Marca)
+### Coaching (Empleados y Encargados)
+| Campo | Componente |
+|-------|-----------|
+| Fortalezas | `CoachingForm.tsx`, `CoachingManagerForm.tsx` |
+| Áreas de Mejora | `CoachingForm.tsx`, `CoachingManagerForm.tsx` |
+| Plan de Acción | `CoachingForm.tsx`, `CoachingManagerForm.tsx` |
+| Notas Privadas | `CoachingForm.tsx`, `CoachingManagerForm.tsx` |
+| Seguimiento del Plan Anterior | `CoachingForm.tsx`, `CoachingManagerForm.tsx` |
 
-┌─────────────────────────────────────────────┐
-│         CoachingManagersPage.tsx            │
-│  (Lista de encargados de toda la red)       │
-└─────────────────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────┐
-│         CoachingManagerForm.tsx ← NUEVO     │
-│                                             │
-│  ┌───────────────────────────────────────┐  │
-│  │ CoachingManagerSection                │  │
-│  │ (7 competencias de gestión)           │  │
-│  │ - Liderazgo de Equipo        [1-5]   │  │
-│  │ - Gestión del Turno          [1-5]   │  │
-│  │ - Control de Calidad         [1-5]   │  │
-│  │ - Atención de Crisis         [1-5]   │  │
-│  │ - Cumplimiento Operativo     [1-5]   │  │
-│  │ - Desarrollo del Equipo      [1-5]   │  │
-│  │ - Comunicación con Marca     [1-5]   │  │
-│  └───────────────────────────────────────┘  │
-│                                             │
-│  ┌───────────────────────────────────────┐  │
-│  │ Feedback Cualitativo                  │  │
-│  │ - Fortalezas                          │  │
-│  │ - Áreas de Mejora                     │  │
-│  │ - Plan de Acción                      │  │
-│  │ - Notas Privadas                      │  │
-│  └───────────────────────────────────────┘  │
-│                                             │
-│         [Guardar Coaching]                  │
-└─────────────────────────────────────────────┘
-```
+### Reuniones
+| Campo | Componente |
+|-------|-----------|
+| Título de la Reunión | `MeetingConveneModal.tsx` |
+| Notas de la Reunión | `MeetingExecutionForm.tsx` |
+| Descripción de Acuerdos | `MeetingWizardStep3.tsx`, `MeetingExecutionForm.tsx` |
 
 ---
 
-## Impacto
+## Beneficios
 
-- **Encargados**: Reciben evaluaciones relevantes a su rol de gestión
-- **Superadmin/Coordinador**: Puede evaluar encargados con criterios claros
-- **Consistencia**: Se mantiene la escala 1-5 ya implementada
-- **Claridad**: 7 competencias bien definidas vs 14 duplicadas
+- **Sin dependencias externas**: Usa el corrector nativo del navegador
+- **Funciona offline**: El diccionario está en el navegador
+- **Multi-idioma**: Respeta la configuración de idioma del usuario
+- **Cero impacto en rendimiento**: Es funcionalidad nativa HTML
+- **Compatible con todos los navegadores modernos**
 
 ---
 
-## Testing Recomendado
+## Consideraciones
 
-1. Verificar que al evaluar un encargado NO aparecen estaciones de trabajo
-2. Confirmar que las 7 competencias de gestión se muestran correctamente
-3. Probar que el coaching se guarda con tipo 'manager' en `coaching_competency_scores`
-4. Verificar que el modal de detalle muestra las competencias de gestión
-5. Probar en `/mimarca/coaching/encargados` el flujo completo
+1. **Idioma español**: Agregamos `lang="es"` para asegurar que use el diccionario español
+2. **Solo en texto**: No aplicamos a inputs de tipo email, número, fecha, etc.
+3. **Override posible**: Si algún campo específico no necesita corrector, puede pasar `spellCheck={false}`
+
+---
+
+## Archivos a Modificar
+
+| Archivo | Cambio |
+|---------|--------|
+| `src/components/ui/textarea.tsx` | Agregar `spellCheck={true}` y `lang="es"` |
+| `src/components/ui/input.tsx` | Agregar `spellCheck={true}` para type="text" y `lang="es"` |
+
+---
+
+## Resultado Visual
+
+Después de implementar, el usuario verá:
+- Palabras mal escritas subrayadas en rojo ondulado
+- Al hacer clic derecho sobre la palabra, aparecen sugerencias de corrección
+- Al seleccionar una sugerencia, se corrige automáticamente
+
+---
+
+## Resumen de Entregables
+
+| Ítem | Descripción |
+|------|-------------|
+| Corrector habilitado | En todos los Textarea e Input de texto |
+| Idioma español | Configurado por defecto |
+| Sin librerías | Usa funcionalidad nativa del navegador |
+| Transparente | El usuario no tiene que hacer nada extra |
