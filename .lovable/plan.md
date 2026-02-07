@@ -1,106 +1,150 @@
 
-# Plan: Integrar Mi Perfil dentro del WorkShell de Mi Cuenta
+# Plan: Estandarizar UI de Mi Cuenta
 
-## Problema Detectado
-
-La página `/cuenta/perfil` tiene dos layouts superpuestos:
+## Problemas Detectados
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  ACTUALMENTE                                                            │
+│  INCONSISTENCIAS ACTUALES                                               │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
-│  ┌─ WorkShell (CuentaLayout) ───────────────────────────────────────┐   │
-│  │                                                                   │   │
-│  │  [Sidebar]  │  ┌─ PublicHeader ────────────────────────────┐     │   │
-│  │  Mi Cuenta  │  │  HOPPINESS CLUB  |  Pedir  |  Nosotros    │     │   │
-│  │             │  └───────────────────────────────────────────┘     │   │
-│  │  ◉ Inicio   │                                                    │   │
-│  │  ◯ Comunic. │      ← Mi Perfil                                   │   │
-│  │             │      [Card: Datos personales]                      │   │
-│  │  ────────── │      [Card: Seguridad]                             │   │
-│  │  Mi Perfil  │                                                    │   │
-│  │  Salir      │  ┌─ PublicFooter ────────────────────────────┐     │   │
-│  │             │  │  Enlaces | Sumate | Seguinos               │     │   │
-│  │             │  └───────────────────────────────────────────┘     │   │
-│  └─────────────┴────────────────────────────────────────────────────┘   │
+│  Página          │ max-width  │ Header         │ Layout propio          │
+│  ───────────────────────────────────────────────────────────────────────│
+│  CuentaHome      │ max-w-4xl  │ div+h1 manual  │ No                     │
+│  CuentaPerfil    │ SIN LIMITE │ PageHeader     │ No                     │
+│  MiHorarioPage   │ max-w-4xl  │ PublicHeader   │ SI (duplicado!)        │
+│  Resto (8 págs)  │ max-w-4xl  │ div+h1 manual  │ No                     │
 │                                                                         │
-│  PROBLEMAS:                                                             │
-│  1. Header público dentro del panel interno                             │
-│  2. Footer público dentro del panel interno                             │
-│  3. "Mi Perfil" redundante en sidebar footer                            │
-│  4. UI inconsistente con otras páginas de Mi Cuenta                     │
+│  RESULTADO: Diferentes anchos, headers inconsistentes, MiHorario        │
+│  tiene un layout completo con PublicHeader dentro del WorkShell         │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Solución
+## Solución: Estándar Unificado
 
-Convertir `CuentaPerfil.tsx` en un componente de contenido puro (sin layout propio):
+Todas las páginas de Mi Cuenta deben seguir este patrón:
+
+```tsx
+// Estructura estándar para TODAS las páginas de Mi Cuenta
+export default function MiXxxPage() {
+  return (
+    <div className="space-y-6 max-w-4xl">
+      <PageHeader 
+        title="Título de Página" 
+        subtitle="Descripción breve"
+      />
+      
+      {/* Contenido específico */}
+      <ComponenteCard />
+    </div>
+  );
+}
+```
+
+### Reglas de Diseño
+
+| Aspecto | Valor estándar |
+|---------|----------------|
+| Ancho máximo | `max-w-4xl` |
+| Espaciado vertical | `space-y-6` |
+| Header | Componente `PageHeader` |
+| Contenido | Cards sin padding extra |
+
+## Cambios por Página
+
+### 1. CuentaHome.tsx
+- Cambiar header manual por `PageHeader`
+- Mantener `max-w-4xl`
+
+### 2. CuentaPerfil.tsx
+- AGREGAR `max-w-4xl` (falta actualmente)
+- Ya usa `PageHeader` (bien)
+
+### 3. MiHorarioPage.tsx (el más problemático)
+- ELIMINAR `PublicHeader` (está dentro de WorkShell)
+- ELIMINAR `<main className="container...">` wrapper
+- Usar `PageHeader` con título/subtítulo
+- Simplificar a contenido puro como las demás
+
+### 4. MisFichajesPage.tsx
+- Cambiar header manual por `PageHeader`
+
+### 5. MisCoachingsPage.tsx
+- Cambiar header manual por `PageHeader`
+
+### 6. MisReunionesPage.tsx
+- Cambiar header manual por `PageHeader`
+
+### 7. MisSolicitudesPage.tsx
+- Cambiar header manual por `PageHeader`
+
+### 8. MisAdelantosPage.tsx
+- Cambiar header manual por `PageHeader`
+
+### 9. MisComunicadosPage.tsx
+- Cambiar header manual por `PageHeader`
+
+### 10. MiReglamentoPage.tsx
+- Cambiar header manual por `PageHeader`
+
+## Ejemplo Visual Final
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  PROPUESTA                                                              │
-├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
-│  ┌─ WorkShell (CuentaLayout) ───────────────────────────────────────┐   │
+│  ┌─ WorkShell ──────────────────────────────────────────────────────┐   │
 │  │                                                                   │   │
-│  │  [Sidebar]  │                                                    │   │
-│  │  Mi Cuenta  │      Mi Perfil                                     │   │
-│  │             │                                                    │   │
-│  │  ◉ Inicio   │      ┌─────────────────────────────────────────┐   │   │
-│  │  ◉ Perfil   │      │  [Avatar]  Juan Finocchiaro             │   │   │
-│  │  ◯ Comunic. │      │           juan.finocchiaro@gmail.com    │   │   │
-│  │             │      ├─────────────────────────────────────────┤   │   │
-│  │  ────────── │      │  Email (no editable)                    │   │   │
-│  │  Mi Local   │      │  Nombre completo                        │   │   │
-│  │  Mi Marca   │      │  Teléfono                               │   │   │
-│  │  ────────── │      │  Fecha de nacimiento                    │   │   │
-│  │  Volver...  │      │  [Guardar cambios]                      │   │   │
-│  │  Salir      │      └─────────────────────────────────────────┘   │   │
-│  │             │                                                    │   │
-│  │             │      ┌── Seguridad ────────────────────────────┐   │   │
-│  │             │      │  [Cambiar contraseña]                   │   │   │
-│  │             │      └─────────────────────────────────────────┘   │   │
-│  │             │                                                    │   │
-│  └─────────────┴────────────────────────────────────────────────────┘   │
+│  │  [Sidebar]  │  ┌── max-w-4xl ────────────────────────────────┐   │   │
+│  │  Mi Cuenta  │  │                                              │   │   │
+│  │             │  │  ┌── PageHeader ─────────────────────────┐   │   │   │
+│  │  ◉ Inicio   │  │  │  Mi Perfil                            │   │   │   │
+│  │  ◯ Perfil   │  │  │  Información de tu cuenta             │   │   │   │
+│  │  ◯ Comunic. │  │  └───────────────────────────────────────┘   │   │   │
+│  │             │  │                                              │   │   │
+│  │             │  │  ┌── Card: Datos personales ─────────────┐   │   │   │
+│  │             │  │  │  [Avatar] Juan Finocchiaro            │   │   │   │
+│  │             │  │  │  juan.finocchiaro@gmail.com           │   │   │   │
+│  │             │  │  │  ─────────────────────────────────    │   │   │   │
+│  │             │  │  │  Email, Nombre, Teléfono, Fecha       │   │   │   │
+│  │             │  │  │  [Guardar cambios]                    │   │   │   │
+│  │             │  │  └───────────────────────────────────────┘   │   │   │
+│  │             │  │                                              │   │   │
+│  │             │  │  ┌── Card: Seguridad ────────────────────┐   │   │   │
+│  │             │  │  │  [Cambiar contraseña]                 │   │   │   │
+│  │             │  │  └───────────────────────────────────────┘   │   │   │
+│  │             │  │                                              │   │   │
+│  │             │  └──────────────────────────────────────────────┘   │   │
+│  │             │                                                     │   │
+│  └─────────────┴─────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  TODAS LAS PÁGINAS SIGUEN EL MISMO PATRÓN:                              │
+│  - max-w-4xl                                                            │
+│  - PageHeader con título y subtítulo                                    │
+│  - Cards con contenido                                                  │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
-
-## Cambios Técnicos
-
-### 1. Refactorizar CuentaPerfil.tsx
-
-Eliminar:
-- Import de `PublicHeader` y `PublicFooter`
-- El wrapper `<div className="min-h-screen flex flex-col bg-muted/30">`
-- La flecha "volver" (la navegación está en el sidebar)
-
-Mantener:
-- La lógica de datos (queries, mutations)
-- Las cards de datos personales y seguridad
-- El formulario de edición
-
-### 2. Actualizar CuentaSidebar.tsx
-
-Agregar "Mi Perfil" como ítem de navegación en el sidebar (no en el footer), ya que es una sección del panel igual que las demás.
-
-### 3. Actualizar CuentaLayout.tsx
-
-Remover "Mi Perfil" del footer (ya estará en el sidebar).
 
 ## Archivos a Modificar
 
-| Archivo | Cambio |
-|---------|--------|
-| `src/pages/cuenta/CuentaPerfil.tsx` | Eliminar layout propio, simplificar a contenido puro |
-| `src/components/layout/CuentaSidebar.tsx` | Agregar "Mi Perfil" como NavItemButton |
-| `src/pages/cuenta/CuentaLayout.tsx` | Remover link a Mi Perfil del footer |
+| Archivo | Cambio Principal |
+|---------|-----------------|
+| `src/pages/cuenta/CuentaHome.tsx` | Usar PageHeader |
+| `src/pages/cuenta/CuentaPerfil.tsx` | Agregar max-w-4xl |
+| `src/pages/cuenta/MiHorarioPage.tsx` | Eliminar PublicHeader, simplificar layout |
+| `src/pages/cuenta/MisFichajesPage.tsx` | Usar PageHeader |
+| `src/pages/cuenta/MisCoachingsPage.tsx` | Usar PageHeader |
+| `src/pages/cuenta/MisReunionesPage.tsx` | Usar PageHeader |
+| `src/pages/cuenta/MisSolicitudesPage.tsx` | Usar PageHeader |
+| `src/pages/cuenta/MisAdelantosPage.tsx` | Usar PageHeader |
+| `src/pages/cuenta/MisComunicadosPage.tsx` | Usar PageHeader |
+| `src/pages/cuenta/MiReglamentoPage.tsx` | Usar PageHeader |
 
 ## Resultado
 
-- **UI consistente**: Todas las páginas de Mi Cuenta usan el mismo WorkShell
-- **Navegación clara**: Mi Perfil es un ítem más del sidebar
-- **Sin redundancia**: Un solo lugar para acceder al perfil
-- **Escalable**: Preparado para agregar más secciones de configuración personal
+- UI consistente en todas las páginas de Mi Cuenta
+- Mismo ancho máximo (max-w-4xl)
+- Headers unificados con PageHeader
+- Sin layouts duplicados (PublicHeader eliminado de MiHorarioPage)
+- Profesional y en sintonía con Mi Local y Mi Marca
