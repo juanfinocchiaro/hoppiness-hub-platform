@@ -146,8 +146,8 @@ export function CoachingExpressModal({
     : 0;
 
   const getScoreColor = (score: number) => {
-    if (score >= 3.5) return 'text-green-600';
-    if (score >= 2.5) return 'text-amber-600';
+    if (score >= 4) return 'text-green-600';
+    if (score >= 3) return 'text-amber-600';
     if (score > 0) return 'text-red-600';
     return 'text-muted-foreground';
   };
@@ -212,7 +212,7 @@ export function CoachingExpressModal({
                       value={[score.score]}
                       onValueChange={([v]) => handleScoreChange(score.id, v)}
                       min={0}
-                      max={4}
+                      max={5}
                       step={0.5}
                       className="flex-1"
                     />
@@ -238,7 +238,7 @@ export function CoachingExpressModal({
                       value={[score.score]}
                       onValueChange={([v]) => handleScoreChange(score.id, v)}
                       min={0}
-                      max={4}
+                      max={5}
                       step={0.5}
                       className="flex-1"
                     />

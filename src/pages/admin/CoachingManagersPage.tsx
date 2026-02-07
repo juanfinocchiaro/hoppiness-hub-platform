@@ -16,7 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { EmptyState } from '@/components/ui/states';
-import { CoachingForm } from '@/components/coaching';
+import { CoachingManagerForm } from '@/components/coaching';
 import { 
   Users, 
   CheckCircle, 
@@ -219,10 +219,10 @@ function CoachingManagersPageContent() {
                             {manager.hasCoachingThisMonth && manager.latestCoaching ? (
                               <div className="flex items-center gap-2">
                                 <div className="text-right">
-                                  <span className={`font-semibold ${getScoreColor(manager.latestCoaching.overallScore)}`}>
+                                <span className={`font-semibold ${getScoreColor(manager.latestCoaching.overallScore)}`}>
                                     {manager.latestCoaching.overallScore?.toFixed(1) || '-'}
                                   </span>
-                                  <span className="text-xs text-muted-foreground">/4</span>
+                                  <span className="text-xs text-muted-foreground">/5</span>
                                 </div>
                                 <div className="flex items-center gap-1">
                                   {getTrendIcon(manager.latestCoaching.overallScore, manager.previousScore)}
@@ -260,7 +260,7 @@ function CoachingManagersPageContent() {
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
-                          <CoachingForm
+                          <CoachingManagerForm
                             employee={{
                               id: manager.userId,
                               full_name: manager.fullName,
