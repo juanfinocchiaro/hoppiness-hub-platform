@@ -224,7 +224,7 @@ export function getArgentinaHolidays(year: number): CreateHolidayInput[] {
     
     // Abril - Malvinas + Semana Santa
     { day_date: `${year}-04-02`, description: 'Día del Veterano y Caídos en Malvinas' },
-    { day_date: formatDate(juevesSanto), description: 'Jueves Santo', day_type: 'special_event' }, // Día no laborable
+    { day_date: formatDate(juevesSanto), description: 'Jueves Santo (día no laborable)' },
     { day_date: formatDate(viernesSanto), description: 'Viernes Santo' },
     
     // Mayo
@@ -255,9 +255,9 @@ export function getArgentinaHolidays(year: number): CreateHolidayInput[] {
   // Add tourist days for 2026 (decreed by government)
   if (year === 2026) {
     holidays.push(
-      { day_date: '2026-03-23', description: 'Día no laborable turístico', day_type: 'special_event' },
-      { day_date: '2026-07-10', description: 'Día no laborable turístico', day_type: 'special_event' },
-      { day_date: '2026-12-07', description: 'Día no laborable turístico', day_type: 'special_event' },
+      { day_date: '2026-03-23', description: 'Día no laborable turístico' },
+      { day_date: '2026-07-10', description: 'Día no laborable turístico' },
+      { day_date: '2026-12-07', description: 'Día no laborable turístico' },
     );
   }
   
