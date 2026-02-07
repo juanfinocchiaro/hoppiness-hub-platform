@@ -2,16 +2,15 @@
  * MisComunicadosPage - Comunicados recibidos por el usuario
  */
 import MyCommunicationsCard from '@/components/cuenta/MyCommunicationsCard';
+import { PageHeader } from '@/components/ui/page-header';
 
 export default function MisComunicadosPage() {
   return (
-    <div className="max-w-4xl space-y-6">
-      <div>
-        <h1 className="text-xl md:text-2xl font-bold">Comunicados</h1>
-        <p className="text-sm text-muted-foreground">
-          Mensajes y novedades de la marca
-        </p>
-      </div>
+    <div className="space-y-6 max-w-4xl">
+      <PageHeader 
+        title="Comunicados" 
+        subtitle="Mensajes y novedades de la marca"
+      />
       
       <MyCommunicationsCard />
     </div>

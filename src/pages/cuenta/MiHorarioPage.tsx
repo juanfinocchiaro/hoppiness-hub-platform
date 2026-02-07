@@ -13,22 +13,20 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
-  Calendar, Clock, ChevronLeft, ChevronRight, ArrowLeft, 
+  Calendar, Clock, ChevronLeft, ChevronRight,
   Flame, CreditCard, Package, Utensils, Info, Coffee 
 } from 'lucide-react';
 import { 
   format, isToday, startOfWeek, endOfWeek, eachDayOfInterval, 
-  addMonths, subMonths, startOfMonth, endOfMonth, isSameMonth,
-  differenceInMinutes, parseISO
+  addMonths, subMonths, startOfMonth, endOfMonth, isSameMonth
 } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Link, useNavigate } from 'react-router-dom';
-import { PublicHeader } from '@/components/layout/PublicHeader';
+import { PageHeader } from '@/components/ui/page-header';
 
 interface ScheduleEntry {
   id: string;
@@ -50,7 +48,6 @@ const POSITION_CONFIG: Record<string, { icon: React.ComponentType<any>; color: s
 const DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
 export default function MiHorarioPage() {
-  const navigate = useNavigate();
   const { id: userId } = useEffectiveUser();
   const now = new Date();
   
@@ -200,220 +197,139 @@ export default function MiHorarioPage() {
   const hasWorkToday = todaySchedule && !todaySchedule.is_day_off && todaySchedule.start_time !== '00:00:00';
 
   return (
-    <div className="min-h-screen bg-background">
-      <PublicHeader />
-      
-      <main className="container max-w-4xl mx-auto px-4 py-6">
-        {/* Header with back button */}
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/cuenta')}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">Mi Horario</h1>
-            <p className="text-muted-foreground">Tu horario de trabajo mensual</p>
-          </div>
-        </div>
+    <div className="space-y-6 max-w-4xl">
+      <PageHeader 
+        title="Mi Horario" 
+        subtitle="Tu horario de trabajo mensual"
+      />
 
-        {/* Month navigation */}
-        <Card className="mb-6">
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between">
-              <Button variant="outline" size="sm" onClick={goToPrevMonth}>
-                <ChevronLeft className="w-4 h-4 mr-1" />
-                Anterior
-              </Button>
-              
-              <div className="text-center">
-                <h2 className="text-xl font-semibold capitalize">
-                  {format(currentDate, "MMMM yyyy", { locale: es })}
-                </h2>
-                {!isSameMonth(currentDate, now) && (
-                  <Button variant="link" size="sm" onClick={goToCurrentMonth} className="text-xs">
-                    Ir a mes actual
-                  </Button>
-                )}
-              </div>
-              
-              <Button variant="outline" size="sm" onClick={goToNextMonth}>
-                Siguiente
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
+      {/* Month navigation */}
+      <Card>
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between">
+            <Button variant="outline" size="sm" onClick={goToPrevMonth}>
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Anterior
+            </Button>
+            
+            <div className="text-center">
+              <h2 className="text-xl font-semibold capitalize">
+                {format(currentDate, "MMMM yyyy", { locale: es })}
+              </h2>
+              {!isSameMonth(currentDate, now) && (
+                <Button variant="link" size="sm" onClick={goToCurrentMonth} className="text-xs">
+                  Ir a mes actual
+                </Button>
+              )}
+            </div>
+            
+            <Button variant="outline" size="sm" onClick={goToNextMonth}>
+              Siguiente
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Loading state */}
+      {isLoading && (
+        <div className="space-y-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      )}
+
+      {/* No schedules */}
+      {!isLoading && !schedules?.length && (
+        <Card>
+          <CardContent className="py-12">
+            <div className="flex flex-col items-center justify-center text-center">
+              <Info className="w-16 h-16 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">Sin horarios publicados</h3>
+              <p className="text-muted-foreground max-w-md">
+                Tu encargado aún no publicó los horarios para {format(currentDate, "MMMM yyyy", { locale: es })}.
+                Te notificaremos cuando estén disponibles.
+              </p>
             </div>
           </CardContent>
         </Card>
+      )}
 
-        {/* Loading state */}
-        {isLoading && (
-          <div className="space-y-4">
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-48 w-full" />
-            <Skeleton className="h-64 w-full" />
-          </div>
-        )}
-
-        {/* No schedules */}
-        {!isLoading && !schedules?.length && (
-          <Card>
-            <CardContent className="py-12">
-              <div className="flex flex-col items-center justify-center text-center">
-                <Info className="w-16 h-16 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">Sin horarios publicados</h3>
-                <p className="text-muted-foreground max-w-md">
-                  Tu encargado aún no publicó los horarios para {format(currentDate, "MMMM yyyy", { locale: es })}.
-                  Te notificaremos cuando estén disponibles.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Schedule content */}
-        {!isLoading && schedules && schedules.length > 0 && (
-          <div className="space-y-6">
-            {/* Month summary */}
-            <div className="grid grid-cols-3 gap-4">
-              <Card>
-                <CardContent className="py-4 text-center">
-                  <p className="text-2xl font-bold text-primary">{workDays}</p>
-                  <p className="text-sm text-muted-foreground">Días de trabajo</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="py-4 text-center">
-                  <p className="text-2xl font-bold">{francos}</p>
-                  <p className="text-sm text-muted-foreground">Francos</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="py-4 text-center">
-                  <p className="text-2xl font-bold">{totalHours}h</p>
-                  <p className="text-sm text-muted-foreground">Horas totales</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Today's schedule - only if current month */}
-            {isSameMonth(currentDate, now) && (
-              <Card className={hasWorkToday ? 'border-primary' : ''}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Calendar className="w-5 h-5" />
-                    Hoy - {format(now, "EEEE d 'de' MMMM", { locale: es })}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {hasWorkToday ? (
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-3 text-lg">
-                          <Clock className="w-5 h-5 text-muted-foreground" />
-                          <span className="font-semibold">
-                            {formatTime(todaySchedule.start_time)} - {formatTime(todaySchedule.end_time)}
-                          </span>
-                          <span className="text-muted-foreground">
-                            ({calculateDuration(todaySchedule.start_time, todaySchedule.end_time)})
-                          </span>
-                        </div>
-                        {todaySchedule.work_position && renderPosition(todaySchedule.work_position, 'md')}
-                      </div>
-                      <Badge className="bg-primary text-primary-foreground text-base px-4 py-2">
-                        Trabajás
-                      </Badge>
-                    </div>
-                  ) : todaySchedule?.is_day_off ? (
-                    <div className="flex items-center justify-between">
-                      <p className="text-lg text-muted-foreground">Día franco</p>
-                      <Badge variant="secondary" className="text-base px-4 py-2">Franco</Badge>
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">Sin turno asignado para hoy</p>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* This week - only if current month */}
-            {isSameMonth(currentDate, now) && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Esta semana</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {weekDays.map((day, idx) => {
-                      const schedule = getScheduleForDate(day);
-                      const isDayOff = schedule?.is_day_off;
-                      const hasWork = schedule && !isDayOff && schedule.start_time !== '00:00:00';
-                      const isCurrentDay = isToday(day);
-                      
-                      return (
-                        <div 
-                          key={idx}
-                          className={`
-                            flex items-center justify-between p-3 rounded-lg
-                            ${isCurrentDay ? 'bg-primary/10 ring-1 ring-primary' : 'bg-muted/30'}
-                          `}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`w-10 text-center ${isCurrentDay ? 'font-bold text-primary' : ''}`}>
-                              <div className="text-xs text-muted-foreground">{DAY_NAMES[day.getDay()].slice(0, 3)}</div>
-                              <div className="text-lg">{format(day, 'd')}</div>
-                            </div>
-                            
-                            {hasWork ? (
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">
-                                  {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
-                                </span>
-                                {schedule.work_position && renderPosition(schedule.work_position)}
-                              </div>
-                            ) : isDayOff ? (
-                              <span className="text-muted-foreground">Franco</span>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </div>
-                          
-                          {hasWork && (
-                            <span className="text-sm text-muted-foreground">
-                              {calculateDuration(schedule.start_time, schedule.end_time)}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Full month calendar */}
+      {/* Schedule content */}
+      {!isLoading && schedules && schedules.length > 0 && (
+        <div className="space-y-6">
+          {/* Month summary */}
+          <div className="grid grid-cols-3 gap-4">
             <Card>
+              <CardContent className="py-4 text-center">
+                <p className="text-2xl font-bold text-primary">{workDays}</p>
+                <p className="text-sm text-muted-foreground">Días de trabajo</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="py-4 text-center">
+                <p className="text-2xl font-bold">{francos}</p>
+                <p className="text-sm text-muted-foreground">Francos</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="py-4 text-center">
+                <p className="text-2xl font-bold">{totalHours}h</p>
+                <p className="text-sm text-muted-foreground">Horas totales</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Today's schedule - only if current month */}
+          {isSameMonth(currentDate, now) && (
+            <Card className={hasWorkToday ? 'border-primary' : ''}>
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg capitalize">
-                  Calendario de {format(currentDate, "MMMM", { locale: es })}
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  Hoy - {format(now, "EEEE d 'de' MMMM", { locale: es })}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {/* Calendar header */}
-                <div className="grid grid-cols-7 gap-1 mb-2">
-                  {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day, idx) => (
-                    <div key={idx} className="text-center text-xs font-medium text-muted-foreground py-2">
-                      {day}
+                {hasWorkToday ? (
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3 text-lg">
+                        <Clock className="w-5 h-5 text-muted-foreground" />
+                        <span className="font-semibold">
+                          {formatTime(todaySchedule.start_time)} - {formatTime(todaySchedule.end_time)}
+                        </span>
+                        <span className="text-muted-foreground">
+                          ({calculateDuration(todaySchedule.start_time, todaySchedule.end_time)})
+                        </span>
+                      </div>
+                      {todaySchedule.work_position && renderPosition(todaySchedule.work_position, 'md')}
                     </div>
-                  ))}
-                </div>
-                
-                {/* Calendar grid */}
-                <div className="grid grid-cols-7 gap-1">
-                  {/* Empty cells for start of month (Monday = 0) */}
-                  {Array.from({ length: (monthDays[0].getDay() + 6) % 7 }).map((_, idx) => (
-                    <div key={`empty-${idx}`} className="h-20" />
-                  ))}
-                  
-                  {/* Month days */}
-                  {monthDays.map((day, idx) => {
+                    <Badge className="bg-primary text-primary-foreground text-base px-4 py-2">
+                      Trabajás
+                    </Badge>
+                  </div>
+                ) : todaySchedule?.is_day_off ? (
+                  <div className="flex items-center justify-between">
+                    <p className="text-lg text-muted-foreground">Día franco</p>
+                    <Badge variant="secondary" className="text-base px-4 py-2">Franco</Badge>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">Sin turno asignado para hoy</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* This week - only if current month */}
+          {isSameMonth(currentDate, now) && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Esta semana</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {weekDays.map((day, idx) => {
                     const schedule = getScheduleForDate(day);
                     const isDayOff = schedule?.is_day_off;
                     const hasWork = schedule && !isDayOff && schedule.start_time !== '00:00:00';
@@ -421,65 +337,131 @@ export default function MiHorarioPage() {
                     
                     return (
                       <div 
-                        key={idx} 
+                        key={idx}
                         className={`
-                          flex flex-col p-2 rounded-lg h-20 text-sm
-                          ${isCurrentDay ? 'ring-2 ring-primary' : 'border'}
-                          ${hasWork ? 'bg-primary/5' : isDayOff ? 'bg-muted/50' : ''}
+                          flex items-center justify-between p-3 rounded-lg
+                          ${isCurrentDay ? 'bg-primary/10 ring-1 ring-primary' : 'bg-muted/30'}
                         `}
                       >
-                        <span className={`text-xs ${isCurrentDay ? 'font-bold text-primary' : 'text-muted-foreground'}`}>
-                          {format(day, 'd')}
-                        </span>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 text-center ${isCurrentDay ? 'font-bold text-primary' : ''}`}>
+                            <div className="text-xs text-muted-foreground">{DAY_NAMES[day.getDay()].slice(0, 3)}</div>
+                            <div className="text-lg">{format(day, 'd')}</div>
+                          </div>
+                          
+                          {hasWork ? (
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">
+                                {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
+                              </span>
+                              {schedule.work_position && renderPosition(schedule.work_position)}
+                            </div>
+                          ) : isDayOff ? (
+                            <span className="text-muted-foreground">Franco</span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </div>
                         
                         {hasWork && (
-                          <div className="mt-1 space-y-0.5">
-                            <span className="text-xs font-medium block">
-                              {formatTime(schedule.start_time)}-{formatTime(schedule.end_time)}
-                            </span>
-                            {schedule.work_position && (
-                              <span className="text-[10px] text-muted-foreground block truncate">
-                                {POSITION_CONFIG[schedule.work_position]?.label || schedule.work_position}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        
-                        {isDayOff && (
-                          <span className="text-xs text-muted-foreground mt-1">Franco</span>
+                          <span className="text-sm text-muted-foreground">
+                            {calculateDuration(schedule.start_time, schedule.end_time)}
+                          </span>
                         )}
                       </div>
                     );
                   })}
                 </div>
-                
-                {/* Legend */}
-                <div className="flex items-center gap-6 mt-4 pt-4 border-t text-sm text-muted-foreground">
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 rounded bg-primary/10 border" /> Día de trabajo
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 rounded bg-muted/50 border" /> Franco
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 rounded ring-2 ring-primary" /> Hoy
-                  </span>
-                </div>
               </CardContent>
             </Card>
-          </div>
-        )}
+          )}
 
-        {/* Back to account */}
-        <div className="mt-8 text-center">
-          <Link to="/cuenta">
-            <Button variant="outline">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a Mi Cuenta
-            </Button>
-          </Link>
+          {/* Full month calendar */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg capitalize">
+                Calendario de {format(currentDate, "MMMM", { locale: es })}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {/* Calendar header */}
+              <div className="grid grid-cols-7 gap-1 mb-2">
+                {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day, idx) => (
+                  <div key={idx} className="text-center text-xs font-medium text-muted-foreground py-2">
+                    {day}
+                  </div>
+                ))}
+              </div>
+              
+              {/* Calendar grid */}
+              <div className="grid grid-cols-7 gap-1">
+                {/* Empty cells for start of month (Monday = 0) */}
+                {Array.from({ length: (monthDays[0].getDay() + 6) % 7 }).map((_, idx) => (
+                  <div key={`empty-${idx}`} className="h-20" />
+                ))}
+                
+                {/* Month days */}
+                {monthDays.map((day, idx) => {
+                  const schedule = getScheduleForDate(day);
+                  const isDayOff = schedule?.is_day_off;
+                  const hasWork = schedule && !isDayOff && schedule.start_time !== '00:00:00';
+                  const isCurrentDay = isToday(day);
+                  
+                  return (
+                    <div 
+                      key={idx} 
+                      className={`
+                        flex flex-col p-2 rounded-lg h-20 text-sm
+                        ${isCurrentDay ? 'ring-2 ring-primary' : 'border'}
+                        ${hasWork ? 'bg-primary/5' : isDayOff ? 'bg-muted/50' : ''}
+                      `}
+                    >
+                      <span className={`font-medium ${isCurrentDay ? 'text-primary' : ''}`}>
+                        {format(day, 'd')}
+                      </span>
+                      
+                      {hasWork ? (
+                        <div className="mt-1 space-y-0.5">
+                          <p className="text-xs font-medium">
+                            {formatTime(schedule.start_time)}-{formatTime(schedule.end_time)}
+                          </p>
+                          {schedule.work_position && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              {POSITION_CONFIG[schedule.work_position]?.label || schedule.work_position}
+                            </p>
+                          )}
+                        </div>
+                      ) : isDayOff ? (
+                        <p className="text-xs text-muted-foreground mt-1">Franco</p>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Legend */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Posiciones</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-3">
+                {Object.entries(POSITION_CONFIG).map(([key, config]) => (
+                  <span
+                    key={key}
+                    className={`inline-flex items-center gap-1.5 rounded px-2 py-1 text-sm ${config.bgColor} ${config.color}`}
+                  >
+                    <config.icon className="w-4 h-4" />
+                    {config.label}
+                  </span>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </main>
+      )}
     </div>
   );
 }

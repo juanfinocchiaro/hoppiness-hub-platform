@@ -2,16 +2,15 @@
  * MiReglamentoPage - Estado de firma del reglamento
  */
 import MyRegulationsCard from '@/components/cuenta/MyRegulationsCard';
+import { PageHeader } from '@/components/ui/page-header';
 
 export default function MiReglamentoPage() {
   return (
-    <div className="max-w-4xl space-y-6">
-      <div>
-        <h1 className="text-xl md:text-2xl font-bold">Reglamento</h1>
-        <p className="text-sm text-muted-foreground">
-          Estado de firma del reglamento interno
-        </p>
-      </div>
+    <div className="space-y-6 max-w-4xl">
+      <PageHeader 
+        title="Reglamento" 
+        subtitle="Estado de firma del reglamento interno"
+      />
       
       <MyRegulationsCard />
     </div>

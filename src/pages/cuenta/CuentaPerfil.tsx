@@ -66,7 +66,6 @@ export default function CuentaPerfil() {
   const updateProfile = useMutation({
     mutationFn: async (data: { full_name: string; phone: string; birth_date?: string | null }) => {
       if (!effectiveUserId) throw new Error('No user');
-      // profiles.id = user_id after migration
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -140,8 +139,11 @@ export default function CuentaPerfil() {
   };
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Mi Perfil" />
+    <div className="space-y-6 max-w-4xl">
+      <PageHeader 
+        title="Mi Perfil" 
+        subtitle="Información de tu cuenta"
+      />
 
       {isLoading ? (
         <Card>
@@ -151,207 +153,207 @@ export default function CuentaPerfil() {
         </Card>
       ) : (
         <>
-              {/* Datos personales */}
-              <form onSubmit={handleSubmit}>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Datos personales</CardTitle>
-                    <CardDescription>
-                      Información de tu cuenta
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Avatar Section - display only, no upload */}
-                    <div className="flex items-center gap-4">
-                      <Avatar className="w-20 h-20">
-                        <AvatarImage src={avatarUrl || undefined} alt={fullName} />
-                        <AvatarFallback className="text-lg bg-primary/10 text-primary">
-                          {fullName ? getInitials(fullName) : <User className="w-8 h-8" />}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium">{fullName || 'Sin nombre'}</p>
-                        <p className="text-xs text-muted-foreground">{effectiveEmail}</p>
-                      </div>
-                    </div>
+          {/* Datos personales */}
+          <form onSubmit={handleSubmit}>
+            <Card>
+              <CardHeader>
+                <CardTitle>Datos personales</CardTitle>
+                <CardDescription>
+                  Información básica de tu cuenta
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Avatar Section - display only, no upload */}
+                <div className="flex items-center gap-4">
+                  <Avatar className="w-20 h-20">
+                    <AvatarImage src={avatarUrl || undefined} alt={fullName} />
+                    <AvatarFallback className="text-lg bg-primary/10 text-primary">
+                      {fullName ? getInitials(fullName) : <User className="w-8 h-8" />}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-medium">{fullName || 'Sin nombre'}</p>
+                    <p className="text-xs text-muted-foreground">{effectiveEmail}</p>
+                  </div>
+                </div>
 
-                    <Separator />
+                <Separator />
 
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={effectiveEmail || ''}
-                        disabled
-                        className="bg-muted"
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={effectiveEmail || ''}
+                    disabled
+                    className="bg-muted"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    El email no se puede modificar
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Nombre completo</Label>
+                  <Input
+                    id="fullName"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Tu nombre"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Teléfono</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="351-1234567"
+                  />
+                </div>
+
+                {/* Birth Date */}
+                <div className="space-y-2">
+                  <Label>Fecha de nacimiento</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !birthDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {birthDate ? (
+                          format(birthDate, "d 'de' MMMM, yyyy", { locale: es })
+                        ) : (
+                          "Seleccionar fecha..."
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={birthDate}
+                        onSelect={setBirthDate}
+                        disabled={(date) => date > new Date() || date < new Date("1920-01-01")}
+                        initialFocus
+                        captionLayout="dropdown-buttons"
+                        fromYear={1920}
+                        toYear={new Date().getFullYear()}
+                        className="pointer-events-auto"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        El email no se puede modificar
-                      </p>
-                    </div>
+                    </PopoverContent>
+                  </Popover>
+                  <p className="text-xs text-muted-foreground">
+                    Tu cumpleaños aparecerá en el calendario de horarios
+                  </p>
+                </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="fullName">Nombre completo</Label>
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={updateProfile.isPending}
+                >
+                  {updateProfile.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Guardar cambios
+                </Button>
+              </CardContent>
+            </Card>
+          </form>
+
+          {/* Cambiar contraseña */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Lock className="w-5 h-5 text-muted-foreground" />
+                  <CardTitle>Seguridad</CardTitle>
+                </div>
+                {!showPasswordSection && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowPasswordSection(true)}
+                  >
+                    Cambiar contraseña
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            
+            {showPasswordSection && (
+              <CardContent>
+                <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword">Nueva contraseña</Label>
+                    <div className="relative">
                       <Input
-                        id="fullName"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="Tu nombre"
+                        id="newPassword"
+                        type={showPasswords ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Mínimo 6 caracteres"
                       />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3"
+                        onClick={() => setShowPasswords(!showPasswords)}
+                      >
+                        {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </Button>
                     </div>
+                  </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Teléfono</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="351-1234567"
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
+                    <Input
+                      id="confirmPassword"
+                      type={showPasswords ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Repetir contraseña"
+                    />
+                  </div>
 
-                    {/* Birth Date */}
-                    <div className="space-y-2">
-                      <Label>Fecha de nacimiento</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !birthDate && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {birthDate ? (
-                              format(birthDate, "d 'de' MMMM, yyyy", { locale: es })
-                            ) : (
-                              "Seleccionar fecha..."
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={birthDate}
-                            onSelect={setBirthDate}
-                            disabled={(date) => date > new Date() || date < new Date("1920-01-01")}
-                            initialFocus
-                            captionLayout="dropdown-buttons"
-                            fromYear={1920}
-                            toYear={new Date().getFullYear()}
-                            className="pointer-events-auto"
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <p className="text-xs text-muted-foreground">
-                        Tu cumpleaños aparecerá en el calendario de horarios
-                      </p>
-                    </div>
-
+                  <div className="flex gap-2">
+                    <Button 
+                      type="button" 
+                      variant="ghost"
+                      className="flex-1"
+                      onClick={() => {
+                        setShowPasswordSection(false);
+                        setNewPassword('');
+                        setConfirmPassword('');
+                      }}
+                    >
+                      Cancelar
+                    </Button>
                     <Button 
                       type="submit" 
-                      className="w-full"
-                      disabled={updateProfile.isPending}
+                      className="flex-1"
+                      disabled={changePassword.isPending || !newPassword || !confirmPassword}
                     >
-                      {updateProfile.isPending ? (
+                      {changePassword.isPending ? (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       ) : (
-                        <Save className="w-4 h-4 mr-2" />
+                        <Lock className="w-4 h-4 mr-2" />
                       )}
-                      Guardar cambios
+                      Guardar
                     </Button>
-                  </CardContent>
-                </Card>
-              </form>
-
-              {/* Cambiar contraseña */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Lock className="w-5 h-5 text-muted-foreground" />
-                      <CardTitle>Seguridad</CardTitle>
-                    </div>
-                    {!showPasswordSection && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setShowPasswordSection(true)}
-                      >
-                        Cambiar contraseña
-                      </Button>
-                    )}
                   </div>
-                </CardHeader>
-                
-                {showPasswordSection && (
-                  <CardContent>
-                    <form onSubmit={handlePasswordSubmit} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="newPassword">Nueva contraseña</Label>
-                        <div className="relative">
-                          <Input
-                            id="newPassword"
-                            type={showPasswords ? 'text' : 'password'}
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            placeholder="Mínimo 6 caracteres"
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-0 top-0 h-full px-3"
-                            onClick={() => setShowPasswords(!showPasswords)}
-                          >
-                            {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
-                        <Input
-                          id="confirmPassword"
-                          type={showPasswords ? 'text' : 'password'}
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          placeholder="Repetir contraseña"
-                        />
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button 
-                          type="button" 
-                          variant="ghost"
-                          className="flex-1"
-                          onClick={() => {
-                            setShowPasswordSection(false);
-                            setNewPassword('');
-                            setConfirmPassword('');
-                          }}
-                        >
-                          Cancelar
-                        </Button>
-                        <Button 
-                          type="submit" 
-                          className="flex-1"
-                          disabled={changePassword.isPending || !newPassword || !confirmPassword}
-                        >
-                          {changePassword.isPending ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          ) : (
-                            <Lock className="w-4 h-4 mr-2" />
-                          )}
-                          Guardar
-                        </Button>
-                      </div>
-                    </form>
-                  </CardContent>
-                )}
+                </form>
+              </CardContent>
+            )}
           </Card>
         </>
       )}
