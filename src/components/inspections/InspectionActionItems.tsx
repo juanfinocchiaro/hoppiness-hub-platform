@@ -147,7 +147,7 @@ export function InspectionActionItems({
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label className="text-xs">Responsable</Label>
-              <Select value={newResponsible} onValueChange={setNewResponsible}>
+              <Select value={newResponsible || undefined} onValueChange={setNewResponsible}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Seleccionar..." />
                 </SelectTrigger>
