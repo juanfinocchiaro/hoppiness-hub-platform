@@ -55,19 +55,19 @@ export default function InspectionDetailPage() {
     }
   }, [inspection]);
 
-  // Fetch managers for this branch (using user_branch_roles for local roles)
+  // Fetch encargados for this branch (only encargado role)
   const { data: branchManagers } = useQuery({
     queryKey: ['branch-managers', inspection?.branch_id],
     queryFn: async () => {
       if (!inspection?.branch_id) return [];
       
-      // Query user_branch_roles for encargado/franquiciado roles in this branch
+      // Query user_branch_roles for encargado role only in this branch
       const { data: roles } = await supabase
         .from('user_branch_roles')
-        .select('user_id, local_role')
+        .select('user_id')
         .eq('branch_id', inspection.branch_id)
         .eq('is_active', true)
-        .in('local_role', ['encargado', 'franquiciado']);
+        .eq('local_role', 'encargado');
 
       if (!roles?.length) return [];
 
