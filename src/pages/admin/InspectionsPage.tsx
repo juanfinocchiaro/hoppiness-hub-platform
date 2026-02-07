@@ -7,7 +7,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Plus, MapPin, Calendar, User, ChevronRight, Filter } from 'lucide-react';
+import { Plus, MapPin, Calendar, User, ChevronRight, Filter, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,7 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/states';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
-import { useInspections } from '@/hooks/useInspections';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useInspections, useDeleteInspection } from '@/hooks/useInspections';
 import { TYPE_SHORT_LABELS, STATUS_LABELS } from '@/types/inspection';
 import { cn } from '@/lib/utils';
 
@@ -24,6 +25,9 @@ export default function InspectionsPage() {
   const navigate = useNavigate();
   const [branchFilter, setBranchFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const deleteInspection = useDeleteInspection();
 
   // Fetch branches for filter
   const { data: branches } = useQuery({
@@ -146,13 +150,25 @@ export default function InspectionsPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         {score !== null && (
                           <div className={cn("text-2xl font-bold", scoreColor)}>
                             {score}
                             <span className="text-sm text-muted-foreground">/100</span>
                           </div>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setDeleteId(inspection.id);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                         <ChevronRight className="w-5 h-5 text-muted-foreground" />
                       </div>
                     </div>
@@ -163,6 +179,22 @@ export default function InspectionsPage() {
           })}
         </div>
       )}
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={!!deleteId}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title="¿Eliminar visita?"
+        description="Esta acción no se puede deshacer. Se eliminarán todos los datos de esta visita."
+        confirmLabel="Eliminar"
+        onConfirm={async () => {
+          if (deleteId) {
+            await deleteInspection.mutateAsync(deleteId);
+            setDeleteId(null);
+          }
+        }}
+        variant="destructive"
+      />
     </div>
   );
 }
