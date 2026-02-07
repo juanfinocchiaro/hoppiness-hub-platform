@@ -49,11 +49,11 @@ export function ScoreEvolutionChart({ data, height = 120, showLabels = true }: S
           hide={!showLabels}
         />
         <YAxis 
-          domain={[1, 4]} 
+          domain={[1, 5]} 
           tick={{ fontSize: 10 }} 
           tickLine={false}
           axisLine={false}
-          ticks={[1, 2, 3, 4]}
+          ticks={[1, 2, 3, 4, 5]}
           hide={!showLabels}
         />
         <Tooltip
@@ -65,7 +65,7 @@ export function ScoreEvolutionChart({ data, height = 120, showLabels = true }: S
           }}
           formatter={(value: number) => [value?.toFixed(1), 'Score']}
         />
-        <ReferenceLine y={2.5} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" opacity={0.3} />
+        <ReferenceLine y={3} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" opacity={0.3} />
         <Line
           type="monotone"
           dataKey="score"

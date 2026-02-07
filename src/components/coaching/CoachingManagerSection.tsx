@@ -3,14 +3,17 @@
  * 
  * Usa manager_competencies en lugar de estaciones de trabajo.
  * Para evaluaciones brand_to_manager.
+ * 
+ * Escala actualizada 1-5
  */
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useManagerCompetencies } from '@/hooks/useStationCompetencies';
 import { Loader2, Star, Info } from 'lucide-react';
+import { ScoreLegend, SCORE_LABELS } from './ScoreLegend';
 import type { ManagerCompetency } from '@/types/coaching';
 
 interface ManagerScore {
@@ -23,13 +26,6 @@ interface CoachingManagerSectionProps {
   onScoreChange: (competencyId: string, score: number) => void;
 }
 
-const SCORE_LABELS: Record<number, { label: string; color: string }> = {
-  1: { label: 'Necesita mejorar', color: 'bg-red-500' },
-  2: { label: 'Regular', color: 'bg-amber-500' },
-  3: { label: 'Bueno', color: 'bg-blue-500' },
-  4: { label: 'Excelente', color: 'bg-green-500' },
-};
-
 function ScoreButton({ 
   value, 
   selected, 
@@ -39,7 +35,7 @@ function ScoreButton({
   selected: boolean; 
   onClick: () => void;
 }) {
-  const config = SCORE_LABELS[value];
+  const config = SCORE_LABELS.find(s => s.value === value);
   
   return (
     <Tooltip>
@@ -50,15 +46,18 @@ function ScoreButton({
           size="sm"
           className={cn(
             'h-8 w-8 p-0 transition-all',
-            selected && `${config.color} text-white border-transparent hover:${config.color}/90`
+            selected && config && `${config.bgColor} ${config.color} border-current hover:opacity-90`
           )}
-          onClick={onClick}
+          onClick={(e) => {
+            e.stopPropagation(); // Prevenir propagación
+            onClick();
+          }}
         >
           {value}
         </Button>
       </TooltipTrigger>
       <TooltipContent side="top">
-        {config.label}
+        {config?.label} - {config?.description}
       </TooltipContent>
     </Tooltip>
   );
@@ -91,13 +90,14 @@ function CompetencyRow({
         </div>
       </div>
       
-      <div className="flex items-center gap-1">
-        {[1, 2, 3, 4].map(value => (
+      {/* Wrapper con stopPropagation */}
+      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+        {SCORE_LABELS.map(sl => (
           <ScoreButton
-            key={value}
-            value={value}
-            selected={score === value}
-            onClick={() => onScoreChange(value)}
+            key={sl.value}
+            value={sl.value}
+            selected={score === sl.value}
+            onClick={() => onScoreChange(sl.value)}
           />
         ))}
       </div>
@@ -150,10 +150,13 @@ export function CoachingManagerSection({ scores, onScoreChange }: CoachingManage
         {averageScore > 0 && (
           <Badge variant="secondary" className="text-lg font-bold gap-1">
             {averageScore.toFixed(1)}
-            <span className="text-xs font-normal text-muted-foreground">/4</span>
+            <span className="text-xs font-normal text-muted-foreground">/5</span>
           </Badge>
         )}
       </div>
+
+      {/* Leyenda ARRIBA del formulario */}
+      <ScoreLegend />
 
       <div className="grid gap-2">
         {competencies.map(competency => (
@@ -163,16 +166,6 @@ export function CoachingManagerSection({ scores, onScoreChange }: CoachingManage
             score={getScore(competency.id)}
             onScoreChange={(value) => onScoreChange(competency.id, value)}
           />
-        ))}
-      </div>
-
-      {/* Leyenda de puntuación */}
-      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground pt-2 border-t">
-        {Object.entries(SCORE_LABELS).map(([value, config]) => (
-          <span key={value} className="flex items-center gap-1">
-            <div className={cn('w-3 h-3 rounded', config.color)} />
-            {value} = {config.label}
-          </span>
         ))}
       </div>
     </div>

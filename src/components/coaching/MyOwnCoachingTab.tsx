@@ -98,8 +98,10 @@ export function MyOwnCoachingTab({ branchId }: MyOwnCoachingTabProps) {
 
   const getScoreColor = (score: number | null) => {
     if (!score) return 'text-muted-foreground';
-    if (score >= 3.5) return 'text-green-600';
-    if (score >= 2.5) return 'text-amber-600';
+    if (score >= 4.5) return 'text-purple-600';
+    if (score >= 3.5) return 'text-blue-600';
+    if (score >= 2.5) return 'text-green-600';
+    if (score >= 1.5) return 'text-amber-600';
     return 'text-red-600';
   };
 
@@ -219,7 +221,7 @@ export function MyOwnCoachingTab({ branchId }: MyOwnCoachingTabProps) {
             <div className="text-right">
               <p className={`text-4xl font-bold ${getScoreColor(latestCoaching.overall_score)}`}>
                 {latestCoaching.overall_score?.toFixed(1) || '-'}
-                <span className="text-lg font-normal text-muted-foreground">/4</span>
+                <span className="text-lg font-normal text-muted-foreground">/5</span>
               </p>
               <div className="flex items-center gap-1 justify-end">
                 {getTrendIcon(latestCoaching.overall_score, previousCoaching?.overall_score || null)}

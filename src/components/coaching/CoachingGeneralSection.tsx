@@ -2,6 +2,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ScoreLegend, SCORE_LABELS } from './ScoreLegend';
 import type { GeneralCompetency } from '@/types/coaching';
 
 interface GeneralScore {
@@ -14,13 +15,6 @@ interface CoachingGeneralSectionProps {
   scores: GeneralScore[];
   onScoreChange: (competencyId: string, score: number) => void;
 }
-
-const scoreLabels = [
-  { value: 1, label: 'Necesita mejorar', color: 'bg-red-100 text-red-700 border-red-200' },
-  { value: 2, label: 'En desarrollo', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  { value: 3, label: 'Cumple', color: 'bg-green-100 text-green-700 border-green-200' },
-  { value: 4, label: 'Supera', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-];
 
 export function CoachingGeneralSection({
   competencies,
@@ -65,11 +59,14 @@ export function CoachingGeneralSection({
           </div>
           {averageScore && (
             <Badge variant="secondary" className="mt-1">
-              Promedio: {averageScore}/4
+              Promedio: {averageScore}/5
             </Badge>
           )}
         </div>
       </div>
+
+      {/* Leyenda ARRIBA del formulario */}
+      <ScoreLegend />
 
       <Card>
         <CardContent className="p-4 space-y-4">
@@ -94,45 +91,39 @@ export function CoachingGeneralSection({
                   )}
                 </div>
                 
-                <RadioGroup
-                  value={currentScore.toString()}
-                  onValueChange={(value) => onScoreChange(comp.id, parseInt(value))}
-                  className="flex gap-1"
-                >
-                  {scoreLabels.map(score => (
-                    <div key={score.value}>
-                      <RadioGroupItem 
-                        value={score.value.toString()} 
-                        id={`gen-${comp.id}-${score.value}`} 
-                        className="sr-only" 
-                      />
-                      <Label
-                        htmlFor={`gen-${comp.id}-${score.value}`}
-                        className={`w-8 h-8 flex items-center justify-center text-xs rounded-md cursor-pointer border transition-all
-                          ${currentScore === score.value 
-                            ? score.color
-                            : 'bg-muted hover:bg-muted/80 border-transparent'
-                          }`}
-                      >
-                        {score.value}
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
+                {/* Wrapper con stopPropagation para evitar cierre de Collapsible */}
+                <div onClick={(e) => e.stopPropagation()}>
+                  <RadioGroup
+                    value={currentScore.toString()}
+                    onValueChange={(value) => onScoreChange(comp.id, parseInt(value))}
+                    className="flex gap-1"
+                  >
+                    {SCORE_LABELS.map(score => (
+                      <div key={score.value}>
+                        <RadioGroupItem 
+                          value={score.value.toString()} 
+                          id={`gen-${comp.id}-${score.value}`} 
+                          className="sr-only" 
+                        />
+                        <Label
+                          htmlFor={`gen-${comp.id}-${score.value}`}
+                          className={`w-8 h-8 flex items-center justify-center text-xs rounded-md cursor-pointer border transition-all
+                            ${currentScore === score.value 
+                              ? `${score.bgColor} ${score.color} border-current`
+                              : 'bg-muted hover:bg-muted/80 border-transparent'
+                            }`}
+                        >
+                          {score.value}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </div>
               </div>
             );
           })}
         </CardContent>
       </Card>
-
-      {/* Leyenda */}
-      <div className="flex flex-wrap gap-2 text-xs">
-        {scoreLabels.map(score => (
-          <div key={score.value} className={`px-2 py-1 rounded border ${score.color}`}>
-            {score.value} = {score.label}
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

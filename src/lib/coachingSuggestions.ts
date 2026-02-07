@@ -50,9 +50,19 @@ const SUGGESTIONS_BY_AREA: Record<string, ScoreSuggestion[]> = {
       maxScore: 4,
       area: 'Atención al Cliente',
       suggestions: {
-        strengths: ['Excelente trato con clientes', 'Resuelve problemas con calma'],
+        strengths: ['Buen trato con clientes', 'Resuelve problemas con calma'],
+        improvements: ['Mejorar consistencia en servicio'],
+        actions: ['Liderar capacitaciones de atención'],
+      },
+    },
+    {
+      minScore: 4,
+      maxScore: 5,
+      area: 'Atención al Cliente',
+      suggestions: {
+        strengths: ['Excelente trato con clientes', 'Referente del equipo en atención'],
         improvements: [],
-        actions: ['Mentorear a compañeros nuevos'],
+        actions: ['Mentorear a compañeros nuevos', 'Crear material de capacitación'],
       },
     },
   ],
@@ -89,7 +99,17 @@ const SUGGESTIONS_BY_AREA: Record<string, ScoreSuggestion[]> = {
       maxScore: 4,
       area: 'Puntualidad',
       suggestions: {
-        strengths: ['Siempre puntual', 'Ejemplo para el equipo'],
+        strengths: ['Siempre puntual', 'Confiable'],
+        improvements: [],
+        actions: ['Mantener el excelente hábito'],
+      },
+    },
+    {
+      minScore: 4,
+      maxScore: 5,
+      area: 'Puntualidad',
+      suggestions: {
+        strengths: ['Siempre puntual', 'Ejemplo para el equipo', 'Llega antes para preparar'],
         improvements: [],
         actions: [],
       },
@@ -127,9 +147,19 @@ const SUGGESTIONS_BY_AREA: Record<string, ScoreSuggestion[]> = {
       maxScore: 4,
       area: 'Trabajo en Equipo',
       suggestions: {
-        strengths: ['Excelente compañero', 'Ayuda proactivamente'],
+        strengths: ['Buen compañero', 'Ayuda proactivamente'],
+        improvements: ['Mejorar comunicación con otros turnos'],
+        actions: ['Coordinar tareas de limpieza'],
+      },
+    },
+    {
+      minScore: 4,
+      maxScore: 5,
+      area: 'Trabajo en Equipo',
+      suggestions: {
+        strengths: ['Excelente compañero', 'Referente del equipo', 'Resuelve conflictos'],
         improvements: [],
-        actions: ['Ser referente del equipo'],
+        actions: ['Mentorear a nuevos empleados'],
       },
     },
   ],
@@ -167,9 +197,19 @@ const SUGGESTIONS_BY_AREA: Record<string, ScoreSuggestion[]> = {
       maxScore: 4,
       area: 'Estación de Cocina',
       suggestions: {
-        strengths: ['Domina la estación', 'Rápido y preciso'],
+        strengths: ['Buen dominio de la estación', 'Consistente'],
+        improvements: ['Mejorar velocidad en horas pico'],
+        actions: ['Practicar flujo de pedidos simultáneos'],
+      },
+    },
+    {
+      minScore: 4,
+      maxScore: 5,
+      area: 'Estación de Cocina',
+      suggestions: {
+        strengths: ['Domina la estación', 'Rápido y preciso', 'Puede entrenar a otros'],
         improvements: [],
-        actions: ['Enseñar a nuevos empleados'],
+        actions: ['Capacitar a nuevos empleados', 'Documentar mejores prácticas'],
       },
     },
   ],
@@ -205,9 +245,19 @@ const SUGGESTIONS_BY_AREA: Record<string, ScoreSuggestion[]> = {
       maxScore: 4,
       area: 'Caja',
       suggestions: {
-        strengths: ['Excelente manejo de caja', 'Sin errores de arqueo'],
+        strengths: ['Buen manejo de caja', 'Pocos errores de arqueo'],
+        improvements: ['Mejorar velocidad con apps de delivery'],
+        actions: ['Practicar con todos los medios de pago'],
+      },
+    },
+    {
+      minScore: 4,
+      maxScore: 5,
+      area: 'Caja',
+      suggestions: {
+        strengths: ['Excelente manejo de caja', 'Sin errores de arqueo', 'Referente del equipo'],
         improvements: [],
-        actions: ['Capacitar a compañeros'],
+        actions: ['Capacitar a compañeros', 'Supervisar cierres de caja'],
       },
     },
   ],
@@ -286,29 +336,33 @@ export function getSuggestionsForScores(
 }
 
 /**
- * Genera texto de fortalezas basado en score general
+ * Genera texto de fortalezas basado en score general (escala 1-5)
  */
 export function generateStrengthsText(avgScore: number): string {
-  if (avgScore >= 3.5) {
-    return 'Excelente desempeño general. Destaca por su compromiso y habilidades.';
+  if (avgScore >= 4.5) {
+    return 'Desempeño excepcional. Es un referente del equipo en múltiples áreas.';
+  } else if (avgScore >= 4) {
+    return 'Excelente desempeño. Destaca por su compromiso y habilidades.';
+  } else if (avgScore >= 3.5) {
+    return 'Muy buen desempeño. Muestra mejora constante y es confiable.';
   } else if (avgScore >= 3) {
-    return 'Buen desempeño. Muestra mejora constante.';
-  } else if (avgScore >= 2.5) {
-    return 'Desempeño aceptable con potencial de mejora.';
+    return 'Buen desempeño. Cumple con las expectativas del rol.';
   }
   return '';
 }
 
 /**
- * Genera texto de áreas de mejora basado en score general
+ * Genera texto de áreas de mejora basado en score general (escala 1-5)
  */
 export function generateImprovementsText(avgScore: number): string {
   if (avgScore < 2) {
     return 'Requiere atención inmediata en múltiples áreas.';
   } else if (avgScore < 2.5) {
-    return 'Necesita enfocarse en mejorar consistencia.';
+    return 'Necesita enfocarse en mejorar consistencia y técnicas básicas.';
   } else if (avgScore < 3) {
-    return 'Puede mejorar en algunas áreas específicas.';
+    return 'Puede mejorar en algunas áreas específicas para alcanzar el nivel competente.';
+  } else if (avgScore < 3.5) {
+    return 'Pequeños ajustes lo llevarían a un nivel destacado.';
   }
   return '';
 }

@@ -1,10 +1,9 @@
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, ChefHat, Calculator, Package, Droplets } from 'lucide-react';
 import { useState } from 'react';
+import { ScoreLegend, SCORE_LABELS } from './ScoreLegend';
 import type { WorkStation, StationCompetency } from '@/types/coaching';
 
 const stationIcons: Record<string, React.ReactNode> = {
@@ -29,13 +28,6 @@ interface CoachingStationSectionProps {
   onScoreChange: (stationId: string, score: number) => void;
   onCompetencyScoreChange: (stationId: string, competencyId: string, score: number) => void;
 }
-
-const scoreLabels = [
-  { value: 1, label: 'Necesita mejorar', color: 'text-red-600' },
-  { value: 2, label: 'En desarrollo', color: 'text-amber-600' },
-  { value: 3, label: 'Cumple expectativas', color: 'text-green-600' },
-  { value: 4, label: 'Supera expectativas', color: 'text-blue-600' },
-];
 
 export function CoachingStationSection({
   stations,
@@ -74,6 +66,9 @@ export function CoachingStationSection({
         </p>
       </div>
 
+      {/* Leyenda ARRIBA del formulario */}
+      <ScoreLegend />
+
       <div className="grid gap-3">
         {stations.map(station => {
           const isSelected = selectedStations.includes(station.id);
@@ -102,7 +97,7 @@ export function CoachingStationSection({
                     <CardTitle className="text-sm font-medium">{station.name}</CardTitle>
                     {isSelected && stationData?.score && (
                       <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                        {stationData.score}/4
+                        {stationData.score}/5
                       </span>
                     )}
                   </div>
@@ -131,27 +126,30 @@ export function CoachingStationSection({
                     <Label className="text-xs font-medium text-muted-foreground">
                       Evaluación General de la Estación
                     </Label>
-                    <RadioGroup
-                      value={stationData?.score?.toString() || ''}
-                      onValueChange={(value) => onScoreChange(station.id, parseInt(value))}
-                      className="flex gap-2"
-                    >
-                      {scoreLabels.map(score => (
-                        <div key={score.value} className="flex items-center">
-                          <RadioGroupItem value={score.value.toString()} id={`${station.id}-${score.value}`} className="sr-only" />
-                          <Label
-                            htmlFor={`${station.id}-${score.value}`}
-                            className={`px-3 py-1.5 text-xs rounded cursor-pointer border transition-colors
-                              ${stationData?.score === score.value 
-                                ? `${score.color} bg-primary/5 border-primary` 
-                                : 'bg-muted hover:bg-muted/80 border-transparent'
-                              }`}
-                          >
-                            {score.value}
-                          </Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
+                    {/* Wrapper con stopPropagation */}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <RadioGroup
+                        value={stationData?.score?.toString() || ''}
+                        onValueChange={(value) => onScoreChange(station.id, parseInt(value))}
+                        className="flex gap-2"
+                      >
+                        {SCORE_LABELS.map(score => (
+                          <div key={score.value} className="flex items-center">
+                            <RadioGroupItem value={score.value.toString()} id={`${station.id}-${score.value}`} className="sr-only" />
+                            <Label
+                              htmlFor={`${station.id}-${score.value}`}
+                              className={`px-3 py-1.5 text-xs rounded cursor-pointer border transition-colors
+                                ${stationData?.score === score.value 
+                                  ? `${score.bgColor} ${score.color} border-current` 
+                                  : 'bg-muted hover:bg-muted/80 border-transparent'
+                                }`}
+                            >
+                              {score.value}
+                            </Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    </div>
                   </div>
 
                   {/* Competencias individuales */}
@@ -163,30 +161,34 @@ export function CoachingStationSection({
                       <div key={comp.id} className="space-y-1">
                         <div className="flex items-center justify-between">
                           <span className="text-xs">{comp.name}</span>
-                          <RadioGroup
-                            value={getCompetencyScore(station.id, comp.id).toString() || '0'}
-                            onValueChange={(value) => onCompetencyScoreChange(station.id, comp.id, parseInt(value))}
-                            className="flex gap-1"
-                          >
-                            {[1, 2, 3, 4].map(value => {
-                              const currentScore = getCompetencyScore(station.id, comp.id);
-                              return (
-                                <div key={value}>
-                                  <RadioGroupItem value={value.toString()} id={`${comp.id}-${value}`} className="sr-only" />
-                                  <Label
-                                    htmlFor={`${comp.id}-${value}`}
-                                    className={`w-6 h-6 flex items-center justify-center text-xs rounded cursor-pointer border
-                                      ${currentScore === value 
-                                        ? 'bg-primary text-primary-foreground border-primary' 
-                                        : 'bg-muted hover:bg-muted/80 border-transparent'
-                                      }`}
-                                  >
-                                    {value}
-                                  </Label>
-                                </div>
-                              );
-                            })}
-                          </RadioGroup>
+                          {/* Wrapper con stopPropagation */}
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <RadioGroup
+                              value={getCompetencyScore(station.id, comp.id).toString() || '0'}
+                              onValueChange={(value) => onCompetencyScoreChange(station.id, comp.id, parseInt(value))}
+                              className="flex gap-1"
+                            >
+                              {[1, 2, 3, 4, 5].map(value => {
+                                const currentScore = getCompetencyScore(station.id, comp.id);
+                                const scoreConfig = SCORE_LABELS.find(s => s.value === value);
+                                return (
+                                  <div key={value}>
+                                    <RadioGroupItem value={value.toString()} id={`${comp.id}-${value}`} className="sr-only" />
+                                    <Label
+                                      htmlFor={`${comp.id}-${value}`}
+                                      className={`w-6 h-6 flex items-center justify-center text-xs rounded cursor-pointer border
+                                        ${currentScore === value 
+                                          ? `${scoreConfig?.bgColor} ${scoreConfig?.color} border-current` 
+                                          : 'bg-muted hover:bg-muted/80 border-transparent'
+                                        }`}
+                                    >
+                                      {value}
+                                    </Label>
+                                  </div>
+                                );
+                              })}
+                            </RadioGroup>
+                          </div>
                         </div>
                       </div>
                     ))}
