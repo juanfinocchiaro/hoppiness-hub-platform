@@ -92,7 +92,7 @@ export function SelectionToolbar({
           </TooltipTrigger>
           <TooltipContent side="bottom">
             {clipboard 
-              ? `Ctrl+V • ${clipboard.sourceInfo}` 
+              ? `Pegar: ${clipboard.sourceInfo}` 
               : 'Nada copiado'
             }
           </TooltipContent>

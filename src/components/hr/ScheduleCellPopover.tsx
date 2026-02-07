@@ -168,6 +168,19 @@ export function ScheduleCellPopover({
     setOpen(false);
   };
 
+  const handleVacation = () => {
+    onChange({
+      startTime: null,
+      endTime: null,
+      isDayOff: true,
+      isBirthdayOff: false,
+      position: 'vacaciones',
+      breakStart: null,
+      breakEnd: null,
+    });
+    setOpen(false);
+  };
+
   const handleDeleteShift = () => {
     onChange({
       startTime: null,
@@ -222,7 +235,7 @@ export function ScheduleCellPopover({
           </div>
 
           <div className="p-4 space-y-4">
-            {/* Quick actions: Day off and Birthday */}
+            {/* Quick actions: Day off, Vacation, and Birthday */}
             <div className="space-y-2">
               <Button
                 variant="outline"
@@ -231,6 +244,17 @@ export function ScheduleCellPopover({
                 onClick={handleDayOff}
               >
                 Franco (día libre)
+              </Button>
+
+              {/* Vacation button */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full h-9 text-cyan-600 border-cyan-200 hover:bg-cyan-50 dark:text-cyan-400 dark:border-cyan-800 dark:hover:bg-cyan-950/50"
+                onClick={handleVacation}
+              >
+                <span className="mr-2">🏖️</span>
+                Vacaciones
               </Button>
 
               {/* Birthday day off - only if birthday month and not used */}

@@ -935,6 +935,7 @@ export type Database = {
           day_of_week: number
           employee_id: string
           end_time: string
+          end_time_2: string | null
           id: string
           is_day_off: boolean | null
           modification_reason: string | null
@@ -948,6 +949,7 @@ export type Database = {
           schedule_year: number | null
           shift_number: number
           start_time: string
+          start_time_2: string | null
           updated_at: string
           user_id: string | null
           work_position: string | null
@@ -958,6 +960,7 @@ export type Database = {
           day_of_week: number
           employee_id: string
           end_time: string
+          end_time_2?: string | null
           id?: string
           is_day_off?: boolean | null
           modification_reason?: string | null
@@ -971,6 +974,7 @@ export type Database = {
           schedule_year?: number | null
           shift_number?: number
           start_time: string
+          start_time_2?: string | null
           updated_at?: string
           user_id?: string | null
           work_position?: string | null
@@ -981,6 +985,7 @@ export type Database = {
           day_of_week?: number
           employee_id?: string
           end_time?: string
+          end_time_2?: string | null
           id?: string
           is_day_off?: boolean | null
           modification_reason?: string | null
@@ -994,6 +999,7 @@ export type Database = {
           schedule_year?: number | null
           shift_number?: number
           start_time?: string
+          start_time_2?: string | null
           updated_at?: string
           user_id?: string | null
           work_position?: string | null
