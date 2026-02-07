@@ -16,7 +16,7 @@
  * - Multi-cell selection with keyboard shortcuts (Ctrl+C/V, Delete, F, Escape)
  * - Week copy/paste functionality for faster schedule entry
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
@@ -36,10 +36,11 @@ import { useMonthlySchedules, type ScheduleEntry, type DaySchedule } from '@/hoo
 import { sendBulkScheduleNotifications } from '@/hooks/useScheduleNotifications';
 import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
-import { ScheduleCellPopover, type ScheduleValue } from './ScheduleCellPopover';
+import { type ScheduleValue } from './ScheduleCellPopover';
 import { SaveScheduleDialog } from './SaveScheduleDialog';
 import { useScheduleSelection, SelectionToolbar } from './schedule-selection';
 import { usePreviousMonthPattern, applyPatternToMonth } from '@/hooks/usePreviousMonthSchedules';
+import { useWorkPositions } from '@/hooks/useWorkPositions';
 import type { WorkPositionType } from '@/types/workPosition';
 
 interface InlineScheduleEditorProps {
@@ -95,8 +96,8 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
   const [hourRange, setHourRange] = useState<HourRangeType>('all');
   const [copyMonthDialogOpen, setCopyMonthDialogOpen] = useState(false);
   
-  // Double-click edit state
-  const [editingCell, setEditingCell] = useState<{ userId: string; date: string } | null>(null);
+  // Work positions for toolbar
+  const { data: workPositions = [] } = useWorkPositions();
   
   const queryClient = useQueryClient();
   const { id: currentUserId } = useEffectiveUser();
@@ -699,16 +700,20 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
     );
   };
 
-  // Handle cell double-click (open popover)
-  const handleCellDoubleClick = (userId: string, date: string) => {
-    if (!canManageSchedules) return;
-    setEditingCell({ userId, date });
-  };
-
-  // Close popover
-  const handleClosePopover = () => {
-    setEditingCell(null);
-  };
+  // Handle mouse move on grid container for drag selection
+  const handleGridMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!selection.isDragging) return;
+    
+    // Find the cell under cursor using elementFromPoint
+    const element = document.elementFromPoint(e.clientX, e.clientY);
+    const cellData = element?.closest('[data-cell]')?.getAttribute('data-cell');
+    if (cellData) {
+      const [userId, date] = cellData.split(':');
+      if (userId && date) {
+        selection.handleDragMove(userId, date);
+      }
+    }
+  }, [selection.isDragging, selection.handleDragMove]);
 
   // Phase 3: Copy previous month pattern
   const handleCopyPreviousMonth = useCallback(() => {
@@ -919,8 +924,12 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                     onPaste={selection.handlePaste}
                     onClear={selection.handleClearCells}
                     onApplyDayOff={selection.handleApplyDayOff}
-                    onApplyQuickSchedule={selection.handleApplyQuickSchedule}
+                    onApplyVacation={selection.handleApplyVacation}
+                    onApplyBirthday={selection.handleApplyBirthday}
+                    onApplyWithOptions={selection.handleApplyWithOptions}
                     onDeselect={selection.clearSelection}
+                    positions={workPositions}
+                    showBirthday={true}
                   />
                 </div>
               )}
@@ -1042,6 +1051,7 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                           key={member.id} 
                           className="flex border-b"
                           style={{ height: SCHEDULE_ROW_HEIGHT }}
+                          onMouseMove={handleGridMouseMove}
                         >
                           {monthDays.map((day) => {
                             const dateStr = format(day, 'yyyy-MM-dd');
@@ -1051,14 +1061,11 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                             const isPending = hasPendingChange(member.id, dateStr);
                             const isEditable = canManageSchedules && !isHoliday;
                             const isSelected = selection.isCellSelected(member.id, dateStr);
-                            const isEditing = editingCell?.userId === member.id && editingCell?.date === dateStr;
-
-                            const hasBirthdayThisMonth = birthdayMonthMap.get(member.id) === month;
-                            const birthdayUsed = birthdayUsedMap.get(member.id) || false;
 
                             return (
                               <div
                                 key={dateStr}
+                                data-cell={`${member.id}:${dateStr}`}
                                 style={{ width: DAY_WIDTH, height: SCHEDULE_ROW_HEIGHT }}
                                 className={cn(
                                   'shrink-0 flex items-center justify-center border-r cursor-pointer transition-all select-none',
@@ -1071,35 +1078,12 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                                   if (!isEditable) return;
                                   selection.handleCellClick(member.id, dateStr, e);
                                 }}
-                                onDoubleClick={() => handleCellDoubleClick(member.id, dateStr)}
                                 onMouseDown={(e) => {
                                   if (!isEditable) return;
                                   selection.handleDragStart(member.id, dateStr, e);
                                 }}
-                                onMouseEnter={() => {
-                                  if (selection.isDragging) {
-                                    selection.handleDragMove(member.id, dateStr);
-                                  }
-                                }}
                               >
                                 {renderCellContent(value, isPending, isHoliday, isSelected)}
-                                
-                                {/* Controlled popover for editing */}
-                                {isEditing && (
-                                  <ScheduleCellPopover
-                                    open={isEditing}
-                                    onOpenChange={(open) => {
-                                      if (!open) handleClosePopover();
-                                    }}
-                                    value={value}
-                                    onChange={(newValue) => handleCellChange(member.id, member.full_name, dateStr, newValue)}
-                                    employeeName={member.full_name}
-                                    dateLabel={format(day, "EEEE d 'de' MMMM", { locale: es })}
-                                    defaultPosition={member.default_position}
-                                    hasBirthdayThisMonth={hasBirthdayThisMonth}
-                                    birthdayUsedThisMonth={birthdayUsed}
-                                  />
-                                )}
                               </div>
                             );
                           })}
