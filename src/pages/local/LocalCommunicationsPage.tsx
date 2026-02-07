@@ -43,7 +43,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import { useUserCommunications, useMarkAsRead } from '@/hooks/useCommunications';
 
 const TYPES = [
@@ -56,7 +56,7 @@ const TYPES = [
 export default function LocalCommunicationsPage() {
   const { branchId } = useParams();
   const { user } = useAuth();
-  const { local } = usePermissionsV2(branchId);
+  const { local } = useDynamicPermissions(branchId);
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({

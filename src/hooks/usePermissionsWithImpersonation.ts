@@ -109,6 +109,13 @@ export function usePermissionsWithImpersonation(currentBranchId?: string): Permi
       canDoCoaching: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
       canViewCoaching: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
       canSendLocalCommunication: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+      // Reuniones (nuevos)
+      canViewMeetings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero || isEmpleado),
+      canCreateMeetings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+      canCloseMeetings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+      // Cierres de turno (nuevos)
+      canViewClosures: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero),
+      canCloseShifts: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
       canViewSalesReports: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
       canViewLocalPnL: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isFranquiciado),
       canViewCMV: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado),

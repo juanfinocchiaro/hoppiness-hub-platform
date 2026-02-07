@@ -12,7 +12,7 @@ import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -73,7 +73,7 @@ interface ScheduleRequest {
 export default function RequestsPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const { user } = useAuth();
-  const { isFranquiciado, local } = usePermissionsV2(branchId);
+  const { isFranquiciado, local } = useDynamicPermissions(branchId);
   const queryClient = useQueryClient();
   
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');

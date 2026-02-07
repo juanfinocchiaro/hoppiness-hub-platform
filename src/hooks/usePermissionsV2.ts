@@ -149,6 +149,15 @@ export interface PermissionsV2 {
     canViewCoaching: boolean;
     canSendLocalCommunication: boolean;
     
+    // Reuniones (nuevos)
+    canViewMeetings: boolean;
+    canCreateMeetings: boolean;
+    canCloseMeetings: boolean;
+    
+    // Cierres de turno (nuevos)
+    canViewClosures: boolean;
+    canCloseShifts: boolean;
+    
     // Reportes
     canViewSalesReports: boolean;
     canViewLocalPnL: boolean;
@@ -396,6 +405,15 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     canDoCoaching: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
     canViewCoaching: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
     canSendLocalCommunication: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+    
+    // Reuniones (nuevos)
+    canViewMeetings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero || isEmpleado),
+    canCreateMeetings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+    canCloseMeetings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+    
+    // Cierres de turno (nuevos)
+    canViewClosures: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero),
+    canCloseShifts: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
     
     // Reportes
     canViewSalesReports: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),

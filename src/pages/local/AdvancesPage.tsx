@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useSalaryAdvances, useCreateAdvance, useCancelAdvance } from '@/hooks/useSalaryAdvances';
 import { useAuth } from '@/hooks/useAuth';
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,7 +42,7 @@ export default function AdvancesPage() {
   const { branchId } = useParams();
   const { branch } = useOutletContext<{ branch: Branch }>();
   const { user } = useAuth();
-  const { local } = usePermissionsV2(branchId);
+  const { local } = useDynamicPermissions(branchId);
   
   const [showNewAdvance, setShowNewAdvance] = useState(false);
   const [selectedUser, setSelectedUser] = useState('');

@@ -20,10 +20,10 @@ import {
   LOCAL_ROLE_LABELS,
   type PermissionConfigRow
 } from '@/hooks/usePermissionConfig';
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 
 export default function PermissionsConfigPage() {
-  const { isSuperadmin } = usePermissionsV2();
+  const { isSuperadmin } = useDynamicPermissions();
   const {
     brandPermissions,
     localPermissions,

@@ -104,7 +104,7 @@ export function useDynamicPermissions(currentBranchId?: string): DynamicPermissi
       canViewTeam: getPermission('local.viewTeam', localRole, permissions.local.canViewTeam),
       canEditSchedules: getPermission('local.editSchedules', localRole, permissions.local.canEditSchedules),
       canViewMonthlyHours: permissions.local.canViewMonthlyHours,
-      canViewPayroll: permissions.local.canViewPayroll,
+      canViewPayroll: getPermission('local.viewPayroll', localRole, permissions.local.canViewPayroll),
       canInviteEmployees: getPermission('local.inviteEmployees', localRole, permissions.local.canInviteEmployees),
       canDeactivateEmployees: permissions.local.canDeactivateEmployees,
       canViewSalaryAdvances: getPermission('local.viewAdvances', localRole, permissions.local.canViewSalaryAdvances),
@@ -118,6 +118,15 @@ export function useDynamicPermissions(currentBranchId?: string): DynamicPermissi
       canDoCoaching: getPermission('local.doCoaching', localRole, permissions.local.canDoCoaching),
       canViewCoaching: getPermission('local.viewCoaching', localRole, permissions.local.canViewCoaching),
       canSendLocalCommunication: getPermission('local.sendCommunications', localRole, permissions.local.canSendLocalCommunication),
+      
+      // Reuniones (nuevos)
+      canViewMeetings: getPermission('local.viewMeetings', localRole, permissions.local.canViewDashboard), // fallback a dashboard
+      canCreateMeetings: getPermission('local.createMeetings', localRole, permissions.local.canDoCoaching), // fallback a coaching
+      canCloseMeetings: getPermission('local.closeMeetings', localRole, permissions.local.canDoCoaching),
+      
+      // Cierres (nuevos)
+      canViewClosures: getPermission('local.viewClosures', localRole, permissions.local.canViewDashboard),
+      canCloseShifts: getPermission('local.closeShifts', localRole, permissions.local.canEnterSales),
       
       // Reportes
       canViewSalesReports: permissions.local.canViewSalesReports,

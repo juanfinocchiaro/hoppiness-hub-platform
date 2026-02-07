@@ -23,7 +23,7 @@ import { useCoachingStats } from '@/hooks/useCoachingStats';
 import { useTeamCertifications } from '@/hooks/useCertifications';
 import { useWorkStations } from '@/hooks/useStationCompetencies';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import { PageHelp } from '@/components/ui/PageHelp';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,7 +42,7 @@ interface TeamMember {
 export default function CoachingPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const { id: currentUserId } = useEffectiveUser();
-  const { local, isFranquiciado, isEncargado, isSuperadmin } = usePermissionsV2(branchId);
+  const { local, isFranquiciado, isEncargado, isSuperadmin } = useDynamicPermissions(branchId);
   const [expandedEmployeeId, setExpandedEmployeeId] = useState<string | null>(null);
   
   // Tab inicial según rol
