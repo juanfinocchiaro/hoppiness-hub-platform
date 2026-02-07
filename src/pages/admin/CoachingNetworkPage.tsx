@@ -32,7 +32,9 @@ import {
   Cell
 } from 'recharts';
 
-export default function CoachingNetworkPage() {
+import { RequireBrandPermission } from '@/components/guards';
+
+function CoachingNetworkPageContent() {
   const { data: stats, isLoading } = useNetworkCoachingStats();
 
   const currentMonth = new Date().toLocaleString('es-AR', { month: 'long' });
@@ -362,5 +364,16 @@ export default function CoachingNetworkPage() {
         </Card>
       )}
     </div>
+  );
+}
+
+export default function CoachingNetworkPage() {
+  return (
+    <RequireBrandPermission
+      permission="canEditBrandConfig"
+      noAccessMessage="Solo el Superadmin puede ver el dashboard de coaching de red."
+    >
+      <CoachingNetworkPageContent />
+    </RequireBrandPermission>
   );
 }

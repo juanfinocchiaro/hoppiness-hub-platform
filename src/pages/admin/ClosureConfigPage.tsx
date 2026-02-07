@@ -28,7 +28,9 @@ interface ConfigGroup {
   items: ClosureConfigItem[];
 }
 
-export default function ClosureConfigPage() {
+import { RequireBrandPermission } from '@/components/guards';
+
+function ClosureConfigPageContent() {
   const queryClient = useQueryClient();
   const [newItemLabel, setNewItemLabel] = useState<Record<string, string>>({});
 
@@ -245,6 +247,17 @@ export default function ClosureConfigPage() {
         </Card>
       ))}
     </div>
+  );
+}
+
+export default function ClosureConfigPage() {
+  return (
+    <RequireBrandPermission
+      permission="canEditBrandConfig"
+      noAccessMessage="Solo el Superadmin puede modificar la configuración de cierre."
+    >
+      <ClosureConfigPageContent />
+    </RequireBrandPermission>
   );
 }
 

@@ -30,7 +30,9 @@ import {
   X
 } from 'lucide-react';
 
-export default function CoachingManagersPage() {
+import { RequireBrandPermission } from '@/components/guards';
+
+function CoachingManagersPageContent() {
   const [branchFilter, setBranchFilter] = useState<string>('all');
   const [expandedManagerId, setExpandedManagerId] = useState<string | null>(null);
 
@@ -279,5 +281,16 @@ export default function CoachingManagersPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function CoachingManagersPage() {
+  return (
+    <RequireBrandPermission
+      permission="canEditBrandConfig"
+      noAccessMessage="Solo el Superadmin puede realizar coaching a encargados."
+    >
+      <CoachingManagersPageContent />
+    </RequireBrandPermission>
   );
 }
