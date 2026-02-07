@@ -52,6 +52,9 @@ import CoachingManagersPage from "./pages/admin/CoachingManagersPage";
 import CoachingNetworkPage from "./pages/admin/CoachingNetworkPage";
 import LaborCalendarPage from "./pages/admin/LaborCalendarPage";
 import BrandMeetingsPage from "./pages/admin/BrandMeetingsPage";
+import InspectionsPage from "./pages/admin/InspectionsPage";
+import NewInspectionPage from "./pages/admin/NewInspectionPage";
+import InspectionDetailPage from "./pages/admin/InspectionDetailPage";
 
 // Mi Local - Comunicaciones
 import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
@@ -176,6 +179,11 @@ const App = () => (
               {/* Coaching */}
               <Route path="coaching/encargados" element={<CoachingManagersPage />} />
               <Route path="coaching/red" element={<CoachingNetworkPage />} />
+              
+              {/* Supervisión */}
+              <Route path="supervisiones" element={<InspectionsPage />} />
+              <Route path="supervisiones/nueva" element={<NewInspectionPage />} />
+              <Route path="supervisiones/:id" element={<InspectionDetailPage />} />
               
               {/* Configuración */}
               <Route path="reglamentos" element={<BrandRegulationsPage />} />

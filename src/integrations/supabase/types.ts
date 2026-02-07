@@ -93,6 +93,72 @@ export type Database = {
           },
         ]
       }
+      branch_inspections: {
+        Row: {
+          action_items: Json | null
+          branch_id: string
+          completed_at: string | null
+          created_at: string
+          critical_findings: string | null
+          general_notes: string | null
+          id: string
+          inspection_type: string
+          inspector_id: string
+          present_manager_id: string | null
+          score_total: number | null
+          started_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          action_items?: Json | null
+          branch_id: string
+          completed_at?: string | null
+          created_at?: string
+          critical_findings?: string | null
+          general_notes?: string | null
+          id?: string
+          inspection_type: string
+          inspector_id: string
+          present_manager_id?: string | null
+          score_total?: number | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          action_items?: Json | null
+          branch_id?: string
+          completed_at?: string | null
+          created_at?: string
+          critical_findings?: string | null
+          general_notes?: string | null
+          id?: string
+          inspection_type?: string
+          inspector_id?: string
+          present_manager_id?: string | null
+          score_total?: number | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_inspections_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_inspections_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branch_shifts: {
         Row: {
           branch_id: string
@@ -979,6 +1045,86 @@ export type Database = {
           name?: string
           sort_order?: number
           weight?: number
+        }
+        Relationships: []
+      }
+      inspection_items: {
+        Row: {
+          category: string
+          complies: boolean | null
+          created_at: string
+          id: string
+          inspection_id: string
+          item_key: string
+          item_label: string
+          observations: string | null
+          photo_url: string | null
+          sort_order: number
+        }
+        Insert: {
+          category: string
+          complies?: boolean | null
+          created_at?: string
+          id?: string
+          inspection_id: string
+          item_key: string
+          item_label: string
+          observations?: string | null
+          photo_url?: string | null
+          sort_order?: number
+        }
+        Update: {
+          category?: string
+          complies?: boolean | null
+          created_at?: string
+          id?: string
+          inspection_id?: string
+          item_key?: string
+          item_label?: string
+          observations?: string | null
+          photo_url?: string | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_items_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "branch_inspections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inspection_templates: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          inspection_type: string
+          is_active: boolean
+          item_key: string
+          item_label: string
+          sort_order: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          inspection_type: string
+          is_active?: boolean
+          item_key: string
+          item_label: string
+          sort_order?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          inspection_type?: string
+          is_active?: boolean
+          item_key?: string
+          item_label?: string
+          sort_order?: number
         }
         Relationships: []
       }
