@@ -29,7 +29,7 @@ export function useContextualHelp(pageId: string): UseContextualHelpResult {
         .from('profiles')
         .select('help_dismissed_pages, show_floating_help')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       return data as { help_dismissed_pages: string[] | null; show_floating_help: boolean | null } | null;

@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { handleError } from '@/lib/errorHandler';
 import { Loader2, Mail, UserPlus, CheckCircle, Search, ArrowLeft, AlertCircle, User, RefreshCw, UserCheck } from 'lucide-react';
 
 type LocalRole = 'encargado' | 'cajero' | 'empleado';
@@ -102,8 +103,7 @@ export function InviteStaffDialog({
         .maybeSingle();
 
       if (error) {
-        if (import.meta.env.DEV) console.error('Error searching profile:', error);
-        toast.error('Error al buscar el usuario');
+        handleError(error, { userMessage: 'Error al buscar el usuario', context: 'InviteStaffDialog.handleSearch' });
         setSearchStatus('idle');
         return;
       }
@@ -144,8 +144,7 @@ export function InviteStaffDialog({
 
       setSearchStatus('found');
     } catch (error) {
-      if (import.meta.env.DEV) console.error('Error searching profile:', error);
-      toast.error('Error al buscar el usuario');
+      handleError(error, { userMessage: 'Error al buscar el usuario', context: 'InviteStaffDialog.handleSearch' });
       setSearchStatus('idle');
     }
   };
@@ -174,9 +173,8 @@ export function InviteStaffDialog({
       toast.success(`${foundUser.full_name} reactivado en el equipo`);
       handleClose(false);
       onSuccess?.();
-    } catch (error: any) {
-      if (import.meta.env.DEV) console.error('Error reactivating user:', error);
-      toast.error(error.message || 'Error al reactivar colaborador');
+    } catch (error) {
+      handleError(error, { userMessage: 'Error al reactivar colaborador', context: 'InviteStaffDialog.handleReactivate' });
     } finally {
       setLoading(false);
     }
@@ -230,9 +228,8 @@ export function InviteStaffDialog({
       handleClose(false);
       onSuccess?.();
 
-    } catch (error: any) {
-      if (import.meta.env.DEV) console.error('Error processing request:', error);
-      toast.error(error.message || 'Error al procesar la solicitud');
+    } catch (error) {
+      handleError(error, { userMessage: 'Error al procesar la solicitud', context: 'InviteStaffDialog.handleSubmit' });
     } finally {
       setLoading(false);
     }

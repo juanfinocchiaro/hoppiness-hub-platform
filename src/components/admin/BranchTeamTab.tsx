@@ -29,6 +29,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Search, UserPlus, Users, Home, Briefcase, UsersRound, ChevronDown, ChevronUp, UserMinus } from 'lucide-react';
 import { toast } from 'sonner';
+import { handleError } from '@/lib/errorHandler';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { type LocalRole } from '@/hooks/usePermissionsV2';
 import { useWorkPositions } from '@/hooks/useWorkPositions';
@@ -156,7 +157,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
       toast.success('Rol actualizado');
       setExpandedMember(null);
     },
-    onError: () => toast.error('Error al actualizar rol'),
+    onError: (error) => handleError(error, { userMessage: 'Error al actualizar rol', context: 'BranchTeamTab.updateRole' }),
   });
 
   const updatePositionMutation = useMutation({
@@ -173,7 +174,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
       queryClient.invalidateQueries({ queryKey: ['branch-team', branchId] });
       toast.success('Posición actualizada');
     },
-    onError: () => toast.error('Error al actualizar posición'),
+    onError: (error) => handleError(error, { userMessage: 'Error al actualizar posición', context: 'BranchTeamTab.updatePosition' }),
   });
 
   const addMemberMutation = useMutation({
@@ -202,7 +203,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
       if (error.message?.includes('duplicate')) {
         toast.error('Este usuario ya está en el equipo');
       } else {
-        toast.error('Error al agregar miembro');
+        handleError(error, { userMessage: 'Error al agregar miembro', context: 'BranchTeamTab.addMember' });
       }
     },
   });
@@ -222,7 +223,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
       toast.success('Miembro dado de baja');
       setMemberToRemove(null);
     },
-    onError: () => toast.error('Error al dar de baja'),
+    onError: (error) => handleError(error, { userMessage: 'Error al dar de baja', context: 'BranchTeamTab.removeMember' }),
   });
 
   const handleSelectUser = (user: typeof searchResults[0]) => {

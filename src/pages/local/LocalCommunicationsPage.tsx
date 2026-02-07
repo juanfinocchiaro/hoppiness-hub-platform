@@ -74,7 +74,7 @@ export default function LocalCommunicationsPage() {
         .from('branches')
         .select('id, name')
         .eq('id', branchId)
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
     },

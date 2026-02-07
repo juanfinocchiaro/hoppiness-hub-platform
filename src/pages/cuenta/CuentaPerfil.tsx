@@ -9,6 +9,7 @@ import { Save, Loader2, Lock, Eye, EyeOff, User, Calendar as CalendarIcon } from
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { handleError } from '@/lib/errorHandler';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -43,7 +44,7 @@ export default function CuentaPerfil() {
         .from('profiles')
         .select('*')
         .eq('id', effectiveUserId)
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -82,8 +83,7 @@ export default function CuentaPerfil() {
       toast.success('Perfil actualizado');
     },
     onError: (error) => {
-      toast.error('Error al actualizar el perfil');
-      if (import.meta.env.DEV) console.error(error);
+      handleError(error, { userMessage: 'Error al actualizar el perfil', context: 'CuentaPerfil.updateProfile' });
     },
   });
 
@@ -102,8 +102,8 @@ export default function CuentaPerfil() {
       setConfirmPassword('');
       setShowPasswordSection(false);
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Error al cambiar la contraseña');
+    onError: (error) => {
+      handleError(error, { userMessage: 'Error al cambiar la contraseña', context: 'CuentaPerfil.changePassword' });
     },
   });
 

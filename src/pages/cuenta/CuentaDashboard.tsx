@@ -47,7 +47,7 @@ export default function CuentaDashboard() {
         .from('profiles')
         .select('*')
         .eq('id', effectiveUserId)
-        .single();
+        .maybeSingle();
       if (result.error) throw result.error;
       return result.data;
     },

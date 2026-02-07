@@ -91,7 +91,7 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
         .from('branches')
         .select('name')
         .eq('id', branchId)
-        .single();
+        .maybeSingle();
       return data;
     },
     enabled: open,
