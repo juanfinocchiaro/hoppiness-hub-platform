@@ -1,14 +1,18 @@
 /**
  * useScheduleSelection - Multi-cell selection logic for schedule editor
  * 
+ * SIMPLIFIED MODEL (Jan 2026):
+ * - Copy: always copies the FIRST selected cell's schedule
+ * - Paste: applies that schedule to ALL selected target cells
+ * 
  * Supports:
  * - Single click: select single cell
  * - Shift+click: select range from last clicked
  * - Ctrl/Cmd+click: toggle cell in selection
  * - Keyboard shortcuts: Ctrl+C, Ctrl+V, Delete, Escape, F
  */
-import { useState, useCallback, useEffect, useMemo } from 'react';
-import { format, differenceInDays, addDays, min as dateMin, max as dateMax } from 'date-fns';
+import { useState, useCallback, useEffect } from 'react';
+import { format, min as dateMin, max as dateMax } from 'date-fns';
 import { toast } from 'sonner';
 import type { ScheduleValue } from '../ScheduleCellPopover';
 import { 
@@ -178,76 +182,64 @@ export function useScheduleSelection({
     toast.info(`Fila seleccionada: ${monthDays.length} celdas`);
   }, [enabled, monthDays]);
 
-  // Copy selected cells
+  // Copy selected cells - SIMPLIFIED: always copies FIRST cell only
   const handleCopy = useCallback(() => {
     if (selectedCells.size === 0) return;
 
-    // Sort cells by date
-    const sortedCells = Array.from(selectedCells)
-      .map(parseCellKey)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    // Take the first selected cell
+    const firstCellKey = Array.from(selectedCells)[0];
+    const { userId, date } = parseCellKey(firstCellKey);
+    const schedule = getEffectiveValue(userId, date);
 
-    const firstDate = new Date(sortedCells[0].date);
-    const firstUserName = getTeamMemberName(sortedCells[0].userId);
+    // Build descriptive sourceInfo
+    let sourceInfo: string;
+    if (schedule.isDayOff) {
+      if (schedule.position === 'vacaciones') {
+        sourceInfo = '🏖️ Vacaciones';
+      } else if (schedule.position === 'cumple') {
+        sourceInfo = '🎂 Cumple';
+      } else {
+        sourceInfo = 'Franco';
+      }
+    } else if (schedule.startTime && schedule.endTime) {
+      const start = schedule.startTime.slice(0, 5);
+      const end = schedule.endTime.slice(0, 5);
+      sourceInfo = `${start}-${end}`;
+      if (schedule.position) {
+        sourceInfo += ` (${schedule.position})`;
+      }
+    } else {
+      sourceInfo = 'Vacío';
+    }
 
     const clipboardData: ClipboardDataV2 = {
       type: 'cells',
-      cells: sortedCells.map(cell => ({
-        dayOffset: differenceInDays(new Date(cell.date), firstDate),
-        schedule: getEffectiveValue(cell.userId, cell.date),
-      })),
-      sourceInfo: selectedCells.size === 1 
-        ? `1 celda de ${firstUserName?.split(' ')[0]}`
-        : `${selectedCells.size} celdas`,
+      cells: [{ dayOffset: 0, schedule }],
+      sourceInfo,
     };
 
     setClipboard(clipboardData);
-    toast.success(`📋 ${clipboardData.sourceInfo} copiado`);
-  }, [selectedCells, getEffectiveValue, getTeamMemberName]);
+    toast.success(`📋 Copiado: ${sourceInfo}`);
+  }, [selectedCells, getEffectiveValue]);
 
-  // Paste clipboard to selection
+  // Paste clipboard to selection - SIMPLIFIED: applies to ALL selected cells
   const handlePaste = useCallback(() => {
     if (!clipboard || selectedCells.size === 0) {
       if (!clipboard) toast.error('No hay nada en el portapapeles');
       return;
     }
 
+    const schedule = clipboard.cells[0].schedule;
     const targetCells = Array.from(selectedCells).map(parseCellKey);
-    
-    // If single target cell, paste sequentially
-    if (targetCells.length === 1) {
-      const target = targetCells[0];
-      const targetDate = new Date(target.date);
-      let pastedCount = 0;
 
-      clipboard.cells.forEach(item => {
-        const pasteDate = addDays(targetDate, item.dayOffset);
-        const pasteDateStr = format(pasteDate, 'yyyy-MM-dd');
-        
-        // Only paste within month bounds
-        if (monthDays.some(d => format(d, 'yyyy-MM-dd') === pasteDateStr)) {
-          const userName = getTeamMemberName(target.userId);
-          onCellChange(target.userId, userName, pasteDateStr, item.schedule);
-          pastedCount++;
-        }
-      });
+    targetCells.forEach(cell => {
+      const userName = getTeamMemberName(cell.userId);
+      onCellChange(cell.userId, userName, cell.date, schedule);
+    });
 
-      toast.success(`📄 Pegado ${pastedCount} días`);
-    }
-    // Multiple target cells: broadcast first value
-    else {
-      const firstSchedule = clipboard.cells[0].schedule;
-      
-      targetCells.forEach(cell => {
-        const userName = getTeamMemberName(cell.userId);
-        onCellChange(cell.userId, userName, cell.date, firstSchedule);
-      });
-
-      toast.success(`📄 Aplicado a ${targetCells.length} celdas`);
-    }
-
+    toast.success(`✓ Pegado en ${targetCells.length} celda${targetCells.length > 1 ? 's' : ''}`);
     setSelectedCells(new Set());
-  }, [clipboard, selectedCells, monthDays, onCellChange, getTeamMemberName]);
+  }, [clipboard, selectedCells, onCellChange, getTeamMemberName]);
 
   // Clear selected cells (delete)
   const handleClearCells = useCallback(() => {

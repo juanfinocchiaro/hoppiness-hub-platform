@@ -345,8 +345,30 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
       refetch();
       toast.success('Horarios publicados');
     },
-    onError: (error) => {
-      toast.error('Error al guardar: ' + (error instanceof Error ? error.message : 'Error desconocido'));
+    onError: (error: unknown) => {
+      console.error('Save schedule error:', error);
+      
+      let message = 'Error desconocido';
+      if (error instanceof Error) {
+        message = error.message;
+      } else if (error && typeof error === 'object') {
+        const errObj = error as Record<string, unknown>;
+        if (typeof errObj.message === 'string') {
+          message = errObj.message;
+        } else if (typeof errObj.error_description === 'string') {
+          message = errObj.error_description;
+        } else if (typeof errObj.details === 'string') {
+          message = errObj.details;
+        } else {
+          try {
+            message = JSON.stringify(error);
+          } catch {
+            message = 'Error al procesar la respuesta';
+          }
+        }
+      }
+      
+      toast.error('Error al guardar: ' + message);
     },
   });
 
@@ -466,7 +488,14 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
       
       schedulesWithPending.forEach(s => {
         if (s.user_id === member.id) {
-          const isDayOff = s.is_day_off || (!s.start_time && !s.end_time);
+          // A day is "day off" if:
+          // 1. Explicitly marked as is_day_off
+          // 2. Has no times set (empty)
+          // 3. Has 00:00-00:00 times (unconfigured)
+          const isEmptySchedule = !s.start_time || !s.end_time || 
+            (s.start_time === '00:00' && s.end_time === '00:00') ||
+            (s.start_time === '00:00:00' && s.end_time === '00:00:00');
+          const isDayOff = s.is_day_off || isEmptySchedule;
           userScheduleMap.set(s.schedule_date, isDayOff);
         }
       });
@@ -475,12 +504,17 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
       
       monthDays.forEach(day => {
         const dateStr = format(day, 'yyyy-MM-dd');
-        const isDayOff = userScheduleMap.get(dateStr);
         const hasSchedule = userScheduleMap.has(dateStr);
+        const isDayOff = userScheduleMap.get(dateStr);
         
-        if (hasSchedule && !isDayOff) {
+        // A day is "working" ONLY if it has a schedule AND is NOT marked as day off
+        // Days without any schedule are treated as rest days (not working)
+        const isWorkingDay = hasSchedule && isDayOff === false;
+        
+        if (isWorkingDay) {
           consecutiveWorking++;
         } else {
+          // Any other case (no schedule, or day off) → reset counter
           if (consecutiveWorking >= 7) {
             violations.push({
               userId: member.id,
@@ -569,6 +603,15 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
       return (
         <Badge variant="secondary" className={cn('text-[10px] px-1.5 bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300', isPending && 'ring-2 ring-primary ring-offset-1')}>
           🎂 Cumple
+        </Badge>
+      );
+    }
+
+    // Vacation day off
+    if (value.isDayOff && value.position === 'vacaciones') {
+      return (
+        <Badge variant="secondary" className={cn('text-[10px] px-1.5 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300', isPending && 'ring-2 ring-primary ring-offset-1')}>
+          🏖️ Vac
         </Badge>
       );
     }
