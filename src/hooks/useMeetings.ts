@@ -41,7 +41,8 @@ export function useBranchMeetings(branchId: string | undefined) {
           )
         `)
         .eq('branch_id', branchId)
-        .order('scheduled_at', { ascending: false, nullsFirst: false });
+        .order('scheduled_at', { ascending: false, nullsFirst: false })
+        .limit(100);
       
       if (error) throw error;
       return (data || []) as (Meeting & { participants: any[] })[];
@@ -72,10 +73,12 @@ export function useMyMeetings() {
       const meetingIds = participantRecords.map(p => p.meeting_id);
       
       // Then get the meetings
+      const recentMeetingIds = meetingIds.slice(0, 50); // Limit to 50 most recent
+      
       const { data: meetings, error: mError } = await supabase
         .from('meetings')
         .select('*, branches(id, name)')
-        .in('id', meetingIds)
+        .in('id', recentMeetingIds)
         .order('scheduled_at', { ascending: false, nullsFirst: false });
       
       if (mError) throw mError;
@@ -134,7 +137,8 @@ export function useBrandMeetings() {
           branches(id, name, slug),
           participants:meeting_participants(id, user_id, attended, was_present, read_at)
         `)
-        .order('scheduled_at', { ascending: false, nullsFirst: false });
+        .order('scheduled_at', { ascending: false, nullsFirst: false })
+        .limit(200);
       
       if (error) throw error;
       return data || [];

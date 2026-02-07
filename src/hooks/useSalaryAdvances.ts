@@ -47,7 +47,8 @@ export function useSalaryAdvances(branchId: string | undefined, selectedMonth?: 
         .from('salary_advances')
         .select('*')
         .eq('branch_id', branchId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(100);
       
       // Filter by month if provided
       if (selectedMonth) {
