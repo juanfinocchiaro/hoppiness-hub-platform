@@ -1,14 +1,21 @@
 /**
  * InspectionStaffChecklist - Checklist de personal presente durante la inspección
+ * 
+ * Nuevo enfoque: Solo agregar quienes están presentes, con evaluación de:
+ * - Uniforme en correcto estado
+ * - Estación de trabajo limpia
+ * - Observaciones
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, X, Users, MessageSquare } from 'lucide-react';
+import { Check, X, UserPlus, Trash2, Shirt, Sparkles, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -19,8 +26,10 @@ interface StaffMember {
 }
 
 interface StaffPresent {
+  id: string;
   user_id: string;
-  was_present: boolean;
+  uniform_ok: boolean | null;
+  station_clean: boolean | null;
   observations: string | null;
 }
 
@@ -42,11 +51,12 @@ export function InspectionStaffChecklist({
   readOnly = false,
 }: InspectionStaffChecklistProps) {
   const queryClient = useQueryClient();
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [editingObservation, setEditingObservation] = useState<string | null>(null);
   const [observationText, setObservationText] = useState('');
 
-  // Fetch staff members for this branch (excluding franquiciados)
-  const { data: staffMembers = [] } = useQuery({
+  // Fetch all staff members for this branch (excluding franquiciados)
+  const { data: allStaff = [] } = useQuery({
     queryKey: ['inspection-staff-members', branchId],
     queryFn: async () => {
       const { data: roles } = await supabase
@@ -65,7 +75,6 @@ export function InspectionStaffChecklist({
         .in('id', userIds)
         .order('full_name');
 
-      // Merge profile with role
       return (profiles || []).map(p => {
         const role = roles.find(r => r.user_id === p.id);
         return {
@@ -78,57 +87,101 @@ export function InspectionStaffChecklist({
     enabled: !!branchId,
   });
 
-  // Fetch existing staff present records
-  const { data: staffPresent = [] } = useQuery({
+  // Fetch present staff records
+  const { data: presentStaff = [] } = useQuery({
     queryKey: ['inspection-staff-present', inspectionId],
     queryFn: async () => {
       const { data } = await supabase
         .from('inspection_staff_present')
-        .select('user_id, was_present, observations')
+        .select('id, user_id, uniform_ok, station_clean, observations')
         .eq('inspection_id', inspectionId);
       return (data || []) as StaffPresent[];
     },
     enabled: !!inspectionId,
   });
 
-  // Toggle presence mutation
-  const togglePresence = useMutation({
-    mutationFn: async ({ userId, wasPresent }: { userId: string; wasPresent: boolean }) => {
-      const existing = staffPresent.find(s => s.user_id === userId);
-      
-      if (existing) {
-        const { error } = await supabase
-          .from('inspection_staff_present')
-          .update({ was_present: wasPresent })
-          .eq('inspection_id', inspectionId)
-          .eq('user_id', userId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('inspection_staff_present')
-          .insert({
-            inspection_id: inspectionId,
-            user_id: userId,
-            was_present: wasPresent,
-          });
-        if (error) throw error;
-      }
+  // Available staff (not yet added)
+  const availableStaff = allStaff.filter(
+    s => !presentStaff.some(p => p.user_id === s.id)
+  );
+
+  // Add staff member mutation
+  const addStaff = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data, error } = await supabase
+        .from('inspection_staff_present')
+        .insert({
+          inspection_id: inspectionId,
+          user_id: userId,
+        })
+        .select('id, user_id, uniform_ok, station_clean, observations')
+        .single();
+      if (error) throw error;
+      return data;
     },
-    onMutate: async ({ userId, wasPresent }) => {
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inspection-staff-present', inspectionId] });
+      setSelectedUserId('');
+    },
+    onError: () => {
+      toast.error('Error al agregar');
+    },
+  });
+
+  // Remove staff member mutation
+  const removeStaff = useMutation({
+    mutationFn: async (recordId: string) => {
+      const { error } = await supabase
+        .from('inspection_staff_present')
+        .delete()
+        .eq('id', recordId);
+      if (error) throw error;
+    },
+    onMutate: async (recordId) => {
       await queryClient.cancelQueries({ queryKey: ['inspection-staff-present', inspectionId] });
       const previous = queryClient.getQueryData<StaffPresent[]>(['inspection-staff-present', inspectionId]);
-      
-      queryClient.setQueryData<StaffPresent[]>(['inspection-staff-present', inspectionId], old => {
-        const existing = old?.find(s => s.user_id === userId);
-        if (existing) {
-          return old?.map(s => s.user_id === userId ? { ...s, was_present: wasPresent } : s);
-        }
-        return [...(old || []), { user_id: userId, was_present: wasPresent, observations: null }];
-      });
-      
+      queryClient.setQueryData<StaffPresent[]>(['inspection-staff-present', inspectionId], 
+        old => old?.filter(s => s.id !== recordId) || []
+      );
       return { previous };
     },
-    onError: (err, _, context) => {
+    onError: (_, __, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['inspection-staff-present', inspectionId], context.previous);
+      }
+      toast.error('Error al eliminar');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['inspection-staff-present', inspectionId] });
+    },
+  });
+
+  // Update evaluation mutation
+  const updateEvaluation = useMutation({
+    mutationFn: async ({ 
+      recordId, 
+      field, 
+      value 
+    }: { 
+      recordId: string; 
+      field: 'uniform_ok' | 'station_clean'; 
+      value: boolean | null;
+    }) => {
+      const { error } = await supabase
+        .from('inspection_staff_present')
+        .update({ [field]: value })
+        .eq('id', recordId);
+      if (error) throw error;
+    },
+    onMutate: async ({ recordId, field, value }) => {
+      await queryClient.cancelQueries({ queryKey: ['inspection-staff-present', inspectionId] });
+      const previous = queryClient.getQueryData<StaffPresent[]>(['inspection-staff-present', inspectionId]);
+      queryClient.setQueryData<StaffPresent[]>(['inspection-staff-present', inspectionId], 
+        old => old?.map(s => s.id === recordId ? { ...s, [field]: value } : s) || []
+      );
+      return { previous };
+    },
+    onError: (_, __, context) => {
       if (context?.previous) {
         queryClient.setQueryData(['inspection-staff-present', inspectionId], context.previous);
       }
@@ -141,27 +194,12 @@ export function InspectionStaffChecklist({
 
   // Save observation mutation
   const saveObservation = useMutation({
-    mutationFn: async ({ userId, observations }: { userId: string; observations: string }) => {
-      const existing = staffPresent.find(s => s.user_id === userId);
-      
-      if (existing) {
-        const { error } = await supabase
-          .from('inspection_staff_present')
-          .update({ observations: observations || null })
-          .eq('inspection_id', inspectionId)
-          .eq('user_id', userId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('inspection_staff_present')
-          .insert({
-            inspection_id: inspectionId,
-            user_id: userId,
-            was_present: true,
-            observations: observations || null,
-          });
-        if (error) throw error;
-      }
+    mutationFn: async ({ recordId, observations }: { recordId: string; observations: string }) => {
+      const { error } = await supabase
+        .from('inspection_staff_present')
+        .update({ observations: observations || null })
+        .eq('id', recordId);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inspection-staff-present', inspectionId] });
@@ -173,226 +211,237 @@ export function InspectionStaffChecklist({
     },
   });
 
-  const handleToggle = (userId: string, newValue: boolean) => {
+  const handleAddStaff = () => {
+    if (!selectedUserId) return;
+    addStaff.mutate(selectedUserId);
+  };
+
+  const handleToggleEvaluation = (
+    recordId: string, 
+    field: 'uniform_ok' | 'station_clean', 
+    currentValue: boolean | null
+  ) => {
     if (readOnly) return;
-    togglePresence.mutate({ userId, wasPresent: newValue });
+    // Toggle: null -> true -> false -> null
+    let newValue: boolean | null;
+    if (currentValue === null) newValue = true;
+    else if (currentValue === true) newValue = false;
+    else newValue = null;
+    
+    updateEvaluation.mutate({ recordId, field, value: newValue });
   };
 
-  const handleStartEditObservation = (userId: string) => {
+  const handleStartEditObservation = (recordId: string, currentObs: string | null) => {
     if (readOnly) return;
-    const existing = staffPresent.find(s => s.user_id === userId);
-    setEditingObservation(userId);
-    setObservationText(existing?.observations || '');
+    setEditingObservation(recordId);
+    setObservationText(currentObs || '');
   };
 
-  const handleSaveObservation = (userId: string) => {
-    saveObservation.mutate({ userId, observations: observationText });
+  const handleSaveObservation = (recordId: string) => {
+    saveObservation.mutate({ recordId, observations: observationText });
   };
 
-  const getStaffStatus = (userId: string) => {
-    const record = staffPresent.find(s => s.user_id === userId);
-    return {
-      wasPresent: record?.was_present ?? null,
-      observations: record?.observations || null,
-    };
+  const getStaffName = (userId: string) => {
+    const staff = allStaff.find(s => s.id === userId);
+    return staff?.full_name || 'Desconocido';
   };
 
-  if (staffMembers.length === 0) {
-    return null;
-  }
-
-  // Group by role
-  const encargados = staffMembers.filter(s => s.local_role === 'encargado');
-  const others = staffMembers.filter(s => s.local_role !== 'encargado');
+  const getStaffRole = (userId: string) => {
+    const staff = allStaff.find(s => s.id === userId);
+    return ROLE_LABELS[staff?.local_role || ''] || 'Empleado';
+  };
 
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
-          <Users className="w-4 h-4" />
+          <UserPlus className="w-4 h-4" />
           Personal Presente
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Encargados first */}
-        {encargados.length > 0 && (
-          <div className="space-y-2">
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Encargados
-            </div>
-            {encargados.map(member => (
-              <StaffRow
-                key={member.id}
-                member={member}
-                status={getStaffStatus(member.id)}
-                readOnly={readOnly}
-                isEditing={editingObservation === member.id}
-                observationText={observationText}
-                onToggle={handleToggle}
-                onStartEdit={handleStartEditObservation}
-                onObservationChange={setObservationText}
-                onSaveObservation={handleSaveObservation}
-                onCancelEdit={() => setEditingObservation(null)}
-              />
+        {/* Add staff selector */}
+        {!readOnly && availableStaff.length > 0 && (
+          <div className="flex gap-2">
+            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Agregar empleado presente..." />
+              </SelectTrigger>
+              <SelectContent>
+                {availableStaff.map(staff => (
+                  <SelectItem key={staff.id} value={staff.id}>
+                    {staff.full_name} ({ROLE_LABELS[staff.local_role] || staff.local_role})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button 
+              onClick={handleAddStaff} 
+              disabled={!selectedUserId || addStaff.isPending}
+            >
+              <UserPlus className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+
+        {/* Present staff list */}
+        {presentStaff.length === 0 ? (
+          <div className="text-sm text-muted-foreground text-center py-4">
+            No hay personal registrado. Agrega a quienes están presentes.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {presentStaff.map(record => (
+              <div key={record.id} className="space-y-2">
+                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+                  {/* Staff info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{getStaffName(record.user_id)}</div>
+                    <div className="text-xs text-muted-foreground">{getStaffRole(record.user_id)}</div>
+                  </div>
+
+                  {/* Evaluation toggles */}
+                  <div className="flex items-center gap-1">
+                    {/* Uniform */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className={cn(
+                            'h-9 w-9',
+                            record.uniform_ok === true && 'bg-green-100 border-green-500 text-green-700',
+                            record.uniform_ok === false && 'bg-red-100 border-red-500 text-red-700'
+                          )}
+                          onClick={() => handleToggleEvaluation(record.id, 'uniform_ok', record.uniform_ok)}
+                          disabled={readOnly}
+                        >
+                          <Shirt className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Uniforme: {record.uniform_ok === true ? '✓ Correcto' : record.uniform_ok === false ? '✗ Incorrecto' : 'Sin evaluar'}
+                      </TooltipContent>
+                    </Tooltip>
+
+                    {/* Station clean */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className={cn(
+                            'h-9 w-9',
+                            record.station_clean === true && 'bg-green-100 border-green-500 text-green-700',
+                            record.station_clean === false && 'bg-red-100 border-red-500 text-red-700'
+                          )}
+                          onClick={() => handleToggleEvaluation(record.id, 'station_clean', record.station_clean)}
+                          disabled={readOnly}
+                        >
+                          <Sparkles className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Estación: {record.station_clean === true ? '✓ Limpia' : record.station_clean === false ? '✗ Sucia' : 'Sin evaluar'}
+                      </TooltipContent>
+                    </Tooltip>
+
+                    {/* Observation button */}
+                    {!readOnly && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className={cn('h-9 w-9', record.observations && 'text-primary')}
+                            onClick={() => handleStartEditObservation(record.id, record.observations)}
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Agregar observación</TooltipContent>
+                      </Tooltip>
+                    )}
+
+                    {/* Remove button */}
+                    {!readOnly && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeStaff.mutate(record.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Observation display (read-only) */}
+                {readOnly && record.observations && (
+                  <div className="ml-4 text-sm text-muted-foreground bg-muted/30 p-2 rounded">
+                    {record.observations}
+                  </div>
+                )}
+
+                {/* Observation input (editing) */}
+                {editingObservation === record.id && (
+                  <div className="ml-4 flex gap-2">
+                    <Input
+                      value={observationText}
+                      onChange={(e) => setObservationText(e.target.value)}
+                      placeholder="Observación sobre este empleado..."
+                      className="flex-1"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveObservation(record.id);
+                        if (e.key === 'Escape') setEditingObservation(null);
+                      }}
+                    />
+                    <Button size="sm" onClick={() => handleSaveObservation(record.id)}>
+                      Guardar
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setEditingObservation(null)}>
+                      Cancelar
+                    </Button>
+                  </div>
+                )}
+
+                {/* Show saved observation (not editing) */}
+                {!readOnly && editingObservation !== record.id && record.observations && (
+                  <div 
+                    className="ml-4 text-sm text-muted-foreground bg-muted/30 p-2 rounded cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleStartEditObservation(record.id, record.observations)}
+                  >
+                    {record.observations}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}
 
-        {/* Other staff */}
-        {others.length > 0 && (
-          <div className="space-y-2">
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Equipo
+        {/* Summary with legend */}
+        {presentStaff.length > 0 && (
+          <div className="pt-3 border-t space-y-2">
+            <div className="text-sm text-muted-foreground">
+              {presentStaff.length} empleado{presentStaff.length !== 1 ? 's' : ''} presente{presentStaff.length !== 1 ? 's' : ''}
             </div>
-            {others.map(member => (
-              <StaffRow
-                key={member.id}
-                member={member}
-                status={getStaffStatus(member.id)}
-                readOnly={readOnly}
-                isEditing={editingObservation === member.id}
-                observationText={observationText}
-                onToggle={handleToggle}
-                onStartEdit={handleStartEditObservation}
-                onObservationChange={setObservationText}
-                onSaveObservation={handleSaveObservation}
-                onCancelEdit={() => setEditingObservation(null)}
-              />
-            ))}
+            <div className="flex gap-4 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Shirt className="w-3 h-3" /> Uniforme
+              </span>
+              <span className="flex items-center gap-1">
+                <Sparkles className="w-3 h-3" /> Estación limpia
+              </span>
+            </div>
           </div>
         )}
-
-        {/* Summary */}
-        <div className="pt-2 border-t text-sm text-muted-foreground">
-          {staffPresent.filter(s => s.was_present).length} de {staffMembers.length} presentes
-        </div>
       </CardContent>
     </Card>
   );
 }
-
-interface StaffRowProps {
-  member: StaffMember;
-  status: { wasPresent: boolean | null; observations: string | null };
-  readOnly: boolean;
-  isEditing: boolean;
-  observationText: string;
-  onToggle: (userId: string, value: boolean) => void;
-  onStartEdit: (userId: string) => void;
-  onObservationChange: (text: string) => void;
-  onSaveObservation: (userId: string) => void;
-  onCancelEdit: () => void;
-}
-
-function StaffRow({
-  member,
-  status,
-  readOnly,
-  isEditing,
-  observationText,
-  onToggle,
-  onStartEdit,
-  onObservationChange,
-  onSaveObservation,
-  onCancelEdit,
-}: StaffRowProps) {
-  const { wasPresent, observations } = status;
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-        {/* Toggle buttons */}
-        <div className="flex gap-1">
-          <Button
-            type="button"
-            variant={wasPresent === true ? 'default' : 'outline'}
-            size="icon"
-            className={cn(
-              'h-9 w-9 transition-all',
-              wasPresent === true && 'bg-green-600 hover:bg-green-700'
-            )}
-            onClick={() => onToggle(member.id, wasPresent === true ? false : true)}
-            disabled={readOnly}
-          >
-            <Check className="w-4 h-4" />
-          </Button>
-          <Button
-            type="button"
-            variant={wasPresent === false ? 'default' : 'outline'}
-            size="icon"
-            className={cn(
-              'h-9 w-9 transition-all',
-              wasPresent === false && 'bg-destructive hover:bg-destructive/90'
-            )}
-            onClick={() => onToggle(member.id, wasPresent === false ? true : false)}
-            disabled={readOnly}
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-
-        {/* Name and role */}
-        <div className="flex-1 min-w-0">
-          <div className="font-medium truncate">{member.full_name}</div>
-          <div className="text-xs text-muted-foreground">
-            {ROLE_LABELS[member.local_role] || member.local_role}
-          </div>
-        </div>
-
-        {/* Observation button */}
-        {!readOnly && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className={cn('h-8 w-8', observations && 'text-primary')}
-            onClick={() => onStartEdit(member.id)}
-          >
-            <MessageSquare className="w-4 h-4" />
-          </Button>
-        )}
-      </div>
-
-      {/* Observation display (read-only) */}
-      {readOnly && observations && (
-        <div className="ml-[4.5rem] text-sm text-muted-foreground bg-muted/30 p-2 rounded">
-          {observations}
-        </div>
-      )}
-
-      {/* Observation input (editing) */}
-      {isEditing && (
-        <div className="ml-[4.5rem] flex gap-2">
-          <Input
-            value={observationText}
-            onChange={(e) => onObservationChange(e.target.value)}
-            placeholder="Observación sobre este empleado..."
-            className="flex-1"
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') onSaveObservation(member.id);
-              if (e.key === 'Escape') onCancelEdit();
-            }}
-          />
-          <Button size="sm" onClick={() => onSaveObservation(member.id)}>
-            Guardar
-          </Button>
-          <Button size="sm" variant="ghost" onClick={onCancelEdit}>
-            Cancelar
-          </Button>
-        </div>
-      )}
-
-      {/* Show saved observation (not editing) */}
-      {!readOnly && !isEditing && observations && (
-        <div 
-          className="ml-[4.5rem] text-sm text-muted-foreground bg-muted/30 p-2 rounded cursor-pointer hover:bg-muted/50"
-          onClick={() => onStartEdit(member.id)}
-        >
-          {observations}
-        </div>
-      )}
-    </div>
-  );
-}
-

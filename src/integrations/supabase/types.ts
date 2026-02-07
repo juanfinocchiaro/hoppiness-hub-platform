@@ -1107,24 +1107,27 @@ export type Database = {
           id: string
           inspection_id: string
           observations: string | null
+          station_clean: boolean | null
+          uniform_ok: boolean | null
           user_id: string
-          was_present: boolean | null
         }
         Insert: {
           created_at?: string | null
           id?: string
           inspection_id: string
           observations?: string | null
+          station_clean?: boolean | null
+          uniform_ok?: boolean | null
           user_id: string
-          was_present?: boolean | null
         }
         Update: {
           created_at?: string | null
           id?: string
           inspection_id?: string
           observations?: string | null
+          station_clean?: boolean | null
+          uniform_ok?: boolean | null
           user_id?: string
-          was_present?: boolean | null
         }
         Relationships: [
           {
