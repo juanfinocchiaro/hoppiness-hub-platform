@@ -1,17 +1,17 @@
 /**
- * ScheduleCellPopover - Modern schedule editing popover
+ * ScheduleCellPopover - Modern schedule editing popover (CONTROLLED VERSION)
  * 
- * Features:
- * - Clean modern design with proper close button
+ * V2 (Feb 2026) - Converted to controlled component:
+ * - open/onOpenChange props for external control
+ * - Parent decides when to open (on double-click)
  * - Automatic break for shifts over 6 hours
  * - Position selection
- * - Clear UX separation: X = close, Delete = destructive action with confirmation
  */
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Coffee, X, Check, Calendar, Clock, Trash2 } from 'lucide-react';
@@ -29,10 +29,10 @@ export interface ScheduleValue {
 }
 
 interface ScheduleCellPopoverProps {
-  children: React.ReactNode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   value: ScheduleValue;
   onChange: (value: ScheduleValue) => void;
-  disabled?: boolean;
   employeeName?: string;
   dateLabel?: string;
   /** Employee's default position to pre-populate */
@@ -41,13 +41,14 @@ interface ScheduleCellPopoverProps {
   hasBirthdayThisMonth?: boolean;
   /** Whether this employee has already used their birthday day off this month */
   birthdayUsedThisMonth?: boolean;
+  /** Anchor element for positioning */
+  anchorRef?: React.RefObject<HTMLElement>;
 }
 
 // Helper to calculate shift duration in hours
 function calculateShiftHours(start: string, end: string): number {
   if (!start || !end) return 0;
   
-  // Treat "00:00" to "00:00" as unconfigured (not a 24h shift)
   const isUnconfigured = (start === '00:00' || start === '00:00:00') && 
                          (end === '00:00' || end === '00:00:00');
   if (isUnconfigured) return 0;
@@ -95,17 +96,16 @@ function calculateDefaultBreak(start: string, end: string): { breakStart: string
 }
 
 export function ScheduleCellPopover({
-  children,
+  open,
+  onOpenChange,
   value,
   onChange,
-  disabled = false,
   employeeName,
   dateLabel,
   defaultPosition,
   hasBirthdayThisMonth = false,
   birthdayUsedThisMonth = false,
 }: ScheduleCellPopoverProps) {
-  const [open, setOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [customStart, setCustomStart] = useState(value.startTime || '19:30');
   const [customEnd, setCustomEnd] = useState(value.endTime || '23:30');
@@ -118,7 +118,6 @@ export function ScheduleCellPopover({
   const shiftHours = useMemo(() => calculateShiftHours(customStart, customEnd), [customStart, customEnd]);
   const requiresBreak = shiftHours > 6;
   
-  // Check if there's an existing shift (not empty)
   const hasExistingShift = value.startTime || value.endTime || value.isDayOff;
 
   useEffect(() => {
@@ -135,7 +134,6 @@ export function ScheduleCellPopover({
     if (open) {
       setCustomStart(value.startTime || '19:30');
       setCustomEnd(value.endTime || '23:30');
-      // Use existing position if set, otherwise use employee's default position
       setPosition(value.position || defaultPosition || '');
       setBreakStart(value.breakStart || '');
       setBreakEnd(value.breakEnd || '');
@@ -152,7 +150,7 @@ export function ScheduleCellPopover({
       breakStart: null,
       breakEnd: null,
     });
-    setOpen(false);
+    onOpenChange(false);
   };
 
   const handleBirthdayOff = () => {
@@ -165,7 +163,7 @@ export function ScheduleCellPopover({
       breakStart: null,
       breakEnd: null,
     });
-    setOpen(false);
+    onOpenChange(false);
   };
 
   const handleVacation = () => {
@@ -178,7 +176,7 @@ export function ScheduleCellPopover({
       breakStart: null,
       breakEnd: null,
     });
-    setOpen(false);
+    onOpenChange(false);
   };
 
   const handleDeleteShift = () => {
@@ -191,7 +189,7 @@ export function ScheduleCellPopover({
       breakEnd: null,
     });
     setShowDeleteConfirm(false);
-    setOpen(false);
+    onOpenChange(false);
   };
 
   const handleCustomApply = () => {
@@ -204,21 +202,19 @@ export function ScheduleCellPopover({
         breakStart: requiresBreak ? breakStart : null,
         breakEnd: requiresBreak ? breakEnd : null,
       });
-      setOpen(false);
+      onOpenChange(false);
     }
   };
 
   return (
     <>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild disabled={disabled}>
-          {children}
-        </PopoverTrigger>
+      <Popover open={open} onOpenChange={onOpenChange}>
+        <PopoverAnchor />
         <PopoverContent className="w-80 p-0" align="center" sideOffset={8}>
           {/* Header with close button */}
           <div className="relative bg-primary/5 border-b px-4 py-3">
             <button
-              onClick={() => setOpen(false)}
+              onClick={() => onOpenChange(false)}
               className="absolute right-2 top-2 p-1.5 rounded-full hover:bg-muted transition-colors"
               aria-label="Cerrar"
             >
@@ -246,7 +242,6 @@ export function ScheduleCellPopover({
                 Franco (día libre)
               </Button>
 
-              {/* Vacation button */}
               <Button
                 variant="outline"
                 size="sm"
@@ -257,7 +252,6 @@ export function ScheduleCellPopover({
                 Vacaciones
               </Button>
 
-              {/* Birthday day off - only if birthday month and not used */}
               {hasBirthdayThisMonth && !birthdayUsedThisMonth && (
                 <Button 
                   variant="outline" 
@@ -377,7 +371,7 @@ export function ScheduleCellPopover({
               Aplicar horario
             </Button>
 
-            {/* Delete shift - only visible if there's an existing shift */}
+            {/* Delete shift */}
             {hasExistingShift && (
               <>
                 <div className="relative">

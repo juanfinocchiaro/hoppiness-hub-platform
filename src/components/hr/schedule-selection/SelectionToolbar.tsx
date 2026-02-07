@@ -1,16 +1,17 @@
 /**
  * SelectionToolbar - Inline action bar when cells are selected
  * 
- * Shows:
+ * V2 (Feb 2026) - Excel-style with inline time inputs:
  * - Selection count
+ * - Time inputs (Entrada/Salida) + Apply button
+ * - Franco button
  * - Copy/Paste/Clear buttons
- * - Quick schedule presets
  * - Keyboard shortcut hints
- * 
- * Integrated within the editor header, not floating
  */
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { 
@@ -18,6 +19,7 @@ import {
   ClipboardPaste, 
   Trash2, 
   X,
+  Check,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ClipboardDataV2 } from './types';
@@ -29,6 +31,7 @@ interface SelectionToolbarProps {
   onPaste: () => void;
   onClear: () => void;
   onApplyDayOff: () => void;
+  onApplyQuickSchedule: (start: string, end: string) => void;
   onDeselect: () => void;
   className?: string;
 }
@@ -40,9 +43,39 @@ export function SelectionToolbar({
   onPaste,
   onClear,
   onApplyDayOff,
+  onApplyQuickSchedule,
   onDeselect,
   className,
 }: SelectionToolbarProps) {
+  const [startTime, setStartTime] = useState('19:00');
+  const [endTime, setEndTime] = useState('23:00');
+  const startInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus start input when selection appears
+  useEffect(() => {
+    if (selectionCount > 0 && startInputRef.current) {
+      // Small delay to allow DOM to settle
+      const timeout = setTimeout(() => {
+        startInputRef.current?.focus();
+        startInputRef.current?.select();
+      }, 50);
+      return () => clearTimeout(timeout);
+    }
+  }, [selectionCount > 0]);
+
+  const handleApply = () => {
+    if (startTime && endTime) {
+      onApplyQuickSchedule(startTime, endTime);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleApply();
+    }
+  };
+
   if (selectionCount === 0) return null;
 
   return (
@@ -54,6 +87,54 @@ export function SelectionToolbar({
       <Badge variant="secondary" className="gap-1 text-xs h-7 px-2">
         {selectionCount} celda{selectionCount !== 1 ? 's' : ''}
       </Badge>
+
+      <Separator orientation="vertical" className="h-5" />
+
+      {/* Quick time inputs */}
+      <div className="flex items-center gap-1">
+        <span className="text-xs text-muted-foreground hidden sm:inline">Entrada</span>
+        <Input
+          ref={startInputRef}
+          type="time"
+          value={startTime}
+          onChange={(e) => setStartTime(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="h-7 w-[90px] text-xs"
+        />
+        <span className="text-xs text-muted-foreground hidden sm:inline">Salida</span>
+        <Input
+          type="time"
+          value={endTime}
+          onChange={(e) => setEndTime(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="h-7 w-[90px] text-xs"
+        />
+        <Button 
+          size="sm" 
+          onClick={handleApply}
+          className="h-7 gap-1 px-2 text-xs"
+        >
+          <Check className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Aplicar</span>
+        </Button>
+      </div>
+
+      <Separator orientation="vertical" className="h-5" />
+
+      {/* Franco button */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            onClick={onApplyDayOff}
+            className="h-7 text-xs px-2"
+          >
+            Franco
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Tecla F</TooltipContent>
+      </Tooltip>
 
       <Separator orientation="vertical" className="h-5" />
 
@@ -93,7 +174,7 @@ export function SelectionToolbar({
           <TooltipContent side="bottom">
             {clipboard 
               ? `Pegar: ${clipboard.sourceInfo}` 
-              : 'Nada copiado'
+              : 'Nada copiado (Ctrl+V)'
             }
           </TooltipContent>
         </Tooltip>
@@ -116,23 +197,6 @@ export function SelectionToolbar({
 
       <Separator orientation="vertical" className="h-5" />
 
-      {/* Franco button */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button 
-            variant="secondary" 
-            size="sm" 
-            onClick={onApplyDayOff}
-            className="h-7 text-xs px-2"
-          >
-            Franco
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Tecla F</TooltipContent>
-      </Tooltip>
-
-      <Separator orientation="vertical" className="h-5" />
-
       {/* Deselect */}
       <Tooltip>
         <TooltipTrigger asChild>
@@ -147,7 +211,6 @@ export function SelectionToolbar({
         </TooltipTrigger>
         <TooltipContent side="bottom">Escape</TooltipContent>
       </Tooltip>
-
     </div>
   );
 }
