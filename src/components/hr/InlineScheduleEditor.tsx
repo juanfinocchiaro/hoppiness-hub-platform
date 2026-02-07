@@ -26,8 +26,9 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { ChevronLeft, ChevronRight, User, Save, Undo2, AlertCircle, Coffee, Utensils, CreditCard, Flame, Package, Users, BarChart3 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, Save, Undo2, AlertCircle, Coffee, Utensils, CreditCard, Flame, Package, Users, BarChart3, Copy, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTeamData } from '@/components/local/team/useTeamData';
 import { useHolidays } from '@/hooks/useHolidays';
@@ -38,10 +39,12 @@ import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import { ScheduleCellPopover, type ScheduleValue } from './ScheduleCellPopover';
 import { SaveScheduleDialog } from './SaveScheduleDialog';
 import { useScheduleSelection, SelectionToolbar } from './schedule-selection';
+import { usePreviousMonthPattern, applyPatternToMonth } from '@/hooks/usePreviousMonthSchedules';
 import type { WorkPositionType } from '@/types/workPosition';
 
 interface InlineScheduleEditorProps {
   branchId: string;
+  readOnly?: boolean;
 }
 
 interface PendingChange {
@@ -82,7 +85,7 @@ const COVERAGE_ROW_HEIGHT = 32;
 type ViewType = 'personas' | 'cobertura';
 type HourRangeType = 'all' | '12-00' | '18-00';
 
-export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorProps) {
+export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly }: InlineScheduleEditorProps) {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
@@ -90,6 +93,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [activeView, setActiveView] = useState<ViewType>('personas');
   const [hourRange, setHourRange] = useState<HourRangeType>('all');
+  const [copyMonthDialogOpen, setCopyMonthDialogOpen] = useState(false);
   
   // Double-click edit state
   const [editingCell, setEditingCell] = useState<{ userId: string; date: string } | null>(null);
@@ -98,12 +102,15 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
   const { id: currentUserId } = useEffectiveUser();
 
   const { local } = useDynamicPermissions(branchId);
-  const canManageSchedules = local.canEditSchedules;
+  const canManageSchedules = !propReadOnly && local.canEditSchedules;
 
   // Fetch data
   const { team: rawTeam, loading: loadingTeam } = useTeamData(branchId, { excludeOwners: true });
   const { data: holidays = [] } = useHolidays(month, year);
   const { data: schedules = [], isLoading: loadingSchedules, refetch } = useMonthlySchedules(branchId, month, year);
+  
+  // Phase 3: Previous month pattern
+  const { data: previousMonthPattern } = usePreviousMonthPattern(branchId, month, year);
 
   // Sort team hierarchically by role
   const team = useMemo(() => {
@@ -703,6 +710,43 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
     setEditingCell(null);
   };
 
+  // Phase 3: Copy previous month pattern
+  const handleCopyPreviousMonth = useCallback(() => {
+    if (!previousMonthPattern) {
+      toast.error('No se encontraron horarios del mes anterior');
+      return;
+    }
+    
+    const changes = applyPatternToMonth(
+      previousMonthPattern,
+      monthDays,
+      teamMemberIds,
+      getTeamMemberName
+    );
+    
+    if (changes.length === 0) {
+      toast.info('No hay horarios para copiar del mes anterior');
+      setCopyMonthDialogOpen(false);
+      return;
+    }
+    
+    // Apply changes as pending
+    changes.forEach(change => {
+      handleCellChange(
+        change.userId,
+        change.userName,
+        change.date,
+        change.schedule
+      );
+    });
+    
+    toast.success(`📋 ${changes.length} horarios copiados del mes anterior`);
+    setCopyMonthDialogOpen(false);
+  }, [previousMonthPattern, monthDays, teamMemberIds, getTeamMemberName, handleCellChange]);
+
+  // Check if month is empty (for prominent copy button)
+  const isMonthEmpty = schedules.length === 0 && pendingChanges.size === 0;
+
   const gridWidth = monthDays.length * DAY_WIDTH;
 
   return (
@@ -798,6 +842,30 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                         <SelectItem value="18-00">18:00 - 00:00</SelectItem>
                       </SelectContent>
                     </Select>
+                  )}
+                  
+                  {/* Copy previous month button - prominent when empty, subtle otherwise */}
+                  {canManageSchedules && activeView === 'personas' && previousMonthPattern?.patterns.length && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant={isMonthEmpty ? 'default' : 'outline'}
+                          size="sm"
+                          className={cn(
+                            'h-8 text-xs gap-1',
+                            isMonthEmpty && 'animate-pulse'
+                          )}
+                          onClick={() => setCopyMonthDialogOpen(true)}
+                        >
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">Copiar mes anterior</span>
+                          <span className="sm:hidden">📋</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Copiar patrón semanal de {format(subMonths(new Date(year, month - 1), 1), 'MMMM', { locale: es })}
+                      </TooltipContent>
+                    </Tooltip>
                   )}
                 </div>
 
@@ -929,25 +997,39 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
                       {monthDays.map((day) => {
                         const dateStr = format(day, 'yyyy-MM-dd');
                         const isHoliday = holidayDates.has(dateStr);
+                        const holidayName = holidayDates.get(dateStr);
                         const isSunday = day.getDay() === 0;
 
                         return (
-                          <div
-                            key={dateStr}
-                            style={{ width: DAY_WIDTH }}
-                            className={cn(
-                              'shrink-0 flex flex-col items-center justify-center border-r cursor-pointer hover:bg-primary/5',
-                              isHoliday && 'bg-warning/20',
-                              isSunday && 'bg-muted/60'
-                            )}
-                            onClick={() => canManageSchedules && activeView === 'personas' && selection.handleColumnSelect(dateStr)}
-                            title="Click para seleccionar toda la columna"
-                          >
-                            <span className="text-[10px] text-muted-foreground">{dayNames[day.getDay()]}</span>
-                            <span className={cn('text-sm font-medium', isHoliday && 'text-warning')}>
-                              {format(day, 'd')}
-                            </span>
-                          </div>
+                          <Tooltip key={dateStr}>
+                            <TooltipTrigger asChild>
+                              <div
+                                style={{ width: DAY_WIDTH }}
+                                className={cn(
+                                  'shrink-0 flex flex-col items-center justify-center border-r cursor-pointer hover:bg-primary/5 relative',
+                                  isHoliday && 'bg-warning/20',
+                                  isSunday && 'bg-muted/60'
+                                )}
+                                onClick={() => canManageSchedules && activeView === 'personas' && selection.handleColumnSelect(dateStr)}
+                              >
+                                <span className="text-[10px] text-muted-foreground">{dayNames[day.getDay()]}</span>
+                                <span className={cn('text-sm font-medium', isHoliday && 'text-warning')}>
+                                  {format(day, 'd')}
+                                </span>
+                                {/* Holiday indicator dot */}
+                                {isHoliday && (
+                                  <div className="absolute bottom-0.5 w-1.5 h-1.5 rounded-full bg-warning" />
+                                )}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="text-xs">
+                              {isHoliday ? (
+                                <span className="text-warning font-medium">🎉 {holidayName}</span>
+                              ) : (
+                                <span>Click para seleccionar columna</span>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
                         );
                       })}
                     </div>
@@ -1123,6 +1205,48 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
           }}
           isPending={saveMutation.isPending}
         />
+
+        {/* Copy Previous Month Dialog */}
+        <AlertDialog open={copyMonthDialogOpen} onOpenChange={setCopyMonthDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Copiar mes anterior
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3">
+                  <p>
+                    Se copiará el patrón semanal de{' '}
+                    <strong>{format(subMonths(new Date(year, month - 1), 1), 'MMMM yyyy', { locale: es })}</strong>{' '}
+                    a todos los días de{' '}
+                    <strong>{format(new Date(year, month - 1), 'MMMM yyyy', { locale: es })}</strong>.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Los horarios se cargarán como borrador. Podrás ajustarlos antes de publicar.
+                  </p>
+                  {previousMonthPattern?.patterns.length && (
+                    <div className="bg-muted/50 rounded-lg p-3 text-xs">
+                      <p className="font-medium">Patrón encontrado:</p>
+                      <p className="text-muted-foreground">
+                        {previousMonthPattern.patterns.length} horarios de la semana del{' '}
+                        {format(previousMonthPattern.sourceWeekStart, 'd', { locale: es })} al{' '}
+                        {format(previousMonthPattern.sourceWeekEnd, 'd \'de\' MMMM', { locale: es })}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleCopyPreviousMonth}>
+                <Copy className="w-4 h-4 mr-2" />
+                Copiar horarios
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </TooltipProvider>
   );
