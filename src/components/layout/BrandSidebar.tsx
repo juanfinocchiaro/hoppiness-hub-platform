@@ -31,6 +31,7 @@ import {
   BarChart3,
   CalendarDays,
   Calendar,
+  Eye,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -62,6 +63,7 @@ export function BrandSidebar() {
   // Check active sections
   const isSucursalesActive = location.pathname.includes('/mimarca/locales');
   const isCoachingActive = location.pathname.includes('/mimarca/coaching');
+  const isSupervisionActive = location.pathname.includes('/mimarca/supervisiones');
   const isPersonasActive = location.pathname.includes('/mimarca/usuarios') || location.pathname.includes('/mimarca/equipo-central');
   const isComunicacionActive = location.pathname.includes('/mimarca/mensajes') || location.pathname.includes('/mimarca/comunicados') || location.pathname.includes('/mimarca/reuniones');
   const isConfigActive = location.pathname.includes('/mimarca/reglamentos') || location.pathname.includes('/mimarca/configuracion');
@@ -100,7 +102,23 @@ export function BrandSidebar() {
           ))}
         </NavSectionGroup>
 
-        {/* Coaching Section - NUEVO */}
+        {/* Supervisión Section - NUEVO */}
+        <NavSectionGroup
+          id="supervision"
+          label="Supervisión"
+          icon={Eye}
+          forceOpen={isSupervisionActive}
+        >
+          <NavActionButton
+            icon={Plus}
+            label="Nueva Visita"
+            onClick={() => window.location.href = '/mimarca/supervisiones/nueva'}
+            variant="primary"
+          />
+          <NavItemButton to="/mimarca/supervisiones" icon={ClipboardList} label="Historial" />
+        </NavSectionGroup>
+
+        {/* Coaching Section */}
         <NavSectionGroup
           id="coaching"
           label="Coaching"
