@@ -658,7 +658,8 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
       (value.startTime === '00:00:00' && value.endTime === '00:00:00');
     
     if (isEmptySchedule) {
-      return <span className="text-xs text-muted-foreground">{isHoliday ? '🎉' : '-'}</span>;
+      // Don't show holiday emoji inside cells - holidays are shown in the day header
+      return <span className="text-xs text-muted-foreground">-</span>;
     }
 
     const positionConfig = value.position ? POSITION_ICONS[value.position] : null;
@@ -850,7 +851,7 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                   )}
                   
                   {/* Copy previous month button - prominent when empty, subtle otherwise */}
-                  {canManageSchedules && activeView === 'personas' && previousMonthPattern?.patterns.length && (
+                  {canManageSchedules && activeView === 'personas' && (previousMonthPattern?.patterns?.length ?? 0) > 0 && (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -1209,7 +1210,7 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                   <p className="text-xs text-muted-foreground">
                     Los horarios se cargarán como borrador. Podrás ajustarlos antes de publicar.
                   </p>
-                  {previousMonthPattern?.patterns.length && (
+                  {(previousMonthPattern?.patterns?.length ?? 0) > 0 && (
                     <div className="bg-muted/50 rounded-lg p-3 text-xs">
                       <p className="font-medium">Patrón encontrado:</p>
                       <p className="text-muted-foreground">
