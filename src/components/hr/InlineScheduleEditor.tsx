@@ -28,7 +28,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { ChevronLeft, ChevronRight, User, Save, Undo2, AlertCircle, Coffee, Utensils, CreditCard, Flame, Package, Users, BarChart3, Copy, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, Save, Undo2, AlertCircle, Coffee, Utensils, CreditCard, Flame, Package, Users, BarChart3, Copy, Calendar, Flag } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTeamData } from '@/components/local/team/useTeamData';
 import { useHolidays } from '@/hooks/useHolidays';
@@ -1008,7 +1008,10 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                         const dateStr = format(day, 'yyyy-MM-dd');
                         const isHoliday = holidayDates.has(dateStr);
                         const holidayName = holidayDates.get(dateStr);
-                        const isSunday = day.getDay() === 0;
+                        const dayOfWeek = day.getDay();
+                        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                        const isSaturday = dayOfWeek === 6;
+                        const isSunday = dayOfWeek === 0;
 
                         return (
                           <Tooltip key={dateStr}>
@@ -1017,24 +1020,34 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                                 style={{ width: DAY_WIDTH }}
                                 className={cn(
                                   'shrink-0 flex flex-col items-center justify-center border-r cursor-pointer hover:bg-primary/5 relative',
-                                  isHoliday && 'bg-warning/20',
-                                  isSunday && 'bg-muted/60'
+                                  // Feriado - color de acento fuerte
+                                  isHoliday && 'bg-orange-100 dark:bg-orange-950/40',
+                                  // Fin de semana (si no es feriado)
+                                  !isHoliday && isSaturday && 'bg-blue-50 dark:bg-blue-950/30',
+                                  !isHoliday && isSunday && 'bg-blue-100 dark:bg-blue-950/50'
                                 )}
                                 onClick={() => canManageSchedules && activeView === 'personas' && selection.handleColumnSelect(dateStr)}
                               >
-                                <span className="text-[10px] text-muted-foreground">{dayNames[day.getDay()]}</span>
-                                <span className={cn('text-sm font-medium', isHoliday && 'text-warning')}>
-                                  {format(day, 'd')}
+                                <span className={cn(
+                                  'text-[10px]',
+                                  isWeekend && !isHoliday && 'text-blue-600 dark:text-blue-400 font-medium',
+                                  isHoliday && 'text-orange-600 dark:text-orange-400'
+                                )}>
+                                  {dayNames[day.getDay()]}
                                 </span>
-                                {/* Holiday indicator dot */}
-                                {isHoliday && (
-                                  <div className="absolute bottom-0.5 w-1.5 h-1.5 rounded-full bg-warning" />
-                                )}
+                                <span className={cn(
+                                  'text-sm font-medium flex items-center gap-0.5',
+                                  isWeekend && !isHoliday && 'text-blue-700 dark:text-blue-300',
+                                  isHoliday && 'text-orange-700 dark:text-orange-300'
+                                )}>
+                                  {format(day, 'd')}
+                                  {isHoliday && <Flag className="w-3 h-3 ml-0.5" />}
+                                </span>
                               </div>
                             </TooltipTrigger>
                             <TooltipContent side="bottom" className="text-xs">
                               {isHoliday ? (
-                                <span className="text-warning font-medium">🎉 {holidayName}</span>
+                                <span className="text-orange-600 font-medium">🎉 {holidayName}</span>
                               ) : (
                                 <span>Click para seleccionar columna</span>
                               )}
@@ -1057,7 +1070,10 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                           {monthDays.map((day) => {
                             const dateStr = format(day, 'yyyy-MM-dd');
                             const isHoliday = holidayDates.has(dateStr);
-                            const isSunday = day.getDay() === 0;
+                            const dayOfWeek = day.getDay();
+                            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                            const isSaturday = dayOfWeek === 6;
+                            const isSunday = dayOfWeek === 0;
                             const value = getEffectiveValue(member.id, dateStr);
                             const isPending = hasPendingChange(member.id, dateStr);
                             const isEditable = canManageSchedules && !isHoliday;
@@ -1070,8 +1086,11 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                                 style={{ width: DAY_WIDTH, height: SCHEDULE_ROW_HEIGHT }}
                                 className={cn(
                                   'shrink-0 flex items-center justify-center border-r cursor-pointer transition-all select-none',
-                                  isHoliday && 'bg-warning/10',
-                                  isSunday && 'bg-muted/30',
+                                  // Feriado - color de acento fuerte
+                                  isHoliday && 'bg-orange-50 dark:bg-orange-950/20',
+                                  // Fin de semana (si no es feriado)
+                                  !isHoliday && isSaturday && 'bg-blue-50/50 dark:bg-blue-950/20',
+                                  !isHoliday && isSunday && 'bg-blue-100/50 dark:bg-blue-950/30',
                                   isEditable && 'hover:bg-primary/5',
                                   isSelected && 'bg-primary/20 ring-2 ring-primary ring-inset'
                                 )}
@@ -1107,7 +1126,10 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                               const dateStr = format(day, 'yyyy-MM-dd');
                               const employees = getEmployeesAtHour(dateStr, hour);
                               const count = employees.length;
-                              const isSunday = day.getDay() === 0;
+                              const dayOfWeek = day.getDay();
+                              const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                              const isSaturday = dayOfWeek === 6;
+                              const isSunday = dayOfWeek === 0;
                               const isHoliday = holidayDates.has(dateStr);
 
                               return (
@@ -1117,8 +1139,11 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                                       style={{ width: DAY_WIDTH, height: COVERAGE_ROW_HEIGHT }}
                                       className={cn(
                                         'shrink-0 flex items-center justify-center border-r',
-                                        isSunday && 'bg-muted/20',
-                                        isHoliday && 'bg-warning/5'
+                                        // Feriado
+                                        isHoliday && 'bg-orange-50/50 dark:bg-orange-950/10',
+                                        // Fin de semana
+                                        !isHoliday && isSaturday && 'bg-blue-50/30 dark:bg-blue-950/10',
+                                        !isHoliday && isSunday && 'bg-blue-100/30 dark:bg-blue-950/20'
                                       )}
                                     >
                                       <div className={cn(
