@@ -6,6 +6,7 @@ export { CoachingStationSection } from './CoachingStationSection';
 export { CoachingGeneralSection } from './CoachingGeneralSection';
 export { CoachingManagerSection } from './CoachingManagerSection';
 export { CoachingForm } from './CoachingForm';
+export { CoachingManagerForm } from './CoachingManagerForm';
 export { CoachingDetailModal } from './CoachingDetailModal';
 export { EmployeeCoachingCard } from './EmployeeCoachingCard';
 export { CoachingHistoryTab } from './CoachingHistoryTab';
