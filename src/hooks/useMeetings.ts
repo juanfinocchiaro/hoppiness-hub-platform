@@ -355,6 +355,13 @@ export function useConveneMeeting() {
         if (pError) throw pError;
       }
       
+      // Trigger email notification (fire and forget)
+      supabase.functions.invoke('send-meeting-notification', {
+        body: { meeting_id: meeting.id },
+      }).catch((err) => {
+        console.error('Failed to send meeting notification:', err);
+      });
+      
       return meeting;
     },
     onSuccess: (_, data) => {
@@ -687,6 +694,13 @@ export function useCloseMeeting() {
           }
         }
       }
+      
+      // 4. Trigger email notification with minutes (fire and forget)
+      supabase.functions.invoke('send-meeting-minutes-notification', {
+        body: { meeting_id: meetingId },
+      }).catch((err) => {
+        console.error('Failed to send meeting minutes notification:', err);
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meeting-detail'] });
