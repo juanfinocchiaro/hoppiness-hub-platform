@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/ui/page-header';
 
 export default function MisCoachingsPage() {
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6">
       <PageHeader 
         title="Mis Coachings" 
         subtitle="Evaluaciones de desempeño recibidas"

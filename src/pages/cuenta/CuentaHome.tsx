@@ -103,7 +103,7 @@ export default function CuentaHome() {
   const hasLocalRoles = branchPinData && branchPinData.filter((r: any) => r.local_role).length > 0;
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6">
       <PageHelp pageId={helpPageId} />
       
       <PageHeader 

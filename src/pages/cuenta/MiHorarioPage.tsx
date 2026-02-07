@@ -197,7 +197,7 @@ export default function MiHorarioPage() {
   const hasWorkToday = todaySchedule && !todaySchedule.is_day_off && todaySchedule.start_time !== '00:00:00';
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6">
       <PageHeader 
         title="Mi Horario" 
         subtitle="Tu horario de trabajo mensual"

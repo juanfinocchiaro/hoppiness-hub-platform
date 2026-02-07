@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/ui/page-header';
 
 export default function MisSolicitudesPage() {
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6">
       <PageHeader 
         title="Mis Solicitudes" 
         subtitle="Solicitudes de días libres y ausencias"
