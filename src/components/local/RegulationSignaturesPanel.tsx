@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +33,7 @@ interface TeamMemberSignature {
 
 export default function RegulationSignaturesPanel({ branchId }: RegulationSignaturesPanelProps) {
   const { user } = useAuth();
-  const { local } = usePermissionsV2(branchId);
+  const { local } = useDynamicPermissions(branchId);
   const queryClient = useQueryClient();
   const [uploadingFor, setUploadingFor] = useState<TeamMemberSignature | null>(null);
   const [previewFor, setPreviewFor] = useState<TeamMemberSignature | null>(null);

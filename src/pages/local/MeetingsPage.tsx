@@ -8,7 +8,7 @@ import { PageHelp } from '@/components/ui/PageHelp';
 import { Calendar } from 'lucide-react';
 import { MeetingsList, MeetingDetail, MeetingConveneModal } from '@/components/meetings';
 import { useBranchMeetings, useMeetingDetail } from '@/hooks/useMeetings';
-import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
+import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import type { Tables } from '@/integrations/supabase/types';
 import type { Meeting } from '@/types/meeting';
@@ -25,10 +25,10 @@ export default function MeetingsPage() {
   const [showConveneModal, setShowConveneModal] = useState(false);
 
   const effectiveUser = useEffectiveUser();
-  const { isEncargado, isSuperadmin, isFranquiciado } = usePermissionsWithImpersonation(branch.id);
-  const canCreate = isEncargado || isSuperadmin || isFranquiciado;
-  const canManage = isEncargado || isSuperadmin || isFranquiciado;
-  const canTrackReads = isEncargado || isSuperadmin || isFranquiciado;
+  const { local, isEncargado, isSuperadmin, isFranquiciado } = useDynamicPermissions(branch.id);
+  const canCreate = local.canCreateMeetings || isEncargado || isSuperadmin || isFranquiciado;
+  const canManage = local.canCloseMeetings || isEncargado || isSuperadmin || isFranquiciado;
+  const canTrackReads = local.canViewMeetings || isEncargado || isSuperadmin || isFranquiciado;
 
   const { data: meetings = [], isLoading } = useBranchMeetings(branch.id);
   const { data: selectedMeeting } = useMeetingDetail(selectedMeetingId || undefined);

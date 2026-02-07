@@ -24,11 +24,11 @@ import { toast } from 'sonner';
 import { CalendarDays, Plus, Trash2, Download, ChevronLeft, ChevronRight, Flag, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useHolidaysRange, useCreateHoliday, useDeleteHoliday, useCreateHolidaysBulk, getArgentinaHolidays } from '@/hooks/useHolidays';
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import { PageHelp } from '@/components/ui/PageHelp';
 
 export default function LaborCalendarPage() {
-  const { isSuperadmin, isCoordinador } = usePermissionsV2();
+  const { isSuperadmin, isCoordinador } = useDynamicPermissions();
   const canManage = isSuperadmin || isCoordinador;
   
   const now = new Date();

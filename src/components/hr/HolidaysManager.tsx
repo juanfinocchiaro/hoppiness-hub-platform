@@ -25,14 +25,14 @@ import { toast } from 'sonner';
 import { CalendarDays, Plus, Trash2, Download, Info, CalendarCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useHolidays, useCreateHoliday, useDeleteHoliday, useCreateHolidaysBulk, getArgentinaHolidays } from '@/hooks/useHolidays';
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 
 interface HolidaysManagerProps {
   className?: string;
 }
 
 export default function HolidaysManager({ className }: HolidaysManagerProps) {
-  const { isSuperadmin, isCoordinador } = usePermissionsV2();
+  const { isSuperadmin, isCoordinador } = useDynamicPermissions();
   const canManage = isSuperadmin || isCoordinador;
   
   const now = new Date();

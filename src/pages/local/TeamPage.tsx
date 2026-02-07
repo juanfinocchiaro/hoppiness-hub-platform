@@ -7,7 +7,7 @@ import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { TeamTable, TeamCardList, useTeamData } from '@/components/local/team';
 import { InviteStaffDialog } from '@/components/hr/InviteStaffDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import { PageHelp } from '@/components/ui/PageHelp';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -18,7 +18,7 @@ interface OutletContext {
 export default function TeamPage() {
   const { branch } = useOutletContext<OutletContext>();
   const { team, loading, refetch } = useTeamData(branch?.id);
-  const { local } = usePermissionsV2(branch?.id);
+  const { local } = useDynamicPermissions(branch?.id);
   const isMobile = useIsMobile();
   
   const [search, setSearch] = useState('');

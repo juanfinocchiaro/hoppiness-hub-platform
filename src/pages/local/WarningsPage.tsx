@@ -8,7 +8,7 @@ import { useParams, useOutletContext } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,7 +72,7 @@ export default function WarningsPage() {
   const { branchId } = useParams();
   const { branch } = useOutletContext<{ branch: Branch }>();
   const { user } = useAuth();
-  const { local } = usePermissionsV2(branchId);
+  const { local } = useDynamicPermissions(branchId);
   const queryClient = useQueryClient();
   
   const [showNewWarning, setShowNewWarning] = useState(false);

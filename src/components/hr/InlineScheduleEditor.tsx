@@ -26,7 +26,7 @@ import { useTeamData } from '@/components/local/team/useTeamData';
 import { useHolidays } from '@/hooks/useHolidays';
 import { useMonthlySchedules, type ScheduleEntry, type DaySchedule } from '@/hooks/useSchedules';
 import { sendBulkScheduleNotifications } from '@/hooks/useScheduleNotifications';
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import { ScheduleCellPopover, type ScheduleValue } from './ScheduleCellPopover';
 import { SaveScheduleDialog } from './SaveScheduleDialog';
@@ -79,7 +79,7 @@ export default function InlineScheduleEditor({ branchId }: InlineScheduleEditorP
   const queryClient = useQueryClient();
   const { id: currentUserId } = useEffectiveUser();
 
-  const { local } = usePermissionsV2(branchId);
+  const { local } = useDynamicPermissions(branchId);
   const canManageSchedules = local.canEditSchedules;
 
   // Fetch data

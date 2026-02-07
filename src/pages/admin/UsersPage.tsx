@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { UsersFilters, UsersTable, useUsersData, userHasRole } from '@/components/admin/users';
 
 export default function UsersPage() {
-  const { isSuperadmin, loading: permLoading } = usePermissionsV2();
+  const { isSuperadmin, loading: permLoading } = useDynamicPermissions();
   const { users, branches, loading, refetch } = useUsersData();
 
   // Filter state - simplified

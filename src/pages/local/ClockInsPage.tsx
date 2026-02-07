@@ -10,7 +10,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -32,7 +32,7 @@ import { getClockInUrl } from '@/lib/constants';
 
 export default function ClockInsPage() {
   const { branchId } = useParams<{ branchId: string }>();
-  const { isSuperadmin, local } = usePermissionsV2(branchId);
+  const { isSuperadmin, local } = useDynamicPermissions(branchId);
   const [showQRModal, setShowQRModal] = useState(false);
   const [dateFilter, setDateFilter] = useState<Date>(new Date());
 
