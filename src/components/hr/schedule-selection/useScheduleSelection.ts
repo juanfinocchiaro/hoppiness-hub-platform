@@ -33,12 +33,6 @@ interface UseScheduleSelectionOptions {
   enabled?: boolean;
 }
 
-interface DragState {
-  isDragging: boolean;
-  startCell: CellKey | null;
-  currentCell: CellKey | null;
-}
-
 interface FillDragState {
   isFilling: boolean;
   originCell: CellKey | null;
@@ -57,11 +51,6 @@ export function useScheduleSelection({
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
   const [lastClickedCell, setLastClickedCell] = useState<CellKey | null>(null);
   const [clipboard, setClipboard] = useState<ClipboardDataV2 | null>(null);
-  const [dragState, setDragState] = useState<DragState>({
-    isDragging: false,
-    startCell: null,
-    currentCell: null,
-  });
   const [fillDragState, setFillDragState] = useState<FillDragState>({
     isFilling: false,
     originCell: null,
@@ -69,8 +58,14 @@ export function useScheduleSelection({
     direction: null,
   });
 
-  // Ref to track if we just finished a drag (to prevent click from clearing)
-  const justFinishedDrag = useRef(false);
+  // Use refs for drag state to avoid stale closures
+  const isDraggingRef = useRef(false);
+  const dragStartCellRef = useRef<CellKey | null>(null);
+  const dragCurrentCellRef = useRef<CellKey | null>(null);
+  
+  // Track if a mousedown started a potential drag (to distinguish from click)
+  const mouseDownCellRef = useRef<string | null>(null);
+  const didDragMoveRef = useRef(false);
 
   // Calculate rectangular selection between two cells
   const calculateRectSelection = useCallback((start: CellKey, end: CellKey): Set<string> => {
@@ -159,22 +154,22 @@ export function useScheduleSelection({
     if (!enabled) return;
 
     const handleMouseUp = () => {
-      if (dragState.isDragging && dragState.startCell && dragState.currentCell) {
-        const selection = calculateRectSelection(dragState.startCell, dragState.currentCell);
+      if (isDraggingRef.current && dragStartCellRef.current && dragCurrentCellRef.current) {
+        const selection = calculateRectSelection(dragStartCellRef.current, dragCurrentCellRef.current);
         setSelectedCells(selection);
-        setLastClickedCell(dragState.currentCell);
-        justFinishedDrag.current = true;
-        setTimeout(() => { justFinishedDrag.current = false; }, 100);
+        setLastClickedCell(dragCurrentCellRef.current);
       }
-      setDragState({ isDragging: false, startCell: null, currentCell: null });
+      // Reset drag state
+      isDraggingRef.current = false;
+      dragStartCellRef.current = null;
+      dragCurrentCellRef.current = null;
     };
 
     window.addEventListener('mouseup', handleMouseUp);
     return () => window.removeEventListener('mouseup', handleMouseUp);
-  }, [enabled, dragState, calculateRectSelection]);
+  }, [enabled, calculateRectSelection]);
 
   // Handle cell click - Excel paradigm: click = select
-  // NOTE: This is called AFTER mouseup completes (not during drag)
   const handleCellClick = useCallback((
     userId: string, 
     date: string, 
@@ -182,19 +177,20 @@ export function useScheduleSelection({
   ) => {
     if (!enabled) return;
 
-    // If we just finished a drag, don't process the click
-    if (justFinishedDrag.current) return;
-    
-    // If currently dragging, don't process click (will be handled by mouseup)
-    if (dragState.isDragging) return;
-
     const cellKey = cellKeyString(userId, date);
+    
+    // If we dragged (moved to different cells), don't process click - mouseup already handled it
+    if (didDragMoveRef.current) {
+      didDragMoveRef.current = false;
+      return;
+    }
     
     // Shift+click: select range from last clicked cell
     if (e.shiftKey && lastClickedCell) {
       e.preventDefault();
       const selection = calculateRectSelection(lastClickedCell, { userId, date });
       setSelectedCells(selection);
+      setLastClickedCell({ userId, date });
     }
     // Ctrl/Cmd+click: toggle cell in selection
     else if (e.ctrlKey || e.metaKey) {
@@ -210,31 +206,34 @@ export function useScheduleSelection({
       });
       setLastClickedCell({ userId, date });
     }
-    // Normal click without drag: single selection (Excel behavior)
-    // Note: We only do this if we didn't start a drag
-    else if (!dragState.startCell) {
+    // Normal click: single selection
+    // This fires on mousedown cell = mouseup cell (no drag movement)
+    else {
+      // Only select if clicking on a different cell OR same cell (toggle logic handled by mousedown)
+      // mousedown already selected, so this maintains selection
       setSelectedCells(new Set([cellKey]));
       setLastClickedCell({ userId, date });
     }
-  }, [enabled, lastClickedCell, calculateRectSelection, dragState.isDragging, dragState.startCell]);
+  }, [enabled, lastClickedCell, calculateRectSelection]);
 
   // Start drag selection on mousedown
   const handleDragStart = useCallback((userId: string, date: string, e: React.MouseEvent) => {
     if (!enabled) return;
-    // Don't start drag on modified clicks (shift/ctrl handle their own logic)
+    // Don't start drag on modified clicks (shift/ctrl handle their own logic in onClick)
     if (e.shiftKey || e.ctrlKey || e.metaKey) return;
     // Only left mouse button
     if (e.button !== 0) return;
     
-    // Don't preventDefault - let onClick work too
     const cell = { userId, date };
     const cellKey = cellKeyString(userId, date);
     
-    setDragState({
-      isDragging: true,
-      startCell: cell,
-      currentCell: cell,
-    });
+    // Set refs for drag tracking
+    isDraggingRef.current = true;
+    dragStartCellRef.current = cell;
+    dragCurrentCellRef.current = cell;
+    mouseDownCellRef.current = cellKey;
+    didDragMoveRef.current = false;
+    
     // Select immediately on mousedown
     setSelectedCells(new Set([cellKey]));
     setLastClickedCell(cell);
@@ -242,15 +241,24 @@ export function useScheduleSelection({
 
   // Continue drag selection
   const handleDragMove = useCallback((userId: string, date: string) => {
-    if (!enabled || !dragState.isDragging || !dragState.startCell) return;
+    if (!enabled) return;
+    if (!isDraggingRef.current || !dragStartCellRef.current) return;
     
     const currentCell = { userId, date };
-    setDragState(prev => ({ ...prev, currentCell }));
+    const currentKey = cellKeyString(userId, date);
+    const startKey = cellKeyString(dragStartCellRef.current.userId, dragStartCellRef.current.date);
     
-    // Update selection preview
-    const selection = calculateRectSelection(dragState.startCell, currentCell);
+    // Check if we actually moved to a different cell
+    if (currentKey !== startKey) {
+      didDragMoveRef.current = true;
+    }
+    
+    dragCurrentCellRef.current = currentCell;
+    
+    // Update selection preview using refs (always fresh)
+    const selection = calculateRectSelection(dragStartCellRef.current, currentCell);
     setSelectedCells(selection);
-  }, [enabled, dragState.isDragging, dragState.startCell, calculateRectSelection]);
+  }, [enabled, calculateRectSelection]);
 
   // Select entire column (all employees for a day)
   const handleColumnSelect = useCallback((date: string) => {
@@ -547,7 +555,7 @@ export function useScheduleSelection({
     clipboard,
     hasSelection: selectedCells.size > 0,
     hasClipboard: clipboard !== null,
-    isDragging: dragState.isDragging,
+    isDragging: isDraggingRef.current,
     
     // Cell operations
     handleCellClick,
