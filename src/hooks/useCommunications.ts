@@ -28,7 +28,8 @@ export function useCommunications() {
       const { data, error } = await supabase
         .from('communications')
         .select('*')
-        .order('published_at', { ascending: false });
+        .order('published_at', { ascending: false })
+        .limit(100);
       
       if (error) throw error;
       return (data || []) as Communication[];
@@ -76,7 +77,8 @@ export function useUserCommunications() {
         .select('*, branches:source_branch_id(name)')
         .eq('is_published', true)
         .or('expires_at.is.null,expires_at.gt.now()')
-        .order('published_at', { ascending: false });
+        .order('published_at', { ascending: false })
+        .limit(100);
       
       if (commsError) throw commsError;
       

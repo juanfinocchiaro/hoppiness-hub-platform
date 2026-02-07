@@ -23,10 +23,11 @@ Este plan aborda **10 tipos de errores recurrentes** identificados en la auditor
 | **Permisos** | `useDynamicPermissions` solo usado en guards (1 archivo) | Medio | ✅ Resuelto |
 | **Permisos** | 15 páginas usan `usePermissionsV2` hardcodeado | Medio | ✅ Resuelto |
 | **DB Config** | Faltan permisos en `permission_config` | Alto | ✅ Resuelto |
-| **Notificaciones** | 0 Edge Functions para notificar | Alto | 🔄 Fase 2 |
+| **Notificaciones** | 0 Edge Functions para notificar | Alto | ✅ Resuelto |
 | **RLS** | Linter detecta 1 Security Definer View | Bajo | 🔄 Fase 5 |
-| **Errores** | 642 usos de `toast.error` vs 2 usos de `handleError()` | Medio | 🔄 Fase 3 |
-| **Queries** | 235 usos de `.single()` sin fallback | Bajo | 🔄 Fase 3 |
+| **Errores** | 642 usos de `toast.error` vs 2 usos de `handleError()` | Medio | ✅ Resuelto (parcial) |
+| **Queries** | 235 usos de `.single()` sin fallback | Bajo | ✅ Resuelto (parcial) |
+| **Performance** | Queries sin límite | Bajo | ✅ Resuelto |
 
 ---
 

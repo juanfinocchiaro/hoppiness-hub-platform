@@ -28,7 +28,8 @@ export function useCoachings(filters: CoachingFilters = {}) {
       let query = supabase
         .from('coachings')
         .select('*')
-        .order('coaching_date', { ascending: false });
+        .order('coaching_date', { ascending: false })
+        .limit(100);
 
       if (branchId) {
         query = query.eq('branch_id', branchId);
