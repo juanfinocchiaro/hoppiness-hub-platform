@@ -61,7 +61,9 @@ const TARGET_ROLE_OPTIONS = [
   { value: 'encargado', label: 'Encargados' },
 ];
 
-export default function CommunicationsPage() {
+import { RequireBrandPermission } from '@/components/guards';
+
+function CommunicationsPageContent() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -420,5 +422,16 @@ export default function CommunicationsPage() {
         requiresConfirmation={readersModal.requiresConfirmation}
       />
     </div>
+  );
+}
+
+export default function CommunicationsPage() {
+  return (
+    <RequireBrandPermission
+      permission="canManageMessages"
+      noAccessMessage="No tenés permisos para gestionar comunicados de marca."
+    >
+      <CommunicationsPageContent />
+    </RequireBrandPermission>
   );
 }

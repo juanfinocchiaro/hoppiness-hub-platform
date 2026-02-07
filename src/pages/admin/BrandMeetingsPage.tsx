@@ -25,7 +25,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Skeleton } from '@/components/ui/skeleton';
 import { MEETING_AREAS, type MeetingStatus } from '@/types/meeting';
 
-export default function BrandMeetingsPage() {
+import { RequireBrandPermission } from '@/components/guards';
+
+function BrandMeetingsPageContent() {
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
   const [selectedArea, setSelectedArea] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -398,5 +400,16 @@ export default function BrandMeetingsPage() {
         onOpenChange={setShowConveneModal} 
       />
     </div>
+  );
+}
+
+export default function BrandMeetingsPage() {
+  return (
+    <RequireBrandPermission
+      permission="canManageMessages"
+      noAccessMessage="No tenés permisos para gestionar reuniones de la red."
+    >
+      <BrandMeetingsPageContent />
+    </RequireBrandPermission>
   );
 }

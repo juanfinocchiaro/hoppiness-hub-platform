@@ -2118,6 +2118,10 @@ export type Database = {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
       }
+      can_close_shift: {
+        Args: { _branch_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_manage_coaching: {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean

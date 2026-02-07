@@ -1,6 +1,7 @@
 import RegulationsManager from '@/components/admin/RegulationsManager';
+import { RequireBrandPermission } from '@/components/guards';
 
-export default function BrandRegulationsPage() {
+function BrandRegulationsPageContent() {
   return (
     <div className="space-y-6">
       <div>
@@ -11,5 +12,16 @@ export default function BrandRegulationsPage() {
       </div>
       <RegulationsManager />
     </div>
+  );
+}
+
+export default function BrandRegulationsPage() {
+  return (
+    <RequireBrandPermission
+      permission="canEditBrandConfig"
+      noAccessMessage="Solo el Superadmin puede gestionar reglamentos."
+    >
+      <BrandRegulationsPageContent />
+    </RequireBrandPermission>
   );
 }

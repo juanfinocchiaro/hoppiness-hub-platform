@@ -204,7 +204,9 @@ function MessageCard({ message, onMarkRead, onArchive }: {
   );
 }
 
-export default function ContactMessagesPage() {
+import { RequireBrandPermission } from '@/components/guards';
+
+function ContactMessagesPageContent() {
   const [typeFilter, setTypeFilter] = useState<MessageType>('all');
   const [showOnlyUnread, setShowOnlyUnread] = useState(false);
 
@@ -319,5 +321,16 @@ export default function ContactMessagesPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ContactMessagesPage() {
+  return (
+    <RequireBrandPermission
+      permission="canManageMessages"
+      noAccessMessage="No tenés permisos para gestionar mensajes de contacto."
+    >
+      <ContactMessagesPageContent />
+    </RequireBrandPermission>
   );
 }
