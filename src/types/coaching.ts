@@ -42,13 +42,10 @@ export interface GeneralCompetency {
   is_active: boolean;
 }
 
-export type ManagerCompetencyCategory = 'operacion' | 'estandar' | 'negocio' | 'personas';
+export type ManagerCompetencyCategory = 'marca';
 
 export const MANAGER_CATEGORY_CONFIG: Record<ManagerCompetencyCategory, { label: string; icon: string }> = {
-  operacion: { label: 'Operación Diaria', icon: '📋' },
-  estandar: { label: 'Estándar de Marca', icon: '🍔' },
-  negocio: { label: 'Negocio y Control', icon: '💰' },
-  personas: { label: 'Personas y Cultura', icon: '👥' },
+  marca: { label: 'Evaluación desde Marca', icon: '🏢' },
 };
 
 export interface ManagerCompetency {
