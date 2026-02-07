@@ -160,12 +160,15 @@ export function SelectionToolbar({
 
           {/* Position selector */}
           {positions.length > 0 && (
-            <Select value={selectedPosition} onValueChange={setSelectedPosition}>
+            <Select 
+              value={selectedPosition} 
+              onValueChange={(val) => setSelectedPosition(val === '__none__' ? '' : val)}
+            >
               <SelectTrigger className="h-7 w-[120px] text-xs">
                 <SelectValue placeholder="Posición" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Sin posición</SelectItem>
+                <SelectItem value="__none__">Sin posición</SelectItem>
                 {positions.map(pos => (
                   <SelectItem key={pos.id} value={pos.key}>
                     {pos.label}
