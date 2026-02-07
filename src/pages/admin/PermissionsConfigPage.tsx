@@ -4,6 +4,7 @@
  * Permite al superadmin activar/desactivar permisos por rol.
  * Los permisos marcados como is_editable=false no pueden modificarse.
  */
+import React from 'react';
 import { Lock, Check, X, Shield, Building2, Info } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -77,8 +78,8 @@ export default function PermissionsConfigPage() {
         </thead>
         <tbody>
           {categories.map(category => (
-            <>
-              <tr key={`cat-${category}`} className="bg-muted/50">
+            <React.Fragment key={`cat-${category}`}>
+              <tr className="bg-muted/50">
                 <td colSpan={roles.length + 2} className="py-2 px-2 font-medium text-muted-foreground text-xs uppercase tracking-wide">
                   {category}
                 </td>
@@ -125,7 +126,7 @@ export default function PermissionsConfigPage() {
                     </td>
                   </tr>
                 ))}
-            </>
+            </React.Fragment>
           ))}
         </tbody>
       </table>
