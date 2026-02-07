@@ -64,7 +64,7 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
         .from('branches')
         .select('name')
         .eq('id', branchId)
-        .single();
+        .maybeSingle();
       return data;
     },
   });

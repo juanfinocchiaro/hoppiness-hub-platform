@@ -35,7 +35,7 @@ export default function FichajeQRDisplay() {
         .from('branches')
         .select('id, name, clock_code')
         .eq('id', branchId)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       return data;
