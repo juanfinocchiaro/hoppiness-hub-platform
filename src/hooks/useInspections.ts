@@ -235,7 +235,7 @@ export function useCreateInspection() {
 }
 
 // ============================================================================
-// UPDATE INSPECTION ITEM
+// UPDATE INSPECTION ITEM (with optimistic updates for instant UI feedback)
 // ============================================================================
 
 export function useUpdateInspectionItem() {
@@ -261,14 +261,42 @@ export function useUpdateInspectionItem() {
         .eq('id', itemId);
 
       if (error) throw error;
-      return { itemId, inspectionId };
+      return { itemId, inspectionId, data };
     },
-    onSuccess: ({ inspectionId }) => {
-      queryClient.invalidateQueries({ queryKey: ['inspection', inspectionId] });
+    // Optimistic update: update UI immediately before server responds
+    onMutate: async ({ itemId, inspectionId, data }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['inspection', inspectionId] });
+
+      // Snapshot previous value
+      const previousInspection = queryClient.getQueryData<BranchInspection>(['inspection', inspectionId]);
+
+      // Optimistically update the cache
+      if (previousInspection?.items) {
+        queryClient.setQueryData<BranchInspection>(['inspection', inspectionId], {
+          ...previousInspection,
+          items: previousInspection.items.map(item =>
+            item.id === itemId
+              ? { ...item, complies: data.complies, observations: data.observations ?? item.observations, photo_url: data.photo_url ?? item.photo_url }
+              : item
+          ),
+        });
+      }
+
+      // Return context for rollback
+      return { previousInspection };
     },
-    onError: (error) => {
+    onError: (error, { inspectionId }, context) => {
+      // Rollback on error
+      if (context?.previousInspection) {
+        queryClient.setQueryData(['inspection', inspectionId], context.previousInspection);
+      }
       console.error('Error updating item:', error);
       toast.error('Error al guardar');
+    },
+    onSettled: (_, __, { inspectionId }) => {
+      // Refetch to ensure server state is synced (but UI already updated)
+      queryClient.invalidateQueries({ queryKey: ['inspection', inspectionId] });
     },
   });
 }
