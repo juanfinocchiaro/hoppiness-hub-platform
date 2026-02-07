@@ -1,129 +1,191 @@
 
 
-# Plan: Categorías Más Específicas + Predisposición Laboral
+# Plan: Sistema de Visitas de Supervisión (Coordinadores)
 
-## Problema Actual
+## Resumen
 
-Las 6 categorías actuales son algo genéricas. Falta capturar aspectos específicos como:
-- **Predisposición laboral**: gente que no quiere recibir mensajes fuera del horario, que pone trabas
-- **Actitud y presencia**: sonrisa, energía, hospitalidad (mencionado antes)
-- Más especificidad en cada rúbrica
+Crear un módulo completo para que el **Coordinador de marca** pueda realizar visitas de supervisión **sorpresa** a sucursales (BOH - Back of House y FOH - Front of House), registrar hallazgos con fotos, generar informes automáticos y notificar a encargados/franquiciados.
 
 ---
 
-## Propuesta: 8 Categorías Específicas
+## Cambios respecto al plan anterior
 
-| # | Categoría | Icono | Qué evalúa específicamente |
-|---|-----------|-------|---------------------------|
-| 1 | **Comunicación y Reportes** | 💬 | Responde mensajes, reporta novedades, informa problemas con contexto |
-| 2 | **Disponibilidad y Predisposición** | 📲 | Responde fuera de horario cuando es necesario, no pone trabas, flexibilidad ante urgencias |
-| 3 | **Liderazgo y Clima de Equipo** | 👥 | Maneja conflictos, sostiene buen clima, el equipo lo respeta |
-| 4 | **Desarrollo del Staff** | 📚 | Hace coachings, entrena nuevos, da feedback, el equipo mejora |
-| 5 | **Adaptación a Cambios** | 🔄 | Implementa cambios de menú/procesos sin resistencia ni quejas |
-| 6 | **Resolución Autónoma** | 🔧 | Resuelve problemas sin escalar todo, tiene criterio propio |
-| 7 | **Compromiso con la Marca** | 💜 | Cuida la imagen, propone mejoras, se siente parte |
-| 8 | **Actitud y Presencia** | ✨ | Sonrisa, energía positiva, hospitalidad, "la camiseta puesta" |
+1. **Sin programación**: Las visitas son sorpresa, no se agendan
+   - Se elimina el campo `scheduled_at`
+   - Se elimina el estado `'programada'`
+   - Se elimina la sección "Programadas" del sidebar
+   
+2. **Encargados ven todo**: El encargado ve TODAS las visitas de su local, no solo donde estuvo presente
 
 ---
 
-## Rúbricas Detalladas (1 / 3 / 5)
+## Entidades del Sistema
 
-### 1. Comunicación y Reportes 💬
-| Score | Descripción |
-|-------|-------------|
-| **1** | No reporta novedades; avisa tarde o nunca; mensajes confusos sin contexto; hay que perseguirlo para obtener info |
-| **3** | Comunica lo importante pero a veces incompleto; responde aunque con demora; le falta iniciativa |
-| **5** | Comunica proactivamente con claridad y evidencia; responde rápido; anticipa problemas; propone soluciones |
-
-### 2. Disponibilidad y Predisposición 📲 (NUEVA)
-| Score | Descripción |
-|-------|-------------|
-| **1** | No responde fuera de horario nunca; pone trabas ante urgencias; inflexible; "eso no me corresponde" |
-| **3** | Responde cuando puede pero con demora; acepta urgencias sin entusiasmo; disponibilidad limitada |
-| **5** | Responde rápido ante urgencias reales; flexible sin que le pidan; entiende que el rol tiene responsabilidad extra |
-
-### 3. Liderazgo y Clima de Equipo 👥
-| Score | Descripción |
-|-------|-------------|
-| **1** | Mal clima; conflictos frecuentes no resueltos; el equipo se queja de él/ella; alta rotación |
-| **3** | Clima aceptable; maneja lo básico; algunos roces sin resolver; el equipo lo respeta a medias |
-| **5** | Equipo motivado y estable; resuelve conflictos; liderazgo sano; baja rotación; el equipo lo sigue |
-
-### 4. Desarrollo del Staff 📚
-| Score | Descripción |
-|-------|-------------|
-| **1** | No entrena; no hace coachings; la gente "aprende sola"; no da feedback constructivo |
-| **3** | Capacita cuando le sobra tiempo; hace algunos coachings pero sin rutina ni seguimiento |
-| **5** | Tiene rutina de entrenamiento; hace coachings mensuales; da feedback continuo; el equipo crece |
-
-### 5. Adaptación a Cambios 🔄
-| Score | Descripción |
-|-------|-------------|
-| **1** | Resiste todo cambio; se queja públicamente; demora implementaciones; contagia negatividad al equipo |
-| **3** | Acepta cambios sin entusiasmo; implementa con ayuda; no propone mejoras |
-| **5** | Lidera el cambio; entrena al equipo rápido; sostiene el nuevo estándar; propone mejoras activamente |
-
-### 6. Resolución Autónoma de Problemas 🔧
-| Score | Descripción |
-|-------|-------------|
-| **1** | Escala absolutamente todo; no propone soluciones; espera que otros resuelvan; depende de la marca |
-| **3** | Resuelve problemas típicos; escala lo complejo con contexto; a veces necesita guía |
-| **5** | Resuelve con criterio propio; documenta para que no se repita; casi no necesita escalar |
-
-### 7. Compromiso con la Marca 💜
-| Score | Descripción |
-|-------|-------------|
-| **1** | Desconectado de la marca; actitud de "empleado"; no cuida imagen ni estándares; le da igual |
-| **3** | Cumple con lo pedido; actitud neutral; hace su trabajo pero sin ir más allá |
-| **5** | Se siente dueño; propone mejoras; cuida la marca como propia; orgullo visible |
-
-### 8. Actitud y Presencia ✨ (NUEVA)
-| Score | Descripción |
-|-------|-------------|
-| **1** | Actitud negativa visible; sin energía; cara larga; no transmite hospitalidad; el equipo lo nota |
-| **3** | Actitud correcta pero sin brillo; cumple pero no contagia entusiasmo |
-| **5** | Energía positiva; sonrisa genuina; transmite hospitalidad; "la camiseta puesta"; contagia al equipo |
-
----
-
-## Cambios Técnicos
-
-### 1. Migración de Base de Datos
+### Nueva Tabla: `branch_inspections`
 
 ```sql
--- Eliminar las 6 actuales e insertar 8 nuevas con rúbricas más detalladas
-DELETE FROM manager_competencies;
-
-INSERT INTO manager_competencies (key, name, category, rubric_1, rubric_3, rubric_5, icon, sort_order)
-VALUES 
-  ('comunicacion_reportes', 'Comunicación y Reportes', 'marca', 
-   'No reporta novedades; avisa tarde o nunca; mensajes confusos sin contexto; hay que perseguirlo.',
-   'Comunica lo importante pero a veces incompleto; responde aunque con demora; le falta iniciativa.',
-   'Comunica proactivamente con claridad y evidencia; responde rápido; anticipa problemas; propone soluciones.',
-   '💬', 1),
-   
-  ('disponibilidad_predisposicion', 'Disponibilidad y Predisposición', 'marca', 
-   'No responde fuera de horario nunca; pone trabas ante urgencias; inflexible; "eso no me corresponde".',
-   'Responde cuando puede pero con demora; acepta urgencias sin entusiasmo; disponibilidad limitada.',
-   'Responde rápido ante urgencias reales; flexible sin que le pidan; entiende la responsabilidad del rol.',
-   '📲', 2),
-   
-  -- ... (las otras 6)
+branch_inspections
+├── id (UUID)
+├── branch_id (FK branches)
+├── inspection_type (TEXT) → 'boh' | 'foh'
+├── inspector_id (FK auth.users) → El coordinador que hace la visita
+├── started_at (TIMESTAMPTZ) → Cuándo empezó
+├── completed_at (TIMESTAMPTZ) → Cuándo terminó
+├── status (TEXT) → 'en_curso' | 'completada' | 'cancelada'
+├── score_total (INT) → Puntaje total 0-100
+├── present_manager_id (FK auth.users) → El encargado presente durante la visita
+├── general_notes (TEXT) → Observaciones generales
+├── critical_findings (TEXT) → Hallazgos críticos (resumen)
+├── action_items (JSONB) → Acciones y responsables
+├── created_at / updated_at
 ```
 
-### 2. Corregir cálculo del promedio
+### Nueva Tabla: `inspection_items`
 
-El promedio debe calcularse sobre las competencias **puntuadas**, no sobre el total:
-
-```typescript
-// ManagerScoreHeader.tsx
-const average = filledCount > 0 ? totalScore / filledCount : 0;
+```sql
+inspection_items
+├── id (UUID)
+├── inspection_id (FK branch_inspections)
+├── category (TEXT)
+├── item_key (TEXT)
+├── item_label (TEXT)
+├── complies (BOOLEAN | NULL)
+├── observations (TEXT)
+├── photo_url (TEXT)
+├── sort_order (INT)
 ```
 
-### 3. Ajustar escala
+### Nueva Tabla: `inspection_templates`
 
-- **Máximo total**: 8 x 5 = **40 puntos**
-- **Promedio**: 1 a 5 (solo sobre las puntuadas)
+```sql
+inspection_templates
+├── id (UUID)
+├── inspection_type (TEXT) → 'boh' | 'foh'
+├── category (TEXT)
+├── item_key (TEXT)
+├── item_label (TEXT)
+├── sort_order (INT)
+├── is_active (BOOLEAN)
+```
+
+---
+
+## Checklist de Items
+
+### BOH (Back-of-House) - 17 ítems
+
+| Categoría | Item |
+|-----------|------|
+| **Heladeras** | Temperatura heladeras (superior e inferior) |
+| | Etiquetado FIFO legible y resistente al frío |
+| | Juntas y burletes sin fugas ni condensación |
+| | Ventiladores y rejillas limpios |
+| | Stock próximo a vencer identificado |
+| **Depósito** | Orden en depósito (carnes, salsas, descartables) |
+| | Iluminación y cableado en depósito |
+| **Cocina** | Limpieza de campanas y paredes de cocina |
+| | Nivel de aceite en freidoras (3/4 cesta) |
+| | Fecha de cambio de aceite actualizada |
+| | Superficie de planchas en buen estado |
+| | Rejillas de desagüe completas |
+| | Calidad de corte de vegetales |
+| **Seguridad** | Certificado de desinfección visible |
+| | Matafuegos cargado y accesible |
+| | Pisos sin grietas peligrosas |
+| | Ausencia de celulares en área operativa |
+
+### FOH (Front-of-House) - 13 ítems
+
+| Categoría | Item |
+|-----------|------|
+| **Mostrador** | Limpieza de mostrador y terminales de pago |
+| | Cartelería actualizada y libre de polvo |
+| | Uniformes del personal limpios y conformes |
+| **Producto** | Tiempo pedido-entrega (< 6 min) |
+| | Presentación del producto |
+| | Punto de cocción de la carne |
+| **Salón** | Limpieza de mesas y sillas |
+| | Estado de iluminación en salón y barra |
+| | Baños: inodoros y lavamanos funcionando |
+| | Suministro de papel y jabón en baños |
+| | Señalética interna legible y sin daños |
+| **Atención** | Saludo y atención |
+| | Claridad de respuestas a preguntas de clientes |
+
+---
+
+## Flujo de la Visita (Sorpresa)
+
+```text
+1. INICIAR VISITA
+   ├── Coordinador llega al local
+   ├── Elige tipo: BOH o FOH
+   ├── Selecciona encargado presente
+   └── Estado: "en_curso"
+
+2. EJECUTAR CHECKLIST
+   ├── Para cada ítem: Cumple / No cumple / N/A
+   ├── Observaciones opcionales
+   └── Subir foto si hay hallazgo
+
+3. CERRAR VISITA
+   ├── Agregar observaciones generales
+   ├── Marcar hallazgos críticos
+   ├── Definir acciones con responsable y plazo
+   └── Se calcula puntaje automático
+
+4. NOTIFICAR
+   └── Automático a encargado + franquiciado
+```
+
+---
+
+## Navegación
+
+### En BrandSidebar - Nueva sección
+
+```text
+📋 Supervisión
+├── Nueva Visita (+)
+└── Historial
+```
+
+### Rutas
+
+```text
+/mimarca/supervisiones          → Historial de visitas
+/mimarca/supervisiones/nueva    → Iniciar nueva visita
+/mimarca/supervisiones/:id      → Ejecutar/ver visita
+```
+
+---
+
+## Permisos (Actualizado)
+
+| Rol | Puede |
+|-----|-------|
+| `superadmin` | Todo |
+| `coordinador` | Crear/ejecutar visitas, ver todas |
+| `franquiciado` | Ver visitas de su local |
+| `encargado` | **Ver TODAS las visitas de su local** |
+
+---
+
+## Archivos a Crear
+
+| Archivo | Descripción |
+|---------|-------------|
+| `src/types/inspection.ts` | Tipos TypeScript |
+| `src/hooks/useInspections.ts` | CRUD de visitas |
+| `src/pages/admin/InspectionsPage.tsx` | Historial con filtros |
+| `src/pages/admin/NewInspectionPage.tsx` | Iniciar visita |
+| `src/pages/admin/InspectionDetailPage.tsx` | Ejecutar/ver visita |
+| `src/components/inspections/InspectionChecklist.tsx` | Formulario checklist |
+| `src/components/inspections/InspectionItemRow.tsx` | Fila individual |
+| `src/components/inspections/InspectionSummary.tsx` | Resumen y puntaje |
+| `src/components/inspections/InspectionPhotoUpload.tsx` | Upload de fotos |
+| `src/components/inspections/InspectionActionItems.tsx` | Acciones a tomar |
+| `src/components/cuenta/MyInspectionsCard.tsx` | Card para Mi Cuenta |
 
 ---
 
@@ -131,39 +193,79 @@ const average = filledCount > 0 ? totalScore / filledCount : 0;
 
 | Archivo | Cambio |
 |---------|--------|
-| `manager_competencies` (tabla) | Insertar 8 categorías con rúbricas específicas |
-| `ManagerScoreHeader.tsx` | Corregir cálculo del promedio + actualizar máximo a 40 |
-| `CoachingManagerForm.tsx` | Pasar `filledCount` correcto al header |
+| `App.tsx` | Agregar rutas de supervisiones |
+| `BrandSidebar.tsx` | Nueva sección "Supervisión" |
+| `CuentaDashboard.tsx` | Agregar MyInspectionsCard |
 
 ---
 
-## Resultado Visual
+## Migración de Base de Datos
+
+1. Crear tabla `inspection_templates` con 30 ítems predefinidos (BOH + FOH)
+2. Crear tabla `branch_inspections`
+3. Crear tabla `inspection_items`
+4. Crear bucket de storage `inspection-photos`
+5. RLS policies:
+   - Coordinadores/Superadmins: acceso total
+   - Franquiciados: ver visitas de sus locales
+   - **Encargados: ver visitas de su local (sin restricción de presencia)**
+
+---
+
+## Edge Function: Notificación
+
+`send-inspection-notification`:
+- Se dispara al completar visita
+- Email al encargado presente + franquiciado del local
+- Incluye: puntaje, hallazgos críticos, acciones pendientes
+
+---
+
+## UI del Checklist
 
 ```text
-📊 SCORECARD DE ENCARGADO
-━━━━━━━━━━━━━━━━━━━━━━━━━━
+┌─────────────────────────────────────────────────────────────┐
+│  🏪 Villa Carlos Paz · FOH · 07/02/26 20:30                │
+│  Coordinador: Ismael Sanchez Fundaro                       │
+│  Encargado presente: [Select...]                           │
+├─────────────────────────────────────────────────────────────┤
+│  MOSTRADOR                                          3/3 ✓  │
+│  ├─ Limpieza mostrador y terminales    [✓] [✗] [N/A] 📷   │
+│  ├─ Cartelería actualizada             [✓] [✗] [N/A] 📷   │
+│  └─ Uniformes del personal             [✓] [✗] [N/A] 📷   │
+│                                                             │
+│  PRODUCTO                                           2/3 ⚠  │
+│  ├─ Tiempo pedido-entrega (< 6 min)    [✓] [✗] [N/A] 📷   │
+│  │    └─ Obs: "8 minutos"                                  │
+│  ├─ Presentación del producto          [✓] [✗] [N/A] 📷   │
+│  └─ Punto de cocción de la carne       [✓] [✗] [N/A] 📷   │
+├─────────────────────────────────────────────────────────────┤
+│  PUNTAJE: 85/100                                           │
+│  [Guardar Borrador]           [Cerrar y Notificar]        │
+└─────────────────────────────────────────────────────────────┘
+```
 
-Total: 32/40  │  Promedio: 4.0/5
+---
 
-🏢 Evaluación desde Marca
+## Vista en Mi Cuenta (Encargados)
 
-💬 Comunicación y Reportes        [1] [2] [3] [4] [5]  ℹ️
-📲 Disponibilidad y Predisposición [1] [2] [3] [4] [5]  ℹ️  ← NUEVA
-👥 Liderazgo y Clima               [1] [2] [3] [4] [5]  ℹ️
-📚 Desarrollo del Staff            [1] [2] [3] [4] [5]  ℹ️
-🔄 Adaptación a Cambios            [1] [2] [3] [4] [5]  ℹ️
-🔧 Resolución Autónoma             [1] [2] [3] [4] [5]  ℹ️
-💜 Compromiso con la Marca         [1] [2] [3] [4] [5]  ℹ️
-✨ Actitud y Presencia             [1] [2] [3] [4] [5]  ℹ️  ← NUEVA
+```text
+📋 Supervisiones de mi Local
+──────────────────────────────
+Última visita: 07/02/26 - FOH - 85/100 ✓
+Ver informe completo →
+
+Acciones pendientes:
+• Reparar luz led de barra (vence 14/02)
 ```
 
 ---
 
 ## Beneficios
 
-1. **Más específico**: Las rúbricas describen comportamientos concretos, no genéricos
-2. **Predisposición laboral**: Ahora se evalúa la disponibilidad y flexibilidad
-3. **Actitud visible**: Captura el "aura", la sonrisa, la energía
-4. **Cálculo correcto**: El promedio refleja solo lo que se puntuó
-5. **Accionable**: La encargada sabe exactamente qué mejorar en cada punto
+1. **Visitas sorpresa**: Sin aviso previo, refleja el estado real
+2. **Trazabilidad**: El encargado ve todo el historial de su local
+3. **Evidencia**: Fotos adjuntas a cada hallazgo
+4. **Accionable**: Acciones con responsable y fecha límite
+5. **Automático**: Notificación inmediata al cerrar
 
