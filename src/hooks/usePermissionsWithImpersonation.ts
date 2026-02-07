@@ -101,6 +101,7 @@ export function usePermissionsWithImpersonation(currentBranchId?: string): Dynam
         canSearchUsers: isSuperadmin,
         canAssignRoles: isSuperadmin,
         canManageMessages: isSuperadmin || isCoordinador,
+        canCoachManagers: isSuperadmin || isCoordinador,
         canEditBrandConfig: isSuperadmin,
         canManageChannels: isSuperadmin || isCoordinador,
         canManageIntegrations: isSuperadmin,

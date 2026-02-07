@@ -61,6 +61,9 @@ export function useDynamicPermissions(currentBranchId?: string): DynamicPermissi
       // Comunicación
       canManageMessages: getPermission('brand.createCommunications', brandRole, permissions.brand.canManageMessages),
       
+      // Coaching
+      canCoachManagers: getPermission('brand.coachManagers', brandRole, false),
+      
       // Configuración
       canEditBrandConfig: getPermission('brand.editConfig', brandRole, permissions.brand.canEditBrandConfig),
       canManageChannels: permissions.brand.canManageChannels,
