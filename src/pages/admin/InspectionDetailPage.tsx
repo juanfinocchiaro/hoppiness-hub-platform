@@ -7,8 +7,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ArrowLeft, Check, X, AlertTriangle, MapPin, Clock, User } from 'lucide-react';
+import { ArrowLeft, Check, X, AlertTriangle, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +22,8 @@ import { InspectionChecklist, InspectionSummary, InspectionActionItems } from '@
 import { 
   useInspection, 
   useCompleteInspection, 
-  useCancelInspection 
+  useCancelInspection,
+  useUpdateInspection
 } from '@/hooks/useInspections';
 import { TYPE_SHORT_LABELS, STATUS_LABELS } from '@/types/inspection';
 import type { InspectionActionItem } from '@/types/inspection';
@@ -34,12 +36,14 @@ export default function InspectionDetailPage() {
   const [generalNotes, setGeneralNotes] = useState('');
   const [criticalFindings, setCriticalFindings] = useState('');
   const [actionItems, setActionItems] = useState<InspectionActionItem[]>([]);
+  const [presentManagerId, setPresentManagerId] = useState<string>('');
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
 
   const { data: inspection, isLoading } = useInspection(id);
   const completeInspection = useCompleteInspection();
   const cancelInspection = useCancelInspection();
+  const updateInspection = useUpdateInspection();
 
   // Initialize form values when inspection loads
   useEffect(() => {
@@ -47,25 +51,27 @@ export default function InspectionDetailPage() {
       setGeneralNotes(inspection.general_notes || '');
       setCriticalFindings(inspection.critical_findings || '');
       setActionItems(inspection.action_items || []);
+      setPresentManagerId(inspection.present_manager_id || '');
     }
   }, [inspection]);
 
-  // Fetch team members for action items
-  const { data: teamMembers } = useQuery({
-    queryKey: ['team-members-for-actions', inspection?.branch_id],
+  // Fetch managers for this branch (using user_branch_roles for local roles)
+  const { data: branchManagers } = useQuery({
+    queryKey: ['branch-managers', inspection?.branch_id],
     queryFn: async () => {
       if (!inspection?.branch_id) return [];
       
+      // Query user_branch_roles for encargado/franquiciado roles in this branch
       const { data: roles } = await supabase
-        .from('user_roles_v2')
-        .select('user_id')
+        .from('user_branch_roles')
+        .select('user_id, local_role')
+        .eq('branch_id', inspection.branch_id)
         .eq('is_active', true)
-        .not('local_role', 'is', null)
-        .contains('branch_ids', [inspection.branch_id]);
+        .in('local_role', ['encargado', 'franquiciado']);
 
       if (!roles?.length) return [];
 
-      const userIds = roles.map(r => r.user_id);
+      const userIds = [...new Set(roles.map(r => r.user_id))];
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name')
@@ -76,6 +82,45 @@ export default function InspectionDetailPage() {
     },
     enabled: !!inspection?.branch_id,
   });
+
+  // Fetch all team members for action items
+  const { data: teamMembers } = useQuery({
+    queryKey: ['team-members-for-actions', inspection?.branch_id],
+    queryFn: async () => {
+      if (!inspection?.branch_id) return [];
+      
+      const { data: roles } = await supabase
+        .from('user_branch_roles')
+        .select('user_id')
+        .eq('branch_id', inspection.branch_id)
+        .eq('is_active', true);
+
+      if (!roles?.length) return [];
+
+      const userIds = [...new Set(roles.map(r => r.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds)
+        .order('full_name');
+
+      return profiles || [];
+    },
+    enabled: !!inspection?.branch_id,
+  });
+
+  // Handle manager change
+  const handleManagerChange = async (managerId: string) => {
+    const newValue = managerId === 'none' ? null : managerId;
+    setPresentManagerId(newValue || '');
+    
+    if (id) {
+      await updateInspection.mutateAsync({
+        inspectionId: id,
+        data: { present_manager_id: newValue },
+      });
+    }
+  };
 
   // Calculate current score
   const currentScore = useMemo(() => {
@@ -172,7 +217,7 @@ export default function InspectionDetailPage() {
             </div>
             <div className="flex items-center gap-3">
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-2xl font-bold text-primary">
                   {inspection.items?.filter(i => i.complies === true).length || 0}
                 </div>
                 <div className="text-xs text-muted-foreground">Cumple</div>
@@ -193,6 +238,36 @@ export default function InspectionDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Present Manager Selection */}
+      {isEditable && (
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex items-center gap-4">
+              <Users className="w-5 h-5 text-muted-foreground" />
+              <div className="flex-1">
+                <div className="text-sm font-medium mb-1">Encargado Presente</div>
+                <Select 
+                  value={presentManagerId || 'none'} 
+                  onValueChange={handleManagerChange}
+                >
+                  <SelectTrigger className="w-full max-w-xs">
+                    <SelectValue placeholder="Seleccionar..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin especificar</SelectItem>
+                    {branchManagers?.map(manager => (
+                      <SelectItem key={manager.id} value={manager.id}>
+                        {manager.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {isEditable ? (
         /* Execution Mode */

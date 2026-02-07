@@ -19,7 +19,6 @@ export default function NewInspectionPage() {
   const navigate = useNavigate();
   const [branchId, setBranchId] = useState<string>('');
   const [inspectionType, setInspectionType] = useState<InspectionType | ''>('');
-  const [managerId, setManagerId] = useState<string>('');
 
   const createInspection = useCreateInspection();
 
@@ -36,41 +35,12 @@ export default function NewInspectionPage() {
     },
   });
 
-  // Fetch managers for selected branch
-  const { data: managers } = useQuery({
-    queryKey: ['managers-for-inspection', branchId],
-    queryFn: async () => {
-      if (!branchId) return [];
-      
-      // Get users with encargado or franquiciado role for this branch
-      const { data: roles } = await supabase
-        .from('user_roles_v2')
-        .select('user_id')
-        .eq('is_active', true)
-        .in('local_role', ['encargado', 'franquiciado'])
-        .contains('branch_ids', [branchId]);
-
-      if (!roles?.length) return [];
-
-      const userIds = roles.map(r => r.user_id);
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('id', userIds)
-        .order('full_name');
-
-      return profiles || [];
-    },
-    enabled: !!branchId,
-  });
-
   const handleStart = async () => {
     if (!branchId || !inspectionType) return;
 
     const result = await createInspection.mutateAsync({
       branch_id: branchId,
       inspection_type: inspectionType,
-      present_manager_id: managerId || undefined,
     });
 
     navigate(`/mimarca/supervisiones/${result.id}`);
@@ -168,33 +138,6 @@ export default function NewInspectionPage() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Manager Present (optional) */}
-        {branchId && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Encargado Presente</CardTitle>
-              <CardDescription>
-                ¿Quién está a cargo en este momento? (opcional)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Select value={managerId || 'none'} onValueChange={(val) => setManagerId(val === 'none' ? '' : val)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar encargado..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sin especificar</SelectItem>
-                  {managers?.map(manager => (
-                    <SelectItem key={manager.id} value={manager.id}>
-                      {manager.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Start Button */}
         <Button 
