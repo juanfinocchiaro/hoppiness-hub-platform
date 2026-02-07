@@ -287,8 +287,8 @@ function CoachingManagersPageContent() {
 export default function CoachingManagersPage() {
   return (
     <RequireBrandPermission
-      permission="canEditBrandConfig"
-      noAccessMessage="Solo el Superadmin puede realizar coaching a encargados."
+      permission="canCoachManagers"
+      noAccessMessage="No tenés permiso para realizar coaching a encargados."
     >
       <CoachingManagersPageContent />
     </RequireBrandPermission>

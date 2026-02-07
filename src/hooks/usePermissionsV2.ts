@@ -105,6 +105,9 @@ export interface PermissionsV2 {
     // Comunicación
     canManageMessages: boolean;
     
+    // Coaching
+    canCoachManagers: boolean;
+    
     // Configuración
     canEditBrandConfig: boolean;
     canManageChannels: boolean;
@@ -358,6 +361,9 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     
     // Comunicación
     canManageMessages: isSuperadmin || isCoordinador,
+    
+    // Coaching
+    canCoachManagers: isSuperadmin || isCoordinador,
     
     // Configuración
     canEditBrandConfig: isSuperadmin,
