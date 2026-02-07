@@ -5,6 +5,8 @@ export { CoachingHistory } from './CoachingHistory';
 export { CoachingStationSection } from './CoachingStationSection';
 export { CoachingGeneralSection } from './CoachingGeneralSection';
 export { CoachingManagerSection } from './CoachingManagerSection';
+export { ManagerScoreHeader } from './ManagerScoreHeader';
+export { ManagerCompetencyRow } from './ManagerCompetencyRow';
 export { CoachingForm } from './CoachingForm';
 export { CoachingManagerForm } from './CoachingManagerForm';
 export { CoachingDetailModal } from './CoachingDetailModal';

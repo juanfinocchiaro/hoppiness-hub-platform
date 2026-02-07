@@ -1,21 +1,19 @@
 /**
  * CoachingManagerForm - Formulario específico para evaluar encargados
  * 
- * NO usa estaciones de trabajo.
- * SOLO evalúa competencias de gestión (manager_competencies).
- * Para evaluaciones desde Mi Marca hacia encargados.
+ * Evalúa 12 competencias de gestión agrupadas por categoría.
+ * Muestra total/promedio con barra visual de nivel.
  */
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Save, Star, FileText, ShieldCheck } from 'lucide-react';
+import { Loader2, Save, FileText } from 'lucide-react';
 import { CoachingManagerSection } from './CoachingManagerSection';
+import { ManagerScoreHeader } from './ManagerScoreHeader';
 import { useManagerCompetencies } from '@/hooks/useStationCompetencies';
 import { useCreateCoaching, useEmployeeCoachings } from '@/hooks/useCoachings';
 
@@ -53,10 +51,6 @@ export function CoachingManagerForm({ employee, branchId, onSuccess, onCancel }:
   const [managerNotes, setManagerNotes] = useState('');
   const [previousActionReview, setPreviousActionReview] = useState('');
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
-
   // Handler para competencias de gestión
   const handleManagerScoreChange = (competencyId: string, score: number) => {
     setManagerScores(prev => {
@@ -68,28 +62,30 @@ export function CoachingManagerForm({ employee, branchId, onSuccess, onCancel }:
     });
   };
 
-  // Calculate average for preview
+  // Calculate totals
+  const totalCompetencies = managerCompetencies?.length || 0;
+  const maxScore = totalCompetencies * 5;
   const filledScores = managerScores.filter(s => s.score > 0);
-  const overallAvg = filledScores.length > 0
-    ? filledScores.reduce((sum, s) => sum + s.score, 0) / filledScores.length
-    : 0;
+  const totalScore = filledScores.reduce((sum, s) => sum + s.score, 0);
+  
+  // Previous average for trend (if available)
+  const previousAverage = previousCoaching?.overall_score || undefined;
 
   // Submit - Solo guarda scores de tipo 'manager'
   const handleSubmit = async () => {
-    // Mapear scores de manager como "general" scores con tipo 'manager' en el coaching
     const formData = {
       userId: employee.id,
       branchId,
       coachingDate: new Date(),
       stationScores: [], // NO hay estaciones para encargados
-      generalScores: managerScores.filter(s => s.score > 0), // Se guardan como competencias
+      generalScores: managerScores.filter(s => s.score > 0),
       strengths,
       areasToImprove,
       actionPlan,
       managerNotes,
       certificationChanges: [],
       previousActionReview,
-      coachingType: 'manager' as const, // Marca el coaching como de tipo manager
+      coachingType: 'manager' as const,
     };
 
     await createCoaching.mutateAsync(formData);
@@ -108,39 +104,13 @@ export function CoachingManagerForm({ employee, branchId, onSuccess, onCancel }:
 
   return (
     <div className="space-y-6">
-      {/* Header con empleado y score */}
-      <Card className="bg-gradient-to-r from-primary/5 to-primary/10">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Avatar className="h-12 w-12 ring-2 ring-primary/20">
-                  <AvatarImage src={employee.avatar_url || undefined} />
-                  <AvatarFallback>{getInitials(employee.full_name)}</AvatarFallback>
-                </Avatar>
-                <ShieldCheck className="absolute -bottom-1 -right-1 h-5 w-5 text-primary bg-background rounded-full" />
-              </div>
-              <div>
-                <h3 className="font-semibold">{employee.full_name}</h3>
-                <p className="text-sm text-muted-foreground flex items-center gap-1">
-                  <ShieldCheck className="h-3 w-3" />
-                  Evaluación de Encargado
-                </p>
-              </div>
-            </div>
-            
-            {overallAvg > 0 && (
-              <div className="text-center">
-                <div className="flex items-center gap-1 text-2xl font-bold">
-                  <Star className="h-5 w-5 text-primary" />
-                  {overallAvg.toFixed(1)}
-                </div>
-                <span className="text-xs text-muted-foreground">/ 5</span>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Header con score total y promedio */}
+      <ManagerScoreHeader
+        employee={employee}
+        totalScore={totalScore}
+        maxScore={maxScore}
+        previousAverage={previousAverage}
+      />
 
       <ScrollArea className="h-[calc(100vh-320px)]">
         <div className="space-y-6 px-1 py-1">
