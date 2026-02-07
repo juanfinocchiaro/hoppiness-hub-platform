@@ -179,12 +179,12 @@ export default function NewInspectionPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Select value={managerId} onValueChange={setManagerId}>
+              <Select value={managerId || 'none'} onValueChange={(val) => setManagerId(val === 'none' ? '' : val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar encargado..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sin especificar</SelectItem>
+                  <SelectItem value="none">Sin especificar</SelectItem>
                   {managers?.map(manager => (
                     <SelectItem key={manager.id} value={manager.id}>
                       {manager.full_name}
