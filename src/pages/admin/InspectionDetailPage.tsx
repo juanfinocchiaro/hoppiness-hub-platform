@@ -18,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PageHeader } from '@/components/ui/page-header';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { InspectionChecklist, InspectionSummary, InspectionActionItems } from '@/components/inspections';
+import { InspectionChecklist, InspectionSummary, InspectionActionItems, InspectionStaffChecklist } from '@/components/inspections';
 import { 
   useInspection, 
   useCompleteInspection, 
@@ -276,6 +276,7 @@ export default function InspectionDetailPage() {
         <Tabs defaultValue="checklist" className="space-y-4">
           <TabsList>
             <TabsTrigger value="checklist">Checklist</TabsTrigger>
+            <TabsTrigger value="personal">Personal</TabsTrigger>
             <TabsTrigger value="cierre">Cierre</TabsTrigger>
           </TabsList>
 
@@ -283,6 +284,14 @@ export default function InspectionDetailPage() {
             <InspectionChecklist
               items={inspection.items || []}
               inspectionId={inspection.id}
+              readOnly={false}
+            />
+          </TabsContent>
+
+          <TabsContent value="personal" className="space-y-4">
+            <InspectionStaffChecklist
+              inspectionId={inspection.id}
+              branchId={inspection.branch_id}
               readOnly={false}
             />
           </TabsContent>
