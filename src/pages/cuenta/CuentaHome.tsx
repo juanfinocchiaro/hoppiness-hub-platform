@@ -13,6 +13,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { User, ArrowRight, Building2, AlertTriangle } from 'lucide-react';
 import { BranchWorkCard } from '@/components/cuenta/BranchWorkCard';
 import { PageHelp } from '@/components/ui/PageHelp';
+import { PageHeader } from '@/components/ui/page-header';
 
 export default function CuentaHome() {
   const effectiveUser = useEffectiveUser();
@@ -102,18 +103,13 @@ export default function CuentaHome() {
   const hasLocalRoles = branchPinData && branchPinData.filter((r: any) => r.local_role).length > 0;
 
   return (
-    <div className="space-y-4 md:space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl">
       <PageHelp pageId={helpPageId} />
       
-      {/* Welcome */}
-      <div>
-        <h1 className="text-xl md:text-2xl font-bold">
-          Hola, {displayName.split(' ')[0]}! 👋
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Bienvenido a tu cuenta
-        </p>
-      </div>
+      <PageHeader 
+        title={`Hola, ${displayName.split(' ')[0]}! 👋`}
+        subtitle="Bienvenido a tu cuenta"
+      />
 
       {/* Urgent Banner */}
       {urgentUnread.length > 0 && (
