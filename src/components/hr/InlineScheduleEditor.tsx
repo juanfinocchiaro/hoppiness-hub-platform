@@ -987,17 +987,12 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                   )}
                 </div>
 
-                {/* Days Grid - unified container for pointer move tracking */}
+                {/* Days Grid - container for fallback pointer tracking */}
                 <div 
                   className="flex-1"
                   style={{ touchAction: 'none' }}
                   onPointerMove={(e) => {
-                    if (activeView === 'personas' && canManageSchedules) {
-                      selection.handleGridPointerMove(e);
-                    }
-                  }}
-                  onMouseMove={(e) => {
-                    // Fallback for older browsers
+                    // Fallback: only used if cell's onPointerMove doesn't fire
                     if (activeView === 'personas' && canManageSchedules) {
                       selection.handleGridPointerMove(e);
                     }
@@ -1094,20 +1089,20 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                                   isEditable && 'hover:bg-primary/5',
                                   isSelected && 'bg-primary/20 ring-2 ring-primary ring-inset'
                                 )}
-                                onClick={(e) => {
-                                  if (!isEditable) return;
-                                  selection.handleCellClick(member.id, dateStr, e);
-                                }}
                                 onPointerDown={(e) => {
                                   if (!isEditable) return;
                                   selection.handleDragStart(member.id, dateStr, e);
                                 }}
-                                onMouseDown={(e) => {
-                                  // Fallback for older browsers
+                                onPointerMove={(e) => {
                                   if (!isEditable) return;
-                                  if (!('pointerId' in e)) {
-                                    selection.handleDragStart(member.id, dateStr, e as any);
-                                  }
+                                  selection.handleCellPointerMove(member.id, dateStr, e);
+                                }}
+                                onPointerUp={(e) => {
+                                  if (!isEditable) return;
+                                  selection.handleCellPointerUp(member.id, dateStr, e);
+                                }}
+                                onLostPointerCapture={() => {
+                                  selection.handleLostPointerCapture();
                                 }}
                               >
                                 {renderCellContent(value, isPending, isHoliday, isSelected)}
