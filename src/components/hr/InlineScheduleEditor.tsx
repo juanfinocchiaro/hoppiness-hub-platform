@@ -987,16 +987,10 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                   )}
                 </div>
 
-                {/* Days Grid - container for fallback pointer tracking */}
+                {/* Days Grid */}
                 <div 
                   className="flex-1"
                   style={{ touchAction: 'none' }}
-                  onPointerMove={(e) => {
-                    // Fallback: only used if cell's onPointerMove doesn't fire
-                    if (activeView === 'personas' && canManageSchedules) {
-                      selection.handleGridPointerMove(e);
-                    }
-                  }}
                 >
                   <div style={{ width: gridWidth }}>
                     {/* Day headers - sticky top */}
@@ -1080,9 +1074,9 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                                 data-cell={`${member.id}:${dateStr}`}
                                 style={{ width: DAY_WIDTH, height: SCHEDULE_ROW_HEIGHT }}
                                 className={cn(
-                                  'shrink-0 flex items-center justify-center border-r border-border/40 cursor-pointer transition-all select-none',
-                                  // Feriado - color de acento fuerte
-                                  isHoliday && 'bg-orange-50 dark:bg-orange-950/20 border-border/70',
+                                  'shrink-0 flex items-center justify-center border-r border-b border-border/40 cursor-pointer transition-all select-none',
+                                  // Feriado - color de acento fuerte + borde visible
+                                  isHoliday && 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800/50',
                                   // Fin de semana (si no es feriado)
                                   !isHoliday && isSaturday && 'bg-blue-50/50 dark:bg-blue-950/20',
                                   !isHoliday && isSunday && 'bg-blue-100/50 dark:bg-blue-950/30',
@@ -1093,16 +1087,13 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                                   if (!isEditable) return;
                                   selection.handleDragStart(member.id, dateStr, e);
                                 }}
-                                onPointerMove={(e) => {
+                                onPointerEnter={() => {
                                   if (!isEditable) return;
-                                  selection.handleCellPointerMove(member.id, dateStr, e);
+                                  selection.handleCellEnter(member.id, dateStr);
                                 }}
                                 onPointerUp={(e) => {
                                   if (!isEditable) return;
                                   selection.handleCellPointerUp(member.id, dateStr, e);
-                                }}
-                                onLostPointerCapture={() => {
-                                  selection.handleLostPointerCapture();
                                 }}
                               >
                                 {renderCellContent(value, isPending, isHoliday, isSelected)}
