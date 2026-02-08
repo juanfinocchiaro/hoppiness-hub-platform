@@ -1,146 +1,183 @@
 
-## Objetivo (lo que vamos a arreglar)
-1) El “lag de 1 celda” (A1→B1 no actualiza, recién A1→C1 muestra A1+B1) en la selección por arrastre.  
-2) Los bordes de fila/columna en feriados (que hoy se ven “cortados” o inconsistentes).  
-3) Quitar la “notificación/barra” de selección arriba (no mostrar nada si no hay selección; y opcionalmente no reservar altura).
+Contexto (lo que entendí)
+- El problema que estás describiendo ahora no es “Ctrl+C no copia”, sino el núcleo: “hago click en una celda, mantengo apretado y me muevo por la grilla para seleccionar más celdas” y sigue fallando (se saltea celdas / va atrasado / no es confiable).
+- Ya existe un fallback con pointermove + elementFromPoint, pero en tu caso no alcanza: la selección múltiple por arrastre sigue “exactamente igual”.
+- Tu zona horaria es Argentina (UTC‑3). Esto es importante porque en JS `new Date("YYYY-MM-DD")` se interpreta como UTC y puede correrse al día anterior local, rompiendo comparaciones y offsets. En tu repo ya existe un estándar para evitar esto (usar parseISO / fecha local), pero el sistema de selección no lo respeta todavía.
 
----
+Auditoría a fondo (estado real del sistema hoy)
+Archivos clave:
+- src/components/hr/schedule-selection/useScheduleSelection.ts
+  - Drag state en ref (dragStateRef)
+  - updateDragSelection() calcula rectángulo usando calculateRectSelection(start,end)
+  - Fallback global: window.pointermove + findCellAtPoint() + elementFromPoint() + closest([data-cell])
+  - Copy/Paste: offsets con differenceInDays(new Date(dateStr), anchorDate), addDays(anchorTargetDate, dayOffset)
+- src/components/hr/InlineScheduleEditor.tsx
+  - Cada celda: data-cell="userId:yyyy-MM-dd"
+  - Eventos: onPointerDown / onPointerEnter / onPointerUp
+  - Celdas usan bordes y fondos (feriados ya corregido)
+- Tipos: src/components/hr/schedule-selection/types.ts
 
-## Hallazgos en el codebase (estado actual)
-### Archivos involucrados
-- **Hook de selección**: `src/components/hr/schedule-selection/useScheduleSelection.ts`
-- **Tipos**: `src/components/hr/schedule-selection/types.ts`
-- **Toolbar/Hints**: `src/components/hr/schedule-selection/SelectionToolbar.tsx`
-- **Grid**: `src/components/hr/InlineScheduleEditor.tsx` (ruta actual `/milocal/:branchId/equipo/horarios` usa este componente)
+10+ causas posibles (con probabilidad y cómo se verifica)
+Nota: varias pueden coexistir; por eso la solución tiene que ser “integral”, no un parche aislado.
 
-### 1) Confirmación: el bug NO parece ser “stale ref/state” dentro de `handleCellEnter`
-En `useScheduleSelection.ts`, `handleCellEnter` hoy hace esto (resumen):
-- compara `currentKey` vs `newKey`
-- actualiza `dragStateRef.current.currentCell = { userId, date }`
-- calcula la selección usando **el endCell por parámetro**:  
-  `calculateRectSelection(startCell, { userId, date })`
+Causa 1 (muy probable): bug de zona horaria por new Date("YYYY-MM-DD") en selección
+Dónde:
+- calculateRectSelection(): startDate = new Date(start.date), endDate = new Date(end.date)
+- handleCopy(): anchorDate = new Date(anchorCell.date), differenceInDays(new Date(cell.date), anchorDate)
+- handlePaste(): anchorTargetDate = new Date(anchorTarget.date), addDays(anchorTargetDate, dayOffset)
 
-Eso ya evita el patrón “Entré a B1 pero calculé con A1” por orden de refs/state.
-Conclusión: el síntoma A1→B1→(nada)→C1 sí encaja perfecto con otra causa:
-- **el evento (o la detección) de “entré a B1” NO está ocurriendo**, entonces `currentCell` queda en A1 hasta que se detecta C1, y el rectángulo A1→C1 incluye B1 “de rebote”.
+Por qué rompe:
+- En UTC‑3, new Date("2026-02-10") = 2026-02-10T00:00Z = 2026-02-09 21:00 local.
+- Eso puede provocar:
+  - rectángulos que incluyen/excluyen un día mal,
+  - offsets dayOffset incorrectos (negativos o corridos),
+  - “pega hacia atrás” aunque el usuario haya elegido jueves como destino.
 
-### 2) Por qué se pierde B1 (muy probable)
-Hoy el sistema depende de **`onPointerEnter` en cada celda** (ver `InlineScheduleEditor.tsx`, celdas tienen `onPointerEnter={() => selection.handleCellEnter(...)}`).
+Cómo confirmarlo rápido:
+- Loguear start.date/end.date y también startDate.toString() / endDate.toString().
+- Si ves que la fecha local cae “el día anterior”, está confirmado.
 
-En grillas con `border-r/border-b`, es típico que exista un “micro-gap” (1px de borde, subpixel, repaint) donde:
-- el puntero puede pasar por un borde/gap y **no disparar enter del siguiente elemento** en un frame,
-- o el target real del evento es un hijo/overlay, no el contenedor con `data-cell`,
-- o el movimiento rápido con botón presionado haga que se “salte” el enter de la celda intermedia.
+Causa 2 (muy probable): calculateRectSelection itera monthDays con Date local, pero compara contra minDate/maxDate calculados desde Date UTC
+monthDays viene de eachDayOfInterval() (fechas locales), mientras minDate/maxDate pueden estar corridos a 21:00 del día anterior (UTC parse). Comparar day >= minDate puede incluir un día extra o excluir el primero.
 
-Resultado: “me paro sobre B1 visualmente pero el sistema no registró enter en B1”.
+Causa 3 (muy probable): el fallback pointermove detecta “otra cosa” (sticky header/columna fija) y no encuentra data-cell
+elementFromPoint puede devolver:
+- header sticky,
+- columna fija de empleados,
+- contenedor con border,
+y closest('[data-cell]') devuelve null. Si en un “frame” justo estás sobre un borde/intersección, no actualiza y se saltea.
 
----
+Cómo confirmarlo:
+- En DEBUG, loguear cuando findCellAtPoint retorna null durante drag y loguear el tagName/class del elementFromPoint.
 
-## Plan de corrección (sin re-arquitectura, pero robusto)
-### Fase A — Instrumentación mínima para confirmar (rápido, 1 commit)
-1) Agregar logs temporales (controlados por un flag) dentro de:
-   - `handleDragStart`
-   - `handleCellEnter`
-   - un nuevo detector de celda “under pointer” (ver Fase B)
-2) Qué buscamos ver:
-   - si al pasar por B1 **no hay log de `handleCellEnter(B1)`**, entonces confirmado: el evento se pierde.
-   - si sí hay log, pero la selección no cambia, recién ahí revisamos cálculo (pero hoy el código se ve correcto).
+Causa 4 (probable): no hay pointer capture; el drag depende de eventos del browser que pueden “desengancharse”
+Aunque haya window.pointermove, el “inicio” y “fin” del drag (pointerup) puede perderse o llegar tarde, y el estado active puede quedar inconsistente en casos de:
+- click + scroll accidental,
+- mouseup fuera de ventana,
+- trackpad con gestures.
 
-> Nota: estos logs se dejan con un `const DEBUG = false` para poder activarlos rápido si vuelve a pasar.
+Causa 5 (probable): falta de gate por e.buttons en pointermove
+El pointermove global se ejecuta solo si dragStateRef.active es true, pero no valida que el botón siga presionado (e.buttons & 1). En ciertos navegadores, si el drag se corta raro, active puede quedar true un rato y generar selecciones inesperadas (o al revés: active false temprano).
 
----
+Causa 6 (probable): lastDetectedKeyRef impide “recuperar” cuando la detección alterna (celda/null/celda)
+Si el puntero pasa por un gap y findCellAtPoint alterna entre A1 y null, el sistema puede quedarse con lastDetectedKeyRef en A1 y no actualizar cuando vuelve a detectar A1, y recién actualizar en C1, dando sensación de lag/saltos.
 
-### Fase B — Fallback sólido durante drag: `pointermove` global + `elementFromPoint` (2–3 commits)
-Objetivo: aunque `onPointerEnter` se pierda, durante drag se detecta la celda actual con la posición del puntero y se llama a `handleCellEnter` manualmente.
+Causa 7 (probable): renderCellContent puede contener elementos que capturan eventos o cambian el target real
+Aunque closest() suele salvarlo, si hay elementos con pointer-events o portales/poppers, elementFromPoint puede caer en una capa que NO está dentro del DOM de la celda (portal) y entonces closest([data-cell]) nunca aparece.
 
-1) En `useScheduleSelection.ts`:
-   - agregar `useEffect` que **solo mientras `dragStateRef.current.active === true`** escuche `window.addEventListener('pointermove', ...)`.
-   - en cada `pointermove`:
-     - usar `document.elementFromPoint(e.clientX, e.clientY)`
-     - subir con `closest('[data-cell]')`
-     - parsear `data-cell="userId:yyyy-MM-dd"` y llamar a `handleCellEnter(userId, date)`.
+Causa 8 (probable): comparación de fechas por objetos Date en vez de índices (díaIndex)
+Comparar Date con horas distintas es frágil. Lo correcto para una grilla “Excel-like” es trabajar con:
+- dayIndex (0..N-1) y userIndex (0..M-1)
+y derivar dateStr desde monthDays[dayIndex].
 
-2) Robustez extra para el caso “gap de 1px”:
-   - implementar muestreo multi-punto:
-     - probar `(x,y)`, `(x+1,y)`, `(x-1,y)`, `(x,y+1)`, `(x,y-1)`
-   - tomar el primer `data-cell` encontrado.
-   - esto elimina el “A1→B1 no detectado” incluso si el puntero cae justo en el borde.
+Causa 9 (confirmada como bug de lógica): el “anchor” de copy no está definido como top-left de forma consistente
+En handleCopy hoy se ordena por userIdx y luego por date. El anchor termina siendo “primer usuario” aunque la fecha no sea la más temprana; eso genera dayOffset negativos y luego al pegar “hacia atrás”.
+Aunque esto es copy/paste, también es parte del mismo “sistema Excel” y hay que arreglarlo en la auditoría integral.
 
-3) Evitar jitter / re-renders innecesarios:
-   - mantener un `lastDetectedKeyRef` y si no cambia, no llamar a `handleCellEnter`.
-   - `handleCellEnter` ya ignora si `currentKey === newKey`, pero igual conviene para performance.
+Causa 10 (probable): el sistema de selección está recreando Sets grandes en cada pointermove sin throttle
+En grillas grandes, setSelectedCells(selection) en cada movimiento puede generar:
+- frames perdidos,
+- render retrasado,
+- sensación de “me toma una celda tarde”.
+Solución típica: throttle con requestAnimationFrame o solo recalcular si cambió endCell (y no por ruido de puntero). Hoy se recalcula si cambia key, pero no si la detección es ruidosa o el cálculo es pesado.
 
-4) Mantener `onPointerEnter`:
-   - se deja como vía primaria (barata y limpia),
-   - el `pointermove global` actúa como “airbag” cuando se pierde el enter.
+Causa 11 (posible): onPointerEnter sigue existiendo y puede interferir con el fallback (doble fuente de verdad)
+Si onPointerEnter dispara en un orden distinto al pointermove (por ejemplo, enter llega tarde y “pisotea” currentCell), podrías ver comportamientos erráticos. Ideal: durante drag, elegir una sola fuente (pointermove + elementFromPoint) como “authoritative”.
 
----
+Causa 12 (posible): parsing de data-cell por split(':') es frágil si cambia el formato
+Hoy userId es UUID (no contiene ‘:’), así que no es el problema actual, pero para robustez la auditoría lo contempla (por ejemplo, si se agrega otro encoding).
 
-### Fase C — Overlays y “pointer-events: none” (1 commit)
-Si existe cualquier overlay sobre la grilla (highlight layers, wrappers, etc.), puede interceptar el puntero y hacer errático `closest('[data-cell]')`.
+Solución integral y optimizada (lo que voy a implementar)
+Objetivo: que la grilla sea determinista y “Excel-like” de verdad, eliminando clases de bugs (zona horaria, gaps, orden de eventos) en lugar de seguir parchando síntomas.
 
-Acción:
-- revisar componentes que renderizan encima de la grilla (especialmente si hay contenedores `absolute` o `sticky` superpuestos).
-- asegurar `pointer-events: none` en capas visuales que no deban capturar eventos.
+A) Unificar el modelo interno a índices (no Date objects)
+- Precomputar:
+  - dayIndexByDateStr: Map<string, number> (dateStr -> index en monthDays)
+  - dateStrByDayIndex: string[] (index -> dateStr)
+  - userIndexById: Map<string, number>
+- Representar una celda como { userIdx, dayIdx } internamente.
+- calculateRectSelection() pasa a usar min/max de índices, y arma el Set con loops de índices:
+  for u=minU..maxU
+    for d=minD..maxD
+      add(cellKeyString(userId[u], dateStr[d]))
 
-En este editor, la selección actualmente se pinta con clases (`ring`, `bg-primary/20`), no con overlays, pero igual lo verificamos en el DOM (y si hay overlays de popovers/tooltips dentro de la celda, confirmamos que no tapen el wrapper).
+Beneficios:
+- Se elimina por completo la dependencia de new Date("YYYY-MM-DD") y los offsets por UTC‑3.
+- Performance mejor (comparación de ints).
+- Copy/Paste y selección usan el mismo sistema.
 
----
+B) Drag selection “single source of truth” con pointer capture + pointermove global
+- En pointerDown:
+  - setPointerCapture(e.pointerId) en el elemento de la celda (o en el contenedor del grid) para garantizar continuidad.
+  - guardar dragStart (indices) y active true.
+- Durante drag:
+  - solo usar el pointermove global + elementFromPoint para detectar endCell (ignorar onPointerEnter mientras active).
+  - agregar validación e.buttons & 1 (si ya no está presionado, terminar drag inmediatamente).
+  - mejorar findCellAtPoint:
+    - aumentar offsets y considerar también un “line scan” pequeño (x±4,y) para atravesar bordes.
+- En pointerUp / lostpointercapture:
+  - endDrag consistente, sin duplicar caminos.
 
-## Plan UI: bordes en feriados + eliminar barra superior
-### D1) Bordes de fila/columna en feriados (1 commit)
-Hoy la celda feriado usa:
-- `border-r border-b border-border/40` (bien)
-- pero además agrega `border-orange-200` que cambia el color de TODOS los bordes; puede quedar tan tenue que “parece que no hay fila”.
+C) Robustez contra sticky headers/columna izquierda
+- En findCellAtPoint:
+  - si elementFromPoint cae en header/left, intentar:
+    - usar offsets que empujen hacia “adentro” de la celda (x+4,y+4),
+    - repetir búsqueda.
+  - (Opcional) como fallback final: si no hay cell, mantener última cell válida, no “congelar” selection.
 
-Cambio propuesto:
-- NO cambiar el color de borde para feriados; solo cambiar el fondo.
-- Mantener un borde consistente (`border-border/40`) para que siempre se vean filas/columnas iguales.
-- Si querés un acento sutil, aplicarlo en el header del día (ya está en naranja) y no en todas las celdas.
+D) Rehacer Copy/Paste sobre índices (y corregir anchor)
+- Copy:
+  - anchor = top-left real: minDayIdx y minUserIdx dentro del conjunto.
+  - Para cada celda seleccionada:
+    - dayOffset = cell.dayIdx - anchor.dayIdx
+    - userOffset = cell.userIdx - anchor.userIdx
+- Paste:
+  - Si el usuario tiene 1 celda seleccionada: paste anchor = esa celda.
+  - Si tiene un bloque seleccionado: paste anchor = top-left del bloque destino (pero con índices, determinista).
+  - target = anchor + offsets (sumas de ints), validar rango.
+- Con esto desaparece “pega hacia atrás” por definición (no hay fechas UTC ni anchor mal elegido).
 
-Concretamente:
-- en `InlineScheduleEditor.tsx`:
-  - reemplazar `isHoliday && '... border-orange-200 ...'` por solo `isHoliday && 'bg-orange-50 ...'`
-  - conservar `border-r border-b border-border/40` siempre.
+E) Instrumentación de auditoría (para demostrar causas y no “adivinar”)
+- Agregar un DEBUG interno que, cuando está activo:
+  - loguea: startIdx, endIdx, elementFromPoint target, cell encontrada, y tamaño del set.
+  - loguea: veces que findCellAtPoint devuelve null durante drag.
+- Dejarlo apagado por defecto.
 
-### D2) Quitar la “notificación/barra” de selección arriba (1 commit)
-Hoy se renderiza siempre (cuando `canManageSchedules && activeView === 'personas'`) y reserva altura (`min-h-[40px]`), incluso sin selección.
+F) Optimización: throttle con requestAnimationFrame (si hace falta)
+- Si el cálculo del set es pesado, actualizar selección a lo sumo 1 vez por frame:
+  - guardar “pendingEndCell” en ref
+  - rAF que aplica el cálculo con la última celda detectada
+Esto evita “lag visual” por exceso de renders.
 
-Cambio propuesto:
-- renderizar el contenedor de `SelectionToolbar` **solo si `selection.selectedCells.size > 0`**.
-- si querés conservar el hint “Click para seleccionar…”, moverlo a otro lugar (o directamente no mostrarlo).
-- Resultado: desaparece el bloque superior cuando no hay selección (sin ruido visual).
+Secuencia de implementación (paso a paso)
+1) Refactor controlado en useScheduleSelection.ts:
+   - introducir maps dayIndexByDateStr/userIndexById
+   - reemplazar toda lógica basada en Date por índices
+   - ajustar copy/paste a offsets por índices
+2) Ajustar InlineScheduleEditor.tsx:
+   - pasar el evento completo a handleDragStart para poder hacer pointer capture (necesita el elemento actualTarget)
+   - opcional: durante drag, deshabilitar onPointerEnter para evitar doble fuente (o dejarlo pero que handleCellEnter ignore si “drag source = pointermove”).
+3) Activar DEBUG localmente y validar con tu escenario real:
+   - arrastre lento y rápido, horizontal y vertical
+   - verificación de que no saltea celdas
+4) Confirmar que copy/paste ya no retrocede (por índices + anchor correcto).
 
----
+Criterios de aceptación (lo que tiene que quedar perfecto)
+- Drag A1→B1 selecciona B1 siempre, incluso pasando por bordes.
+- Drag rápido no “pierde” celdas intermedias.
+- No hay “un día corrido” en Argentina (UTC‑3) ni en selección ni en copy/paste.
+- Pegar nunca va “hacia atrás” si los offsets son positivos (y si copiaste un bloque, el bloque se preserva).
+- Performance: no se nota pesado al arrastrar.
 
-## Validación (checklist exacta en tu pantalla)
-En `/milocal/.../equipo/horarios`:
+Riesgos / tradeoffs
+- Es un refactor real (no un parche): toca lógica central, pero reduce muchísimo la probabilidad de futuros bugs.
+- El throttle con rAF solo lo agrego si en tu máquina sigue habiendo “lag” por performance; primero medimos con índices porque eso ya suele mejorar mucho.
 
-1) Drag corto A1→B1: debe seleccionar A1 y B1 inmediatamente (sin necesitar C1).
-2) Drag A1→C1: debe seleccionar A1,B1,C1.
-3) Drag rápido (moviendo el mouse rápido sobre bordes): no debe “saltearse” celdas.
-4) Drag vertical (A1→A2): debe seleccionar ambas (y no deseleccionar).
-5) Bordes: en columnas feriado, se deben ver los bordes de fila (líneas horizontales) igual que los días normales.
-6) Barra superior: no debe aparecer nada arriba si no hay selección.
+Qué me falta de vos (solo si querés maximizar precisión)
+- Confirmar si el fallo de drag selection es:
+  a) “se saltea una celda intermedia”,
+  b) “selecciona pero visualmente tarda un frame”,
+  c) “se corta el drag y deja de seleccionar”,
+  d) “selecciona pero el rectángulo queda mal (fechas corridas)”.
+Con el refactor por índices, a+b+c+d deberían quedar cubiertas, pero esto ayuda a elegir si agrego rAF throttle y/o ajustes extra en findCellAtPoint.
 
----
-
-## Entregables (qué cambios de código voy a hacer)
-- `useScheduleSelection.ts`
-  - agregar fallback `pointermove global` durante drag + muestreo multi-punto
-  - agregar logs opcionales de debug (apagados por defecto)
-- `InlineScheduleEditor.tsx`
-  - ajustar clases de feriados para no romper bordes
-  - ocultar `SelectionToolbar` cuando no hay selección (y quitar el “placeholder” si no lo querés)
-- (opcional) revisar si hay capas que requieran `pointer-events: none`
-
----
-
-## Riesgos / Tradeoffs
-- `pointermove global` durante drag aumenta un poco el trabajo por movimiento, pero solo ocurre mientras arrastrás. Con el “lastDetectedKeyRef” queda muy liviano.
-- Si hay popovers abiertos durante drag, la detección con `elementFromPoint` puede apuntar a otra cosa. Por eso el `closest('[data-cell]')` y el muestreo multi-punto son clave.
-
----
-
-## Pregunta mínima (solo para cerrar el alcance visual)
-- ¿Querés eliminar completamente cualquier ayuda textual (“Click para seleccionar · …”) o querés que quede en algún lugar más discreto (por ejemplo, abajo del grid o dentro de un tooltip)?
