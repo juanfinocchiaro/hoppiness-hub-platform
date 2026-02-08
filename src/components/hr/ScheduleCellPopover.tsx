@@ -1,17 +1,17 @@
 /**
- * ScheduleCellPopover - Modern schedule editing popover (CONTROLLED VERSION)
+ * ScheduleCellPopover - Schedule editing dialog (CONTROLLED VERSION)
  * 
- * V2 (Feb 2026) - Converted to controlled component:
- * - open/onOpenChange props for external control
- * - Parent decides when to open (on double-click)
+ * V3 (Feb 2026) - Changed to Dialog for better UX with dynamic cells:
+ * - Works with double-click on any cell
  * - Automatic break for shifts over 6 hours
  * - Position selection
+ * - Split shift (turno cortado) support
  */
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
@@ -230,27 +230,16 @@ export function ScheduleCellPopover({
 
   return (
     <>
-      <Popover open={open} onOpenChange={onOpenChange}>
-        <PopoverAnchor />
-        <PopoverContent className="w-80 p-0" align="center" sideOffset={8}>
-          {/* Header with close button */}
-          <div className="relative bg-primary/5 border-b px-4 py-3">
-            <button
-              onClick={() => onOpenChange(false)}
-              className="absolute right-2 top-2 p-1.5 rounded-full hover:bg-muted transition-colors"
-              aria-label="Cerrar"
-            >
-              <X className="w-4 h-4 text-muted-foreground" />
-            </button>
-            
-            <div className="pr-8">
-              <p className="font-semibold text-sm text-foreground">{employeeName}</p>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                <Calendar className="w-3 h-3" />
-                {dateLabel}
-              </div>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="w-80 max-w-[95vw] p-0 gap-0">
+          {/* Header */}
+          <DialogHeader className="bg-primary/5 border-b px-4 py-3">
+            <DialogTitle className="text-sm font-semibold">{employeeName}</DialogTitle>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+              <Calendar className="w-3 h-3" />
+              {dateLabel}
             </div>
-          </div>
+          </DialogHeader>
 
           <div className="p-4 space-y-4">
             {/* Quick actions: Day off, Vacation, and Birthday */}
@@ -458,8 +447,8 @@ export function ScheduleCellPopover({
               </>
             )}
           </div>
-        </PopoverContent>
-      </Popover>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
