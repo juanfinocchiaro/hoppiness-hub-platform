@@ -83,8 +83,44 @@ const changeKey = (userId: string, date: string) => `${userId}:${date}`;
 
 const DAY_WIDTH = 80;
 const EMPLOYEE_COL_WIDTH = 160;
+const HOURS_COL_WIDTH = 50;
 const SCHEDULE_ROW_HEIGHT = 56;
 const COVERAGE_ROW_HEIGHT = 32;
+
+// Calculate hours for a schedule entry
+const calculateShiftHours = (startTime: string | null, endTime: string | null, startTime2?: string | null, endTime2?: string | null): number => {
+  if (!startTime || !endTime) return 0;
+  
+  const parseTime = (t: string) => {
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  };
+  
+  let total = 0;
+  
+  // First shift
+  const start1 = parseTime(startTime);
+  const end1 = parseTime(endTime);
+  if (end1 > start1) {
+    total += end1 - start1;
+  } else if (end1 < start1) {
+    // Overnight shift
+    total += (24 * 60 - start1) + end1;
+  }
+  
+  // Second shift (split shift)
+  if (startTime2 && endTime2) {
+    const start2 = parseTime(startTime2);
+    const end2 = parseTime(endTime2);
+    if (end2 > start2) {
+      total += end2 - start2;
+    } else if (end2 < start2) {
+      total += (24 * 60 - start2) + end2;
+    }
+  }
+  
+  return total / 60; // Return in hours
+};
 
 type ViewType = 'personas' | 'cobertura';
 type HourRangeType = 'all' | '12-00' | '18-00';
@@ -518,6 +554,33 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
     
     return result;
   }, [schedules, pendingChanges, team]);
+
+  // Calculate monthly hours per employee (with pending changes)
+  const monthlyHoursByEmployee = useMemo(() => {
+    const hoursMap = new Map<string, number>();
+    
+    team.forEach(member => {
+      let totalHours = 0;
+      
+      monthDays.forEach(day => {
+        const dateStr = format(day, 'yyyy-MM-dd');
+        const value = getEffectiveValue(member.id, dateStr);
+        
+        if (!value.isDayOff && value.startTime && value.endTime) {
+          totalHours += calculateShiftHours(
+            value.startTime, 
+            value.endTime,
+            value.startTime2,
+            value.endTime2
+          );
+        }
+      });
+      
+      hoursMap.set(member.id, totalHours);
+    });
+    
+    return hoursMap;
+  }, [team, monthDays, getEffectiveValue]);
 
   // Detect if employee already used birthday day off this month
   const birthdayUsedMap = useMemo(() => {
@@ -956,54 +1019,90 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                 >
                 {/* Fixed Left Column - sticky */}
                 <div 
-                  className="shrink-0 border-r bg-card z-20 sticky left-0" 
-                  style={{ width: EMPLOYEE_COL_WIDTH }}
+                  className="shrink-0 border-r bg-card z-20 sticky left-0 flex" 
                 >
-                  {/* Header cell */}
-                  <div className="h-12 border-b bg-muted/50 flex items-center px-3 sticky top-0 z-30 bg-card">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {activeView === 'personas' ? 'Empleado' : 'Hora'}
-                    </span>
-                  </div>
-                  
-                  {/* Left column rows - changes based on active view */}
-                  {activeView === 'personas' ? (
-                    // Employee rows - show full name
-                    team.map((member) => (
-                      <div 
-                        key={member.id} 
-                        className="border-b flex items-center gap-2 px-2 bg-card hover:bg-muted/50 cursor-pointer"
-                        style={{ height: SCHEDULE_ROW_HEIGHT }}
-                        onClick={() => canManageSchedules && selection.handleRowSelect(member.id)}
-                        title="Click para seleccionar toda la fila"
-                      >
-                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-medium text-primary shrink-0">
-                          {getInitials(member.full_name)}
-                        </div>
-                        <span className="text-xs truncate flex-1 min-w-0" title={member.full_name}>
-                          {member.full_name}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    // Hour rows
-                    filteredHours.length === 0 ? (
-                      <div className="py-8 px-3 text-center text-sm text-muted-foreground">
-                        Sin datos
-                      </div>
-                    ) : (
-                      filteredHours.map((hour) => (
+                  {/* Employee name column */}
+                  <div style={{ width: EMPLOYEE_COL_WIDTH }}>
+                    {/* Header cell */}
+                    <div className="h-12 border-b bg-muted/50 flex items-center px-3 sticky top-0 z-30 bg-card">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {activeView === 'personas' ? 'Empleado' : 'Hora'}
+                      </span>
+                    </div>
+                    
+                    {/* Left column rows - changes based on active view */}
+                    {activeView === 'personas' ? (
+                      // Employee rows - show full name
+                      team.map((member) => (
                         <div 
-                          key={hour} 
-                          className="border-b bg-muted/10 flex items-center px-3"
-                          style={{ height: COVERAGE_ROW_HEIGHT }}
+                          key={member.id} 
+                          className="border-b flex items-center gap-2 px-2 bg-card hover:bg-muted/50 cursor-pointer"
+                          style={{ height: SCHEDULE_ROW_HEIGHT }}
+                          onClick={() => canManageSchedules && selection.handleRowSelect(member.id)}
+                          title="Click para seleccionar toda la fila"
                         >
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {String(hour).padStart(2, '0')}:00
+                          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-medium text-primary shrink-0">
+                            {getInitials(member.full_name)}
+                          </div>
+                          <span className="text-xs truncate flex-1 min-w-0" title={member.full_name}>
+                            {member.full_name}
                           </span>
                         </div>
                       ))
-                    )
+                    ) : (
+                      // Hour rows
+                      filteredHours.length === 0 ? (
+                        <div className="py-8 px-3 text-center text-sm text-muted-foreground">
+                          Sin datos
+                        </div>
+                      ) : (
+                        filteredHours.map((hour) => (
+                          <div 
+                            key={hour} 
+                            className="border-b bg-muted/10 flex items-center px-3"
+                            style={{ height: COVERAGE_ROW_HEIGHT }}
+                          >
+                            <span className="text-xs font-medium text-muted-foreground">
+                              {String(hour).padStart(2, '0')}:00
+                            </span>
+                          </div>
+                        ))
+                      )
+                    )}
+                  </div>
+                  
+                  {/* Hours column - only for personas view */}
+                  {activeView === 'personas' && (
+                    <div className="border-l" style={{ width: HOURS_COL_WIDTH }}>
+                      {/* Header */}
+                      <div className="h-12 border-b bg-muted/50 flex items-center justify-center sticky top-0 z-30 bg-card">
+                        <span className="text-[10px] font-medium text-muted-foreground">Hrs</span>
+                      </div>
+                      
+                      {/* Hours per employee */}
+                      {team.map((member) => {
+                        const hours = monthlyHoursByEmployee.get(member.id) || 0;
+                        const isOverLimit = hours > 190; // CCT limit
+                        
+                        return (
+                          <div 
+                            key={member.id}
+                            className={cn(
+                              "border-b flex items-center justify-center bg-card",
+                              isOverLimit && "bg-destructive/10"
+                            )}
+                            style={{ height: SCHEDULE_ROW_HEIGHT }}
+                          >
+                            <span className={cn(
+                              "text-xs font-medium tabular-nums",
+                              isOverLimit ? "text-destructive" : "text-muted-foreground"
+                            )}>
+                              {hours.toFixed(0)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
 
