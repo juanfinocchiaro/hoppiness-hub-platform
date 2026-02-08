@@ -1078,6 +1078,9 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                                   if (!isEditable) return;
                                   selection.handleCellPointerUp(member.id, dateStr, e);
                                 }}
+                                onLostPointerCapture={() => {
+                                  selection.handleLostPointerCapture();
+                                }}
                               >
                                 {renderCellContent(value, isPending, isHoliday, isSelected)}
                               </div>

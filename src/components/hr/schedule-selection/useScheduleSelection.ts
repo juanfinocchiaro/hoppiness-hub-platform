@@ -1,10 +1,12 @@
 /**
  * useScheduleSelection - Excel-style multi-cell selection
  * 
- * V8 (Feb 2026) - Multi-cell copy/paste:
- * - Copy ALL selected cells, not just the first one
- * - Paste respects relative positions (like Excel)
- * - Robust drag with global pointermove fallback
+ * V9 (Feb 2026) - Index-based deterministic selection:
+ * - All logic uses dayIdx/userIdx instead of Date objects (no timezone bugs)
+ * - Pointer capture for reliable drag tracking
+ * - e.buttons validation to detect released mouse
+ * - Improved findCellAtPoint with line scanning
+ * - Correct top-left anchor for copy/paste
  * 
  * Supports:
  * - Keyboard shortcuts: Ctrl+C, Ctrl+V, Delete, Escape, F, V
@@ -12,7 +14,7 @@
  * - Quick schedule apply from toolbar with position + break
  */
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { format, min as dateMin, max as dateMax, differenceInDays, addDays } from 'date-fns';
+import { format } from 'date-fns';
 import { toast } from 'sonner';
 import type { ScheduleValue } from '../ScheduleCellPopover';
 import { 
@@ -34,24 +36,34 @@ interface UseScheduleSelectionOptions {
   enabled?: boolean;
 }
 
+// Internal cell representation using indices (no Date objects)
+interface CellIndices {
+  userIdx: number;
+  dayIdx: number;
+}
+
 // Drag state stored in ref for immediate access without re-renders
 interface DragState {
   active: boolean;
-  startCell: CellKey | null;
-  currentCell: CellKey | null;
+  startCell: CellIndices | null;
+  currentCell: CellIndices | null;
+  pointerId: number | null;
 }
 
 /**
  * Multi-point sampling to find a cell even when pointer is on border/gap.
- * Returns the first cell found from the sampling points, or null.
+ * Uses line scanning for better border detection.
  */
-function findCellAtPoint(x: number, y: number): CellKey | null {
-  // Sample points: center + small offsets to catch border cases
+function findCellAtPoint(x: number, y: number): { userId: string; dateStr: string } | null {
+  // Sample points: center + line scans in all directions
   const offsets = [
     [0, 0],
-    [2, 0], [-2, 0],
-    [0, 2], [0, -2],
-    [2, 2], [-2, -2],
+    // Horizontal line scan
+    [4, 0], [-4, 0], [8, 0], [-8, 0],
+    // Vertical line scan  
+    [0, 4], [0, -4], [0, 8], [0, -8],
+    // Diagonals for corner cases
+    [4, 4], [-4, -4], [4, -4], [-4, 4],
   ];
   
   for (const [dx, dy] of offsets) {
@@ -62,9 +74,11 @@ function findCellAtPoint(x: number, y: number): CellKey | null {
     if (cellEl) {
       const cellData = cellEl.getAttribute('data-cell');
       if (cellData && cellData.includes(':')) {
-        const [userId, date] = cellData.split(':');
-        if (userId && date) {
-          return { userId, date };
+        const colonIdx = cellData.indexOf(':');
+        const userId = cellData.substring(0, colonIdx);
+        const dateStr = cellData.substring(colonIdx + 1);
+        if (userId && dateStr) {
+          return { userId, dateStr };
         }
       }
     }
@@ -91,64 +105,106 @@ export function useScheduleSelection({
     active: false,
     startCell: null,
     currentCell: null,
+    pointerId: null,
   });
   
   // Track last detected cell to avoid redundant updates
-  const lastDetectedKeyRef = useRef<string | null>(null);
+  const lastDetectedIdxRef = useRef<string | null>(null);
+  
+  // Reference to the element that has pointer capture
+  const captureElementRef = useRef<HTMLElement | null>(null);
 
-  // Calculate rectangular selection between two cells
-  const calculateRectSelection = useCallback((start: CellKey, end: CellKey): Set<string> => {
+  // ========== INDEX-BASED LOOKUP MAPS ==========
+  // Pre-compute maps for O(1) lookups - eliminates all Date object comparisons
+  
+  const dayIndexByDateStr = useMemo(() => {
+    const map = new Map<string, number>();
+    monthDays.forEach((day, idx) => {
+      map.set(format(day, 'yyyy-MM-dd'), idx);
+    });
+    return map;
+  }, [monthDays]);
+  
+  const dateStrByDayIndex = useMemo(() => {
+    return monthDays.map(day => format(day, 'yyyy-MM-dd'));
+  }, [monthDays]);
+  
+  const userIndexById = useMemo(() => {
+    const map = new Map<string, number>();
+    teamMemberIds.forEach((id, idx) => {
+      map.set(id, idx);
+    });
+    return map;
+  }, [teamMemberIds]);
+
+  // Convert CellKey to indices
+  const cellToIndices = useCallback((cell: CellKey): CellIndices | null => {
+    const userIdx = userIndexById.get(cell.userId);
+    const dayIdx = dayIndexByDateStr.get(cell.date);
+    if (userIdx === undefined || dayIdx === undefined) return null;
+    return { userIdx, dayIdx };
+  }, [userIndexById, dayIndexByDateStr]);
+
+  // Convert indices to CellKey
+  const indicesToCell = useCallback((indices: CellIndices): CellKey | null => {
+    const userId = teamMemberIds[indices.userIdx];
+    const dateStr = dateStrByDayIndex[indices.dayIdx];
+    if (!userId || !dateStr) return null;
+    return { userId, date: dateStr };
+  }, [teamMemberIds, dateStrByDayIndex]);
+
+  // ========== RECTANGULAR SELECTION USING INDICES ==========
+  const calculateRectSelection = useCallback((start: CellIndices, end: CellIndices): Set<string> => {
     const selection = new Set<string>();
     
-    const startUserIdx = teamMemberIds.indexOf(start.userId);
-    const endUserIdx = teamMemberIds.indexOf(end.userId);
+    const minUserIdx = Math.min(start.userIdx, end.userIdx);
+    const maxUserIdx = Math.max(start.userIdx, end.userIdx);
+    const minDayIdx = Math.min(start.dayIdx, end.dayIdx);
+    const maxDayIdx = Math.max(start.dayIdx, end.dayIdx);
     
-    if (startUserIdx === -1 || endUserIdx === -1) return selection;
-    
-    const minUserIdx = Math.min(startUserIdx, endUserIdx);
-    const maxUserIdx = Math.max(startUserIdx, endUserIdx);
-    
-    const startDate = new Date(start.date);
-    const endDate = new Date(end.date);
-    const minDate = dateMin([startDate, endDate]);
-    const maxDate = dateMax([startDate, endDate]);
+    if (DEBUG) {
+      console.log('[Selection] calculateRectSelection:', {
+        minUserIdx, maxUserIdx, minDayIdx, maxDayIdx,
+        cellCount: (maxUserIdx - minUserIdx + 1) * (maxDayIdx - minDayIdx + 1)
+      });
+    }
     
     for (let uIdx = minUserIdx; uIdx <= maxUserIdx; uIdx++) {
       const userId = teamMemberIds[uIdx];
       if (!userId) continue;
       
-      for (const day of monthDays) {
-        if (day >= minDate && day <= maxDate) {
-          selection.add(cellKeyString(userId, format(day, 'yyyy-MM-dd')));
-        }
+      for (let dIdx = minDayIdx; dIdx <= maxDayIdx; dIdx++) {
+        const dateStr = dateStrByDayIndex[dIdx];
+        if (!dateStr) continue;
+        selection.add(cellKeyString(userId, dateStr));
       }
     }
     
     return selection;
-  }, [teamMemberIds, monthDays]);
+  }, [teamMemberIds, dateStrByDayIndex]);
 
   // Update selection based on current drag state
-  const updateDragSelection = useCallback((endCell: CellKey) => {
+  const updateDragSelection = useCallback((endIndices: CellIndices) => {
     const startCell = dragStateRef.current.startCell;
     if (!startCell) return;
     
-    const newKey = cellKeyString(endCell.userId, endCell.date);
+    const idxKey = `${endIndices.userIdx}:${endIndices.dayIdx}`;
     
-    // Skip if same cell as last detected
-    if (lastDetectedKeyRef.current === newKey) return;
+    // Skip if same indices as last detected
+    if (lastDetectedIdxRef.current === idxKey) return;
     
     if (DEBUG) {
       console.log('[Selection] updateDragSelection:', { 
-        start: cellKeyString(startCell.userId, startCell.date),
-        end: newKey 
+        start: `${startCell.userIdx}:${startCell.dayIdx}`,
+        end: idxKey 
       });
     }
     
-    lastDetectedKeyRef.current = newKey;
-    dragStateRef.current.currentCell = endCell;
+    lastDetectedIdxRef.current = idxKey;
+    dragStateRef.current.currentCell = endIndices;
     
-    // Calculate and update selection
-    const selection = calculateRectSelection(startCell, endCell);
+    // Calculate and update selection using indices
+    const selection = calculateRectSelection(startCell, endIndices);
     setSelectedCells(selection);
   }, [calculateRectSelection]);
 
@@ -158,12 +214,23 @@ export function useScheduleSelection({
     
     if (DEBUG) console.log('[Selection] cancelDrag');
     
+    // Release pointer capture if held
+    if (captureElementRef.current && dragStateRef.current.pointerId !== null) {
+      try {
+        captureElementRef.current.releasePointerCapture(dragStateRef.current.pointerId);
+      } catch (e) {
+        // Ignore - pointer may already be released
+      }
+    }
+    
     dragStateRef.current = {
       active: false,
       startCell: null,
       currentCell: null,
+      pointerId: null,
     };
-    lastDetectedKeyRef.current = null;
+    captureElementRef.current = null;
+    lastDetectedIdxRef.current = null;
     setIsDragging(false);
     setSelectedCells(new Set());
   }, []);
@@ -174,25 +241,36 @@ export function useScheduleSelection({
     
     if (DEBUG) console.log('[Selection] endDrag');
     
-    const { startCell, currentCell } = dragStateRef.current;
+    // Release pointer capture if held
+    if (captureElementRef.current && dragStateRef.current.pointerId !== null) {
+      try {
+        captureElementRef.current.releasePointerCapture(dragStateRef.current.pointerId);
+      } catch (e) {
+        // Ignore - pointer may already be released
+      }
+    }
     
-    // Set last clicked cell
-    if (currentCell) {
-      setLastClickedCell(currentCell);
-    } else if (startCell) {
-      setLastClickedCell(startCell);
+    const { currentCell, startCell } = dragStateRef.current;
+    
+    // Set last clicked cell (for shift+click range)
+    const finalIndices = currentCell || startCell;
+    if (finalIndices) {
+      const cell = indicesToCell(finalIndices);
+      if (cell) setLastClickedCell(cell);
     }
     
     dragStateRef.current = {
       active: false,
       startCell: null,
       currentCell: null,
+      pointerId: null,
     };
-    lastDetectedKeyRef.current = null;
+    captureElementRef.current = null;
+    lastDetectedIdxRef.current = null;
     setIsDragging(false);
-  }, []);
+  }, [indicesToCell]);
 
-  // Global pointermove listener - FALLBACK for missed onPointerEnter events
+  // Global pointermove listener - SINGLE SOURCE OF TRUTH during drag
   useEffect(() => {
     if (!enabled) return;
 
@@ -200,11 +278,23 @@ export function useScheduleSelection({
       // Only process if actively dragging
       if (!dragStateRef.current.active) return;
       
-      // Find cell under pointer using multi-point sampling
-      const cell = findCellAtPoint(e.clientX, e.clientY);
+      // CRITICAL: Validate mouse button is still pressed
+      if ((e.buttons & 1) === 0) {
+        if (DEBUG) console.log('[Selection] Button released during drag, ending');
+        endDrag();
+        return;
+      }
       
-      if (cell) {
-        updateDragSelection(cell);
+      // Find cell under pointer using multi-point sampling
+      const foundCell = findCellAtPoint(e.clientX, e.clientY);
+      
+      if (foundCell) {
+        const indices = cellToIndices({ userId: foundCell.userId, date: foundCell.dateStr });
+        if (indices) {
+          updateDragSelection(indices);
+        }
+      } else if (DEBUG) {
+        console.log('[Selection] findCellAtPoint returned null at', e.clientX, e.clientY);
       }
     };
 
@@ -238,7 +328,7 @@ export function useScheduleSelection({
       window.removeEventListener('blur', handleBlur);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [enabled, endDrag, cancelDrag, updateDragSelection]);
+  }, [enabled, endDrag, cancelDrag, updateDragSelection, cellToIndices]);
 
   // Keyboard shortcuts handler
   useEffect(() => {
@@ -315,32 +405,49 @@ export function useScheduleSelection({
     // Only left mouse button
     if (e.button !== 0) return;
     
-    const cell = { userId, date };
+    const indices = cellToIndices({ userId, date });
+    if (!indices) return;
+    
     const cellKey = cellKeyString(userId, date);
     
-    if (DEBUG) console.log('[Selection] handleDragStart:', cellKey);
+    if (DEBUG) console.log('[Selection] handleDragStart:', cellKey, 'indices:', indices);
+    
+    // Set pointer capture for reliable tracking
+    const target = e.currentTarget as HTMLElement;
+    if ('setPointerCapture' in target && 'pointerId' in e) {
+      try {
+        target.setPointerCapture((e as React.PointerEvent).pointerId);
+        captureElementRef.current = target;
+      } catch (err) {
+        if (DEBUG) console.log('[Selection] setPointerCapture failed:', err);
+      }
+    }
     
     dragStateRef.current = {
       active: true,
-      startCell: cell,
-      currentCell: cell,
+      startCell: indices,
+      currentCell: indices,
+      pointerId: 'pointerId' in e ? (e as React.PointerEvent).pointerId : null,
     };
-    lastDetectedKeyRef.current = cellKey;
+    lastDetectedIdxRef.current = `${indices.userIdx}:${indices.dayIdx}`;
     setIsDragging(true);
     
     // For Ctrl+click, don't pre-select (handled in pointerUp)
     if (!e.ctrlKey && !e.metaKey) {
       setSelectedCells(new Set([cellKey]));
     }
-  }, [enabled]);
+  }, [enabled, cellToIndices]);
 
-  // Called when pointer enters a cell during drag (PRIMARY path)
+  // Called when pointer enters a cell during drag (fallback, pointermove is primary)
   const handleCellEnter = useCallback((userId: string, date: string) => {
+    // During active drag, pointermove is authoritative - ignore pointerEnter
     if (!dragStateRef.current.active || !dragStateRef.current.startCell) return;
     
-    const cell = { userId, date };
-    updateDragSelection(cell);
-  }, [updateDragSelection]);
+    const indices = cellToIndices({ userId, date });
+    if (!indices) return;
+    
+    updateDragSelection(indices);
+  }, [updateDragSelection, cellToIndices]);
 
   // Handle pointer up on a cell (for click modifiers)
   const handleCellPointerUp = useCallback((
@@ -356,7 +463,7 @@ export function useScheduleSelection({
     
     // Check if this was just a click (no movement)
     const didMove = startCell && currentCell && 
-      (startCell.userId !== currentCell.userId || startCell.date !== currentCell.date);
+      (startCell.userIdx !== currentCell.userIdx || startCell.dayIdx !== currentCell.dayIdx);
     
     // End the drag first
     if (wasActive) {
@@ -379,21 +486,28 @@ export function useScheduleSelection({
     }
     // Handle Shift+click range (only if didn't drag)
     else if (e.shiftKey && lastClickedCell && !wasActive) {
-      const selection = calculateRectSelection(lastClickedCell, { userId, date });
-      setSelectedCells(selection);
-      setLastClickedCell({ userId, date });
+      const startIndices = cellToIndices(lastClickedCell);
+      const endIndices = cellToIndices({ userId, date });
+      if (startIndices && endIndices) {
+        const selection = calculateRectSelection(startIndices, endIndices);
+        setSelectedCells(selection);
+        setLastClickedCell({ userId, date });
+      }
     }
-  }, [enabled, lastClickedCell, calculateRectSelection, endDrag]);
+  }, [enabled, lastClickedCell, calculateRectSelection, endDrag, cellToIndices]);
+
+  // Lost pointer capture handler
+  const handleLostPointerCapture = useCallback(() => {
+    if (dragStateRef.current.active) {
+      if (DEBUG) console.log('[Selection] lostpointercapture, ending drag');
+      endDrag();
+    }
+  }, [endDrag]);
 
   // Legacy handlers kept for compatibility
   const handleCellClick = useCallback(() => {}, []);
   const handleGridPointerMove = useCallback(() => {}, []);
   const handleCellPointerMove = useCallback(() => {}, []);
-  const handleLostPointerCapture = useCallback(() => {
-    if (dragStateRef.current.active) {
-      endDrag();
-    }
-  }, [endDrag]);
 
   // Select entire column (all employees for a day)
   const handleColumnSelect = useCallback((date: string) => {
@@ -411,34 +525,48 @@ export function useScheduleSelection({
     if (!enabled) return;
     
     const newSelection = new Set<string>();
-    monthDays.forEach(day => {
-      newSelection.add(cellKeyString(userId, format(day, 'yyyy-MM-dd')));
+    dateStrByDayIndex.forEach(dateStr => {
+      newSelection.add(cellKeyString(userId, dateStr));
     });
     setSelectedCells(newSelection);
-  }, [enabled, monthDays]);
+  }, [enabled, dateStrByDayIndex]);
 
-  // Copy ALL selected cells with relative positions (Excel-like)
+  // ========== COPY USING INDICES - CORRECT TOP-LEFT ANCHOR ==========
   const handleCopy = useCallback(() => {
     if (selectedCells.size === 0) return;
 
     const cellsArray = Array.from(selectedCells).map(parseCellKey);
     
-    // Find the anchor cell (top-left of selection)
-    const sortedCells = [...cellsArray].sort((a, b) => {
-      const userIdxA = teamMemberIds.indexOf(a.userId);
-      const userIdxB = teamMemberIds.indexOf(b.userId);
-      if (userIdxA !== userIdxB) return userIdxA - userIdxB;
-      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    // Convert to indices for sorting
+    const cellsWithIndices = cellsArray
+      .map(cell => {
+        const indices = cellToIndices(cell);
+        return indices ? { cell, indices } : null;
+      })
+      .filter((x): x is { cell: CellKey; indices: CellIndices } => x !== null);
+    
+    if (cellsWithIndices.length === 0) return;
+    
+    // Sort by dayIdx FIRST, then userIdx - this gives us true top-left anchor
+    cellsWithIndices.sort((a, b) => {
+      if (a.indices.dayIdx !== b.indices.dayIdx) return a.indices.dayIdx - b.indices.dayIdx;
+      return a.indices.userIdx - b.indices.userIdx;
     });
     
-    const anchorCell = sortedCells[0];
-    const anchorDate = new Date(anchorCell.date);
-    const anchorUserIdx = teamMemberIds.indexOf(anchorCell.userId);
+    const anchor = cellsWithIndices[0];
     
-    // Build clipboard with relative positions
-    const copiedCells = sortedCells.map(cell => {
-      const dayOffset = differenceInDays(new Date(cell.date), anchorDate);
-      const userOffset = teamMemberIds.indexOf(cell.userId) - anchorUserIdx;
+    if (DEBUG) {
+      console.log('[Copy] anchor:', {
+        dayIdx: anchor.indices.dayIdx,
+        userIdx: anchor.indices.userIdx,
+        date: anchor.cell.date
+      });
+    }
+    
+    // Build clipboard with relative positions using indices
+    const copiedCells = cellsWithIndices.map(({ cell, indices }) => {
+      const dayOffset = indices.dayIdx - anchor.indices.dayIdx;
+      const userOffset = indices.userIdx - anchor.indices.userIdx;
       const schedule = getEffectiveValue(cell.userId, cell.date);
       
       return {
@@ -480,9 +608,9 @@ export function useScheduleSelection({
 
     setClipboard(clipboardData);
     toast.success(`📋 Copiado: ${sourceInfo}`);
-  }, [selectedCells, getEffectiveValue, teamMemberIds]);
+  }, [selectedCells, getEffectiveValue, cellToIndices]);
 
-  // Paste clipboard respecting relative positions (Excel-like)
+  // ========== PASTE USING INDICES - DETERMINISTIC ==========
   const handlePaste = useCallback(() => {
     if (!clipboard || selectedCells.size === 0) {
       if (!clipboard) toast.error('No hay nada en el portapapeles');
@@ -504,25 +632,32 @@ export function useScheduleSelection({
       return;
     }
 
-    // Multi-cell paste: find the TOP-LEFT cell as anchor (earliest date, then lowest user index)
+    // Multi-cell paste: find the TOP-LEFT cell as anchor using indices
     const targetCellsArray = Array.from(selectedCells).map(parseCellKey);
     
-    // Sort by DATE FIRST, then by user index - this ensures we get the leftmost-topmost cell
-    const sortedTargets = [...targetCellsArray].sort((a, b) => {
-      const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime();
-      if (dateCompare !== 0) return dateCompare;
-      return teamMemberIds.indexOf(a.userId) - teamMemberIds.indexOf(b.userId);
+    // Convert to indices for proper sorting
+    const targetsWithIndices = targetCellsArray
+      .map(cell => {
+        const indices = cellToIndices(cell);
+        return indices ? { cell, indices } : null;
+      })
+      .filter((x): x is { cell: CellKey; indices: CellIndices } => x !== null);
+    
+    if (targetsWithIndices.length === 0) return;
+    
+    // Sort by dayIdx FIRST, then userIdx - true top-left anchor
+    targetsWithIndices.sort((a, b) => {
+      if (a.indices.dayIdx !== b.indices.dayIdx) return a.indices.dayIdx - b.indices.dayIdx;
+      return a.indices.userIdx - b.indices.userIdx;
     });
     
-    const anchorTarget = sortedTargets[0];
-    const anchorTargetDate = new Date(anchorTarget.date);
-    const anchorTargetUserIdx = teamMemberIds.indexOf(anchorTarget.userId);
+    const anchorTarget = targetsWithIndices[0];
 
     if (DEBUG) {
       console.log('[Paste] anchor target:', {
-        date: anchorTarget.date,
-        userId: anchorTarget.userId,
-        userIdx: anchorTargetUserIdx
+        dayIdx: anchorTarget.indices.dayIdx,
+        userIdx: anchorTarget.indices.userIdx,
+        date: anchorTarget.cell.date
       });
     }
 
@@ -532,28 +667,28 @@ export function useScheduleSelection({
       const dayOffset = copiedCell.dayOffset;
       const userOffset = copiedCell.userOffset ?? 0;
       
-      // Calculate target position: anchor + offsets
-      const targetDate = addDays(anchorTargetDate, dayOffset);
-      const targetDateStr = format(targetDate, 'yyyy-MM-dd');
-      const targetUserIdx = anchorTargetUserIdx + userOffset;
+      // Calculate target position using indices: anchor + offsets
+      const targetDayIdx = anchorTarget.indices.dayIdx + dayOffset;
+      const targetUserIdx = anchorTarget.indices.userIdx + userOffset;
+      
+      // Validate indices are in range
+      if (targetUserIdx < 0 || targetUserIdx >= teamMemberIds.length) return;
+      if (targetDayIdx < 0 || targetDayIdx >= dateStrByDayIndex.length) return;
+      
+      const targetUserId = teamMemberIds[targetUserIdx];
+      const targetDateStr = dateStrByDayIndex[targetDayIdx];
+      
+      if (!targetUserId || !targetDateStr) return;
       
       if (DEBUG) {
         console.log('[Paste] applying cell:', {
           dayOffset,
           userOffset,
-          targetDate: targetDateStr,
-          targetUserIdx
+          targetDayIdx,
+          targetUserIdx,
+          targetDate: targetDateStr
         });
       }
-      
-      // Check if target user is valid
-      if (targetUserIdx < 0 || targetUserIdx >= teamMemberIds.length) return;
-      const targetUserId = teamMemberIds[targetUserIdx];
-      if (!targetUserId) return;
-      
-      // Check if date is in current month
-      const isInMonth = monthDays.some(d => format(d, 'yyyy-MM-dd') === targetDateStr);
-      if (!isInMonth) return;
       
       const userName = getTeamMemberName(targetUserId);
       onCellChange(targetUserId, userName, targetDateStr, copiedCell.schedule);
@@ -562,7 +697,7 @@ export function useScheduleSelection({
 
     toast.success(`✓ Pegado en ${pastedCount} celda${pastedCount > 1 ? 's' : ''}`);
     setSelectedCells(new Set());
-  }, [clipboard, selectedCells, onCellChange, getTeamMemberName, teamMemberIds, monthDays]);
+  }, [clipboard, selectedCells, onCellChange, getTeamMemberName, teamMemberIds, dateStrByDayIndex, cellToIndices]);
 
   // Clear selected cells (delete)
   const handleClearCells = useCallback(() => {
@@ -749,7 +884,7 @@ export function useScheduleSelection({
     
     // Cell event handlers
     handleDragStart,        // onPointerDown
-    handleCellEnter,        // onPointerEnter (primary path)
+    handleCellEnter,        // onPointerEnter (fallback)
     handleCellPointerUp,    // onPointerUp
     
     // Legacy handlers (kept for compatibility)
