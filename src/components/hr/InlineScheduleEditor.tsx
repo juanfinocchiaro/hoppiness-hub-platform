@@ -275,66 +275,81 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
     toast.info('Cambios descartados');
   };
 
-  // Save mutation - uses UPSERT to avoid duplicate key errors
+  // Save mutation - uses BATCH UPSERT for efficiency and reliability
   const saveMutation = useMutation({
     mutationFn: async ({ notifyEmail, notifyCommunication }: { notifyEmail: boolean; notifyCommunication: boolean }) => {
-      const changesByUser = new Map<string, PendingChange[]>();
+      const recordsToUpsert: Array<{
+        user_id: string;
+        employee_id: string;
+        branch_id: string;
+        schedule_date: string;
+        schedule_month: number;
+        schedule_year: number;
+        day_of_week: number;
+        start_time: string;
+        end_time: string;
+        is_day_off: boolean;
+        work_position: WorkPositionType | null;
+        shift_number: number;
+        published_at: string;
+        published_by: string | null;
+      }> = [];
+      
+      const recordsToDelete: Array<{ userId: string; date: string }> = [];
+      const now = new Date().toISOString();
+
+      // Process all pending changes into batch arrays
       pendingChanges.forEach((change) => {
-        if (!changesByUser.has(change.userId)) {
-          changesByUser.set(change.userId, []);
+        const hasValidSchedule = change.startTime || change.isDayOff;
+        
+        // Calculate day_of_week using the month's local date reference (avoids UTC issues)
+        const dayDate = monthDays.find(d => format(d, 'yyyy-MM-dd') === change.date);
+        const dayOfWeek = dayDate ? dayDate.getDay() : 0;
+        
+        if (hasValidSchedule) {
+          recordsToUpsert.push({
+            user_id: change.userId,
+            employee_id: change.userId,
+            branch_id: branchId,
+            schedule_date: change.date,
+            schedule_month: month,
+            schedule_year: year,
+            day_of_week: dayOfWeek,
+            start_time: change.isDayOff ? '00:00' : (change.startTime || '00:00'),
+            end_time: change.isDayOff ? '00:00' : (change.endTime || '00:00'),
+            is_day_off: change.isDayOff,
+            work_position: change.position,
+            shift_number: 1,
+            published_at: now,
+            published_by: currentUserId,
+          });
+        } else {
+          recordsToDelete.push({ userId: change.userId, date: change.date });
         }
-        changesByUser.get(change.userId)!.push(change);
       });
 
-      for (const [userId, userChanges] of changesByUser) {
-        const days: DaySchedule[] = userChanges.map(change => ({
-          date: change.date,
-          start_time: change.startTime,
-          end_time: change.endTime,
-          is_day_off: change.isDayOff,
-          work_position: change.position,
-        }));
+      // Batch UPSERT all records at once
+      if (recordsToUpsert.length > 0) {
+        const { error } = await supabase
+          .from('employee_schedules')
+          .upsert(recordsToUpsert, {
+            onConflict: 'user_id,schedule_date',
+            ignoreDuplicates: false,
+          });
+        if (error) throw error;
+      }
 
-        for (const day of days) {
-          const hasValidSchedule = day.start_time || day.is_day_off;
-          
-          if (hasValidSchedule) {
-            // Use UPSERT to handle both insert and update
-            const scheduleData = {
-              user_id: userId,
-              employee_id: userId,
-              branch_id: branchId,
-              schedule_date: day.date,
-              schedule_month: month,
-              schedule_year: year,
-              day_of_week: new Date(day.date).getDay(),
-              start_time: day.is_day_off ? '00:00' : day.start_time,
-              end_time: day.is_day_off ? '00:00' : day.end_time,
-              is_day_off: day.is_day_off,
-              work_position: day.work_position,
-              shift_number: 1,
-              published_at: new Date().toISOString(),
-              published_by: currentUserId,
-            };
-            
-            // Use the user_id + schedule_date unique index
-            const { error } = await supabase
-              .from('employee_schedules')
-              .upsert(scheduleData, {
-                onConflict: 'user_id,schedule_date',
-                ignoreDuplicates: false,
-              });
-            if (error) throw error;
-          } else {
-            // Delete if clearing the schedule
-            const { error } = await supabase
-              .from('employee_schedules')
-              .delete()
-              .eq('employee_id', userId)
-              .eq('schedule_date', day.date)
-              .eq('branch_id', branchId);
-            if (error) throw error;
-          }
+      // Batch DELETE records that need to be cleared
+      if (recordsToDelete.length > 0) {
+        // Delete in a single query using OR conditions
+        for (const record of recordsToDelete) {
+          const { error } = await supabase
+            .from('employee_schedules')
+            .delete()
+            .eq('user_id', record.userId)
+            .eq('schedule_date', record.date)
+            .eq('branch_id', branchId);
+          if (error) throw error;
         }
       }
     },
