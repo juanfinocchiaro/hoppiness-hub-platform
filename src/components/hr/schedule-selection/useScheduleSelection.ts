@@ -1,11 +1,10 @@
 /**
  * useScheduleSelection - Excel-style multi-cell selection
  * 
- * V5 (Feb 2026) - Pointer Capture implementation:
- * - Uses setPointerCapture for reliable drag tracking regardless of gaps/overlays
- * - Unified click/drag model: click handled in pointerUp (not separate onClick)
- * - updateDragCell method for direct cell updates (no elementFromPoint issues)
- * - Robust state cleanup on blur/visibility/escape
+ * V6 (Feb 2026) - Simple drag model without Pointer Capture:
+ * - Uses onPointerEnter on cells for reliable drag tracking
+ * - Global pointerup listener to end drag
+ * - No more elementFromPoint issues
  * 
  * Supports:
  * - Keyboard shortcuts: Ctrl+C, Ctrl+V, Delete, Escape, F, V
@@ -37,9 +36,6 @@ interface DragState {
   active: boolean;
   startCell: CellKey | null;
   currentCell: CellKey | null;
-  didMove: boolean;
-  pointerId: number | null;
-  captureTarget: HTMLElement | null;
 }
 
 export function useScheduleSelection({
@@ -60,9 +56,6 @@ export function useScheduleSelection({
     active: false,
     startCell: null,
     currentCell: null,
-    didMove: false,
-    pointerId: null,
-    captureTarget: null,
   });
 
   // Calculate rectangular selection between two cells
@@ -93,76 +86,49 @@ export function useScheduleSelection({
     return selection;
   }, [teamMemberIds, monthDays]);
 
-  // Release pointer capture safely
-  const releaseCapture = useCallback(() => {
-    const { captureTarget, pointerId } = dragStateRef.current;
-    if (captureTarget && pointerId !== null) {
-      try {
-        captureTarget.releasePointerCapture(pointerId);
-      } catch {
-        // Ignore errors if capture was already released
-      }
-    }
-  }, []);
-
   // Cancel drag - resets everything without committing selection
   const cancelDrag = useCallback(() => {
     if (!dragStateRef.current.active) return;
-    
-    releaseCapture();
     
     dragStateRef.current = {
       active: false,
       startCell: null,
       currentCell: null,
-      didMove: false,
-      pointerId: null,
-      captureTarget: null,
     };
     setIsDragging(false);
-    // Optionally clear selection on cancel
     setSelectedCells(new Set());
-  }, [releaseCapture]);
+  }, []);
 
   // End drag - commit the selection
   const endDrag = useCallback(() => {
     if (!dragStateRef.current.active) return;
     
-    releaseCapture();
+    const { startCell, currentCell } = dragStateRef.current;
     
-    const { startCell, currentCell, didMove } = dragStateRef.current;
-    
-    // If we moved, the selection is already set during drag
-    // If we didn't move, treat as single click
-    if (!didMove && startCell) {
-      const cellKey = cellKeyString(startCell.userId, startCell.date);
-      setSelectedCells(new Set([cellKey]));
-      setLastClickedCell(startCell);
-    } else if (startCell && currentCell) {
+    // Set last clicked cell
+    if (currentCell) {
       setLastClickedCell(currentCell);
+    } else if (startCell) {
+      setLastClickedCell(startCell);
     }
     
     dragStateRef.current = {
       active: false,
       startCell: null,
       currentCell: null,
-      didMove: false,
-      pointerId: null,
-      captureTarget: null,
     };
     setIsDragging(false);
-  }, [releaseCapture]);
+  }, []);
 
-  // Handle lost pointer capture (browser took it away)
-  const handleLostPointerCapture = useCallback(() => {
-    if (dragStateRef.current.active) {
-      endDrag();
-    }
-  }, [endDrag]);
-
-  // Global event listeners for cleanup
+  // Global pointerup listener to end drag
   useEffect(() => {
     if (!enabled) return;
+
+    const handlePointerUp = () => {
+      if (dragStateRef.current.active) {
+        endDrag();
+      }
+    };
 
     const handleBlur = () => {
       if (dragStateRef.current.active) {
@@ -176,14 +142,17 @@ export function useScheduleSelection({
       }
     };
 
+    window.addEventListener('pointerup', handlePointerUp);
     window.addEventListener('blur', handleBlur);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      window.removeEventListener('pointerup', handlePointerUp);
       window.removeEventListener('blur', handleBlur);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [enabled, cancelDrag]);
+  }, [enabled, endDrag, cancelDrag]);
+
   // Keyboard shortcuts handler
   useEffect(() => {
     if (!enabled) return;
@@ -251,31 +220,20 @@ export function useScheduleSelection({
   const handleDragStart = useCallback((
     userId: string, 
     date: string, 
-    e: React.PointerEvent
+    e: React.PointerEvent | React.MouseEvent
   ) => {
     if (!enabled) return;
-    // Don't start drag on modified clicks (Ctrl handles toggle in pointerUp)
+    // Don't start drag on Shift (handled separately for range)
     if (e.shiftKey) return;
     // Only left mouse button
     if (e.button !== 0) return;
     
     const cell = { userId, date };
-    const target = e.currentTarget as HTMLElement;
-    
-    // Set pointer capture so all move events come to this element
-    try {
-      target.setPointerCapture(e.pointerId);
-    } catch {
-      // Fallback if capture fails
-    }
     
     dragStateRef.current = {
       active: true,
       startCell: cell,
       currentCell: cell,
-      didMove: false,
-      pointerId: e.pointerId,
-      captureTarget: target,
     };
     setIsDragging(true);
     
@@ -286,8 +244,8 @@ export function useScheduleSelection({
     }
   }, [enabled]);
 
-  // Update drag cell - called directly from cell pointerMove
-  const updateDragCell = useCallback((userId: string, date: string) => {
+  // Called when pointer enters a cell during drag
+  const handleCellEnter = useCallback((userId: string, date: string) => {
     if (!dragStateRef.current.active || !dragStateRef.current.startCell) return;
     
     const currentKey = dragStateRef.current.currentCell 
@@ -298,13 +256,6 @@ export function useScheduleSelection({
     // Skip if same cell
     if (currentKey === newKey) return;
     
-    const startKey = cellKeyString(dragStateRef.current.startCell.userId, dragStateRef.current.startCell.date);
-    
-    // Mark that we moved to a different cell
-    if (newKey !== startKey) {
-      dragStateRef.current.didMove = true;
-    }
-    
     dragStateRef.current.currentCell = { userId, date };
     
     // Update selection rectangle
@@ -312,72 +263,21 @@ export function useScheduleSelection({
     setSelectedCells(selection);
   }, [calculateRectSelection]);
 
-  // Global pointermove listener while dragging.
-  // With pointer capture, pointermove events are delivered to the capture target,
-  // so we must do hit-testing manually (elementFromPoint) to know which cell we're over.
-  useEffect(() => {
-    if (!enabled) return;
-
-    const detectCellKeyAtPoint = (x: number, y: number): string | null => {
-      const points: Array<[number, number]> = [
-        [x, y],
-        [x + 1, y],
-        [x - 1, y],
-        [x, y + 1],
-        [x, y - 1],
-        [x + 2, y],
-        [x - 2, y],
-      ];
-
-      for (const [px, py] of points) {
-        const el = document.elementFromPoint(px, py);
-        const cellEl = el?.closest?.('[data-cell]') as HTMLElement | null;
-        const key = cellEl?.getAttribute?.('data-cell');
-        if (key) return key;
-      }
-      return null;
-    };
-
-    const handlePointerMove = (e: PointerEvent) => {
-      if (!dragStateRef.current.active) return;
-      if (dragStateRef.current.pointerId !== null && e.pointerId !== dragStateRef.current.pointerId) return;
-
-      const key = detectCellKeyAtPoint(e.clientX, e.clientY);
-      if (!key) return;
-
-      const [userId, date] = key.split(':');
-      if (!userId || !date) return;
-      updateDragCell(userId, date);
-    };
-
-    window.addEventListener('pointermove', handlePointerMove);
-    return () => window.removeEventListener('pointermove', handlePointerMove);
-  }, [enabled, updateDragCell]);
-
-  // Handle pointer move on a cell (kept as an additional path; global listener is primary)
-  const handleCellPointerMove = useCallback((
-    userId: string, 
-    date: string, 
-    e: React.PointerEvent
-  ) => {
-    if (!enabled) return;
-    if (!dragStateRef.current.active) return;
-    if (e.pointerId !== dragStateRef.current.pointerId) return;
-    
-    updateDragCell(userId, date);
-  }, [enabled, updateDragCell]);
-
-  // Handle pointer up on a cell
+  // Handle pointer up on a cell (for click modifiers)
   const handleCellPointerUp = useCallback((
     userId: string, 
     date: string, 
-    e: React.PointerEvent
+    e: React.PointerEvent | React.MouseEvent
   ) => {
     if (!enabled) return;
     
     const wasActive = dragStateRef.current.active;
-    const didMove = dragStateRef.current.didMove;
     const startCell = dragStateRef.current.startCell;
+    const currentCell = dragStateRef.current.currentCell;
+    
+    // Check if this was just a click (no movement)
+    const didMove = startCell && currentCell && 
+      (startCell.userId !== currentCell.userId || startCell.date !== currentCell.date);
     
     // End the drag first
     if (wasActive) {
@@ -406,25 +306,15 @@ export function useScheduleSelection({
     }
   }, [enabled, lastClickedCell, calculateRectSelection, endDrag]);
 
-  // Legacy grid move handler (fallback, less reliable)
-  const handleGridPointerMove = useCallback((e: React.PointerEvent | React.MouseEvent | PointerEvent | MouseEvent) => {
-    if (!enabled || !dragStateRef.current.active || !dragStateRef.current.startCell) return;
-    
-    // Only use elementFromPoint as fallback if cell's pointerMove didn't fire
-    const element = document.elementFromPoint(e.clientX, e.clientY);
-    if (!element) return;
-    
-    const cellElement = element.closest('[data-cell]');
-    if (!cellElement) return;
-    
-    const cellKey = cellElement.getAttribute('data-cell');
-    if (!cellKey) return;
-    
-    const [userId, date] = cellKey.split(':');
-    if (!userId || !date) return;
-    
-    updateDragCell(userId, date);
-  }, [enabled, updateDragCell]);
+  // Legacy handlers kept for compatibility
+  const handleCellClick = useCallback(() => {}, []);
+  const handleGridPointerMove = useCallback(() => {}, []);
+  const handleCellPointerMove = useCallback(() => {}, []);
+  const handleLostPointerCapture = useCallback(() => {
+    if (dragStateRef.current.active) {
+      endDrag();
+    }
+  }, [endDrag]);
 
   // Select entire column (all employees for a day)
   const handleColumnSelect = useCallback((date: string) => {
@@ -679,17 +569,6 @@ export function useScheduleSelection({
     return parseCellKey(Array.from(selectedCells)[0]);
   }, [canShowFillHandle, selectedCells]);
 
-  // Legacy handleCellClick - now just a wrapper for compatibility
-  // Actual click logic is in handleCellPointerUp
-  const handleCellClick = useCallback((
-    userId: string, 
-    date: string, 
-    e: React.MouseEvent
-  ) => {
-    // This is now handled in handleCellPointerUp
-    // Kept for potential non-pointer-event fallback scenarios
-  }, []);
-
   return {
     // State
     selectedCells,
@@ -699,15 +578,16 @@ export function useScheduleSelection({
     hasClipboard: clipboard !== null,
     isDragging,
     
-    // Cell event handlers (new unified model)
+    // Cell event handlers (new model)
     handleDragStart,        // onPointerDown
-    handleCellPointerMove,  // onPointerMove (on each cell)
+    handleCellEnter,        // onPointerEnter (NEW - primary drag tracking)
     handleCellPointerUp,    // onPointerUp
-    handleLostPointerCapture, // onLostPointerCapture
     
-    // Legacy handlers (kept for container fallback)
-    handleCellClick,        // Deprecated, use handleCellPointerUp
-    handleGridPointerMove,  // Fallback for container-level tracking
+    // Legacy handlers (kept for compatibility)
+    handleCellClick,
+    handleGridPointerMove,
+    handleCellPointerMove,
+    handleLostPointerCapture,
     
     // Row/Column selection
     handleColumnSelect,
