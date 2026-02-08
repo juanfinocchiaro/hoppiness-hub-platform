@@ -646,7 +646,13 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
 
   const hasLaborViolations = consecutiveDaysViolations.length > 0;
 
-  // Calculate all hours with coverage
+  // Helper: Sort hours in operational order (11:00 → 02:00+)
+  // Early morning hours (0-4) come AFTER evening hours (23)
+  const operationalHourOrder = (hour: number): number => {
+    return hour < 5 ? hour + 24 : hour; // 0→24, 1→25, 2→26, 3→27, 4→28
+  };
+
+  // Calculate all hours with coverage - sorted by operational day
   const allHoursWithCoverage = useMemo(() => {
     const hourSet = new Set<number>();
     
@@ -664,7 +670,10 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
     
     if (hourSet.size === 0) return [];
     
-    const hours = Array.from(hourSet).sort((a, b) => a - b);
+    // Sort in operational order: 5, 6, ..., 23, 0, 1, 2, 3, 4
+    const hours = Array.from(hourSet).sort((a, b) => 
+      operationalHourOrder(a) - operationalHourOrder(b)
+    );
     return hours;
   }, [schedulesWithPending]);
 
@@ -680,37 +689,45 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
     return allHoursWithCoverage;
   }, [allHoursWithCoverage, hourRange]);
 
-  // Get employees at specific hour for a day (handles overnight shifts from previous day)
+  // Get employees at specific hour for a day
+  // Key concept: "Operational Day" - early morning hours (0-4) belong to the SAME operational day
+  // A shift 20:00-02:00 on Saturday shows coverage at 00:00/01:00 in the Saturday column
   const getEmployeesAtHour = useCallback((dateStr: string, hour: number) => {
-    const currentDate = new Date(dateStr);
-    const previousDateStr = format(new Date(currentDate.getTime() - 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
+    // For early morning hours (0-4), we show employees whose shift STARTED on this same date
+    // and crosses midnight (overnight shift)
+    if (hour < 5) {
+      return schedulesWithPending.filter(s => {
+        if (s.schedule_date !== dateStr) return false;
+        if (s.is_day_off || !s.start_time || !s.end_time) return false;
+        
+        const [startH] = s.start_time.split(':').map(Number);
+        const [endH] = s.end_time.split(':').map(Number);
+        
+        // Only overnight shifts that cross midnight
+        const isOvernight = endH < startH;
+        if (!isOvernight) return false;
+        
+        // Check if this early morning hour is covered by the shift
+        return hour < endH;
+      });
+    }
     
+    // For regular hours (5:00-23:59), show employees working on this date
     return schedulesWithPending.filter(s => {
-      if (s.is_day_off) return false;
-      if (!s.start_time || !s.end_time) return false;
+      if (s.schedule_date !== dateStr) return false;
+      if (s.is_day_off || !s.start_time || !s.end_time) return false;
       
       const [startH] = s.start_time.split(':').map(Number);
       const [endH] = s.end_time.split(':').map(Number);
       const isOvernight = endH < startH;
       
-      // Case 1: Schedule is for this date
-      if (s.schedule_date === dateStr) {
-        if (isOvernight) {
-          // For overnight shift on this date, only count hours from start until midnight
-          return hour >= startH;
-        } else {
-          // Normal shift
-          return startH <= hour && hour < endH;
-        }
+      if (isOvernight) {
+        // For overnight shifts, cover from start until midnight (23:59)
+        return hour >= startH;
+      } else {
+        // Normal shift
+        return startH <= hour && hour < endH;
       }
-      
-      // Case 2: Overnight shift from previous day spills into this date
-      if (s.schedule_date === previousDateStr && isOvernight) {
-        // Check if the hour falls in the morning portion (0 to endH)
-        return hour < endH;
-      }
-      
-      return false;
     });
   }, [schedulesWithPending]);
 
@@ -1094,15 +1111,18 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                           Sin datos
                         </div>
                       ) : (
-                        filteredHours.map((hour) => (
+                      filteredHours.map((hour) => (
                           <div 
                             key={hour} 
-                            className="border-b bg-muted/10 flex items-center px-3"
+                            className="border-b bg-muted/10 flex items-center px-3 gap-1"
                             style={{ height: COVERAGE_ROW_HEIGHT }}
                           >
                             <span className="text-xs font-medium text-muted-foreground">
                               {String(hour).padStart(2, '0')}:00
                             </span>
+                            {hour < 5 && (
+                              <span className="text-[9px] text-muted-foreground/70">(cierre)</span>
+                            )}
                           </div>
                         ))
                       )
@@ -1276,10 +1296,13 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                                   <TooltipContent side="top" className="text-xs max-w-[200px]">
                                     <p className="font-medium">
                                       {format(day, "EEE d", { locale: es })}, {String(hour).padStart(2, '0')}:00
+                                      {hour < 5 && <span className="text-muted-foreground"> (cierre)</span>}
                                     </p>
                                     {count > 0 ? (
                                       <>
-                                        <p className="text-muted-foreground">{count} persona{count !== 1 ? 's' : ''}:</p>
+                                        <p className="text-muted-foreground">
+                                          {hour < 5 ? 'Cerrando el turno:' : `${count} persona${count !== 1 ? 's' : ''}:`}
+                                        </p>
                                         <ul className="mt-1">
                                           {employees.slice(0, 5).map((e, i) => (
                                             <li key={i} className="truncate">{e.user_name}</li>
