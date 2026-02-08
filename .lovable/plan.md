@@ -1,272 +1,146 @@
 
-# Análisis Completo: Problemas de Drag-Selection en Editor de Horarios
-
-## Resumen de Síntomas Reportados
-
-| # | Síntoma | Descripción |
-|---|---------|-------------|
-| 1 | **Selección no se extiende hasta la última celda** | Arrastras de Dom1 a Mar3, pero solo se selecciona hasta Lun2 |
-| 2 | **Deselección inesperada al arrastrar verticalmente** | Click en una celda, arrastrar hacia abajo, y se deselecciona todo |
-| 3 | **"Ghost dragging" al volver a la ventana** | Al salir y volver, el mouse sin click selecciona celdas |
+## Objetivo (lo que vamos a arreglar)
+1) El “lag de 1 celda” (A1→B1 no actualiza, recién A1→C1 muestra A1+B1) en la selección por arrastre.  
+2) Los bordes de fila/columna en feriados (que hoy se ven “cortados” o inconsistentes).  
+3) Quitar la “notificación/barra” de selección arriba (no mostrar nada si no hay selección; y opcionalmente no reservar altura).
 
 ---
 
-## Diagnóstico Técnico Detallado
+## Hallazgos en el codebase (estado actual)
+### Archivos involucrados
+- **Hook de selección**: `src/components/hr/schedule-selection/useScheduleSelection.ts`
+- **Tipos**: `src/components/hr/schedule-selection/types.ts`
+- **Toolbar/Hints**: `src/components/hr/schedule-selection/SelectionToolbar.tsx`
+- **Grid**: `src/components/hr/InlineScheduleEditor.tsx` (ruta actual `/milocal/:branchId/equipo/horarios` usa este componente)
 
-### Problema 1: Selección que "no alcanza" la última celda
+### 1) Confirmación: el bug NO parece ser “stale ref/state” dentro de `handleCellEnter`
+En `useScheduleSelection.ts`, `handleCellEnter` hoy hace esto (resumen):
+- compara `currentKey` vs `newKey`
+- actualiza `dragStateRef.current.currentCell = { userId, date }`
+- calcula la selección usando **el endCell por parámetro**:  
+  `calculateRectSelection(startCell, { userId, date })`
 
-**Causa raíz identificada**: Conflicto entre `onPointerDown` y `onClick` en la misma celda.
+Eso ya evita el patrón “Entré a B1 pero calculé con A1” por orden de refs/state.
+Conclusión: el síntoma A1→B1→(nada)→C1 sí encaja perfecto con otra causa:
+- **el evento (o la detección) de “entré a B1” NO está ocurriendo**, entonces `currentCell` queda en A1 hasta que se detecta C1, y el rectángulo A1→C1 incluye B1 “de rebote”.
 
-**Flujo actual problemático:**
-```text
-1. PointerDown en Dom1 → handleDragStart() → isDragging=true, selection={Dom1}
-2. PointerMove sobre Lun2 → handleGridPointerMove() → selection={Dom1,Lun2}
-3. PointerMove sobre Mar3 → handleGridPointerMove() → ❌ NO SE EJECUTA
-4. PointerUp → endDrag() → selection={Dom1,Lun2} (sin Mar3)
-```
+### 2) Por qué se pierde B1 (muy probable)
+Hoy el sistema depende de **`onPointerEnter` en cada celda** (ver `InlineScheduleEditor.tsx`, celdas tienen `onPointerEnter={() => selection.handleCellEnter(...)}`).
 
-**¿Por qué Mar3 no se detecta?**
+En grillas con `border-r/border-b`, es típico que exista un “micro-gap” (1px de borde, subpixel, repaint) donde:
+- el puntero puede pasar por un borde/gap y **no disparar enter del siguiente elemento** en un frame,
+- o el target real del evento es un hijo/overlay, no el contenedor con `data-cell`,
+- o el movimiento rápido con botón presionado haga que se “salte” el enter de la celda intermedia.
 
-El problema está en `handleGridPointerMove` que usa `document.elementFromPoint(e.clientX, e.clientY)`:
-
-```typescript
-// Línea 309-314 del hook
-const element = document.elementFromPoint(e.clientX, e.clientY);
-if (!element) return;   // ← Si el cursor está entre celdas, retorna
-
-const cellElement = element.closest('[data-cell]');
-if (!cellElement) return;  // ← Si hay un overlay/tooltip, no encuentra la celda
-```
-
-**Problemas específicos:**
-1. **Gaps entre celdas**: El `border-r` crea un espacio de 1px donde `elementFromPoint` no encuentra ninguna celda
-2. **Z-index de Tooltips**: Al pasar sobre una celda con Tooltip, el elemento bajo el cursor puede ser el TooltipTrigger, no el div con `data-cell`
-3. **Timing de actualización**: Si el `PointerMove` llega justo cuando React está re-renderizando (por el `setSelectedCells`), el elemento puede no estar disponible
-
-### Problema 2: Deselección al arrastrar verticalmente (una fila hacia abajo)
-
-**Causa raíz**: Doble ejecución de eventos `onClick` + `onPointerDown`.
-
-**Flujo problemático:**
-```text
-1. PointerDown en CeldaA → handleDragStart() → isDragging=true
-2. PointerMove (muy poco, cursor apenas sale) → didMove queda false
-3. PointerUp → endDrag() → commit selection (solo CeldaA)
-4. Click en CeldaB (porque el browser dispara click en la celda donde terminó el drag)
-   → handleCellClick() → ¡reemplaza selección con solo CeldaB!
-   → Pero si el cursor estaba entre celdas, no hay target válido
-   → setSelectedCells(new Set([CeldaB])) o peor: new Set() vacío
-```
-
-**El flag `didMove` no previene esto correctamente** porque se revisa en `handleCellClick`:
-
-```typescript
-// Línea 240-243
-if (dragStateRef.current.didMove) {
-  dragStateRef.current.didMove = false;
-  return;
-}
-```
-
-Pero `didMove` solo se marca `true` si cambió de celda durante el drag. Si el movimiento fue mínimo (pero suficiente para que el browser registre la posición final en otra celda), `didMove=false` y el `onClick` pisa la selección.
-
-### Problema 3: Ghost dragging (selección sin click)
-
-**Causa**: Los listeners de `blur` y `visibilitychange` pueden no ejecutarse si el focus se pierde de cierta manera (ej: click en otra app sin cambiar pestaña).
-
-**Además**: El `onPointerMove` en el contenedor se ejecuta SIEMPRE que el mouse se mueve, y solo chequea `dragStateRef.current.active`. Si por alguna razón ese ref quedó en `true`...
+Resultado: “me paro sobre B1 visualmente pero el sistema no registró enter en B1”.
 
 ---
 
-## Soluciones Propuestas
+## Plan de corrección (sin re-arquitectura, pero robusto)
+### Fase A — Instrumentación mínima para confirmar (rápido, 1 commit)
+1) Agregar logs temporales (controlados por un flag) dentro de:
+   - `handleDragStart`
+   - `handleCellEnter`
+   - un nuevo detector de celda “under pointer” (ver Fase B)
+2) Qué buscamos ver:
+   - si al pasar por B1 **no hay log de `handleCellEnter(B1)`**, entonces confirmado: el evento se pierde.
+   - si sí hay log, pero la selección no cambia, recién ahí revisamos cálculo (pero hoy el código se ve correcto).
 
-### Solución A: Pointer Capture (Crítico)
-
-Agregar `setPointerCapture` cuando inicia el drag para que TODOS los eventos de movimiento lleguen al elemento, incluso si el cursor está en gaps o sobre otros elementos:
-
-```typescript
-// En handleDragStart:
-const handleDragStart = useCallback((userId: string, date: string, e: React.PointerEvent) => {
-  if (!enabled) return;
-  if (e.shiftKey || e.ctrlKey || e.metaKey) return;
-  if (e.button !== 0) return;
-  
-  // ✅ Capturar el pointer para que todos los eventos lleguen
-  (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  
-  // ... resto de la lógica
-}, [enabled]);
-```
-
-Y en `endDrag` / `cancelDrag`:
-```typescript
-// Liberar pointer capture si existe
-if (dragStateRef.current.pointerId !== null) {
-  try {
-    document.releasePointerCapture(dragStateRef.current.pointerId);
-  } catch {}
-}
-```
-
-### Solución B: Mover tracking del pointer al elemento que tiene capture
-
-Con pointer capture, el tracking debería hacerse en handlers específicos en vez del contenedor:
-
-```typescript
-// En cada celda, agregar:
-onPointerMove={(e) => {
-  if (canManageSchedules && e.pointerId === dragStateRef.current.pointerId) {
-    // Actualizar selección directamente con la celda conocida
-    selection.updateDragCell(member.id, dateStr);
-  }
-}}
-```
-
-Alternativamente, usar un listener global:
-```typescript
-useEffect(() => {
-  const handleGlobalMove = (e: PointerEvent) => {
-    if (!dragStateRef.current.active) return;
-    // El resto de la lógica de elementFromPoint...
-  };
-  
-  window.addEventListener('pointermove', handleGlobalMove);
-  return () => window.removeEventListener('pointermove', handleGlobalMove);
-}, []);
-```
-
-### Solución C: Prevenir conflicto onClick/onPointerDown
-
-**Opción C1**: Usar un timeout para marcar si hubo drag:
-
-```typescript
-const handleDragStart = useCallback((...) => {
-  // ... inicio del drag
-  
-  // Prevenir click inmediato
-  setTimeout(() => {
-    dragStateRef.current.dragStarted = true;
-  }, 50);
-}, []);
-
-const handleCellClick = useCallback((...) => {
-  // Si el drag comenzó, ignorar el click
-  if (dragStateRef.current.active || dragStateRef.current.dragStarted) {
-    dragStateRef.current.dragStarted = false;
-    return;
-  }
-  // ... lógica de click
-}, []);
-```
-
-**Opción C2** (Mejor): Separar completamente click y drag:
-
-```typescript
-// En el JSX, en vez de tener ambos handlers:
-onClick={(e) => {
-  if (e.detail > 0 && !dragStateRef.current.justDragged) {
-    selection.handleCellClick(member.id, dateStr, e);
-  }
-}}
-onPointerDown={(e) => {
-  selection.handleDragStart(member.id, dateStr, e);
-}}
-onPointerUp={(e) => {
-  if (!dragStateRef.current.didMove) {
-    // Si no se movió, procesar como click
-    selection.handleCellClick(member.id, dateStr, e as any);
-  }
-  dragStateRef.current.justDragged = dragStateRef.current.didMove;
-  selection.endDrag();
-}}
-```
-
-### Solución D: Reseteo más agresivo del estado de drag
-
-```typescript
-// En cancelDrag, además de limpiar refs:
-const cancelDrag = useCallback(() => {
-  dragStateRef.current = {
-    active: false,
-    startCell: null,
-    currentCell: null,
-    didMove: false,
-    pointerId: null,
-    justDragged: false, // ← nuevo
-  };
-  lastDetectedCellRef.current = null;
-  setIsDragging(false);
-  
-  // ✅ También limpiar cualquier pointer capture pendiente
-  document.querySelectorAll('[data-cell]').forEach(el => {
-    try {
-      (el as HTMLElement).releasePointerCapture?.(dragStateRef.current.pointerId!);
-    } catch {}
-  });
-}, []);
-```
-
-### Solución E: Prevenir propagación de eventos que interfieren
-
-```typescript
-// En el contenedor del grid, prevenir que ciertos eventos suban:
-onPointerDown={(e) => {
-  // No hacer nada aquí, solo en las celdas
-  e.stopPropagation();
-}}
-```
+> Nota: estos logs se dejan con un `const DEBUG = false` para poder activarlos rápido si vuelve a pasar.
 
 ---
 
-## Plan de Implementación
+### Fase B — Fallback sólido durante drag: `pointermove` global + `elementFromPoint` (2–3 commits)
+Objetivo: aunque `onPointerEnter` se pierda, durante drag se detecta la celda actual con la posición del puntero y se llama a `handleCellEnter` manualmente.
 
-### Fase 1: Refactorizar `useScheduleSelection.ts`
+1) En `useScheduleSelection.ts`:
+   - agregar `useEffect` que **solo mientras `dragStateRef.current.active === true`** escuche `window.addEventListener('pointermove', ...)`.
+   - en cada `pointermove`:
+     - usar `document.elementFromPoint(e.clientX, e.clientY)`
+     - subir con `closest('[data-cell]')`
+     - parsear `data-cell="userId:yyyy-MM-dd"` y llamar a `handleCellEnter(userId, date)`.
 
-1. **Agregar Pointer Capture** en `handleDragStart`
-2. **Crear `updateDragCell`** como método dedicado (no depende de elementFromPoint)
-3. **Refactorizar `endDrag`** para liberar pointer capture y manejar el flag `justDragged`
-4. **Agregar listener global `pointermove`** como backup durante drag activo
-5. **Mejorar `cancelDrag`** con limpieza más exhaustiva
+2) Robustez extra para el caso “gap de 1px”:
+   - implementar muestreo multi-punto:
+     - probar `(x,y)`, `(x+1,y)`, `(x-1,y)`, `(x,y+1)`, `(x,y-1)`
+   - tomar el primer `data-cell` encontrado.
+   - esto elimina el “A1→B1 no detectado” incluso si el puntero cae justo en el borde.
 
-### Fase 2: Actualizar `InlineScheduleEditor.tsx`
+3) Evitar jitter / re-renders innecesarios:
+   - mantener un `lastDetectedKeyRef` y si no cambia, no llamar a `handleCellEnter`.
+   - `handleCellEnter` ya ignora si `currentKey === newKey`, pero igual conviene para performance.
 
-1. **Modificar los handlers de celdas**:
-   - `onPointerDown` → inicia drag con capture
-   - `onPointerMove` → actualiza drag directamente (si esta celda tiene capture)
-   - `onPointerUp` → termina drag, procesa click si no hubo movimiento
-   - Eliminar `onClick` separado (manejar en pointerUp)
-
-2. **Agregar `onLostPointerCapture`** para detectar si perdimos el capture inesperadamente
-
-3. **Remover el fallback `onMouseMove`/`onMouseDown`** (Pointer Events tienen soporte universal en browsers modernos)
-
-### Fase 3: Testing
-
-Casos a verificar:
-1. ✓ Click simple → selecciona 1 celda
-2. ✓ Drag horizontal Dom1→Mar3 → selecciona 3 celdas en fila
-3. ✓ Drag vertical 1 celda hacia abajo → selecciona 2 celdas (columna)
-4. ✓ Drag diagonal → rectángulo completo
-5. ✓ Salir de ventana y volver → no hay ghost dragging
-6. ✓ Drag sobre feriados → funciona igual
-7. ✓ Ctrl+Click → agrega/quita de selección
+4) Mantener `onPointerEnter`:
+   - se deja como vía primaria (barata y limpia),
+   - el `pointermove global` actúa como “airbag” cuando se pierde el enter.
 
 ---
 
-## Archivos a Modificar
+### Fase C — Overlays y “pointer-events: none” (1 commit)
+Si existe cualquier overlay sobre la grilla (highlight layers, wrappers, etc.), puede interceptar el puntero y hacer errático `closest('[data-cell]')`.
 
-| Archivo | Cambios |
-|---------|---------|
-| `src/components/hr/schedule-selection/useScheduleSelection.ts` | Refactor completo del sistema de drag con Pointer Capture |
-| `src/components/hr/InlineScheduleEditor.tsx` | Actualizar handlers de celda, eliminar fallbacks legacy |
-| `src/components/hr/schedule-selection/types.ts` | Agregar nuevos campos al tipo de drag state |
+Acción:
+- revisar componentes que renderizan encima de la grilla (especialmente si hay contenedores `absolute` o `sticky` superpuestos).
+- asegurar `pointer-events: none` en capas visuales que no deban capturar eventos.
+
+En este editor, la selección actualmente se pinta con clases (`ring`, `bg-primary/20`), no con overlays, pero igual lo verificamos en el DOM (y si hay overlays de popovers/tooltips dentro de la celda, confirmamos que no tapen el wrapper).
 
 ---
 
-## Resultado Esperado
+## Plan UI: bordes en feriados + eliminar barra superior
+### D1) Bordes de fila/columna en feriados (1 commit)
+Hoy la celda feriado usa:
+- `border-r border-b border-border/40` (bien)
+- pero además agrega `border-orange-200` que cambia el color de TODOS los bordes; puede quedar tan tenue que “parece que no hay fila”.
 
-Después de implementar:
-- El drag se sentirá **fluido y preciso** como en Excel/Google Sheets
-- No habrá más "celdas que no alcanzan" porque Pointer Capture garantiza que todos los movimientos se registren
-- No habrá deselecciones inesperadas porque el conflicto click/drag estará resuelto
-- No habrá ghost dragging porque el estado se limpiará correctamente
+Cambio propuesto:
+- NO cambiar el color de borde para feriados; solo cambiar el fondo.
+- Mantener un borde consistente (`border-border/40`) para que siempre se vean filas/columnas iguales.
+- Si querés un acento sutil, aplicarlo en el header del día (ya está en naranja) y no en todas las celdas.
+
+Concretamente:
+- en `InlineScheduleEditor.tsx`:
+  - reemplazar `isHoliday && '... border-orange-200 ...'` por solo `isHoliday && 'bg-orange-50 ...'`
+  - conservar `border-r border-b border-border/40` siempre.
+
+### D2) Quitar la “notificación/barra” de selección arriba (1 commit)
+Hoy se renderiza siempre (cuando `canManageSchedules && activeView === 'personas'`) y reserva altura (`min-h-[40px]`), incluso sin selección.
+
+Cambio propuesto:
+- renderizar el contenedor de `SelectionToolbar` **solo si `selection.selectedCells.size > 0`**.
+- si querés conservar el hint “Click para seleccionar…”, moverlo a otro lugar (o directamente no mostrarlo).
+- Resultado: desaparece el bloque superior cuando no hay selección (sin ruido visual).
+
+---
+
+## Validación (checklist exacta en tu pantalla)
+En `/milocal/.../equipo/horarios`:
+
+1) Drag corto A1→B1: debe seleccionar A1 y B1 inmediatamente (sin necesitar C1).
+2) Drag A1→C1: debe seleccionar A1,B1,C1.
+3) Drag rápido (moviendo el mouse rápido sobre bordes): no debe “saltearse” celdas.
+4) Drag vertical (A1→A2): debe seleccionar ambas (y no deseleccionar).
+5) Bordes: en columnas feriado, se deben ver los bordes de fila (líneas horizontales) igual que los días normales.
+6) Barra superior: no debe aparecer nada arriba si no hay selección.
+
+---
+
+## Entregables (qué cambios de código voy a hacer)
+- `useScheduleSelection.ts`
+  - agregar fallback `pointermove global` durante drag + muestreo multi-punto
+  - agregar logs opcionales de debug (apagados por defecto)
+- `InlineScheduleEditor.tsx`
+  - ajustar clases de feriados para no romper bordes
+  - ocultar `SelectionToolbar` cuando no hay selección (y quitar el “placeholder” si no lo querés)
+- (opcional) revisar si hay capas que requieran `pointer-events: none`
+
+---
+
+## Riesgos / Tradeoffs
+- `pointermove global` durante drag aumenta un poco el trabajo por movimiento, pero solo ocurre mientras arrastrás. Con el “lastDetectedKeyRef” queda muy liviano.
+- Si hay popovers abiertos durante drag, la detección con `elementFromPoint` puede apuntar a otra cosa. Por eso el `closest('[data-cell]')` y el muestreo multi-punto son clave.
+
+---
+
+## Pregunta mínima (solo para cerrar el alcance visual)
+- ¿Querés eliminar completamente cualquier ayuda textual (“Click para seleccionar · …”) o querés que quede en algún lugar más discreto (por ejemplo, abajo del grid o dentro de un tooltip)?
