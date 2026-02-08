@@ -275,7 +275,7 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
     toast.info('Cambios descartados');
   };
 
-  // Save mutation
+  // Save mutation - uses UPSERT to avoid duplicate key errors
   const saveMutation = useMutation({
     mutationFn: async ({ notifyEmail, notifyCommunication }: { notifyEmail: boolean; notifyCommunication: boolean }) => {
       const changesByUser = new Map<string, PendingChange[]>();
@@ -296,41 +296,10 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
         }));
 
         for (const day of days) {
-          const existingSchedule = schedulesByUser.get(userId)?.get(day.date);
-          
           const hasValidSchedule = day.start_time || day.is_day_off;
           
-          if (existingSchedule?.id) {
-            if (hasValidSchedule) {
-              const scheduleData = {
-                user_id: userId,
-                employee_id: userId,
-                branch_id: branchId,
-                schedule_date: day.date,
-                schedule_month: month,
-                schedule_year: year,
-                day_of_week: new Date(day.date).getDay(),
-                start_time: day.is_day_off ? '00:00' : day.start_time,
-                end_time: day.is_day_off ? '00:00' : day.end_time,
-                is_day_off: day.is_day_off,
-                work_position: day.work_position,
-                published_at: new Date().toISOString(),
-                published_by: currentUserId,
-              };
-              
-              const { error } = await supabase
-                .from('employee_schedules')
-                .update(scheduleData)
-                .eq('id', existingSchedule.id);
-              if (error) throw error;
-            } else {
-              const { error } = await supabase
-                .from('employee_schedules')
-                .delete()
-                .eq('id', existingSchedule.id);
-              if (error) throw error;
-            }
-          } else if (hasValidSchedule) {
+          if (hasValidSchedule) {
+            // Use UPSERT to handle both insert and update
             const scheduleData = {
               user_id: userId,
               employee_id: userId,
@@ -343,13 +312,27 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
               end_time: day.is_day_off ? '00:00' : day.end_time,
               is_day_off: day.is_day_off,
               work_position: day.work_position,
+              shift_number: 1,
               published_at: new Date().toISOString(),
               published_by: currentUserId,
             };
             
+            // Use the user_id + schedule_date unique index
             const { error } = await supabase
               .from('employee_schedules')
-              .insert(scheduleData);
+              .upsert(scheduleData, {
+                onConflict: 'user_id,schedule_date',
+                ignoreDuplicates: false,
+              });
+            if (error) throw error;
+          } else {
+            // Delete if clearing the schedule
+            const { error } = await supabase
+              .from('employee_schedules')
+              .delete()
+              .eq('employee_id', userId)
+              .eq('schedule_date', day.date)
+              .eq('branch_id', branchId);
             if (error) throw error;
           }
         }
