@@ -702,19 +702,7 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
   };
 
   // Handle mouse move on grid container for drag selection
-  const handleGridMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!selection.isDragging) return;
-    
-    // Find the cell under cursor using elementFromPoint
-    const element = document.elementFromPoint(e.clientX, e.clientY);
-    const cellData = element?.closest('[data-cell]')?.getAttribute('data-cell');
-    if (cellData) {
-      const [userId, date] = cellData.split(':');
-      if (userId && date) {
-        selection.handleDragMove(userId, date);
-      }
-    }
-  }, [selection.isDragging, selection.handleDragMove]);
+  // handleGridMouseMove is now handled in the unified container with selection.handleGridPointerMove
 
   // Phase 3: Copy previous month pattern
   const handleCopyPreviousMonth = useCallback(() => {
@@ -999,8 +987,22 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                   )}
                 </div>
 
-                {/* Days Grid */}
-                <div className="flex-1">
+                {/* Days Grid - unified container for pointer move tracking */}
+                <div 
+                  className="flex-1"
+                  style={{ touchAction: 'none' }}
+                  onPointerMove={(e) => {
+                    if (activeView === 'personas' && canManageSchedules) {
+                      selection.handleGridPointerMove(e);
+                    }
+                  }}
+                  onMouseMove={(e) => {
+                    // Fallback for older browsers
+                    if (activeView === 'personas' && canManageSchedules) {
+                      selection.handleGridPointerMove(e);
+                    }
+                  }}
+                >
                   <div style={{ width: gridWidth }}>
                     {/* Day headers - sticky top */}
                     <div className="h-12 border-b bg-muted/50 flex sticky top-0 z-10">
@@ -1065,13 +1067,11 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                           key={member.id} 
                           className="flex border-b"
                           style={{ height: SCHEDULE_ROW_HEIGHT }}
-                          onMouseMove={handleGridMouseMove}
                         >
                           {monthDays.map((day) => {
                             const dateStr = format(day, 'yyyy-MM-dd');
                             const isHoliday = holidayDates.has(dateStr);
                             const dayOfWeek = day.getDay();
-                            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
                             const isSaturday = dayOfWeek === 6;
                             const isSunday = dayOfWeek === 0;
                             const value = getEffectiveValue(member.id, dateStr);
@@ -1098,9 +1098,16 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                                   if (!isEditable) return;
                                   selection.handleCellClick(member.id, dateStr, e);
                                 }}
-                                onMouseDown={(e) => {
+                                onPointerDown={(e) => {
                                   if (!isEditable) return;
                                   selection.handleDragStart(member.id, dateStr, e);
+                                }}
+                                onMouseDown={(e) => {
+                                  // Fallback for older browsers
+                                  if (!isEditable) return;
+                                  if (!('pointerId' in e)) {
+                                    selection.handleDragStart(member.id, dateStr, e as any);
+                                  }
                                 }}
                               >
                                 {renderCellContent(value, isPending, isHoliday, isSelected)}
