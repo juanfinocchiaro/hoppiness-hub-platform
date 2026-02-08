@@ -58,6 +58,9 @@ interface PendingChange {
   position: WorkPositionType | null;
   breakStart?: string | null;
   breakEnd?: string | null;
+  // Split shift support
+  startTime2?: string | null;
+  endTime2?: string | null;
   originalValue: ScheduleEntry | null;
 }
 
@@ -198,6 +201,8 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
         position: pending.position,
         breakStart: pending.breakStart,
         breakEnd: pending.breakEnd,
+        startTime2: pending.startTime2,
+        endTime2: pending.endTime2,
       };
     }
 
@@ -210,6 +215,8 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
         position: (schedule as any).work_position || null,
         breakStart: (schedule as any).break_start || null,
         breakEnd: (schedule as any).break_end || null,
+        startTime2: (schedule as any).start_time_2 || null,
+        endTime2: (schedule as any).end_time_2 || null,
       };
     }
 
@@ -230,7 +237,9 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
       (originalSchedule?.start_time || null) === value.startTime &&
       (originalSchedule?.end_time || null) === value.endTime &&
       (originalSchedule?.is_day_off || false) === value.isDayOff &&
-      ((originalSchedule as any)?.work_position || null) === value.position;
+      ((originalSchedule as any)?.work_position || null) === value.position &&
+      ((originalSchedule as any)?.start_time_2 || null) === value.startTime2 &&
+      ((originalSchedule as any)?.end_time_2 || null) === value.endTime2;
 
     if (isSameAsOriginal) {
       setPendingChanges(prev => {
@@ -251,6 +260,8 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
           position: value.position,
           breakStart: value.breakStart,
           breakEnd: value.breakEnd,
+          startTime2: value.startTime2,
+          endTime2: value.endTime2,
           originalValue: originalSchedule,
         });
         return next;
@@ -293,6 +304,8 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
         shift_number: number;
         published_at: string;
         published_by: string | null;
+        start_time_2: string | null;
+        end_time_2: string | null;
       }> = [];
       
       const recordsToDelete: Array<{ userId: string; date: string }> = [];
@@ -322,6 +335,8 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
             shift_number: 1,
             published_at: now,
             published_by: currentUserId,
+            start_time_2: change.startTime2 || null,
+            end_time_2: change.endTime2 || null,
           });
         } else {
           recordsToDelete.push({ userId: change.userId, date: change.date });
@@ -663,6 +678,10 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
     const positionConfig = value.position ? POSITION_ICONS[value.position] : null;
     const PositionIcon = positionConfig?.icon;
     const hasBreak = value.breakStart && value.breakEnd;
+    
+    // Check for split shift (second time range)
+    const hasSplitShift = value.startTime2 && value.endTime2 && 
+      value.startTime2 !== '00:00' && value.endTime2 !== '00:00';
 
     return (
       <div className={cn(
@@ -671,6 +690,9 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
       )}>
         <div className="font-medium text-foreground">
           {value.startTime.slice(0, 5)}-{value.endTime.slice(0, 5)}
+          {hasSplitShift && (
+            <span className="text-muted-foreground"> / {value.startTime2!.slice(0, 5)}-{value.endTime2!.slice(0, 5)}</span>
+          )}
         </div>
         
         <div className="flex items-center gap-1">
@@ -684,7 +706,7 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
               </TooltipContent>
             </Tooltip>
           )}
-          {hasBreak && (
+          {hasBreak && !hasSplitShift && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Coffee className="w-3 h-3 text-amber-600" />

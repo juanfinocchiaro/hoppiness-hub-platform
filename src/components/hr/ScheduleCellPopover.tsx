@@ -14,7 +14,8 @@ import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Coffee, X, Check, Calendar, Clock, Trash2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Coffee, X, Check, Calendar, Clock, Trash2, Plus } from 'lucide-react';
 import { useWorkPositions } from '@/hooks/useWorkPositions';
 import type { WorkPositionType } from '@/types/workPosition';
 
@@ -26,6 +27,9 @@ export interface ScheduleValue {
   position: WorkPositionType | null;
   breakStart?: string | null;
   breakEnd?: string | null;
+  // Split shift support (second time range)
+  startTime2?: string | null;
+  endTime2?: string | null;
 }
 
 interface ScheduleCellPopoverProps {
@@ -113,10 +117,19 @@ export function ScheduleCellPopover({
   const [breakStart, setBreakStart] = useState(value.breakStart || '');
   const [breakEnd, setBreakEnd] = useState(value.breakEnd || '');
   
+  // Split shift (second time range)
+  const [hasSplitShift, setHasSplitShift] = useState(!!value.startTime2 && !!value.endTime2);
+  const [customStart2, setCustomStart2] = useState(value.startTime2 || '20:00');
+  const [customEnd2, setCustomEnd2] = useState(value.endTime2 || '01:00');
+  
   const { data: workPositions = [] } = useWorkPositions();
 
   const shiftHours = useMemo(() => calculateShiftHours(customStart, customEnd), [customStart, customEnd]);
-  const requiresBreak = shiftHours > 6;
+  const shiftHours2 = useMemo(() => hasSplitShift ? calculateShiftHours(customStart2, customEnd2) : 0, [customStart2, customEnd2, hasSplitShift]);
+  const totalHours = shiftHours + shiftHours2;
+  
+  // Break only applies to continuous shifts (not split shifts)
+  const requiresBreak = !hasSplitShift && shiftHours > 6;
   
   const hasExistingShift = value.startTime || value.endTime || value.isDayOff;
 
@@ -137,6 +150,13 @@ export function ScheduleCellPopover({
       setPosition(value.position || defaultPosition || '');
       setBreakStart(value.breakStart || '');
       setBreakEnd(value.breakEnd || '');
+      
+      // Initialize split shift state
+      const hasSecondShift = !!value.startTime2 && !!value.endTime2 && 
+        value.startTime2 !== '00:00' && value.endTime2 !== '00:00';
+      setHasSplitShift(hasSecondShift);
+      setCustomStart2(value.startTime2 || '20:00');
+      setCustomEnd2(value.endTime2 || '01:00');
     }
   }, [open, value, defaultPosition]);
 
@@ -201,6 +221,8 @@ export function ScheduleCellPopover({
         position: (position || null) as WorkPositionType | null,
         breakStart: requiresBreak ? breakStart : null,
         breakEnd: requiresBreak ? breakEnd : null,
+        startTime2: hasSplitShift ? customStart2 : null,
+        endTime2: hasSplitShift ? customEnd2 : null,
       });
       onOpenChange(false);
     }
@@ -275,12 +297,12 @@ export function ScheduleCellPopover({
               </div>
             </div>
 
-            {/* Time inputs */}
+            {/* First shift time inputs */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground flex items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  Entrada
+                  {hasSplitShift ? 'Turno 1 - Entrada' : 'Entrada'}
                 </Label>
                 <Input
                   type="time"
@@ -292,7 +314,7 @@ export function ScheduleCellPopover({
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground flex items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  Salida
+                  {hasSplitShift ? 'Turno 1 - Salida' : 'Salida'}
                 </Label>
                 <Input
                   type="time"
@@ -303,18 +325,63 @@ export function ScheduleCellPopover({
               </div>
             </div>
 
+            {/* Split shift toggle */}
+            <div className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Plus className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs font-medium">Turno cortado (doble jornada)</span>
+              </div>
+              <Switch
+                checked={hasSplitShift}
+                onCheckedChange={setHasSplitShift}
+              />
+            </div>
+
+            {/* Second shift time inputs (only when split shift is enabled) */}
+            {hasSplitShift && (
+              <div className="grid grid-cols-2 gap-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    Turno 2 - Entrada
+                  </Label>
+                  <Input
+                    type="time"
+                    value={customStart2}
+                    onChange={(e) => setCustomStart2(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    Turno 2 - Salida
+                  </Label>
+                  <Input
+                    type="time"
+                    value={customEnd2}
+                    onChange={(e) => setCustomEnd2(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Duration badge */}
             <div className="flex items-center justify-center">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-muted rounded-full text-xs font-medium">
                 <Clock className="w-3 h-3" />
-                {shiftHours.toFixed(1)} horas
+                {totalHours.toFixed(1)} horas
+                {hasSplitShift && (
+                  <span className="text-muted-foreground"> ({shiftHours.toFixed(1)} + {shiftHours2.toFixed(1)})</span>
+                )}
                 {requiresBreak && (
                   <span className="text-primary"> · incluye break</span>
                 )}
               </span>
             </div>
 
-            {/* Break section */}
+            {/* Break section - only for continuous shifts */}
             {requiresBreak && (
               <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 space-y-2 border border-amber-200 dark:border-amber-800">
                 <div className="flex items-center gap-2 text-xs font-medium text-amber-700 dark:text-amber-400">
