@@ -83,7 +83,6 @@ const changeKey = (userId: string, date: string) => `${userId}:${date}`;
 
 const DAY_WIDTH = 80;
 const EMPLOYEE_COL_WIDTH = 160;
-const HOURS_COL_WIDTH = 50;
 const SCHEDULE_ROW_HEIGHT = 56;
 const COVERAGE_ROW_HEIGHT = 32;
 
@@ -681,18 +680,37 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
     return allHoursWithCoverage;
   }, [allHoursWithCoverage, hourRange]);
 
-  // Get employees at specific hour for a day
+  // Get employees at specific hour for a day (handles overnight shifts from previous day)
   const getEmployeesAtHour = useCallback((dateStr: string, hour: number) => {
+    const currentDate = new Date(dateStr);
+    const previousDateStr = format(new Date(currentDate.getTime() - 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
+    
     return schedulesWithPending.filter(s => {
-      if (s.schedule_date !== dateStr) return false;
       if (s.is_day_off) return false;
       if (!s.start_time || !s.end_time) return false;
       
       const [startH] = s.start_time.split(':').map(Number);
       const [endH] = s.end_time.split(':').map(Number);
-      const adjustedEnd = endH < startH ? endH + 24 : endH;
+      const isOvernight = endH < startH;
       
-      return startH <= hour && hour < adjustedEnd;
+      // Case 1: Schedule is for this date
+      if (s.schedule_date === dateStr) {
+        if (isOvernight) {
+          // For overnight shift on this date, only count hours from start until midnight
+          return hour >= startH;
+        } else {
+          // Normal shift
+          return startH <= hour && hour < endH;
+        }
+      }
+      
+      // Case 2: Overnight shift from previous day spills into this date
+      if (s.schedule_date === previousDateStr && isOvernight) {
+        // Check if the hour falls in the morning portion (0 to endH)
+        return hour < endH;
+      }
+      
+      return false;
     });
   }, [schedulesWithPending]);
 
@@ -906,6 +924,26 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                       <span className="hidden sm:inline">Cobertura</span>
                     </button>
                   </div>
+                  
+                  {/* Monthly hours summary - only for personas view */}
+                  {activeView === 'personas' && (
+                    <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                      <span className="font-medium">
+                        {Array.from(monthlyHoursByEmployee.values()).reduce((a, b) => a + b, 0).toFixed(0)}h
+                      </span>
+                      <span className="text-muted-foreground/70">programadas</span>
+                      {Array.from(monthlyHoursByEmployee.entries()).some(([_, h]) => h > 190) && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <AlertCircle className="w-3.5 h-3.5 text-destructive" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Hay empleados que superan las 190hs mensuales
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                  )}
 
                   {/* Hour range filter - only for Cobertura view */}
                   {activeView === 'cobertura' && (
@@ -1070,40 +1108,6 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                       )
                     )}
                   </div>
-                  
-                  {/* Hours column - only for personas view */}
-                  {activeView === 'personas' && (
-                    <div className="border-l" style={{ width: HOURS_COL_WIDTH }}>
-                      {/* Header */}
-                      <div className="h-12 border-b bg-muted/50 flex items-center justify-center sticky top-0 z-30 bg-card">
-                        <span className="text-[10px] font-medium text-muted-foreground">Hrs</span>
-                      </div>
-                      
-                      {/* Hours per employee */}
-                      {team.map((member) => {
-                        const hours = monthlyHoursByEmployee.get(member.id) || 0;
-                        const isOverLimit = hours > 190; // CCT limit
-                        
-                        return (
-                          <div 
-                            key={member.id}
-                            className={cn(
-                              "border-b flex items-center justify-center bg-card",
-                              isOverLimit && "bg-destructive/10"
-                            )}
-                            style={{ height: SCHEDULE_ROW_HEIGHT }}
-                          >
-                            <span className={cn(
-                              "text-xs font-medium tabular-nums",
-                              isOverLimit ? "text-destructive" : "text-muted-foreground"
-                            )}>
-                              {hours.toFixed(0)}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
                 </div>
 
                 {/* Days Grid */}
