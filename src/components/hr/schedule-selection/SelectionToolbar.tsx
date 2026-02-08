@@ -1,11 +1,12 @@
 /**
  * SelectionToolbar - Inline action bar when cells are selected
  * 
- * V4 (Feb 2026) - Only rendered when selection exists:
+ * V5 (Feb 2026) - Added split shift ("Turno cortado") support:
  * - Day type buttons: Franco, Vacaciones, Cumple
  * - Position selector
  * - Time inputs (Entrada/Salida) + Apply button
- * - Break toggle (auto for >6h shifts)
+ * - Split shift toggle with second time inputs
+ * - Break toggle (auto for >6h shifts, hidden for split shifts)
  * - Copy/Paste/Clear buttons
  * - Keyboard shortcut hints
  */
@@ -27,6 +28,7 @@ import {
   Palmtree,
   Cake,
   Coffee,
+  SplitSquareHorizontal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ClipboardDataV2 } from './types';
@@ -41,7 +43,14 @@ interface SelectionToolbarProps {
   onApplyDayOff: () => void;
   onApplyVacation: () => void;
   onApplyBirthday: () => void;
-  onApplyWithOptions: (start: string, end: string, position: string | null, includeBreak: boolean) => void;
+  onApplyWithOptions: (
+    start: string, 
+    end: string, 
+    position: string | null, 
+    includeBreak: boolean,
+    start2?: string,
+    end2?: string
+  ) => void;
   onDeselect: () => void;
   positions?: WorkPosition[];
   showBirthday?: boolean;
@@ -67,6 +76,11 @@ export function SelectionToolbar({
   const [endTime, setEndTime] = useState('23:00');
   const [selectedPosition, setSelectedPosition] = useState<string>('');
   const [includeBreak, setIncludeBreak] = useState(true);
+  
+  // Split shift state
+  const [isSplitShift, setIsSplitShift] = useState(false);
+  const [startTime2, setStartTime2] = useState('20:00');
+  const [endTime2, setEndTime2] = useState('01:00');
 
   const handleApply = () => {
     if (startTime && endTime) {
@@ -74,7 +88,9 @@ export function SelectionToolbar({
         startTime, 
         endTime, 
         selectedPosition || null, 
-        includeBreak
+        isSplitShift ? false : includeBreak, // No break for split shifts
+        isSplitShift && startTime2 ? startTime2 : undefined,
+        isSplitShift && endTime2 ? endTime2 : undefined
       );
     }
   };
@@ -166,7 +182,7 @@ export function SelectionToolbar({
         </Select>
       )}
 
-      {/* Quick time inputs */}
+      {/* Quick time inputs - First shift */}
       <div className="flex items-center gap-1">
         <span className="text-xs text-muted-foreground hidden sm:inline">Entrada</span>
         <Input
@@ -186,31 +202,83 @@ export function SelectionToolbar({
         />
       </div>
 
-      {/* Break toggle */}
+      <Separator orientation="vertical" className="h-5" />
+
+      {/* Split shift toggle */}
       <div className="flex items-center gap-1.5">
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="flex items-center gap-1">
               <Switch
-                id="break-toggle"
-                checked={includeBreak}
-                onCheckedChange={setIncludeBreak}
+                id="split-shift-toggle"
+                checked={isSplitShift}
+                onCheckedChange={setIsSplitShift}
                 className="scale-75"
               />
               <Label 
-                htmlFor="break-toggle" 
+                htmlFor="split-shift-toggle" 
                 className="text-xs text-muted-foreground cursor-pointer flex items-center gap-1"
               >
-                <Coffee className="w-3 h-3" />
-                <span className="hidden sm:inline">Break</span>
+                <SplitSquareHorizontal className="w-3 h-3" />
+                <span className="hidden sm:inline">Cortado</span>
               </Label>
             </div>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            Break automático (30 min) para turnos de +6 horas
+            Turno cortado (doble jornada)
           </TooltipContent>
         </Tooltip>
       </div>
+
+      {/* Second shift inputs - only visible when split shift is enabled */}
+      {isSplitShift && (
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-muted-foreground hidden sm:inline">Entrada 2</span>
+          <Input
+            type="time"
+            value={startTime2}
+            onChange={(e) => setStartTime2(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="h-7 w-[90px] text-xs"
+          />
+          <span className="text-xs text-muted-foreground hidden sm:inline">Salida 2</span>
+          <Input
+            type="time"
+            value={endTime2}
+            onChange={(e) => setEndTime2(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="h-7 w-[90px] text-xs"
+          />
+        </div>
+      )}
+
+      {/* Break toggle - hidden when split shift is active */}
+      {!isSplitShift && (
+        <div className="flex items-center gap-1.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-1">
+                <Switch
+                  id="break-toggle"
+                  checked={includeBreak}
+                  onCheckedChange={setIncludeBreak}
+                  className="scale-75"
+                />
+                <Label 
+                  htmlFor="break-toggle" 
+                  className="text-xs text-muted-foreground cursor-pointer flex items-center gap-1"
+                >
+                  <Coffee className="w-3 h-3" />
+                  <span className="hidden sm:inline">Break</span>
+                </Label>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              Break automático (30 min) para turnos de +6 horas
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      )}
 
       {/* Apply button */}
       <Button 

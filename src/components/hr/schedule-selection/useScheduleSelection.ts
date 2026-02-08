@@ -781,22 +781,27 @@ export function useScheduleSelection({
     toast.success(`🎂 Cumple aplicado a ${cells.length} celda${cells.length > 1 ? 's' : ''}`);
   }, [selectedCells, onCellChange, getTeamMemberName]);
 
-  // Apply schedule with all options (time, position, break)
+  // Apply schedule with all options (time, position, break, split shift)
   const handleApplyWithOptions = useCallback((
     startTime: string, 
     endTime: string, 
     position: string | null,
-    includeBreak: boolean
+    includeBreak: boolean,
+    startTime2?: string,
+    endTime2?: string
   ) => {
     if (selectedCells.size === 0) return;
     
     const cells = Array.from(selectedCells).map(parseCellKey);
     
     // Calculate break times if needed (auto-calculate for shifts >6h)
+    // Only if not a split shift
     let breakStart: string | null = null;
     let breakEnd: string | null = null;
     
-    if (includeBreak && startTime && endTime) {
+    const hasSplitShift = startTime2 && endTime2;
+    
+    if (!hasSplitShift && includeBreak && startTime && endTime) {
       const [startH, startM] = startTime.split(':').map(Number);
       const [endH, endM] = endTime.split(':').map(Number);
       let durationMinutes = (endH * 60 + endM) - (startH * 60 + startM);
@@ -822,8 +827,10 @@ export function useScheduleSelection({
       endTime,
       isDayOff: false,
       position,
-      breakStart,
-      breakEnd,
+      breakStart: hasSplitShift ? null : breakStart,
+      breakEnd: hasSplitShift ? null : breakEnd,
+      startTime2: hasSplitShift ? startTime2 : null,
+      endTime2: hasSplitShift ? endTime2 : null,
     };
 
     cells.forEach(cell => {
@@ -833,7 +840,8 @@ export function useScheduleSelection({
 
     const posLabel = position ? ` (${position})` : '';
     const breakLabel = breakStart ? ' + break' : '';
-    toast.success(`✓ ${startTime}-${endTime}${posLabel}${breakLabel} aplicado a ${cells.length} celda${cells.length > 1 ? 's' : ''}`);
+    const splitLabel = hasSplitShift ? ` / ${startTime2}-${endTime2}` : '';
+    toast.success(`✓ ${startTime}-${endTime}${splitLabel}${posLabel}${breakLabel} aplicado a ${cells.length} celda${cells.length > 1 ? 's' : ''}`);
     setSelectedCells(new Set());
   }, [selectedCells, onCellChange, getTeamMemberName]);
 
