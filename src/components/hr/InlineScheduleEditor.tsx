@@ -36,7 +36,7 @@ import { useMonthlySchedules, type ScheduleEntry, type DaySchedule } from '@/hoo
 import { sendBulkScheduleNotifications } from '@/hooks/useScheduleNotifications';
 import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
-import { ScheduleCellPopover, type ScheduleValue } from './ScheduleCellPopover';
+import { type ScheduleValue } from './ScheduleCellPopover';
 import { SaveScheduleDialog } from './SaveScheduleDialog';
 import { useScheduleSelection, SelectionToolbar } from './schedule-selection';
 import { usePreviousMonthPattern, applyPatternToMonth } from '@/hooks/usePreviousMonthSchedules';
@@ -98,9 +98,6 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
   const [activeView, setActiveView] = useState<ViewType>('personas');
   const [hourRange, setHourRange] = useState<HourRangeType>('all');
   const [copyMonthDialogOpen, setCopyMonthDialogOpen] = useState(false);
-  
-  // Popover state for individual cell editing (double-click)
-  const [editingCell, setEditingCell] = useState<{ userId: string; userName: string; dateStr: string } | null>(null);
   
   // Work positions for toolbar
   const { data: workPositions = [] } = useWorkPositions();
@@ -1121,10 +1118,6 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                                 onLostPointerCapture={() => {
                                   selection.handleLostPointerCapture();
                                 }}
-                                onDoubleClick={() => {
-                                  if (!isEditable) return;
-                                  setEditingCell({ userId: member.id, userName: member.full_name || '', dateStr });
-                                }}
                               >
                                 {renderCellContent(value, isPending, isHoliday, isSelected)}
                               </div>
@@ -1281,38 +1274,6 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Cell Edit Popover (double-click on cell) */}
-        {editingCell && (
-          <ScheduleCellPopover
-            open={!!editingCell}
-            onOpenChange={(open) => {
-              if (!open) setEditingCell(null);
-            }}
-            value={getEffectiveValue(editingCell.userId, editingCell.dateStr)}
-            onChange={(value) => {
-              handleCellChange(
-                editingCell.userId,
-                editingCell.userName,
-                editingCell.dateStr,
-                value
-              );
-              setEditingCell(null);
-            }}
-            employeeName={editingCell.userName}
-            dateLabel={format(new Date(editingCell.dateStr + 'T12:00:00'), "EEEE d 'de' MMMM", { locale: es })}
-            defaultPosition={team.find(m => m.id === editingCell.userId)?.default_position || null}
-            hasBirthdayThisMonth={birthdayMonthMap.get(editingCell.userId) === month}
-            birthdayUsedThisMonth={
-              (() => {
-                const userSchedules = schedulesByUser.get(editingCell.userId);
-                if (!userSchedules) return false;
-                return Array.from(userSchedules.values()).some(
-                  (s) => (s as any).work_position === 'cumple'
-                );
-              })()
-            }
-          />
-        )}
       </div>
     </TooltipProvider>
   );
