@@ -1,10 +1,10 @@
 /**
  * useScheduleSelection - Excel-style multi-cell selection
  * 
- * V6 (Feb 2026) - Simple drag model without Pointer Capture:
- * - Uses onPointerEnter on cells for reliable drag tracking
- * - Global pointerup listener to end drag
- * - No more elementFromPoint issues
+ * V7 (Feb 2026) - Robust drag with global pointermove fallback:
+ * - Primary: onPointerEnter on cells
+ * - Fallback: global pointermove with elementFromPoint + multi-point sampling
+ * - This eliminates the "1-cell lag" when onPointerEnter is missed
  * 
  * Supports:
  * - Keyboard shortcuts: Ctrl+C, Ctrl+V, Delete, Escape, F, V
@@ -22,6 +22,9 @@ import {
   type ClipboardDataV2,
 } from './types';
 
+// Debug flag - set to true to see drag detection logs
+const DEBUG = false;
+
 interface UseScheduleSelectionOptions {
   monthDays: Date[];
   teamMemberIds: string[];
@@ -36,6 +39,38 @@ interface DragState {
   active: boolean;
   startCell: CellKey | null;
   currentCell: CellKey | null;
+}
+
+/**
+ * Multi-point sampling to find a cell even when pointer is on border/gap.
+ * Returns the first cell found from the sampling points, or null.
+ */
+function findCellAtPoint(x: number, y: number): CellKey | null {
+  // Sample points: center + small offsets to catch border cases
+  const offsets = [
+    [0, 0],
+    [2, 0], [-2, 0],
+    [0, 2], [0, -2],
+    [2, 2], [-2, -2],
+  ];
+  
+  for (const [dx, dy] of offsets) {
+    const el = document.elementFromPoint(x + dx, y + dy);
+    if (!el) continue;
+    
+    const cellEl = el.closest('[data-cell]') as HTMLElement | null;
+    if (cellEl) {
+      const cellData = cellEl.getAttribute('data-cell');
+      if (cellData && cellData.includes(':')) {
+        const [userId, date] = cellData.split(':');
+        if (userId && date) {
+          return { userId, date };
+        }
+      }
+    }
+  }
+  
+  return null;
 }
 
 export function useScheduleSelection({
@@ -57,6 +92,9 @@ export function useScheduleSelection({
     startCell: null,
     currentCell: null,
   });
+  
+  // Track last detected cell to avoid redundant updates
+  const lastDetectedKeyRef = useRef<string | null>(null);
 
   // Calculate rectangular selection between two cells
   const calculateRectSelection = useCallback((start: CellKey, end: CellKey): Set<string> => {
@@ -64,6 +102,9 @@ export function useScheduleSelection({
     
     const startUserIdx = teamMemberIds.indexOf(start.userId);
     const endUserIdx = teamMemberIds.indexOf(end.userId);
+    
+    if (startUserIdx === -1 || endUserIdx === -1) return selection;
+    
     const minUserIdx = Math.min(startUserIdx, endUserIdx);
     const maxUserIdx = Math.max(startUserIdx, endUserIdx);
     
@@ -86,15 +127,43 @@ export function useScheduleSelection({
     return selection;
   }, [teamMemberIds, monthDays]);
 
+  // Update selection based on current drag state
+  const updateDragSelection = useCallback((endCell: CellKey) => {
+    const startCell = dragStateRef.current.startCell;
+    if (!startCell) return;
+    
+    const newKey = cellKeyString(endCell.userId, endCell.date);
+    
+    // Skip if same cell as last detected
+    if (lastDetectedKeyRef.current === newKey) return;
+    
+    if (DEBUG) {
+      console.log('[Selection] updateDragSelection:', { 
+        start: cellKeyString(startCell.userId, startCell.date),
+        end: newKey 
+      });
+    }
+    
+    lastDetectedKeyRef.current = newKey;
+    dragStateRef.current.currentCell = endCell;
+    
+    // Calculate and update selection
+    const selection = calculateRectSelection(startCell, endCell);
+    setSelectedCells(selection);
+  }, [calculateRectSelection]);
+
   // Cancel drag - resets everything without committing selection
   const cancelDrag = useCallback(() => {
     if (!dragStateRef.current.active) return;
+    
+    if (DEBUG) console.log('[Selection] cancelDrag');
     
     dragStateRef.current = {
       active: false,
       startCell: null,
       currentCell: null,
     };
+    lastDetectedKeyRef.current = null;
     setIsDragging(false);
     setSelectedCells(new Set());
   }, []);
@@ -102,6 +171,8 @@ export function useScheduleSelection({
   // End drag - commit the selection
   const endDrag = useCallback(() => {
     if (!dragStateRef.current.active) return;
+    
+    if (DEBUG) console.log('[Selection] endDrag');
     
     const { startCell, currentCell } = dragStateRef.current;
     
@@ -117,12 +188,25 @@ export function useScheduleSelection({
       startCell: null,
       currentCell: null,
     };
+    lastDetectedKeyRef.current = null;
     setIsDragging(false);
   }, []);
 
-  // Global pointerup listener to end drag
+  // Global pointermove listener - FALLBACK for missed onPointerEnter events
   useEffect(() => {
     if (!enabled) return;
+
+    const handlePointerMove = (e: PointerEvent) => {
+      // Only process if actively dragging
+      if (!dragStateRef.current.active) return;
+      
+      // Find cell under pointer using multi-point sampling
+      const cell = findCellAtPoint(e.clientX, e.clientY);
+      
+      if (cell) {
+        updateDragSelection(cell);
+      }
+    };
 
     const handlePointerUp = () => {
       if (dragStateRef.current.active) {
@@ -142,16 +226,19 @@ export function useScheduleSelection({
       }
     };
 
+    // Add listeners
+    window.addEventListener('pointermove', handlePointerMove, { passive: true });
     window.addEventListener('pointerup', handlePointerUp);
     window.addEventListener('blur', handleBlur);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
       window.removeEventListener('blur', handleBlur);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [enabled, endDrag, cancelDrag]);
+  }, [enabled, endDrag, cancelDrag, updateDragSelection]);
 
   // Keyboard shortcuts handler
   useEffect(() => {
@@ -229,39 +316,31 @@ export function useScheduleSelection({
     if (e.button !== 0) return;
     
     const cell = { userId, date };
+    const cellKey = cellKeyString(userId, date);
+    
+    if (DEBUG) console.log('[Selection] handleDragStart:', cellKey);
     
     dragStateRef.current = {
       active: true,
       startCell: cell,
       currentCell: cell,
     };
+    lastDetectedKeyRef.current = cellKey;
     setIsDragging(true);
     
     // For Ctrl+click, don't pre-select (handled in pointerUp)
     if (!e.ctrlKey && !e.metaKey) {
-      const cellKey = cellKeyString(userId, date);
       setSelectedCells(new Set([cellKey]));
     }
   }, [enabled]);
 
-  // Called when pointer enters a cell during drag
+  // Called when pointer enters a cell during drag (PRIMARY path)
   const handleCellEnter = useCallback((userId: string, date: string) => {
     if (!dragStateRef.current.active || !dragStateRef.current.startCell) return;
     
-    const currentKey = dragStateRef.current.currentCell 
-      ? cellKeyString(dragStateRef.current.currentCell.userId, dragStateRef.current.currentCell.date)
-      : null;
-    const newKey = cellKeyString(userId, date);
-    
-    // Skip if same cell
-    if (currentKey === newKey) return;
-    
-    dragStateRef.current.currentCell = { userId, date };
-    
-    // Update selection rectangle
-    const selection = calculateRectSelection(dragStateRef.current.startCell, { userId, date });
-    setSelectedCells(selection);
-  }, [calculateRectSelection]);
+    const cell = { userId, date };
+    updateDragSelection(cell);
+  }, [updateDragSelection]);
 
   // Handle pointer up on a cell (for click modifiers)
   const handleCellPointerUp = useCallback((
@@ -578,9 +657,9 @@ export function useScheduleSelection({
     hasClipboard: clipboard !== null,
     isDragging,
     
-    // Cell event handlers (new model)
+    // Cell event handlers
     handleDragStart,        // onPointerDown
-    handleCellEnter,        // onPointerEnter (NEW - primary drag tracking)
+    handleCellEnter,        // onPointerEnter (primary path)
     handleCellPointerUp,    // onPointerUp
     
     // Legacy handlers (kept for compatibility)

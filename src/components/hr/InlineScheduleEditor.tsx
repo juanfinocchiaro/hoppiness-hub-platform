@@ -903,9 +903,9 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                 </div>
               </div>
 
-              {/* Row 2: Selection toolbar - ALWAYS visible in Personas view when canManage */}
-              {canManageSchedules && activeView === 'personas' && (
-                <div className="min-h-[40px] flex items-center border-t border-border/50 pt-2 mt-2">
+              {/* Row 2: Selection toolbar - ONLY visible when cells are selected */}
+              {canManageSchedules && activeView === 'personas' && selection.selectedCells.size > 0 && (
+                <div className="flex items-center border-t border-border/50 pt-2 mt-2">
                   <SelectionToolbar
                     selectionCount={selection.selectedCells.size}
                     clipboard={selection.clipboard}
@@ -1075,8 +1075,8 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                                 style={{ width: DAY_WIDTH, height: SCHEDULE_ROW_HEIGHT }}
                                 className={cn(
                                   'shrink-0 flex items-center justify-center border-r border-b border-border/40 cursor-pointer transition-all select-none',
-                                  // Feriado - color de acento fuerte + borde visible
-                                  isHoliday && 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800/50',
+                                  // Feriado - solo cambio de fondo, bordes consistentes
+                                  isHoliday && 'bg-orange-50 dark:bg-orange-950/20',
                                   // Fin de semana (si no es feriado)
                                   !isHoliday && isSaturday && 'bg-blue-50/50 dark:bg-blue-950/20',
                                   !isHoliday && isSunday && 'bg-blue-100/50 dark:bg-blue-950/30',

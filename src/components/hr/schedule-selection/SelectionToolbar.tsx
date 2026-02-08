@@ -1,7 +1,7 @@
 /**
  * SelectionToolbar - Inline action bar when cells are selected
  * 
- * V3 (Feb 2026) - Complete inline editing:
+ * V4 (Feb 2026) - Only rendered when selection exists:
  * - Day type buttons: Franco, Vacaciones, Cumple
  * - Position selector
  * - Time inputs (Entrada/Salida) + Apply button
@@ -86,231 +86,217 @@ export function SelectionToolbar({
     }
   };
 
-  // Always render, show placeholder when no selection
-  const hasSelection = selectionCount > 0;
-
   return (
-    <div className={cn(
-      'flex items-center gap-2 flex-wrap min-h-[32px]',
-      className
-    )}>
-      {!hasSelection ? (
-        <span className="text-xs text-muted-foreground italic">
-          Click para seleccionar · Arrastrar para rango · Ctrl+click para agregar
-        </span>
-      ) : (
-        <>
-          {/* Selection count badge */}
-          <Badge variant="secondary" className="gap-1 text-xs h-7 px-2">
-            {selectionCount} celda{selectionCount !== 1 ? 's' : ''}
-          </Badge>
+    <div className={cn('flex items-center gap-2 flex-wrap', className)}>
+      {/* Selection count badge */}
+      <Badge variant="secondary" className="gap-1 text-xs h-7 px-2">
+        {selectionCount} celda{selectionCount !== 1 ? 's' : ''}
+      </Badge>
 
-          <Separator orientation="vertical" className="h-5" />
+      <Separator orientation="vertical" className="h-5" />
 
-          {/* Day type buttons */}
-          <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="secondary" 
-                  size="sm" 
-                  onClick={onApplyDayOff}
-                  className="h-7 text-xs px-2"
-                >
-                  Franco
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Tecla F</TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="secondary" 
-                  size="sm" 
-                  onClick={onApplyVacation}
-                  className="h-7 text-xs px-2 gap-1"
-                >
-                  <Palmtree className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Vac</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Vacaciones (Tecla V)</TooltipContent>
-            </Tooltip>
-
-            {showBirthday && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="secondary" 
-                    size="sm" 
-                    onClick={onApplyBirthday}
-                    className="h-7 text-xs px-2 gap-1"
-                  >
-                    <Cake className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Cumple</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">Día libre por cumpleaños</TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-
-          <Separator orientation="vertical" className="h-5" />
-
-          {/* Position selector */}
-          {positions.length > 0 && (
-            <Select 
-              value={selectedPosition} 
-              onValueChange={(val) => setSelectedPosition(val === '__none__' ? '' : val)}
+      {/* Day type buttons */}
+      <div className="flex items-center gap-1">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="secondary" 
+              size="sm" 
+              onClick={onApplyDayOff}
+              className="h-7 text-xs px-2"
             >
-              <SelectTrigger className="h-7 w-[120px] text-xs">
-                <SelectValue placeholder="Posición" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Sin posición</SelectItem>
-                {positions.map(pos => (
-                  <SelectItem key={pos.id} value={pos.key}>
-                    {pos.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+              Franco
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Tecla F</TooltipContent>
+        </Tooltip>
 
-          {/* Quick time inputs */}
-          <div className="flex items-center gap-1">
-            <span className="text-xs text-muted-foreground hidden sm:inline">Entrada</span>
-            <Input
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="h-7 w-[90px] text-xs"
-            />
-            <span className="text-xs text-muted-foreground hidden sm:inline">Salida</span>
-            <Input
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="h-7 w-[90px] text-xs"
-            />
-          </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="secondary" 
+              size="sm" 
+              onClick={onApplyVacation}
+              className="h-7 text-xs px-2 gap-1"
+            >
+              <Palmtree className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Vac</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Vacaciones (Tecla V)</TooltipContent>
+        </Tooltip>
 
-          {/* Break toggle */}
-          <div className="flex items-center gap-1.5">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-1">
-                  <Switch
-                    id="break-toggle"
-                    checked={includeBreak}
-                    onCheckedChange={setIncludeBreak}
-                    className="scale-75"
-                  />
-                  <Label 
-                    htmlFor="break-toggle" 
-                    className="text-xs text-muted-foreground cursor-pointer flex items-center gap-1"
-                  >
-                    <Coffee className="w-3 h-3" />
-                    <span className="hidden sm:inline">Break</span>
-                  </Label>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                Break automático (30 min) para turnos de +6 horas
-              </TooltipContent>
-            </Tooltip>
-          </div>
-
-          {/* Apply button */}
-          <Button 
-            size="sm" 
-            onClick={handleApply}
-            className="h-7 gap-1 px-2 text-xs"
-          >
-            <Check className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Aplicar</span>
-          </Button>
-
-          <Separator orientation="vertical" className="h-5" />
-
-          {/* Main actions */}
-          <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={onCopy}
-                  className="h-7 gap-1 px-2 text-xs"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Copiar</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Ctrl+C</TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={onPaste}
-                  disabled={!clipboard}
-                  className={cn(
-                    'h-7 gap-1 px-2 text-xs',
-                    clipboard && 'text-primary'
-                  )}
-                >
-                  <ClipboardPaste className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Pegar</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                {clipboard 
-                  ? `Pegar: ${clipboard.sourceInfo}` 
-                  : 'Nada copiado (Ctrl+V)'
-                }
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={onClear}
-                  className="h-7 gap-1 px-2 text-xs text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Limpiar</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Delete</TooltipContent>
-            </Tooltip>
-          </div>
-
-          <Separator orientation="vertical" className="h-5" />
-
-          {/* Deselect */}
+        {showBirthday && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={onDeselect}
-                className="h-7 w-7 text-muted-foreground"
+                variant="secondary" 
+                size="sm" 
+                onClick={onApplyBirthday}
+                className="h-7 text-xs px-2 gap-1"
               >
-                <X className="w-4 h-4" />
+                <Cake className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Cumple</span>
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Escape</TooltipContent>
+            <TooltipContent side="bottom">Día libre por cumpleaños</TooltipContent>
           </Tooltip>
-        </>
+        )}
+      </div>
+
+      <Separator orientation="vertical" className="h-5" />
+
+      {/* Position selector */}
+      {positions.length > 0 && (
+        <Select 
+          value={selectedPosition} 
+          onValueChange={(val) => setSelectedPosition(val === '__none__' ? '' : val)}
+        >
+          <SelectTrigger className="h-7 w-[120px] text-xs">
+            <SelectValue placeholder="Posición" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">Sin posición</SelectItem>
+            {positions.map(pos => (
+              <SelectItem key={pos.id} value={pos.key}>
+                {pos.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       )}
+
+      {/* Quick time inputs */}
+      <div className="flex items-center gap-1">
+        <span className="text-xs text-muted-foreground hidden sm:inline">Entrada</span>
+        <Input
+          type="time"
+          value={startTime}
+          onChange={(e) => setStartTime(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="h-7 w-[90px] text-xs"
+        />
+        <span className="text-xs text-muted-foreground hidden sm:inline">Salida</span>
+        <Input
+          type="time"
+          value={endTime}
+          onChange={(e) => setEndTime(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="h-7 w-[90px] text-xs"
+        />
+      </div>
+
+      {/* Break toggle */}
+      <div className="flex items-center gap-1.5">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-1">
+              <Switch
+                id="break-toggle"
+                checked={includeBreak}
+                onCheckedChange={setIncludeBreak}
+                className="scale-75"
+              />
+              <Label 
+                htmlFor="break-toggle" 
+                className="text-xs text-muted-foreground cursor-pointer flex items-center gap-1"
+              >
+                <Coffee className="w-3 h-3" />
+                <span className="hidden sm:inline">Break</span>
+              </Label>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            Break automático (30 min) para turnos de +6 horas
+          </TooltipContent>
+        </Tooltip>
+      </div>
+
+      {/* Apply button */}
+      <Button 
+        size="sm" 
+        onClick={handleApply}
+        className="h-7 gap-1 px-2 text-xs"
+      >
+        <Check className="w-3.5 h-3.5" />
+        <span className="hidden sm:inline">Aplicar</span>
+      </Button>
+
+      <Separator orientation="vertical" className="h-5" />
+
+      {/* Main actions */}
+      <div className="flex items-center gap-1">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={onCopy}
+              className="h-7 gap-1 px-2 text-xs"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Copiar</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Ctrl+C</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={onPaste}
+              disabled={!clipboard}
+              className={cn(
+                'h-7 gap-1 px-2 text-xs',
+                clipboard && 'text-primary'
+              )}
+            >
+              <ClipboardPaste className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Pegar</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            {clipboard 
+              ? `Pegar: ${clipboard.sourceInfo}` 
+              : 'Nada copiado (Ctrl+V)'
+            }
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={onClear}
+              className="h-7 gap-1 px-2 text-xs text-destructive hover:text-destructive"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Limpiar</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Delete</TooltipContent>
+        </Tooltip>
+      </div>
+
+      <Separator orientation="vertical" className="h-5" />
+
+      {/* Deselect */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onDeselect}
+            className="h-7 w-7 text-muted-foreground"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Escape</TooltipContent>
+      </Tooltip>
     </div>
   );
 }
