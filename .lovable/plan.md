@@ -1,118 +1,159 @@
 
-## Objetivo
-Eliminar de raíz el error que le impide a Dalma (y a cualquier encargado) publicar horarios 1, 2 o muchos días a la vez, que hoy aparece como:
 
-- `duplicate key value violates unique constraint "employee_schedules_employee_month_day_shift_unique"`
+## Agregar Turno Cortado al Toolbar (sin doble-click)
 
-Ese constraint está mal para el modelo actual (por fecha exacta `schedule_date`) y vuelve imposible cargar más de un día por semana (porque usa `day_of_week` como parte de la unicidad).
-
----
-
-## Hallazgo principal (causa raíz)
-En la tabla `employee_schedules` existen **dos “reglas” de unicidad**:
-
-1) Correcta para el sistema nuevo:
-- `idx_employee_schedules_user_date_unique` (unique por `user_id, schedule_date`)
-
-2) Heredada del sistema viejo (la que rompe todo):
-- `employee_schedules_employee_month_day_shift_unique` (unique por `employee_id, schedule_year, schedule_month, day_of_week, shift_number`)
-
-Esta segunda regla implica que, para un empleado y un mes, **solo puede existir 1 registro por día de la semana** (ej: solo 1 “lunes” en todo el mes), lo cual es incompatible con horarios mensuales por fecha.
-
-Esto explica que “ya lo cargó 4 veces” y siempre falla: la app intenta guardar múltiples lunes/martes/etc. del mes, y la base lo rechaza.
-
-Además: hoy la UI hace UPSERT por `user_id,schedule_date`, pero igual falla porque **el otro unique constraint** se dispara antes de que el UPSERT pueda resolver el conflicto.
+### Entendimiento del pedido
+Querés que la funcionalidad de **turno cortado** (doble jornada: ej. 11:00-14:00 / 20:00-01:00) esté disponible directamente en la **barra de herramientas** que aparece cuando hay celdas seleccionadas, en lugar de tener que hacer doble-click para abrir un modal. Esto mantiene el flujo Excel-style fluido.
 
 ---
 
-## Comprobaciones que ya hice (para evitar arreglos a ciegas)
-- Verifiqué los índices reales de `employee_schedules` en la base.
-- Verifiqué si había filas con `schedule_date` en null (no hay): `null_schedule_date = 0`. Esto es clave porque permite eliminar la regla vieja sin dejar datos “en el limbo”.
+### Cambios propuestos
+
+#### 1. Agregar toggle y campos de segundo turno al `SelectionToolbar`
+
+**Ubicación**: Entre los inputs de hora existentes y el botón "Aplicar"
+
+**Nuevos elementos UI**:
+- **Toggle "Turno cortado"** (switch pequeño con icono de reloj dividido)
+- **Inputs de segundo turno** (Entrada 2 / Salida 2) - solo visibles cuando el toggle está activo
+
+**Comportamiento**:
+- Cuando el toggle está desactivado: funciona como ahora (un solo turno)
+- Cuando el toggle está activo:
+  - Aparecen 2 inputs adicionales para el segundo tramo
+  - El switch de "Break" se oculta automáticamente (no aplica a turnos cortados)
+
+#### 2. Actualizar la firma de `onApplyWithOptions`
+
+Actualmente recibe:
+```typescript
+onApplyWithOptions(start, end, position, includeBreak)
+```
+
+Se extiende a:
+```typescript
+onApplyWithOptions(start, end, position, includeBreak, start2?, end2?)
+```
+
+Esto permite enviar los datos del segundo turno al sistema de cambios.
+
+#### 3. Actualizar `handleApplyWithOptions` en `useScheduleSelection.ts`
+
+- Recibir los nuevos parámetros `startTime2` y `endTime2`
+- Incluirlos en el `ScheduleValue` que se aplica a las celdas
+- Cuando hay turno cortado, omitir el cálculo automático de break
+
+#### 4. Eliminar el manejo de doble-click
+
+- Remover el estado `editingCell`
+- Remover el componente `ScheduleCellPopover` del render
+- Remover el handler `onDoubleClick` de las celdas
 
 ---
 
-## Solución integral (backend + frontend) — en pasos
+### Diseño visual del toolbar ampliado
 
-### 1) Arreglo definitivo en la base de datos (lo que elimina el error)
-**Cambio de esquema:**
-- Eliminar el índice/constraint único heredado:
-  - `DROP INDEX public.employee_schedules_employee_month_day_shift_unique;`
-
-**Opcional recomendado (para consistencia futura):**
-- Asegurar el modelo “un registro por día” de forma explícita:
-  - Mantener como autoridad la unicidad por fecha (`user_id,schedule_date`) ya existente.
-- Si en el futuro quieren múltiples turnos por día (shift_number > 1), el diseño ideal sería:
-  - unique por (`user_id`,`schedule_date`,`shift_number`)
-  - y adaptar UI/DB para soportarlo.
-  - (No lo implemento ahora salvo que lo pidan, para no abrir alcance.)
-
-**Por qué esto es “de raíz”**
-- Porque remueve la regla que hace físicamente imposible guardar varios días del mes (no es un bug de UI; es un bloqueo estructural).
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ [3 celdas] | [Franco] [Vac] [Cumple] | [Posición ▼]                             │
+│                                                                                  │
+│ Entrada [19:00] Salida [23:00]                                                   │
+│                                                                                  │
+│ 🔲 Turno cortado    (cuando activo:)  Entrada 2 [--:--] Salida 2 [--:--]        │
+│                                                                                  │
+│ ☕ Break (oculto si turno cortado)    [✓ Aplicar] | [Copiar] [Pegar] [Limpiar] │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-### 2) Optimizar el guardado desde la UI (para que sea robusto y rápido)
-Hoy `InlineScheduleEditor` guarda **día por día** dentro de loops. Esto:
-- genera muchas llamadas,
-- aumenta chances de error parcial,
-- hace más probable que Dalma “intente varias veces”.
+### Archivos a modificar
 
-**Cambio propuesto:**
-- Construir un único array `recordsToUpsert` con todos los cambios válidos (de todos los empleados) y ejecutar:
-  - `supabase.from('employee_schedules').upsert(recordsToUpsert, { onConflict: 'user_id,schedule_date' })`
-- Y para “borrados” (cuando vacía una celda), agrupar deletes en menos llamadas (por ejemplo por usuario y rango del mes o por pares `user_id + schedule_date`).
+1. **`src/components/hr/schedule-selection/SelectionToolbar.tsx`**
+   - Agregar estado local: `isSplitShift`, `startTime2`, `endTime2`
+   - Agregar toggle de "Turno cortado" 
+   - Agregar inputs condicionales para segundo turno
+   - Ocultar switch de Break cuando hay turno cortado
+   - Actualizar `handleApply` para enviar los nuevos parámetros
+   - Actualizar props interface para `onApplyWithOptions`
 
-**Beneficios**
-- Guardado mucho más rápido.
-- Menos probabilidad de “guardó la mitad y falló”.
-- Reintentos más sencillos e idempotentes (si Dalma lo hace 4 veces, no debería romper ni duplicar).
+2. **`src/components/hr/schedule-selection/useScheduleSelection.ts`**
+   - Extender `handleApplyWithOptions` para recibir `startTime2?` y `endTime2?`
+   - Incluir estos valores en el `ScheduleValue` resultante
+   - Omitir break automático cuando hay turno cortado
 
----
-
-### 3) Corregir detalles que hoy pueden generar inconsistencias (no bloqueantes, pero importantes)
-- Evitar `new Date('YYYY-MM-DD').getDay()` para `day_of_week` por el tema UTC/Argentina.
-  - Cambiar a `parseISO(day.date)` o derivar `day_of_week` desde el `Date` ya local del calendario si aplica.
-  - Esto no es lo que causa el “duplicate key”, pero evita que el `day_of_week` quede mal cargado.
+3. **`src/components/hr/InlineScheduleEditor.tsx`**
+   - Eliminar estado `editingCell`
+   - Eliminar el componente `<ScheduleCellPopover>` del render
+   - Eliminar `onDoubleClick` de las celdas
 
 ---
 
-### 4) UX de error y anti “doble submit”
-- Agregar un guard con `useRef` o deshabilitar el botón “Publicar horarios” mientras hay un guardado en curso (además del `isPending` ya visible).
-- Mostrar un mensaje de error “amigable” cuando sea un problema de constraint (si vuelve a pasar por otra razón), incluyendo:
-  - qué empleado y qué día falló (cuando sea posible),
-  - y sugerencia “reintentar” sin perder cambios.
+### Detalle técnico
+
+**SelectionToolbar - Nuevos estados y lógica:**
+```typescript
+const [isSplitShift, setIsSplitShift] = useState(false);
+const [startTime2, setStartTime2] = useState('');
+const [endTime2, setEndTime2] = useState('');
+
+const handleApply = () => {
+  if (startTime && endTime) {
+    onApplyWithOptions(
+      startTime, 
+      endTime, 
+      selectedPosition || null, 
+      isSplitShift ? false : includeBreak, // No break for split shifts
+      isSplitShift ? startTime2 : undefined,
+      isSplitShift ? endTime2 : undefined
+    );
+  }
+};
+```
+
+**useScheduleSelection - handleApplyWithOptions extendido:**
+```typescript
+const handleApplyWithOptions = useCallback((
+  startTime: string, 
+  endTime: string, 
+  position: string | null,
+  includeBreak: boolean,
+  startTime2?: string,
+  endTime2?: string
+) => {
+  // ... existing logic ...
+  
+  const scheduleValue: ScheduleValue = {
+    startTime,
+    endTime,
+    isDayOff: false,
+    position,
+    breakStart: startTime2 ? null : breakStart, // No break for split shifts
+    breakEnd: startTime2 ? null : breakEnd,
+    startTime2: startTime2 || null,
+    endTime2: endTime2 || null,
+  };
+  // ...
+}, [...]);
+```
 
 ---
 
-## Plan de verificación (end-to-end)
-1) En la misma pantalla `/milocal/:branchId/equipo/horarios`:
-   - Cargar horarios para Dalma en 8 días del mes (incluyendo 2 lunes).
-   - Publicar.
-2) Repetir con 2-3 empleados a la vez (como el caso del screenshot: 6 empleados, 18 cambios).
-3) Re-publicar los mismos cambios (idempotencia):
-   - No debe duplicar ni fallar.
-4) Probar en zona horaria Argentina (UTC‑3) con cambios en días limítrofes del mes:
-   - Confirmar que el día de la semana y fecha guardada coinciden.
+### Beneficios
+
+1. **Flujo más rápido**: No hay que hacer doble-click ni abrir modales
+2. **Consistencia Excel-style**: Todo se maneja desde el toolbar inline
+3. **Menos código**: Se elimina el modal/popover de edición individual
+4. **Mejor UX**: El toggle hace evidente cuándo es turno cortado
 
 ---
 
-## Entregables concretos (qué voy a tocar cuando implemente)
-1) Migración de base de datos:
-   - Drop del índice unique heredado `employee_schedules_employee_month_day_shift_unique`.
-2) Código UI:
-   - Refactor del “save” en `InlineScheduleEditor.tsx` para hacer upsert en batch (no por celda).
-   - Ajuste de cálculo de `day_of_week` para evitar UTC issues.
-   - Guard anti doble click / doble submit y mejor manejo de errores.
+### Verificación recomendada
 
----
-
-## Riesgos / Consideraciones
-- Eliminar ese índice no borra datos; solo quita una restricción errónea.
-- Como ya no hay filas con `schedule_date = null`, el sistema ya está en modo “nuevo”, por lo que el cambio es seguro.
-- Si alguien dependía del constraint viejo (muy improbable, porque bloquea el negocio), el único efecto será permitir lo que hoy necesitan: múltiples semanas del mes.
-
----
-
-## Nota técnica breve (por qué el error se dispara incluso con UPSERT)
-UPSERT resuelve conflictos sobre el índice que se le indica (`onConflict: user_id,schedule_date`), pero **si existe otra restricción unique que también se viola** (la vieja por `day_of_week`), la inserción falla igual. Por eso el fix correcto es eliminar la constraint heredada.
+1. Seleccionar una o más celdas
+2. Activar toggle "Turno cortado"
+3. Ingresar: 11:00-14:00 / 20:00-01:00
+4. Click en "Aplicar"
+5. Verificar que la celda muestre ambos tramos (ej: `11-14 / 20-01`)
+6. Guardar y confirmar que se persiste correctamente
 
