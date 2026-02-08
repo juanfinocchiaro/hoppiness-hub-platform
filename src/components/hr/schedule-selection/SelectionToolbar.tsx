@@ -96,7 +96,7 @@ export function SelectionToolbar({
     )}>
       {!hasSelection ? (
         <span className="text-xs text-muted-foreground italic">
-          Click para seleccionar · Shift+click para rango · Arrastrar para selección múltiple
+          Click para seleccionar · Arrastrar para rango · Shift+click para agregar
         </span>
       ) : (
         <>
