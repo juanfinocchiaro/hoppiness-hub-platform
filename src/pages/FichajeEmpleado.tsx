@@ -271,23 +271,38 @@ export default function FichajeEmpleado() {
     },
   });
 
-  // Register clock entry mutation
+  // Register clock entry mutation - now uses Edge Function instead of direct insert
   const clockMutation = useMutation({
     mutationFn: async ({ type }: { type: 'clock_in' | 'clock_out' }) => {
       if (!validatedUser) throw new Error('Usuario no validado');
       
-      // Note: We don't store the photo, it's just for validation
-      const insertData = {
-        branch_id: validatedUser.branch_id,
-        user_id: validatedUser.user_id,
-        entry_type: type,
-        photo_url: null, // Selfie not stored as per requirement
-        user_agent: navigator.userAgent,
-      };
-
-      const { error } = await supabase.from('clock_entries').insert(insertData);
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       
-      if (error) throw error;
+      const response = await fetch(`${supabaseUrl}/functions/v1/register-clock-entry`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey,
+        },
+        body: JSON.stringify({
+          branch_code: branchCode,
+          pin: pin, // We already validated the PIN, but the edge function will re-validate for security
+          entry_type: type,
+          user_agent: navigator.userAgent,
+          gps_lat: null, // GPS coords could be added here if needed
+          gps_lng: null,
+          gps_status: gpsStatus,
+          gps_message: gpsMessage,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al registrar fichaje');
+      }
+      
       return type;
     },
     onSuccess: (type) => {
