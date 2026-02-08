@@ -1016,9 +1016,9 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                               <div
                                 style={{ width: DAY_WIDTH }}
                                 className={cn(
-                                  'shrink-0 flex flex-col items-center justify-center border-r cursor-pointer hover:bg-primary/5 relative',
+                                  'shrink-0 flex flex-col items-center justify-center border-r border-border/40 cursor-pointer hover:bg-primary/5 relative',
                                   // Feriado - color de acento fuerte
-                                  isHoliday && 'bg-orange-100 dark:bg-orange-950/40',
+                                  isHoliday && 'bg-orange-100 dark:bg-orange-950/40 border-border/70',
                                   // Fin de semana (si no es feriado)
                                   !isHoliday && isSaturday && 'bg-blue-50 dark:bg-blue-950/30',
                                   !isHoliday && isSunday && 'bg-blue-100 dark:bg-blue-950/50'
@@ -1080,9 +1080,9 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                                 data-cell={`${member.id}:${dateStr}`}
                                 style={{ width: DAY_WIDTH, height: SCHEDULE_ROW_HEIGHT }}
                                 className={cn(
-                                  'shrink-0 flex items-center justify-center border-r cursor-pointer transition-all select-none',
+                                  'shrink-0 flex items-center justify-center border-r border-border/40 cursor-pointer transition-all select-none',
                                   // Feriado - color de acento fuerte
-                                  isHoliday && 'bg-orange-50 dark:bg-orange-950/20',
+                                  isHoliday && 'bg-orange-50 dark:bg-orange-950/20 border-border/70',
                                   // Fin de semana (si no es feriado)
                                   !isHoliday && isSaturday && 'bg-blue-50/50 dark:bg-blue-950/20',
                                   !isHoliday && isSunday && 'bg-blue-100/50 dark:bg-blue-950/30',

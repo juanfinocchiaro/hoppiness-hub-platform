@@ -184,7 +184,6 @@ export function useScheduleSelection({
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [enabled, cancelDrag]);
-
   // Keyboard shortcuts handler
   useEffect(() => {
     if (!enabled) return;
@@ -313,7 +312,49 @@ export function useScheduleSelection({
     setSelectedCells(selection);
   }, [calculateRectSelection]);
 
-  // Handle pointer move on a cell (with capture, this fires even over gaps)
+  // Global pointermove listener while dragging.
+  // With pointer capture, pointermove events are delivered to the capture target,
+  // so we must do hit-testing manually (elementFromPoint) to know which cell we're over.
+  useEffect(() => {
+    if (!enabled) return;
+
+    const detectCellKeyAtPoint = (x: number, y: number): string | null => {
+      const points: Array<[number, number]> = [
+        [x, y],
+        [x + 1, y],
+        [x - 1, y],
+        [x, y + 1],
+        [x, y - 1],
+        [x + 2, y],
+        [x - 2, y],
+      ];
+
+      for (const [px, py] of points) {
+        const el = document.elementFromPoint(px, py);
+        const cellEl = el?.closest?.('[data-cell]') as HTMLElement | null;
+        const key = cellEl?.getAttribute?.('data-cell');
+        if (key) return key;
+      }
+      return null;
+    };
+
+    const handlePointerMove = (e: PointerEvent) => {
+      if (!dragStateRef.current.active) return;
+      if (dragStateRef.current.pointerId !== null && e.pointerId !== dragStateRef.current.pointerId) return;
+
+      const key = detectCellKeyAtPoint(e.clientX, e.clientY);
+      if (!key) return;
+
+      const [userId, date] = key.split(':');
+      if (!userId || !date) return;
+      updateDragCell(userId, date);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    return () => window.removeEventListener('pointermove', handlePointerMove);
+  }, [enabled, updateDragCell]);
+
+  // Handle pointer move on a cell (kept as an additional path; global listener is primary)
   const handleCellPointerMove = useCallback((
     userId: string, 
     date: string, 
@@ -394,7 +435,6 @@ export function useScheduleSelection({
       newSelection.add(cellKeyString(userId, date));
     });
     setSelectedCells(newSelection);
-    toast.info(`Columna seleccionada: ${teamMemberIds.length} celdas`);
   }, [enabled, teamMemberIds]);
 
   // Select entire row (all days for an employee)
@@ -406,7 +446,6 @@ export function useScheduleSelection({
       newSelection.add(cellKeyString(userId, format(day, 'yyyy-MM-dd')));
     });
     setSelectedCells(newSelection);
-    toast.info(`Fila seleccionada: ${monthDays.length} celdas`);
   }, [enabled, monthDays]);
 
   // Copy selected cells - always copies FIRST cell only
