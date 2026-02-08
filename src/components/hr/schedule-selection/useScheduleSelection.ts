@@ -1,10 +1,10 @@
 /**
  * useScheduleSelection - Excel-style multi-cell selection
  * 
- * V7 (Feb 2026) - Robust drag with global pointermove fallback:
- * - Primary: onPointerEnter on cells
- * - Fallback: global pointermove with elementFromPoint + multi-point sampling
- * - This eliminates the "1-cell lag" when onPointerEnter is missed
+ * V8 (Feb 2026) - Multi-cell copy/paste:
+ * - Copy ALL selected cells, not just the first one
+ * - Paste respects relative positions (like Excel)
+ * - Robust drag with global pointermove fallback
  * 
  * Supports:
  * - Keyboard shortcuts: Ctrl+C, Ctrl+V, Delete, Escape, F, V
@@ -12,7 +12,7 @@
  * - Quick schedule apply from toolbar with position + break
  */
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { format, min as dateMin, max as dateMax } from 'date-fns';
+import { format, min as dateMin, max as dateMax, differenceInDays, addDays } from 'date-fns';
 import { toast } from 'sonner';
 import type { ScheduleValue } from '../ScheduleCellPopover';
 import { 
@@ -417,62 +417,134 @@ export function useScheduleSelection({
     setSelectedCells(newSelection);
   }, [enabled, monthDays]);
 
-  // Copy selected cells - always copies FIRST cell only
+  // Copy ALL selected cells with relative positions (Excel-like)
   const handleCopy = useCallback(() => {
     if (selectedCells.size === 0) return;
 
-    const firstCellKey = Array.from(selectedCells)[0];
-    const { userId, date } = parseCellKey(firstCellKey);
-    const schedule = getEffectiveValue(userId, date);
+    const cellsArray = Array.from(selectedCells).map(parseCellKey);
+    
+    // Find the anchor cell (top-left of selection)
+    const sortedCells = [...cellsArray].sort((a, b) => {
+      const userIdxA = teamMemberIds.indexOf(a.userId);
+      const userIdxB = teamMemberIds.indexOf(b.userId);
+      if (userIdxA !== userIdxB) return userIdxA - userIdxB;
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+    
+    const anchorCell = sortedCells[0];
+    const anchorDate = new Date(anchorCell.date);
+    const anchorUserIdx = teamMemberIds.indexOf(anchorCell.userId);
+    
+    // Build clipboard with relative positions
+    const copiedCells = sortedCells.map(cell => {
+      const dayOffset = differenceInDays(new Date(cell.date), anchorDate);
+      const userOffset = teamMemberIds.indexOf(cell.userId) - anchorUserIdx;
+      const schedule = getEffectiveValue(cell.userId, cell.date);
+      
+      return {
+        dayOffset,
+        userOffset,
+        schedule,
+      };
+    });
 
+    // Build sourceInfo
     let sourceInfo: string;
-    if (schedule.isDayOff) {
-      if (schedule.position === 'vacaciones') {
-        sourceInfo = '🏖️ Vacaciones';
-      } else if (schedule.position === 'cumple') {
-        sourceInfo = '🎂 Cumple';
+    if (selectedCells.size === 1) {
+      const schedule = copiedCells[0].schedule;
+      if (schedule.isDayOff) {
+        if (schedule.position === 'vacaciones') {
+          sourceInfo = '🏖️ Vacaciones';
+        } else if (schedule.position === 'cumple') {
+          sourceInfo = '🎂 Cumple';
+        } else {
+          sourceInfo = 'Franco';
+        }
+      } else if (schedule.startTime && schedule.endTime) {
+        sourceInfo = `${schedule.startTime.slice(0, 5)}-${schedule.endTime.slice(0, 5)}`;
+        if (schedule.position) {
+          sourceInfo += ` (${schedule.position})`;
+        }
       } else {
-        sourceInfo = 'Franco';
-      }
-    } else if (schedule.startTime && schedule.endTime) {
-      const start = schedule.startTime.slice(0, 5);
-      const end = schedule.endTime.slice(0, 5);
-      sourceInfo = `${start}-${end}`;
-      if (schedule.position) {
-        sourceInfo += ` (${schedule.position})`;
+        sourceInfo = 'Vacío';
       }
     } else {
-      sourceInfo = 'Vacío';
+      sourceInfo = `${selectedCells.size} celdas`;
     }
 
     const clipboardData: ClipboardDataV2 = {
       type: 'cells',
-      cells: [{ dayOffset: 0, schedule }],
+      cells: copiedCells,
       sourceInfo,
     };
 
     setClipboard(clipboardData);
     toast.success(`📋 Copiado: ${sourceInfo}`);
-  }, [selectedCells, getEffectiveValue]);
+  }, [selectedCells, getEffectiveValue, teamMemberIds]);
 
-  // Paste clipboard to selection
+  // Paste clipboard respecting relative positions (Excel-like)
   const handlePaste = useCallback(() => {
     if (!clipboard || selectedCells.size === 0) {
       if (!clipboard) toast.error('No hay nada en el portapapeles');
       return;
     }
 
-    const schedule = clipboard.cells[0].schedule;
-    const targetCells = Array.from(selectedCells).map(parseCellKey);
+    // If only 1 cell copied, fill all selected cells with that value
+    if (clipboard.cells.length === 1) {
+      const schedule = clipboard.cells[0].schedule;
+      const targetCells = Array.from(selectedCells).map(parseCellKey);
 
-    targetCells.forEach(cell => {
-      const userName = getTeamMemberName(cell.userId);
-      onCellChange(cell.userId, userName, cell.date, schedule);
+      targetCells.forEach(cell => {
+        const userName = getTeamMemberName(cell.userId);
+        onCellChange(cell.userId, userName, cell.date, schedule);
+      });
+
+      toast.success(`✓ Pegado en ${targetCells.length} celda${targetCells.length > 1 ? 's' : ''}`);
+      setSelectedCells(new Set());
+      return;
+    }
+
+    // Multi-cell paste: use first selected cell as anchor
+    const targetCellsArray = Array.from(selectedCells).map(parseCellKey);
+    const sortedTargets = [...targetCellsArray].sort((a, b) => {
+      const userIdxA = teamMemberIds.indexOf(a.userId);
+      const userIdxB = teamMemberIds.indexOf(b.userId);
+      if (userIdxA !== userIdxB) return userIdxA - userIdxB;
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+    
+    const anchorTarget = sortedTargets[0];
+    const anchorTargetDate = new Date(anchorTarget.date);
+    const anchorTargetUserIdx = teamMemberIds.indexOf(anchorTarget.userId);
+
+    let pastedCount = 0;
+
+    clipboard.cells.forEach(copiedCell => {
+      const dayOffset = copiedCell.dayOffset;
+      const userOffset = (copiedCell as any).userOffset ?? 0;
+      
+      // Calculate target position
+      const targetDate = addDays(anchorTargetDate, dayOffset);
+      const targetDateStr = format(targetDate, 'yyyy-MM-dd');
+      const targetUserIdx = anchorTargetUserIdx + userOffset;
+      
+      // Check if target is valid
+      if (targetUserIdx < 0 || targetUserIdx >= teamMemberIds.length) return;
+      const targetUserId = teamMemberIds[targetUserIdx];
+      if (!targetUserId) return;
+      
+      // Check if date is in current month
+      const isInMonth = monthDays.some(d => format(d, 'yyyy-MM-dd') === targetDateStr);
+      if (!isInMonth) return;
+      
+      const userName = getTeamMemberName(targetUserId);
+      onCellChange(targetUserId, userName, targetDateStr, copiedCell.schedule);
+      pastedCount++;
     });
 
-    toast.success(`✓ Pegado en ${targetCells.length} celda${targetCells.length > 1 ? 's' : ''}`);
+    toast.success(`✓ Pegado en ${pastedCount} celda${pastedCount > 1 ? 's' : ''}`);
     setSelectedCells(new Set());
-  }, [clipboard, selectedCells, onCellChange, getTeamMemberName]);
+  }, [clipboard, selectedCells, onCellChange, getTeamMemberName, teamMemberIds, monthDays]);
 
   // Clear selected cells (delete)
   const handleClearCells = useCallback(() => {

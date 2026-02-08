@@ -13,10 +13,11 @@ export type SelectionMode = 'single' | 'range' | 'multi';
 export interface ClipboardDataV2 {
   type: 'cells';
   cells: Array<{
-    dayOffset: number; // Relative to first copied cell
+    dayOffset: number;    // Days relative to anchor cell (horizontal)
+    userOffset?: number;  // User rows relative to anchor cell (vertical)
     schedule: ScheduleValue;
   }>;
-  sourceInfo: string; // Human readable e.g. "3 celdas de Juan"
+  sourceInfo: string; // Human readable e.g. "3 celdas" or "19:00-02:00"
 }
 
 export interface ScheduleSelectionState {
