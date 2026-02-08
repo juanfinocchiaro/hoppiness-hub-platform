@@ -1076,7 +1076,7 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                             const isSunday = dayOfWeek === 0;
                             const value = getEffectiveValue(member.id, dateStr);
                             const isPending = hasPendingChange(member.id, dateStr);
-                            const isEditable = canManageSchedules && !isHoliday;
+                            const isEditable = canManageSchedules; // Feriados también se pueden editar en gastronomía
                             const isSelected = selection.isCellSelected(member.id, dateStr);
 
                             return (
