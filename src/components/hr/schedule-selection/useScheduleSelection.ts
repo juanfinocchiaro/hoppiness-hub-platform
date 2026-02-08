@@ -504,31 +504,49 @@ export function useScheduleSelection({
       return;
     }
 
-    // Multi-cell paste: use first selected cell as anchor
+    // Multi-cell paste: find the TOP-LEFT cell as anchor (earliest date, then lowest user index)
     const targetCellsArray = Array.from(selectedCells).map(parseCellKey);
+    
+    // Sort by DATE FIRST, then by user index - this ensures we get the leftmost-topmost cell
     const sortedTargets = [...targetCellsArray].sort((a, b) => {
-      const userIdxA = teamMemberIds.indexOf(a.userId);
-      const userIdxB = teamMemberIds.indexOf(b.userId);
-      if (userIdxA !== userIdxB) return userIdxA - userIdxB;
-      return new Date(a.date).getTime() - new Date(b.date).getTime();
+      const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime();
+      if (dateCompare !== 0) return dateCompare;
+      return teamMemberIds.indexOf(a.userId) - teamMemberIds.indexOf(b.userId);
     });
     
     const anchorTarget = sortedTargets[0];
     const anchorTargetDate = new Date(anchorTarget.date);
     const anchorTargetUserIdx = teamMemberIds.indexOf(anchorTarget.userId);
 
+    if (DEBUG) {
+      console.log('[Paste] anchor target:', {
+        date: anchorTarget.date,
+        userId: anchorTarget.userId,
+        userIdx: anchorTargetUserIdx
+      });
+    }
+
     let pastedCount = 0;
 
     clipboard.cells.forEach(copiedCell => {
       const dayOffset = copiedCell.dayOffset;
-      const userOffset = (copiedCell as any).userOffset ?? 0;
+      const userOffset = copiedCell.userOffset ?? 0;
       
-      // Calculate target position
+      // Calculate target position: anchor + offsets
       const targetDate = addDays(anchorTargetDate, dayOffset);
       const targetDateStr = format(targetDate, 'yyyy-MM-dd');
       const targetUserIdx = anchorTargetUserIdx + userOffset;
       
-      // Check if target is valid
+      if (DEBUG) {
+        console.log('[Paste] applying cell:', {
+          dayOffset,
+          userOffset,
+          targetDate: targetDateStr,
+          targetUserIdx
+        });
+      }
+      
+      // Check if target user is valid
       if (targetUserIdx < 0 || targetUserIdx >= teamMemberIds.length) return;
       const targetUserId = teamMemberIds[targetUserIdx];
       if (!targetUserId) return;
