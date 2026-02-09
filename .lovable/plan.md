@@ -1,48 +1,53 @@
 
+## Problema Identificado
 
-# Separar responsabilidades: Compras vs Proveedores
+Los pagos de General Paz estan todos verificados pero el saldo no se actualiza. La causa raiz son dos problemas en los triggers de base de datos:
 
-## Problema actual
+1. **El trigger `update_saldo_factura_after_pago`** solo se ejecuta en INSERT. Cuando se verifica un pago (UPDATE de `verificado`), el trigger NO se dispara, asi que `facturas_proveedores.saldo_pendiente` nunca se recalcula.
 
-Hay funcionalidades duplicadas entre las dos secciones:
+2. **El trigger `trg_update_canon_saldo`** escucha cambios en `pagos_canon` (que tiene 0 registros). Los pagos reales estan en `pagos_proveedores`. Hay una desconexion total: `canon_liquidaciones.saldo_pendiente` nunca se actualiza.
 
-- En **Compras y Servicios** se puede: cargar facturas, ver facturas, pagar facturas y eliminar facturas
-- En **Proveedores** se puede: ver proveedores, crear/editar proveedores, y al entrar a un proveedor ver su cuenta corriente donde tambien se puede pagar
+## Plan de Correccion
 
-El boton de "Pagar" aparece en ambos lados, generando confusion.
+### Paso 1: Corregir el trigger de saldo de facturas
 
-## Nueva separacion propuesta
+Modificar el trigger `update_saldo_factura_after_pago` para que tambien se dispare cuando cambia la columna `verificado`:
 
-| Seccion | Responsabilidad |
-|---------|----------------|
-| **Compras y Servicios** | Cargar nuevas facturas, ver listado de facturas, expandir detalle de items, eliminar facturas manuales |
-| **Proveedores** | Ver todos los proveedores (marca + locales), crear/editar proveedores locales, ver cuenta corriente por proveedor, registrar pagos |
+```
+AFTER INSERT OR UPDATE OF verificado, deleted_at, monto
+ON pagos_proveedores
+```
 
-## Cambios concretos
+Esto hara que al verificar un pago, se recalcule el saldo de la factura automaticamente.
 
-### 1. ComprasPage.tsx - Quitar funcionalidad de pago
+### Paso 2: Sincronizar canon_liquidaciones con facturas_proveedores
 
-- Eliminar el boton de "Registrar pago" (icono de tarjeta de credito) de cada fila
-- Eliminar el estado `paying` y el componente `PagoProveedorModal`
-- Eliminar la columna "Saldo" (ya que sin poder pagar ahi, no tiene sentido mostrarla)
-- Mantener: nueva factura, listado, expandir items, eliminar
+Crear un trigger que, al actualizarse `facturas_proveedores` (cuando el proveedor es Hoppiness Club), sincronice el `saldo_pendiente` y `estado` en `canon_liquidaciones` para el mismo branch+periodo.
 
-### 2. ComprasPage.tsx - Agregar link al proveedor
+Esto elimina la dependencia de la tabla `pagos_canon` (que esta vacia y no se usa).
 
-- Hacer que el nombre del proveedor en la tabla sea un link que lleve a la cuenta corriente del proveedor (`/milocal/:branchId/finanzas/proveedores/:proveedorId`)
-- Esto conecta ambas secciones de forma natural: "veo la factura -> quiero pagar -> click en el proveedor -> cuenta corriente -> pago"
+### Paso 3: Recalcular saldos existentes
 
-### 3. Sin cambios en Proveedores
+Ejecutar un script de backfill que fuerce el recalculo de todos los saldos de:
+- `facturas_proveedores` de Hoppiness Club (sumando pagos verificados)
+- `canon_liquidaciones` (reflejando el saldo correcto de la factura)
 
-- `ProveedoresLocalPage.tsx` y `CuentaCorrienteProveedorPage.tsx` ya funcionan correctamente con la logica de cuenta corriente y pagos
+Esto corregira inmediatamente los datos de General Paz y cualquier otro local con pagos verificados.
 
-## Detalle tecnico
+### Paso 4: Eliminar trigger obsoleto
+
+Eliminar `trg_update_canon_saldo` que escucha `pagos_canon` ya que esa tabla no se usa. Toda la logica pasa por `pagos_proveedores` y `facturas_proveedores`.
+
+---
+
+### Seccion Tecnica
 
 **Archivos a modificar:**
-- `src/pages/local/ComprasPage.tsx`: eliminar import de `PagoProveedorModal`, eliminar estado `paying`, eliminar columna Saldo, eliminar boton pagar, agregar link en nombre de proveedor hacia cuenta corriente
+- Nueva migracion SQL con:
+  - DROP del trigger `update_saldo_factura_after_pago` y recreacion con `AFTER INSERT OR UPDATE OF verificado, deleted_at, monto`
+  - DROP del trigger `update_saldo_factura_after_delete_pago` (redundante con el nuevo)
+  - Nuevo trigger en `facturas_proveedores` para sincronizar a `canon_liquidaciones`
+  - DROP del trigger `trg_update_canon_saldo` en `pagos_canon`
+  - Script de backfill para recalcular todos los saldos existentes
 
-**Archivos sin cambios:**
-- `src/pages/local/ProveedoresLocalPage.tsx` (ya correcto)
-- `src/pages/local/CuentaCorrienteProveedorPage.tsx` (ya correcto)
-- `src/components/layout/LocalSidebar.tsx` (ya correcto)
-
+**Sin cambios en frontend** — el problema es 100% de triggers en la base de datos.
