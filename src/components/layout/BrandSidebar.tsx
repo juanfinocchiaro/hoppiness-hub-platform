@@ -29,6 +29,9 @@ import {
   Shield,
   ClipboardList,
   BarChart3,
+  Wallet,
+  Package,
+  Truck,
   CalendarDays,
   Calendar,
   Eye,
@@ -64,6 +67,7 @@ export function BrandSidebar() {
   const isSucursalesActive = location.pathname.includes('/mimarca/locales');
   const isCoachingActive = location.pathname.includes('/mimarca/coaching');
   const isSupervisionActive = location.pathname.includes('/mimarca/supervisiones');
+  const isFinanzasActive = location.pathname.includes('/mimarca/finanzas');
   const isPersonasActive = location.pathname.includes('/mimarca/usuarios') || location.pathname.includes('/mimarca/equipo-central');
   const isComunicacionActive = location.pathname.includes('/mimarca/mensajes') || location.pathname.includes('/mimarca/comunicados') || location.pathname.includes('/mimarca/reuniones');
   const isConfigActive = location.pathname.includes('/mimarca/reglamentos') || location.pathname.includes('/mimarca/configuracion');
@@ -127,6 +131,17 @@ export function BrandSidebar() {
         >
           <NavItemButton to="/mimarca/coaching/encargados" icon={Users} label="Encargados" />
           <NavItemButton to="/mimarca/coaching/red" icon={BarChart3} label="Red" />
+        </NavSectionGroup>
+
+        {/* Finanzas Section */}
+        <NavSectionGroup
+          id="finanzas"
+          label="Finanzas"
+          icon={Wallet}
+          forceOpen={isFinanzasActive}
+        >
+          <NavItemButton to="/mimarca/finanzas/proveedores" icon={Truck} label="Proveedores" />
+          <NavItemButton to="/mimarca/finanzas/insumos" icon={Package} label="Insumos" />
         </NavSectionGroup>
 
         {/* Personas Section */}

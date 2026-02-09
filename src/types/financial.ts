@@ -1,0 +1,71 @@
+import type { Tables } from '@/integrations/supabase/types';
+
+// Re-export DB types
+export type Proveedor = Tables<'proveedores'>;
+export type CategoriaInsumo = Tables<'categorias_insumo'>;
+export type Insumo = Tables<'insumos'>;
+
+// Form types for create/edit
+export interface ProveedorFormData {
+  razon_social: string;
+  cuit?: string;
+  contacto?: string;
+  telefono?: string;
+  email?: string;
+  direccion?: string;
+  ambito: 'marca' | 'local';
+  branch_id?: string | null;
+  permite_cuenta_corriente?: boolean;
+  dias_pago_habitual?: number;
+  descuento_pago_contado?: number;
+  medios_pago_aceptados?: string[];
+  observaciones?: string;
+}
+
+export interface InsumoFormData {
+  nombre: string;
+  categoria_id?: string;
+  unidad_base: string;
+  categoria_pl?: string;
+  precio_referencia?: number;
+  proveedor_sugerido_id?: string;
+  descripcion?: string;
+}
+
+export interface CategoriaInsumoFormData {
+  nombre: string;
+  tipo: string;
+  descripcion?: string;
+  orden?: number;
+}
+
+// Constants
+export const AMBITO_OPTIONS = [
+  { value: 'marca', label: 'Marca (todas las sucursales)' },
+  { value: 'local', label: 'Local (una sucursal)' },
+] as const;
+
+export const UNIDAD_OPTIONS = [
+  { value: 'kg', label: 'Kilogramo (kg)' },
+  { value: 'g', label: 'Gramo (g)' },
+  { value: 'lt', label: 'Litro (lt)' },
+  { value: 'ml', label: 'Mililitro (ml)' },
+  { value: 'un', label: 'Unidad (un)' },
+  { value: 'paquete', label: 'Paquete' },
+  { value: 'caja', label: 'Caja' },
+  { value: 'bolsa', label: 'Bolsa' },
+  { value: 'balde', label: 'Balde' },
+  { value: 'rollo', label: 'Rollo' },
+] as const;
+
+export const TIPO_CATEGORIA_OPTIONS = [
+  { value: 'materia_prima', label: 'Materia Prima' },
+  { value: 'descartables', label: 'Descartables' },
+  { value: 'limpieza', label: 'Limpieza' },
+  { value: 'servicios', label: 'Servicios' },
+  { value: 'otro', label: 'Otro' },
+] as const;
+
+export const MEDIOS_PAGO_PROVEEDOR = [
+  'efectivo', 'transferencia', 'cheque', 'cuenta_corriente',
+] as const;

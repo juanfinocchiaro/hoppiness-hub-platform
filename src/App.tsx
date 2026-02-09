@@ -37,6 +37,8 @@ import CoachingPage from "./pages/local/CoachingPage";
 import LiquidacionPage from "./pages/local/LiquidacionPage";
 import MeetingsPage from "./pages/local/MeetingsPage";
 import SalesHistoryPage from "./pages/local/SalesHistoryPage";
+import ProveedoresLocalPage from "./pages/local/ProveedoresLocalPage";
+import InsumosLocalPage from "./pages/local/InsumosLocalPage";
 
 // Mi Marca
 import BrandLayout from "./pages/admin/BrandLayout";
@@ -56,6 +58,8 @@ import BrandMeetingsPage from "./pages/admin/BrandMeetingsPage";
 import InspectionsPage from "./pages/admin/InspectionsPage";
 import NewInspectionPage from "./pages/admin/NewInspectionPage";
 import InspectionDetailPage from "./pages/admin/InspectionDetailPage";
+import ProveedoresPage from "./pages/admin/ProveedoresPage";
+import InsumosPage from "./pages/admin/InsumosPage";
 
 // Mi Local - Comunicaciones
 import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
@@ -156,6 +160,10 @@ const App = () => (
               {/* Ventas */}
               <Route path="ventas/historial" element={<SalesHistoryPage />} />
               
+              {/* Finanzas (read-only) */}
+              <Route path="finanzas/proveedores" element={<ProveedoresLocalPage />} />
+              <Route path="finanzas/insumos" element={<InsumosLocalPage />} />
+              
               {/* Configuración */}
               <Route path="config/turnos" element={<ShiftConfigPage />} />
             </Route>
@@ -188,6 +196,10 @@ const App = () => (
               <Route path="supervisiones" element={<InspectionsPage />} />
               <Route path="supervisiones/nueva" element={<NewInspectionPage />} />
               <Route path="supervisiones/:id" element={<InspectionDetailPage />} />
+              
+              {/* Finanzas */}
+              <Route path="finanzas/proveedores" element={<ProveedoresPage />} />
+              <Route path="finanzas/insumos" element={<InsumosPage />} />
               
               {/* Configuración */}
               <Route path="reglamentos" element={<BrandRegulationsPage />} />

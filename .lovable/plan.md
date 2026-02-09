@@ -33,10 +33,34 @@
 
 ### RLS Policies: Completas en todas las tablas
 
-## 🔜 PENDIENTE: Frontend (módulos uno por uno)
+## ✅ COMPLETADO: Proveedores + Insumos (Frontend)
+
+### Archivos creados:
+- `src/types/financial.ts` - Tipos y constantes
+- `src/hooks/useProveedores.ts` - CRUD proveedores
+- `src/hooks/useInsumos.ts` - CRUD insumos y categorías
+- `src/components/finanzas/ProveedorFormModal.tsx` - Modal crear/editar proveedor
+- `src/components/finanzas/InsumoFormModal.tsx` - Modal crear/editar insumo
+- `src/components/finanzas/CategoriaFormModal.tsx` - Modal crear/editar categoría
+- `src/pages/admin/ProveedoresPage.tsx` - CRUD completo (Mi Marca)
+- `src/pages/admin/InsumosPage.tsx` - CRUD con tabs Insumos/Categorías (Mi Marca)
+- `src/pages/local/ProveedoresLocalPage.tsx` - Vista read-only (Mi Local)
+- `src/pages/local/InsumosLocalPage.tsx` - Vista read-only (Mi Local)
+
+### Navegación:
+- Mi Marca: sección "Finanzas" con Proveedores e Insumos
+- Mi Local: sección "Finanzas" con consulta read-only
+
+### Rutas:
+- `/mimarca/finanzas/proveedores`
+- `/mimarca/finanzas/insumos`
+- `/milocal/:branchId/finanzas/proveedores`
+- `/milocal/:branchId/finanzas/insumos`
+
+## 🔜 PENDIENTE: Frontend (módulos restantes)
 
 Orden sugerido:
-1. Proveedores + Insumos (CRUD básico)
+1. ~~Proveedores + Insumos (CRUD básico)~~ ✅
 2. Compras + Pagos
 3. Gastos
 4. Ventas mensuales + Canon

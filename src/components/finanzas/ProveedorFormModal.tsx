@@ -1,0 +1,196 @@
+import { useEffect, useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FormLayout, FormRow, FormSection } from '@/components/ui/forms-pro';
+import { StickyActions } from '@/components/ui/forms-pro';
+import { Building2, Phone } from 'lucide-react';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useProveedorMutations } from '@/hooks/useProveedores';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import type { Proveedor, ProveedorFormData, AMBITO_OPTIONS } from '@/types/financial';
+
+interface Props {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  proveedor?: Proveedor | null;
+}
+
+const EMPTY: ProveedorFormData = {
+  razon_social: '',
+  ambito: 'marca',
+  permite_cuenta_corriente: false,
+};
+
+export function ProveedorFormModal({ open, onOpenChange, proveedor }: Props) {
+  const { create, update } = useProveedorMutations();
+  const isEdit = !!proveedor;
+
+  const [form, setForm] = useState<ProveedorFormData>(EMPTY);
+
+  const { data: branches } = useQuery({
+    queryKey: ['branches-select'],
+    queryFn: async () => {
+      const { data } = await supabase.from('branches').select('id, name').eq('is_active', true).order('name');
+      return data || [];
+    },
+    enabled: open && form.ambito === 'local',
+  });
+
+  useEffect(() => {
+    if (proveedor) {
+      setForm({
+        razon_social: proveedor.razon_social,
+        cuit: proveedor.cuit || '',
+        contacto: proveedor.contacto || '',
+        telefono: proveedor.telefono || '',
+        email: proveedor.email || '',
+        direccion: proveedor.direccion || '',
+        ambito: proveedor.ambito as 'marca' | 'local',
+        branch_id: proveedor.branch_id,
+        permite_cuenta_corriente: proveedor.permite_cuenta_corriente || false,
+        dias_pago_habitual: proveedor.dias_pago_habitual || undefined,
+        descuento_pago_contado: proveedor.descuento_pago_contado || undefined,
+        observaciones: proveedor.observaciones || '',
+      });
+    } else {
+      setForm(EMPTY);
+    }
+  }, [proveedor, open]);
+
+  const set = (key: keyof ProveedorFormData, value: any) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
+
+  const handleSubmit = async () => {
+    if (!form.razon_social.trim()) return;
+    const payload = {
+      ...form,
+      branch_id: form.ambito === 'local' ? form.branch_id : null,
+    };
+
+    if (isEdit) {
+      await update.mutateAsync({ id: proveedor!.id, data: payload });
+    } else {
+      await create.mutateAsync(payload);
+    }
+    onOpenChange(false);
+  };
+
+  const isPending = create.isPending || update.isPending;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{isEdit ? 'Editar Proveedor' : 'Nuevo Proveedor'}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          <FormSection title="Datos Principales" icon={Building2}>
+            <FormLayout columns={1}>
+              <FormRow label="Razón Social" required>
+                <Input
+                  value={form.razon_social}
+                  onChange={(e) => set('razon_social', e.target.value)}
+                  placeholder="Nombre del proveedor"
+                />
+              </FormRow>
+              <FormLayout columns={2}>
+                <FormRow label="CUIT">
+                  <Input value={form.cuit || ''} onChange={(e) => set('cuit', e.target.value)} placeholder="XX-XXXXXXXX-X" />
+                </FormRow>
+                <FormRow label="Ámbito">
+                  <Select value={form.ambito} onValueChange={(v) => set('ambito', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="marca">Marca (todas)</SelectItem>
+                      <SelectItem value="local">Local (una sucursal)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormRow>
+              </FormLayout>
+              {form.ambito === 'local' && (
+                <FormRow label="Sucursal" required>
+                  <Select value={form.branch_id || ''} onValueChange={(v) => set('branch_id', v)}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                    <SelectContent>
+                      {branches?.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormRow>
+              )}
+            </FormLayout>
+          </FormSection>
+
+          <FormSection title="Contacto" icon={Phone}>
+            <FormLayout columns={2}>
+              <FormRow label="Contacto">
+                <Input value={form.contacto || ''} onChange={(e) => set('contacto', e.target.value)} />
+              </FormRow>
+              <FormRow label="Teléfono">
+                <Input value={form.telefono || ''} onChange={(e) => set('telefono', e.target.value)} />
+              </FormRow>
+              <FormRow label="Email">
+                <Input type="email" value={form.email || ''} onChange={(e) => set('email', e.target.value)} />
+              </FormRow>
+              <FormRow label="Dirección">
+                <Input value={form.direccion || ''} onChange={(e) => set('direccion', e.target.value)} />
+              </FormRow>
+            </FormLayout>
+          </FormSection>
+
+          <FormSection title="Condiciones Comerciales">
+            <FormLayout columns={2}>
+              <FormRow label="Cuenta Corriente">
+                <div className="flex items-center gap-2 pt-1">
+                  <Switch
+                    checked={form.permite_cuenta_corriente || false}
+                    onCheckedChange={(v) => set('permite_cuenta_corriente', v)}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {form.permite_cuenta_corriente ? 'Habilitada' : 'No'}
+                  </span>
+                </div>
+              </FormRow>
+              <FormRow label="Días pago habitual">
+                <Input
+                  type="number"
+                  value={form.dias_pago_habitual ?? ''}
+                  onChange={(e) => set('dias_pago_habitual', e.target.value ? Number(e.target.value) : undefined)}
+                />
+              </FormRow>
+              <FormRow label="Dto. pago contado (%)">
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={form.descuento_pago_contado ?? ''}
+                  onChange={(e) => set('descuento_pago_contado', e.target.value ? Number(e.target.value) : undefined)}
+                />
+              </FormRow>
+            </FormLayout>
+            <FormRow label="Observaciones" className="mt-4">
+              <Textarea
+                value={form.observaciones || ''}
+                onChange={(e) => set('observaciones', e.target.value)}
+                rows={2}
+              />
+            </FormRow>
+          </FormSection>
+
+          <StickyActions>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <LoadingButton loading={isPending} onClick={handleSubmit}>
+              {isEdit ? 'Guardar' : 'Crear Proveedor'}
+            </LoadingButton>
+          </StickyActions>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
