@@ -122,7 +122,7 @@ export default function ComprasPage() {
                           <TableBody>
                             {row.items_factura.map((item: any) => (
                               <TableRow key={item.id}>
-                                <TableCell className="text-sm">{item.insumo_id?.slice(0, 8)}...</TableCell>
+                                <TableCell className="text-sm">{item.insumos?.nombre || item.conceptos_servicio?.nombre || item.insumo_id || '-'}</TableCell>
                                 <TableCell className="text-right font-mono">{Number(item.cantidad)}</TableCell>
                                 <TableCell className="text-sm">{item.unidad}</TableCell>
                                 <TableCell className="text-right font-mono">$ {Number(item.precio_unitario).toLocaleString('es-AR')}</TableCell>

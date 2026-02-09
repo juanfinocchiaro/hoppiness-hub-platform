@@ -202,23 +202,23 @@ export default function VentasMensualesMarcaPage() {
                       <TableCell colSpan={9} className="bg-muted/30">
                         <div className="p-3 space-y-3 text-sm">
                           <div>
-                            <p className="font-medium mb-1">Desglose de Canon (5% sobre Venta Total)</p>
+                            <p className="font-medium mb-1">Desglose de Canon</p>
                             <div className="grid grid-cols-2 gap-x-6 gap-y-1 ml-2">
-                              <p>Uso de Marca (4.5%)</p>
+                              <p>Canon 4,5% Uso de Marca</p>
                               <p className="font-mono text-right">$ {(ventaTotal * 0.045).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</p>
-                              <p>Marketing y Publicidad (0.5%)</p>
+                              <p>Canon 0,5% Mkt y Publicidad</p>
                               <p className="font-mono text-right">$ {(ventaTotal * 0.005).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</p>
                               <p className="font-semibold border-t pt-1">Total Canon</p>
                               <p className="font-mono font-semibold text-right border-t pt-1">$ {(ventaTotal * 0.05).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</p>
                             </div>
                           </div>
                           <div>
-                            <p className="font-medium mb-1">Forma de Pago Sugerida</p>
+                            <p className="font-medium mb-1">Forma de Pago</p>
                             <div className="grid grid-cols-2 gap-x-6 gap-y-1 ml-2">
-                              <p>En efectivo <span className="text-xs text-muted-foreground">(5% del efectivo)</span></p>
-                              <p className="font-mono text-right">$ {(efectivo * 0.05).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</p>
-                              <p>Por transferencia <span className="text-xs text-muted-foreground">(5% del online)</span></p>
-                              <p className="font-mono text-right">$ {(online * 0.05).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</p>
+                              <p className="font-semibold text-green-700">💵 Pagar en efectivo <span className="text-xs font-normal text-muted-foreground">(5% del efectivo)</span></p>
+                              <p className="font-mono font-semibold text-green-700 text-right">$ {(efectivo * 0.05).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</p>
+                              <p className="font-semibold text-blue-700">🏦 Pagar por transferencia <span className="text-xs font-normal text-muted-foreground">(5% del online)</span></p>
+                              <p className="font-mono font-semibold text-blue-700 text-right">$ {(online * 0.05).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</p>
                             </div>
                           </div>
                           {venta.observaciones && <p className="text-muted-foreground">Obs: {venta.observaciones}</p>}
