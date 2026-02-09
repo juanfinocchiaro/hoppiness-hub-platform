@@ -139,12 +139,12 @@ Crear función `get_rdo_report(branch_id, periodo)` que retorne:
 
 ## Orden de ejecución
 
-1. ✅ Migración Fase 1 (rdo_categories + seed) — requiere aprobación
-2. ✅ Migración Fase 2 (campos en tablas existentes) — requiere aprobación
-3. 🔨 Migración Fase 3 (vista + función) — requiere aprobación
-4. 🔨 Tipos + Hooks (Fase 4)
-5. 🔨 Componentes UI (Fase 5)
-6. 🔨 Dashboard RDO (Fase 6)
+1. ✅ Migración Fase 1 (rdo_categories + seed) — completado
+2. ✅ Migración Fase 2 (campos en tablas existentes) — completado
+3. ✅ Migración Fase 3 (vista + función) — completado
+4. ✅ Tipos + Hooks (Fase 4) — completado
+5. ✅ Componentes UI (Fase 5) — completado
+6. ✅ Dashboard RDO (Fase 6) — completado
 
 ## Notas técnicas
 
