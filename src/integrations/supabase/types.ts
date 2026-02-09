@@ -333,6 +333,139 @@ export type Database = {
         }
         Relationships: []
       }
+      canon_liquidaciones: {
+        Row: {
+          branch_id: string
+          canon_monto: number
+          canon_porcentaje: number | null
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          estado: string | null
+          fc_total: number
+          fecha_vencimiento: string | null
+          ft_total: number
+          id: string
+          marketing_monto: number
+          marketing_porcentaje: number | null
+          observaciones: string | null
+          pago_ft_sugerido: number | null
+          pago_vt_sugerido: number | null
+          periodo: string
+          porcentaje_ft: number | null
+          saldo_pendiente: number | null
+          total_canon: number
+          updated_at: string | null
+          ventas_id: string | null
+        }
+        Insert: {
+          branch_id: string
+          canon_monto: number
+          canon_porcentaje?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          estado?: string | null
+          fc_total: number
+          fecha_vencimiento?: string | null
+          ft_total: number
+          id?: string
+          marketing_monto: number
+          marketing_porcentaje?: number | null
+          observaciones?: string | null
+          pago_ft_sugerido?: number | null
+          pago_vt_sugerido?: number | null
+          periodo: string
+          porcentaje_ft?: number | null
+          saldo_pendiente?: number | null
+          total_canon: number
+          updated_at?: string | null
+          ventas_id?: string | null
+        }
+        Update: {
+          branch_id?: string
+          canon_monto?: number
+          canon_porcentaje?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          estado?: string | null
+          fc_total?: number
+          fecha_vencimiento?: string | null
+          ft_total?: number
+          id?: string
+          marketing_monto?: number
+          marketing_porcentaje?: number | null
+          observaciones?: string | null
+          pago_ft_sugerido?: number | null
+          pago_vt_sugerido?: number | null
+          periodo?: string
+          porcentaje_ft?: number | null
+          saldo_pendiente?: number | null
+          total_canon?: number
+          updated_at?: string | null
+          ventas_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canon_liquidaciones_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canon_liquidaciones_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canon_liquidaciones_ventas_id_fkey"
+            columns: ["ventas_id"]
+            isOneToOne: false
+            referencedRelation: "ventas_mensuales_local"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categorias_insumo: {
+        Row: {
+          activo: boolean | null
+          created_at: string | null
+          deleted_at: string | null
+          descripcion: string | null
+          id: string
+          nombre: string
+          orden: number | null
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          created_at?: string | null
+          deleted_at?: string | null
+          descripcion?: string | null
+          id?: string
+          nombre: string
+          orden?: number | null
+          tipo: string
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          created_at?: string | null
+          deleted_at?: string | null
+          descripcion?: string | null
+          id?: string
+          nombre?: string
+          orden?: number | null
+          tipo?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       clock_entries: {
         Row: {
           branch_id: string
@@ -664,6 +797,262 @@ export type Database = {
           },
         ]
       }
+      compras: {
+        Row: {
+          afecta_costo_base: boolean | null
+          branch_id: string
+          cantidad: number
+          categoria_pl: string | null
+          compra_original_id: string | null
+          condicion_pago: string | null
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          estado_pago: string | null
+          factura_fecha: string | null
+          factura_numero: string | null
+          factura_tipo: string | null
+          factura_url: string | null
+          fecha: string
+          fecha_vencimiento: string | null
+          id: string
+          insumo_id: string
+          medio_pago: string | null
+          motivo_extraordinaria: string | null
+          observaciones: string | null
+          periodo: string
+          precio_unitario: number
+          proveedor_id: string
+          saldo_pendiente: number | null
+          subtotal: number
+          tipo_compra: Database["public"]["Enums"]["tipo_compra_enum"] | null
+          unidad: string
+          updated_at: string | null
+        }
+        Insert: {
+          afecta_costo_base?: boolean | null
+          branch_id: string
+          cantidad: number
+          categoria_pl?: string | null
+          compra_original_id?: string | null
+          condicion_pago?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          estado_pago?: string | null
+          factura_fecha?: string | null
+          factura_numero?: string | null
+          factura_tipo?: string | null
+          factura_url?: string | null
+          fecha: string
+          fecha_vencimiento?: string | null
+          id?: string
+          insumo_id: string
+          medio_pago?: string | null
+          motivo_extraordinaria?: string | null
+          observaciones?: string | null
+          periodo: string
+          precio_unitario: number
+          proveedor_id: string
+          saldo_pendiente?: number | null
+          subtotal: number
+          tipo_compra?: Database["public"]["Enums"]["tipo_compra_enum"] | null
+          unidad: string
+          updated_at?: string | null
+        }
+        Update: {
+          afecta_costo_base?: boolean | null
+          branch_id?: string
+          cantidad?: number
+          categoria_pl?: string | null
+          compra_original_id?: string | null
+          condicion_pago?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          estado_pago?: string | null
+          factura_fecha?: string | null
+          factura_numero?: string | null
+          factura_tipo?: string | null
+          factura_url?: string | null
+          fecha?: string
+          fecha_vencimiento?: string | null
+          id?: string
+          insumo_id?: string
+          medio_pago?: string | null
+          motivo_extraordinaria?: string | null
+          observaciones?: string | null
+          periodo?: string
+          precio_unitario?: number
+          proveedor_id?: string
+          saldo_pendiente?: number | null
+          subtotal?: number
+          tipo_compra?: Database["public"]["Enums"]["tipo_compra_enum"] | null
+          unidad?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_compra_original_id_fkey"
+            columns: ["compra_original_id"]
+            isOneToOne: false
+            referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "cuenta_corriente_proveedores"
+            referencedColumns: ["proveedor_id"]
+          },
+          {
+            foreignKeyName: "compras_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      configuracion_impuestos: {
+        Row: {
+          branch_id: string
+          created_at: string | null
+          deleted_at: string | null
+          id: string
+          iibb_alicuota: number
+          observaciones: string | null
+          otros_impuestos: Json | null
+          tasas_municipales: number | null
+          updated_at: string | null
+          vigencia_desde: string
+          vigencia_hasta: string | null
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string | null
+          deleted_at?: string | null
+          id?: string
+          iibb_alicuota: number
+          observaciones?: string | null
+          otros_impuestos?: Json | null
+          tasas_municipales?: number | null
+          updated_at?: string | null
+          vigencia_desde: string
+          vigencia_hasta?: string | null
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string | null
+          deleted_at?: string | null
+          id?: string
+          iibb_alicuota?: number
+          observaciones?: string | null
+          otros_impuestos?: Json | null
+          tasas_municipales?: number | null
+          updated_at?: string | null
+          vigencia_desde?: string
+          vigencia_hasta?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "configuracion_impuestos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "configuracion_impuestos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consumos_manuales: {
+        Row: {
+          branch_id: string
+          categoria_pl: string
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          detalle: Json | null
+          id: string
+          monto_consumido: number
+          observaciones: string | null
+          periodo: string
+          tipo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id: string
+          categoria_pl: string
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          detalle?: Json | null
+          id?: string
+          monto_consumido: number
+          observaciones?: string | null
+          periodo: string
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: string
+          categoria_pl?: string
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          detalle?: Json | null
+          id?: string
+          monto_consumido?: number
+          observaciones?: string | null
+          periodo?: string
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consumos_manuales_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consumos_manuales_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_messages: {
         Row: {
           assigned_to: string | null
@@ -783,6 +1172,75 @@ export type Database = {
           {
             foreignKeyName: "contact_messages_order_branch_id_fkey"
             columns: ["order_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      distribuciones_utilidades: {
+        Row: {
+          branch_id: string
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          distribuciones: Json
+          fecha_distribucion: string
+          fecha_proceso: string | null
+          id: string
+          monto_distribuible: number
+          observaciones: string | null
+          otras_reservas: number | null
+          periodo: string
+          procesado: boolean | null
+          reserva_legal: number | null
+          resultado_neto: number
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          distribuciones: Json
+          fecha_distribucion: string
+          fecha_proceso?: string | null
+          id?: string
+          monto_distribuible: number
+          observaciones?: string | null
+          otras_reservas?: number | null
+          periodo: string
+          procesado?: boolean | null
+          reserva_legal?: number | null
+          resultado_neto: number
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          distribuciones?: Json
+          fecha_distribucion?: string
+          fecha_proceso?: string | null
+          id?: string
+          monto_distribuible?: number
+          observaciones?: string | null
+          otras_reservas?: number | null
+          periodo?: string
+          procesado?: boolean | null
+          reserva_legal?: number | null
+          resultado_neto?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "distribuciones_utilidades_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "distribuciones_utilidades_branch_id_fkey"
+            columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches_public"
             referencedColumns: ["id"]
@@ -1027,6 +1485,132 @@ export type Database = {
           },
         ]
       }
+      financial_audit_log: {
+        Row: {
+          campos_modificados: string[] | null
+          datos_antes: Json | null
+          datos_despues: Json | null
+          id: string
+          ip_address: unknown
+          observaciones: string | null
+          operacion: string
+          registro_id: string
+          tabla: string
+          timestamp: string | null
+          user_agent: string | null
+          usuario_email: string | null
+          usuario_id: string | null
+        }
+        Insert: {
+          campos_modificados?: string[] | null
+          datos_antes?: Json | null
+          datos_despues?: Json | null
+          id?: string
+          ip_address?: unknown
+          observaciones?: string | null
+          operacion: string
+          registro_id: string
+          tabla: string
+          timestamp?: string | null
+          user_agent?: string | null
+          usuario_email?: string | null
+          usuario_id?: string | null
+        }
+        Update: {
+          campos_modificados?: string[] | null
+          datos_antes?: Json | null
+          datos_despues?: Json | null
+          id?: string
+          ip_address?: unknown
+          observaciones?: string | null
+          operacion?: string
+          registro_id?: string
+          tabla?: string
+          timestamp?: string | null
+          user_agent?: string | null
+          usuario_email?: string | null
+          usuario_id?: string | null
+        }
+        Relationships: []
+      }
+      gastos: {
+        Row: {
+          adjuntos: Json | null
+          branch_id: string
+          categoria_principal: string
+          concepto: string
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          detalle: Json | null
+          estado: string | null
+          fecha: string
+          id: string
+          medio_pago: string | null
+          monto: number
+          observaciones: string | null
+          periodo: string
+          referencia_pago: string | null
+          subcategoria: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          adjuntos?: Json | null
+          branch_id: string
+          categoria_principal: string
+          concepto: string
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          detalle?: Json | null
+          estado?: string | null
+          fecha: string
+          id?: string
+          medio_pago?: string | null
+          monto: number
+          observaciones?: string | null
+          periodo: string
+          referencia_pago?: string | null
+          subcategoria?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          adjuntos?: Json | null
+          branch_id?: string
+          categoria_principal?: string
+          concepto?: string
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          detalle?: Json | null
+          estado?: string | null
+          fecha?: string
+          id?: string
+          medio_pago?: string | null
+          monto?: number
+          observaciones?: string | null
+          periodo?: string
+          referencia_pago?: string | null
+          subcategoria?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gastos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       general_competencies: {
         Row: {
           created_at: string
@@ -1177,6 +1761,76 @@ export type Database = {
           sort_order?: number
         }
         Relationships: []
+      }
+      insumos: {
+        Row: {
+          activo: boolean | null
+          categoria_id: string | null
+          categoria_pl: string | null
+          creado_por: string | null
+          created_at: string | null
+          deleted_at: string | null
+          descripcion: string | null
+          id: string
+          nombre: string
+          precio_referencia: number | null
+          proveedor_sugerido_id: string | null
+          unidad_base: string
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          categoria_id?: string | null
+          categoria_pl?: string | null
+          creado_por?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          descripcion?: string | null
+          id?: string
+          nombre: string
+          precio_referencia?: number | null
+          proveedor_sugerido_id?: string | null
+          unidad_base: string
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          categoria_id?: string | null
+          categoria_pl?: string | null
+          creado_por?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          descripcion?: string | null
+          id?: string
+          nombre?: string
+          precio_referencia?: number | null
+          proveedor_sugerido_id?: string | null
+          unidad_base?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insumos_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias_insumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insumos_proveedor_sugerido_id_fkey"
+            columns: ["proveedor_sugerido_id"]
+            isOneToOne: false
+            referencedRelation: "cuenta_corriente_proveedores"
+            referencedColumns: ["proveedor_id"]
+          },
+          {
+            foreignKeyName: "insumos_proveedor_sugerido_id_fkey"
+            columns: ["proveedor_sugerido_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       manager_competencies: {
         Row: {
@@ -1391,6 +2045,306 @@ export type Database = {
           },
         ]
       }
+      movimientos_socio: {
+        Row: {
+          branch_id: string
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          detalle: Json | null
+          fecha: string
+          id: string
+          monto: number
+          observaciones: string | null
+          periodo: string | null
+          resultado_periodo: number | null
+          saldo_acumulado: number | null
+          socio_id: string
+          tipo: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          detalle?: Json | null
+          fecha: string
+          id?: string
+          monto: number
+          observaciones?: string | null
+          periodo?: string | null
+          resultado_periodo?: number | null
+          saldo_acumulado?: number | null
+          socio_id: string
+          tipo: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          detalle?: Json | null
+          fecha?: string
+          id?: string
+          monto?: number
+          observaciones?: string | null
+          periodo?: string | null
+          resultado_periodo?: number | null
+          saldo_acumulado?: number | null
+          socio_id?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimientos_socio_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_socio_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_socio_socio_id_fkey"
+            columns: ["socio_id"]
+            isOneToOne: false
+            referencedRelation: "balance_socios"
+            referencedColumns: ["socio_id"]
+          },
+          {
+            foreignKeyName: "movimientos_socio_socio_id_fkey"
+            columns: ["socio_id"]
+            isOneToOne: false
+            referencedRelation: "socios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pagos_canon: {
+        Row: {
+          branch_id: string
+          canon_liquidacion_id: string
+          created_at: string | null
+          created_by: string | null
+          datos_pago: Json | null
+          deleted_at: string | null
+          fecha_pago: string
+          id: string
+          medio_pago: string
+          monto: number
+          observaciones: string | null
+          referencia: string | null
+        }
+        Insert: {
+          branch_id: string
+          canon_liquidacion_id: string
+          created_at?: string | null
+          created_by?: string | null
+          datos_pago?: Json | null
+          deleted_at?: string | null
+          fecha_pago: string
+          id?: string
+          medio_pago: string
+          monto: number
+          observaciones?: string | null
+          referencia?: string | null
+        }
+        Update: {
+          branch_id?: string
+          canon_liquidacion_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          datos_pago?: Json | null
+          deleted_at?: string | null
+          fecha_pago?: string
+          id?: string
+          medio_pago?: string
+          monto?: number
+          observaciones?: string | null
+          referencia?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagos_canon_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_canon_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_canon_canon_liquidacion_id_fkey"
+            columns: ["canon_liquidacion_id"]
+            isOneToOne: false
+            referencedRelation: "canon_liquidaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pagos_proveedores: {
+        Row: {
+          branch_id: string
+          compra_id: string | null
+          created_at: string | null
+          created_by: string | null
+          datos_pago: Json | null
+          deleted_at: string | null
+          fecha_pago: string
+          id: string
+          medio_pago: string
+          monto: number
+          observaciones: string | null
+          proveedor_id: string
+          referencia: string | null
+        }
+        Insert: {
+          branch_id: string
+          compra_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          datos_pago?: Json | null
+          deleted_at?: string | null
+          fecha_pago: string
+          id?: string
+          medio_pago: string
+          monto: number
+          observaciones?: string | null
+          proveedor_id: string
+          referencia?: string | null
+        }
+        Update: {
+          branch_id?: string
+          compra_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          datos_pago?: Json | null
+          deleted_at?: string | null
+          fecha_pago?: string
+          id?: string
+          medio_pago?: string
+          monto?: number
+          observaciones?: string | null
+          proveedor_id?: string
+          referencia?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagos_proveedores_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_proveedores_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_proveedores_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: false
+            referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_proveedores_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "cuenta_corriente_proveedores"
+            referencedColumns: ["proveedor_id"]
+          },
+          {
+            foreignKeyName: "pagos_proveedores_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      periodos: {
+        Row: {
+          aprobado_por: string | null
+          branch_id: string
+          cerrado_por: string | null
+          created_at: string | null
+          estado: string | null
+          fecha_aprobacion: string | null
+          fecha_cierre: string | null
+          fecha_reapertura: string | null
+          id: string
+          motivo_cierre: string | null
+          motivo_reapertura: string | null
+          observaciones: string | null
+          periodo: string
+          reabierto_por: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          aprobado_por?: string | null
+          branch_id: string
+          cerrado_por?: string | null
+          created_at?: string | null
+          estado?: string | null
+          fecha_aprobacion?: string | null
+          fecha_cierre?: string | null
+          fecha_reapertura?: string | null
+          id?: string
+          motivo_cierre?: string | null
+          motivo_reapertura?: string | null
+          observaciones?: string | null
+          periodo: string
+          reabierto_por?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          aprobado_por?: string | null
+          branch_id?: string
+          cerrado_por?: string | null
+          created_at?: string | null
+          estado?: string | null
+          fecha_aprobacion?: string | null
+          fecha_cierre?: string | null
+          fecha_reapertura?: string | null
+          id?: string
+          motivo_cierre?: string | null
+          motivo_reapertura?: string | null
+          observaciones?: string | null
+          periodo?: string
+          reabierto_por?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "periodos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "periodos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permission_config: {
         Row: {
           allowed_roles: string[]
@@ -1541,6 +2495,87 @@ export type Database = {
           {
             foreignKeyName: "profiles_favorite_branch_id_fkey"
             columns: ["favorite_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proveedores: {
+        Row: {
+          activo: boolean | null
+          ambito: string
+          branch_id: string | null
+          contacto: string | null
+          created_at: string | null
+          created_by: string | null
+          cuit: string | null
+          deleted_at: string | null
+          descuento_pago_contado: number | null
+          dias_pago_habitual: number | null
+          direccion: string | null
+          email: string | null
+          id: string
+          medios_pago_aceptados: Json | null
+          observaciones: string | null
+          permite_cuenta_corriente: boolean | null
+          razon_social: string
+          telefono: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          ambito?: string
+          branch_id?: string | null
+          contacto?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          cuit?: string | null
+          deleted_at?: string | null
+          descuento_pago_contado?: number | null
+          dias_pago_habitual?: number | null
+          direccion?: string | null
+          email?: string | null
+          id?: string
+          medios_pago_aceptados?: Json | null
+          observaciones?: string | null
+          permite_cuenta_corriente?: boolean | null
+          razon_social: string
+          telefono?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          ambito?: string
+          branch_id?: string | null
+          contacto?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          cuit?: string | null
+          deleted_at?: string | null
+          descuento_pago_contado?: number | null
+          dias_pago_habitual?: number | null
+          direccion?: string | null
+          email?: string | null
+          id?: string
+          medios_pago_aceptados?: Json | null
+          observaciones?: string | null
+          permite_cuenta_corriente?: boolean | null
+          razon_social?: string
+          telefono?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proveedores_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedores_branch_id_fkey"
+            columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches_public"
             referencedColumns: ["id"]
@@ -1902,6 +2937,78 @@ export type Database = {
           },
         ]
       }
+      socios: {
+        Row: {
+          activo: boolean | null
+          branch_id: string
+          created_at: string | null
+          created_by: string | null
+          cuit: string | null
+          deleted_at: string | null
+          email: string | null
+          fecha_ingreso: string
+          fecha_salida: string | null
+          id: string
+          limite_retiro_mensual: number | null
+          nombre: string
+          porcentaje_participacion: number
+          telefono: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          branch_id: string
+          created_at?: string | null
+          created_by?: string | null
+          cuit?: string | null
+          deleted_at?: string | null
+          email?: string | null
+          fecha_ingreso: string
+          fecha_salida?: string | null
+          id?: string
+          limite_retiro_mensual?: number | null
+          nombre: string
+          porcentaje_participacion: number
+          telefono?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          branch_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          cuit?: string | null
+          deleted_at?: string | null
+          email?: string | null
+          fecha_ingreso?: string
+          fecha_salida?: string | null
+          id?: string
+          limite_retiro_mensual?: number | null
+          nombre?: string
+          porcentaje_participacion?: number
+          telefono?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "socios_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "socios_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       special_days: {
         Row: {
           branch_id: string | null
@@ -2135,6 +3242,66 @@ export type Database = {
         }
         Relationships: []
       }
+      ventas_mensuales_local: {
+        Row: {
+          branch_id: string
+          cargado_por: string | null
+          created_at: string | null
+          deleted_at: string | null
+          fc_total: number
+          fecha_carga: string | null
+          ft_total: number
+          id: string
+          observaciones: string | null
+          periodo: string
+          porcentaje_ft: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id: string
+          cargado_por?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          fc_total: number
+          fecha_carga?: string | null
+          ft_total: number
+          id?: string
+          observaciones?: string | null
+          periodo: string
+          porcentaje_ft?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: string
+          cargado_por?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          fc_total?: number
+          fecha_carga?: string | null
+          ft_total?: number
+          id?: string
+          observaciones?: string | null
+          periodo?: string
+          porcentaje_ft?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ventas_mensuales_local_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventas_mensuales_local_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       warnings: {
         Row: {
           acknowledged_at: string | null
@@ -2254,6 +3421,38 @@ export type Database = {
       }
     }
     Views: {
+      balance_socios: {
+        Row: {
+          branch_id: string | null
+          branch_nombre: string | null
+          cantidad_movimientos: number | null
+          nombre: string | null
+          porcentaje_participacion: number | null
+          saldo_actual: number | null
+          socio_id: string | null
+          total_aportes: number | null
+          total_devoluciones: number | null
+          total_prestamos_dados: number | null
+          total_retiros: number | null
+          total_utilidades: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "socios_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "socios_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branches_public: {
         Row: {
           address: string | null
@@ -2298,6 +3497,77 @@ export type Database = {
           slug?: string | null
         }
         Relationships: []
+      }
+      cuenta_corriente_proveedores: {
+        Row: {
+          branch_id: string | null
+          branch_nombre: string | null
+          cantidad_facturas: number | null
+          facturas_pendientes: number | null
+          facturas_vencidas: number | null
+          proveedor_id: string | null
+          proximo_vencimiento: string | null
+          razon_social: string | null
+          saldo_pendiente: number | null
+          total_facturado: number | null
+          total_pagado: number | null
+          ultima_compra: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      precio_promedio_mes: {
+        Row: {
+          branch_id: string | null
+          branch_nombre: string | null
+          cantidad_compras: number | null
+          cantidad_total: number | null
+          fecha_ultima_compra: string | null
+          insumo_id: string | null
+          insumo_nombre: string | null
+          periodo: string | null
+          precio_maximo: number | null
+          precio_minimo: number | null
+          precio_promedio: number | null
+          precio_ultimo: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles_public: {
         Row: {
@@ -2364,6 +3634,10 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["brand_role_type"]
       }
+      get_iibb_alicuota: {
+        Args: { _branch_id: string; _fecha?: string }
+        Returns: number
+      }
       get_local_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["local_role_type"]
@@ -2421,6 +3695,10 @@ export type Database = {
       }
       is_meeting_participant: {
         Args: { _meeting_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_socio_admin: {
+        Args: { _branch_id: string; _user_id: string }
         Returns: boolean
       }
       is_staff:
@@ -2508,6 +3786,7 @@ export type Database = {
         | "count_adjust"
         | "production"
       supplier_control_type: "brand_only" | "brand_preferred" | "free"
+      tipo_compra_enum: "normal" | "extraordinaria" | "devolucion"
       transaction_type: "income" | "expense"
       work_position_type:
         | "cajero"
@@ -2681,6 +3960,7 @@ export const Constants = {
         "production",
       ],
       supplier_control_type: ["brand_only", "brand_preferred", "free"],
+      tipo_compra_enum: ["normal", "extraordinaria", "devolucion"],
       transaction_type: ["income", "expense"],
       work_position_type: [
         "cajero",
