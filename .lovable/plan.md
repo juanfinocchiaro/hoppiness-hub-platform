@@ -47,22 +47,40 @@
 - `src/pages/local/ProveedoresLocalPage.tsx` - Vista read-only (Mi Local)
 - `src/pages/local/InsumosLocalPage.tsx` - Vista read-only (Mi Local)
 
+## ✅ COMPLETADO: Compras + Pagos (Frontend)
+
+### Archivos creados:
+- `src/types/compra.ts` - Tipos para compras, pagos y gastos
+- `src/hooks/useCompras.ts` - CRUD compras + pagos a proveedores
+- `src/components/finanzas/CompraFormModal.tsx` - Modal registrar compra
+- `src/components/finanzas/PagoProveedorModal.tsx` - Modal registrar pago
+- `src/pages/local/ComprasPage.tsx` - Gestión de compras por sucursal
+
+## ✅ COMPLETADO: Gastos (Frontend)
+
+### Archivos creados:
+- `src/hooks/useGastos.ts` - CRUD gastos operativos
+- `src/components/finanzas/GastoFormModal.tsx` - Modal crear/editar gasto
+- `src/pages/local/GastosPage.tsx` - Gestión de gastos por sucursal
+
 ### Navegación:
 - Mi Marca: sección "Finanzas" con Proveedores e Insumos
-- Mi Local: sección "Finanzas" con consulta read-only
+- Mi Local: sección "Finanzas" con Proveedores, Insumos, Compras y Gastos
 
 ### Rutas:
 - `/mimarca/finanzas/proveedores`
 - `/mimarca/finanzas/insumos`
 - `/milocal/:branchId/finanzas/proveedores`
 - `/milocal/:branchId/finanzas/insumos`
+- `/milocal/:branchId/finanzas/compras`
+- `/milocal/:branchId/finanzas/gastos`
 
 ## 🔜 PENDIENTE: Frontend (módulos restantes)
 
 Orden sugerido:
 1. ~~Proveedores + Insumos (CRUD básico)~~ ✅
-2. Compras + Pagos
-3. Gastos
+2. ~~Compras + Pagos~~ ✅
+3. ~~Gastos~~ ✅
 4. Ventas mensuales + Canon
 5. Consumos manuales
 6. Socios + Distribuciones
