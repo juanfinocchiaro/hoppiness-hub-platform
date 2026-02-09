@@ -66,11 +66,13 @@ export function useFacturaMutations() {
 
       // 2. Create items
       if (data.items.length > 0) {
-        const itemsToInsert = data.items.map(item => ({
+        const itemsToInsert = data.items.map((item: any) => ({
           factura_id: factura.id,
-          insumo_id: item.insumo_id,
-          cantidad: item.cantidad,
-          unidad: item.unidad,
+          tipo_item: item.tipo_item || 'insumo',
+          insumo_id: item.tipo_item === 'servicio' ? null : (item.insumo_id || null),
+          concepto_servicio_id: item.tipo_item === 'servicio' ? item.concepto_servicio_id : null,
+          cantidad: item.tipo_item === 'servicio' ? 1 : item.cantidad,
+          unidad: item.tipo_item === 'servicio' ? null : (item.unidad || null),
           precio_unitario: item.precio_unitario,
           subtotal: item.subtotal,
           afecta_costo_base: item.afecta_costo_base ?? true,
@@ -87,6 +89,7 @@ export function useFacturaMutations() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['facturas'] });
+      qc.invalidateQueries({ queryKey: ['cuenta-corriente'] });
       toast.success('Factura registrada');
     },
     onError: (e) => toast.error(`Error: ${e.message}`),

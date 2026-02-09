@@ -797,6 +797,72 @@ export type Database = {
           },
         ]
       }
+      conceptos_servicio: {
+        Row: {
+          activo: boolean | null
+          categoria_gasto: string | null
+          created_at: string | null
+          deleted_at: string | null
+          descripcion: string | null
+          es_calculado: boolean | null
+          formula_calculo: Json | null
+          id: string
+          nombre: string
+          periodicidad: string | null
+          proveedor_id: string | null
+          subcategoria: string | null
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          categoria_gasto?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          descripcion?: string | null
+          es_calculado?: boolean | null
+          formula_calculo?: Json | null
+          id?: string
+          nombre: string
+          periodicidad?: string | null
+          proveedor_id?: string | null
+          subcategoria?: string | null
+          tipo?: string
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          categoria_gasto?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          descripcion?: string | null
+          es_calculado?: boolean | null
+          formula_calculo?: Json | null
+          id?: string
+          nombre?: string
+          periodicidad?: string | null
+          proveedor_id?: string | null
+          subcategoria?: string | null
+          tipo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conceptos_servicio_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "cuenta_corriente_proveedores"
+            referencedColumns: ["proveedor_id"]
+          },
+          {
+            foreignKeyName: "conceptos_servicio_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       configuracion_impuestos: {
         Row: {
           branch_id: string
@@ -1944,42 +2010,55 @@ export type Database = {
           afecta_costo_base: boolean | null
           cantidad: number
           categoria_pl: string | null
+          concepto_servicio_id: string | null
           created_at: string | null
           factura_id: string
           id: string
-          insumo_id: string
+          insumo_id: string | null
           observaciones: string | null
           precio_unitario: number
           subtotal: number
-          unidad: string
+          tipo_item: string
+          unidad: string | null
         }
         Insert: {
           afecta_costo_base?: boolean | null
-          cantidad: number
+          cantidad?: number
           categoria_pl?: string | null
+          concepto_servicio_id?: string | null
           created_at?: string | null
           factura_id: string
           id?: string
-          insumo_id: string
+          insumo_id?: string | null
           observaciones?: string | null
           precio_unitario: number
           subtotal: number
-          unidad: string
+          tipo_item?: string
+          unidad?: string | null
         }
         Update: {
           afecta_costo_base?: boolean | null
           cantidad?: number
           categoria_pl?: string | null
+          concepto_servicio_id?: string | null
           created_at?: string | null
           factura_id?: string
           id?: string
-          insumo_id?: string
+          insumo_id?: string | null
           observaciones?: string | null
           precio_unitario?: number
           subtotal?: number
-          unidad?: string
+          tipo_item?: string
+          unidad?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "items_factura_concepto_servicio_id_fkey"
+            columns: ["concepto_servicio_id"]
+            isOneToOne: false
+            referencedRelation: "conceptos_servicio"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "items_factura_factura_id_fkey"
             columns: ["factura_id"]

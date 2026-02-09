@@ -65,7 +65,7 @@ export function BrandSidebar() {
 
   // Active section detection
   const isRedActive = location.pathname.includes('/mimarca/locales') || location.pathname.includes('/mimarca/supervisiones');
-  const isCatalogosActive = location.pathname.includes('/mimarca/finanzas/insumos') || location.pathname.includes('/mimarca/finanzas/proveedores');
+  const isCatalogosActive = location.pathname.includes('/mimarca/finanzas/insumos') || location.pathname.includes('/mimarca/finanzas/proveedores') || location.pathname.includes('/mimarca/finanzas/conceptos-servicio');
   const isFinanzasActive = (location.pathname.includes('/mimarca/finanzas') && !isCatalogosActive);
   const isPersonasActive = location.pathname.includes('/mimarca/usuarios') || location.pathname.includes('/mimarca/equipo-central') || location.pathname.includes('/mimarca/coaching');
   const isComunicacionActive = location.pathname.includes('/mimarca/mensajes') || location.pathname.includes('/mimarca/comunicados') || location.pathname.includes('/mimarca/reuniones');
@@ -110,6 +110,7 @@ export function BrandSidebar() {
           forceOpen={isCatalogosActive}
         >
           <NavItemButton to="/mimarca/finanzas/insumos" icon={Package} label="Insumos" />
+          <NavItemButton to="/mimarca/finanzas/conceptos-servicio" icon={FileText} label="Conceptos de Servicio" />
           <NavItemButton to="/mimarca/finanzas/proveedores" icon={Truck} label="Proveedores" />
         </NavSectionGroup>
 
