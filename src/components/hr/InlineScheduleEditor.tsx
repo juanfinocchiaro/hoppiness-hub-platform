@@ -592,59 +592,6 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
     return used;
   }, [schedulesWithPending]);
 
-  // Labor law validation
-  const consecutiveDaysViolations = useMemo(() => {
-    const violations: { userId: string; userName: string; consecutiveDays: number }[] = [];
-    
-    team.forEach(member => {
-      const userScheduleMap = new Map<string, boolean>();
-      
-      schedulesWithPending.forEach(s => {
-        if (s.user_id === member.id) {
-          const isEmptySchedule = !s.start_time || !s.end_time || 
-            (s.start_time === '00:00' && s.end_time === '00:00') ||
-            (s.start_time === '00:00:00' && s.end_time === '00:00:00');
-          const isDayOff = s.is_day_off || isEmptySchedule;
-          userScheduleMap.set(s.schedule_date, isDayOff);
-        }
-      });
-      
-      let consecutiveWorking = 0;
-      
-      monthDays.forEach(day => {
-        const dateStr = format(day, 'yyyy-MM-dd');
-        const hasSchedule = userScheduleMap.has(dateStr);
-        const isDayOff = userScheduleMap.get(dateStr);
-        
-        const isWorkingDay = hasSchedule && isDayOff === false;
-        
-        if (isWorkingDay) {
-          consecutiveWorking++;
-        } else {
-          if (consecutiveWorking >= 7) {
-            violations.push({
-              userId: member.id,
-              userName: member.full_name || 'Empleado',
-              consecutiveDays: consecutiveWorking,
-            });
-          }
-          consecutiveWorking = 0;
-        }
-      });
-      
-      if (consecutiveWorking >= 7) {
-        violations.push({
-          userId: member.id,
-          userName: member.full_name || 'Empleado',
-          consecutiveDays: consecutiveWorking,
-        });
-      }
-    });
-    
-    return violations;
-  }, [team, schedulesWithPending, monthDays]);
-
-  const hasLaborViolations = consecutiveDaysViolations.length > 0;
 
   // Helper: Sort hours in operational order (11:00 → 02:00+)
   // Early morning hours (0-4) come AFTER evening hours (23)
@@ -1029,9 +976,7 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
                       <Button 
                         size="sm" 
                         onClick={() => setSaveDialogOpen(true)}
-                        disabled={hasLaborViolations}
                         className="h-8 text-xs"
-                        title={hasLaborViolations ? 'Corrige las violaciones laborales antes de guardar' : ''}
                       >
                         <Save className="w-3.5 h-3.5 mr-1" />
                         Guardar
@@ -1331,19 +1276,6 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
           </Card>
         )}
 
-        {/* Labor violations warning */}
-        {hasLaborViolations && (
-          <Card className="border-destructive bg-destructive/10">
-            <CardContent className="py-3 px-4">
-              <div className="flex items-center gap-2 text-destructive">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span className="text-sm font-medium">
-                  ⚠️ {consecutiveDaysViolations.map(v => v.userName).join(', ')} tiene(n) 7+ días consecutivos sin franco (Ley 11.544)
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Save Dialog */}
         <SaveScheduleDialog
