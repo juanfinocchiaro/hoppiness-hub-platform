@@ -9,11 +9,12 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Building2, Phone, Mail, CreditCard, AlertTriangle,
-  TrendingUp, Calendar, ArrowLeft
+  TrendingUp, Calendar, ArrowLeft, Pencil
 } from 'lucide-react';
 import { useSaldoProveedor, useMovimientosProveedor } from '@/hooks/useCuentaCorrienteProveedor';
 import { useProveedores } from '@/hooks/useProveedores';
 import { PagoProveedorModal } from '@/components/finanzas/PagoProveedorModal';
+import { ProveedorFormModal } from '@/components/finanzas/ProveedorFormModal';
 import { EmptyState } from '@/components/ui/states';
 
 export default function CuentaCorrienteProveedorPage() {
@@ -24,6 +25,7 @@ export default function CuentaCorrienteProveedorPage() {
   const { data: saldo, isLoading: loadingSaldo } = useSaldoProveedor(branchId, proveedorId);
   const { data: movimientos, isLoading: loadingMov } = useMovimientosProveedor(branchId, proveedorId);
   const [payingFacturaId, setPayingFacturaId] = useState<string | null>(null);
+  const [editingProveedor, setEditingProveedor] = useState(false);
 
   const payingFactura = payingFacturaId ? {
     id: payingFacturaId,
@@ -121,7 +123,12 @@ export default function CuentaCorrienteProveedorPage() {
       {/* Datos del Proveedor */}
       {proveedor && (
         <Card>
-          <CardHeader><CardTitle className="text-base">Datos del Proveedor</CardTitle></CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base">Datos del Proveedor</CardTitle>
+            <Button variant="outline" size="sm" onClick={() => setEditingProveedor(true)}>
+              <Pencil className="w-3.5 h-3.5 mr-1" /> Editar
+            </Button>
+          </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
               <div className="flex items-center gap-2">
@@ -250,6 +257,14 @@ export default function CuentaCorrienteProveedorPage() {
         onOpenChange={() => setPayingFacturaId(null)}
         factura={payingFactura as any}
       />
+
+      {proveedor && (
+        <ProveedorFormModal
+          open={editingProveedor}
+          onOpenChange={setEditingProveedor}
+          proveedor={proveedor}
+        />
+      )}
     </div>
   );
 }
