@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FormLayout, FormRow, FormSection } from '@/components/ui/forms-pro';
 import { StickyActions } from '@/components/ui/forms-pro';
-import { Building2, Phone } from 'lucide-react';
+import { Building2, Phone, Landmark } from 'lucide-react';
 import { LoadingButton } from '@/components/ui/loading-button';
 import { useProveedorMutations } from '@/hooks/useProveedores';
 import { useQuery } from '@tanstack/react-query';
@@ -144,11 +144,17 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranc
 
           <FormSection title="Contacto" icon={Phone}>
             <FormLayout columns={2}>
-              <FormRow label="Contacto">
+              <FormRow label="Contacto principal">
                 <Input value={form.contacto || ''} onChange={(e) => set('contacto', e.target.value)} />
               </FormRow>
-              <FormRow label="Teléfono">
+              <FormRow label="Teléfono principal">
                 <Input value={form.telefono || ''} onChange={(e) => set('telefono', e.target.value)} />
+              </FormRow>
+              <FormRow label="Contacto secundario">
+                <Input value={form.contacto_secundario || ''} onChange={(e) => set('contacto_secundario', e.target.value)} placeholder="Ej: Administración" />
+              </FormRow>
+              <FormRow label="Teléfono secundario">
+                <Input value={form.telefono_secundario || ''} onChange={(e) => set('telefono_secundario', e.target.value)} />
               </FormRow>
               <FormRow label="Email">
                 <Input type="email" value={form.email || ''} onChange={(e) => set('email', e.target.value)} />
@@ -157,6 +163,26 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranc
                 <Input value={form.direccion || ''} onChange={(e) => set('direccion', e.target.value)} />
               </FormRow>
             </FormLayout>
+          </FormSection>
+
+          <FormSection title="Datos Bancarios" icon={Landmark}>
+            <FormLayout columns={2}>
+              <FormRow label="Banco">
+                <Input value={form.banco || ''} onChange={(e) => set('banco', e.target.value)} />
+              </FormRow>
+              <FormRow label="Nº de Cuenta">
+                <Input value={form.numero_cuenta || ''} onChange={(e) => set('numero_cuenta', e.target.value)} placeholder="Ej: 374-002997/9" />
+              </FormRow>
+              <FormRow label="CBU">
+                <Input value={form.cbu || ''} onChange={(e) => set('cbu', e.target.value)} placeholder="22 dígitos" />
+              </FormRow>
+              <FormRow label="Alias CBU">
+                <Input value={form.alias_cbu || ''} onChange={(e) => set('alias_cbu', e.target.value)} />
+              </FormRow>
+            </FormLayout>
+            <FormRow label="Titular de la cuenta" className="mt-4">
+              <Input value={form.titular_cuenta || ''} onChange={(e) => set('titular_cuenta', e.target.value)} placeholder="Completar si difiere de la razón social" />
+            </FormRow>
           </FormSection>
 
           <FormSection title="Condiciones Comerciales">

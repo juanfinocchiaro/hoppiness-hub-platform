@@ -19,6 +19,13 @@ export interface ProveedorFormData {
   dias_pago_habitual?: number;
   descuento_pago_contado?: number;
   medios_pago_aceptados?: string[];
+  banco?: string;
+  numero_cuenta?: string;
+  cbu?: string;
+  alias_cbu?: string;
+  titular_cuenta?: string;
+  telefono_secundario?: string;
+  contacto_secundario?: string;
   observaciones?: string;
 }
 
