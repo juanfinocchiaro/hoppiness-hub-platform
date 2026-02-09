@@ -250,6 +250,7 @@ export default function VentasMensualesMarcaPage() {
             if (!open) { setEditingBranchId(null); setEditingVenta(null); }
           }}
           branchId={editingBranchId}
+          branchName={branches?.find(b => b.id === editingBranchId)?.name}
           periodo={periodo}
           venta={editingVenta}
         />
