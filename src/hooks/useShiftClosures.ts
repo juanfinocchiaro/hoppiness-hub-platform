@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import type { Json } from '@/integrations/supabase/types';
+import { getOperationalDate } from '@/lib/operationalDate';
 import type {
   ShiftClosure,
   ShiftClosureInput,
@@ -53,10 +54,11 @@ export function useDateClosures(branchId: string, date: Date) {
 }
 
 /**
- * Get closures for today
+ * Get closures for today's operational date
+ * Uses operational date logic: 00:00-04:59 belongs to previous day
  */
 export function useTodayClosures(branchId: string) {
-  return useDateClosures(branchId, new Date());
+  return useDateClosures(branchId, getOperationalDate());
 }
 
 /**

@@ -36,6 +36,7 @@ import ShiftConfigPage from "./pages/local/ShiftConfigPage";
 import CoachingPage from "./pages/local/CoachingPage";
 import LiquidacionPage from "./pages/local/LiquidacionPage";
 import MeetingsPage from "./pages/local/MeetingsPage";
+import SalesHistoryPage from "./pages/local/SalesHistoryPage";
 
 // Mi Marca
 import BrandLayout from "./pages/admin/BrandLayout";
@@ -151,6 +152,9 @@ const App = () => (
               {/* Tiempo */}
               <Route path="tiempo/liquidacion" element={<LiquidacionPage />} />
               <Route path="tiempo/solicitudes" element={<RequestsPage />} />
+              
+              {/* Ventas */}
+              <Route path="ventas/historial" element={<SalesHistoryPage />} />
               
               {/* Configuración */}
               <Route path="config/turnos" element={<ShiftConfigPage />} />

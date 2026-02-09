@@ -28,8 +28,8 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import { format, differenceInMinutes } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { useTodayClosures, useEnabledShifts } from '@/hooks/useShiftClosures';
+import { getOperationalDateString, formatOperationalDate, isEarlyMorning } from '@/lib/operationalDate';
 import { ShiftClosureModal } from '@/components/local/closure/ShiftClosureModal';
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { CoachingPendingCard } from '@/components/coaching';
@@ -47,9 +47,10 @@ function useCurrentlyWorking(branchId: string) {
   return useQuery({
     queryKey: ['currently-working', branchId],
     queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
+      // Usar fecha operativa para que el personal de cierre siga visible
+      const today = getOperationalDateString();
       
-      // Obtener todas las entradas/salidas de hoy
+      // Obtener todas las entradas/salidas de la jornada operativa
       const { data: entries, error } = await supabase
         .from('clock_entries')
         .select('user_id, entry_type, created_at')
@@ -196,8 +197,11 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl md:text-2xl font-bold">{branch.name}</h1>
-          <p className="text-sm text-muted-foreground">
-            {format(new Date(), "EEEE d MMM", { locale: es })}
+          <p className="text-sm text-muted-foreground capitalize">
+            {formatOperationalDate()}
+            {isEarlyMorning() && (
+              <span className="ml-1 text-xs text-warning">(turno de cierre activo)</span>
+            )}
           </p>
         </div>
         {/* Solo mostrar botón Cargar si puede cargar ventas */}
@@ -268,6 +272,14 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
                   {formatCurrency(todayTotal)}
                 </span>
               </div>
+
+              {/* Link al historial de ventas */}
+              <Link to={`/milocal/${branch.id}/ventas/historial`}>
+                <Button variant="ghost" size="sm" className="w-full text-xs">
+                  Ver historial de ventas
+                  <ChevronRight className="w-3 h-3 ml-1" />
+                </Button>
+              </Link>
 
               {loadedShifts.length === 0 && (
                 <div className="flex items-center gap-2 p-2 rounded bg-warning/10 text-xs">
