@@ -2,7 +2,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
-import type { VentaMensualFormData } from '@/types/ventas';
+
+interface VentaMensualPayload {
+  branch_id?: string;
+  periodo?: string;
+  venta_total?: number;
+  efectivo?: number;
+  fc_total?: number;
+  ft_total?: number;
+  observaciones?: string;
+}
 
 export function useVentasMensuales(branchId: string) {
   const { user } = useAuth();
@@ -28,14 +37,16 @@ export function useVentaMensualMutations() {
   const { user } = useAuth();
 
   const create = useMutation({
-    mutationFn: async (data: VentaMensualFormData) => {
+    mutationFn: async (data: VentaMensualPayload) => {
       const { data: result, error } = await supabase
         .from('ventas_mensuales_local')
         .insert({
-          branch_id: data.branch_id,
-          periodo: data.periodo,
-          fc_total: data.fc_total,
-          ft_total: data.ft_total,
+          branch_id: data.branch_id!,
+          periodo: data.periodo!,
+          venta_total: data.venta_total,
+          efectivo: data.efectivo,
+          fc_total: data.fc_total ?? 0,
+          ft_total: data.ft_total ?? 0,
           observaciones: data.observaciones,
           cargado_por: user?.id,
         })
@@ -52,10 +63,12 @@ export function useVentaMensualMutations() {
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<VentaMensualFormData> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: VentaMensualPayload }) => {
       const { error } = await supabase
         .from('ventas_mensuales_local')
         .update({
+          venta_total: data.venta_total,
+          efectivo: data.efectivo,
           fc_total: data.fc_total,
           ft_total: data.ft_total,
           observaciones: data.observaciones,

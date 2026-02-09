@@ -27,7 +27,7 @@ export default function VentasMensualesPage() {
     <div className="p-6">
       <PageHeader
         title="Ventas Mensuales"
-        subtitle="Registro de facturación contable y total por período"
+        subtitle="Registro de venta total y efectivo por período"
         actions={
           <Button onClick={() => { setEditing(null); setModalOpen(true); }}>
             <Plus className="w-4 h-4 mr-2" /> Cargar Período
@@ -40,10 +40,10 @@ export default function VentasMensualesPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Período</TableHead>
-              <TableHead className="text-right">FC (Contable)</TableHead>
-              <TableHead className="text-right">FT (Total)</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead className="text-right">% FT</TableHead>
+              <TableHead className="text-right">Venta Total</TableHead>
+              <TableHead className="text-right">Efectivo</TableHead>
+              <TableHead className="text-right">FC</TableHead>
+              <TableHead className="text-right">% Ef.</TableHead>
               <TableHead className="w-[60px]" />
             </TableRow>
           </TableHeader>
@@ -64,16 +64,18 @@ export default function VentasMensualesPage() {
               </TableRow>
             ) : (
               ventas.map((row) => {
-                const total = Number(row.fc_total) + Number(row.ft_total);
-                const pctFt = total > 0 ? ((Number(row.ft_total) / total) * 100).toFixed(1) : '0.0';
+                const ventaTotal = Number(row.venta_total ?? (Number(row.fc_total) + Number(row.ft_total)));
+                const efectivo = Number(row.efectivo ?? row.ft_total);
+                const fc = ventaTotal - efectivo;
+                const pctEf = ventaTotal > 0 ? ((efectivo / ventaTotal) * 100).toFixed(1) : '0.0';
                 return (
                   <TableRow key={row.id}>
                     <TableCell className="font-medium">{formatPeriodo(row.periodo)}</TableCell>
-                    <TableCell className="text-right font-mono">$ {Number(row.fc_total).toLocaleString('es-AR')}</TableCell>
-                    <TableCell className="text-right font-mono">$ {Number(row.ft_total).toLocaleString('es-AR')}</TableCell>
-                    <TableCell className="text-right font-mono font-semibold">$ {total.toLocaleString('es-AR')}</TableCell>
+                    <TableCell className="text-right font-mono font-semibold">$ {ventaTotal.toLocaleString('es-AR')}</TableCell>
+                    <TableCell className="text-right font-mono">$ {efectivo.toLocaleString('es-AR')}</TableCell>
+                    <TableCell className="text-right font-mono">$ {fc.toLocaleString('es-AR')}</TableCell>
                     <TableCell className="text-right">
-                      <Badge variant={parseFloat(pctFt) > 30 ? 'destructive' : 'secondary'}>{pctFt}%</Badge>
+                      <Badge variant={parseFloat(pctEf) > 30 ? 'destructive' : 'secondary'}>{pctEf}%</Badge>
                     </TableCell>
                     <TableCell>
                       <Button variant="ghost" size="icon" onClick={() => { setEditing(row); setModalOpen(true); }}>
