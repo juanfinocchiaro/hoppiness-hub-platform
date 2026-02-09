@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Building2, Phone, Mail, CreditCard, AlertTriangle,
   TrendingUp, Calendar, ArrowLeft, Pencil, Trash2, Plus,
-  Clock, Receipt, ShieldCheck
+  Clock, Receipt, ShieldCheck, BadgeDollarSign
 } from 'lucide-react';
 import { useResumenProveedor, useMovimientosProveedor } from '@/hooks/useCuentaCorrienteProveedor';
 import { useProveedores } from '@/hooks/useProveedores';
@@ -236,6 +236,7 @@ export default function CuentaCorrienteProveedorPage() {
                 movimientos.map((mov) => {
                   const isFactura = mov.tipo === 'factura';
                   const isOverdue = isFactura && mov.fecha_vencimiento && parseLocalDate(mov.fecha_vencimiento) < new Date();
+                  const isImputacion = !isFactura && mov.medio_pago === 'imputacion_saldo';
                   
                   return (
                     <TableRow key={`${mov.tipo}-${mov.id}`}>
@@ -248,6 +249,11 @@ export default function CuentaCorrienteProveedorPage() {
                           <div className="flex items-center gap-1.5">
                             <Receipt className="w-3.5 h-3.5 text-muted-foreground" />
                             <span className="text-sm font-medium">Factura</span>
+                          </div>
+                        ) : isImputacion ? (
+                          <div className="flex items-center gap-1.5">
+                            <BadgeDollarSign className="w-3.5 h-3.5 text-green-600" />
+                            <span className="text-sm font-medium">Imputación</span>
                           </div>
                         ) : (
                           <div className="flex items-center gap-1.5">
@@ -267,6 +273,11 @@ export default function CuentaCorrienteProveedorPage() {
                                 Venc: {formatLocalDate(mov.fecha_vencimiento)}
                               </p>
                             )}
+                          </div>
+                        ) : isImputacion ? (
+                          <div>
+                            <p className="text-sm font-medium">Saldo a favor imputado</p>
+                            <p className="text-xs text-muted-foreground">Aplicado de mes anterior</p>
                           </div>
                         ) : (
                           <div>
