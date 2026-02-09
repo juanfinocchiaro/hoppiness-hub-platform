@@ -42,6 +42,10 @@ import InsumosLocalPage from "./pages/local/InsumosLocalPage";
 import ComprasPage from "./pages/local/ComprasPage";
 import GastosPage from "./pages/local/GastosPage";
 import VentasMensualesPage from "./pages/local/VentasMensualesPage";
+import ConsumosPage from "./pages/local/ConsumosPage";
+import SociosPage from "./pages/local/SociosPage";
+import PeriodosPage from "./pages/local/PeriodosPage";
+import PLDashboardPage from "./pages/local/PLDashboardPage";
 
 // Mi Marca
 import BrandLayout from "./pages/admin/BrandLayout";
@@ -170,6 +174,10 @@ const App = () => (
               <Route path="finanzas/compras" element={<ComprasPage />} />
               <Route path="finanzas/gastos" element={<GastosPage />} />
               <Route path="finanzas/ventas" element={<VentasMensualesPage />} />
+              <Route path="finanzas/consumos" element={<ConsumosPage />} />
+              <Route path="finanzas/socios" element={<SociosPage />} />
+              <Route path="finanzas/periodos" element={<PeriodosPage />} />
+              <Route path="finanzas/pl" element={<PLDashboardPage />} />
               
               {/* Configuración */}
               <Route path="config/turnos" element={<ShiftConfigPage />} />

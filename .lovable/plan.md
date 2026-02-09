@@ -63,18 +63,6 @@
 - `src/components/finanzas/GastoFormModal.tsx` - Modal crear/editar gasto
 - `src/pages/local/GastosPage.tsx` - Gestión de gastos por sucursal
 
-### Navegación:
-- Mi Marca: sección "Finanzas" con Proveedores e Insumos
-- Mi Local: sección "Finanzas" con Proveedores, Insumos, Compras y Gastos
-
-### Rutas:
-- `/mimarca/finanzas/proveedores`
-- `/mimarca/finanzas/insumos`
-- `/milocal/:branchId/finanzas/proveedores`
-- `/milocal/:branchId/finanzas/insumos`
-- `/milocal/:branchId/finanzas/compras`
-- `/milocal/:branchId/finanzas/gastos`
-
 ## ✅ COMPLETADO: Ventas Mensuales + Canon (Frontend)
 
 ### Archivos creados:
@@ -86,18 +74,48 @@
 - `src/pages/local/VentasMensualesPage.tsx` - Ventas por sucursal (Mi Local)
 - `src/pages/admin/CanonPage.tsx` - Liquidaciones de canon (Mi Marca)
 
-### Rutas nuevas:
-- `/milocal/:branchId/finanzas/ventas`
+## ✅ COMPLETADO: Consumos Manuales (Frontend)
+
+### Archivos creados:
+- `src/hooks/useConsumosManuales.ts` - CRUD consumos + constantes
+- `src/components/finanzas/ConsumoManualFormModal.tsx` - Modal crear/editar
+- `src/pages/local/ConsumosPage.tsx` - Gestión por sucursal
+
+## ✅ COMPLETADO: Socios + Distribuciones (Frontend)
+
+### Archivos creados:
+- `src/hooks/useSocios.ts` - CRUD socios + movimientos
+- `src/components/finanzas/SocioFormModal.tsx` - Modal crear/editar socio
+- `src/components/finanzas/MovimientoSocioModal.tsx` - Modal registrar movimiento
+- `src/pages/local/SociosPage.tsx` - Gestión socios con subtabla de movimientos
+
+## ✅ COMPLETADO: Períodos (Frontend)
+
+### Archivos creados:
+- `src/hooks/usePeriodos.ts` - CRUD períodos + cerrar/reabrir
+- `src/pages/local/PeriodosPage.tsx` - Gestión de períodos contables
+
+## ✅ COMPLETADO: Dashboard P&L (Frontend)
+
+### Archivos creados:
+- `src/pages/local/PLDashboardPage.tsx` - Estado de resultados mensual
+
+### Navegación completa:
+- Mi Marca: Proveedores, Insumos, Canon
+- Mi Local: P&L, Ventas Mensuales, Compras, Gastos, Consumos, Proveedores, Socios, Períodos
+
+### Rutas:
+- `/mimarca/finanzas/proveedores`
+- `/mimarca/finanzas/insumos`
 - `/mimarca/finanzas/canon`
+- `/milocal/:branchId/finanzas/pl`
+- `/milocal/:branchId/finanzas/ventas`
+- `/milocal/:branchId/finanzas/compras`
+- `/milocal/:branchId/finanzas/gastos`
+- `/milocal/:branchId/finanzas/consumos`
+- `/milocal/:branchId/finanzas/proveedores`
+- `/milocal/:branchId/finanzas/insumos`
+- `/milocal/:branchId/finanzas/socios`
+- `/milocal/:branchId/finanzas/periodos`
 
-## 🔜 PENDIENTE: Frontend (módulos restantes)
-
-Orden sugerido:
-1. ~~Proveedores + Insumos (CRUD básico)~~ ✅
-2. ~~Compras + Pagos~~ ✅
-3. ~~Gastos~~ ✅
-4. ~~Ventas mensuales + Canon~~ ✅
-5. Consumos manuales
-6. Socios + Distribuciones
-7. Períodos (cierre/reapertura)
-8. Dashboard P&L
+## 🎉 SISTEMA FINANCIERO MVP COMPLETO

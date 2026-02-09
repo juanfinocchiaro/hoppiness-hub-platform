@@ -31,6 +31,9 @@ import {
   Truck,
   Package,
   TrendingUp,
+  BarChart3,
+  CalendarDays,
+  Handshake,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -76,7 +79,7 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
     return location.pathname === fullPath || location.pathname.startsWith(`${fullPath}/`);
   });
 
-  const finanzasPaths = ['finanzas/proveedores', 'finanzas/insumos', 'finanzas/compras', 'finanzas/gastos', 'finanzas/ventas'];
+  const finanzasPaths = ['finanzas/proveedores', 'finanzas/insumos', 'finanzas/compras', 'finanzas/gastos', 'finanzas/ventas', 'finanzas/consumos', 'finanzas/socios', 'finanzas/periodos', 'finanzas/pl'];
   const isFinanzasActive = finanzasPaths.some(path => {
     const fullPath = `${basePath}/${path}`;
     return location.pathname === fullPath || location.pathname.startsWith(`${fullPath}/`);
@@ -177,11 +180,14 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
           icon={Wallet}
           forceOpen={isFinanzasActive}
         >
-          <NavItemButton to={`${basePath}/finanzas/proveedores`} icon={Truck} label="Proveedores" />
-          <NavItemButton to={`${basePath}/finanzas/insumos`} icon={Package} label="Insumos" />
+          <NavItemButton to={`${basePath}/finanzas/pl`} icon={BarChart3} label="P&L" />
+          <NavItemButton to={`${basePath}/finanzas/ventas`} icon={TrendingUp} label="Ventas Mensuales" />
           <NavItemButton to={`${basePath}/finanzas/compras`} icon={ShoppingCart} label="Compras" />
           <NavItemButton to={`${basePath}/finanzas/gastos`} icon={Receipt} label="Gastos" />
-          <NavItemButton to={`${basePath}/finanzas/ventas`} icon={TrendingUp} label="Ventas Mensuales" />
+          <NavItemButton to={`${basePath}/finanzas/consumos`} icon={Package} label="Consumos" />
+          <NavItemButton to={`${basePath}/finanzas/proveedores`} icon={Truck} label="Proveedores" />
+          <NavItemButton to={`${basePath}/finanzas/socios`} icon={Handshake} label="Socios" />
+          <NavItemButton to={`${basePath}/finanzas/periodos`} icon={CalendarDays} label="Períodos" />
         </NavSectionGroup>
       )}
 
