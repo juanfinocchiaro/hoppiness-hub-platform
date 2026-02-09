@@ -1,53 +1,45 @@
 
-## Problema Identificado
 
-Los pagos de General Paz estan todos verificados pero el saldo no se actualiza. La causa raiz son dos problemas en los triggers de base de datos:
+## Imputacion de Saldo a Favor en la Cuenta Corriente
 
-1. **El trigger `update_saldo_factura_after_pago`** solo se ejecuta en INSERT. Cuando se verifica un pago (UPDATE de `verificado`), el trigger NO se dispara, asi que `facturas_proveedores.saldo_pendiente` nunca se recalcula.
+### Situacion Actual
 
-2. **El trigger `trg_update_canon_saldo`** escucha cambios en `pagos_canon` (que tiene 0 registros). Los pagos reales estan en `pagos_proveedores`. Hay una desconexion total: `canon_liquidaciones.saldo_pendiente` nunca se actualiza.
+El sistema ya funciona correctamente como cuenta corriente a nivel de **libro mayor**: el saldo acumulado (columna "Saldo") muestra correctamente saldos negativos cuando se paga de mas. El excedente se arrastra automaticamente en el calculo del saldo corrido.
 
-## Plan de Correccion
+Sin embargo, hay una desconexion: cada factura maneja su propio `saldo_pendiente` de forma independiente. Si sobrepagaste la factura de Diciembre, ese excedente aparece en el saldo corrido pero **no se descuenta automaticamente** de la factura de Enero.
 
-### Paso 1: Corregir el trigger de saldo de facturas
+### Enfoque Propuesto
 
-Modificar el trigger `update_saldo_factura_after_pago` para que tambien se dispare cuando cambia la columna `verificado`:
+No se necesita un refactor grande. La solucion es agregar la posibilidad de registrar pagos **a nivel cuenta corriente** (no solo vinculados a una factura especifica):
 
-```
-AFTER INSERT OR UPDATE OF verificado, deleted_at, monto
-ON pagos_proveedores
-```
+1. **Nuevo boton "Registrar Pago" global** en la pagina de Cuenta Corriente, ademas de los botones "Pagar" por factura. Esto permite registrar pagos que no estan atados a una factura especifica (ej: un pago anticipado).
 
-Esto hara que al verificar un pago, se recalcule el saldo de la factura automaticamente.
+2. **Mostrar saldo global real** en la card de resumen. Si el total pagado supera el total facturado, mostrar "Saldo a Favor" en verde en vez de "Saldo Pendiente".
 
-### Paso 2: Sincronizar canon_liquidaciones con facturas_proveedores
+3. **En el modal de pago por factura**, mostrar el saldo a favor de la cuenta si existe, con un boton para aplicarlo (pre-cargar el monto del saldo a favor como primer linea de pago).
 
-Crear un trigger que, al actualizarse `facturas_proveedores` (cuando el proveedor es Hoppiness Club), sincronice el `saldo_pendiente` y `estado` en `canon_liquidaciones` para el mismo branch+periodo.
+### Cambios Tecnicos
 
-Esto elimina la dependencia de la tabla `pagos_canon` (que esta vacia y no se usa).
+**Frontend:**
 
-### Paso 3: Recalcular saldos existentes
+- `CuentaCorrienteProveedorPage.tsx`:
+  - Agregar boton "Registrar Pago" que abra el modal sin factura especifica (pago a cuenta)
+  - Card "Saldo Pendiente" cambia dinamicamente: si el saldo global es negativo, muestra "Saldo a Favor" en verde
 
-Ejecutar un script de backfill que fuerce el recalculo de todos los saldos de:
-- `facturas_proveedores` de Hoppiness Club (sumando pagos verificados)
-- `canon_liquidaciones` (reflejando el saldo correcto de la factura)
+- `PagoProveedorModal.tsx`:
+  - Soportar modo sin factura (pago a cuenta general del proveedor)
+  - Cuando se abre para una factura especifica y hay saldo a favor global, mostrar un banner: "Tenes $X a favor en la cuenta" con boton para aplicarlo
 
-Esto corregira inmediatamente los datos de General Paz y cualquier otro local con pagos verificados.
+- `useCuentaCorrienteProveedor.ts`:
+  - La vista `cuenta_corriente_proveedores` ya calcula `total_pagado` y `total_pendiente`. Solo hay que usar `total_pagado - total_facturado` para detectar saldo a favor en el frontend.
 
-### Paso 4: Eliminar trigger obsoleto
+**Base de datos:**
+- No se necesitan cambios de esquema. Los pagos ya se registran en `pagos_proveedores` con `factura_id` que puede ser nullable (pago a cuenta). Si actualmente no es nullable, agregar migracion para permitirlo.
 
-Eliminar `trg_update_canon_saldo` que escucha `pagos_canon` ya que esa tabla no se usa. Toda la logica pasa por `pagos_proveedores` y `facturas_proveedores`.
+### Resultado
 
----
+- El franquiciado puede pagar de mas en una factura o registrar un pago a cuenta
+- El saldo a favor se muestra claramente en la cuenta corriente
+- Al pagar la siguiente factura, puede aplicar el saldo a favor con un click
+- El libro mayor sigue mostrando el saldo corrido real
 
-### Seccion Tecnica
-
-**Archivos a modificar:**
-- Nueva migracion SQL con:
-  - DROP del trigger `update_saldo_factura_after_pago` y recreacion con `AFTER INSERT OR UPDATE OF verificado, deleted_at, monto`
-  - DROP del trigger `update_saldo_factura_after_delete_pago` (redundante con el nuevo)
-  - Nuevo trigger en `facturas_proveedores` para sincronizar a `canon_liquidaciones`
-  - DROP del trigger `trg_update_canon_saldo` en `pagos_canon`
-  - Script de backfill para recalcular todos los saldos existentes
-
-**Sin cambios en frontend** — el problema es 100% de triggers en la base de datos.
