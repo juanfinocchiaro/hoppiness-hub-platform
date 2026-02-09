@@ -9,9 +9,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Building2, Phone, Mail, CreditCard, AlertTriangle,
-  TrendingUp, Calendar, ArrowLeft, Pencil, Trash2, Plus
+  TrendingUp, Calendar, ArrowLeft, Pencil, Trash2, Plus,
+  Clock, Receipt, ShieldCheck
 } from 'lucide-react';
-import { useSaldoProveedor, useMovimientosProveedor } from '@/hooks/useCuentaCorrienteProveedor';
+import { useResumenProveedor, useMovimientosProveedor } from '@/hooks/useCuentaCorrienteProveedor';
 import { useProveedores } from '@/hooks/useProveedores';
 import { usePagoProveedorMutations, useFacturaById } from '@/hooks/useCompras';
 import { PagoProveedorModal } from '@/components/finanzas/PagoProveedorModal';
@@ -19,10 +20,12 @@ import { ProveedorFormModal } from '@/components/finanzas/ProveedorFormModal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/states';
 
-/** Parse YYYY-MM-DD as local date to avoid UTC→local shift */
+const MONTHS_SHORT = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+/** Format YYYY-MM-DD as "1 Feb 2026" */
 function formatLocalDate(dateStr: string) {
   const [y, m, d] = dateStr.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString('es-AR');
+  return `${d} ${MONTHS_SHORT[m - 1]} ${y}`;
 }
 
 function parseLocalDate(dateStr: string) {
@@ -30,12 +33,14 @@ function parseLocalDate(dateStr: string) {
   return new Date(y, m - 1, d);
 }
 
+const fmt = (n: number) => Number(n).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
 export default function CuentaCorrienteProveedorPage() {
   const { branchId, proveedorId } = useParams<{ branchId: string; proveedorId: string }>();
   const navigate = useNavigate();
   const { data: proveedores } = useProveedores(branchId);
   const proveedor = proveedores?.find(p => p.id === proveedorId);
-  const { data: saldo, isLoading: loadingSaldo } = useSaldoProveedor(branchId, proveedorId);
+  const { data: resumen, isLoading: loadingResumen } = useResumenProveedor(branchId, proveedorId);
   const { data: movimientos, isLoading: loadingMov } = useMovimientosProveedor(branchId, proveedorId);
   const { softDeletePago } = usePagoProveedorMutations();
   const [payingFacturaId, setPayingFacturaId] = useState<string | null>(null);
@@ -44,8 +49,7 @@ export default function CuentaCorrienteProveedorPage() {
   const [deletingPagoId, setDeletingPagoId] = useState<string | null>(null);
   const { data: facturaData } = useFacturaById(payingFacturaId);
 
-  const totalPendiente = Number(saldo?.total_pendiente || 0);
-  const saldoAFavor = totalPendiente < 0 ? Math.abs(totalPendiente) : 0;
+  const saldoAFavor = resumen && resumen.saldo_actual < 0 ? Math.abs(resumen.saldo_actual) : 0;
 
   const payingFactura = payingFacturaId && facturaData ? {
     ...facturaData,
@@ -71,86 +75,98 @@ export default function CuentaCorrienteProveedorPage() {
       />
 
       {/* Alerta de facturas vencidas */}
-      {saldo && Number(saldo.facturas_vencidas) > 0 && (
+      {resumen && resumen.facturas_vencidas > 0 && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Tenés {saldo.facturas_vencidas} factura(s) vencida(s) por $ {Number(saldo.monto_vencido).toLocaleString('es-AR')}
+            Tenés {resumen.facturas_vencidas} factura(s) vencida(s) por $ {fmt(resumen.monto_vencido)}
           </AlertDescription>
         </Alert>
       )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {loadingSaldo ? (
+        {loadingResumen ? (
           Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}><CardContent className="pt-6"><Skeleton className="h-12 w-full" /></CardContent></Card>
           ))
-        ) : (
+        ) : resumen ? (
           <>
+            {/* Card 1: Saldo Actual */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {totalPendiente >= 0 ? 'Saldo Pendiente' : 'Saldo a Favor'}
+                  {resumen.saldo_actual > 0 ? 'Saldo Actual' : resumen.saldo_actual < 0 ? 'Saldo a Favor' : 'Saldo'}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold font-mono ${totalPendiente < 0 ? 'text-green-600' : totalPendiente === 0 ? 'text-green-600' : ''}`}>
-                  $ {Number(Math.abs(totalPendiente)).toLocaleString('es-AR')}
+                <div className={`text-2xl font-bold font-mono ${resumen.saldo_actual < 0 ? 'text-green-600' : resumen.saldo_actual === 0 ? 'text-green-600' : ''}`}>
+                  $ {fmt(Math.abs(resumen.saldo_actual))}
                 </div>
-                {totalPendiente >= 0 && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {saldo?.facturas_pendientes || 0} factura(s) pendiente(s)
-                  </p>
-                )}
-                {totalPendiente < 0 && (
-                  <p className="text-xs text-green-600 mt-1">
-                    Se aplicará a próximas facturas
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  {resumen.saldo_actual > 0 ? 'Deuda total' : resumen.saldo_actual < 0 ? 'Crédito disponible' : 'Sin deuda'}
+                </p>
               </CardContent>
             </Card>
+
+            {/* Card 2: Vencido */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <Calendar className="w-4 h-4" /> Próximo Vencimiento
+                  <AlertTriangle className="w-4 h-4" /> Vencido
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-lg font-semibold">
-                  {saldo?.proximo_vencimiento
-                    ? new Date(saldo.proximo_vencimiento).toLocaleDateString('es-AR')
-                    : '-'}
+                <div className={`text-lg font-semibold font-mono ${resumen.monto_vencido > 0 ? 'text-destructive' : ''}`}>
+                  $ {fmt(resumen.monto_vencido)}
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {resumen.facturas_vencidas > 0 ? `${resumen.facturas_vencidas} factura(s)` : 'Sin vencimientos'}
+                </p>
               </CardContent>
             </Card>
+
+            {/* Card 3: Por Vencer */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" /> Total Facturado
+                  <Calendar className="w-4 h-4" /> Por Vencer
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-lg font-semibold font-mono">
-                  $ {Number(saldo?.total_facturado || 0).toLocaleString('es-AR')}
+                  $ {fmt(resumen.monto_por_vencer)}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">{saldo?.cantidad_facturas || 0} factura(s)</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {resumen.todas_vencidas 
+                    ? 'Todas vencidas' 
+                    : resumen.proximo_vencimiento 
+                      ? `Próx: ${formatLocalDate(resumen.proximo_vencimiento)}`
+                      : 'Sin vencimientos'}
+                </p>
               </CardContent>
             </Card>
+
+            {/* Card 4: Pagos Pendientes de Verificación */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <CreditCard className="w-4 h-4" /> Total Pagado
+                  <ShieldCheck className="w-4 h-4" /> Pagos Pend. Verif.
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-lg font-semibold font-mono">
-                  $ {Number(saldo?.total_pagado || 0).toLocaleString('es-AR')}
+                <div className={`text-lg font-semibold font-mono ${resumen.pagos_pendientes_verif > 0 ? 'text-amber-600' : ''}`}>
+                  $ {fmt(resumen.total_pagado_pendiente_verif)}
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {resumen.pagos_pendientes_verif > 0 
+                    ? `${resumen.pagos_pendientes_verif} pago(s) verificando`
+                    : 'Todo verificado'}
+                </p>
               </CardContent>
             </Card>
           </>
-        )}
+        ) : null}
       </div>
 
       {/* Datos del Proveedor */}
@@ -185,7 +201,7 @@ export default function CuentaCorrienteProveedorPage() {
         </Card>
       )}
 
-      {/* Historial de Movimientos */}
+      {/* Historial de Movimientos - Redesigned */}
       <Card>
         <CardHeader><CardTitle className="text-base">Historial de Cuenta Corriente</CardTitle></CardHeader>
         <CardContent className="p-0">
@@ -194,113 +210,139 @@ export default function CuentaCorrienteProveedorPage() {
               <TableRow>
                 <TableHead>Fecha</TableHead>
                 <TableHead>Tipo</TableHead>
-                <TableHead>Referencia</TableHead>
-                <TableHead className="text-right">Debe</TableHead>
-                <TableHead className="text-right">Haber</TableHead>
+                <TableHead>Detalle</TableHead>
+                <TableHead className="text-right">Importe</TableHead>
                 <TableHead className="text-right">Saldo</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead>Vencimiento</TableHead>
-                <TableHead className="w-[100px]" />
+                <TableHead className="w-[80px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {loadingMov ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 9 }).map((_, j) => (
+                    {Array.from({ length: 7 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : !movimientos?.length ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-32">
+                  <TableCell colSpan={7} className="h-32">
                     <EmptyState icon={CreditCard} title="Sin movimientos" description="No hay facturas ni pagos registrados" />
                   </TableCell>
                 </TableRow>
               ) : (
-                movimientos.map((mov) => (
-                  <TableRow key={`${mov.tipo}-${mov.id}`}>
-                    <TableCell className="text-sm">{formatLocalDate(mov.fecha)}</TableCell>
-                    <TableCell>
-                      {mov.tipo === 'factura' ? (
-                        <Badge variant="destructive">Factura</Badge>
-                      ) : (
-                        <Badge variant="default">Pago</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {mov.tipo === 'factura' ? (
-                        <div>
-                          <p className="font-medium text-sm">{mov.factura_numero}</p>
-                          <p className="text-xs text-muted-foreground">{mov.items_count} item(s)</p>
-                        </div>
-                      ) : (
-                        <div>
-                          <p className="font-medium text-sm capitalize">{mov.medio_pago}</p>
-                          {mov.referencia && <p className="text-xs text-muted-foreground">Ref: {mov.referencia}</p>}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {mov.tipo === 'factura' && (
-                        <span className="text-destructive">$ {mov.monto.toLocaleString('es-AR')}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {mov.tipo === 'pago' && (
-                        <span className="text-green-600">$ {mov.monto.toLocaleString('es-AR')}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-mono font-bold">
-                      $ {mov.saldo_acumulado.toLocaleString('es-AR')}
-                    </TableCell>
-                    <TableCell>
-                      {mov.tipo === 'factura' && mov.estado && (
-                        mov.estado === 'pagado' ? <Badge variant="default">Pagado</Badge> :
-                        mov.estado === 'vencido' || (mov.fecha_vencimiento && parseLocalDate(mov.fecha_vencimiento) < new Date()) ?
-                          <Badge variant="destructive">Vencido</Badge> :
-                          <Badge variant="secondary">Pendiente</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {mov.tipo === 'factura' && mov.fecha_vencimiento && (
-                        <span className={parseLocalDate(mov.fecha_vencimiento) < new Date() ? 'text-destructive font-medium' : ''}>
-                          {formatLocalDate(mov.fecha_vencimiento)}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1 justify-end items-center">
-                        {mov.tipo === 'factura' && mov.estado !== 'pagado' && (
-                          <Button size="sm" variant="outline" onClick={() => setPayingFacturaId(mov.id)}>
-                            Pagar
-                          </Button>
+                movimientos.map((mov) => {
+                  const isFactura = mov.tipo === 'factura';
+                  const isOverdue = isFactura && mov.fecha_vencimiento && parseLocalDate(mov.fecha_vencimiento) < new Date();
+                  
+                  return (
+                    <TableRow key={`${mov.tipo}-${mov.id}`}>
+                      {/* Fecha */}
+                      <TableCell className="text-sm whitespace-nowrap">{formatLocalDate(mov.fecha)}</TableCell>
+                      
+                      {/* Tipo */}
+                      <TableCell>
+                        {isFactura ? (
+                          <div className="flex items-center gap-1.5">
+                            <Receipt className="w-3.5 h-3.5 text-muted-foreground" />
+                            <span className="text-sm font-medium">Factura</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <CreditCard className="w-3.5 h-3.5 text-green-600" />
+                            <span className="text-sm font-medium">Pago</span>
+                          </div>
                         )}
-                        {mov.tipo === 'pago' && mov.verificado === false && (
-                          <Badge variant="outline" className="text-amber-600 border-amber-300 text-xs">
-                            Pend. verificación
+                      </TableCell>
+                      
+                      {/* Detalle */}
+                      <TableCell>
+                        {isFactura ? (
+                          <div>
+                            <p className="text-sm font-medium">{mov.factura_numero}</p>
+                            {mov.fecha_vencimiento && (
+                              <p className={`text-xs ${isOverdue ? 'text-destructive' : 'text-muted-foreground'}`}>
+                                Venc: {formatLocalDate(mov.fecha_vencimiento)}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="text-sm font-medium capitalize">{mov.medio_pago}</p>
+                            {mov.referencia && <p className="text-xs text-muted-foreground">{mov.referencia}</p>}
+                          </div>
+                        )}
+                      </TableCell>
+                      
+                      {/* Importe (signed) */}
+                      <TableCell className="text-right font-mono text-sm">
+                        {isFactura ? (
+                          <span className="text-destructive">+$ {fmt(mov.monto)}</span>
+                        ) : (
+                          <span className="text-green-600">-$ {fmt(mov.monto)}</span>
+                        )}
+                      </TableCell>
+                      
+                      {/* Saldo running */}
+                      <TableCell className="text-right font-mono text-sm font-semibold">
+                        {mov.saldo_acumulado < 0 ? (
+                          <span className="text-green-600">-$ {fmt(Math.abs(mov.saldo_acumulado))}</span>
+                        ) : (
+                          <span>$ {fmt(mov.saldo_acumulado)}</span>
+                        )}
+                      </TableCell>
+                      
+                      {/* Estado */}
+                      <TableCell>
+                        {isFactura && (
+                          mov.estado === 'pagado' ? (
+                            <Badge variant="default" className="text-xs">Pagado</Badge>
+                          ) : isOverdue ? (
+                            <Badge variant="destructive" className="text-xs">Vencida</Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">Pendiente</Badge>
+                          )
+                        )}
+                        {!isFactura && mov.verificado === false && (
+                          <Badge variant="outline" className="text-xs text-amber-600 border-amber-300 gap-1">
+                            <Clock className="w-3 h-3" />
+                            Verificando
                           </Badge>
                         )}
-                        {mov.tipo === 'pago' && mov.verificado === true && (
+                        {!isFactura && mov.verificado === true && (
                           <Badge variant="default" className="text-xs gap-1">
-                            ✓ Verificado
+                            <ShieldCheck className="w-3 h-3" />
+                            Verificado
                           </Badge>
                         )}
-                        {mov.tipo === 'pago' && !mov.verificado && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setDeletingPagoId(mov.id)}
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                      </TableCell>
+                      
+                      {/* Actions */}
+                      <TableCell>
+                        <div className="flex gap-1 justify-end items-center">
+                          {isFactura && mov.estado !== 'pagado' && (
+                            <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => setPayingFacturaId(mov.id)}>
+                              Registrar Pago
+                            </Button>
+                          )}
+                          {!isFactura && !mov.verificado && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              title="Eliminar pago"
+                              onClick={() => setDeletingPagoId(mov.id)}
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

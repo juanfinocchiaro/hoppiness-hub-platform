@@ -17,6 +17,129 @@ export interface MovimientoCuenta {
   verificado?: boolean;
 }
 
+export interface ResumenCuenta {
+  /** Running total of all invoices */
+  total_facturado: number;
+  /** Sum of ALL payments (verified + unverified) */
+  total_pagado: number;
+  /** Sum of only verified payments */
+  total_pagado_verificado: number;
+  /** Sum of unverified payments */
+  total_pagado_pendiente_verif: number;
+  /** Count of unverified payments */
+  pagos_pendientes_verif: number;
+  /** Net balance: facturado - pagado (negative = saldo a favor) */
+  saldo_actual: number;
+  /** Total overdue amount (from invoices past due) */
+  monto_vencido: number;
+  /** Count of overdue invoices */
+  facturas_vencidas: number;
+  /** Total not-yet-due amount */
+  monto_por_vencer: number;
+  /** Next due date, or null */
+  proximo_vencimiento: string | null;
+  /** Whether all pending invoices are overdue */
+  todas_vencidas: boolean;
+}
+
+/** Parse YYYY-MM-DD as local date to avoid UTC→local shift */
+function parseLocalDate(dateStr: string) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+export function useResumenProveedor(branchId?: string, proveedorId?: string) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['resumen-proveedor', branchId, proveedorId],
+    queryFn: async () => {
+      // Get all invoices
+      const { data: facturas, error: fErr } = await supabase
+        .from('facturas_proveedores')
+        .select('id, total, saldo_pendiente, estado_pago, fecha_vencimiento')
+        .eq('branch_id', branchId!)
+        .eq('proveedor_id', proveedorId!)
+        .is('deleted_at', null);
+      if (fErr) throw fErr;
+
+      // Get all payments
+      const { data: pagos, error: pErr } = await supabase
+        .from('pagos_proveedores')
+        .select('id, monto, verificado')
+        .eq('branch_id', branchId!)
+        .eq('proveedor_id', proveedorId!)
+        .is('deleted_at', null);
+      if (pErr) throw pErr;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      let total_facturado = 0;
+      let monto_vencido = 0;
+      let monto_por_vencer = 0;
+      let facturas_vencidas = 0;
+      let proximo_vencimiento: string | null = null;
+      let facturas_pendientes = 0;
+
+      for (const f of facturas || []) {
+        total_facturado += Number(f.total);
+        if (f.estado_pago === 'pendiente') {
+          facturas_pendientes++;
+          const venc = f.fecha_vencimiento ? parseLocalDate(f.fecha_vencimiento) : null;
+          if (venc && venc < today) {
+            monto_vencido += Number(f.saldo_pendiente);
+            facturas_vencidas++;
+          } else {
+            monto_por_vencer += Number(f.saldo_pendiente);
+            if (f.fecha_vencimiento) {
+              if (!proximo_vencimiento || f.fecha_vencimiento < proximo_vencimiento) {
+                proximo_vencimiento = f.fecha_vencimiento;
+              }
+            }
+          }
+        }
+      }
+
+      let total_pagado = 0;
+      let total_pagado_verificado = 0;
+      let total_pagado_pendiente_verif = 0;
+      let pagos_pendientes_verif = 0;
+
+      for (const p of pagos || []) {
+        const m = Number(p.monto);
+        total_pagado += m;
+        if (p.verificado) {
+          total_pagado_verificado += m;
+        } else {
+          total_pagado_pendiente_verif += m;
+          pagos_pendientes_verif++;
+        }
+      }
+
+      const saldo_actual = total_facturado - total_pagado;
+
+      const resumen: ResumenCuenta = {
+        total_facturado,
+        total_pagado,
+        total_pagado_verificado,
+        total_pagado_pendiente_verif,
+        pagos_pendientes_verif,
+        saldo_actual,
+        monto_vencido,
+        facturas_vencidas,
+        monto_por_vencer,
+        proximo_vencimiento,
+        todas_vencidas: facturas_pendientes > 0 && facturas_vencidas === facturas_pendientes,
+      };
+
+      return resumen;
+    },
+    enabled: !!user && !!branchId && !!proveedorId,
+  });
+}
+
+/** @deprecated Use useResumenProveedor instead for summary data */
 export function useSaldoProveedor(branchId?: string, proveedorId?: string) {
   const { user } = useAuth();
 
