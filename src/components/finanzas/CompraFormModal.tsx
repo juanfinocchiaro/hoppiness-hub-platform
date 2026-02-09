@@ -248,7 +248,7 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                             <Select value={item.insumo_id} onValueChange={v => updateItem(idx, 'insumo_id', v)}>
                               <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                               <SelectContent>
-                                {insumos?.map((i: any) => (
+                                {insumos?.filter((i: any) => i.activo !== false).map((i: any) => (
                                   <SelectItem key={i.id} value={i.id}>
                                     {i.nivel_control === 'obligatorio' ? '🔒 ' : i.nivel_control === 'semi_libre' ? '🟡 ' : '🟢 '}{i.nombre}
                                   </SelectItem>

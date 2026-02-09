@@ -79,63 +79,71 @@ export default function ComprasPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((row: any) => (
-                <>
-                  <TableRow key={row.id} className="cursor-pointer" onClick={() => setExpanded(expanded === row.id ? null : row.id)}>
-                    <TableCell>
-                      {expanded === row.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </TableCell>
-                    <TableCell className="text-sm">{new Date(row.factura_fecha).toLocaleDateString('es-AR')}</TableCell>
-                    <TableCell className="font-medium">{row.proveedores?.razon_social}</TableCell>
-                    <TableCell className="text-sm font-mono">{row.factura_tipo ? `${row.factura_tipo}-` : ''}{row.factura_numero}</TableCell>
-                    <TableCell className="text-right font-mono">$ {Number(row.total).toLocaleString('es-AR')}</TableCell>
-                    <TableCell>{estadoBadge(row.estado_pago)}</TableCell>
-                    <TableCell className="text-right font-mono text-destructive">
-                      {Number(row.saldo_pendiente) > 0 ? `$ ${Number(row.saldo_pendiente).toLocaleString('es-AR')}` : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1 justify-end" onClick={e => e.stopPropagation()}>
-                        {Number(row.saldo_pendiente) > 0 && (
-                          <Button variant="ghost" size="icon" title="Registrar pago" onClick={() => setPaying(row)}>
-                            <CreditCard className="w-4 h-4" />
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="icon" onClick={() => setDeleting(row)}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                  {expanded === row.id && row.items_factura?.length > 0 && (
-                    <TableRow>
-                      <TableCell colSpan={8} className="bg-muted/30 p-0">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Insumo</TableHead>
-                              <TableHead className="text-right">Cant.</TableHead>
-                              <TableHead>Ud.</TableHead>
-                              <TableHead className="text-right">P.Unit</TableHead>
-                              <TableHead className="text-right">Subtotal</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {row.items_factura.map((item: any) => (
-                              <TableRow key={item.id}>
-                                <TableCell className="text-sm">{item.insumos?.nombre || item.conceptos_servicio?.nombre || item.insumo_id || '-'}</TableCell>
-                                <TableCell className="text-right font-mono">{Number(item.cantidad)}</TableCell>
-                                <TableCell className="text-sm">{item.unidad}</TableCell>
-                                <TableCell className="text-right font-mono">$ {Number(item.precio_unitario).toLocaleString('es-AR')}</TableCell>
-                                <TableCell className="text-right font-mono">$ {Number(item.subtotal).toLocaleString('es-AR')}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
+              filtered.map((row: any) => {
+                const isCanon = row.factura_numero?.startsWith('CANON-');
+                return (
+                  <tbody key={row.id}>
+                    <TableRow className="cursor-pointer" onClick={() => setExpanded(expanded === row.id ? null : row.id)}>
+                      <TableCell>
+                        {expanded === row.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </TableCell>
+                      <TableCell className="text-sm">{new Date(row.factura_fecha).toLocaleDateString('es-AR')}</TableCell>
+                      <TableCell className="font-medium">
+                        {row.proveedores?.razon_social}
+                        {isCanon && <Badge variant="outline" className="ml-2 text-xs">Automática</Badge>}
+                      </TableCell>
+                      <TableCell className="text-sm font-mono">{row.factura_tipo ? `${row.factura_tipo}-` : ''}{row.factura_numero}</TableCell>
+                      <TableCell className="text-right font-mono">$ {Number(row.total).toLocaleString('es-AR')}</TableCell>
+                      <TableCell>{estadoBadge(row.estado_pago)}</TableCell>
+                      <TableCell className="text-right font-mono text-destructive">
+                        {Number(row.saldo_pendiente) > 0 ? `$ ${Number(row.saldo_pendiente).toLocaleString('es-AR')}` : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1 justify-end" onClick={e => e.stopPropagation()}>
+                          {Number(row.saldo_pendiente) > 0 && (
+                            <Button variant="ghost" size="icon" title="Registrar pago" onClick={() => setPaying(row)}>
+                              <CreditCard className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {!isCanon && (
+                            <Button variant="ghost" size="icon" onClick={() => setDeleting(row)}>
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
-                  )}
-                </>
-              ))
+                    {expanded === row.id && row.items_factura?.length > 0 && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="bg-muted/30 p-0">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Concepto</TableHead>
+                                <TableHead className="text-right">Cant.</TableHead>
+                                <TableHead>Ud.</TableHead>
+                                <TableHead className="text-right">P.Unit</TableHead>
+                                <TableHead className="text-right">Subtotal</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {row.items_factura.map((item: any) => (
+                                <TableRow key={item.id}>
+                                  <TableCell className="text-sm">{item.insumos?.nombre || item.conceptos_servicio?.nombre || '-'}</TableCell>
+                                  <TableCell className="text-right font-mono">{Number(item.cantidad)}</TableCell>
+                                  <TableCell className="text-sm">{item.unidad || '-'}</TableCell>
+                                  <TableCell className="text-right font-mono">$ {Number(item.precio_unitario).toLocaleString('es-AR')}</TableCell>
+                                  <TableCell className="text-right font-mono">$ {Number(item.subtotal).toLocaleString('es-AR')}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </tbody>
+                );
+              })
             )}
           </TableBody>
         </Table>
