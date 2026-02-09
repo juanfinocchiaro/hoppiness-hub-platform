@@ -38,7 +38,37 @@ export function useVentaMensualMutations() {
     mutationFn: async (data: VentaMensualPayload) => {
       const vt = data.venta_total ?? 0;
       const ef = data.efectivo ?? 0;
-      const fc = vt - ef; // FC = Venta Total - Efectivo
+      const fc = vt - ef;
+
+      // Check if a soft-deleted record exists for this branch+periodo
+      const { data: existing } = await supabase
+        .from('ventas_mensuales_local')
+        .select('id')
+        .eq('branch_id', data.branch_id!)
+        .eq('periodo', data.periodo!)
+        .not('deleted_at', 'is', null)
+        .maybeSingle();
+
+      if (existing) {
+        // Revive the soft-deleted record with new data
+        const { data: result, error } = await supabase
+          .from('ventas_mensuales_local')
+          .update({
+            venta_total: vt,
+            efectivo: ef,
+            fc_total: fc,
+            ft_total: ef,
+            observaciones: data.observaciones,
+            cargado_por: user?.id,
+            deleted_at: null,
+          })
+          .eq('id', existing.id)
+          .select()
+          .single();
+        if (error) throw error;
+        return result;
+      }
+
       const { data: result, error } = await supabase
         .from('ventas_mensuales_local')
         .insert({
@@ -47,7 +77,7 @@ export function useVentaMensualMutations() {
           venta_total: vt,
           efectivo: ef,
           fc_total: fc,
-          ft_total: ef, // legacy column
+          ft_total: ef,
           observaciones: data.observaciones,
           cargado_por: user?.id,
         })
