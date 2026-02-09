@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,55 +12,77 @@ interface VentaMensualFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   branchId: string;
+  /** Período seleccionado en la página padre - OBLIGATORIO para nuevas cargas */
+  periodo: string;
   venta?: VentaMensual | null;
 }
 
-export function VentaMensualFormModal({ open, onOpenChange, branchId, venta }: VentaMensualFormModalProps) {
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+function formatPeriodoLargo(p: string) {
+  if (!p) return '';
+  const [y, m] = p.split('-');
+  return `${MESES[parseInt(m) - 1]} ${y}`;
+}
+
+export function VentaMensualFormModal({ open, onOpenChange, branchId, periodo, venta }: VentaMensualFormModalProps) {
   const { create, update } = useVentaMensualMutations();
   const isEditing = !!venta;
 
   const [form, setForm] = useState({
-    periodo: getCurrentPeriodo(),
-    venta_total: '',
-    efectivo: '',
+    periodo: periodo || getCurrentPeriodo(),
+    fc_total: '',
+    ft_total: '',
     observaciones: '',
   });
 
+  // Cuando cambia el período seleccionado o se abre el modal, actualizar el form
   useEffect(() => {
-    if (open && venta) {
-      setForm({
-        periodo: venta.periodo,
-        venta_total: String(venta.venta_total ?? (Number(venta.fc_total) + Number(venta.ft_total))),
-        efectivo: String(venta.efectivo ?? venta.ft_total),
-        observaciones: venta.observaciones || '',
-      });
-    } else if (open) {
-      setForm({ periodo: getCurrentPeriodo(), venta_total: '', efectivo: '', observaciones: '' });
+    if (open) {
+      if (venta) {
+        // Modo edición: usar datos de la venta existente
+        setForm({
+          periodo: venta.periodo,
+          fc_total: String(venta.fc_total),
+          ft_total: String(venta.ft_total),
+          observaciones: venta.observaciones || '',
+        });
+      } else {
+        // Modo nuevo: usar el período que viene de la página padre
+        setForm({
+          periodo: periodo,
+          fc_total: '',
+          ft_total: '',
+          observaciones: '',
+        });
+      }
     }
-  }, [open, venta]);
+  }, [open, venta, periodo]);
 
-  const ventaTotal = parseFloat(form.venta_total) || 0;
-  const efectivo = parseFloat(form.efectivo) || 0;
-  const facturacionContable = ventaTotal - efectivo;
-  const porcentajeEfectivo = ventaTotal > 0 ? ((efectivo / ventaTotal) * 100).toFixed(1) : '0.0';
+  const fcTotal = parseFloat(form.fc_total) || 0;
+  const ftTotal = parseFloat(form.ft_total) || 0;
+  const ventaTotal = fcTotal + ftTotal;
+  const porcentajeFt = ventaTotal > 0 ? ((ftTotal / ventaTotal) * 100).toFixed(1) : '0.0';
 
   const handleSubmit = async () => {
-    if (!form.venta_total) return;
-    const payload = {
-      venta_total: ventaTotal,
-      efectivo: efectivo,
-      fc_total: facturacionContable,
-      ft_total: efectivo,
-      observaciones: form.observaciones || undefined,
-    };
-
+    if (!form.fc_total && !form.ft_total) return;
+    
     if (isEditing) {
-      await update.mutateAsync({ id: venta.id, data: payload });
+      await update.mutateAsync({
+        id: venta.id,
+        data: { 
+          fc_total: fcTotal, 
+          ft_total: ftTotal, 
+          observaciones: form.observaciones || undefined 
+        },
+      });
     } else {
       await create.mutateAsync({
         branch_id: branchId,
-        periodo: form.periodo,
-        ...payload,
+        periodo: form.periodo, // Usa el período del form (que viene de la página)
+        fc_total: fcTotal,
+        ft_total: ftTotal,
+        observaciones: form.observaciones || undefined,
       });
     }
     onOpenChange(false);
@@ -73,56 +95,81 @@ export function VentaMensualFormModal({ open, onOpenChange, branchId, venta }: V
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Editar Ventas del Período' : 'Registrar Ventas Mensuales'}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? 'Editar Ventas del Período' : 'Registrar Ventas Mensuales'}
+          </DialogTitle>
+          <DialogDescription>
+            Período: <strong>{formatPeriodoLargo(form.periodo)}</strong>
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div>
-            <Label>Período *</Label>
-            <Input
-              type="month"
-              value={form.periodo}
-              onChange={e => set('periodo', e.target.value)}
-              disabled={isEditing}
-            />
+          {/* Mostrar período como solo lectura - no editable */}
+          <div className="p-3 rounded-md bg-primary/5 border border-primary/20">
+            <p className="text-sm text-muted-foreground">Cargando ventas para:</p>
+            <p className="text-lg font-semibold">{formatPeriodoLargo(form.periodo)}</p>
           </div>
 
           <div>
-            <Label>Venta Total *</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={form.venta_total}
-              onChange={e => set('venta_total', e.target.value)}
-              placeholder="$ 0.00"
-            />
+            <Label>Venta Total (Facturación Contable) *</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+              <Input
+                type="number"
+                step="0.01"
+                value={form.fc_total}
+                onChange={e => set('fc_total', e.target.value)}
+                placeholder="0.00"
+                className="pl-7"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Total facturado con comprobante fiscal (FC)
+            </p>
           </div>
 
           <div>
-            <Label>Efectivo</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={form.efectivo}
-              onChange={e => set('efectivo', e.target.value)}
-              placeholder="$ 0.00"
-            />
+            <Label>Efectivo (sin facturar)</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+              <Input
+                type="number"
+                step="0.01"
+                value={form.ft_total}
+                onChange={e => set('ft_total', e.target.value)}
+                placeholder="0.00"
+                className="pl-7"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Ventas en efectivo sin comprobante fiscal
+            </p>
           </div>
 
           <div className="p-3 rounded-md bg-muted text-sm space-y-1">
-            <p>Venta Total: <strong>$ {ventaTotal.toLocaleString('es-AR')}</strong></p>
-            <p>Efectivo: <strong>$ {efectivo.toLocaleString('es-AR')}</strong> ({porcentajeEfectivo}%)</p>
-            <p>Facturación Contable (FC): <strong>$ {facturacionContable.toLocaleString('es-AR')}</strong></p>
+            <p>Venta Total: <strong className="font-mono">$ {ventaTotal.toLocaleString('es-AR')}</strong></p>
+            <p>Efectivo: <strong className="font-mono">$ {ftTotal.toLocaleString('es-AR')}</strong> ({porcentajeFt}%)</p>
+            <p>Facturación Contable (FC): <strong className="font-mono">$ {fcTotal.toLocaleString('es-AR')}</strong></p>
           </div>
 
           <div>
             <Label>Observaciones</Label>
-            <Textarea value={form.observaciones} onChange={e => set('observaciones', e.target.value)} rows={2} />
+            <Textarea 
+              value={form.observaciones} 
+              onChange={e => set('observaciones', e.target.value)} 
+              rows={2}
+              placeholder="Notas adicionales sobre el período..."
+            />
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button onClick={handleSubmit} disabled={isPending || !form.venta_total}>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={isPending || (!form.fc_total && !form.ft_total)}
+            >
               {isPending ? 'Guardando...' : isEditing ? 'Guardar Cambios' : 'Registrar'}
             </Button>
           </div>
