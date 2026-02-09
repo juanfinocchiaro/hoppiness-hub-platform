@@ -94,19 +94,41 @@ export interface PermissionsV2 {
     canEditPrices: boolean;
     canManagePromotions: boolean;
     
+    // Catálogos Marca
+    canViewInsumos: boolean;
+    canEditInsumos: boolean;
+    canViewConceptosServicio: boolean;
+    canEditConceptosServicio: boolean;
+    canViewProveedoresMarca: boolean;
+    canEditProveedoresMarca: boolean;
+    
+    // Finanzas Marca
+    canViewVentasMensuales: boolean;
+    canEditVentasMensuales: boolean;
+    canViewCanon: boolean;
+    canEditCanon: boolean;
+    
     // Proveedores
     canManageSuppliers: boolean;
     
     // Equipo
     canManageCentralTeam: boolean;
+    canViewCentralTeam: boolean;
     canSearchUsers: boolean;
     canAssignRoles: boolean;
     
     // Comunicación
     canManageMessages: boolean;
+    canViewContactMessages: boolean;
+    canManageContactMessages: boolean;
     
     // Coaching
     canCoachManagers: boolean;
+    canViewCoaching: boolean;
+    
+    // Reuniones
+    canViewMeetings: boolean;
+    canCreateMeetings: boolean;
     
     // Configuración
     canEditBrandConfig: boolean;
@@ -143,7 +165,7 @@ export interface PermissionsV2 {
     canViewSalaryAdvances: boolean;
     canViewWarnings: boolean;
     
-    // Acciones operativas (solo Superadmin/Encargado - NO Franquiciado)
+    // Acciones operativas
     canCreateSalaryAdvance: boolean;
     canCancelSalaryAdvance: boolean;
     canCreateWarning: boolean;
@@ -151,21 +173,34 @@ export interface PermissionsV2 {
     canDoCoaching: boolean;
     canViewCoaching: boolean;
     canSendLocalCommunication: boolean;
+    canViewLocalCommunications: boolean;
     
-    // Reuniones (nuevos)
+    // Reuniones
     canViewMeetings: boolean;
     canCreateMeetings: boolean;
     canCloseMeetings: boolean;
     
-    // Cierres de turno (nuevos)
+    // Cierres de turno
     canViewClosures: boolean;
     canCloseShifts: boolean;
     
-    // Reportes
+    // Finanzas / Reportes
     canViewSalesReports: boolean;
     canViewLocalPnL: boolean;
     canViewCMV: boolean;
     canViewStockMovements: boolean;
+    canViewGastos: boolean;
+    canCreateGastos: boolean;
+    canViewConsumos: boolean;
+    canCreateConsumos: boolean;
+    canViewPeriodos: boolean;
+    canEditPeriodos: boolean;
+    canViewVentasMensualesLocal: boolean;
+    canEditVentasMensualesLocal: boolean;
+    
+    // Socios
+    canViewSocios: boolean;
+    canEditSocios: boolean;
     
     // Configuración
     canEditLocalConfig: boolean;
@@ -351,19 +386,41 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     canEditPrices: isSuperadmin || isCoordinador,
     canManagePromotions: isSuperadmin || isCoordinador,
     
+    // Catálogos Marca
+    canViewInsumos: isSuperadmin || isCoordinador || isContadorMarca,
+    canEditInsumos: isSuperadmin || isCoordinador,
+    canViewConceptosServicio: isSuperadmin || isCoordinador || isContadorMarca,
+    canEditConceptosServicio: isSuperadmin || isCoordinador,
+    canViewProveedoresMarca: isSuperadmin || isCoordinador || isContadorMarca,
+    canEditProveedoresMarca: isSuperadmin || isCoordinador,
+    
+    // Finanzas Marca
+    canViewVentasMensuales: isSuperadmin || isInformes || isContadorMarca,
+    canEditVentasMensuales: isSuperadmin || isContadorMarca,
+    canViewCanon: isSuperadmin || isContadorMarca,
+    canEditCanon: isSuperadmin || isContadorMarca,
+    
     // Proveedores
     canManageSuppliers: isSuperadmin,
     
     // Equipo
     canManageCentralTeam: isSuperadmin,
+    canViewCentralTeam: isSuperadmin || isCoordinador,
     canSearchUsers: isSuperadmin,
     canAssignRoles: isSuperadmin,
     
     // Comunicación
     canManageMessages: isSuperadmin || isCoordinador,
+    canViewContactMessages: isSuperadmin || isCoordinador,
+    canManageContactMessages: isSuperadmin || isCoordinador,
     
     // Coaching
     canCoachManagers: isSuperadmin || isCoordinador,
+    canViewCoaching: isSuperadmin || isCoordinador,
+    
+    // Reuniones
+    canViewMeetings: isSuperadmin || isCoordinador,
+    canCreateMeetings: isSuperadmin || isCoordinador,
     
     // Configuración
     canEditBrandConfig: isSuperadmin,
@@ -372,12 +429,11 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
   };
   
   // ===== CALCULAR PERMISOS LOCALES =====
-  // Verificar si tiene acceso a la sucursal actual
   const hasCurrentBranchAccess = currentBranchId ? hasAccessToBranch(currentBranchId) : false;
   
   const localPermissions = {
-    // Visión General - Superadmin siempre puede ver. Cajeros ven dashboard limitado.
-    canViewDashboard: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero),
+    // Visión General
+    canViewDashboard: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero || isContadorLocal),
     
     // Stock
     canViewStock: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
@@ -391,19 +447,19 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     canPaySupplier: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal),
     canViewPurchaseHistory: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isEncargado || isFranquiciado),
     
-    // Equipo - Franquiciado puede VER pero NO editar
+    // Equipo
     canClockInOut: hasCurrentBranchAccess && (isSuperadmin || !!localRole),
     canViewAllClockIns: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
     canViewTeam: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
-    canEditSchedules: hasCurrentBranchAccess && (isSuperadmin || isEncargado), // NO franquiciado
+    canEditSchedules: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
     canViewMonthlyHours: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
     canViewPayroll: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
-    canInviteEmployees: hasCurrentBranchAccess && (isSuperadmin || isEncargado), // NO franquiciado
-    canDeactivateEmployees: hasCurrentBranchAccess && (isSuperadmin || isEncargado), // NO franquiciado
+    canInviteEmployees: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+    canDeactivateEmployees: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
     canViewSalaryAdvances: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
     canViewWarnings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
     
-    // Acciones operativas - SOLO Superadmin y Encargado (Franquiciado es solo lectura)
+    // Acciones operativas
     canCreateSalaryAdvance: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
     canCancelSalaryAdvance: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
     canCreateWarning: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
@@ -411,28 +467,41 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     canDoCoaching: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
     canViewCoaching: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
     canSendLocalCommunication: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+    canViewLocalCommunications: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
     
-    // Reuniones (nuevos)
+    // Reuniones
     canViewMeetings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero || isEmpleado),
     canCreateMeetings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
     canCloseMeetings: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
     
-    // Cierres de turno (nuevos)
+    // Cierres de turno
     canViewClosures: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero),
     canCloseShifts: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
     
-    // Reportes
+    // Finanzas / Reportes
     canViewSalesReports: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
     canViewLocalPnL: hasCurrentBranchAccess && (isSuperadmin || isContadorLocal || isFranquiciado),
     canViewCMV: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado),
     canViewStockMovements: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
+    canViewGastos: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
+    canCreateGastos: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isContadorLocal),
+    canViewConsumos: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isContadorLocal),
+    canCreateConsumos: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isContadorLocal),
+    canViewPeriodos: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado || isContadorLocal),
+    canEditPeriodos: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado || isContadorLocal),
+    canViewVentasMensualesLocal: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado || isContadorLocal),
+    canEditVentasMensualesLocal: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado || isContadorLocal),
+    
+    // Socios
+    canViewSocios: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado),
+    canEditSocios: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado),
     
     // Configuración
     canEditLocalConfig: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado),
     canConfigPrinters: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
     canConfigShifts: hasCurrentBranchAccess && (isSuperadmin || isFranquiciado),
     
-    // Carga manual de ventas - NO franquiciado
+    // Carga manual de ventas
     canEnterSales: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
   };
   
