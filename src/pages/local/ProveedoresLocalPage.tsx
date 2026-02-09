@@ -6,18 +6,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Building2, MapPin, Package, Plus, Pencil } from 'lucide-react';
-import { useProveedores } from '@/hooks/useProveedores';
+import { Building2, MapPin, Package, Plus, Pencil, Trash2 } from 'lucide-react';
+import { useProveedores, useProveedorMutations } from '@/hooks/useProveedores';
 import { ProveedorFormModal } from '@/components/finanzas/ProveedorFormModal';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/states';
 
 export default function ProveedoresLocalPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const navigate = useNavigate();
   const { data: proveedores, isLoading } = useProveedores(branchId);
+  const { softDelete } = useProveedorMutations();
   const [search, setSearch] = useState('');
   const [showNew, setShowNew] = useState(false);
   const [editing, setEditing] = useState<any>(null);
+  const [deleting, setDeleting] = useState<any>(null);
 
   const filtered = proveedores?.filter((p) =>
     p.razon_social.toLowerCase().includes(search.toLowerCase()) ||
@@ -90,14 +93,24 @@ export default function ProveedoresLocalPage() {
                 </TableCell>
                 <TableCell>
                   {isLocalProvider(row) && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={(e) => { e.stopPropagation(); setEditing(row); }}
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </Button>
+                    <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setEditing(row)}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setDeleting(row)}
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                      </Button>
+                    </div>
                   )}
                 </TableCell>
               </TableRow>
@@ -121,6 +134,19 @@ export default function ProveedoresLocalPage() {
           proveedor={editing}
         />
       )}
+
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={() => setDeleting(null)}
+        title="Eliminar proveedor"
+        description={`¿Estás seguro de eliminar a "${deleting?.razon_social}"? Las facturas asociadas no se eliminarán.`}
+        confirmLabel="Eliminar"
+        variant="destructive"
+        onConfirm={async () => {
+          if (deleting) await softDelete.mutateAsync(deleting.id);
+          setDeleting(null);
+        }}
+      />
     </div>
   );
 }
