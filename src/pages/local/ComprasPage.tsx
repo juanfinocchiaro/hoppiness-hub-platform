@@ -14,6 +14,12 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/states';
 import type { FacturaProveedor } from '@/types/compra';
 
+/** Parse YYYY-MM-DD as local date to avoid UTC→local shift */
+function formatLocalDate(dateStr: string) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('es-AR');
+}
+
 export default function ComprasPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const { data: facturas, isLoading } = useFacturas(branchId!);
@@ -88,7 +94,7 @@ export default function ComprasPage() {
                       <TableCell>
                         {expanded === row.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </TableCell>
-                      <TableCell className="text-sm whitespace-nowrap">{new Date(row.factura_fecha).toLocaleDateString('es-AR')}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">{formatLocalDate(row.factura_fecha)}</TableCell>
                       <TableCell className="font-medium">
                         <span className="whitespace-nowrap">{row.proveedores?.razon_social}</span>
                         {isCanon && <Badge variant="outline" className="ml-2 text-xs">Automática</Badge>}
@@ -97,7 +103,7 @@ export default function ComprasPage() {
                       <TableCell className="text-right font-mono whitespace-nowrap">$ {Number(row.total).toLocaleString('es-AR')}</TableCell>
                       <TableCell>{estadoBadge(row.estado_pago)}</TableCell>
                       <TableCell className="text-sm whitespace-nowrap">
-                        {row.fecha_vencimiento ? new Date(row.fecha_vencimiento).toLocaleDateString('es-AR') : '-'}
+                        {row.fecha_vencimiento ? formatLocalDate(row.fecha_vencimiento) : '-'}
                       </TableCell>
                       <TableCell className="text-right font-mono text-destructive whitespace-nowrap">
                         {Number(row.saldo_pendiente) > 0 ? `$ ${Number(row.saldo_pendiente).toLocaleString('es-AR')}` : '-'}
