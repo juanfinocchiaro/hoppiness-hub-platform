@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useSaldoProveedor, useMovimientosProveedor } from '@/hooks/useCuentaCorrienteProveedor';
 import { useProveedores } from '@/hooks/useProveedores';
-import { usePagoProveedorMutations } from '@/hooks/useCompras';
+import { usePagoProveedorMutations, useFacturaById } from '@/hooks/useCompras';
 import { PagoProveedorModal } from '@/components/finanzas/PagoProveedorModal';
 import { ProveedorFormModal } from '@/components/finanzas/ProveedorFormModal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -30,12 +30,12 @@ export default function CuentaCorrienteProveedorPage() {
   const [payingFacturaId, setPayingFacturaId] = useState<string | null>(null);
   const [editingProveedor, setEditingProveedor] = useState(false);
   const [deletingPagoId, setDeletingPagoId] = useState<string | null>(null);
+  const { data: facturaData } = useFacturaById(payingFacturaId);
 
-  const payingFactura = payingFacturaId ? {
-    id: payingFacturaId,
+  const payingFactura = payingFacturaId && facturaData ? {
+    ...facturaData,
     proveedor_id: proveedorId!,
     branch_id: branchId!,
-    saldo_pendiente: movimientos?.find(m => m.id === payingFacturaId)?.monto || 0,
   } : null;
 
   return (

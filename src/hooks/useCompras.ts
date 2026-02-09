@@ -27,6 +27,24 @@ export function useFacturas(branchId: string, periodo?: string) {
   });
 }
 
+export function useFacturaById(facturaId?: string | null) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['factura', facturaId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('facturas_proveedores')
+        .select('*')
+        .eq('id', facturaId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user && !!facturaId,
+  });
+}
+
 export function useFacturaMutations() {
   const qc = useQueryClient();
   const { user } = useAuth();
