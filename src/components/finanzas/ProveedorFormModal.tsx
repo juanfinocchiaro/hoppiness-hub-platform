@@ -158,12 +158,18 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor }: Props) {
                   </span>
                 </div>
               </FormRow>
-              <FormRow label="Días pago habitual">
-                <Input
-                  type="number"
-                  value={form.dias_pago_habitual ?? ''}
-                  onChange={(e) => set('dias_pago_habitual', e.target.value ? Number(e.target.value) : undefined)}
-                />
+              <FormRow label="Plazo de pago (días)">
+                <div className="space-y-1">
+                  <Input
+                    type="number"
+                    value={form.dias_pago_habitual ?? ''}
+                    onChange={(e) => set('dias_pago_habitual', e.target.value ? Number(e.target.value) : undefined)}
+                    placeholder="Ej: 30"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    El vencimiento de facturas se calculará automáticamente: fecha factura + estos días.
+                  </p>
+                </div>
               </FormRow>
               <FormRow label="Dto. pago contado (%)">
                 <Input

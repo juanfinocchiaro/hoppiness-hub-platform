@@ -41,7 +41,6 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
     factura_numero: '',
     factura_fecha: new Date().toISOString().slice(0, 10),
     condicion_pago: 'contado',
-    fecha_vencimiento: '',
     iva: '',
     otros_impuestos: '',
     tipo: 'normal',
@@ -49,14 +48,32 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
     observaciones: '',
   });
 
+  // Derive fecha_vencimiento from supplier rules
+  const selectedProveedor = proveedores?.find(p => p.id === form.proveedor_id);
+  const computedVencimiento = (() => {
+    if (form.condicion_pago !== 'cuenta_corriente' || !selectedProveedor?.dias_pago_habitual) return undefined;
+    const base = new Date(form.factura_fecha);
+    base.setDate(base.getDate() + selectedProveedor.dias_pago_habitual);
+    return base.toISOString().slice(0, 10);
+  })();
+
   const [items, setItems] = useState<ItemFacturaFormData[]>([emptyItem()]);
 
   useEffect(() => {
     if (open) {
-      setForm(f => ({ ...f, proveedor_id: '', factura_numero: '', observaciones: '', iva: '', otros_impuestos: '' }));
+      setForm(f => ({ ...f, proveedor_id: '', factura_numero: '', observaciones: '', iva: '', otros_impuestos: '', condicion_pago: 'contado' }));
       setItems([emptyItem()]);
     }
   }, [open]);
+
+  // Auto-set condicion_pago when supplier changes
+  useEffect(() => {
+    if (selectedProveedor?.permite_cuenta_corriente) {
+      setForm(f => ({ ...f, condicion_pago: 'cuenta_corriente' }));
+    } else {
+      setForm(f => ({ ...f, condicion_pago: 'contado' }));
+    }
+  }, [form.proveedor_id, selectedProveedor]);
 
   const updateItem = (idx: number, field: string, value: string | number | boolean) => {
     setItems(prev => {
@@ -90,7 +107,7 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
       factura_numero: form.factura_numero,
       factura_fecha: form.factura_fecha,
       condicion_pago: form.condicion_pago,
-      fecha_vencimiento: form.fecha_vencimiento || undefined,
+      fecha_vencimiento: computedVencimiento,
       iva: ivaNum,
       otros_impuestos: otrosNum,
       tipo: form.tipo,
@@ -239,11 +256,22 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
               </div>
               {form.condicion_pago === 'cuenta_corriente' && (
                 <div>
-                  <Label>Vencimiento</Label>
-                  <Input type="date" value={form.fecha_vencimiento} onChange={e => set('fecha_vencimiento', e.target.value)} />
+                  <Label>Vencimiento (automático)</Label>
+                  {computedVencimiento ? (
+                    <Input value={new Date(computedVencimiento + 'T12:00:00').toLocaleDateString('es-AR')} disabled className="font-mono" />
+                  ) : (
+                    <p className="text-xs text-muted-foreground pt-2">
+                      {selectedProveedor ? 'Configure "Días de pago" en el proveedor para calcular vencimiento automáticamente.' : 'Seleccione un proveedor.'}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
+            {form.condicion_pago === 'cuenta_corriente' && selectedProveedor?.dias_pago_habitual && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Regla: {selectedProveedor.dias_pago_habitual} días desde fecha de factura
+              </p>
+            )}
           </FormSection>
 
           <div>
