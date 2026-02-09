@@ -9,16 +9,17 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ChevronDown, CreditCard, HelpCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { VentasLocalData, ComparacionPosnet } from '@/types/shiftClosure';
+import type { VentasLocalData, VentasAppsData, ComparacionPosnet } from '@/types/shiftClosure';
 import { calcularDiferenciaPosnet, calcularDesgloseTarjetas } from '@/types/shiftClosure';
 
 interface PosnetComparisonSectionProps {
   ventasLocal: VentasLocalData;
+  ventasApps?: VentasAppsData;
   onPosnetChange: (data: ComparacionPosnet) => void;
 }
 
-export function PosnetComparisonSection({ ventasLocal, onPosnetChange }: PosnetComparisonSectionProps) {
-  const comparacion = calcularDiferenciaPosnet(ventasLocal);
+export function PosnetComparisonSection({ ventasLocal, ventasApps, onPosnetChange }: PosnetComparisonSectionProps) {
+  const comparacion = calcularDiferenciaPosnet(ventasLocal, ventasApps);
   const desglose = calcularDesgloseTarjetas(ventasLocal);
   
   const formatCurrency = (value: number) =>

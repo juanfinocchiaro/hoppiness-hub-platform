@@ -53,6 +53,7 @@ export interface VentasAppsData {
   mas_delivery: {
     efectivo: number;      // Payment type "Efectivo" in Núcleo
     mercadopago: number;   // Payment type "MercadoPago" in Núcleo
+    cobrado_posnet: number; // Orders entered as cash but paid by card at store
     total_panel: number;   // Total from MásDelivery panel
   };
   rappi: {
@@ -181,11 +182,14 @@ export function calcularTotalesVentasLocal(data: VentasLocalData): { total: numb
 }
 
 // Calculate total cards in Núcleo (for Posnet comparison)
-export function calcularTotalTarjetasNucleo(ventasLocal: VentasLocalData): number {
+// Includes cobrado_posnet from MásDelivery (orders that changed payment method to card)
+export function calcularTotalTarjetasNucleo(ventasLocal: VentasLocalData, ventasApps?: VentasAppsData): number {
   const canales = [ventasLocal.salon, ventasLocal.takeaway, ventasLocal.delivery_manual];
-  return canales.reduce((sum, canal) => 
+  const tarjetasLocal = canales.reduce((sum, canal) => 
     sum + canal.debito + canal.credito + canal.qr, 0
   );
+  const cobradoPosnet = ventasApps?.mas_delivery?.cobrado_posnet || 0;
+  return tarjetasLocal + cobradoPosnet;
 }
 
 // Calculate card breakdown for display
@@ -199,13 +203,13 @@ export function calcularDesgloseTarjetas(ventasLocal: VentasLocalData): { debito
 }
 
 // Calculate Posnet difference
-export function calcularDiferenciaPosnet(ventasLocal: VentasLocalData): {
+export function calcularDiferenciaPosnet(ventasLocal: VentasLocalData, ventasApps?: VentasAppsData): {
   nucleo: number;
   posnet: number;
   diferencia: number;
   tieneAlerta: boolean;
 } {
-  const nucleo = calcularTotalTarjetasNucleo(ventasLocal);
+  const nucleo = calcularTotalTarjetasNucleo(ventasLocal, ventasApps);
   const posnet = ventasLocal.comparacion_posnet?.total_posnet || 0;
   const diferencia = nucleo - posnet;
   return {
@@ -306,8 +310,9 @@ export function calcularFacturacionEsperada(
   // Efectivo mostrador = efectivo de salón + takeaway + delivery_manual + PeYa efectivo (va a caja)
   const efectivoMostrador = totalesLocal.efectivo + ventasApps.pedidosya.efectivo;
   
-  // Efectivo MásDelivery tampoco se factura
-  const efectivoMasDelivery = ventasApps.mas_delivery.efectivo;
+  // Efectivo MásDelivery tampoco se factura (minus cobrado_posnet which is now card)
+  const cobradoPosnet = ventasApps.mas_delivery.cobrado_posnet || 0;
+  const efectivoMasDelivery = ventasApps.mas_delivery.efectivo - cobradoPosnet;
   
   // Esperado = Total vendido - Efectivo mostrador - Efectivo MásDelivery
   return totalVendido - efectivoMostrador - efectivoMasDelivery;
@@ -339,7 +344,7 @@ export function getDefaultVentasLocal(): VentasLocalData {
 
 export function getDefaultVentasApps(): VentasAppsData {
   return {
-    mas_delivery: { efectivo: 0, mercadopago: 0, total_panel: 0 },
+    mas_delivery: { efectivo: 0, mercadopago: 0, cobrado_posnet: 0, total_panel: 0 },
     rappi: { vales: 0, total_panel: 0 },
     pedidosya: { efectivo: 0, vales: 0, total_panel: 0 },
     mp_delivery: { vales: 0, total_panel: 0 },
@@ -357,6 +362,7 @@ export function migrateVentasApps(data: any): VentasAppsData {
     mas_delivery: {
       efectivo: data?.mas_delivery?.efectivo || 0,
       mercadopago: data?.mas_delivery?.mercadopago || 0,
+      cobrado_posnet: data?.mas_delivery?.cobrado_posnet || 0,
       total_panel: data?.mas_delivery?.total_panel || 0,
     },
     rappi: {
