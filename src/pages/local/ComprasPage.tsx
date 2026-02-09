@@ -59,6 +59,7 @@ export default function ComprasPage() {
               <TableHead>Nº Factura</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead>Estado</TableHead>
+              <TableHead>Vencimiento</TableHead>
               <TableHead className="text-right">Saldo</TableHead>
               <TableHead className="w-[100px]" />
             </TableRow>
@@ -67,14 +68,14 @@ export default function ComprasPage() {
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 8 }).map((_, j) => (
+                  {Array.from({ length: 9 }).map((_, j) => (
                     <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                   ))}
                 </TableRow>
               ))
             ) : !filtered?.length ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-40">
+                <TableCell colSpan={9} className="h-40">
                   <EmptyState icon={ShoppingCart} title="Sin facturas" description="Registrá tu primera factura de proveedor" />
                 </TableCell>
               </TableRow>
@@ -95,6 +96,9 @@ export default function ComprasPage() {
                       <TableCell className="text-sm font-mono whitespace-nowrap">{row.factura_tipo ? `${row.factura_tipo}-` : ''}{row.factura_numero}</TableCell>
                       <TableCell className="text-right font-mono whitespace-nowrap">$ {Number(row.total).toLocaleString('es-AR')}</TableCell>
                       <TableCell>{estadoBadge(row.estado_pago)}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">
+                        {row.fecha_vencimiento ? new Date(row.fecha_vencimiento).toLocaleDateString('es-AR') : '-'}
+                      </TableCell>
                       <TableCell className="text-right font-mono text-destructive whitespace-nowrap">
                         {Number(row.saldo_pendiente) > 0 ? `$ ${Number(row.saldo_pendiente).toLocaleString('es-AR')}` : '-'}
                       </TableCell>
@@ -115,7 +119,7 @@ export default function ComprasPage() {
                     </TableRow>
                     {expanded === row.id && row.items_factura?.length > 0 && (
                       <TableRow>
-                        <TableCell colSpan={8} className="bg-muted/30 p-0">
+                        <TableCell colSpan={9} className="bg-muted/30 p-0">
                           <Table>
                             <TableHeader>
                               <TableRow>
