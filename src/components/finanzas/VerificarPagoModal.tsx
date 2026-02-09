@@ -24,7 +24,7 @@ export function VerificarPagoModal({ open, onOpenChange, pago }: VerificarPagoMo
     mutationFn: async (aprobado: boolean) => {
       if (aprobado) {
         const { error } = await supabase
-          .from('pagos_canon')
+          .from('pagos_proveedores')
           .update({
             verificado: true,
             verificado_por: user?.id,
@@ -36,7 +36,7 @@ export function VerificarPagoModal({ open, onOpenChange, pago }: VerificarPagoMo
       } else {
         // Reject = soft delete the payment
         const { error } = await supabase
-          .from('pagos_canon')
+          .from('pagos_proveedores')
           .update({
             deleted_at: new Date().toISOString(),
             verificado_notas: `RECHAZADO: ${notas}`,
@@ -46,8 +46,12 @@ export function VerificarPagoModal({ open, onOpenChange, pago }: VerificarPagoMo
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['pagos-canon'] });
+      qc.invalidateQueries({ queryKey: ['pagos-canon-prov'] });
       qc.invalidateQueries({ queryKey: ['canon-liquidaciones'] });
+      qc.invalidateQueries({ queryKey: ['movimientos-proveedor'] });
+      qc.invalidateQueries({ queryKey: ['saldo-proveedor'] });
+      qc.invalidateQueries({ queryKey: ['facturas'] });
+      qc.invalidateQueries({ queryKey: ['saldos-proveedores'] });
       toast.success('Pago procesado');
       onOpenChange(false);
     },
@@ -64,7 +68,7 @@ export function VerificarPagoModal({ open, onOpenChange, pago }: VerificarPagoMo
         <div className="space-y-4">
           <div className="p-3 rounded-md bg-muted text-sm space-y-1">
             <p>Monto: <strong className="font-mono">$ {Number(pago.monto).toLocaleString('es-AR')}</strong></p>
-            <p>Fecha: <strong>{new Date(pago.fecha_pago).toLocaleDateString('es-AR')}</strong></p>
+            <p>Fecha: <strong>{(() => { const [y,m,d] = pago.fecha_pago.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('es-AR'); })()}</strong></p>
             <p>Medio: <strong>{pago.medio_pago}</strong></p>
             {pago.referencia && <p>Referencia: <strong>{pago.referencia}</strong></p>}
             {pago.observaciones && <p className="text-muted-foreground">{pago.observaciones}</p>}

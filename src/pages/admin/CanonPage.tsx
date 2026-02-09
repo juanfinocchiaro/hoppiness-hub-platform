@@ -5,13 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Landmark, CheckCircle, XCircle, ChevronDown, ChevronUp, AlertCircle, Clock } from 'lucide-react';
-import { useCanonLiquidaciones, usePagosCanon } from '@/hooks/useCanonLiquidaciones';
+import { Landmark, CheckCircle, ChevronDown, ChevronUp, AlertCircle, Clock } from 'lucide-react';
+import { useCanonLiquidaciones, usePagosCanonFromProveedores } from '@/hooks/useCanonLiquidaciones';
 import { VerificarPagoModal } from '@/components/finanzas/VerificarPagoModal';
 import { EmptyState } from '@/components/ui/states';
 
-function PagosDetalleRow({ canonId }: { canonId: string }) {
-  const { data: pagos, isLoading } = usePagosCanon(canonId);
+function PagosDetalleRow({ branchId, periodo }: { branchId: string; periodo: string }) {
+  const { data: pagos, isLoading } = usePagosCanonFromProveedores(branchId, periodo);
   const [verificando, setVerificando] = useState<any>(null);
 
   if (isLoading) return <div className="p-2"><Skeleton className="h-5 w-full" /></div>;
@@ -28,11 +28,11 @@ function PagosDetalleRow({ canonId }: { canonId: string }) {
     <div className="space-y-3">
       {pendientes.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-medium text-amber-700 uppercase tracking-wide flex items-center gap-1">
+          <p className="text-xs font-medium uppercase tracking-wide flex items-center gap-1 text-amber-700">
             <AlertCircle className="w-3 h-3" /> Pendientes de verificación ({pendientes.length})
           </p>
           {pendientes.map((p: any) => (
-            <div key={p.id} className="flex items-center justify-between text-sm border border-amber-200 bg-amber-50 rounded-lg p-3">
+            <div key={p.id} className="flex items-center justify-between text-sm border rounded-lg p-3 border-amber-200 bg-amber-50">
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
                 <span className="font-mono font-semibold">$ {Number(p.monto).toLocaleString('es-AR')}</span>
                 <span className="text-muted-foreground">{formatLocalDate(p.fecha_pago)}</span>
@@ -50,7 +50,7 @@ function PagosDetalleRow({ canonId }: { canonId: string }) {
 
       {verificados.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-medium text-green-700 uppercase tracking-wide flex items-center gap-1">
+          <p className="text-xs font-medium uppercase tracking-wide flex items-center gap-1 text-green-700">
             <CheckCircle className="w-3 h-3" /> Verificados ({verificados.length})
           </p>
           {verificados.map((p: any) => (
@@ -106,7 +106,6 @@ export default function CanonPage() {
     return row.estado === filtroEstado;
   }) ?? [];
 
-  // Count pending payments across all liquidaciones (for alert)
   const totalPendientes = liquidaciones?.filter((r: any) => r.estado !== 'pagado').length ?? 0;
 
   return (
@@ -117,7 +116,7 @@ export default function CanonPage() {
       />
 
       {totalPendientes > 0 && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+        <div className="flex items-center gap-2 p-3 rounded-lg border text-sm bg-amber-50 border-amber-200 text-amber-800">
           <Clock className="w-4 h-4 shrink-0" />
           <span><strong>{totalPendientes}</strong> liquidaciones con saldo pendiente</span>
         </div>
@@ -195,7 +194,7 @@ export default function CanonPage() {
                   {expanded === row.id && (
                     <TableRow key={`${row.id}-pagos`}>
                       <TableCell colSpan={8} className="bg-muted/30 p-4">
-                        <PagosDetalleRow canonId={row.id} />
+                        <PagosDetalleRow branchId={row.branch_id} periodo={row.periodo} />
                       </TableCell>
                     </TableRow>
                   )}

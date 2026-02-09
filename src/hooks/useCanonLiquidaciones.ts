@@ -83,6 +83,41 @@ export function usePagosCanon(canonId: string) {
   });
 }
 
+/**
+ * Fetch pagos_proveedores for a Hoppiness Club canon invoice
+ * identified by branch_id + periodo
+ */
+export function usePagosCanonFromProveedores(branchId: string, periodo: string) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['pagos-canon-prov', branchId, periodo],
+    queryFn: async () => {
+      // Find the Hoppiness Club factura for this branch+periodo
+      const { data: factura } = await supabase
+        .from('facturas_proveedores')
+        .select('id')
+        .eq('branch_id', branchId)
+        .eq('periodo', periodo)
+        .eq('proveedor_id', '00000000-0000-0000-0000-000000000001')
+        .is('deleted_at', null)
+        .maybeSingle();
+
+      if (!factura) return [];
+
+      const { data: pagos, error } = await supabase
+        .from('pagos_proveedores')
+        .select('id, fecha_pago, monto, medio_pago, referencia, observaciones, verificado, verificado_por, verificado_at, verificado_notas, created_at')
+        .eq('factura_id', factura.id)
+        .is('deleted_at', null)
+        .order('fecha_pago', { ascending: false });
+      if (error) throw error;
+      return pagos ?? [];
+    },
+    enabled: !!user && !!branchId && !!periodo,
+  });
+}
+
 export function usePagoCanonMutations() {
   const qc = useQueryClient();
   const { user } = useAuth();

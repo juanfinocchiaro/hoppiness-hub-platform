@@ -253,13 +253,23 @@ export default function CuentaCorrienteProveedorPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-1 justify-end">
+                      <div className="flex gap-1 justify-end items-center">
                         {mov.tipo === 'factura' && mov.estado !== 'pagado' && (
                           <Button size="sm" variant="outline" onClick={() => setPayingFacturaId(mov.id)}>
                             Pagar
                           </Button>
                         )}
-                        {mov.tipo === 'pago' && (
+                        {mov.tipo === 'pago' && mov.verificado === false && (
+                          <Badge variant="outline" className="text-amber-600 border-amber-300 text-xs">
+                            Pend. verificación
+                          </Badge>
+                        )}
+                        {mov.tipo === 'pago' && mov.verificado === true && (
+                          <Badge variant="default" className="text-xs gap-1">
+                            ✓ Verificado
+                          </Badge>
+                        )}
+                        {mov.tipo === 'pago' && !mov.verificado && (
                           <Button
                             variant="ghost"
                             size="icon"
