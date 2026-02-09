@@ -8,11 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Pencil, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Pencil, Trash2, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { VentaMensualFormModal } from '@/components/finanzas/VentaMensualFormModal';
 import { EmptyState } from '@/components/ui/states';
 import { getCurrentPeriodo } from '@/types/compra';
+import { useVentaMensualMutations } from '@/hooks/useVentasMensuales';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
@@ -38,6 +40,8 @@ export default function VentasMensualesMarcaPage() {
   const [editingBranchId, setEditingBranchId] = useState<string | null>(null);
   const [editingVenta, setEditingVenta] = useState<any>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; branchName: string } | null>(null);
+  const { remove } = useVentaMensualMutations();
 
   const { data: branches, isLoading: loadingBranches } = useQuery({
     queryKey: ['branches-all'],
@@ -180,9 +184,14 @@ export default function VentasMensualesMarcaPage() {
                     </TableCell>
                     <TableCell>
                       {venta ? (
-                        <Button variant="ghost" size="icon" onClick={() => openModal(branch.id, venta)}>
-                          <Pencil className="w-4 h-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openModal(branch.id, venta)}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ id: venta.id, branchName: branch.name })}>
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
                       ) : (
                         <Button variant="outline" size="sm" onClick={() => openModal(branch.id)}>
                           <Plus className="w-3.5 h-3.5 mr-1" /> Cargar
@@ -250,6 +259,18 @@ export default function VentasMensualesMarcaPage() {
           venta={editingVenta}
         />
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Eliminar registro de ventas"
+        description={`¿Estás seguro de eliminar las ventas de ${deleteTarget?.branchName} para ${formatPeriodo(periodo)}?`}
+        confirmLabel="Eliminar"
+        variant="destructive"
+        onConfirm={() => {
+          if (deleteTarget) remove.mutate(deleteTarget.id);
+        }}
+      />
     </div>
   );
 }

@@ -91,5 +91,22 @@ export function useVentaMensualMutations() {
     onError: (e) => toast.error(`Error: ${e.message}`),
   });
 
-  return { create, update };
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('ventas_mensuales_local')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ventas-mensuales'] });
+      qc.invalidateQueries({ queryKey: ['ventas-mensuales-marca'] });
+      qc.invalidateQueries({ queryKey: ['canon-liquidaciones'] });
+      toast.success('Registro eliminado');
+    },
+    onError: (e) => toast.error(`Error: ${e.message}`),
+  });
+
+  return { create, update, remove };
 }
