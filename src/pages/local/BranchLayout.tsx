@@ -272,6 +272,13 @@ export default function BranchLayout() {
                 canUploadInvoice: lp.canUploadInvoice,
                 canViewLocalPnL: lp.canViewLocalPnL,
                 canViewSalaryAdvances: lp.canViewSalaryAdvances,
+                canViewPayroll: lp.canViewPayroll,
+                canViewGastos: lp.canViewGastos,
+                canViewConsumos: lp.canViewConsumos,
+                canViewPeriodos: lp.canViewPeriodos,
+                canViewVentasMensualesLocal: lp.canViewVentasMensualesLocal,
+                canViewSocios: lp.canViewSocios,
+                canViewLocalCommunications: lp.canViewLocalCommunications,
                 isFranquiciado: permissions.isFranquiciado,
                 isContadorLocal: permissions.isContadorLocal,
             }}

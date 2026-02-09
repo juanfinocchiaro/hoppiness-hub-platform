@@ -42,27 +42,47 @@ export function useDynamicPermissions(currentBranchId?: string): DynamicPermissi
       canViewLocales: getPermission('brand.viewBranches', brandRole, permissions.brand.canViewLocales),
       canCreateLocales: getPermission('brand.createBranches', brandRole, permissions.brand.canCreateLocales),
       
-      // Catálogo
+      // Catálogos Marca
       canViewProducts: getPermission('brand.viewProducts', brandRole, permissions.brand.canViewProducts),
       canEditProducts: getPermission('brand.editProducts', brandRole, permissions.brand.canEditProducts),
       canManageModifiers: permissions.brand.canManageModifiers,
       canManageIngredients: permissions.brand.canManageIngredients,
       canEditPrices: permissions.brand.canEditPrices,
       canManagePromotions: permissions.brand.canManagePromotions,
+      canViewInsumos: getPermission('brand.viewInsumos', brandRole, permissions.brand.canViewInsumos),
+      canEditInsumos: getPermission('brand.editInsumos', brandRole, permissions.brand.canEditInsumos),
+      canViewConceptosServicio: getPermission('brand.viewConceptosServicio', brandRole, permissions.brand.canViewConceptosServicio),
+      canEditConceptosServicio: getPermission('brand.editConceptosServicio', brandRole, permissions.brand.canEditConceptosServicio),
+      canViewProveedoresMarca: getPermission('brand.viewProveedoresMarca', brandRole, permissions.brand.canViewProveedoresMarca),
+      canEditProveedoresMarca: getPermission('brand.editProveedoresMarca', brandRole, permissions.brand.canEditProveedoresMarca),
       
-      // Proveedores
+      // Finanzas Marca
+      canViewVentasMensuales: getPermission('brand.viewVentasMensuales', brandRole, permissions.brand.canViewVentasMensuales),
+      canEditVentasMensuales: getPermission('brand.editVentasMensuales', brandRole, permissions.brand.canEditVentasMensuales),
+      canViewCanon: getPermission('brand.viewCanon', brandRole, permissions.brand.canViewCanon),
+      canEditCanon: getPermission('brand.editCanon', brandRole, permissions.brand.canEditCanon),
+      
+      // Proveedores (legacy)
       canManageSuppliers: permissions.brand.canManageSuppliers,
       
       // Equipo
-      canManageCentralTeam: permissions.brand.canManageCentralTeam,
+      canManageCentralTeam: getPermission('brand.editCentralTeam', brandRole, permissions.brand.canManageCentralTeam),
+      canViewCentralTeam: getPermission('brand.viewCentralTeam', brandRole, permissions.brand.canViewCentralTeam),
       canSearchUsers: getPermission('brand.viewUsers', brandRole, permissions.brand.canSearchUsers),
       canAssignRoles: getPermission('brand.assignRoles', brandRole, permissions.brand.canAssignRoles),
       
       // Comunicación
       canManageMessages: getPermission('brand.createCommunications', brandRole, permissions.brand.canManageMessages),
+      canViewContactMessages: getPermission('brand.viewContactMessages', brandRole, permissions.brand.canViewContactMessages),
+      canManageContactMessages: getPermission('brand.manageContactMessages', brandRole, permissions.brand.canManageContactMessages),
       
       // Coaching
       canCoachManagers: getPermission('brand.coachManagers', brandRole, false),
+      canViewCoaching: getPermission('brand.viewCoaching', brandRole, false),
+      
+      // Reuniones
+      canViewMeetings: getPermission('brand.viewMeetings', brandRole, false),
+      canCreateMeetings: getPermission('brand.createMeetings', brandRole, false),
       
       // Configuración
       canEditBrandConfig: getPermission('brand.editConfig', brandRole, permissions.brand.canEditBrandConfig),
@@ -94,12 +114,12 @@ export function useDynamicPermissions(currentBranchId?: string): DynamicPermissi
       canOrderFromSupplier: permissions.local.canOrderFromSupplier,
       canDoInventoryCount: permissions.local.canDoInventoryCount,
       
-      // Compras
-      canUploadInvoice: permissions.local.canUploadInvoice,
-      canViewSuppliers: permissions.local.canViewSuppliers,
-      canViewSupplierAccounts: permissions.local.canViewSupplierAccounts,
-      canPaySupplier: permissions.local.canPaySupplier,
-      canViewPurchaseHistory: permissions.local.canViewPurchaseHistory,
+      // Compras / Operaciones
+      canUploadInvoice: getPermission('local.createCompras', localRole, permissions.local.canUploadInvoice),
+      canViewSuppliers: getPermission('local.viewProveedoresLocal', localRole, permissions.local.canViewSuppliers),
+      canViewSupplierAccounts: getPermission('local.viewCuentaCorriente', localRole, permissions.local.canViewSupplierAccounts),
+      canPaySupplier: getPermission('local.pagarProveedor', localRole, permissions.local.canPaySupplier),
+      canViewPurchaseHistory: getPermission('local.viewCompras', localRole, permissions.local.canViewPurchaseHistory),
       
       // Equipo
       canClockInOut: permissions.local.canClockInOut,
@@ -120,22 +140,35 @@ export function useDynamicPermissions(currentBranchId?: string): DynamicPermissi
       canUploadSignature: getPermission('local.uploadSignatures', localRole, permissions.local.canUploadSignature),
       canDoCoaching: getPermission('local.doCoaching', localRole, permissions.local.canDoCoaching),
       canViewCoaching: getPermission('local.viewCoaching', localRole, permissions.local.canViewCoaching),
-      canSendLocalCommunication: getPermission('local.sendCommunications', localRole, permissions.local.canSendLocalCommunication),
+      canSendLocalCommunication: getPermission('local.sendLocalCommunications', localRole, permissions.local.canSendLocalCommunication),
+      canViewLocalCommunications: getPermission('local.viewLocalCommunications', localRole, permissions.local.canViewLocalCommunications),
       
-      // Reuniones (nuevos)
-      canViewMeetings: getPermission('local.viewMeetings', localRole, permissions.local.canViewDashboard), // fallback a dashboard
-      canCreateMeetings: getPermission('local.createMeetings', localRole, permissions.local.canDoCoaching), // fallback a coaching
-      canCloseMeetings: getPermission('local.closeMeetings', localRole, permissions.local.canDoCoaching),
+      // Reuniones
+      canViewMeetings: getPermission('local.viewMeetings', localRole, permissions.local.canViewMeetings),
+      canCreateMeetings: getPermission('local.createMeetings', localRole, permissions.local.canCreateMeetings),
+      canCloseMeetings: getPermission('local.closeMeetings', localRole, permissions.local.canCloseMeetings),
       
-      // Cierres (nuevos)
-      canViewClosures: getPermission('local.viewClosures', localRole, permissions.local.canViewDashboard),
-      canCloseShifts: getPermission('local.closeShifts', localRole, permissions.local.canEnterSales),
+      // Cierres
+      canViewClosures: getPermission('local.viewClosures', localRole, permissions.local.canViewClosures),
+      canCloseShifts: getPermission('local.closeShifts', localRole, permissions.local.canCloseShifts),
       
-      // Reportes
+      // Finanzas
       canViewSalesReports: permissions.local.canViewSalesReports,
-      canViewLocalPnL: permissions.local.canViewLocalPnL,
+      canViewLocalPnL: getPermission('local.viewPL', localRole, permissions.local.canViewLocalPnL),
       canViewCMV: permissions.local.canViewCMV,
       canViewStockMovements: permissions.local.canViewStockMovements,
+      canViewGastos: getPermission('local.viewGastos', localRole, permissions.local.canViewGastos),
+      canCreateGastos: getPermission('local.createGastos', localRole, permissions.local.canCreateGastos),
+      canViewConsumos: getPermission('local.viewConsumos', localRole, permissions.local.canViewConsumos),
+      canCreateConsumos: getPermission('local.createConsumos', localRole, permissions.local.canCreateConsumos),
+      canViewPeriodos: getPermission('local.viewPeriodos', localRole, permissions.local.canViewPeriodos),
+      canEditPeriodos: getPermission('local.editPeriodos', localRole, permissions.local.canEditPeriodos),
+      canViewVentasMensualesLocal: getPermission('local.viewVentasMensualesLocal', localRole, permissions.local.canViewVentasMensualesLocal),
+      canEditVentasMensualesLocal: getPermission('local.editVentasMensualesLocal', localRole, permissions.local.canEditVentasMensualesLocal),
+      
+      // Socios
+      canViewSocios: getPermission('local.viewSocios', localRole, permissions.local.canViewSocios),
+      canEditSocios: getPermission('local.editSocios', localRole, permissions.local.canEditSocios),
       
       // Configuración
       canEditLocalConfig: getPermission('local.editConfig', localRole, permissions.local.canEditLocalConfig),
