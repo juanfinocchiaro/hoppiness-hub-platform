@@ -59,9 +59,13 @@ export function VentaMensualFormModal({ open, onOpenChange, branchId, branchName
   const ventaTotal = parseFloat(form.venta_total) || 0;
   const efectivo = parseFloat(form.efectivo) || 0;
   const online = ventaTotal - efectivo;
-  const canonEfectivo = efectivo * 0.05;
-  const canonOnline = online * 0.05;
-  const canonTotal = canonEfectivo + canonOnline;
+  const marcaEfectivo = efectivo * 0.045;
+  const mktEfectivo = efectivo * 0.005;
+  const marcaOnline = online * 0.045;
+  const mktOnline = online * 0.005;
+  const pagarEfectivo = marcaEfectivo + mktEfectivo;
+  const pagarTransferencia = marcaOnline + mktOnline;
+  const canonTotal = pagarEfectivo + pagarTransferencia;
   const pctEfectivo = ventaTotal > 0 ? ((efectivo / ventaTotal) * 100).toFixed(1) : '0.0';
 
   const handleSubmit = async () => {
@@ -144,18 +148,39 @@ export function VentaMensualFormModal({ open, onOpenChange, branchId, branchName
               <span>% Efectivo</span>
               <span className="font-mono">{pctEfectivo}%</span>
             </div>
+
             <div className="border-t pt-2 mt-2 space-y-1">
+              <p className="font-medium text-xs text-muted-foreground uppercase tracking-wide mb-1">Desglose de Canon</p>
               <div className="flex justify-between text-muted-foreground">
-                <span>Canon 5% Efectivo <span className="text-xs">(pago en efectivo)</span></span>
-                <span className="font-mono">$ {canonEfectivo.toLocaleString('es-AR')}</span>
+                <span>Canon 4,5% Uso de Marca <span className="text-xs">(sobre efectivo)</span></span>
+                <span className="font-mono">$ {marcaEfectivo.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between text-muted-foreground">
-                <span>Canon 5% Online <span className="text-xs">(pago transferencia)</span></span>
-                <span className="font-mono">$ {canonOnline.toLocaleString('es-AR')}</span>
+                <span>Canon 0,5% Mkt y Publicidad <span className="text-xs">(sobre efectivo)</span></span>
+                <span className="font-mono">$ {mktEfectivo.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
               </div>
-              <div className="flex justify-between font-semibold">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Canon 4,5% Uso de Marca <span className="text-xs">(sobre online)</span></span>
+                <span className="font-mono">$ {marcaOnline.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Canon 0,5% Mkt y Publicidad <span className="text-xs">(sobre online)</span></span>
+                <span className="font-mono">$ {mktOnline.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+              </div>
+            </div>
+
+            <div className="border-t pt-2 mt-1 space-y-1">
+              <div className="flex justify-between font-semibold text-green-700">
+                <span>💵 Pagar en efectivo</span>
+                <span className="font-mono">$ {pagarEfectivo.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between font-semibold text-blue-700">
+                <span>🏦 Pagar por transferencia</span>
+                <span className="font-mono">$ {pagarTransferencia.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between font-semibold border-t pt-1">
                 <span>Canon Total</span>
-                <span className="font-mono">$ {canonTotal.toLocaleString('es-AR')}</span>
+                <span className="font-mono">$ {canonTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
           </div>

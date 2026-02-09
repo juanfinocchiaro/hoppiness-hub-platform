@@ -12,7 +12,7 @@ export function useFacturas(branchId: string, periodo?: string) {
     queryFn: async () => {
       let q = supabase
         .from('facturas_proveedores')
-        .select('*, proveedores(razon_social), items_factura(*)')
+        .select('*, proveedores(razon_social), items_factura(*, insumos(nombre), conceptos_servicio(nombre))')
         .eq('branch_id', branchId)
         .is('deleted_at', null)
         .order('factura_fecha', { ascending: false });
