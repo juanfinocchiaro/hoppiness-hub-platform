@@ -1122,6 +1122,13 @@ export type Database = {
             foreignKeyName: "devoluciones_factura_original_id_fkey"
             columns: ["factura_original_id"]
             isOneToOne: false
+            referencedRelation: "cuenta_corriente_marca"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_factura_original_id_fkey"
+            columns: ["factura_original_id"]
+            isOneToOne: false
             referencedRelation: "facturas_proveedores"
             referencedColumns: ["id"]
           },
@@ -1961,6 +1968,13 @@ export type Database = {
             foreignKeyName: "items_factura_factura_id_fkey"
             columns: ["factura_id"]
             isOneToOne: false
+            referencedRelation: "cuenta_corriente_marca"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_factura_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
             referencedRelation: "facturas_proveedores"
             referencedColumns: ["id"]
           },
@@ -2398,6 +2412,13 @@ export type Database = {
             foreignKeyName: "pagos_proveedores_factura_id_fkey"
             columns: ["factura_id"]
             isOneToOne: false
+            referencedRelation: "cuenta_corriente_marca"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_proveedores_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
             referencedRelation: "facturas_proveedores"
             referencedColumns: ["id"]
           },
@@ -2662,6 +2683,7 @@ export type Database = {
           permite_cuenta_corriente: boolean | null
           razon_social: string
           telefono: string | null
+          tipo_especial: string | null
           updated_at: string | null
         }
         Insert: {
@@ -2683,6 +2705,7 @@ export type Database = {
           permite_cuenta_corriente?: boolean | null
           razon_social: string
           telefono?: string | null
+          tipo_especial?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -2704,6 +2727,7 @@ export type Database = {
           permite_cuenta_corriente?: boolean | null
           razon_social?: string
           telefono?: string | null
+          tipo_especial?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -3638,6 +3662,37 @@ export type Database = {
           slug?: string | null
         }
         Relationships: []
+      }
+      cuenta_corriente_marca: {
+        Row: {
+          branch_id: string | null
+          detalle: string | null
+          estado_pago: string | null
+          factura_fecha: string | null
+          factura_numero: string | null
+          fecha_vencimiento: string | null
+          id: string | null
+          local_nombre: string | null
+          monto_canon: number | null
+          periodo: string | null
+          saldo_pendiente: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facturas_proveedores_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facturas_proveedores_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cuenta_corriente_proveedores: {
         Row: {

@@ -1,14 +1,14 @@
 /**
- * BrandSidebar - Navegación específica para Mi Marca usando WorkSidebar
+ * BrandSidebar - Navegación de Mi Marca reorganizada por función
  * 
- * Estructura reorganizada:
+ * Estructura:
  * - Dashboard
- * - Sucursales (antes "Mis Locales")
- * - Coaching: Encargados, Red
- * - Personas: Equipo de Marca, Usuarios
- * - Comunicación: Bandeja de Entrada, Comunicados
- * - Configuración: Reglamentos, Cierre de Turno, Permisos
- * - [Footer] Ver como... (solo superadmins)
+ * - Red de Locales (sucursales, supervisión)
+ * - Catálogos Marca (insumos, proveedores)
+ * - Finanzas Marca (ventas, canon)
+ * - Gestión de Personas (equipo central, coaching, usuarios)
+ * - Comunicación (bandeja, comunicados, reuniones)
+ * - Configuración (calendario, reglamentos, cierres, permisos)
  */
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -49,10 +49,8 @@ import NewBranchModal from '@/components/admin/NewBranchModal';
 export function BrandSidebar() {
   const location = useLocation();
   const { data: unreadCount } = useUnreadMessagesCount();
-  
   const [showNewBranchModal, setShowNewBranchModal] = useState(false);
 
-  // Fetch branches for dynamic menu
   const { data: branches, refetch: refetchBranches } = useQuery({
     queryKey: ['brand-sidebar-branches'],
     queryFn: async () => {
@@ -64,32 +62,27 @@ export function BrandSidebar() {
     },
   });
 
-  // Check active sections
-  const isSucursalesActive = location.pathname.includes('/mimarca/locales');
-  const isCoachingActive = location.pathname.includes('/mimarca/coaching');
-  const isSupervisionActive = location.pathname.includes('/mimarca/supervisiones');
-  const isFinanzasActive = location.pathname.includes('/mimarca/finanzas');
-  const isPersonasActive = location.pathname.includes('/mimarca/usuarios') || location.pathname.includes('/mimarca/equipo-central');
+  // Active section detection
+  const isRedActive = location.pathname.includes('/mimarca/locales') || location.pathname.includes('/mimarca/supervisiones');
+  const isCatalogosActive = location.pathname.includes('/mimarca/finanzas/insumos') || location.pathname.includes('/mimarca/finanzas/proveedores');
+  const isFinanzasActive = (location.pathname.includes('/mimarca/finanzas') && !isCatalogosActive);
+  const isPersonasActive = location.pathname.includes('/mimarca/usuarios') || location.pathname.includes('/mimarca/equipo-central') || location.pathname.includes('/mimarca/coaching');
   const isComunicacionActive = location.pathname.includes('/mimarca/mensajes') || location.pathname.includes('/mimarca/comunicados') || location.pathname.includes('/mimarca/reuniones');
   const isConfigActive = location.pathname.includes('/mimarca/reglamentos') || location.pathname.includes('/mimarca/configuracion');
 
   return (
     <>
       <WorkSidebarNav>
-        {/* Dashboard - Link directo */}
-        <NavDashboardLink
-          to="/mimarca"
-          icon={LayoutDashboard}
-          label="Dashboard"
-        />
+        {/* Dashboard */}
+        <NavDashboardLink to="/mimarca" icon={LayoutDashboard} label="Dashboard" />
 
-        {/* Sucursales Section (antes "Mis Locales") */}
+        {/* ═══ RED DE LOCALES ═══ */}
         <NavSectionGroup
-          id="sucursales"
-          label="Sucursales"
+          id="red"
+          label="Red de Locales"
           icon={Store}
           defaultOpen
-          forceOpen={isSucursalesActive}
+          forceOpen={isRedActive}
         >
           <NavActionButton
             icon={Plus}
@@ -105,60 +98,45 @@ export function BrandSidebar() {
               label={branch.name}
             />
           ))}
+          <NavItemButton to="/mimarca/supervisiones" icon={Eye} label="Supervisión" />
         </NavSectionGroup>
 
-        {/* Supervisión Section - NUEVO */}
+        {/* ═══ CATÁLOGOS MARCA ═══ */}
         <NavSectionGroup
-          id="supervision"
-          label="Supervisión"
-          icon={Eye}
-          forceOpen={isSupervisionActive}
+          id="catalogos"
+          label="Catálogos Marca"
+          icon={Package}
+          forceOpen={isCatalogosActive}
         >
-          <NavActionButton
-            icon={Plus}
-            label="Nueva Visita"
-            onClick={() => window.location.href = '/mimarca/supervisiones/nueva'}
-            variant="primary"
-          />
-          <NavItemButton to="/mimarca/supervisiones" icon={ClipboardList} label="Historial" />
+          <NavItemButton to="/mimarca/finanzas/insumos" icon={Package} label="Insumos" />
+          <NavItemButton to="/mimarca/finanzas/proveedores" icon={Truck} label="Proveedores" />
         </NavSectionGroup>
 
-        {/* Coaching Section */}
-        <NavSectionGroup
-          id="coaching"
-          label="Coaching"
-          icon={ClipboardList}
-          forceOpen={isCoachingActive}
-        >
-          <NavItemButton to="/mimarca/coaching/encargados" icon={Users} label="Encargados" />
-          <NavItemButton to="/mimarca/coaching/red" icon={BarChart3} label="Red" />
-        </NavSectionGroup>
-
-        {/* Finanzas Section */}
+        {/* ═══ FINANZAS MARCA ═══ */}
         <NavSectionGroup
           id="finanzas"
-          label="Finanzas"
+          label="Finanzas Marca"
           icon={Wallet}
           forceOpen={isFinanzasActive}
         >
-          <NavItemButton to="/mimarca/finanzas/proveedores" icon={Truck} label="Proveedores" />
-          <NavItemButton to="/mimarca/finanzas/insumos" icon={Package} label="Insumos" />
           <NavItemButton to="/mimarca/finanzas/canon" icon={Landmark} label="Canon" />
         </NavSectionGroup>
 
-        {/* Personas Section */}
+        {/* ═══ GESTIÓN DE PERSONAS ═══ */}
         <NavSectionGroup
           id="personas"
-          label="Personas"
+          label="Gestión de Personas"
           icon={Users}
           defaultOpen
           forceOpen={isPersonasActive}
         >
-          <NavItemButton to="/mimarca/equipo-central" icon={Building2} label="Equipo de Marca" />
-          <NavItemButton to="/mimarca/usuarios" icon={Users} label="Usuarios" />
+          <NavItemButton to="/mimarca/equipo-central" icon={Building2} label="Equipo Central" />
+          <NavItemButton to="/mimarca/coaching/encargados" icon={ClipboardList} label="Coaching Encargados" />
+          <NavItemButton to="/mimarca/coaching/red" icon={BarChart3} label="Coaching Red" />
+          <NavItemButton to="/mimarca/usuarios" icon={Users} label="Usuarios y Permisos" />
         </NavSectionGroup>
 
-        {/* Comunicación Section */}
+        {/* ═══ COMUNICACIÓN ═══ */}
         <NavSectionGroup
           id="comunicacion"
           label="Comunicación"
@@ -176,7 +154,7 @@ export function BrandSidebar() {
           <NavItemButton to="/mimarca/reuniones" icon={Calendar} label="Reuniones" />
         </NavSectionGroup>
 
-        {/* Configuración Section */}
+        {/* ═══ CONFIGURACIÓN ═══ */}
         <NavSectionGroup
           id="config"
           label="Configuración"
@@ -190,7 +168,6 @@ export function BrandSidebar() {
         </NavSectionGroup>
       </WorkSidebarNav>
 
-      {/* Modals */}
       <NewBranchModal
         open={showNewBranchModal}
         onOpenChange={setShowNewBranchModal}

@@ -1,13 +1,14 @@
 /**
- * LocalSidebar - Navegación específica para Mi Local usando WorkSidebar
+ * LocalSidebar - Navegación de Mi Local reorganizada por función
  * 
- * Estructura reorganizada:
- * - Dashboard (link directo)
- * - Personal: Equipo, Coaching
- * - Tiempo: Horarios, Fichajes
- * - Administración: Adelantos, Advertencias, Firmas
- * - Comunicados (link directo)
- * - Configuración: Turnos
+ * Estructura por rol:
+ * - Dashboard
+ * - Gestión de Personas (equipo, horarios, fichajes, solicitudes, coaching, reuniones, admin)
+ * - Operaciones (compras, proveedores)
+ * - Finanzas (gastos, consumos, ventas, P&L, períodos) — solo franquiciado/contador
+ * - Mi Cuenta Socio (socios) — solo franquiciado
+ * - Comunicados
+ * - Configuración
  */
 import { useLocation } from 'react-router-dom';
 import {
@@ -23,9 +24,6 @@ import {
   Settings,
   AlertTriangle,
   UserCheck,
-  CalendarClock,
-  Briefcase,
-  Calculator,
   Calendar,
   Wallet,
   Truck,
@@ -34,6 +32,7 @@ import {
   BarChart3,
   CalendarDays,
   Handshake,
+  Calculator,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -53,6 +52,15 @@ interface LocalSidebarProps {
     canViewCoaching: boolean;
     canConfigPrinters: boolean;
     canViewWarnings?: boolean;
+    // Finanzas
+    canViewPurchaseHistory?: boolean;
+    canViewSuppliers?: boolean;
+    canUploadInvoice?: boolean;
+    canViewLocalPnL?: boolean;
+    canViewSalaryAdvances?: boolean;
+    // Rol flags
+    isFranquiciado?: boolean;
+    isContadorLocal?: boolean;
   };
 }
 
@@ -60,64 +68,72 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
   const location = useLocation();
   const basePath = `/milocal/${branchId}`;
   
-  // Check if sections have active items
-  const personalPaths = ['equipo', 'equipo/coaching', 'equipo/reuniones'];
-  const isPersonalActive = personalPaths.some(path => {
-    const fullPath = `${basePath}/${path}`;
-    return location.pathname === fullPath || location.pathname.startsWith(`${fullPath}/`);
+  const {
+    canViewDashboard, canViewTeam, canEditSchedules, canViewAllClockIns,
+    canDoCoaching, canViewCoaching, canConfigPrinters, canViewWarnings,
+    canViewPurchaseHistory, canViewSuppliers, canUploadInvoice,
+    canViewLocalPnL, canViewSalaryAdvances,
+    isFranquiciado, isContadorLocal,
+  } = permissions;
+
+  // Active section detection helpers
+  const isActive = (paths: string[]) => paths.some(p => {
+    const full = `${basePath}/${p}`;
+    return location.pathname === full || location.pathname.startsWith(`${full}/`);
   });
 
-  const tiempoPaths = ['equipo/horarios', 'equipo/fichajes', 'tiempo/liquidacion', 'tiempo/solicitudes'];
-  const isTiempoActive = tiempoPaths.some(path => {
-    const fullPath = `${basePath}/${path}`;
-    return location.pathname === fullPath || location.pathname.startsWith(`${fullPath}/`);
-  });
+  const isPersonasActive = isActive([
+    'equipo', 'equipo/coaching', 'equipo/reuniones',
+    'equipo/horarios', 'equipo/fichajes', 'tiempo/solicitudes', 'tiempo/liquidacion',
+    'equipo/adelantos', 'equipo/apercibimientos', 'equipo/reglamentos',
+  ]);
 
-  const adminPaths = ['equipo/adelantos', 'equipo/apercibimientos', 'equipo/reglamentos'];
-  const isAdminActive = adminPaths.some(path => {
-    const fullPath = `${basePath}/${path}`;
-    return location.pathname === fullPath || location.pathname.startsWith(`${fullPath}/`);
-  });
+  const isOperacionesActive = isActive(['finanzas/compras', 'finanzas/proveedores']);
+  
+  const isFinanzasActive = isActive([
+    'finanzas/gastos', 'finanzas/consumos', 'finanzas/ventas',
+    'finanzas/pl', 'finanzas/periodos',
+  ]);
 
-  const finanzasPaths = ['finanzas/proveedores', 'finanzas/insumos', 'finanzas/compras', 'finanzas/gastos', 'finanzas/ventas', 'finanzas/consumos', 'finanzas/socios', 'finanzas/periodos', 'finanzas/pl'];
-  const isFinanzasActive = finanzasPaths.some(path => {
-    const fullPath = `${basePath}/${path}`;
-    return location.pathname === fullPath || location.pathname.startsWith(`${fullPath}/`);
-  });
-
+  const isSociosActive = isActive(['finanzas/socios']);
   const isConfigActive = location.pathname.startsWith(`${basePath}/config`);
 
-  const { canViewDashboard, canViewTeam, canEditSchedules, canViewAllClockIns, canDoCoaching, canViewCoaching, canConfigPrinters, canViewWarnings } = permissions;
-
-  // Determine if user can see Personal section
-  const canSeePersonal = canViewTeam || canDoCoaching;
-  // Determine if user can see Tiempo section
-  const canSeeTiempo = canEditSchedules || canViewAllClockIns;
-  // Determine if user can see Admin section
-  const canSeeAdmin = canViewTeam || canViewWarnings || canEditSchedules;
+  // Section visibility
+  const canSeePersonas = canViewTeam || canDoCoaching || canEditSchedules || canViewAllClockIns;
+  const canSeeOperaciones = canViewPurchaseHistory || canViewSuppliers || canUploadInvoice;
+  const canSeeFinanzas = canViewLocalPnL || isContadorLocal || isFranquiciado;
+  const canSeeSocios = isFranquiciado;
 
   return (
     <WorkSidebarNav>
-      {/* Dashboard - Link directo */}
+      {/* Dashboard */}
       {canViewDashboard && (
-        <NavDashboardLink
-          to={basePath}
-          icon={LayoutDashboard}
-          label="Dashboard"
-        />
+        <NavDashboardLink to={basePath} icon={LayoutDashboard} label="Dashboard" />
       )}
 
-      {/* Personal Section */}
-      {canSeePersonal && (
+      {/* ═══ GESTIÓN DE PERSONAS ═══ */}
+      {canSeePersonas && (
         <NavSectionGroup
-          id="personal"
-          label="Personal"
+          id="personas"
+          label="Gestión de Personas"
           icon={UserCheck}
           defaultOpen
-          forceOpen={isPersonalActive}
+          forceOpen={isPersonasActive}
         >
           {canViewTeam && (
             <NavItemButton to={`${basePath}/equipo`} icon={Users} label="Equipo" exact />
+          )}
+          {canEditSchedules && (
+            <NavItemButton to={`${basePath}/equipo/horarios`} icon={Clock} label="Horarios" />
+          )}
+          {canViewAllClockIns && (
+            <NavItemButton to={`${basePath}/equipo/fichajes`} icon={Clock} label="Fichajes" />
+          )}
+          {canEditSchedules && (
+            <NavItemButton to={`${basePath}/tiempo/solicitudes`} icon={ClipboardList} label="Solicitudes" />
+          )}
+          {canViewAllClockIns && (
+            <NavItemButton to={`${basePath}/tiempo/liquidacion`} icon={Calculator} label="Liquidación" />
           )}
           {canViewCoaching && (
             <NavItemButton to={`${basePath}/equipo/coaching`} icon={ClipboardList} label="Coaching" />
@@ -125,42 +141,7 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
           {canViewTeam && (
             <NavItemButton to={`${basePath}/equipo/reuniones`} icon={Calendar} label="Reuniones" />
           )}
-        </NavSectionGroup>
-      )}
-
-      {/* Tiempo Section */}
-      {canSeeTiempo && (
-        <NavSectionGroup
-          id="tiempo"
-          label="Tiempo"
-          icon={CalendarClock}
-          defaultOpen
-          forceOpen={isTiempoActive}
-        >
-          {canEditSchedules && (
-            <NavItemButton to={`${basePath}/equipo/horarios`} icon={Clock} label="Horarios" />
-          )}
-          {canEditSchedules && (
-            <NavItemButton to={`${basePath}/tiempo/solicitudes`} icon={ClipboardList} label="Solicitudes" />
-          )}
-          {canViewAllClockIns && (
-            <NavItemButton to={`${basePath}/equipo/fichajes`} icon={Clock} label="Fichajes" />
-          )}
-          {canViewAllClockIns && (
-            <NavItemButton to={`${basePath}/tiempo/liquidacion`} icon={Calculator} label="Liquidación" />
-          )}
-        </NavSectionGroup>
-      )}
-
-      {/* Administración Section */}
-      {canSeeAdmin && (
-        <NavSectionGroup
-          id="admin"
-          label="Administración"
-          icon={Briefcase}
-          forceOpen={isAdminActive}
-        >
-          {canViewTeam && (
+          {(canViewSalaryAdvances || canViewTeam) && (
             <NavItemButton to={`${basePath}/equipo/adelantos`} icon={DollarSign} label="Adelantos" />
           )}
           {canViewWarnings && (
@@ -172,22 +153,44 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
         </NavSectionGroup>
       )}
 
-      {/* Finanzas Section (read-only) */}
-      {(permissions.canViewTeam) && (
+      {/* ═══ OPERACIONES ═══ */}
+      {canSeeOperaciones && (
+        <NavSectionGroup
+          id="operaciones"
+          label="Operaciones"
+          icon={ShoppingCart}
+          forceOpen={isOperacionesActive}
+        >
+          <NavItemButton to={`${basePath}/finanzas/compras`} icon={Receipt} label="Compras" />
+          <NavItemButton to={`${basePath}/finanzas/proveedores`} icon={Truck} label="Proveedores" />
+        </NavSectionGroup>
+      )}
+
+      {/* ═══ FINANZAS ═══ (franquiciado / contador_local) */}
+      {canSeeFinanzas && (
         <NavSectionGroup
           id="finanzas"
           label="Finanzas"
           icon={Wallet}
           forceOpen={isFinanzasActive}
         >
-          <NavItemButton to={`${basePath}/finanzas/pl`} icon={BarChart3} label="P&L" />
-          <NavItemButton to={`${basePath}/finanzas/ventas`} icon={TrendingUp} label="Ventas Mensuales" />
-          <NavItemButton to={`${basePath}/finanzas/compras`} icon={ShoppingCart} label="Compras" />
           <NavItemButton to={`${basePath}/finanzas/gastos`} icon={Receipt} label="Gastos" />
           <NavItemButton to={`${basePath}/finanzas/consumos`} icon={Package} label="Consumos" />
-          <NavItemButton to={`${basePath}/finanzas/proveedores`} icon={Truck} label="Proveedores" />
-          <NavItemButton to={`${basePath}/finanzas/socios`} icon={Handshake} label="Socios" />
+          <NavItemButton to={`${basePath}/finanzas/ventas`} icon={TrendingUp} label="Ventas Mensuales" />
+          <NavItemButton to={`${basePath}/finanzas/pl`} icon={BarChart3} label="Resultado Económico" />
           <NavItemButton to={`${basePath}/finanzas/periodos`} icon={CalendarDays} label="Períodos" />
+        </NavSectionGroup>
+      )}
+
+      {/* ═══ MI CUENTA SOCIO ═══ (solo franquiciado) */}
+      {canSeeSocios && (
+        <NavSectionGroup
+          id="socios"
+          label="Mi Cuenta Socio"
+          icon={Handshake}
+          forceOpen={isSociosActive}
+        >
+          <NavItemButton to={`${basePath}/finanzas/socios`} icon={Handshake} label="Socios y Movimientos" />
         </NavSectionGroup>
       )}
 
@@ -200,7 +203,7 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
         />
       )}
 
-      {/* Configuración Section */}
+      {/* ═══ CONFIGURACIÓN ═══ */}
       {canConfigPrinters && (
         <NavSectionGroup
           id="config"

@@ -267,6 +267,13 @@ export default function BranchLayout() {
                 canViewCoaching: lp.canViewCoaching,
                 canConfigPrinters: lp.canConfigPrinters,
                 canViewWarnings: lp.canViewWarnings,
+                canViewPurchaseHistory: lp.canViewPurchaseHistory,
+                canViewSuppliers: lp.canViewSuppliers,
+                canUploadInvoice: lp.canUploadInvoice,
+                canViewLocalPnL: lp.canViewLocalPnL,
+                canViewSalaryAdvances: lp.canViewSalaryAdvances,
+                isFranquiciado: permissions.isFranquiciado,
+                isContadorLocal: permissions.isContadorLocal,
             }}
           />
         ) : null
