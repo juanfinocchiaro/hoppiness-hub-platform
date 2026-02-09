@@ -31,10 +31,15 @@ export default function GastosPage() {
   const getCategoriaLabel = (key: string) =>
     CATEGORIA_GASTO_OPTIONS.find(c => c.value === key)?.label || key;
 
-  const estadoBadge = (estado: string | null) => {
+  const estadoBadge = (row: any) => {
+    const estado = row.estado;
     if (estado === 'pagado') return <Badge variant="default">Pagado</Badge>;
+    if (estado === 'pendiente' && row.fecha_vencimiento && new Date(row.fecha_vencimiento) < new Date()) {
+      return <Badge variant="destructive">Vencido</Badge>;
+    }
+    if (estado === 'pendiente') return <Badge variant="secondary">Pendiente</Badge>;
     if (estado === 'parcial') return <Badge variant="secondary">Parcial</Badge>;
-    return <Badge variant="destructive">Pendiente</Badge>;
+    return <Badge variant="secondary">Pendiente</Badge>;
   };
 
   return (
@@ -64,6 +69,7 @@ export default function GastosPage() {
               <TableHead>Concepto</TableHead>
               <TableHead className="text-right">Monto</TableHead>
               <TableHead>Estado</TableHead>
+              <TableHead>Vencimiento</TableHead>
               <TableHead className="w-[80px]" />
             </TableRow>
           </TableHeader>
@@ -71,14 +77,14 @@ export default function GastosPage() {
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 6 }).map((_, j) => (
+                  {Array.from({ length: 7 }).map((_, j) => (
                     <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                   ))}
                 </TableRow>
               ))
             ) : !filtered?.length ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-40">
+                <TableCell colSpan={7} className="h-40">
                   <EmptyState icon={Receipt} title="Sin gastos" description="Registrá el primer gasto del local" />
                 </TableCell>
               </TableRow>
@@ -91,7 +97,14 @@ export default function GastosPage() {
                   </TableCell>
                   <TableCell className="font-medium">{row.concepto}</TableCell>
                   <TableCell className="text-right font-mono">$ {Number(row.monto).toLocaleString('es-AR')}</TableCell>
-                  <TableCell>{estadoBadge(row.estado)}</TableCell>
+                  <TableCell>{estadoBadge(row)}</TableCell>
+                  <TableCell className="text-sm">
+                    {row.fecha_vencimiento ? (
+                      <span className={new Date(row.fecha_vencimiento) < new Date() && row.estado !== 'pagado' ? 'text-destructive font-medium' : ''}>
+                        {new Date(row.fecha_vencimiento).toLocaleDateString('es-AR')}
+                      </span>
+                    ) : '-'}
+                  </TableCell>
                   <TableCell>
                     <div className="flex gap-1 justify-end">
                       <Button variant="ghost" size="icon" onClick={() => { setEditing(row); setModalOpen(true); }}>

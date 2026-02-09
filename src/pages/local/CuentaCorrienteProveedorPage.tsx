@@ -1,0 +1,255 @@
+import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { PageHeader } from '@/components/ui/page-header';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { 
+  Building2, Phone, Mail, CreditCard, AlertTriangle,
+  TrendingUp, Calendar, ArrowLeft
+} from 'lucide-react';
+import { useSaldoProveedor, useMovimientosProveedor } from '@/hooks/useCuentaCorrienteProveedor';
+import { useProveedores } from '@/hooks/useProveedores';
+import { PagoProveedorModal } from '@/components/finanzas/PagoProveedorModal';
+import { EmptyState } from '@/components/ui/states';
+
+export default function CuentaCorrienteProveedorPage() {
+  const { branchId, proveedorId } = useParams<{ branchId: string; proveedorId: string }>();
+  const navigate = useNavigate();
+  const { data: proveedores } = useProveedores(branchId);
+  const proveedor = proveedores?.find(p => p.id === proveedorId);
+  const { data: saldo, isLoading: loadingSaldo } = useSaldoProveedor(branchId, proveedorId);
+  const { data: movimientos, isLoading: loadingMov } = useMovimientosProveedor(branchId, proveedorId);
+  const [payingFacturaId, setPayingFacturaId] = useState<string | null>(null);
+
+  const payingFactura = payingFacturaId ? {
+    id: payingFacturaId,
+    proveedor_id: proveedorId!,
+    branch_id: branchId!,
+    saldo_pendiente: movimientos?.find(m => m.id === payingFacturaId)?.monto || 0,
+  } : null;
+
+  return (
+    <div className="p-6 space-y-6">
+      <PageHeader
+        title={proveedor?.razon_social || 'Proveedor'}
+        subtitle={proveedor?.cuit ? `CUIT: ${proveedor.cuit}` : undefined}
+        actions={
+          <Button variant="outline" onClick={() => navigate(`/milocal/${branchId}/finanzas/proveedores`)}>
+            <ArrowLeft className="w-4 h-4 mr-2" /> Volver
+          </Button>
+        }
+      />
+
+      {/* Alerta de facturas vencidas */}
+      {saldo && Number(saldo.facturas_vencidas) > 0 && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Tenés {saldo.facturas_vencidas} factura(s) vencida(s) por $ {Number(saldo.monto_vencido).toLocaleString('es-AR')}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {loadingSaldo ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}><CardContent className="pt-6"><Skeleton className="h-12 w-full" /></CardContent></Card>
+          ))
+        ) : (
+          <>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Saldo Pendiente</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold font-mono">
+                  $ {Number(saldo?.total_pendiente || 0).toLocaleString('es-AR')}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {saldo?.facturas_pendientes || 0} factura(s) pendiente(s)
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <Calendar className="w-4 h-4" /> Próximo Vencimiento
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-lg font-semibold">
+                  {saldo?.proximo_vencimiento
+                    ? new Date(saldo.proximo_vencimiento).toLocaleDateString('es-AR')
+                    : '-'}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4" /> Total Facturado
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-lg font-semibold font-mono">
+                  $ {Number(saldo?.total_facturado || 0).toLocaleString('es-AR')}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">{saldo?.cantidad_facturas || 0} factura(s)</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <CreditCard className="w-4 h-4" /> Total Pagado
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-lg font-semibold font-mono">
+                  $ {Number(saldo?.total_pagado || 0).toLocaleString('es-AR')}
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
+      </div>
+
+      {/* Datos del Proveedor */}
+      {proveedor && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">Datos del Proveedor</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-muted-foreground" />
+                <span><strong>Razón Social:</strong> {proveedor.razon_social}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Phone className="w-4 h-4 text-muted-foreground" />
+                <span><strong>Teléfono:</strong> {proveedor.telefono || '-'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-muted-foreground" />
+                <span><strong>Email:</strong> {proveedor.email || '-'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-muted-foreground" />
+                <span><strong>Cuenta Corriente:</strong> {proveedor.permite_cuenta_corriente ? `Sí (${proveedor.dias_pago_habitual || '-'} días)` : 'No'}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Historial de Movimientos */}
+      <Card>
+        <CardHeader><CardTitle className="text-base">Historial de Cuenta Corriente</CardTitle></CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Referencia</TableHead>
+                <TableHead className="text-right">Debe</TableHead>
+                <TableHead className="text-right">Haber</TableHead>
+                <TableHead className="text-right">Saldo</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead>Vencimiento</TableHead>
+                <TableHead className="w-[80px]" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loadingMov ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    {Array.from({ length: 9 }).map((_, j) => (
+                      <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : !movimientos?.length ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="h-32">
+                    <EmptyState icon={CreditCard} title="Sin movimientos" description="No hay facturas ni pagos registrados" />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                movimientos.map((mov) => (
+                  <TableRow key={`${mov.tipo}-${mov.id}`}>
+                    <TableCell className="text-sm">{new Date(mov.fecha).toLocaleDateString('es-AR')}</TableCell>
+                    <TableCell>
+                      {mov.tipo === 'factura' ? (
+                        <Badge variant="destructive">Factura</Badge>
+                      ) : (
+                        <Badge variant="default">Pago</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {mov.tipo === 'factura' ? (
+                        <div>
+                          <p className="font-medium text-sm">{mov.factura_numero}</p>
+                          <p className="text-xs text-muted-foreground">{mov.items_count} item(s)</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="font-medium text-sm capitalize">{mov.medio_pago}</p>
+                          {mov.referencia && <p className="text-xs text-muted-foreground">Ref: {mov.referencia}</p>}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {mov.tipo === 'factura' && (
+                        <span className="text-destructive">$ {mov.monto.toLocaleString('es-AR')}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {mov.tipo === 'pago' && (
+                        <span className="text-green-600">$ {mov.monto.toLocaleString('es-AR')}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-mono font-bold">
+                      $ {mov.saldo_acumulado.toLocaleString('es-AR')}
+                    </TableCell>
+                    <TableCell>
+                      {mov.tipo === 'factura' && mov.estado && (
+                        mov.estado === 'pagado' ? <Badge variant="default">Pagado</Badge> :
+                        mov.estado === 'vencido' || (mov.fecha_vencimiento && new Date(mov.fecha_vencimiento) < new Date()) ?
+                          <Badge variant="destructive">Vencido</Badge> :
+                          <Badge variant="secondary">Pendiente</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {mov.tipo === 'factura' && mov.fecha_vencimiento && (
+                        <span className={new Date(mov.fecha_vencimiento) < new Date() ? 'text-destructive font-medium' : ''}>
+                          {new Date(mov.fecha_vencimiento).toLocaleDateString('es-AR')}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {mov.tipo === 'factura' && mov.estado !== 'pagado' && (
+                        <Button size="sm" variant="outline" onClick={() => setPayingFacturaId(mov.id)}>
+                          Pagar
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <PagoProveedorModal
+        open={!!payingFacturaId}
+        onOpenChange={() => setPayingFacturaId(null)}
+        factura={payingFactura as any}
+      />
+    </div>
+  );
+}

@@ -54,10 +54,13 @@ export interface GastoFormData {
   subcategoria?: string;
   concepto: string;
   monto: number;
+  estado?: string;
+  fecha_vencimiento?: string | null;
+  fecha_pago?: string | null;
   medio_pago?: string;
   referencia_pago?: string;
+  gasto_relacionado_id?: string | null;
   observaciones?: string;
-  estado?: string;
 }
 
 // Constants
