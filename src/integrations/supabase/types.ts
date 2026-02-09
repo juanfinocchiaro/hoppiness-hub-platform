@@ -2892,6 +2892,53 @@ export type Database = {
           },
         ]
       }
+      rdo_categories: {
+        Row: {
+          allowed_item_types: string[] | null
+          behavior: string
+          code: string
+          created_at: string | null
+          is_active: boolean
+          level: number
+          name: string
+          parent_code: string | null
+          rdo_section: string
+          sort_order: number
+        }
+        Insert: {
+          allowed_item_types?: string[] | null
+          behavior: string
+          code: string
+          created_at?: string | null
+          is_active?: boolean
+          level: number
+          name: string
+          parent_code?: string | null
+          rdo_section: string
+          sort_order?: number
+        }
+        Update: {
+          allowed_item_types?: string[] | null
+          behavior?: string
+          code?: string
+          created_at?: string | null
+          is_active?: boolean
+          level?: number
+          name?: string
+          parent_code?: string | null
+          rdo_section?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rdo_categories_parent_code_fkey"
+            columns: ["parent_code"]
+            isOneToOne: false
+            referencedRelation: "rdo_categories"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       regulation_signatures: {
         Row: {
           branch_id: string
