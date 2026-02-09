@@ -1,154 +1,62 @@
 
-# Sistema RDO (Resultado de Operaciones)
 
-## Contexto
-El sistema RDO unifica la categorización de todos los costos del negocio (ingredientes, insumos, servicios) para generar automáticamente el Estado de Resultados (P&L) que coincide con el RDO en Excel del cliente.
+## Problema
 
-Actualmente el P&L es un cálculo simple (ventas - compras - gastos - consumos). El RDO lo reemplaza con una estructura jerárquica de categorías con costos variables y fijos.
+1. **En "Compras y Servicios" los items de canon muestran el UUID** (`00000000...`) en lugar del nombre del insumo ("Canon de Marca 4.5%", "Marketing 0.5%").
+2. **El desglose del canon no muestra claramente los conceptos facturables** (4.5% Uso de Marca y 0.5% Marketing y Publicidad) ni cómo debe pagarse cada parte.
+3. **La factura generada automáticamente necesita que el local entienda de un vistazo**: cuánto pagar en efectivo y cuánto en transferencia.
 
-**Dato clave:** Las tablas `insumos`, `gastos` e `items_factura` están vacías (0 registros), así que no hay migración de datos legacy.
+## Solución
 
-## Fases de Implementación
+### 1. Mostrar nombre del insumo en la tabla de Compras
 
-### FASE 1: Base de Datos — Tabla `rdo_categories` + Seed
+En `ComprasPage.tsx`, la query actual trae `items_factura(*)` sin joinear el nombre del insumo. Se cambiará a:
 
-Crear tabla maestra de categorías RDO con estructura jerárquica de 3 niveles.
-
-```sql
-CREATE TABLE public.rdo_categories (
-  code text PRIMARY KEY,
-  name text NOT NULL,
-  parent_code text REFERENCES rdo_categories(code),
-  level integer NOT NULL CHECK (level BETWEEN 1 AND 3),
-  rdo_section text NOT NULL, -- 'costos_variables' | 'costos_fijos'
-  behavior text NOT NULL,    -- 'variable' | 'fijo'
-  allowed_item_types text[], -- {'ingrediente','insumo','servicio'}
-  sort_order integer NOT NULL DEFAULT 0,
-  is_active boolean NOT NULL DEFAULT true,
-  created_at timestamptz DEFAULT now()
-);
+```
+items_factura(*, insumos(nombre))
 ```
 
-Seed con todas las categorías del documento:
+Y en la celda que hoy muestra `item.insumo_id?.slice(0,8)...` se mostrará `item.insumos?.nombre ?? item.insumo_id`.
 
-**Costos Variables:**
-- CMV: cmv_hamburguesas, cmv_bebidas_alcohol, cmv_bebidas_sin_alcohol, descartables_salon, descartables_delivery, insumos_clientes
-- Comisiones: comision_mp_point, comision_rappi, comision_pedidosya
-- Delivery: cadetes_rappiboy, cadetes_terceros
-- Publicidad: fee_marca, marketing
+**Archivos**: `src/hooks/useCompras.ts` y `src/pages/local/ComprasPage.tsx`
 
-**Costos Fijos:**
-- Estructura: limpieza_higiene, descartables_cocina, mantenimiento, uniformes
-- Laborales: sueldos, cargas_sociales, comida_personal
-- Administración: software_gestion, estudio_contable, bromatologia
-- Servicios: alquiler, expensas, gas, internet_telefonia, energia_electrica
+### 2. Mejorar el detalle expandido de facturas de canon
 
-RLS: lectura para todo staff autenticado, escritura solo superadmin.
+Cuando se expande una factura de tipo Canon, en lugar de mostrar solo los 2 items genéricos, se mostrará un bloque claro con:
 
-### FASE 2: Base de Datos — Nuevos campos en tablas existentes
+- Canon 4.5% por Uso de Marca: $X
+- Canon 0.5% por Marketing y Publicidad: $Y
+- Separador con instrucciones de pago:
+  - **Pagar en efectivo**: 5% del efectivo del mes = $Z
+  - **Pagar en transferencia**: 5% del online del mes = $W
 
-**`insumos`:**
-- `tipo_item varchar DEFAULT 'insumo'` — 'ingrediente' | 'insumo'
-- `rdo_category_code text REFERENCES rdo_categories(code)` — categoría RDO
-- `tracks_stock boolean DEFAULT false` — si trackea stock
+Esta info ya existe en el campo `observaciones` de la factura (que contiene VT, Ef, Online). Se parseará para mostrar el desglose.
 
-**`gastos`:**
-- `rdo_category_code text REFERENCES rdo_categories(code)` — categoría RDO
-- `proveedor_id uuid REFERENCES proveedores(id)` — proveedor opcional
+### 3. Renombrar conceptos en el modal de Ventas Mensuales
 
-**`items_factura`:**
-- `rdo_category_code text REFERENCES rdo_categories(code)` — hereda del insumo o se asigna
+En `VentaMensualFormModal.tsx`, cambiar las etiquetas:
+- "Canon 5% Efectivo" a "Canon 4.5% Uso de Marca + 0.5% Mkt (sobre efectivo)"
+- "Canon 5% Online" a "Canon 4.5% Uso de Marca + 0.5% Mkt (sobre online)"
 
-**`proveedores`:**
-- `tipo_proveedor text[]` — {'ingrediente','insumo','servicio'}
-- `rdo_categories_default text[]` — categorías que suele proveer
+O mejor, desglosar en 4 lineas:
+- Uso de Marca 4.5% sobre Efectivo
+- Mkt 0.5% sobre Efectivo
+- Uso de Marca 4.5% sobre Online (transferencia)
+- Mkt 0.5% sobre Online (transferencia)
+- **Pagar en efectivo**: suma de las dos primeras
+- **Pagar en transferencia**: suma de las dos segundas
 
-### FASE 3: Vista de Reporte y Función
+## Detalle Tecnico
 
-Crear vista `rdo_report_data` que consolide:
-- Items de facturas (compras) agrupados por rdo_category_code
-- Gastos agrupados por rdo_category_code
-- Consumos manuales mapeados a categorías RDO
+### Archivo 1: `src/hooks/useCompras.ts`
+- Cambiar la query select de `items_factura(*)` a `items_factura(*, insumos(nombre))`.
 
-Crear función `get_rdo_report(branch_id, periodo)` que retorne:
-- Cada línea del RDO con monto, porcentaje sobre ventas, sección, comportamiento
+### Archivo 2: `src/pages/local/ComprasPage.tsx`
+- Linea 125: reemplazar `item.insumo_id?.slice(0, 8)...` por `item.insumos?.nombre || item.insumo_id`.
 
-### FASE 4: Tipos TypeScript y Hooks
+### Archivo 3: `src/components/finanzas/VentaMensualFormModal.tsx`
+- Reestructurar el bloque de resumen (lineas 147-160) para mostrar el desglose claro con 4.5%/0.5% y las instrucciones de pago en efectivo vs transferencia.
 
-**Nuevo `src/types/rdo.ts`:**
-- RdoCategory type (desde Supabase types)
-- RdoReportLine interface
-- Constantes de secciones y comportamientos
+### Archivo 4: `src/pages/admin/VentasMensualesMarcaPage.tsx`
+- Asegurar que el detalle expandido también use la nomenclatura "4.5% Uso de Marca" y "0.5% Marketing y Publicidad" de forma consistente (ya lo tiene parcialmente).
 
-**Nuevo `src/hooks/useRdoCategories.ts`:**
-- useRdoCategories(filters?) — lista categorías con filtros opcionales
-- useRdoCategoryOptions(itemType?) — para selectores
-
-**Nuevo `src/hooks/useRdoReport.ts`:**
-- useRdoReport(branchId, periodo) — reporte completo
-
-### FASE 5: Componentes UI
-
-**Nuevo `src/components/rdo/RdoCategorySelector.tsx`:**
-- Select con búsqueda y agrupación por sección
-- Filtra por allowed_item_types según contexto
-
-**Nuevo `src/components/rdo/RdoCategoryBadge.tsx`:**
-- Badge que muestra nombre + variable/fijo
-
-**Actualizar formularios existentes:**
-- `InsumoFormModal.tsx` — agregar tipo_item + RdoCategorySelector + tracks_stock
-- `GastoFormModal.tsx` — agregar RdoCategorySelector + proveedor opcional
-- `CompraFormModal.tsx` — items heredan rdo_category_code del insumo
-
-### FASE 6: Dashboard RDO (reemplaza P&L actual)
-
-**Nuevo `src/components/rdo/RdoDashboard.tsx`:**
-- Reemplazar el contenido de PLDashboardPage con dashboard basado en RDO
-- Estructura jerárquica: sección > categoría > subcategoría
-- Columnas: Concepto | Monto | % sobre Ventas
-- Totales por sección (Total Costos Variables, Total Costos Fijos)
-- Resultado Operativo = Ventas - Costos Variables - Costos Fijos
-- Comparativo con período anterior (cuando haya datos)
-
-## Archivos a crear
-
-| Archivo | Descripción |
-|---------|-------------|
-| Migración SQL (Fase 1) | Tabla rdo_categories + seed |
-| Migración SQL (Fase 2) | ALTER TABLE insumos, gastos, items_factura, proveedores |
-| Migración SQL (Fase 3) | Vista rdo_report_data + función get_rdo_report |
-| `src/types/rdo.ts` | Tipos TypeScript |
-| `src/hooks/useRdoCategories.ts` | Hook de categorías |
-| `src/hooks/useRdoReport.ts` | Hook de reporte |
-| `src/components/rdo/RdoCategorySelector.tsx` | Selector de categoría |
-| `src/components/rdo/RdoCategoryBadge.tsx` | Badge de categoría |
-| `src/components/rdo/RdoDashboard.tsx` | Dashboard principal |
-
-## Archivos a modificar
-
-| Archivo | Cambio |
-|---------|--------|
-| `src/components/finanzas/InsumoFormModal.tsx` | Agregar tipo_item, rdo_category_code, tracks_stock |
-| `src/components/finanzas/GastoFormModal.tsx` | Agregar rdo_category_code, proveedor_id |
-| `src/components/finanzas/CompraFormModal.tsx` | Items heredan rdo_category_code |
-| `src/types/financial.ts` | Agregar campos RDO a InsumoFormData |
-| `src/types/compra.ts` | Agregar rdo_category_code a GastoFormData |
-| `src/pages/local/PLDashboardPage.tsx` | Usar RdoDashboard |
-| `src/components/finanzas/ProveedorFormModal.tsx` | Agregar tipo_proveedor |
-
-## Orden de ejecución
-
-1. ✅ Migración Fase 1 (rdo_categories + seed) — completado
-2. ✅ Migración Fase 2 (campos en tablas existentes) — completado
-3. ✅ Migración Fase 3 (vista + función) — completado
-4. ✅ Tipos + Hooks (Fase 4) — completado
-5. ✅ Componentes UI (Fase 5) — completado
-6. ✅ Dashboard RDO (Fase 6) — completado
-
-## Notas técnicas
-
-- Las tablas están vacías, no hay datos legacy que migrar
-- El campo `categoria_pl` existente en insumos y items_factura se mantiene por compatibilidad pero se deriva de rdo_category_code
-- Los gastos menores (caja chica, propinas) NO necesitan categoría RDO — son gastos operativos que ya tienen su propia categorización
-- La tabla `conceptos_servicio` existente se integra: cada concepto puede tener un rdo_category_code default
