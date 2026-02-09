@@ -8,13 +8,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { usePagoProveedorMutations } from '@/hooks/useCompras';
 import { MEDIO_PAGO_OPTIONS } from '@/types/compra';
 import type { FacturaProveedor } from '@/types/compra';
-import { Banknote, ArrowRightLeft } from 'lucide-react';
+import { Banknote, ArrowRightLeft, Plus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   factura: FacturaProveedor | null;
   proveedorNombre?: string;
+}
+
+interface PagoLine {
+  monto: string;
+  medio_pago: string;
 }
 
 function parseCanonObservaciones(obs: string | null) {
@@ -29,58 +35,100 @@ function parseCanonObservaciones(obs: string | null) {
     const ef = parseFloat(efMatch[1]);
     const online = vt - ef;
     return {
-      ventaTotal: vt / 100,
-      efectivo: ef / 100,
-      online: online / 100,
-      canonMarca: canonMatch ? parseFloat(canonMatch[1]) / 100 : vt * 0.045 / 100,
-      canonMkt: mktMatch ? parseFloat(mktMatch[1]) / 100 : vt * 0.005 / 100,
-      pagarEfectivo: ef * 0.05 / 100,
-      pagarTransferencia: online * 0.05 / 100,
+      ventaTotal: vt,
+      efectivo: ef,
+      online,
+      canonMarca: canonMatch ? parseFloat(canonMatch[1]) : vt * 0.045,
+      canonMkt: mktMatch ? parseFloat(mktMatch[1]) : vt * 0.005,
+      pagarEfectivo: ef * 0.05,
+      pagarTransferencia: online * 0.05,
     };
   } catch {
     return null;
   }
 }
 
+const EMPTY_LINE: PagoLine = { monto: '', medio_pago: 'transferencia' };
+
 export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombre }: Props) {
   const { create } = usePagoProveedorMutations();
-  const [form, setForm] = useState({
-    monto: '',
-    fecha_pago: new Date().toISOString().slice(0, 10),
-    medio_pago: 'transferencia',
-    referencia: '',
-    observaciones: '',
-  });
+  const [lines, setLines] = useState<PagoLine[]>([{ ...EMPTY_LINE }]);
+  const [fechaPago, setFechaPago] = useState(new Date().toISOString().slice(0, 10));
+  const [referencia, setReferencia] = useState('');
+  const [observaciones, setObservaciones] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const saldoPendiente = factura?.saldo_pendiente ?? 0;
+  const saldoPendiente = Number(factura?.saldo_pendiente ?? 0);
   const isHoppiness = proveedorNombre?.toLowerCase().includes('hoppiness');
   const canonInfo = useMemo(() => {
     if (!isHoppiness || !factura) return null;
     return parseCanonObservaciones(factura.observaciones as string);
   }, [isHoppiness, factura]);
 
-  const handleSubmit = async () => {
-    if (!factura || !form.monto) return;
-    await create.mutateAsync({
-      factura_id: factura.id,
-      proveedor_id: factura.proveedor_id,
-      branch_id: factura.branch_id,
-      monto: parseFloat(form.monto),
-      fecha_pago: form.fecha_pago,
-      medio_pago: form.medio_pago,
-      referencia: form.referencia || undefined,
-      observaciones: form.observaciones || undefined,
-    });
-    onOpenChange(false);
+  const totalPagos = lines.reduce((s, l) => s + (parseFloat(l.monto) || 0), 0);
+  const excede = totalPagos > saldoPendiente + 0.01;
+
+  const updateLine = (idx: number, key: keyof PagoLine, value: string) => {
+    setLines(prev => prev.map((l, i) => i === idx ? { ...l, [key]: value } : l));
   };
 
-  const set = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }));
+  const addLine = () => {
+    if (lines.length < 4) setLines(prev => [...prev, { ...EMPTY_LINE }]);
+  };
+
+  const removeLine = (idx: number) => {
+    if (lines.length > 1) setLines(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleSubmit = async () => {
+    if (!factura) return;
+    const validLines = lines.filter(l => parseFloat(l.monto) > 0);
+    if (validLines.length === 0) return;
+    if (excede) {
+      toast.error('El total de pagos excede el saldo pendiente');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      for (const line of validLines) {
+        await create.mutateAsync({
+          factura_id: factura.id,
+          proveedor_id: factura.proveedor_id,
+          branch_id: factura.branch_id,
+          monto: parseFloat(line.monto),
+          fecha_pago: fechaPago,
+          medio_pago: line.medio_pago,
+          referencia: referencia || undefined,
+          observaciones: observaciones || undefined,
+        });
+      }
+      onOpenChange(false);
+      setLines([{ ...EMPTY_LINE }]);
+      setReferencia('');
+      setObservaciones('');
+    } catch {
+      // error handled by mutation
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const setCanonPreset = () => {
+    if (!canonInfo) return;
+    setLines([
+      { monto: canonInfo.pagarEfectivo.toFixed(2), medio_pago: 'efectivo' },
+      { monto: canonInfo.pagarTransferencia.toFixed(2), medio_pago: 'transferencia' },
+    ]);
+  };
 
   const fmt = (n: number) => Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  const hasValidPayment = lines.some(l => parseFloat(l.monto) > 0);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Registrar Pago</DialogTitle>
         </DialogHeader>
@@ -88,7 +136,7 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
         <div className="space-y-4">
           <div className="p-3 rounded-md bg-muted text-sm">
             <p>Total factura: <strong>$ {fmt(Number(factura?.total ?? 0))}</strong></p>
-            <p>Saldo pendiente: <strong className="text-destructive">$ {fmt(Number(saldoPendiente))}</strong></p>
+            <p>Saldo pendiente: <strong className="text-destructive">$ {fmt(saldoPendiente)}</strong></p>
           </div>
 
           {/* Canon breakdown for Hoppiness Club */}
@@ -104,61 +152,93 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
               <hr className="border-primary/20" />
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <Banknote className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span>Pagar en <strong>efectivo</strong> (5% de $ {fmt(canonInfo.efectivo)}):</span>
+                  <Banknote className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <span>En <strong>efectivo</strong> (5% de $ {fmt(canonInfo.efectivo)}):</span>
                   <span className="font-mono font-semibold ml-auto">$ {fmt(canonInfo.pagarEfectivo)}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <ArrowRightLeft className="w-4 h-4 text-primary shrink-0" />
-                  <span>Pagar por <strong>transferencia</strong> (5% de $ {fmt(canonInfo.online)}):</span>
+                  <ArrowRightLeft className="w-4 h-4 shrink-0 text-primary" />
+                  <span>Por <strong>transferencia</strong> (5% de $ {fmt(canonInfo.online)}):</span>
                   <span className="font-mono font-semibold ml-auto">$ {fmt(canonInfo.pagarTransferencia)}</span>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Podés registrar pagos parciales (ej: primero el efectivo, luego la transferencia).</p>
+              <Button type="button" variant="outline" size="sm" className="w-full mt-2 text-xs" onClick={setCanonPreset}>
+                Cargar ambos pagos automáticamente
+              </Button>
             </div>
           )}
 
-          <div>
-            <Label>Monto a pagar *</Label>
-            <Input type="number" step="0.01" max={Number(saldoPendiente)} value={form.monto} onChange={e => set('monto', e.target.value)} placeholder={`Máx $ ${fmt(Number(saldoPendiente))}`} />
-            {canonInfo && (
-              <div className="flex gap-2 mt-1.5">
-                <Button type="button" variant="outline" size="sm" className="text-xs h-7" onClick={() => set('monto', canonInfo.pagarEfectivo.toFixed(2))}>
-                  <Banknote className="w-3 h-3 mr-1" /> Porción efectivo
+          {/* Payment lines */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Pagos</Label>
+              {lines.length < 4 && (
+                <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={addLine}>
+                  <Plus className="w-3 h-3 mr-1" /> Agregar pago
                 </Button>
-                <Button type="button" variant="outline" size="sm" className="text-xs h-7" onClick={() => set('monto', canonInfo.pagarTransferencia.toFixed(2))}>
-                  <ArrowRightLeft className="w-3 h-3 mr-1" /> Porción transferencia
-                </Button>
+              )}
+            </div>
+
+            {lines.map((line, idx) => (
+              <div key={idx} className="flex items-end gap-2">
+                <div className="flex-1">
+                  {idx === 0 && <Label className="text-xs text-muted-foreground">Monto</Label>}
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={line.monto}
+                    onChange={e => updateLine(idx, 'monto', e.target.value)}
+                    placeholder="$ 0,00"
+                  />
+                </div>
+                <div className="w-[140px]">
+                  {idx === 0 && <Label className="text-xs text-muted-foreground">Medio</Label>}
+                  <Select value={line.medio_pago} onValueChange={v => updateLine(idx, 'medio_pago', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {MEDIO_PAGO_OPTIONS.map(m => (
+                        <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {lines.length > 1 && (
+                  <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => removeLine(idx)}>
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                )}
+              </div>
+            ))}
+
+            {lines.length > 1 && (
+              <div className="flex justify-between text-sm pt-1 border-t">
+                <span className="text-muted-foreground">Total a registrar:</span>
+                <span className={`font-mono font-semibold ${excede ? 'text-destructive' : ''}`}>
+                  $ {fmt(totalPagos)}
+                </span>
               </div>
             )}
+            {excede && (
+              <p className="text-xs text-destructive">El total excede el saldo pendiente de $ {fmt(saldoPendiente)}</p>
+            )}
           </div>
+
           <div>
             <Label>Fecha de pago</Label>
-            <Input type="date" value={form.fecha_pago} onChange={e => set('fecha_pago', e.target.value)} />
-          </div>
-          <div>
-            <Label>Medio de pago</Label>
-            <Select value={form.medio_pago} onValueChange={v => set('medio_pago', v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {MEDIO_PAGO_OPTIONS.map(m => (
-                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input type="date" value={fechaPago} onChange={e => setFechaPago(e.target.value)} />
           </div>
           <div>
             <Label>Referencia</Label>
-            <Input value={form.referencia} onChange={e => set('referencia', e.target.value)} />
+            <Input value={referencia} onChange={e => setReferencia(e.target.value)} />
           </div>
           <div>
             <Label>Observaciones</Label>
-            <Textarea value={form.observaciones} onChange={e => set('observaciones', e.target.value)} rows={2} />
+            <Textarea value={observaciones} onChange={e => setObservaciones(e.target.value)} rows={2} />
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button onClick={handleSubmit} disabled={create.isPending || !form.monto}>
-              {create.isPending ? 'Guardando...' : 'Registrar Pago'}
+            <Button onClick={handleSubmit} disabled={submitting || !hasValidPayment || excede}>
+              {submitting ? 'Guardando...' : lines.filter(l => parseFloat(l.monto) > 0).length > 1 ? `Registrar ${lines.filter(l => parseFloat(l.monto) > 0).length} Pagos` : 'Registrar Pago'}
             </Button>
           </div>
         </div>
