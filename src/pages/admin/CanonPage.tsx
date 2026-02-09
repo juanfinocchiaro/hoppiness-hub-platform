@@ -23,7 +23,7 @@ function formatPeriodo(p: string) {
 
 function estadoBadge(estado: string | null) {
   if (estado === 'pagado') return <Badge variant="default">Pagado</Badge>;
-  if (estado === 'parcial') return <Badge variant="secondary">Parcial</Badge>;
+  if (estado === 'parcial' || estado === 'pagado_parcial') return <Badge variant="secondary">Parcial</Badge>;
   return <Badge variant="destructive">Pendiente</Badge>;
 }
 
