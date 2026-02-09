@@ -12,7 +12,7 @@ interface VentaMensualFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   branchId: string;
-  /** Período seleccionado en la página padre - OBLIGATORIO para nuevas cargas */
+  branchName?: string;
   periodo: string;
   venta?: VentaMensual | null;
 }
@@ -25,7 +25,7 @@ function formatPeriodoLargo(p: string) {
   return `${MESES[parseInt(m) - 1]} ${y}`;
 }
 
-export function VentaMensualFormModal({ open, onOpenChange, branchId, periodo, venta }: VentaMensualFormModalProps) {
+export function VentaMensualFormModal({ open, onOpenChange, branchId, branchName, periodo, venta }: VentaMensualFormModalProps) {
   const { create, update } = useVentaMensualMutations();
   const isEditing = !!venta;
 
@@ -99,7 +99,8 @@ export function VentaMensualFormModal({ open, onOpenChange, branchId, periodo, v
             {isEditing ? 'Editar Ventas del Período' : 'Registrar Ventas Mensuales'}
           </DialogTitle>
           <DialogDescription>
-            Período: <strong>{formatPeriodoLargo(form.periodo)}</strong>
+            {branchName && <>{branchName} — </>}
+            {formatPeriodoLargo(form.periodo)}
           </DialogDescription>
         </DialogHeader>
 
