@@ -142,7 +142,7 @@ export default function ComprasPage() {
       </div>
 
       <CompraFormModal open={modalOpen} onOpenChange={setModalOpen} branchId={branchId!} />
-      <PagoProveedorModal open={!!paying} onOpenChange={() => setPaying(null)} factura={paying} />
+      <PagoProveedorModal open={!!paying} onOpenChange={() => setPaying(null)} factura={paying} proveedorNombre={(paying as any)?.proveedores?.razon_social} />
 
       <ConfirmDialog
         open={!!deleting}
