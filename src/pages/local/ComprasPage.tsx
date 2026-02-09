@@ -1,15 +1,14 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/page-header';
 import { DataToolbar } from '@/components/ui/data-table-pro';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, CreditCard, Trash2, ShoppingCart, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, ShoppingCart, ChevronDown, ChevronUp } from 'lucide-react';
 import { useFacturas, useFacturaMutations } from '@/hooks/useCompras';
 import { CompraFormModal } from '@/components/finanzas/CompraFormModal';
-import { PagoProveedorModal } from '@/components/finanzas/PagoProveedorModal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/states';
 import type { FacturaProveedor } from '@/types/compra';
@@ -26,7 +25,6 @@ export default function ComprasPage() {
   const { softDelete } = useFacturaMutations();
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
-  const [paying, setPaying] = useState<FacturaProveedor | null>(null);
   const [deleting, setDeleting] = useState<FacturaProveedor | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -66,22 +64,21 @@ export default function ComprasPage() {
               <TableHead className="text-right">Total</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead>Vencimiento</TableHead>
-              <TableHead className="text-right">Saldo</TableHead>
-              <TableHead className="w-[100px]" />
+              <TableHead className="w-[80px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 9 }).map((_, j) => (
+                  {Array.from({ length: 8 }).map((_, j) => (
                     <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                   ))}
                 </TableRow>
               ))
             ) : !filtered?.length ? (
               <TableRow>
-                <TableCell colSpan={9} className="h-40">
+                <TableCell colSpan={8} className="h-40">
                   <EmptyState icon={ShoppingCart} title="Sin facturas" description="Registrá tu primera factura de proveedor" />
                 </TableCell>
               </TableRow>
@@ -90,13 +87,19 @@ export default function ComprasPage() {
                 const isCanon = row.factura_numero?.startsWith('CANON-');
                 return (
                   <>
-                    <TableRow className="cursor-pointer" onClick={() => setExpanded(expanded === row.id ? null : row.id)}>
+                    <TableRow key={row.id} className="cursor-pointer" onClick={() => setExpanded(expanded === row.id ? null : row.id)}>
                       <TableCell>
                         {expanded === row.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </TableCell>
                       <TableCell className="text-sm whitespace-nowrap">{formatLocalDate(row.factura_fecha)}</TableCell>
                       <TableCell className="font-medium">
-                        <span className="whitespace-nowrap">{row.proveedores?.razon_social}</span>
+                        <Link
+                          to={`/milocal/${branchId}/finanzas/proveedores/${row.proveedor_id}`}
+                          className="text-primary hover:underline whitespace-nowrap"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          {row.proveedores?.razon_social}
+                        </Link>
                         {isCanon && <Badge variant="outline" className="ml-2 text-xs">Automática</Badge>}
                       </TableCell>
                       <TableCell className="text-sm font-mono whitespace-nowrap">{row.factura_tipo ? `${row.factura_tipo}-` : ''}{row.factura_numero}</TableCell>
@@ -105,16 +108,8 @@ export default function ComprasPage() {
                       <TableCell className="text-sm whitespace-nowrap">
                         {row.fecha_vencimiento ? formatLocalDate(row.fecha_vencimiento) : '-'}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-destructive whitespace-nowrap">
-                        {Number(row.saldo_pendiente) > 0 ? `$ ${Number(row.saldo_pendiente).toLocaleString('es-AR')}` : '-'}
-                      </TableCell>
                       <TableCell>
                         <div className="flex gap-1 justify-end" onClick={e => e.stopPropagation()}>
-                          {Number(row.saldo_pendiente) > 0 && (
-                            <Button variant="ghost" size="icon" title="Registrar pago" onClick={() => setPaying(row)}>
-                              <CreditCard className="w-4 h-4" />
-                            </Button>
-                          )}
                           {!isCanon && (
                             <Button variant="ghost" size="icon" onClick={() => setDeleting(row)}>
                               <Trash2 className="w-4 h-4 text-destructive" />
@@ -124,8 +119,8 @@ export default function ComprasPage() {
                       </TableCell>
                     </TableRow>
                     {expanded === row.id && row.items_factura?.length > 0 && (
-                      <TableRow>
-                        <TableCell colSpan={9} className="bg-muted/30 p-0">
+                      <TableRow key={`${row.id}-items`}>
+                        <TableCell colSpan={8} className="bg-muted/30 p-0">
                           <Table>
                             <TableHeader>
                               <TableRow>
@@ -160,7 +155,6 @@ export default function ComprasPage() {
       </div>
 
       <CompraFormModal open={modalOpen} onOpenChange={setModalOpen} branchId={branchId!} />
-      <PagoProveedorModal open={!!paying} onOpenChange={() => setPaying(null)} factura={paying} proveedorNombre={(paying as any)?.proveedores?.razon_social} />
 
       <ConfirmDialog
         open={!!deleting}
