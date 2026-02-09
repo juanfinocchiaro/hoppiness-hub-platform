@@ -1,45 +1,43 @@
 
-## Correccion: Firmas de Reglamento bloqueadas por politica de Storage desactualizada
 
-### Problema encontrado
+## Fix: Reuniones muestra "18 sin leer" contando reuniones canceladas
 
-Luca Lipinski (y otros 9 encargados/franquiciados) no pueden subir fotos de firma de reglamento. El error ocurre en el **Storage** de archivos, no en la tabla `regulation_signatures`.
+### Problema
 
-La politica de Storage para el bucket `regulation-signatures` valida permisos contra la tabla **vieja** `user_roles_v2`. Pero desde la migracion V2, los roles operativos estan en `user_branch_roles`. Luca existe en `user_branch_roles` como encargado pero NO tiene registro en `user_roles_v2`, por lo que el Storage le rechaza la subida.
+La card de Reuniones en el dashboard de Manantiales muestra **"18 sin leer"** porque esta sumando los participantes sin leer de **todas** las reuniones, incluyendo las **canceladas**.
 
-**Usuarios afectados:** Luca Lipinski, Dalma Ledesma, Tomas Lambert, Gaston Lopez, Valentina Reginelli, Federico Finocchiaro, guadalupe malizia, Lucas Boros, Maria Eugenia Finocchiaro, Lucia Aste.
+Datos actuales:
+- "NOVEDADES" (convocada): 9 participantes sin leer
+- "REUNION PERSONAL NOVEDADES" (**cancelada**): 9 participantes sin leer
+- Total mostrado: 18 -- pero la reunion cancelada no deberia contar
 
 ### Solucion
 
-Actualizar la politica de Storage del bucket `regulation-signatures` para que valide contra `user_branch_roles` en vez de `user_roles_v2`.
+Filtrar las reuniones canceladas del calculo de `pendingReads` en `MeetingPendingCard.tsx`.
 
 ### Cambio tecnico
 
-**Migracion SQL** - Reemplazar la politica de INSERT en Storage:
+**Archivo:** `src/components/meetings/MeetingPendingCard.tsx`
 
-Politica actual:
-```
-bucket_id = 'regulation-signatures'
-AND EXISTS (
-  SELECT 1 FROM user_roles_v2
-  WHERE user_id = auth.uid() AND is_active = true
-  AND (brand_role = 'superadmin' OR local_role IN ('franquiciado','encargado'))
-)
-```
+Linea 27-30, cambiar:
 
-Politica corregida:
-```
-bucket_id = 'regulation-signatures'
-AND (
-  is_superadmin(auth.uid())
-  OR EXISTS (
-    SELECT 1 FROM user_branch_roles
-    WHERE user_id = auth.uid() AND is_active = true
-    AND local_role IN ('franquiciado','encargado')
-  )
-)
+```typescript
+// Antes (cuenta TODAS las reuniones)
+const pendingReads = meetings?.reduce((acc, m) => {
+  const unread = m.participants?.filter((p: any) => !p.read_at).length || 0;
+  return acc + unread;
+}, 0) || 0;
+
+// Despues (excluye canceladas)
+const pendingReads = meetings
+  ?.filter(m => m.status !== 'cancelada')
+  .reduce((acc, m) => {
+    const unread = m.participants?.filter((p: any) => !p.read_at).length || 0;
+    return acc + unread;
+  }, 0) || 0;
 ```
 
-Tambien se actualizara la politica de SELECT del mismo bucket con la misma logica para que los usuarios afectados puedan ver las fotos que suban.
+Tambien se filtrara `lastMeeting` para que no muestre una reunion cancelada como "ultima reunion".
 
-No se requieren cambios de frontend.
+Solo se modifica 1 archivo, sin cambios de backend.
+
