@@ -26,6 +26,8 @@ import {
   CalendarDays,
   Handshake,
   Calculator,
+  FileInput,
+  Building2,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -102,6 +104,7 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
   const isFinanzasActive = isActive([
     'finanzas/gastos', 'finanzas/consumos',
     'finanzas/pl', 'finanzas/periodos', 'finanzas/ventas-mensuales',
+    'finanzas/rdo-carga', 'finanzas/inversiones',
   ]);
 
   const isSociosActive = isActive(['finanzas/socios']);
@@ -193,7 +196,13 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
             <NavItemButton to={`${basePath}/finanzas/ventas-mensuales`} icon={TrendingUp} label="Ventas Mensuales" />
           )}
           {canViewLocalPnL && (
+            <NavItemButton to={`${basePath}/finanzas/rdo-carga`} icon={FileInput} label="Cargador RDO" />
+          )}
+          {canViewLocalPnL && (
             <NavItemButton to={`${basePath}/finanzas/pl`} icon={BarChart3} label="Resultado Económico" />
+          )}
+          {(isFranquiciado || isContadorLocal) && (
+            <NavItemButton to={`${basePath}/finanzas/inversiones`} icon={Building2} label="Inversiones (CAPEX)" />
           )}
           {canViewPeriodos && (
             <NavItemButton to={`${basePath}/finanzas/periodos`} icon={CalendarDays} label="Períodos" />
