@@ -21,239 +21,229 @@ El sistema RDO unifica la categorización de todos los costos del negocio para g
 | `variable` | Escala con ventas | CMV, comisiones, delivery |
 | `fijo` | Monto constante | Alquiler, sueldos, internet |
 
-## Estructura de Categorías RDO
+### Inversiones (CAPEX) vs Gastos Operativos
+
+| Concepto | Afecta EBIT | Afecta Flujo Caja | Ejemplo |
+|----------|-------------|-------------------|---------|
+| Gasto Operativo | ✅ Sí | ✅ Sí | Alquiler, sueldos, luz |
+| Inversión (CAPEX) | ❌ No | ✅ Sí | Heladera, remodelación |
+
+Las inversiones se registran aparte para no distorsionar el resultado operativo mensual.
+
+---
+
+## Flujo de Carga Mensual
 
 ```
-COSTOS VARIABLES (escalan con ventas)
-├── CMV (Costo de Mercadería Vendida)
-│   ├── cmv_hamburguesas      → Ingredientes de hamburguesas
-│   ├── cmv_bebidas_alcohol   → Cervezas, vinos
-│   ├── cmv_bebidas_sin_alcohol → Gaseosas, aguas
-│   ├── descartables_salon    → Servilletas, vasos salón
-│   ├── descartables_delivery → Cajas, bolsas delivery
-│   └── insumos_clientes      → Sobrecitos, maní
-│
-├── Comisiones por Venta
-│   ├── comision_mp_point     → Mercado Pago Point
-│   ├── comision_rappi        → Comisión Rappi
-│   └── comision_pedidosya    → Comisión PedidosYa
-│
-├── Delivery
-│   ├── cadetes_rappiboy      → Pago a RappiBoys
-│   └── cadetes_terceros      → Cadetes por WhatsApp
-│
-└── Publicidad y Marca
-    ├── fee_marca             → Canon 4.5%
-    └── marketing             → Marketing 0.5%
-
-COSTOS FIJOS (independientes de ventas)
-├── Estructura Operativa
-│   ├── limpieza_higiene      → Productos de limpieza
-│   ├── descartables_cocina   → Descartables uso interno
-│   ├── mantenimiento         → Reparaciones
-│   └── uniformes             → Ropa de trabajo
-│
-├── Laborales
-│   ├── sueldos               → Sueldos de bolsillo
-│   ├── cargas_sociales       → Aportes
-│   └── comida_personal       → Viandas ESPECHE
-│
-├── Administración
-│   ├── software_gestion      → Sistemas IT
-│   ├── estudio_contable      → Contador
-│   └── bromatologia          → Análisis
-│
-└── Servicios e Infraestructura
-    ├── alquiler              → Alquiler mensual
-    ├── expensas              → Gastos comunes
-    ├── gas                   → ECOGAS
-    ├── internet_telefonia    → Internet
-    └── energia_electrica     → EPEC
+┌─────────────────────────────────────────────────────────────────┐
+│                    FLUJO DE CARGA DEL MES                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1️⃣ VENTAS                                                      │
+│     └── Cargar ventas del mes (FC + FT)                        │
+│                                                                 │
+│  2️⃣ COMPRAS/FACTURAS                                            │
+│     └── Cargar facturas de proveedores                          │
+│         → Los items con categoría RDO impactan automáticamente │
+│                                                                 │
+│  3️⃣ CARGADOR DE RDO (por sección)                               │
+│     ├── CMV: Consumos de inventario o manual                   │
+│     ├── Comisiones: Datos de MP, Rappi, PedidosYa              │
+│     ├── Delivery: Pagos a cadetes                              │
+│     ├── Estructura: Limpieza, mantenimiento                    │
+│     ├── Laborales: Sueldos, cargas sociales                    │
+│     ├── Administración: Software, contador                     │
+│     └── Servicios: Alquiler, luz, gas, internet                │
+│                                                                 │
+│  4️⃣ INVERSIONES (aparte)                                        │
+│     └── Registrar CAPEX (no afecta EBIT)                       │
+│                                                                 │
+│  5️⃣ REVISAR RDO                                                 │
+│     └── Ver resultado generado automáticamente                 │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-## Flujos de Trabajo
+---
 
-### 1. Registrar Ingrediente/Insumo
+## Métodos de Carga por Categoría
 
-```
-Usuario crea insumo
-    ↓
-Selecciona tipo: ingrediente | insumo
-    ↓
-Selecciona categoría RDO (ej: cmv_hamburguesas)
-    ↓
-Sistema sabe automáticamente:
-  - Dónde va en el RDO
-  - Si es costo variable o fijo
-  - Si debe trackear stock
-```
+### 1. CMV (Costo de Mercadería Vendida)
 
-### 2. Registrar Compra de Ingredientes
+| Categoría | Método | Descripción |
+|-----------|--------|-------------|
+| CMV Hamburguesas | `consumo_stock` | Del informe de inventario o manual |
+| Bebidas con Alcohol | `consumo_stock` | Del informe de inventario o manual |
+| Bebidas sin Alcohol | `consumo_stock` | Del informe de inventario o manual |
+| Descartables Salón | `consumo_stock` | Estimación basada en ventas |
+| Descartables Delivery | `consumo_stock` | Estimación basada en pedidos delivery |
+| Insumos Clientes | `consumo_stock` | Sobrecitos, maní, etc |
 
-```
-Usuario carga factura de proveedor
-    ↓
-Agrega items (insumos/ingredientes)
-    ↓
-Cada item hereda categoría RDO del insumo
-    ↓
-Al cerrar, impacta en:
-  - Stock (si tracks_stock = true)
-  - RDO del período (según rdo_category_code)
-```
+### 2. Comisiones
 
-### 3. Registrar Gasto de Servicio
+| Categoría | Método | Instrucciones |
+|-----------|--------|---------------|
+| Comisión MP Point | `automatico` | Cargar del informe de Mercado Pago |
+| Comisión Rappi | `automatico` | Cargar del informe de Rappi |
+| Comisión PedidosYa | `automatico` | Cargar del informe de PedidosYa |
 
-```
-Usuario registra gasto
-    ↓
-Selecciona categoría RDO (ej: alquiler)
-    ↓
-Opcionalmente asocia proveedor
-    ↓
-Impacta directo en RDO del período
-```
+### 3. Delivery
 
-## API de Consultas
+| Categoría | Método | Instrucciones |
+|-----------|--------|---------------|
+| Cadetes RappiBoy | `manual` | Total pagado a RappiBoys |
+| Cadetes Terceros | `manual` | Total pagado por WhatsApp/otros |
 
-### Obtener Categorías RDO
+### 4. Fee de Marca
 
-```typescript
-// Todas las categorías
-const { data } = useRdoCategories();
+| Categoría | Método | Instrucciones |
+|-----------|--------|---------------|
+| Canon 4.5% | `automatico` | Se calcula: Ventas × 4.5% (desde Mi Marca) |
+| Marketing 0.5% | `automatico` | Se calcula: Ventas × 0.5% (desde Mi Marca) |
 
-// Solo para ingredientes
-const { data } = useRdoCategories({ itemType: 'ingrediente' });
+### 5. Estructura Operativa
 
-// Solo costos variables
-const { data } = useRdoCategories({ section: 'costos_variables' });
+| Categoría | Método | Instrucciones |
+|-----------|--------|---------------|
+| Limpieza e Higiene | `factura_proveedor` | Factura de productos de limpieza |
+| Descartables Cocina | `factura_proveedor` | Descartables de uso interno |
+| Mantenimiento | `factura_proveedor` | Facturas de técnicos/reparaciones |
+| Uniformes | `factura_proveedor` | Compra de uniformes |
 
-// Para selector (solo nivel 3, habilitadas)
-const { data } = useRdoCategoryOptions('ingrediente');
-```
+### 6. Costos Laborales
 
-### Obtener Reporte RDO
+| Categoría | Método | Instrucciones |
+|-----------|--------|---------------|
+| Sueldos | `nomina` | Total sueldos de bolsillo |
+| Cargas Sociales | `nomina` | Aportes y contribuciones |
+| Comida Personal | `manual` | Viandas ESPECHE |
 
-```typescript
-// Reporte completo del período
-const { data } = useRdoReport(branchId, '2026-02');
+### 7. Administración
 
-// Retorna líneas con:
-// - category_code, category_name
-// - total (monto)
-// - percentage (% sobre ingresos)
-// - rdo_section, behavior
-```
+| Categoría | Método | Instrucciones |
+|-----------|--------|---------------|
+| Software Gestión | `factura_proveedor` | Factura Nucleo IT, etc |
+| Estudio Contable | `factura_proveedor` | Honorarios del contador |
+| Bromatología | `factura_proveedor` | Análisis de laboratorio |
+
+### 8. Servicios e Infraestructura
+
+| Categoría | Método | Instrucciones |
+|-----------|--------|---------------|
+| Alquiler | `factura_proveedor` | Recibo mensual |
+| Expensas | `factura_proveedor` | Liquidación de expensas |
+| Gas (ECOGAS) | `factura_proveedor` | Factura de gas |
+| Internet | `factura_proveedor` | Factura AIRSAT/otro |
+| Energía (EPEC) | `factura_proveedor` | Factura de luz |
+
+---
+
+## Inversiones (CAPEX)
+
+Las inversiones NO afectan el resultado operativo (EBIT) pero sí el flujo de caja.
+
+### Tipos de Inversión
+
+| Tipo | Descripción | Ejemplos |
+|------|-------------|----------|
+| `equipamiento` | Equipos de cocina/local | Heladera, freidora, horno |
+| `mobiliario` | Muebles y decoración | Mesas, sillas, carteles |
+| `obra_civil` | Construcción/remodelación | Ampliación, instalaciones |
+| `tecnologia` | Sistemas y hardware | POS, computadoras |
+| `vehiculo` | Vehículos | Moto de delivery |
+| `franquicia` | Fee inicial | Pago inicial de franquicia |
+| `garantia` | Depósitos | Depósito de alquiler |
+
+### Estados de Pago
+
+- **Pagado**: Ya se pagó completamente
+- **Pendiente**: Falta pagar
+- **Financiado**: Se paga en cuotas
+
+---
+
+## Tablas de Base de Datos
+
+### rdo_movimientos
+
+Tabla unificada de todos los movimientos que impactan el RDO:
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `rdo_category_code` | text | Categoría RDO (FK) |
+| `origen` | text | consumo_inventario, compra_directa, gasto_servicio, comision_plataforma, fee_marca, nomina, manual |
+| `monto` | numeric | Monto del movimiento |
+| `datos_extra` | jsonb | Datos adicionales (venta_total, porcentaje para comisiones) |
+
+### inversiones
+
+Inversiones de capital (CAPEX):
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `tipo_inversion` | text | equipamiento, mobiliario, obra_civil, etc |
+| `monto_total` | numeric | Monto total de la inversión |
+| `vida_util_meses` | int | Para calcular amortización |
+| `estado` | text | pagado, pendiente, financiado |
+| `cuotas_total` | int | Total de cuotas (si financiado) |
+
+---
 
 ## Componentes UI
 
-### RdoCategorySelector
+### CargadorRdoUnificado
 
-Selector con búsqueda y agrupación por sección:
+Pantalla principal de carga mensual organizada por secciones:
 
 ```tsx
-<RdoCategorySelector
-  value={form.rdo_category_code}
-  onChange={(code) => setForm({ ...form, rdo_category_code: code })}
-  itemType="ingrediente"  // Filtra categorías válidas
-  placeholder="Seleccionar categoría..."
-/>
+<CargadorRdoUnificado branchId={branchId} branchName="Local Centro" />
 ```
 
-### RdoCategoryBadge
+Muestra:
+- Progreso de carga (% completado)
+- Secciones agrupadas (CMV, Comisiones, etc)
+- Estado de cada categoría (cargado/pendiente)
+- Modal de carga con instrucciones
 
-Muestra la categoría con badge de comportamiento:
+### GestorInversiones
+
+Administración de inversiones de capital:
 
 ```tsx
-<RdoCategoryBadge code="cmv_hamburguesas" showSection />
-// Muestra: "CMV Hamburguesas" [Variable]
+<GestorInversiones branchId={branchId} />
 ```
 
 ### RdoDashboard
 
-Dashboard completo del RDO:
+Vista del RDO generado:
 
 ```tsx
-<RdoDashboard branchId={branchId} branchName="Local Centro" />
+<RdoDashboard branchId={branchId} />
 ```
+
+---
+
+## Sincronización Automática
+
+Los triggers sincronizan automáticamente:
+
+1. **Gastos → rdo_movimientos**: Cuando se carga un gasto con `rdo_category_code`, se crea automáticamente el movimiento RDO.
+
+2. **Facturas → rdo_movimientos**: Cuando se carga una factura, cada item con categoría RDO crea su movimiento.
+
+3. **Vista en tiempo real**: La vista `rdo_report_data` agrega todos los movimientos por categoría y período.
+
+---
 
 ## Migraciones
 
-### Crear estructura
-
 ```bash
-# Ejecuta la migración principal
-supabase db push
+# 1. Sistema de categorías base
+20260209180000_rdo_categories_system.sql
+
+# 2. Migrar datos existentes
+20260209180001_migrate_data_to_rdo.sql
+
+# 3. Sistema unificado de carga + CAPEX
+20260209190000_rdo_unified_loading_system.sql
 ```
-
-### Migrar datos existentes
-
-```bash
-# Mapea gastos e insumos existentes a categorías RDO
-supabase db push # incluye 20260209180001_migrate_data_to_rdo.sql
-```
-
-## Tablas de Base de Datos
-
-### rdo_categories
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `code` | text | Código único (PK) |
-| `name` | text | Nombre display |
-| `parent_code` | text | Categoría padre |
-| `level` | int | 1=sección, 2=categoría, 3=subcategoría |
-| `rdo_section` | text | costos_variables, costos_fijos, etc |
-| `behavior` | text | variable, fijo |
-| `allowed_item_types` | text[] | Tipos de items permitidos |
-
-### Campos agregados a tablas existentes
-
-**insumos:**
-- `tipo_item`: 'ingrediente' | 'insumo'
-- `rdo_category_code`: FK a rdo_categories
-- `tracks_stock`: boolean
-
-**gastos:**
-- `rdo_category_code`: FK a rdo_categories
-- `proveedor_id`: FK a proveedores
-
-**items_factura:**
-- `rdo_category_code`: FK a rdo_categories
-
-**proveedores:**
-- `tipo_proveedor`: text[] (ingrediente, insumo, servicio)
-- `rdo_categories_default`: text[]
-
-## Vista rdo_report_data
-
-Consolida todos los costos por categoría RDO:
-
-```sql
-SELECT * FROM rdo_report_data
-WHERE branch_id = 'xxx' AND periodo = '2026-02';
-```
-
-## Función get_rdo_report
-
-Genera el reporte completo con porcentajes:
-
-```sql
-SELECT * FROM get_rdo_report('branch-uuid', '2026-02');
-```
-
-## Compatibilidad
-
-El sistema mantiene compatibilidad con los campos legacy:
-
-- `categoria_principal` en gastos se sigue llenando
-- `categoria_pl` en insumos se deriva de la categoría RDO
-- La vista clásica de P&L sigue funcionando
-
-## Mejoras Futuras
-
-1. **Stock en tiempo real**: Descontar stock al registrar venta
-2. **Alertas de precio**: Notificar cuando precio supera máximo sugerido
-3. **Comparativo mensual**: Gráficos de evolución por categoría
-4. **Presupuesto**: Definir presupuesto por categoría y comparar
-5. **Exportar a Excel**: Generar RDO en formato Excel idéntico al actual

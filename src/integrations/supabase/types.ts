@@ -2090,6 +2090,78 @@ export type Database = {
           },
         ]
       }
+      inversiones: {
+        Row: {
+          branch_id: string
+          created_at: string
+          created_by: string | null
+          cuotas_pagadas: number | null
+          cuotas_total: number | null
+          deleted_at: string | null
+          descripcion: string
+          estado: string
+          fecha: string
+          id: string
+          monto_total: number
+          observaciones: string | null
+          periodo: string
+          tipo_inversion: string
+          updated_at: string
+          vida_util_meses: number | null
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          created_by?: string | null
+          cuotas_pagadas?: number | null
+          cuotas_total?: number | null
+          deleted_at?: string | null
+          descripcion: string
+          estado?: string
+          fecha: string
+          id?: string
+          monto_total: number
+          observaciones?: string | null
+          periodo: string
+          tipo_inversion: string
+          updated_at?: string
+          vida_util_meses?: number | null
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          created_by?: string | null
+          cuotas_pagadas?: number | null
+          cuotas_total?: number | null
+          deleted_at?: string | null
+          descripcion?: string
+          estado?: string
+          fecha?: string
+          id?: string
+          monto_total?: number
+          observaciones?: string | null
+          periodo?: string
+          tipo_inversion?: string
+          updated_at?: string
+          vida_util_meses?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inversiones_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inversiones_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       items_factura: {
         Row: {
           afecta_costo_base: boolean | null
@@ -3017,6 +3089,79 @@ export type Database = {
           {
             foreignKeyName: "rdo_categories_parent_code_fkey"
             columns: ["parent_code"]
+            isOneToOne: false
+            referencedRelation: "rdo_categories"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      rdo_movimientos: {
+        Row: {
+          branch_id: string
+          created_at: string
+          created_by: string | null
+          datos_extra: Json | null
+          deleted_at: string | null
+          descripcion: string | null
+          id: string
+          monto: number
+          origen: string
+          periodo: string
+          rdo_category_code: string
+          source_id: string | null
+          source_table: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          created_by?: string | null
+          datos_extra?: Json | null
+          deleted_at?: string | null
+          descripcion?: string | null
+          id?: string
+          monto?: number
+          origen: string
+          periodo: string
+          rdo_category_code: string
+          source_id?: string | null
+          source_table?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          created_by?: string | null
+          datos_extra?: Json | null
+          deleted_at?: string | null
+          descripcion?: string | null
+          id?: string
+          monto?: number
+          origen?: string
+          periodo?: string
+          rdo_category_code?: string
+          source_id?: string | null
+          source_table?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rdo_movimientos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rdo_movimientos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rdo_movimientos_rdo_category_code_fkey"
+            columns: ["rdo_category_code"]
             isOneToOne: false
             referencedRelation: "rdo_categories"
             referencedColumns: ["code"]
@@ -4039,7 +4184,29 @@ export type Database = {
           rdo_category_code: string | null
           total: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rdo_movimientos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rdo_movimientos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rdo_movimientos_rdo_category_code_fkey"
+            columns: ["rdo_category_code"]
+            isOneToOne: false
+            referencedRelation: "rdo_categories"
+            referencedColumns: ["code"]
+          },
+        ]
       }
     }
     Functions: {

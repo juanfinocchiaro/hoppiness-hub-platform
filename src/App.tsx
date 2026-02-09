@@ -47,6 +47,8 @@ import ConsumosPage from "./pages/local/ConsumosPage";
 import SociosPage from "./pages/local/SociosPage";
 import PeriodosPage from "./pages/local/PeriodosPage";
 import PLDashboardPage from "./pages/local/PLDashboardPage";
+import RdoLoaderPage from "./pages/local/RdoLoaderPage";
+import InversionesPage from "./pages/local/InversionesPage";
 
 // Mi Marca
 import BrandLayout from "./pages/admin/BrandLayout";
@@ -182,6 +184,8 @@ const App = () => (
               <Route path="finanzas/socios" element={<SociosPage />} />
               <Route path="finanzas/periodos" element={<PeriodosPage />} />
               <Route path="finanzas/pl" element={<PLDashboardPage />} />
+              <Route path="finanzas/rdo-carga" element={<RdoLoaderPage />} />
+              <Route path="finanzas/inversiones" element={<InversionesPage />} />
               
               {/* Configuración */}
               <Route path="config/turnos" element={<ShiftConfigPage />} />
