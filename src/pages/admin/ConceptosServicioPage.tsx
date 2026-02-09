@@ -47,7 +47,7 @@ export default function ConceptosServicioPage() {
               <TableHead>Concepto</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Periodicidad</TableHead>
-              <TableHead>Cat. P&L</TableHead>
+              <TableHead>Categoría RDO</TableHead>
               <TableHead className="w-24"></TableHead>
             </TableRow>
           </TableHeader>
@@ -65,14 +65,19 @@ export default function ConceptosServicioPage() {
                 <EmptyState icon={FileText} title="Sin conceptos" description="No hay conceptos de servicio registrados" />
               </TableCell></TableRow>
             ) : filtered.map((row: any) => (
-              <TableRow key={row.id}>
+              <TableRow key={row.id} className={row.visible_local === false ? 'opacity-50' : ''}>
                 <TableCell>
-                  <p className="font-medium">{row.nombre}</p>
-                  {row.descripcion && <p className="text-xs text-muted-foreground truncate max-w-[250px]">{row.descripcion}</p>}
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <p className="font-medium">{row.nombre}</p>
+                      {row.descripcion && <p className="text-xs text-muted-foreground truncate max-w-[250px]">{row.descripcion}</p>}
+                    </div>
+                    {row.visible_local === false && <Badge variant="outline" className="text-xs">Solo marca</Badge>}
+                  </div>
                 </TableCell>
                 <TableCell><Badge variant="outline">{TIPO_LABELS[row.tipo] || row.tipo}</Badge></TableCell>
                 <TableCell className="text-sm capitalize">{row.periodicidad || '—'}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{row.categoria_gasto || '—'}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{row.rdo_category_code || '—'}</TableCell>
                 <TableCell>
                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditing(row)}>

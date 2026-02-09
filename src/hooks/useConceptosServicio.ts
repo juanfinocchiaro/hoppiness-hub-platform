@@ -13,6 +13,8 @@ export interface ConceptoServicioFormData {
   formula_calculo?: Record<string, unknown>;
   proveedor_id?: string;
   periodicidad?: string;
+  rdo_category_code?: string;
+  visible_local?: boolean;
 }
 
 export function useConceptosServicio() {

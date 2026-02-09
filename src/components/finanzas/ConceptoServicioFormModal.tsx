@@ -6,14 +6,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FormLayout, FormRow, FormSection } from '@/components/ui/forms-pro';
 import { StickyActions } from '@/components/ui/forms-pro';
-import { FileText } from 'lucide-react';
+import { FileText, BarChart3 } from 'lucide-react';
 import { LoadingButton } from '@/components/ui/loading-button';
 import { useConceptoServicioMutations, type ConceptoServicioFormData } from '@/hooks/useConceptosServicio';
+import { RdoCategorySelector } from '@/components/rdo/RdoCategorySelector';
 
 const TIPO_CONCEPTO_OPTIONS = [
   { value: 'servicio_publico', label: 'Servicio Público' },
   { value: 'alquiler', label: 'Alquiler' },
-  { value: 'canon_marca', label: 'Canon Marca' },
   { value: 'impuesto', label: 'Impuesto' },
   { value: 'servicio_profesional', label: 'Servicio Profesional' },
   { value: 'otro', label: 'Otro' },
@@ -51,6 +51,7 @@ export function ConceptoServicioFormModal({ open, onOpenChange, concepto }: Prop
         subcategoria: concepto.subcategoria || undefined,
         tipo: concepto.tipo,
         periodicidad: concepto.periodicidad || undefined,
+        rdo_category_code: concepto.rdo_category_code || undefined,
       });
     } else {
       setForm(EMPTY);
@@ -107,16 +108,21 @@ export function ConceptoServicioFormModal({ open, onOpenChange, concepto }: Prop
                   </Select>
                 </FormRow>
               </FormLayout>
-              <FormLayout columns={2}>
-                <FormRow label="Categoría P&L">
-                  <Input value={form.categoria_gasto || ''} onChange={e => set('categoria_gasto', e.target.value)} placeholder="servicios_infraestructura" />
-                </FormRow>
-                <FormRow label="Subcategoría">
-                  <Input value={form.subcategoria || ''} onChange={e => set('subcategoria', e.target.value)} placeholder="energia_electrica" />
-                </FormRow>
-              </FormLayout>
               <FormRow label="Descripción">
                 <Textarea value={form.descripcion || ''} onChange={e => set('descripcion', e.target.value)} rows={2} />
+              </FormRow>
+            </FormLayout>
+          </FormSection>
+
+          <FormSection title="Clasificación RDO" icon={BarChart3}>
+            <FormLayout columns={1}>
+              <FormRow label="Categoría RDO" hint="Posición en el Estado de Resultados (RDO)">
+                <RdoCategorySelector
+                  value={form.rdo_category_code}
+                  onChange={v => set('rdo_category_code', v)}
+                  itemType="servicio"
+                  placeholder="Seleccionar categoría RDO..."
+                />
               </FormRow>
             </FormLayout>
           </FormSection>
