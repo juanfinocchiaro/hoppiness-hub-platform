@@ -200,10 +200,27 @@ export default function VentasMensualesMarcaPage() {
                   {expanded === branch.id && venta && (
                     <TableRow key={`${branch.id}-detail`}>
                       <TableCell colSpan={9} className="bg-muted/30">
-                        <div className="p-3 space-y-1 text-sm">
-                          <p>Canon 5% Efectivo <span className="text-xs text-muted-foreground">(pago en efectivo)</span>: <strong className="font-mono">$ {(efectivo * 0.05).toLocaleString('es-AR')}</strong></p>
-                          <p>Canon 5% Online <span className="text-xs text-muted-foreground">(pago transferencia)</span>: <strong className="font-mono">$ {(online * 0.05).toLocaleString('es-AR')}</strong></p>
-                          <p>Total Canon: <strong className="font-mono">$ {canonTotal.toLocaleString('es-AR')}</strong></p>
+                        <div className="p-3 space-y-3 text-sm">
+                          <div>
+                            <p className="font-medium mb-1">Desglose de Canon (5% sobre Venta Total)</p>
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-1 ml-2">
+                              <p>Uso de Marca (4.5%)</p>
+                              <p className="font-mono text-right">$ {(ventaTotal * 0.045).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</p>
+                              <p>Marketing y Publicidad (0.5%)</p>
+                              <p className="font-mono text-right">$ {(ventaTotal * 0.005).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</p>
+                              <p className="font-semibold border-t pt-1">Total Canon</p>
+                              <p className="font-mono font-semibold text-right border-t pt-1">$ {(ventaTotal * 0.05).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</p>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="font-medium mb-1">Forma de Pago Sugerida</p>
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-1 ml-2">
+                              <p>En efectivo <span className="text-xs text-muted-foreground">(5% del efectivo)</span></p>
+                              <p className="font-mono text-right">$ {(efectivo * 0.05).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</p>
+                              <p>Por transferencia <span className="text-xs text-muted-foreground">(5% del online)</span></p>
+                              <p className="font-mono text-right">$ {(online * 0.05).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</p>
+                            </div>
+                          </div>
                           {venta.observaciones && <p className="text-muted-foreground">Obs: {venta.observaciones}</p>}
                           <p className="text-xs text-muted-foreground">
                             Cargado: {new Date(venta.created_at).toLocaleDateString('es-AR')}
