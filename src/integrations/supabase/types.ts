@@ -2636,6 +2636,10 @@ export type Database = {
           observaciones: string | null
           proveedor_id: string
           referencia: string | null
+          verificado: boolean
+          verificado_at: string | null
+          verificado_notas: string | null
+          verificado_por: string | null
         }
         Insert: {
           branch_id: string
@@ -2651,6 +2655,10 @@ export type Database = {
           observaciones?: string | null
           proveedor_id: string
           referencia?: string | null
+          verificado?: boolean
+          verificado_at?: string | null
+          verificado_notas?: string | null
+          verificado_por?: string | null
         }
         Update: {
           branch_id?: string
@@ -2666,6 +2674,10 @@ export type Database = {
           observaciones?: string | null
           proveedor_id?: string
           referencia?: string | null
+          verificado?: boolean
+          verificado_at?: string | null
+          verificado_notas?: string | null
+          verificado_por?: string | null
         }
         Relationships: [
           {

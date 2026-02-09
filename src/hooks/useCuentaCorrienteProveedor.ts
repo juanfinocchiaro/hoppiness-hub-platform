@@ -14,6 +14,7 @@ export interface MovimientoCuenta {
   fecha_vencimiento?: string;
   items_count?: number;
   saldo_acumulado: number;
+  verificado?: boolean;
 }
 
 export function useSaldoProveedor(branchId?: string, proveedorId?: string) {
@@ -54,7 +55,7 @@ export function useMovimientosProveedor(branchId?: string, proveedorId?: string)
       // Get pagos
       const { data: pagos, error: pErr } = await supabase
         .from('pagos_proveedores')
-        .select('id, fecha_pago, monto, medio_pago, referencia, factura_id')
+        .select('id, fecha_pago, monto, medio_pago, referencia, factura_id, verificado')
         .eq('branch_id', branchId!)
         .eq('proveedor_id', proveedorId!)
         .is('deleted_at', null)
@@ -87,6 +88,7 @@ export function useMovimientosProveedor(branchId?: string, proveedorId?: string)
           referencia: p.referencia ?? undefined,
           monto: Number(p.monto),
           saldo_acumulado: 0,
+          verificado: p.verificado ?? true,
         });
       }
 
