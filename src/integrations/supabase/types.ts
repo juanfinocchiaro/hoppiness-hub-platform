@@ -810,9 +810,11 @@ export type Database = {
           nombre: string
           periodicidad: string | null
           proveedor_id: string | null
+          rdo_category_code: string | null
           subcategoria: string | null
           tipo: string
           updated_at: string | null
+          visible_local: boolean
         }
         Insert: {
           activo?: boolean | null
@@ -826,9 +828,11 @@ export type Database = {
           nombre: string
           periodicidad?: string | null
           proveedor_id?: string | null
+          rdo_category_code?: string | null
           subcategoria?: string | null
           tipo?: string
           updated_at?: string | null
+          visible_local?: boolean
         }
         Update: {
           activo?: boolean | null
@@ -842,9 +846,11 @@ export type Database = {
           nombre?: string
           periodicidad?: string | null
           proveedor_id?: string | null
+          rdo_category_code?: string | null
           subcategoria?: string | null
           tipo?: string
           updated_at?: string | null
+          visible_local?: boolean
         }
         Relationships: [
           {
@@ -860,6 +866,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "proveedores"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conceptos_servicio_rdo_category_code_fkey"
+            columns: ["rdo_category_code"]
+            isOneToOne: false
+            referencedRelation: "rdo_categories"
+            referencedColumns: ["code"]
           },
         ]
       }

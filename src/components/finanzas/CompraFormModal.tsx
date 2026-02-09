@@ -316,7 +316,7 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                         <Select value={item.concepto_servicio_id || ''} onValueChange={v => updateItem(idx, 'concepto_servicio_id', v)}>
                           <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar concepto..." /></SelectTrigger>
                           <SelectContent>
-                            {conceptos?.map(c => (
+                            {conceptos?.filter((c: any) => c.visible_local !== false).map(c => (
                               <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
                             ))}
                           </SelectContent>
