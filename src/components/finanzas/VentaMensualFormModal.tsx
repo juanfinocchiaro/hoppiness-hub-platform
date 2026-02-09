@@ -104,14 +104,8 @@ export function VentaMensualFormModal({ open, onOpenChange, branchId, periodo, v
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Mostrar período como solo lectura - no editable */}
-          <div className="p-3 rounded-md bg-primary/5 border border-primary/20">
-            <p className="text-sm text-muted-foreground">Cargando ventas para:</p>
-            <p className="text-lg font-semibold">{formatPeriodoLargo(form.periodo)}</p>
-          </div>
-
           <div>
-            <Label>Venta Total (Facturación Contable) *</Label>
+            <Label>Facturación Contable (FC) *</Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
               <Input
@@ -123,13 +117,10 @@ export function VentaMensualFormModal({ open, onOpenChange, branchId, periodo, v
                 className="pl-7"
               />
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Total facturado con comprobante fiscal (FC)
-            </p>
           </div>
 
           <div>
-            <Label>Efectivo (sin facturar)</Label>
+            <Label>Efectivo (FT)</Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
               <Input
@@ -141,15 +132,17 @@ export function VentaMensualFormModal({ open, onOpenChange, branchId, periodo, v
                 className="pl-7"
               />
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Ventas en efectivo sin comprobante fiscal
-            </p>
           </div>
 
           <div className="p-3 rounded-md bg-muted text-sm space-y-1">
-            <p>Venta Total: <strong className="font-mono">$ {ventaTotal.toLocaleString('es-AR')}</strong></p>
-            <p>Efectivo: <strong className="font-mono">$ {ftTotal.toLocaleString('es-AR')}</strong> ({porcentajeFt}%)</p>
-            <p>Facturación Contable (FC): <strong className="font-mono">$ {fcTotal.toLocaleString('es-AR')}</strong></p>
+            <div className="flex justify-between">
+              <span>Venta Total</span>
+              <strong className="font-mono">$ {ventaTotal.toLocaleString('es-AR')}</strong>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>Canon (5% FC)</span>
+              <span className="font-mono">$ {(fcTotal * 0.05).toLocaleString('es-AR')}</span>
+            </div>
           </div>
 
           <div>
