@@ -70,6 +70,7 @@ import ProveedoresPage from "./pages/admin/ProveedoresPage";
 import InsumosPage from "./pages/admin/InsumosPage";
 import CanonPage from "./pages/admin/CanonPage";
 import VentasMensualesMarcaPage from "./pages/admin/VentasMensualesMarcaPage";
+import ConceptosServicioPage from "./pages/admin/ConceptosServicioPage";
 
 // Mi Local - Comunicaciones
 import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
@@ -218,6 +219,7 @@ const App = () => (
               {/* Finanzas */}
               <Route path="finanzas/proveedores" element={<ProveedoresPage />} />
               <Route path="finanzas/insumos" element={<InsumosPage />} />
+              <Route path="finanzas/conceptos-servicio" element={<ConceptosServicioPage />} />
               <Route path="finanzas/canon" element={<CanonPage />} />
               <Route path="finanzas/ventas-mensuales" element={<VentasMensualesMarcaPage />} />
               

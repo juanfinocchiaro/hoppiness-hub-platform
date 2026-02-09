@@ -5,11 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Plus, Trash2 } from 'lucide-react';
 import { useFacturaMutations } from '@/hooks/useCompras';
 import { useProveedores } from '@/hooks/useProveedores';
 import { useInsumos } from '@/hooks/useInsumos';
+import { useConceptosServicio } from '@/hooks/useConceptosServicio';
 import { CONDICION_PAGO_OPTIONS, FACTURA_TIPO_OPTIONS, getCurrentPeriodo } from '@/types/compra';
 import { UNIDAD_OPTIONS } from '@/types/financial';
 import { FormSection } from '@/components/ui/forms-pro';
@@ -21,7 +22,13 @@ interface Props {
   branchId: string;
 }
 
-const emptyItem = (): ItemFacturaFormData => ({
+interface ItemFormState extends ItemFacturaFormData {
+  tipo_item: 'insumo' | 'servicio';
+  concepto_servicio_id?: string;
+}
+
+const emptyItem = (): ItemFormState => ({
+  tipo_item: 'insumo',
   insumo_id: '',
   cantidad: 0,
   unidad: 'kg',
@@ -34,6 +41,7 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
   const { create } = useFacturaMutations();
   const { data: proveedores } = useProveedores(branchId);
   const { data: insumos } = useInsumos();
+  const { data: conceptos } = useConceptosServicio();
 
   const [form, setForm] = useState({
     proveedor_id: '',
@@ -48,7 +56,6 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
     observaciones: '',
   });
 
-  // Derive fecha_vencimiento from supplier rules
   const selectedProveedor = proveedores?.find(p => p.id === form.proveedor_id);
   const computedVencimiento = (() => {
     if (form.condicion_pago !== 'cuenta_corriente' || !selectedProveedor?.dias_pago_habitual) return undefined;
@@ -57,7 +64,7 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
     return base.toISOString().slice(0, 10);
   })();
 
-  const [items, setItems] = useState<ItemFacturaFormData[]>([emptyItem()]);
+  const [items, setItems] = useState<ItemFormState[]>([emptyItem()]);
 
   useEffect(() => {
     if (open) {
@@ -66,7 +73,6 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
     }
   }, [open]);
 
-  // Auto-set condicion_pago when supplier changes
   useEffect(() => {
     if (selectedProveedor?.permite_cuenta_corriente) {
       setForm(f => ({ ...f, condicion_pago: 'cuenta_corriente' }));
@@ -79,13 +85,38 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
     setItems(prev => {
       const updated = [...prev];
       const item = { ...updated[idx], [field]: value };
-      if (field === 'cantidad' || field === 'precio_unitario') {
-        item.subtotal = Number(item.cantidad) * Number(item.precio_unitario);
+
+      // When switching tipo_item, reset references
+      if (field === 'tipo_item') {
+        if (value === 'insumo') {
+          item.concepto_servicio_id = undefined;
+          item.cantidad = 0;
+          item.unidad = 'kg';
+        } else {
+          item.insumo_id = '';
+          item.cantidad = 1;
+          item.unidad = '';
+        }
+        item.precio_unitario = 0;
+        item.subtotal = 0;
       }
-      if (field === 'insumo_id' && insumos) {
-        const ins = insumos.find(i => i.id === value);
-        if (ins) item.unidad = ins.unidad_base;
+
+      if (item.tipo_item === 'insumo') {
+        if (field === 'cantidad' || field === 'precio_unitario') {
+          item.subtotal = Number(item.cantidad) * Number(item.precio_unitario);
+        }
+        if (field === 'insumo_id' && insumos) {
+          const ins = insumos.find(i => i.id === value);
+          if (ins) item.unidad = ins.unidad_base;
+        }
+      } else {
+        // Services: subtotal = precio_unitario (quantity is always 1)
+        if (field === 'precio_unitario') {
+          item.subtotal = Number(item.precio_unitario);
+          item.cantidad = 1;
+        }
       }
+
       updated[idx] = item;
       return updated;
     });
@@ -97,7 +128,11 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
   const total = subtotalItems + ivaNum + otrosNum;
 
   const handleSubmit = async () => {
-    const validItems = items.filter(i => i.insumo_id && i.cantidad > 0);
+    const validItems = items.filter(i =>
+      i.tipo_item === 'insumo'
+        ? i.insumo_id && i.cantidad > 0
+        : i.concepto_servicio_id && i.precio_unitario > 0
+    );
     if (!form.proveedor_id || !form.factura_numero || validItems.length === 0) return;
 
     await create.mutateAsync({
@@ -114,7 +149,10 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
       motivo_extraordinaria: form.tipo === 'extraordinaria' ? form.motivo_extraordinaria : undefined,
       periodo: getCurrentPeriodo(),
       observaciones: form.observaciones || undefined,
-      items: validItems,
+      items: validItems.map(item => ({
+        ...item,
+        // These fields are handled in the hook
+      })),
     });
     onOpenChange(false);
   };
@@ -167,51 +205,91 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
           </FormSection>
 
           <FormSection title="Items de la Factura">
-            <div className="space-y-2">
+            <div className="space-y-4">
               {items.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-2 items-end">
-                  <div className="col-span-4">
-                    {idx === 0 && <Label className="text-xs">Insumo</Label>}
-                    <Select value={item.insumo_id} onValueChange={v => updateItem(idx, 'insumo_id', v)}>
-                      <SelectTrigger className="h-9"><SelectValue placeholder="Insumo..." /></SelectTrigger>
-                      <SelectContent>
-                        {insumos?.map(i => (
-                          <SelectItem key={i.id} value={i.id}>{i.nombre}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="col-span-2">
-                    {idx === 0 && <Label className="text-xs">Cant.</Label>}
-                    <Input type="number" step="0.01" className="h-9" value={item.cantidad || ''} onChange={e => updateItem(idx, 'cantidad', parseFloat(e.target.value) || 0)} />
-                  </div>
-                  <div className="col-span-1">
-                    {idx === 0 && <Label className="text-xs">Ud.</Label>}
-                    <Select value={item.unidad} onValueChange={v => updateItem(idx, 'unidad', v)}>
-                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {UNIDAD_OPTIONS.map(u => (
-                          <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="col-span-2">
-                    {idx === 0 && <Label className="text-xs">P.Unit</Label>}
-                    <Input type="number" step="0.01" className="h-9" value={item.precio_unitario || ''} onChange={e => updateItem(idx, 'precio_unitario', parseFloat(e.target.value) || 0)} />
-                  </div>
-                  <div className="col-span-2">
-                    {idx === 0 && <Label className="text-xs">Subtotal</Label>}
-                    <Input className="h-9 font-mono" value={`$ ${item.subtotal.toLocaleString('es-AR')}`} disabled />
-                  </div>
-                  <div className="col-span-1">
-                    {idx === 0 && <Label className="text-xs">&nbsp;</Label>}
+                <div key={idx} className="border rounded-lg p-3 space-y-3 bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <RadioGroup
+                      value={item.tipo_item}
+                      onValueChange={v => updateItem(idx, 'tipo_item', v)}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <RadioGroupItem value="insumo" id={`tipo-insumo-${idx}`} />
+                        <Label htmlFor={`tipo-insumo-${idx}`} className="text-sm font-normal cursor-pointer">Insumo</Label>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <RadioGroupItem value="servicio" id={`tipo-servicio-${idx}`} />
+                        <Label htmlFor={`tipo-servicio-${idx}`} className="text-sm font-normal cursor-pointer">Servicio</Label>
+                      </div>
+                    </RadioGroup>
                     {items.length > 1 && (
-                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setItems(prev => prev.filter((_, i) => i !== idx))}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setItems(prev => prev.filter((_, i) => i !== idx))}>
                         <Trash2 className="w-3.5 h-3.5 text-destructive" />
                       </Button>
                     )}
                   </div>
+
+                  {item.tipo_item === 'insumo' ? (
+                    <div className="grid grid-cols-12 gap-2 items-end">
+                      <div className="col-span-4">
+                        <Label className="text-xs">Insumo *</Label>
+                        <Select value={item.insumo_id} onValueChange={v => updateItem(idx, 'insumo_id', v)}>
+                          <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                          <SelectContent>
+                            {insumos?.map(i => (
+                              <SelectItem key={i.id} value={i.id}>{i.nombre}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-2">
+                        <Label className="text-xs">Cant. *</Label>
+                        <Input type="number" step="0.01" className="h-9" value={item.cantidad || ''} onChange={e => updateItem(idx, 'cantidad', parseFloat(e.target.value) || 0)} />
+                      </div>
+                      <div className="col-span-2">
+                        <Label className="text-xs">Unidad</Label>
+                        <Select value={item.unidad} onValueChange={v => updateItem(idx, 'unidad', v)}>
+                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {UNIDAD_OPTIONS.map(u => (
+                              <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-2">
+                        <Label className="text-xs">P.Unit *</Label>
+                        <Input type="number" step="0.01" className="h-9" value={item.precio_unitario || ''} onChange={e => updateItem(idx, 'precio_unitario', parseFloat(e.target.value) || 0)} />
+                      </div>
+                      <div className="col-span-2">
+                        <Label className="text-xs">Subtotal</Label>
+                        <Input className="h-9 font-mono" value={`$ ${item.subtotal.toLocaleString('es-AR')}`} disabled />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-12 gap-2 items-end">
+                      <div className="col-span-6">
+                        <Label className="text-xs">Concepto *</Label>
+                        <Select value={item.concepto_servicio_id || ''} onValueChange={v => updateItem(idx, 'concepto_servicio_id', v)}>
+                          <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar concepto..." /></SelectTrigger>
+                          <SelectContent>
+                            {conceptos?.map(c => (
+                              <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-3">
+                        <Label className="text-xs">Monto *</Label>
+                        <Input type="number" step="0.01" className="h-9" value={item.precio_unitario || ''} onChange={e => updateItem(idx, 'precio_unitario', parseFloat(e.target.value) || 0)} />
+                      </div>
+                      <div className="col-span-3">
+                        <Label className="text-xs">Subtotal</Label>
+                        <Input className="h-9 font-mono" value={`$ ${item.subtotal.toLocaleString('es-AR')}`} disabled />
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
               <Button variant="outline" size="sm" onClick={() => setItems(prev => [...prev, emptyItem()])}>
