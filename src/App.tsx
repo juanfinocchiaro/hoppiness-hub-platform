@@ -41,6 +41,7 @@ import ProveedoresLocalPage from "./pages/local/ProveedoresLocalPage";
 import InsumosLocalPage from "./pages/local/InsumosLocalPage";
 import ComprasPage from "./pages/local/ComprasPage";
 import GastosPage from "./pages/local/GastosPage";
+import VentasMensualesPage from "./pages/local/VentasMensualesPage";
 
 // Mi Marca
 import BrandLayout from "./pages/admin/BrandLayout";
@@ -62,6 +63,7 @@ import NewInspectionPage from "./pages/admin/NewInspectionPage";
 import InspectionDetailPage from "./pages/admin/InspectionDetailPage";
 import ProveedoresPage from "./pages/admin/ProveedoresPage";
 import InsumosPage from "./pages/admin/InsumosPage";
+import CanonPage from "./pages/admin/CanonPage";
 
 // Mi Local - Comunicaciones
 import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
@@ -167,6 +169,7 @@ const App = () => (
               <Route path="finanzas/insumos" element={<InsumosLocalPage />} />
               <Route path="finanzas/compras" element={<ComprasPage />} />
               <Route path="finanzas/gastos" element={<GastosPage />} />
+              <Route path="finanzas/ventas" element={<VentasMensualesPage />} />
               
               {/* Configuración */}
               <Route path="config/turnos" element={<ShiftConfigPage />} />
@@ -204,6 +207,7 @@ const App = () => (
               {/* Finanzas */}
               <Route path="finanzas/proveedores" element={<ProveedoresPage />} />
               <Route path="finanzas/insumos" element={<InsumosPage />} />
+              <Route path="finanzas/canon" element={<CanonPage />} />
               
               {/* Configuración */}
               <Route path="reglamentos" element={<BrandRegulationsPage />} />

@@ -30,6 +30,7 @@ import {
   Wallet,
   Truck,
   Package,
+  TrendingUp,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -75,7 +76,7 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
     return location.pathname === fullPath || location.pathname.startsWith(`${fullPath}/`);
   });
 
-  const finanzasPaths = ['finanzas/proveedores', 'finanzas/insumos', 'finanzas/compras', 'finanzas/gastos'];
+  const finanzasPaths = ['finanzas/proveedores', 'finanzas/insumos', 'finanzas/compras', 'finanzas/gastos', 'finanzas/ventas'];
   const isFinanzasActive = finanzasPaths.some(path => {
     const fullPath = `${basePath}/${path}`;
     return location.pathname === fullPath || location.pathname.startsWith(`${fullPath}/`);
@@ -180,6 +181,7 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
           <NavItemButton to={`${basePath}/finanzas/insumos`} icon={Package} label="Insumos" />
           <NavItemButton to={`${basePath}/finanzas/compras`} icon={ShoppingCart} label="Compras" />
           <NavItemButton to={`${basePath}/finanzas/gastos`} icon={Receipt} label="Gastos" />
+          <NavItemButton to={`${basePath}/finanzas/ventas`} icon={TrendingUp} label="Ventas Mensuales" />
         </NavSectionGroup>
       )}
 
