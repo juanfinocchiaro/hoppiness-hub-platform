@@ -16,8 +16,11 @@ export function useProveedores(branchId?: string) {
         .is('deleted_at', null)
         .order('razon_social');
 
-      // If branchId provided, show marca-level + that branch's local proveedores
-      if (branchId) {
+      if (branchId === '__marca_only__') {
+        // Brand panel: only marca-level suppliers
+        q = q.eq('ambito', 'marca');
+      } else if (branchId) {
+        // Local panel: marca + that branch's local suppliers
         q = q.or(`ambito.eq.marca,branch_id.eq.${branchId}`);
       }
 

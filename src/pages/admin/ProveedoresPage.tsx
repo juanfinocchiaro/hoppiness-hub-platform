@@ -13,7 +13,7 @@ import { EmptyState } from '@/components/ui/states';
 import type { Proveedor } from '@/types/financial';
 
 export default function ProveedoresPage() {
-  const { data: proveedores, isLoading, error } = useProveedores();
+  const { data: proveedores, isLoading, error } = useProveedores('__marca_only__');
   const { softDelete } = useProveedorMutations();
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
