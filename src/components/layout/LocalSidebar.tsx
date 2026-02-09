@@ -18,6 +18,8 @@ import {
   FileText,
   MessageSquare,
   ClipboardList,
+  ShoppingCart,
+  Receipt,
   Settings,
   AlertTriangle,
   UserCheck,
@@ -73,7 +75,7 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
     return location.pathname === fullPath || location.pathname.startsWith(`${fullPath}/`);
   });
 
-  const finanzasPaths = ['finanzas/proveedores', 'finanzas/insumos'];
+  const finanzasPaths = ['finanzas/proveedores', 'finanzas/insumos', 'finanzas/compras', 'finanzas/gastos'];
   const isFinanzasActive = finanzasPaths.some(path => {
     const fullPath = `${basePath}/${path}`;
     return location.pathname === fullPath || location.pathname.startsWith(`${fullPath}/`);
@@ -176,6 +178,8 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
         >
           <NavItemButton to={`${basePath}/finanzas/proveedores`} icon={Truck} label="Proveedores" />
           <NavItemButton to={`${basePath}/finanzas/insumos`} icon={Package} label="Insumos" />
+          <NavItemButton to={`${basePath}/finanzas/compras`} icon={ShoppingCart} label="Compras" />
+          <NavItemButton to={`${basePath}/finanzas/gastos`} icon={Receipt} label="Gastos" />
         </NavSectionGroup>
       )}
 
