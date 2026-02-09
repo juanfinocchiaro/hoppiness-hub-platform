@@ -1944,9 +1944,14 @@ export type Database = {
           created_at: string | null
           deleted_at: string | null
           descripcion: string | null
+          especificacion: Json | null
           id: string
+          motivo_control: string | null
+          nivel_control: string
           nombre: string
+          precio_maximo_sugerido: number | null
           precio_referencia: number | null
+          proveedor_obligatorio_id: string | null
           proveedor_sugerido_id: string | null
           unidad_base: string
           updated_at: string | null
@@ -1959,9 +1964,14 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           descripcion?: string | null
+          especificacion?: Json | null
           id?: string
+          motivo_control?: string | null
+          nivel_control?: string
           nombre: string
+          precio_maximo_sugerido?: number | null
           precio_referencia?: number | null
+          proveedor_obligatorio_id?: string | null
           proveedor_sugerido_id?: string | null
           unidad_base: string
           updated_at?: string | null
@@ -1974,9 +1984,14 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           descripcion?: string | null
+          especificacion?: Json | null
           id?: string
+          motivo_control?: string | null
+          nivel_control?: string
           nombre?: string
+          precio_maximo_sugerido?: number | null
           precio_referencia?: number | null
+          proveedor_obligatorio_id?: string | null
           proveedor_sugerido_id?: string | null
           unidad_base?: string
           updated_at?: string | null
@@ -1987,6 +2002,20 @@ export type Database = {
             columns: ["categoria_id"]
             isOneToOne: false
             referencedRelation: "categorias_insumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insumos_proveedor_obligatorio_id_fkey"
+            columns: ["proveedor_obligatorio_id"]
+            isOneToOne: false
+            referencedRelation: "cuenta_corriente_proveedores"
+            referencedColumns: ["proveedor_id"]
+          },
+          {
+            foreignKeyName: "insumos_proveedor_obligatorio_id_fkey"
+            columns: ["proveedor_obligatorio_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
             referencedColumns: ["id"]
           },
           {

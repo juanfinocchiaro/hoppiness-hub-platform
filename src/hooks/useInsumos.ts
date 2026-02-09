@@ -85,7 +85,7 @@ export function useInsumos() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('insumos')
-        .select('*, categorias_insumo(nombre, tipo)')
+        .select('*, categorias_insumo(nombre, tipo), proveedor_obligatorio:proveedores!insumos_proveedor_obligatorio_id_fkey(id, razon_social), proveedor_sugerido:proveedores!insumos_proveedor_sugerido_id_fkey(id, razon_social)')
         .is('deleted_at', null)
         .order('nombre');
       if (error) throw error;
