@@ -21,6 +21,7 @@ interface Props {
 interface PagoLine {
   monto: string;
   medio_pago: string;
+  fecha: string;
 }
 
 function parseCanonObservaciones(obs: string | null) {
@@ -48,12 +49,12 @@ function parseCanonObservaciones(obs: string | null) {
   }
 }
 
-const EMPTY_LINE: PagoLine = { monto: '', medio_pago: 'transferencia' };
+const todayStr = () => new Date().toISOString().slice(0, 10);
+const EMPTY_LINE = (): PagoLine => ({ monto: '', medio_pago: 'transferencia', fecha: todayStr() });
 
 export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombre }: Props) {
   const { create } = usePagoProveedorMutations();
-  const [lines, setLines] = useState<PagoLine[]>([{ ...EMPTY_LINE }]);
-  const [fechaPago, setFechaPago] = useState(new Date().toISOString().slice(0, 10));
+  const [lines, setLines] = useState<PagoLine[]>([EMPTY_LINE()]);
   const [referencia, setReferencia] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -73,7 +74,7 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
   };
 
   const addLine = () => {
-    if (lines.length < 4) setLines(prev => [...prev, { ...EMPTY_LINE }]);
+    if (lines.length < 4) setLines(prev => [...prev, EMPTY_LINE()]);
   };
 
   const removeLine = (idx: number) => {
@@ -97,14 +98,14 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
           proveedor_id: factura.proveedor_id,
           branch_id: factura.branch_id,
           monto: parseFloat(line.monto),
-          fecha_pago: fechaPago,
+          fecha_pago: line.fecha,
           medio_pago: line.medio_pago,
           referencia: referencia || undefined,
           observaciones: observaciones || undefined,
         });
       }
       onOpenChange(false);
-      setLines([{ ...EMPTY_LINE }]);
+      setLines([EMPTY_LINE()]);
       setReferencia('');
       setObservaciones('');
     } catch {
@@ -118,9 +119,10 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
     if (!canonInfo) return;
     const efectivo = Math.round(canonInfo.pagarEfectivo * 100) / 100;
     const transferencia = Math.round((saldoPendiente - efectivo) * 100) / 100;
+    const hoy = todayStr();
     setLines([
-      { monto: efectivo.toFixed(2), medio_pago: 'efectivo' },
-      { monto: transferencia.toFixed(2), medio_pago: 'transferencia' },
+      { monto: efectivo.toFixed(2), medio_pago: 'efectivo', fecha: hoy },
+      { monto: transferencia.toFixed(2), medio_pago: 'transferencia', fecha: hoy },
     ]);
   };
 
@@ -188,33 +190,39 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
             </div>
 
             {lines.map((line, idx) => (
-              <div key={idx} className="flex items-end gap-2">
-                <div className="flex-1">
-                  {idx === 0 && <Label className="text-xs text-muted-foreground">Monto</Label>}
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={line.monto}
-                    onChange={e => updateLine(idx, 'monto', e.target.value)}
-                    placeholder="$ 0,00"
-                  />
+              <div key={idx} className="space-y-1.5 rounded-md border p-2">
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <Label className="text-xs text-muted-foreground">Monto</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={line.monto}
+                      onChange={e => updateLine(idx, 'monto', e.target.value)}
+                      placeholder="$ 0,00"
+                    />
+                  </div>
+                  <div className="w-[130px]">
+                    <Label className="text-xs text-muted-foreground">Medio</Label>
+                    <Select value={line.medio_pago} onValueChange={v => updateLine(idx, 'medio_pago', v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {MEDIO_PAGO_OPTIONS.map(m => (
+                          <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {lines.length > 1 && (
+                    <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => removeLine(idx)}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  )}
                 </div>
-                <div className="w-[140px]">
-                  {idx === 0 && <Label className="text-xs text-muted-foreground">Medio</Label>}
-                  <Select value={line.medio_pago} onValueChange={v => updateLine(idx, 'medio_pago', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {MEDIO_PAGO_OPTIONS.map(m => (
-                        <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Fecha</Label>
+                  <Input type="date" value={line.fecha} onChange={e => updateLine(idx, 'fecha', e.target.value)} />
                 </div>
-                {lines.length > 1 && (
-                  <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => removeLine(idx)}>
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
-                )}
               </div>
             ))}
 
@@ -231,10 +239,6 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
             )}
           </div>
 
-          <div>
-            <Label>Fecha de pago</Label>
-            <Input type="date" value={fechaPago} onChange={e => setFechaPago(e.target.value)} />
-          </div>
           <div>
             <Label>Referencia</Label>
             <Input value={referencia} onChange={e => setReferencia(e.target.value)} />
