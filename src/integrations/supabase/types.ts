@@ -797,145 +797,6 @@ export type Database = {
           },
         ]
       }
-      compras: {
-        Row: {
-          afecta_costo_base: boolean | null
-          branch_id: string
-          cantidad: number
-          categoria_pl: string | null
-          compra_original_id: string | null
-          condicion_pago: string | null
-          created_at: string | null
-          created_by: string | null
-          deleted_at: string | null
-          estado_pago: string | null
-          factura_fecha: string | null
-          factura_numero: string | null
-          factura_tipo: string | null
-          factura_url: string | null
-          fecha: string
-          fecha_vencimiento: string | null
-          id: string
-          insumo_id: string
-          medio_pago: string | null
-          motivo_extraordinaria: string | null
-          observaciones: string | null
-          periodo: string
-          precio_unitario: number
-          proveedor_id: string
-          saldo_pendiente: number | null
-          subtotal: number
-          tipo_compra: Database["public"]["Enums"]["tipo_compra_enum"] | null
-          unidad: string
-          updated_at: string | null
-        }
-        Insert: {
-          afecta_costo_base?: boolean | null
-          branch_id: string
-          cantidad: number
-          categoria_pl?: string | null
-          compra_original_id?: string | null
-          condicion_pago?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          deleted_at?: string | null
-          estado_pago?: string | null
-          factura_fecha?: string | null
-          factura_numero?: string | null
-          factura_tipo?: string | null
-          factura_url?: string | null
-          fecha: string
-          fecha_vencimiento?: string | null
-          id?: string
-          insumo_id: string
-          medio_pago?: string | null
-          motivo_extraordinaria?: string | null
-          observaciones?: string | null
-          periodo: string
-          precio_unitario: number
-          proveedor_id: string
-          saldo_pendiente?: number | null
-          subtotal: number
-          tipo_compra?: Database["public"]["Enums"]["tipo_compra_enum"] | null
-          unidad: string
-          updated_at?: string | null
-        }
-        Update: {
-          afecta_costo_base?: boolean | null
-          branch_id?: string
-          cantidad?: number
-          categoria_pl?: string | null
-          compra_original_id?: string | null
-          condicion_pago?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          deleted_at?: string | null
-          estado_pago?: string | null
-          factura_fecha?: string | null
-          factura_numero?: string | null
-          factura_tipo?: string | null
-          factura_url?: string | null
-          fecha?: string
-          fecha_vencimiento?: string | null
-          id?: string
-          insumo_id?: string
-          medio_pago?: string | null
-          motivo_extraordinaria?: string | null
-          observaciones?: string | null
-          periodo?: string
-          precio_unitario?: number
-          proveedor_id?: string
-          saldo_pendiente?: number | null
-          subtotal?: number
-          tipo_compra?: Database["public"]["Enums"]["tipo_compra_enum"] | null
-          unidad?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "compras_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "compras_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "compras_compra_original_id_fkey"
-            columns: ["compra_original_id"]
-            isOneToOne: false
-            referencedRelation: "compras"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "compras_insumo_id_fkey"
-            columns: ["insumo_id"]
-            isOneToOne: false
-            referencedRelation: "insumos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "compras_proveedor_id_fkey"
-            columns: ["proveedor_id"]
-            isOneToOne: false
-            referencedRelation: "cuenta_corriente_proveedores"
-            referencedColumns: ["proveedor_id"]
-          },
-          {
-            foreignKeyName: "compras_proveedor_id_fkey"
-            columns: ["proveedor_id"]
-            isOneToOne: false
-            referencedRelation: "proveedores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       configuracion_impuestos: {
         Row: {
           branch_id: string
@@ -1174,6 +1035,122 @@ export type Database = {
             columns: ["order_branch_id"]
             isOneToOne: false
             referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      devoluciones: {
+        Row: {
+          branch_id: string
+          cantidad_devuelta: number
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          factura_original_id: string
+          fecha_devolucion: string
+          id: string
+          insumo_id: string
+          item_original_id: string | null
+          motivo: string
+          nota_credito_numero: string | null
+          nota_credito_url: string | null
+          observaciones: string | null
+          periodo: string
+          precio_unitario: number
+          proveedor_id: string
+          total_devuelto: number
+          unidad: string
+        }
+        Insert: {
+          branch_id: string
+          cantidad_devuelta: number
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          factura_original_id: string
+          fecha_devolucion: string
+          id?: string
+          insumo_id: string
+          item_original_id?: string | null
+          motivo: string
+          nota_credito_numero?: string | null
+          nota_credito_url?: string | null
+          observaciones?: string | null
+          periodo: string
+          precio_unitario: number
+          proveedor_id: string
+          total_devuelto: number
+          unidad: string
+        }
+        Update: {
+          branch_id?: string
+          cantidad_devuelta?: number
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          factura_original_id?: string
+          fecha_devolucion?: string
+          id?: string
+          insumo_id?: string
+          item_original_id?: string | null
+          motivo?: string
+          nota_credito_numero?: string | null
+          nota_credito_url?: string | null
+          observaciones?: string | null
+          periodo?: string
+          precio_unitario?: number
+          proveedor_id?: string
+          total_devuelto?: number
+          unidad?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devoluciones_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_factura_original_id_fkey"
+            columns: ["factura_original_id"]
+            isOneToOne: false
+            referencedRelation: "facturas_proveedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_item_original_id_fkey"
+            columns: ["item_original_id"]
+            isOneToOne: false
+            referencedRelation: "items_factura"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "cuenta_corriente_proveedores"
+            referencedColumns: ["proveedor_id"]
+          },
+          {
+            foreignKeyName: "devoluciones_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
             referencedColumns: ["id"]
           },
         ]
@@ -1481,6 +1458,113 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      facturas_proveedores: {
+        Row: {
+          branch_id: string
+          condicion_pago: string | null
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          estado_pago: string | null
+          factura_fecha: string
+          factura_numero: string
+          factura_tipo: string | null
+          factura_url: string | null
+          fecha_vencimiento: string | null
+          id: string
+          iva: number | null
+          motivo_extraordinaria: string | null
+          observaciones: string | null
+          otros_impuestos: number | null
+          periodo: string
+          proveedor_id: string
+          saldo_pendiente: number | null
+          subtotal: number
+          tipo: string | null
+          total: number
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id: string
+          condicion_pago?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          estado_pago?: string | null
+          factura_fecha: string
+          factura_numero: string
+          factura_tipo?: string | null
+          factura_url?: string | null
+          fecha_vencimiento?: string | null
+          id?: string
+          iva?: number | null
+          motivo_extraordinaria?: string | null
+          observaciones?: string | null
+          otros_impuestos?: number | null
+          periodo: string
+          proveedor_id: string
+          saldo_pendiente?: number | null
+          subtotal?: number
+          tipo?: string | null
+          total?: number
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: string
+          condicion_pago?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          estado_pago?: string | null
+          factura_fecha?: string
+          factura_numero?: string
+          factura_tipo?: string | null
+          factura_url?: string | null
+          fecha_vencimiento?: string | null
+          id?: string
+          iva?: number | null
+          motivo_extraordinaria?: string | null
+          observaciones?: string | null
+          otros_impuestos?: number | null
+          periodo?: string
+          proveedor_id?: string
+          saldo_pendiente?: number | null
+          subtotal?: number
+          tipo?: string | null
+          total?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facturas_proveedores_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facturas_proveedores_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facturas_proveedores_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "cuenta_corriente_proveedores"
+            referencedColumns: ["proveedor_id"]
+          },
+          {
+            foreignKeyName: "facturas_proveedores_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
             referencedColumns: ["id"]
           },
         ]
@@ -1828,6 +1912,63 @@ export type Database = {
             columns: ["proveedor_sugerido_id"]
             isOneToOne: false
             referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      items_factura: {
+        Row: {
+          afecta_costo_base: boolean | null
+          cantidad: number
+          categoria_pl: string | null
+          created_at: string | null
+          factura_id: string
+          id: string
+          insumo_id: string
+          observaciones: string | null
+          precio_unitario: number
+          subtotal: number
+          unidad: string
+        }
+        Insert: {
+          afecta_costo_base?: boolean | null
+          cantidad: number
+          categoria_pl?: string | null
+          created_at?: string | null
+          factura_id: string
+          id?: string
+          insumo_id: string
+          observaciones?: string | null
+          precio_unitario: number
+          subtotal: number
+          unidad: string
+        }
+        Update: {
+          afecta_costo_base?: boolean | null
+          cantidad?: number
+          categoria_pl?: string | null
+          created_at?: string | null
+          factura_id?: string
+          id?: string
+          insumo_id?: string
+          observaciones?: string | null
+          precio_unitario?: number
+          subtotal?: number
+          unidad?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "items_factura_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "facturas_proveedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_factura_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
             referencedColumns: ["id"]
           },
         ]
@@ -2195,11 +2336,11 @@ export type Database = {
       pagos_proveedores: {
         Row: {
           branch_id: string
-          compra_id: string | null
           created_at: string | null
           created_by: string | null
           datos_pago: Json | null
           deleted_at: string | null
+          factura_id: string
           fecha_pago: string
           id: string
           medio_pago: string
@@ -2210,11 +2351,11 @@ export type Database = {
         }
         Insert: {
           branch_id: string
-          compra_id?: string | null
           created_at?: string | null
           created_by?: string | null
           datos_pago?: Json | null
           deleted_at?: string | null
+          factura_id: string
           fecha_pago: string
           id?: string
           medio_pago: string
@@ -2225,11 +2366,11 @@ export type Database = {
         }
         Update: {
           branch_id?: string
-          compra_id?: string | null
           created_at?: string | null
           created_by?: string | null
           datos_pago?: Json | null
           deleted_at?: string | null
+          factura_id?: string
           fecha_pago?: string
           id?: string
           medio_pago?: string
@@ -2254,10 +2395,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "pagos_proveedores_compra_id_fkey"
-            columns: ["compra_id"]
+            foreignKeyName: "pagos_proveedores_factura_id_fkey"
+            columns: ["factura_id"]
             isOneToOne: false
-            referencedRelation: "compras"
+            referencedRelation: "facturas_proveedores"
             referencedColumns: ["id"]
           },
           {
@@ -3515,56 +3656,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "compras_branch_id_fkey"
+            foreignKeyName: "facturas_proveedores_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "compras_branch_id_fkey"
+            foreignKeyName: "facturas_proveedores_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches_public"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      precio_promedio_mes: {
-        Row: {
-          branch_id: string | null
-          branch_nombre: string | null
-          cantidad_compras: number | null
-          cantidad_total: number | null
-          fecha_ultima_compra: string | null
-          insumo_id: string | null
-          insumo_nombre: string | null
-          periodo: string | null
-          precio_maximo: number | null
-          precio_minimo: number | null
-          precio_promedio: number | null
-          precio_ultimo: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "compras_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "compras_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "compras_insumo_id_fkey"
-            columns: ["insumo_id"]
-            isOneToOne: false
-            referencedRelation: "insumos"
             referencedColumns: ["id"]
           },
         ]
@@ -3786,7 +3888,6 @@ export type Database = {
         | "count_adjust"
         | "production"
       supplier_control_type: "brand_only" | "brand_preferred" | "free"
-      tipo_compra_enum: "normal" | "extraordinaria" | "devolucion"
       transaction_type: "income" | "expense"
       work_position_type:
         | "cajero"
@@ -3960,7 +4061,6 @@ export const Constants = {
         "production",
       ],
       supplier_control_type: ["brand_only", "brand_preferred", "free"],
-      tipo_compra_enum: ["normal", "extraordinaria", "devolucion"],
       transaction_type: ["income", "expense"],
       work_position_type: [
         "cajero",

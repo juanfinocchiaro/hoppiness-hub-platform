@@ -7,15 +7,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { usePagoProveedorMutations } from '@/hooks/useCompras';
 import { MEDIO_PAGO_OPTIONS } from '@/types/compra';
-import type { Compra } from '@/types/compra';
+import type { FacturaProveedor } from '@/types/compra';
 
-interface PagoProveedorModalProps {
+interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  compra: Compra | null;
+  factura: FacturaProveedor | null;
 }
 
-export function PagoProveedorModal({ open, onOpenChange, compra }: PagoProveedorModalProps) {
+export function PagoProveedorModal({ open, onOpenChange, factura }: Props) {
   const { create } = usePagoProveedorMutations();
   const [form, setForm] = useState({
     monto: '',
@@ -25,14 +25,14 @@ export function PagoProveedorModal({ open, onOpenChange, compra }: PagoProveedor
     observaciones: '',
   });
 
-  const saldoPendiente = compra?.saldo_pendiente ?? 0;
+  const saldoPendiente = factura?.saldo_pendiente ?? 0;
 
   const handleSubmit = async () => {
-    if (!compra || !form.monto) return;
+    if (!factura || !form.monto) return;
     await create.mutateAsync({
-      compra_id: compra.id,
-      proveedor_id: compra.proveedor_id,
-      branch_id: compra.branch_id,
+      factura_id: factura.id,
+      proveedor_id: factura.proveedor_id,
+      branch_id: factura.branch_id,
       monto: parseFloat(form.monto),
       fecha_pago: form.fecha_pago,
       medio_pago: form.medio_pago,
@@ -53,27 +53,18 @@ export function PagoProveedorModal({ open, onOpenChange, compra }: PagoProveedor
 
         <div className="space-y-4">
           <div className="p-3 rounded-md bg-muted text-sm">
-            <p>Subtotal compra: <strong>$ {compra?.subtotal?.toLocaleString('es-AR')}</strong></p>
+            <p>Total factura: <strong>$ {Number(factura?.total ?? 0).toLocaleString('es-AR')}</strong></p>
             <p>Saldo pendiente: <strong className="text-destructive">$ {Number(saldoPendiente).toLocaleString('es-AR')}</strong></p>
           </div>
 
           <div>
             <Label>Monto a pagar *</Label>
-            <Input
-              type="number"
-              step="0.01"
-              max={Number(saldoPendiente)}
-              value={form.monto}
-              onChange={e => set('monto', e.target.value)}
-              placeholder={`Máx $ ${Number(saldoPendiente).toLocaleString('es-AR')}`}
-            />
+            <Input type="number" step="0.01" max={Number(saldoPendiente)} value={form.monto} onChange={e => set('monto', e.target.value)} placeholder={`Máx $ ${Number(saldoPendiente).toLocaleString('es-AR')}`} />
           </div>
-
           <div>
             <Label>Fecha de pago</Label>
             <Input type="date" value={form.fecha_pago} onChange={e => set('fecha_pago', e.target.value)} />
           </div>
-
           <div>
             <Label>Medio de pago</Label>
             <Select value={form.medio_pago} onValueChange={v => set('medio_pago', v)}>
@@ -85,17 +76,14 @@ export function PagoProveedorModal({ open, onOpenChange, compra }: PagoProveedor
               </SelectContent>
             </Select>
           </div>
-
           <div>
             <Label>Referencia</Label>
-            <Input value={form.referencia} onChange={e => set('referencia', e.target.value)} placeholder="Nº transferencia, cheque, etc." />
+            <Input value={form.referencia} onChange={e => set('referencia', e.target.value)} />
           </div>
-
           <div>
             <Label>Observaciones</Label>
             <Textarea value={form.observaciones} onChange={e => set('observaciones', e.target.value)} rows={2} />
           </div>
-
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
             <Button onClick={handleSubmit} disabled={create.isPending || !form.monto}>
