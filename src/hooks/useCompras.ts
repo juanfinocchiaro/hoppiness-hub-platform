@@ -156,26 +156,27 @@ export function usePagoProveedorMutations() {
 
   const create = useMutation({
     mutationFn: async (data: PagoProveedorFormData) => {
+      const insertData: Record<string, unknown> = {
+        proveedor_id: data.proveedor_id,
+        branch_id: data.branch_id,
+        monto: data.monto,
+        fecha_pago: data.fecha_pago,
+        medio_pago: data.medio_pago,
+        referencia: data.referencia,
+        observaciones: data.observaciones,
+        created_by: user?.id,
+      };
+      if (data.factura_id) insertData.factura_id = data.factura_id;
       const { data: result, error } = await supabase
         .from('pagos_proveedores')
-        .insert({
-          factura_id: data.factura_id,
-          proveedor_id: data.proveedor_id,
-          branch_id: data.branch_id,
-          monto: data.monto,
-          fecha_pago: data.fecha_pago,
-          medio_pago: data.medio_pago,
-          referencia: data.referencia,
-          observaciones: data.observaciones,
-          created_by: user?.id,
-        })
+        .insert(insertData as any)
         .select()
         .single();
       if (error) throw error;
       return result;
     },
     onSuccess: (_, vars) => {
-      qc.invalidateQueries({ queryKey: ['pagos-proveedor', vars.factura_id] });
+      if (vars.factura_id) qc.invalidateQueries({ queryKey: ['pagos-proveedor', vars.factura_id] });
       qc.invalidateQueries({ queryKey: ['facturas'] });
       qc.invalidateQueries({ queryKey: ['movimientos-proveedor'] });
       qc.invalidateQueries({ queryKey: ['saldo-proveedor'] });

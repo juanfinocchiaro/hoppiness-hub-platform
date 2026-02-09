@@ -36,7 +36,7 @@ export interface ItemFacturaFormData {
 }
 
 export interface PagoProveedorFormData {
-  factura_id: string;
+  factura_id?: string;
   proveedor_id: string;
   branch_id: string;
   monto: number;
