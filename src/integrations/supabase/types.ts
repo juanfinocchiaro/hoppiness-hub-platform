@@ -2484,6 +2484,10 @@ export type Database = {
           monto: number
           observaciones: string | null
           referencia: string | null
+          verificado: boolean
+          verificado_at: string | null
+          verificado_notas: string | null
+          verificado_por: string | null
         }
         Insert: {
           branch_id: string
@@ -2498,6 +2502,10 @@ export type Database = {
           monto: number
           observaciones?: string | null
           referencia?: string | null
+          verificado?: boolean
+          verificado_at?: string | null
+          verificado_notas?: string | null
+          verificado_por?: string | null
         }
         Update: {
           branch_id?: string
@@ -2512,6 +2520,10 @@ export type Database = {
           monto?: number
           observaciones?: string | null
           referencia?: string | null
+          verificado?: boolean
+          verificado_at?: string | null
+          verificado_notas?: string | null
+          verificado_por?: string | null
         }
         Relationships: [
           {
@@ -3677,6 +3689,7 @@ export type Database = {
           cargado_por: string | null
           created_at: string | null
           deleted_at: string | null
+          efectivo: number | null
           fc_total: number
           fecha_carga: string | null
           ft_total: number
@@ -3685,12 +3698,14 @@ export type Database = {
           periodo: string
           porcentaje_ft: number | null
           updated_at: string | null
+          venta_total: number | null
         }
         Insert: {
           branch_id: string
           cargado_por?: string | null
           created_at?: string | null
           deleted_at?: string | null
+          efectivo?: number | null
           fc_total: number
           fecha_carga?: string | null
           ft_total: number
@@ -3699,12 +3714,14 @@ export type Database = {
           periodo: string
           porcentaje_ft?: number | null
           updated_at?: string | null
+          venta_total?: number | null
         }
         Update: {
           branch_id?: string
           cargado_por?: string | null
           created_at?: string | null
           deleted_at?: string | null
+          efectivo?: number | null
           fc_total?: number
           fecha_carga?: string | null
           ft_total?: number
@@ -3713,6 +3730,7 @@ export type Database = {
           periodo?: string
           porcentaje_ft?: number | null
           updated_at?: string | null
+          venta_total?: number | null
         }
         Relationships: [
           {

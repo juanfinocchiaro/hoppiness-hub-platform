@@ -21,8 +21,8 @@ export function VentaMensualFormModal({ open, onOpenChange, branchId, venta }: V
 
   const [form, setForm] = useState({
     periodo: getCurrentPeriodo(),
-    fc_total: '',
-    ft_total: '',
+    venta_total: '',
+    efectivo: '',
     observaciones: '',
   });
 
@@ -30,34 +30,37 @@ export function VentaMensualFormModal({ open, onOpenChange, branchId, venta }: V
     if (open && venta) {
       setForm({
         periodo: venta.periodo,
-        fc_total: String(venta.fc_total),
-        ft_total: String(venta.ft_total),
+        venta_total: String(venta.venta_total ?? (Number(venta.fc_total) + Number(venta.ft_total))),
+        efectivo: String(venta.efectivo ?? venta.ft_total),
         observaciones: venta.observaciones || '',
       });
     } else if (open) {
-      setForm({ periodo: getCurrentPeriodo(), fc_total: '', ft_total: '', observaciones: '' });
+      setForm({ periodo: getCurrentPeriodo(), venta_total: '', efectivo: '', observaciones: '' });
     }
   }, [open, venta]);
 
-  const fcTotal = parseFloat(form.fc_total) || 0;
-  const ftTotal = parseFloat(form.ft_total) || 0;
-  const ventasTotal = fcTotal + ftTotal;
-  const porcentajeFt = ventasTotal > 0 ? ((ftTotal / ventasTotal) * 100).toFixed(1) : '0.0';
+  const ventaTotal = parseFloat(form.venta_total) || 0;
+  const efectivo = parseFloat(form.efectivo) || 0;
+  const facturacionContable = ventaTotal - efectivo;
+  const porcentajeEfectivo = ventaTotal > 0 ? ((efectivo / ventaTotal) * 100).toFixed(1) : '0.0';
 
   const handleSubmit = async () => {
-    if (!form.fc_total || !form.ft_total) return;
+    if (!form.venta_total) return;
+    const payload = {
+      venta_total: ventaTotal,
+      efectivo: efectivo,
+      fc_total: facturacionContable,
+      ft_total: efectivo,
+      observaciones: form.observaciones || undefined,
+    };
+
     if (isEditing) {
-      await update.mutateAsync({
-        id: venta.id,
-        data: { fc_total: fcTotal, ft_total: ftTotal, observaciones: form.observaciones || undefined },
-      });
+      await update.mutateAsync({ id: venta.id, data: payload });
     } else {
       await create.mutateAsync({
         branch_id: branchId,
         periodo: form.periodo,
-        fc_total: fcTotal,
-        ft_total: ftTotal,
-        observaciones: form.observaciones || undefined,
+        ...payload,
       });
     }
     onOpenChange(false);
@@ -84,32 +87,32 @@ export function VentaMensualFormModal({ open, onOpenChange, branchId, venta }: V
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Facturación Contable (FC) *</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={form.fc_total}
-                onChange={e => set('fc_total', e.target.value)}
-                placeholder="$ 0.00"
-              />
-            </div>
-            <div>
-              <Label>Facturación Total (FT) *</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={form.ft_total}
-                onChange={e => set('ft_total', e.target.value)}
-                placeholder="$ 0.00"
-              />
-            </div>
+          <div>
+            <Label>Venta Total *</Label>
+            <Input
+              type="number"
+              step="0.01"
+              value={form.venta_total}
+              onChange={e => set('venta_total', e.target.value)}
+              placeholder="$ 0.00"
+            />
+          </div>
+
+          <div>
+            <Label>Efectivo</Label>
+            <Input
+              type="number"
+              step="0.01"
+              value={form.efectivo}
+              onChange={e => set('efectivo', e.target.value)}
+              placeholder="$ 0.00"
+            />
           </div>
 
           <div className="p-3 rounded-md bg-muted text-sm space-y-1">
-            <p>Ventas Totales (FC+FT): <strong>$ {ventasTotal.toLocaleString('es-AR')}</strong></p>
-            <p>% FT sobre total: <strong>{porcentajeFt}%</strong></p>
+            <p>Venta Total: <strong>$ {ventaTotal.toLocaleString('es-AR')}</strong></p>
+            <p>Efectivo: <strong>$ {efectivo.toLocaleString('es-AR')}</strong> ({porcentajeEfectivo}%)</p>
+            <p>Facturación Contable (FC): <strong>$ {facturacionContable.toLocaleString('es-AR')}</strong></p>
           </div>
 
           <div>
@@ -119,7 +122,7 @@ export function VentaMensualFormModal({ open, onOpenChange, branchId, venta }: V
 
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button onClick={handleSubmit} disabled={isPending || !form.fc_total || !form.ft_total}>
+            <Button onClick={handleSubmit} disabled={isPending || !form.venta_total}>
               {isPending ? 'Guardando...' : isEditing ? 'Guardar Cambios' : 'Registrar'}
             </Button>
           </div>
