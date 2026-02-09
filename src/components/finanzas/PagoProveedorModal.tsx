@@ -1,14 +1,15 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { usePagoProveedorMutations } from '@/hooks/useCompras';
 import { MEDIO_PAGO_OPTIONS } from '@/types/compra';
 import type { FacturaProveedor } from '@/types/compra';
-import { Banknote, ArrowRightLeft, Plus, Trash2 } from 'lucide-react';
+import { Banknote, ArrowRightLeft, Plus, Trash2, BadgeDollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Props {
@@ -16,6 +17,11 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   factura: FacturaProveedor | null;
   proveedorNombre?: string;
+  /** For account-level payments without a specific invoice */
+  proveedorId?: string;
+  branchId?: string;
+  /** Global credit balance (saldo a favor) from the account */
+  saldoAFavor?: number;
 }
 
 interface PagoLine {
@@ -52,14 +58,17 @@ function parseCanonObservaciones(obs: string | null) {
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const EMPTY_LINE = (): PagoLine => ({ monto: '', medio_pago: 'transferencia', fecha: todayStr() });
 
-export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombre }: Props) {
+export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombre, proveedorId, branchId, saldoAFavor = 0 }: Props) {
   const { create } = usePagoProveedorMutations();
   const [lines, setLines] = useState<PagoLine[]>([EMPTY_LINE()]);
   const [referencia, setReferencia] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const isAccountLevel = !factura;
   const saldoPendiente = Number(factura?.saldo_pendiente ?? 0);
+  const effectiveProveedorId = factura?.proveedor_id || proveedorId || '';
+  const effectiveBranchId = factura?.branch_id || branchId || '';
   const isHoppiness = proveedorNombre?.toLowerCase().includes('hoppiness');
   const canonInfo = useMemo(() => {
     if (!isHoppiness || !factura) return null;
@@ -67,7 +76,16 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
   }, [isHoppiness, factura]);
 
   const totalPagos = lines.reduce((s, l) => s + (parseFloat(l.monto) || 0), 0);
-  const saldoResultante = saldoPendiente - totalPagos;
+  const saldoResultante = isAccountLevel ? -totalPagos : saldoPendiente - totalPagos;
+
+  // Reset on open
+  useEffect(() => {
+    if (open) {
+      setLines([EMPTY_LINE()]);
+      setReferencia('');
+      setObservaciones('');
+    }
+  }, [open]);
 
   const updateLine = (idx: number, key: keyof PagoLine, value: string) => {
     setLines(prev => prev.map((l, i) => i === idx ? { ...l, [key]: value } : l));
@@ -81,8 +99,16 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
     if (lines.length > 1) setLines(prev => prev.filter((_, i) => i !== idx));
   };
 
+  const applySaldoAFavor = () => {
+    if (saldoAFavor <= 0 || !factura) return;
+    const montoAplicar = Math.min(saldoAFavor, saldoPendiente);
+    setLines(prev => {
+      const first = prev[0];
+      return [{ ...first, monto: montoAplicar.toFixed(2) }, ...prev.slice(1)];
+    });
+  };
+
   const handleSubmit = async () => {
-    if (!factura) return;
     const validLines = lines.filter(l => parseFloat(l.monto) > 0);
     if (validLines.length === 0) return;
 
@@ -90,9 +116,9 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
     try {
       for (const line of validLines) {
         await create.mutateAsync({
-          factura_id: factura.id,
-          proveedor_id: factura.proveedor_id,
-          branch_id: factura.branch_id,
+          factura_id: factura?.id || undefined,
+          proveedor_id: effectiveProveedorId,
+          branch_id: effectiveBranchId,
           monto: parseFloat(line.monto),
           fecha_pago: line.fecha,
           medio_pago: line.medio_pago,
@@ -101,9 +127,6 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
         });
       }
       onOpenChange(false);
-      setLines([EMPTY_LINE()]);
-      setReferencia('');
-      setObservaciones('');
     } catch {
       // error handled by mutation
     } finally {
@@ -130,14 +153,38 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Registrar Pago</DialogTitle>
+          <DialogTitle>{isAccountLevel ? 'Registrar Pago a Cuenta' : 'Registrar Pago'}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="p-3 rounded-md bg-muted text-sm">
-            <p>Total factura: <strong>$ {fmt(Number(factura?.total ?? 0))}</strong></p>
-            <p>Saldo pendiente: <strong className="text-destructive">$ {fmt(saldoPendiente)}</strong></p>
-          </div>
+          {/* Invoice info - only when paying a specific invoice */}
+          {factura && (
+            <div className="p-3 rounded-md bg-muted text-sm">
+              <p>Total factura: <strong>$ {fmt(Number(factura.total ?? 0))}</strong></p>
+              <p>Saldo pendiente: <strong className="text-destructive">$ {fmt(saldoPendiente)}</strong></p>
+            </div>
+          )}
+
+          {/* Account-level payment info */}
+          {isAccountLevel && (
+            <div className="p-3 rounded-md bg-muted text-sm">
+              <p className="text-muted-foreground">Pago a cuenta general para <strong>{proveedorNombre || 'Proveedor'}</strong></p>
+              <p className="text-xs text-muted-foreground mt-1">Este pago no se vincula a una factura específica. Se reflejará como saldo a favor en la cuenta corriente.</p>
+            </div>
+          )}
+
+          {/* Saldo a favor banner - when paying a specific invoice and there's credit */}
+          {factura && saldoAFavor > 0 && (
+            <Alert className="border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800">
+              <BadgeDollarSign className="h-4 w-4 text-green-600" />
+              <AlertDescription className="flex items-center justify-between">
+                <span className="text-sm">Saldo a favor: <strong className="text-green-600">$ {fmt(saldoAFavor)}</strong></span>
+                <Button type="button" variant="outline" size="sm" className="h-7 text-xs ml-2 border-green-300 text-green-700 hover:bg-green-100" onClick={applySaldoAFavor}>
+                  Aplicar
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Canon breakdown for Hoppiness Club */}
           {canonInfo && (
@@ -228,14 +275,16 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
                   <span className="text-muted-foreground">Total a registrar:</span>
                   <span className="font-mono font-semibold">$ {fmt(totalPagos)}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    {saldoResultante >= 0 ? 'Saldo pendiente:' : 'Saldo a favor:'}
-                  </span>
-                  <span className={`font-mono font-semibold ${saldoResultante < 0 ? 'text-green-600' : saldoResultante === 0 ? 'text-green-600' : 'text-destructive'}`}>
-                    $ {fmt(Math.abs(saldoResultante))}
-                  </span>
-                </div>
+                {!isAccountLevel && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      {saldoResultante >= 0 ? 'Saldo pendiente:' : 'Saldo a favor:'}
+                    </span>
+                    <span className={`font-mono font-semibold ${saldoResultante <= 0 ? 'text-green-600' : 'text-destructive'}`}>
+                      $ {fmt(Math.abs(saldoResultante))}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>

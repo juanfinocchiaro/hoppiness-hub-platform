@@ -52,7 +52,7 @@ export function useMovimientosProveedor(branchId?: string, proveedorId?: string)
         .order('factura_fecha', { ascending: true });
       if (fErr) throw fErr;
 
-      // Get pagos
+      // Get pagos (both invoice-linked and account-level)
       const { data: pagos, error: pErr } = await supabase
         .from('pagos_proveedores')
         .select('id, fecha_pago, monto, medio_pago, referencia, factura_id, verificado')
@@ -85,7 +85,7 @@ export function useMovimientosProveedor(branchId?: string, proveedorId?: string)
           fecha: p.fecha_pago,
           tipo: 'pago',
           medio_pago: p.medio_pago ?? undefined,
-          referencia: p.referencia ?? undefined,
+          referencia: !p.factura_id ? 'Pago a cuenta' : (p.referencia ?? undefined),
           monto: Number(p.monto),
           saldo_acumulado: 0,
           verificado: p.verificado ?? true,

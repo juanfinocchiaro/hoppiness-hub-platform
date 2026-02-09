@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Building2, Phone, Mail, CreditCard, AlertTriangle,
-  TrendingUp, Calendar, ArrowLeft, Pencil, Trash2
+  TrendingUp, Calendar, ArrowLeft, Pencil, Trash2, Plus
 } from 'lucide-react';
 import { useSaldoProveedor, useMovimientosProveedor } from '@/hooks/useCuentaCorrienteProveedor';
 import { useProveedores } from '@/hooks/useProveedores';
@@ -39,9 +39,13 @@ export default function CuentaCorrienteProveedorPage() {
   const { data: movimientos, isLoading: loadingMov } = useMovimientosProveedor(branchId, proveedorId);
   const { softDeletePago } = usePagoProveedorMutations();
   const [payingFacturaId, setPayingFacturaId] = useState<string | null>(null);
+  const [payingAccountLevel, setPayingAccountLevel] = useState(false);
   const [editingProveedor, setEditingProveedor] = useState(false);
   const [deletingPagoId, setDeletingPagoId] = useState<string | null>(null);
   const { data: facturaData } = useFacturaById(payingFacturaId);
+
+  const totalPendiente = Number(saldo?.total_pendiente || 0);
+  const saldoAFavor = totalPendiente < 0 ? Math.abs(totalPendiente) : 0;
 
   const payingFactura = payingFacturaId && facturaData ? {
     ...facturaData,
@@ -55,9 +59,14 @@ export default function CuentaCorrienteProveedorPage() {
         title={proveedor?.razon_social || 'Proveedor'}
         subtitle={proveedor?.cuit ? `CUIT: ${proveedor.cuit}` : undefined}
         actions={
-          <Button variant="outline" onClick={() => navigate(`/milocal/${branchId}/finanzas/proveedores`)}>
-            <ArrowLeft className="w-4 h-4 mr-2" /> Volver
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="default" size="sm" onClick={() => setPayingAccountLevel(true)}>
+              <Plus className="w-4 h-4 mr-1" /> Registrar Pago
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate(`/milocal/${branchId}/finanzas/proveedores`)}>
+              <ArrowLeft className="w-4 h-4 mr-1" /> Volver
+            </Button>
+          </div>
         }
       />
 
@@ -81,15 +90,24 @@ export default function CuentaCorrienteProveedorPage() {
           <>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Saldo Pendiente</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {totalPendiente >= 0 ? 'Saldo Pendiente' : 'Saldo a Favor'}
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold font-mono">
-                  $ {Number(saldo?.total_pendiente || 0).toLocaleString('es-AR')}
+                <div className={`text-2xl font-bold font-mono ${totalPendiente < 0 ? 'text-green-600' : totalPendiente === 0 ? 'text-green-600' : ''}`}>
+                  $ {Number(Math.abs(totalPendiente)).toLocaleString('es-AR')}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {saldo?.facturas_pendientes || 0} factura(s) pendiente(s)
-                </p>
+                {totalPendiente >= 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {saldo?.facturas_pendientes || 0} factura(s) pendiente(s)
+                  </p>
+                )}
+                {totalPendiente < 0 && (
+                  <p className="text-xs text-green-600 mt-1">
+                    Se aplicará a próximas facturas
+                  </p>
+                )}
               </CardContent>
             </Card>
             <Card>
@@ -294,6 +312,16 @@ export default function CuentaCorrienteProveedorPage() {
         onOpenChange={() => setPayingFacturaId(null)}
         factura={payingFactura as any}
         proveedorNombre={proveedor?.razon_social}
+        saldoAFavor={saldoAFavor}
+      />
+
+      <PagoProveedorModal
+        open={payingAccountLevel}
+        onOpenChange={setPayingAccountLevel}
+        factura={null}
+        proveedorNombre={proveedor?.razon_social}
+        proveedorId={proveedorId}
+        branchId={branchId}
       />
 
       <ConfirmDialog

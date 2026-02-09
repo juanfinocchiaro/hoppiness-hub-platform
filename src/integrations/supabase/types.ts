@@ -4148,22 +4148,7 @@ export type Database = {
           total_pagado: number | null
           total_pendiente: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "facturas_proveedores_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "facturas_proveedores_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches_public"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       profiles_public: {
         Row: {
