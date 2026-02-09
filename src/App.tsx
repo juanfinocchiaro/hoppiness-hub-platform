@@ -42,7 +42,7 @@ import CuentaCorrienteProveedorPage from "./pages/local/CuentaCorrienteProveedor
 import InsumosLocalPage from "./pages/local/InsumosLocalPage";
 import ComprasPage from "./pages/local/ComprasPage";
 import GastosPage from "./pages/local/GastosPage";
-import VentasMensualesPage from "./pages/local/VentasMensualesPage";
+import VentasMensualesPage from "./pages/local/VentasMensualesPage"; // kept for potential read-only use
 import ConsumosPage from "./pages/local/ConsumosPage";
 import SociosPage from "./pages/local/SociosPage";
 import PeriodosPage from "./pages/local/PeriodosPage";
@@ -69,6 +69,7 @@ import InspectionDetailPage from "./pages/admin/InspectionDetailPage";
 import ProveedoresPage from "./pages/admin/ProveedoresPage";
 import InsumosPage from "./pages/admin/InsumosPage";
 import CanonPage from "./pages/admin/CanonPage";
+import VentasMensualesMarcaPage from "./pages/admin/VentasMensualesMarcaPage";
 
 // Mi Local - Comunicaciones
 import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
@@ -175,7 +176,7 @@ const App = () => (
               <Route path="finanzas/insumos" element={<InsumosLocalPage />} />
               <Route path="finanzas/compras" element={<ComprasPage />} />
               <Route path="finanzas/gastos" element={<GastosPage />} />
-              <Route path="finanzas/ventas" element={<VentasMensualesPage />} />
+              {/* Ventas Mensuales removed from local - now in Mi Marca */}
               <Route path="finanzas/consumos" element={<ConsumosPage />} />
               <Route path="finanzas/socios" element={<SociosPage />} />
               <Route path="finanzas/periodos" element={<PeriodosPage />} />
@@ -218,6 +219,7 @@ const App = () => (
               <Route path="finanzas/proveedores" element={<ProveedoresPage />} />
               <Route path="finanzas/insumos" element={<InsumosPage />} />
               <Route path="finanzas/canon" element={<CanonPage />} />
+              <Route path="finanzas/ventas-mensuales" element={<VentasMensualesMarcaPage />} />
               
               {/* Configuración */}
               <Route path="reglamentos" element={<BrandRegulationsPage />} />

@@ -91,7 +91,7 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
   const isOperacionesActive = isActive(['finanzas/compras', 'finanzas/proveedores']);
   
   const isFinanzasActive = isActive([
-    'finanzas/gastos', 'finanzas/consumos', 'finanzas/ventas',
+    'finanzas/gastos', 'finanzas/consumos',
     'finanzas/pl', 'finanzas/periodos',
   ]);
 
@@ -176,7 +176,6 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
         >
           <NavItemButton to={`${basePath}/finanzas/gastos`} icon={Receipt} label="Gastos" />
           <NavItemButton to={`${basePath}/finanzas/consumos`} icon={Package} label="Consumos" />
-          <NavItemButton to={`${basePath}/finanzas/ventas`} icon={TrendingUp} label="Ventas Mensuales" />
           <NavItemButton to={`${basePath}/finanzas/pl`} icon={BarChart3} label="Resultado Económico" />
           <NavItemButton to={`${basePath}/finanzas/periodos`} icon={CalendarDays} label="Períodos" />
         </NavSectionGroup>

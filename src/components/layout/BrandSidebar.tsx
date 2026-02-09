@@ -33,6 +33,7 @@ import {
   Package,
   Truck,
   Landmark,
+  TrendingUp,
   CalendarDays,
   Calendar,
   Eye,
@@ -119,6 +120,7 @@ export function BrandSidebar() {
           icon={Wallet}
           forceOpen={isFinanzasActive}
         >
+          <NavItemButton to="/mimarca/finanzas/ventas-mensuales" icon={TrendingUp} label="Ventas Mensuales" />
           <NavItemButton to="/mimarca/finanzas/canon" icon={Landmark} label="Canon" />
         </NavSectionGroup>
 
