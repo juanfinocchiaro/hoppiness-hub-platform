@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { TrendingUp, TrendingDown, DollarSign, BarChart3, ArrowDown, ArrowUp } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, BarChart3, ArrowDown, ArrowUp, ChevronRight, ChevronDown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,11 +31,11 @@ function useVentasData(branchId: string, periodo: string) {
   });
 }
 
-function RdoLine({ label, value, pct, indent = 0, bold = false, negative = false }: {
-  label: string; value: number; pct?: number; indent?: number; bold?: boolean; negative?: boolean;
+function RdoLine({ label, value, pct, indent = 0, bold = false }: {
+  label: string; value: number; pct?: number; indent?: number; bold?: boolean;
 }) {
-  const formatted = `${negative ? '- ' : ''}$ ${Math.abs(value).toLocaleString('es-AR', { minimumFractionDigits: 0 })}`;
-  const pl = indent === 1 ? 'pl-4' : indent === 2 ? 'pl-8' : indent === 3 ? 'pl-12' : '';
+  const formatted = `$ ${Math.abs(value).toLocaleString('es-AR', { minimumFractionDigits: 0 })}`;
+  const pl = indent === 1 ? 'pl-5' : indent === 2 ? 'pl-10' : indent === 3 ? 'pl-14' : '';
   return (
     <div className={`flex justify-between items-center py-1.5 ${pl} ${bold ? 'font-semibold text-base' : 'text-sm'}`}>
       <span className={bold ? '' : 'text-muted-foreground'}>{label}</span>
@@ -49,8 +49,38 @@ function RdoLine({ label, value, pct, indent = 0, bold = false, negative = false
   );
 }
 
+function CollapsibleRow({ label, value, pct, indent = 0, bold = false, expanded, onToggle, children }: {
+  label: string; value: number; pct?: number; indent?: number; bold?: boolean;
+  expanded: boolean; onToggle: () => void; children: React.ReactNode;
+}) {
+  const formatted = `$ ${Math.abs(value).toLocaleString('es-AR', { minimumFractionDigits: 0 })}`;
+  const pl = indent === 1 ? 'pl-4' : indent === 2 ? 'pl-8' : '';
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onToggle}
+        className={`flex justify-between items-center py-1.5 w-full text-left hover:bg-muted/40 rounded-sm transition-colors ${pl} ${bold ? 'font-semibold text-base' : 'text-sm font-medium'}`}
+      >
+        <span className="flex items-center gap-1">
+          {expanded
+            ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+            : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
+          {label}
+        </span>
+        <div className="flex items-center gap-3">
+          {pct !== undefined && (
+            <span className="text-xs text-muted-foreground font-mono w-14 text-right">{pct.toFixed(1)}%</span>
+          )}
+          <span className={`font-mono min-w-[100px] text-right ${bold ? 'font-bold' : ''}`}>{formatted}</span>
+        </div>
+      </button>
+      {expanded && children}
+    </div>
+  );
+}
+
 function SectionBlock({ title, lines, ventas }: { title: string; lines: RdoReportLine[]; ventas: number }) {
-  // Group: level 2 parents, then level 3 children
   const level2 = lines.filter(l => l.level === 2);
   const level3 = lines.filter(l => l.level === 3);
 
@@ -58,30 +88,41 @@ function SectionBlock({ title, lines, ventas }: { title: string; lines: RdoRepor
     const children = level3.filter(c => c.parent_code === l.category_code);
     return s + children.reduce((cs, c) => cs + c.total, 0);
   }, 0);
-
   const sectionPct = ventas > 0 ? (sectionTotal / ventas) * 100 : 0;
 
+  const [sectionExpanded, setSectionExpanded] = useState(true);
+  const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(level2.map(p => [p.category_code, true]))
+  );
+
+  const toggleParent = (code: string) =>
+    setExpandedParents(prev => ({ ...prev, [code]: !prev[code] }));
+
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between items-center py-2">
-        <span className="font-bold text-base">{title}</span>
-        <div className="flex items-center gap-3">
-          <Badge variant={sectionTotal > 0 ? 'secondary' : 'outline'} className="font-mono text-xs">
-            {sectionPct.toFixed(1)}%
-          </Badge>
-          <span className="font-mono font-bold min-w-[100px] text-right">
-            $ {sectionTotal.toLocaleString('es-AR')}
-          </span>
-        </div>
-      </div>
+    <CollapsibleRow
+      label={title}
+      value={sectionTotal}
+      pct={sectionPct}
+      bold
+      expanded={sectionExpanded}
+      onToggle={() => setSectionExpanded(e => !e)}
+    >
       {level2.map(parent => {
         const children = level3.filter(c => c.parent_code === parent.category_code);
         const parentTotal = children.reduce((s, c) => s + c.total, 0);
         const parentPct = ventas > 0 ? (parentTotal / ventas) * 100 : 0;
 
         return (
-          <div key={parent.category_code}>
-            <RdoLine label={parent.category_name} value={parentTotal} pct={parentPct} indent={1} bold />
+          <CollapsibleRow
+            key={parent.category_code}
+            label={parent.category_name}
+            value={parentTotal}
+            pct={parentPct}
+            indent={1}
+            bold
+            expanded={!!expandedParents[parent.category_code]}
+            onToggle={() => toggleParent(parent.category_code)}
+          >
             {children.map(child => (
               <RdoLine
                 key={child.category_code}
@@ -91,10 +132,10 @@ function SectionBlock({ title, lines, ventas }: { title: string; lines: RdoRepor
                 indent={2}
               />
             ))}
-          </div>
+          </CollapsibleRow>
         );
       })}
-    </div>
+    </CollapsibleRow>
   );
 }
 
@@ -124,6 +165,8 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
   const totalCostos = totalVariables + totalFijos;
   const resultadoOperativo = totalVentas - totalCostos;
   const margenOperativo = totalVentas > 0 ? (resultadoOperativo / totalVentas) * 100 : 0;
+
+  const [ventasExpanded, setVentasExpanded] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -197,12 +240,20 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
             </CardHeader>
             <CardContent className="space-y-1">
               {/* Ventas */}
-              <RdoLine label="Ventas Totales" value={totalVentas} pct={100} bold />
-              {ventas && ventas.fc > 0 && (
-                <>
+              {ventas && ventas.fc > 0 ? (
+                <CollapsibleRow
+                  label="Ventas Totales"
+                  value={totalVentas}
+                  pct={100}
+                  bold
+                  expanded={ventasExpanded}
+                  onToggle={() => setVentasExpanded(e => !e)}
+                >
                   <RdoLine label="Facturación Contable (FC)" value={ventas.fc} indent={1} />
                   <RdoLine label="Facturación Total (FT)" value={ventas.ft} indent={1} />
-                </>
+                </CollapsibleRow>
+              ) : (
+                <RdoLine label="Ventas Totales" value={totalVentas} pct={100} bold />
               )}
 
               <Separator className="my-3" />
