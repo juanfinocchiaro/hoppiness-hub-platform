@@ -25,6 +25,9 @@ import {
   Briefcase,
   Calculator,
   Calendar,
+  Wallet,
+  Truck,
+  Package,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -66,6 +69,12 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
 
   const adminPaths = ['equipo/adelantos', 'equipo/apercibimientos', 'equipo/reglamentos'];
   const isAdminActive = adminPaths.some(path => {
+    const fullPath = `${basePath}/${path}`;
+    return location.pathname === fullPath || location.pathname.startsWith(`${fullPath}/`);
+  });
+
+  const finanzasPaths = ['finanzas/proveedores', 'finanzas/insumos'];
+  const isFinanzasActive = finanzasPaths.some(path => {
     const fullPath = `${basePath}/${path}`;
     return location.pathname === fullPath || location.pathname.startsWith(`${fullPath}/`);
   });
@@ -154,6 +163,19 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
           {canEditSchedules && (
             <NavItemButton to={`${basePath}/equipo/reglamentos`} icon={FileText} label="Firmas" />
           )}
+        </NavSectionGroup>
+      )}
+
+      {/* Finanzas Section (read-only) */}
+      {(permissions.canViewTeam) && (
+        <NavSectionGroup
+          id="finanzas"
+          label="Finanzas"
+          icon={Wallet}
+          forceOpen={isFinanzasActive}
+        >
+          <NavItemButton to={`${basePath}/finanzas/proveedores`} icon={Truck} label="Proveedores" />
+          <NavItemButton to={`${basePath}/finanzas/insumos`} icon={Package} label="Insumos" />
         </NavSectionGroup>
       )}
 
