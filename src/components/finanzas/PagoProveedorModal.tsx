@@ -17,10 +17,8 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   factura: FacturaProveedor | null;
   proveedorNombre?: string;
-  /** For account-level payments without a specific invoice */
   proveedorId?: string;
   branchId?: string;
-  /** Global credit balance (saldo a favor) from the account */
   saldoAFavor?: number;
 }
 
@@ -28,6 +26,7 @@ interface PagoLine {
   monto: string;
   medio_pago: string;
   fecha: string;
+  locked?: boolean; // imputación lines can't be edited
 }
 
 function parseCanonObservaciones(obs: string | null) {
@@ -64,6 +63,7 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
   const [referencia, setReferencia] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [hasImputacion, setHasImputacion] = useState(false);
 
   const isAccountLevel = !factura;
   const saldoPendiente = Number(factura?.saldo_pendiente ?? 0);
@@ -78,12 +78,12 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
   const totalPagos = lines.reduce((s, l) => s + (parseFloat(l.monto) || 0), 0);
   const saldoResultante = isAccountLevel ? -totalPagos : saldoPendiente - totalPagos;
 
-  // Reset on open
   useEffect(() => {
     if (open) {
       setLines([EMPTY_LINE()]);
       setReferencia('');
       setObservaciones('');
+      setHasImputacion(false);
     }
   }, [open]);
 
@@ -96,16 +96,28 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
   };
 
   const removeLine = (idx: number) => {
+    const line = lines[idx];
+    if (line.locked) {
+      setHasImputacion(false);
+    }
     if (lines.length > 1) setLines(prev => prev.filter((_, i) => i !== idx));
   };
 
-  const applySaldoAFavor = () => {
+  const imputarSaldoAFavor = () => {
     if (saldoAFavor <= 0 || !factura) return;
     const montoAplicar = Math.min(saldoAFavor, saldoPendiente);
+    const imputacionLine: PagoLine = {
+      monto: montoAplicar.toFixed(2),
+      medio_pago: 'imputacion_saldo',
+      fecha: todayStr(),
+      locked: true,
+    };
+    // Add imputación as first line, keep existing lines for remaining balance
     setLines(prev => {
-      const first = prev[0];
-      return [{ ...first, monto: montoAplicar.toFixed(2) }, ...prev.slice(1)];
+      const nonLocked = prev.filter(l => !l.locked);
+      return [imputacionLine, ...nonLocked];
     });
+    setHasImputacion(true);
   };
 
   const handleSubmit = async () => {
@@ -115,6 +127,7 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
     setSubmitting(true);
     try {
       for (const line of validLines) {
+        const isImputacion = line.medio_pago === 'imputacion_saldo';
         await create.mutateAsync({
           factura_id: factura?.id || undefined,
           proveedor_id: effectiveProveedorId,
@@ -122,8 +135,10 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
           monto: parseFloat(line.monto),
           fecha_pago: line.fecha,
           medio_pago: line.medio_pago,
-          referencia: referencia || undefined,
-          observaciones: observaciones || undefined,
+          referencia: isImputacion ? 'Imputación saldo a favor' : (referencia || undefined),
+          observaciones: isImputacion
+            ? `Imputación de saldo a favor de cuenta corriente. Monto: $${line.monto}`
+            : (observaciones || undefined),
         });
       }
       onOpenChange(false);
@@ -137,17 +152,23 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
   const setCanonPreset = () => {
     if (!canonInfo) return;
     const efectivo = Math.round(canonInfo.pagarEfectivo * 100) / 100;
-    const transferencia = Math.round((saldoPendiente - efectivo) * 100) / 100;
+    const pendienteRestante = hasImputacion
+      ? saldoPendiente - (parseFloat(lines.find(l => l.locked)?.monto || '0'))
+      : saldoPendiente;
+    const transferencia = Math.round((pendienteRestante - efectivo) * 100) / 100;
     const hoy = todayStr();
+    const imputacionLines = lines.filter(l => l.locked);
     setLines([
+      ...imputacionLines,
       { monto: efectivo.toFixed(2), medio_pago: 'efectivo', fecha: hoy },
-      { monto: transferencia.toFixed(2), medio_pago: 'transferencia', fecha: hoy },
+      { monto: transferencia > 0 ? transferencia.toFixed(2) : '0', medio_pago: 'transferencia', fecha: hoy },
     ]);
   };
 
   const fmt = (n: number) => Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const hasValidPayment = lines.some(l => parseFloat(l.monto) > 0);
+  const editableLines = lines.filter(l => !l.locked).length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -157,7 +178,6 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Invoice info - only when paying a specific invoice */}
           {factura && (
             <div className="p-3 rounded-md bg-muted text-sm">
               <p>Total factura: <strong>$ {fmt(Number(factura.total ?? 0))}</strong></p>
@@ -165,7 +185,6 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
             </div>
           )}
 
-          {/* Account-level payment info */}
           {isAccountLevel && (
             <div className="p-3 rounded-md bg-muted text-sm">
               <p className="text-muted-foreground">Pago a cuenta general para <strong>{proveedorNombre || 'Proveedor'}</strong></p>
@@ -173,20 +192,26 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
             </div>
           )}
 
-          {/* Saldo a favor banner - when paying a specific invoice and there's credit */}
-          {factura && saldoAFavor > 0 && (
+          {/* Saldo a favor banner with Imputar button */}
+          {factura && saldoAFavor > 0 && !hasImputacion && (
             <Alert className="border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800">
               <BadgeDollarSign className="h-4 w-4 text-green-600" />
-              <AlertDescription className="flex items-center justify-between">
-                <span className="text-sm">Saldo a favor: <strong className="text-green-600">$ {fmt(saldoAFavor)}</strong></span>
-                <Button type="button" variant="outline" size="sm" className="h-7 text-xs ml-2 border-green-300 text-green-700 hover:bg-green-100" onClick={applySaldoAFavor}>
-                  Aplicar
+              <AlertDescription className="flex items-center justify-between gap-2">
+                <span className="text-sm">
+                  Saldo a favor: <strong className="text-green-600">$ {fmt(saldoAFavor)}</strong>
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-7 text-xs shrink-0 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={imputarSaldoAFavor}
+                >
+                  Imputar saldo
                 </Button>
               </AlertDescription>
             </Alert>
           )}
 
-          {/* Canon breakdown for Hoppiness Club */}
           {canonInfo && (
             <div className="rounded-md border border-primary/20 bg-primary/5 p-3 space-y-2 text-sm">
               <p className="font-semibold text-primary">Desglose Canon</p>
@@ -233,7 +258,13 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
             </div>
 
             {lines.map((line, idx) => (
-              <div key={idx} className="space-y-1.5 rounded-md border p-2">
+              <div key={idx} className={`space-y-1.5 rounded-md border p-2 ${line.locked ? 'border-green-300 bg-green-50 dark:bg-green-950/20 dark:border-green-800' : ''}`}>
+                {line.locked && (
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <BadgeDollarSign className="w-3.5 h-3.5 text-green-600" />
+                    <span className="text-xs font-medium text-green-700 dark:text-green-400">Imputación de saldo a favor</span>
+                  </div>
+                )}
                 <div className="flex items-end gap-2">
                   <div className="flex-1">
                     <Label className="text-xs text-muted-foreground">Monto</Label>
@@ -243,29 +274,36 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
                       value={line.monto}
                       onChange={e => updateLine(idx, 'monto', e.target.value)}
                       placeholder="$ 0,00"
+                      disabled={line.locked}
                     />
                   </div>
                   <div className="w-[130px]">
                     <Label className="text-xs text-muted-foreground">Medio</Label>
-                    <Select value={line.medio_pago} onValueChange={v => updateLine(idx, 'medio_pago', v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {MEDIO_PAGO_OPTIONS.map(m => (
-                          <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {line.locked ? (
+                      <Input value="Imputación" disabled className="text-xs" />
+                    ) : (
+                      <Select value={line.medio_pago} onValueChange={v => updateLine(idx, 'medio_pago', v)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {MEDIO_PAGO_OPTIONS.map(m => (
+                            <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
-                  {lines.length > 1 && (
+                  {(lines.length > 1 || line.locked) && (
                     <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => removeLine(idx)}>
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
                   )}
                 </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Fecha</Label>
-                  <Input type="date" value={line.fecha} onChange={e => updateLine(idx, 'fecha', e.target.value)} />
-                </div>
+                {!line.locked && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Fecha</Label>
+                    <Input type="date" value={line.fecha} onChange={e => updateLine(idx, 'fecha', e.target.value)} />
+                  </div>
+                )}
               </div>
             ))}
 
@@ -289,14 +327,20 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
             )}
           </div>
 
-          <div>
-            <Label>Referencia</Label>
-            <Input value={referencia} onChange={e => setReferencia(e.target.value)} />
-          </div>
-          <div>
-            <Label>Observaciones</Label>
-            <Textarea value={observaciones} onChange={e => setObservaciones(e.target.value)} rows={2} />
-          </div>
+          {/* Shared referencia/observaciones only for non-imputación lines */}
+          {editableLines > 0 && (
+            <>
+              <div>
+                <Label>Referencia</Label>
+                <Input value={referencia} onChange={e => setReferencia(e.target.value)} />
+              </div>
+              <div>
+                <Label>Observaciones</Label>
+                <Textarea value={observaciones} onChange={e => setObservaciones(e.target.value)} rows={2} />
+              </div>
+            </>
+          )}
+
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
             <Button onClick={handleSubmit} disabled={submitting || !hasValidPayment}>

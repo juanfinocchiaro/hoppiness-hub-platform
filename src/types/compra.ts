@@ -76,6 +76,11 @@ export const MEDIO_PAGO_OPTIONS = [
   { value: 'cuenta_corriente', label: 'Cuenta Corriente' },
 ] as const;
 
+export const MEDIO_PAGO_OPTIONS_WITH_IMPUTACION = [
+  ...MEDIO_PAGO_OPTIONS,
+  { value: 'imputacion_saldo', label: 'Imputación saldo a favor' },
+] as const;
+
 export const FACTURA_TIPO_OPTIONS = [
   { value: 'A', label: 'Factura A' },
   { value: 'B', label: 'Factura B' },
