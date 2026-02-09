@@ -67,7 +67,7 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
   }, [isHoppiness, factura]);
 
   const totalPagos = lines.reduce((s, l) => s + (parseFloat(l.monto) || 0), 0);
-  const excede = totalPagos > saldoPendiente + 0.01;
+  const saldoResultante = saldoPendiente - totalPagos;
 
   const updateLine = (idx: number, key: keyof PagoLine, value: string) => {
     setLines(prev => prev.map((l, i) => i === idx ? { ...l, [key]: value } : l));
@@ -85,10 +85,6 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
     if (!factura) return;
     const validLines = lines.filter(l => parseFloat(l.monto) > 0);
     if (validLines.length === 0) return;
-    if (excede) {
-      toast.error('El total de pagos excede el saldo pendiente');
-      return;
-    }
 
     setSubmitting(true);
     try {
@@ -226,16 +222,21 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
               </div>
             ))}
 
-            {lines.length > 1 && (
-              <div className="flex justify-between text-sm pt-1 border-t">
-                <span className="text-muted-foreground">Total a registrar:</span>
-                <span className={`font-mono font-semibold ${excede ? 'text-destructive' : ''}`}>
-                  $ {fmt(totalPagos)}
-                </span>
+            {totalPagos > 0 && (
+              <div className="space-y-1 pt-2 border-t">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Total a registrar:</span>
+                  <span className="font-mono font-semibold">$ {fmt(totalPagos)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    {saldoResultante >= 0 ? 'Saldo pendiente:' : 'Saldo a favor:'}
+                  </span>
+                  <span className={`font-mono font-semibold ${saldoResultante < 0 ? 'text-green-600' : saldoResultante === 0 ? 'text-green-600' : 'text-destructive'}`}>
+                    $ {fmt(Math.abs(saldoResultante))}
+                  </span>
+                </div>
               </div>
-            )}
-            {excede && (
-              <p className="text-xs text-destructive">El total excede el saldo pendiente de $ {fmt(saldoPendiente)}</p>
             )}
           </div>
 
@@ -249,7 +250,7 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button onClick={handleSubmit} disabled={submitting || !hasValidPayment || excede}>
+            <Button onClick={handleSubmit} disabled={submitting || !hasValidPayment}>
               {submitting ? 'Guardando...' : lines.filter(l => parseFloat(l.monto) > 0).length > 1 ? `Registrar ${lines.filter(l => parseFloat(l.monto) > 0).length} Pagos` : 'Registrar Pago'}
             </Button>
           </div>
