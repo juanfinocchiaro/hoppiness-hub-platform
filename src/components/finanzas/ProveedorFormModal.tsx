@@ -12,12 +12,14 @@ import { LoadingButton } from '@/components/ui/loading-button';
 import { useProveedorMutations } from '@/hooks/useProveedores';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { Proveedor, ProveedorFormData, AMBITO_OPTIONS } from '@/types/financial';
+import type { Proveedor, ProveedorFormData } from '@/types/financial';
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   proveedor?: Proveedor | null;
+  /** Pre-set branch for local-scope creation from Mi Local */
+  defaultBranchId?: string;
 }
 
 const EMPTY: ProveedorFormData = {
@@ -26,7 +28,7 @@ const EMPTY: ProveedorFormData = {
   permite_cuenta_corriente: false,
 };
 
-export function ProveedorFormModal({ open, onOpenChange, proveedor }: Props) {
+export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranchId }: Props) {
   const { create, update } = useProveedorMutations();
   const isEdit = !!proveedor;
 
@@ -57,19 +59,25 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor }: Props) {
         descuento_pago_contado: proveedor.descuento_pago_contado || undefined,
         observaciones: proveedor.observaciones || '',
       });
+    } else if (defaultBranchId) {
+      // Creating from local panel: pre-set as local provider
+      setForm({ ...EMPTY, ambito: 'local', branch_id: defaultBranchId });
     } else {
       setForm(EMPTY);
     }
-  }, [proveedor, open]);
+  }, [proveedor, defaultBranchId, open]);
 
   const set = (key: keyof ProveedorFormData, value: any) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  // If creating from local context, lock ambito to 'local'
+  const isLocalContext = !!defaultBranchId && !isEdit;
 
   const handleSubmit = async () => {
     if (!form.razon_social.trim()) return;
     const payload = {
       ...form,
-      branch_id: form.ambito === 'local' ? form.branch_id : null,
+      branch_id: form.ambito === 'local' ? (form.branch_id || defaultBranchId || null) : null,
     };
 
     if (isEdit) {
@@ -104,16 +112,22 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor }: Props) {
                   <Input value={form.cuit || ''} onChange={(e) => set('cuit', e.target.value)} placeholder="XX-XXXXXXXX-X" />
                 </FormRow>
                 <FormRow label="Ámbito">
-                  <Select value={form.ambito} onValueChange={(v) => set('ambito', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="marca">Marca (todas)</SelectItem>
-                      <SelectItem value="local">Local (una sucursal)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {isLocalContext ? (
+                    <div className="flex items-center gap-2 h-10 px-3 border rounded-md bg-muted">
+                      <span className="text-sm text-muted-foreground">Local (esta sucursal)</span>
+                    </div>
+                  ) : (
+                    <Select value={form.ambito} onValueChange={(v) => set('ambito', v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="marca">Marca (todas)</SelectItem>
+                        <SelectItem value="local">Local (una sucursal)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                 </FormRow>
               </FormLayout>
-              {form.ambito === 'local' && (
+              {form.ambito === 'local' && !isLocalContext && (
                 <FormRow label="Sucursal" required>
                   <Select value={form.branch_id || ''} onValueChange={(v) => set('branch_id', v)}>
                     <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>

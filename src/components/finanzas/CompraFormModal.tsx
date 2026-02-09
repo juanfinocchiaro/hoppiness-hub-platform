@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Lock, AlertTriangle, CircleDot } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { useFacturaMutations } from '@/hooks/useCompras';
 import { useProveedores } from '@/hooks/useProveedores';
 import { useInsumos } from '@/hooks/useInsumos';
@@ -230,44 +231,85 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                     )}
                   </div>
 
-                  {item.tipo_item === 'insumo' ? (
-                    <div className="grid grid-cols-12 gap-2 items-end">
-                      <div className="col-span-4">
-                        <Label className="text-xs">Insumo *</Label>
-                        <Select value={item.insumo_id} onValueChange={v => updateItem(idx, 'insumo_id', v)}>
-                          <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                          <SelectContent>
-                            {insumos?.map(i => (
-                              <SelectItem key={i.id} value={i.id}>{i.nombre}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                  {item.tipo_item === 'insumo' ? (() => {
+                    const selectedInsumo = insumos?.find((i: any) => i.id === item.insumo_id) as any;
+                    const nivel = selectedInsumo?.nivel_control;
+                    const precioRef = selectedInsumo?.precio_referencia ? Number(selectedInsumo.precio_referencia) : null;
+                    const precioMax = selectedInsumo?.precio_maximo_sugerido ? Number(selectedInsumo.precio_maximo_sugerido) : null;
+                    const isOverpriced = precioMax && item.precio_unitario > precioMax;
+                    const provObligatorio = selectedInsumo?.proveedor_obligatorio;
+                    const wrongProvider = nivel === 'obligatorio' && provObligatorio && form.proveedor_id && form.proveedor_id !== provObligatorio.id;
+
+                    return (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-12 gap-2 items-end">
+                          <div className="col-span-4">
+                            <Label className="text-xs">Insumo *</Label>
+                            <Select value={item.insumo_id} onValueChange={v => updateItem(idx, 'insumo_id', v)}>
+                              <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                              <SelectContent>
+                                {insumos?.map((i: any) => (
+                                  <SelectItem key={i.id} value={i.id}>
+                                    {i.nivel_control === 'obligatorio' ? '🔒 ' : i.nivel_control === 'semi_libre' ? '🟡 ' : '🟢 '}{i.nombre}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="col-span-2">
+                            <Label className="text-xs">Cant. *</Label>
+                            <Input type="number" step="0.01" className="h-9" value={item.cantidad || ''} onChange={e => updateItem(idx, 'cantidad', parseFloat(e.target.value) || 0)} />
+                          </div>
+                          <div className="col-span-2">
+                            <Label className="text-xs">Unidad</Label>
+                            <Select value={item.unidad} onValueChange={v => updateItem(idx, 'unidad', v)}>
+                              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {UNIDAD_OPTIONS.map(u => (
+                                  <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="col-span-2">
+                            <Label className="text-xs">P.Unit *</Label>
+                            <Input type="number" step="0.01" className="h-9" value={item.precio_unitario || ''} onChange={e => updateItem(idx, 'precio_unitario', parseFloat(e.target.value) || 0)} />
+                          </div>
+                          <div className="col-span-2">
+                            <Label className="text-xs">Subtotal</Label>
+                            <Input className="h-9 font-mono" value={`$ ${item.subtotal.toLocaleString('es-AR')}`} disabled />
+                          </div>
+                        </div>
+                        {selectedInsumo && (
+                          <div className="space-y-1">
+                            {nivel === 'obligatorio' && (
+                              <div className="flex items-center gap-2 text-xs">
+                                <Badge variant="destructive" className="gap-1 text-xs"><Lock className="w-3 h-3" />Obligatorio</Badge>
+                                {provObligatorio && <span className="text-muted-foreground">Proveedor fijo: {provObligatorio.razon_social}</span>}
+                              </div>
+                            )}
+                            {nivel === 'semi_libre' && (
+                              <div className="flex items-center gap-2 text-xs">
+                                <Badge variant="secondary" className="gap-1 text-xs"><AlertTriangle className="w-3 h-3" />Semi-libre</Badge>
+                                {selectedInsumo.proveedor_sugerido && <span className="text-muted-foreground">Sugerido: {selectedInsumo.proveedor_sugerido.razon_social}</span>}
+                              </div>
+                            )}
+                            {wrongProvider && (
+                              <p className="text-xs text-destructive font-medium">
+                                ⚠️ Este insumo solo puede comprarse a {provObligatorio.razon_social}
+                              </p>
+                            )}
+                            {precioRef && item.precio_unitario > 0 && (
+                              <p className={`text-xs ${isOverpriced ? 'text-destructive' : 'text-muted-foreground'}`}>
+                                Ref: ${precioRef.toLocaleString('es-AR')}{precioMax ? ` / Máx: $${precioMax.toLocaleString('es-AR')}` : ''}
+                                {isOverpriced && ' ⚠️ Precio por encima del máximo'}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <div className="col-span-2">
-                        <Label className="text-xs">Cant. *</Label>
-                        <Input type="number" step="0.01" className="h-9" value={item.cantidad || ''} onChange={e => updateItem(idx, 'cantidad', parseFloat(e.target.value) || 0)} />
-                      </div>
-                      <div className="col-span-2">
-                        <Label className="text-xs">Unidad</Label>
-                        <Select value={item.unidad} onValueChange={v => updateItem(idx, 'unidad', v)}>
-                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {UNIDAD_OPTIONS.map(u => (
-                              <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="col-span-2">
-                        <Label className="text-xs">P.Unit *</Label>
-                        <Input type="number" step="0.01" className="h-9" value={item.precio_unitario || ''} onChange={e => updateItem(idx, 'precio_unitario', parseFloat(e.target.value) || 0)} />
-                      </div>
-                      <div className="col-span-2">
-                        <Label className="text-xs">Subtotal</Label>
-                        <Input className="h-9 font-mono" value={`$ ${item.subtotal.toLocaleString('es-AR')}`} disabled />
-                      </div>
-                    </div>
-                  ) : (
+                    );
+                  })() : (
                     <div className="grid grid-cols-12 gap-2 items-end">
                       <div className="col-span-6">
                         <Label className="text-xs">Concepto *</Label>
