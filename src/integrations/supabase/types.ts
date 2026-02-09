@@ -2790,9 +2790,13 @@ export type Database = {
       proveedores: {
         Row: {
           activo: boolean | null
+          alias_cbu: string | null
           ambito: string
+          banco: string | null
           branch_id: string | null
+          cbu: string | null
           contacto: string | null
+          contacto_secundario: string | null
           created_at: string | null
           created_by: string | null
           cuit: string | null
@@ -2803,18 +2807,25 @@ export type Database = {
           email: string | null
           id: string
           medios_pago_aceptados: Json | null
+          numero_cuenta: string | null
           observaciones: string | null
           permite_cuenta_corriente: boolean | null
           razon_social: string
           telefono: string | null
+          telefono_secundario: string | null
           tipo_especial: string | null
+          titular_cuenta: string | null
           updated_at: string | null
         }
         Insert: {
           activo?: boolean | null
+          alias_cbu?: string | null
           ambito?: string
+          banco?: string | null
           branch_id?: string | null
+          cbu?: string | null
           contacto?: string | null
+          contacto_secundario?: string | null
           created_at?: string | null
           created_by?: string | null
           cuit?: string | null
@@ -2825,18 +2836,25 @@ export type Database = {
           email?: string | null
           id?: string
           medios_pago_aceptados?: Json | null
+          numero_cuenta?: string | null
           observaciones?: string | null
           permite_cuenta_corriente?: boolean | null
           razon_social: string
           telefono?: string | null
+          telefono_secundario?: string | null
           tipo_especial?: string | null
+          titular_cuenta?: string | null
           updated_at?: string | null
         }
         Update: {
           activo?: boolean | null
+          alias_cbu?: string | null
           ambito?: string
+          banco?: string | null
           branch_id?: string | null
+          cbu?: string | null
           contacto?: string | null
+          contacto_secundario?: string | null
           created_at?: string | null
           created_by?: string | null
           cuit?: string | null
@@ -2847,11 +2865,14 @@ export type Database = {
           email?: string | null
           id?: string
           medios_pago_aceptados?: Json | null
+          numero_cuenta?: string | null
           observaciones?: string | null
           permite_cuenta_corriente?: boolean | null
           razon_social?: string
           telefono?: string | null
+          telefono_secundario?: string | null
           tipo_especial?: string | null
+          titular_cuenta?: string | null
           updated_at?: string | null
         }
         Relationships: [
