@@ -87,6 +87,7 @@ export function useInsumos() {
         .from('insumos')
         .select('*, categorias_insumo(nombre, tipo), proveedor_obligatorio:proveedores!insumos_proveedor_obligatorio_id_fkey(id, razon_social), proveedor_sugerido:proveedores!insumos_proveedor_sugerido_id_fkey(id, razon_social)')
         .is('deleted_at', null)
+        .neq('activo', false)
         .order('nombre');
       if (error) throw error;
       return data;
