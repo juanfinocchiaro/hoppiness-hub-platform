@@ -9,12 +9,14 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Building2, Phone, Mail, CreditCard, AlertTriangle,
-  TrendingUp, Calendar, ArrowLeft, Pencil
+  TrendingUp, Calendar, ArrowLeft, Pencil, Trash2
 } from 'lucide-react';
 import { useSaldoProveedor, useMovimientosProveedor } from '@/hooks/useCuentaCorrienteProveedor';
 import { useProveedores } from '@/hooks/useProveedores';
+import { usePagoProveedorMutations } from '@/hooks/useCompras';
 import { PagoProveedorModal } from '@/components/finanzas/PagoProveedorModal';
 import { ProveedorFormModal } from '@/components/finanzas/ProveedorFormModal';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/states';
 
 export default function CuentaCorrienteProveedorPage() {
@@ -24,8 +26,10 @@ export default function CuentaCorrienteProveedorPage() {
   const proveedor = proveedores?.find(p => p.id === proveedorId);
   const { data: saldo, isLoading: loadingSaldo } = useSaldoProveedor(branchId, proveedorId);
   const { data: movimientos, isLoading: loadingMov } = useMovimientosProveedor(branchId, proveedorId);
+  const { softDeletePago } = usePagoProveedorMutations();
   const [payingFacturaId, setPayingFacturaId] = useState<string | null>(null);
   const [editingProveedor, setEditingProveedor] = useState(false);
+  const [deletingPagoId, setDeletingPagoId] = useState<string | null>(null);
 
   const payingFactura = payingFacturaId ? {
     id: payingFacturaId,
@@ -167,7 +171,7 @@ export default function CuentaCorrienteProveedorPage() {
                 <TableHead className="text-right">Saldo</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Vencimiento</TableHead>
-                <TableHead className="w-[80px]" />
+                <TableHead className="w-[100px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -238,11 +242,23 @@ export default function CuentaCorrienteProveedorPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {mov.tipo === 'factura' && mov.estado !== 'pagado' && (
-                        <Button size="sm" variant="outline" onClick={() => setPayingFacturaId(mov.id)}>
-                          Pagar
-                        </Button>
-                      )}
+                      <div className="flex gap-1 justify-end">
+                        {mov.tipo === 'factura' && mov.estado !== 'pagado' && (
+                          <Button size="sm" variant="outline" onClick={() => setPayingFacturaId(mov.id)}>
+                            Pagar
+                          </Button>
+                        )}
+                        {mov.tipo === 'pago' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setDeletingPagoId(mov.id)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -256,6 +272,20 @@ export default function CuentaCorrienteProveedorPage() {
         open={!!payingFacturaId}
         onOpenChange={() => setPayingFacturaId(null)}
         factura={payingFactura as any}
+        proveedorNombre={proveedor?.razon_social}
+      />
+
+      <ConfirmDialog
+        open={!!deletingPagoId}
+        onOpenChange={() => setDeletingPagoId(null)}
+        title="Eliminar pago"
+        description="¿Estás seguro de eliminar este pago? El saldo de la factura se actualizará automáticamente."
+        confirmLabel="Eliminar"
+        variant="destructive"
+        onConfirm={async () => {
+          if (deletingPagoId) await softDeletePago.mutateAsync(deletingPagoId);
+          setDeletingPagoId(null);
+        }}
       />
 
       {proveedor && (

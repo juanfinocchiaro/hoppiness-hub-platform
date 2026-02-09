@@ -159,10 +159,30 @@ export function usePagoProveedorMutations() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['pagos-proveedor', vars.factura_id] });
       qc.invalidateQueries({ queryKey: ['facturas'] });
+      qc.invalidateQueries({ queryKey: ['movimientos-proveedor'] });
+      qc.invalidateQueries({ queryKey: ['saldo-proveedor'] });
       toast.success('Pago registrado');
     },
     onError: (e) => toast.error(`Error: ${e.message}`),
   });
 
-  return { create };
+  const softDeletePago = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('pagos_proveedores')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['pagos-proveedor'] });
+      qc.invalidateQueries({ queryKey: ['facturas'] });
+      qc.invalidateQueries({ queryKey: ['movimientos-proveedor'] });
+      qc.invalidateQueries({ queryKey: ['saldo-proveedor'] });
+      toast.success('Pago eliminado');
+    },
+    onError: (e) => toast.error(`Error: ${e.message}`),
+  });
+
+  return { create, softDeletePago };
 }
