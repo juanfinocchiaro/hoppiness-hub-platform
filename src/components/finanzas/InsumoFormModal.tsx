@@ -3,16 +3,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { FormLayout, FormRow, FormSection } from '@/components/ui/forms-pro';
 import { StickyActions } from '@/components/ui/forms-pro';
-import { Package, Shield, AlertTriangle } from 'lucide-react';
+import { Package, Shield, BarChart3 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { LoadingButton } from '@/components/ui/loading-button';
 import { useInsumoMutations, useCategoriasInsumo } from '@/hooks/useInsumos';
 import { useProveedores } from '@/hooks/useProveedores';
 import { UNIDAD_OPTIONS } from '@/types/financial';
+import { TIPO_ITEM_OPTIONS } from '@/types/rdo';
+import { RdoCategorySelector } from '@/components/rdo/RdoCategorySelector';
 import type { Insumo, InsumoFormData } from '@/types/financial';
 
 interface Props {
@@ -32,6 +35,8 @@ const EMPTY: ExtendedFormData = {
   nombre: '',
   unidad_base: 'kg',
   nivel_control: 'libre',
+  tipo_item: 'insumo',
+  tracks_stock: false,
 };
 
 const NIVEL_LABELS = {
@@ -62,6 +67,9 @@ export function InsumoFormModal({ open, onOpenChange, insumo }: Props) {
         proveedor_obligatorio_id: (insumo as any).proveedor_obligatorio_id || undefined,
         precio_maximo_sugerido: (insumo as any).precio_maximo_sugerido || undefined,
         motivo_control: (insumo as any).motivo_control || undefined,
+        tipo_item: (insumo as any).tipo_item || 'insumo',
+        rdo_category_code: (insumo as any).rdo_category_code || undefined,
+        tracks_stock: (insumo as any).tracks_stock || false,
       });
     } else {
       setForm(EMPTY);
@@ -88,6 +96,9 @@ export function InsumoFormModal({ open, onOpenChange, insumo }: Props) {
       proveedor_sugerido_id: form.nivel_control === 'semi_libre' ? (form.proveedor_sugerido_id || null) :
                               form.nivel_control === 'obligatorio' ? null :
                               (form.proveedor_sugerido_id || null),
+      tipo_item: form.tipo_item || 'insumo',
+      rdo_category_code: form.rdo_category_code || null,
+      tracks_stock: form.tracks_stock || false,
     };
 
     if (isEdit) {
@@ -118,13 +129,12 @@ export function InsumoFormModal({ open, onOpenChange, insumo }: Props) {
                 />
               </FormRow>
               <FormLayout columns={2}>
-                <FormRow label="Categoría">
-                  <Select value={form.categoria_id || 'none'} onValueChange={(v) => set('categoria_id', v === 'none' ? undefined : v)}>
-                    <SelectTrigger><SelectValue placeholder="Sin categoría" /></SelectTrigger>
+                <FormRow label="Tipo" required>
+                  <Select value={form.tipo_item || 'insumo'} onValueChange={(v) => set('tipo_item', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Sin categoría</SelectItem>
-                      {categorias?.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+                      {TIPO_ITEM_OPTIONS.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -140,6 +150,40 @@ export function InsumoFormModal({ open, onOpenChange, insumo }: Props) {
                   </Select>
                 </FormRow>
               </FormLayout>
+              <FormRow label="Categoría interna">
+                <Select value={form.categoria_id || 'none'} onValueChange={(v) => set('categoria_id', v === 'none' ? undefined : v)}>
+                  <SelectTrigger><SelectValue placeholder="Sin categoría" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin categoría</SelectItem>
+                    {categorias?.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormRow>
+            </FormLayout>
+          </FormSection>
+
+          <FormSection title="Clasificación RDO" icon={BarChart3}>
+            <FormLayout columns={1}>
+              <FormRow label="Categoría RDO" hint="Para el Estado de Resultados">
+                <RdoCategorySelector
+                  value={form.rdo_category_code}
+                  onChange={(code) => set('rdo_category_code', code)}
+                  itemType={form.tipo_item}
+                />
+              </FormRow>
+              <FormRow label="Trackea Stock">
+                <div className="flex items-center gap-2 pt-1">
+                  <Switch
+                    checked={form.tracks_stock || false}
+                    onCheckedChange={(v) => set('tracks_stock', v)}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {form.tracks_stock ? 'Sí, controlar stock' : 'No'}
+                  </span>
+                </div>
+              </FormRow>
             </FormLayout>
           </FormSection>
 
@@ -215,9 +259,6 @@ export function InsumoFormModal({ open, onOpenChange, insumo }: Props) {
                 />
               </FormRow>
             </FormLayout>
-            <FormRow label="Categoría P&L" hint="Para reportes financieros">
-              <Input value={form.categoria_pl || ''} onChange={(e) => set('categoria_pl', e.target.value)} />
-            </FormRow>
           </FormSection>
 
           <FormRow label="Descripción">

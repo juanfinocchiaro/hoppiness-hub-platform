@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { useGastoMutations } from '@/hooks/useGastos';
 import { CATEGORIA_GASTO_OPTIONS, MEDIO_PAGO_OPTIONS, getCurrentPeriodo } from '@/types/compra';
+import { RdoCategorySelector } from '@/components/rdo/RdoCategorySelector';
 import type { Gasto } from '@/types/compra';
 
 const ESTADO_OPTIONS = [
@@ -37,6 +38,7 @@ export function GastoFormModal({ open, onOpenChange, branchId, gasto }: GastoFor
     medio_pago: 'efectivo',
     referencia_pago: '',
     observaciones: '',
+    rdo_category_code: '',
   });
 
   useEffect(() => {
@@ -52,6 +54,7 @@ export function GastoFormModal({ open, onOpenChange, branchId, gasto }: GastoFor
         medio_pago: gasto.medio_pago || 'efectivo',
         referencia_pago: gasto.referencia_pago || '',
         observaciones: gasto.observaciones || '',
+        rdo_category_code: (gasto as any).rdo_category_code || '',
       });
     } else if (open) {
       setForm({
@@ -65,6 +68,7 @@ export function GastoFormModal({ open, onOpenChange, branchId, gasto }: GastoFor
         medio_pago: 'efectivo',
         referencia_pago: '',
         observaciones: '',
+        rdo_category_code: '',
       });
     }
   }, [open, gasto]);
@@ -85,6 +89,7 @@ export function GastoFormModal({ open, onOpenChange, branchId, gasto }: GastoFor
       medio_pago: form.estado === 'pagado' ? form.medio_pago : null,
       referencia_pago: form.estado === 'pagado' ? (form.referencia_pago || null) : null,
       observaciones: form.observaciones || null,
+      rdo_category_code: form.rdo_category_code || null,
     };
 
     if (isEditing) {
@@ -108,7 +113,7 @@ export function GastoFormModal({ open, onOpenChange, branchId, gasto }: GastoFor
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Fecha de factura *</Label>
+              <Label>Fecha *</Label>
               <Input type="date" value={form.fecha} onChange={e => set('fecha', e.target.value)} />
             </div>
             <div>
@@ -126,12 +131,21 @@ export function GastoFormModal({ open, onOpenChange, branchId, gasto }: GastoFor
 
           <div>
             <Label>Concepto *</Label>
-            <Input value={form.concepto} onChange={e => set('concepto', e.target.value)} placeholder="Ej: Factura EPEC febrero" />
+            <Input value={form.concepto} onChange={e => set('concepto', e.target.value)} placeholder="Ej: Propina repartidor" />
           </div>
 
           <div>
             <Label>Monto *</Label>
             <Input type="number" step="0.01" value={form.monto} onChange={e => set('monto', e.target.value)} />
+          </div>
+
+          <div>
+            <Label>Categoría RDO</Label>
+            <p className="text-xs text-muted-foreground mb-1">Para el Estado de Resultados (opcional)</p>
+            <RdoCategorySelector
+              value={form.rdo_category_code}
+              onChange={(code) => setForm(f => ({ ...f, rdo_category_code: code }))}
+            />
           </div>
 
           <Separator />

@@ -37,6 +37,9 @@ export interface InsumoFormData {
   precio_referencia?: number;
   proveedor_sugerido_id?: string;
   descripcion?: string;
+  tipo_item?: 'ingrediente' | 'insumo';
+  rdo_category_code?: string;
+  tracks_stock?: boolean;
 }
 
 export interface CategoriaInsumoFormData {
