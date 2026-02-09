@@ -49,7 +49,7 @@ export default function CuentaCorrienteProveedorPage() {
   const [deletingPagoId, setDeletingPagoId] = useState<string | null>(null);
   const { data: facturaData } = useFacturaById(payingFacturaId);
 
-  const saldoAFavor = resumen && resumen.saldo_actual < 0 ? Math.abs(resumen.saldo_actual) : 0;
+  const saldoAFavor = resumen ? (resumen.saldo_a_favor_facturas > 0 ? resumen.saldo_a_favor_facturas : (resumen.saldo_actual < 0 ? Math.abs(resumen.saldo_actual) : 0)) : 0;
 
   const payingFactura = payingFacturaId && facturaData ? {
     ...facturaData,

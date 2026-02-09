@@ -30,6 +30,8 @@ export interface ResumenCuenta {
   pagos_pendientes_verif: number;
   /** Net balance: facturado - pagado (negative = saldo a favor) */
   saldo_actual: number;
+  /** Sum of overpayments from invoices with negative saldo_pendiente */
+  saldo_a_favor_facturas: number;
   /** Total overdue amount (from invoices past due) */
   monto_vencido: number;
   /** Count of overdue invoices */
@@ -81,9 +83,14 @@ export function useResumenProveedor(branchId?: string, proveedorId?: string) {
       let facturas_vencidas = 0;
       let proximo_vencimiento: string | null = null;
       let facturas_pendientes = 0;
+      let saldo_a_favor_facturas = 0;
 
       for (const f of facturas || []) {
         total_facturado += Number(f.total);
+        const sp = Number(f.saldo_pendiente);
+        if (sp < 0) {
+          saldo_a_favor_facturas += Math.abs(sp);
+        }
         if (f.estado_pago === 'pendiente') {
           facturas_pendientes++;
           const venc = f.fecha_vencimiento ? parseLocalDate(f.fecha_vencimiento) : null;
@@ -126,6 +133,7 @@ export function useResumenProveedor(branchId?: string, proveedorId?: string) {
         total_pagado_pendiente_verif,
         pagos_pendientes_verif,
         saldo_actual,
+        saldo_a_favor_facturas,
         monto_vencido,
         facturas_vencidas,
         monto_por_vencer,
