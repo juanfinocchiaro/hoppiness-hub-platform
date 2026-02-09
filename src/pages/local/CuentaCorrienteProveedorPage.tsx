@@ -19,6 +19,17 @@ import { ProveedorFormModal } from '@/components/finanzas/ProveedorFormModal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/states';
 
+/** Parse YYYY-MM-DD as local date to avoid UTC→local shift */
+function formatLocalDate(dateStr: string) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('es-AR');
+}
+
+function parseLocalDate(dateStr: string) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
 export default function CuentaCorrienteProveedorPage() {
   const { branchId, proveedorId } = useParams<{ branchId: string; proveedorId: string }>();
   const navigate = useNavigate();
@@ -192,7 +203,7 @@ export default function CuentaCorrienteProveedorPage() {
               ) : (
                 movimientos.map((mov) => (
                   <TableRow key={`${mov.tipo}-${mov.id}`}>
-                    <TableCell className="text-sm">{new Date(mov.fecha).toLocaleDateString('es-AR')}</TableCell>
+                    <TableCell className="text-sm">{formatLocalDate(mov.fecha)}</TableCell>
                     <TableCell>
                       {mov.tipo === 'factura' ? (
                         <Badge variant="destructive">Factura</Badge>
@@ -229,15 +240,15 @@ export default function CuentaCorrienteProveedorPage() {
                     <TableCell>
                       {mov.tipo === 'factura' && mov.estado && (
                         mov.estado === 'pagado' ? <Badge variant="default">Pagado</Badge> :
-                        mov.estado === 'vencido' || (mov.fecha_vencimiento && new Date(mov.fecha_vencimiento) < new Date()) ?
+                        mov.estado === 'vencido' || (mov.fecha_vencimiento && parseLocalDate(mov.fecha_vencimiento) < new Date()) ?
                           <Badge variant="destructive">Vencido</Badge> :
                           <Badge variant="secondary">Pendiente</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-sm">
                       {mov.tipo === 'factura' && mov.fecha_vencimiento && (
-                        <span className={new Date(mov.fecha_vencimiento) < new Date() ? 'text-destructive font-medium' : ''}>
-                          {new Date(mov.fecha_vencimiento).toLocaleDateString('es-AR')}
+                        <span className={parseLocalDate(mov.fecha_vencimiento) < new Date() ? 'text-destructive font-medium' : ''}>
+                          {formatLocalDate(mov.fecha_vencimiento)}
                         </span>
                       )}
                     </TableCell>
