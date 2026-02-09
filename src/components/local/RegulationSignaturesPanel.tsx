@@ -81,7 +81,8 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
         .select('user_id, local_role')
         .eq('branch_id', branchId)
         .eq('is_active', true)
-        .neq('local_role', 'franquiciado');
+        .neq('local_role', 'franquiciado')
+        .neq('local_role', 'contador_local');
 
       if (!roles?.length) return [];
 
