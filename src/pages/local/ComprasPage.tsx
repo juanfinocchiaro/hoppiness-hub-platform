@@ -82,20 +82,20 @@ export default function ComprasPage() {
               filtered.map((row: any) => {
                 const isCanon = row.factura_numero?.startsWith('CANON-');
                 return (
-                  <tbody key={row.id}>
+                  <>
                     <TableRow className="cursor-pointer" onClick={() => setExpanded(expanded === row.id ? null : row.id)}>
                       <TableCell>
                         {expanded === row.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </TableCell>
-                      <TableCell className="text-sm">{new Date(row.factura_fecha).toLocaleDateString('es-AR')}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">{new Date(row.factura_fecha).toLocaleDateString('es-AR')}</TableCell>
                       <TableCell className="font-medium">
-                        {row.proveedores?.razon_social}
+                        <span className="whitespace-nowrap">{row.proveedores?.razon_social}</span>
                         {isCanon && <Badge variant="outline" className="ml-2 text-xs">Automática</Badge>}
                       </TableCell>
-                      <TableCell className="text-sm font-mono">{row.factura_tipo ? `${row.factura_tipo}-` : ''}{row.factura_numero}</TableCell>
-                      <TableCell className="text-right font-mono">$ {Number(row.total).toLocaleString('es-AR')}</TableCell>
+                      <TableCell className="text-sm font-mono whitespace-nowrap">{row.factura_tipo ? `${row.factura_tipo}-` : ''}{row.factura_numero}</TableCell>
+                      <TableCell className="text-right font-mono whitespace-nowrap">$ {Number(row.total).toLocaleString('es-AR')}</TableCell>
                       <TableCell>{estadoBadge(row.estado_pago)}</TableCell>
-                      <TableCell className="text-right font-mono text-destructive">
+                      <TableCell className="text-right font-mono text-destructive whitespace-nowrap">
                         {Number(row.saldo_pendiente) > 0 ? `$ ${Number(row.saldo_pendiente).toLocaleString('es-AR')}` : '-'}
                       </TableCell>
                       <TableCell>
@@ -141,7 +141,7 @@ export default function ComprasPage() {
                         </TableCell>
                       </TableRow>
                     )}
-                  </tbody>
+                  </>
                 );
               })
             )}

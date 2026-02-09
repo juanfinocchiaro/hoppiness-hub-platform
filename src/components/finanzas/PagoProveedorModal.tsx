@@ -150,17 +150,23 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
                 <span className="font-mono text-right">$ {fmt(canonInfo.canonMkt)}</span>
               </div>
               <hr className="border-primary/20" />
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <Banknote className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                  <span>En <strong>efectivo</strong> (5% de $ {fmt(canonInfo.efectivo)}):</span>
-                  <span className="font-mono font-semibold ml-auto">$ {fmt(canonInfo.pagarEfectivo)}</span>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <Banknote className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                    <span>En <strong>efectivo</strong>:</span>
+                  </div>
+                  <span className="font-mono font-semibold whitespace-nowrap">$ {fmt(canonInfo.pagarEfectivo)}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <ArrowRightLeft className="w-4 h-4 shrink-0 text-primary" />
-                  <span>Por <strong>transferencia</strong> (5% de $ {fmt(canonInfo.online)}):</span>
-                  <span className="font-mono font-semibold ml-auto">$ {fmt(canonInfo.pagarTransferencia)}</span>
+                <p className="text-xs text-muted-foreground ml-6">5% de $ {fmt(canonInfo.efectivo)}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <ArrowRightLeft className="w-4 h-4 shrink-0 text-primary" />
+                    <span>Por <strong>transferencia</strong>:</span>
+                  </div>
+                  <span className="font-mono font-semibold whitespace-nowrap">$ {fmt(canonInfo.pagarTransferencia)}</span>
                 </div>
+                <p className="text-xs text-muted-foreground ml-6">5% de $ {fmt(canonInfo.online)}</p>
               </div>
               <Button type="button" variant="outline" size="sm" className="w-full mt-2 text-xs" onClick={setCanonPreset}>
                 Cargar ambos pagos automáticamente
