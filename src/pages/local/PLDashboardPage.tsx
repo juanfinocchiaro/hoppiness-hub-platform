@@ -6,13 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Receipt, Package } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { getCurrentPeriodo } from '@/types/compra';
+import { getCurrentPeriodo, CATEGORIA_GASTO_OPTIONS } from '@/types/compra';
 import { CATEGORIA_PL_OPTIONS } from '@/hooks/useConsumosManuales';
-import { CATEGORIA_GASTO_OPTIONS } from '@/types/compra';
 
 function usePLData(branchId: string, periodo: string) {
   const { user } = useAuth();
@@ -20,21 +19,20 @@ function usePLData(branchId: string, periodo: string) {
   return useQuery({
     queryKey: ['pl-dashboard', branchId, periodo],
     queryFn: async () => {
-      // Fetch all data in parallel
-      const [ventasRes, comprasRes, gastosRes, consumosRes] = await Promise.all([
+      const [ventasRes, facturasRes, gastosRes, consumosRes] = await Promise.all([
         supabase.from('ventas_mensuales_local').select('*').eq('branch_id', branchId).eq('periodo', periodo).maybeSingle(),
-        supabase.from('compras').select('*').eq('branch_id', branchId).eq('periodo', periodo).is('deleted_at', null),
+        supabase.from('facturas_proveedores').select('*, items_factura(subtotal)').eq('branch_id', branchId).eq('periodo', periodo).is('deleted_at', null),
         supabase.from('gastos').select('*').eq('branch_id', branchId).eq('periodo', periodo).is('deleted_at', null),
         supabase.from('consumos_manuales').select('*').eq('branch_id', branchId).eq('periodo', periodo).is('deleted_at', null),
       ]);
 
       const ventas = ventasRes.data;
-      const compras = comprasRes.data || [];
+      const facturas = facturasRes.data || [];
       const gastos = gastosRes.data || [];
       const consumos = consumosRes.data || [];
 
       const totalVentas = ventas ? Number(ventas.fc_total) + Number(ventas.ft_total) : 0;
-      const totalCompras = compras.reduce((s, c) => s + Number(c.subtotal), 0);
+      const totalCompras = facturas.reduce((s, f) => s + Number(f.total), 0);
       const totalGastos = gastos.reduce((s, g) => s + Number(g.monto), 0);
       const totalConsumos = consumos.reduce((s, c) => s + Number(c.monto_consumido), 0);
 
@@ -44,32 +42,17 @@ function usePLData(branchId: string, periodo: string) {
       const margenBruto = totalVentas > 0 ? (resultadoBruto / totalVentas) * 100 : 0;
       const margenNeto = totalVentas > 0 ? (resultadoNeto / totalVentas) * 100 : 0;
 
-      // Group gastos by category
       const gastosPorCategoria = gastos.reduce<Record<string, number>>((acc, g) => {
         acc[g.categoria_principal] = (acc[g.categoria_principal] || 0) + Number(g.monto);
         return acc;
       }, {});
 
-      // Group consumos by category
       const consumosPorCategoria = consumos.reduce<Record<string, number>>((acc, c) => {
         acc[c.categoria_pl] = (acc[c.categoria_pl] || 0) + Number(c.monto_consumido);
         return acc;
       }, {});
 
-      return {
-        ventas,
-        totalVentas,
-        totalCompras,
-        totalGastos,
-        totalConsumos,
-        costoTotal,
-        resultadoBruto,
-        resultadoNeto,
-        margenBruto,
-        margenNeto,
-        gastosPorCategoria,
-        consumosPorCategoria,
-      };
+      return { ventas, totalVentas, totalCompras, totalGastos, totalConsumos, costoTotal, resultadoBruto, resultadoNeto, margenBruto, margenNeto, gastosPorCategoria, consumosPorCategoria };
     },
     enabled: !!user && !!branchId,
   });
@@ -90,7 +73,6 @@ export default function PLDashboardPage() {
   const [periodo, setPeriodo] = useState(getCurrentPeriodo());
   const { data: pl, isLoading } = usePLData(branchId!, periodo);
 
-  // Generate period options (last 12 months)
   const periodos = Array.from({ length: 12 }, (_, i) => {
     const d = new Date();
     d.setMonth(d.getMonth() - i);
@@ -123,7 +105,6 @@ export default function PLDashboardPage() {
         </div>
       ) : pl ? (
         <>
-          {/* KPI Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <Card>
               <CardContent className="pt-4">
@@ -151,14 +132,11 @@ export default function PLDashboardPage() {
             <Card>
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">Margen Neto</div>
-                <div className={`text-2xl font-bold mt-1 ${pl.margenNeto < 0 ? 'text-destructive' : ''}`}>
-                  {pl.margenNeto.toFixed(1)}%
-                </div>
+                <div className={`text-2xl font-bold mt-1 ${pl.margenNeto < 0 ? 'text-destructive' : ''}`}>{pl.margenNeto.toFixed(1)}%</div>
               </CardContent>
             </Card>
           </div>
 
-          {/* P&L Statement */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Estado de Resultados — {periodo}</CardTitle>
@@ -171,47 +149,31 @@ export default function PLDashboardPage() {
                   <PLLine label="Facturación Total (FT)" value={Number(pl.ventas.ft_total)} indent />
                 </>
               )}
-
               <Separator className="my-3" />
-
               <PLLine label="Costo de Ventas" value={pl.costoTotal} negative bold />
-              <PLLine label="Compras" value={pl.totalCompras} indent negative />
+              <PLLine label="Compras (Facturas)" value={pl.totalCompras} indent negative />
               {Object.entries(pl.consumosPorCategoria).map(([cat, monto]) => (
                 <PLLine key={cat} label={`Consumo: ${getCatConsumoLabel(cat)}`} value={monto} indent negative />
               ))}
-
               <Separator className="my-3" />
-
               <div className="flex justify-between py-2">
                 <span className="font-bold text-base">Resultado Bruto</span>
                 <div className="flex items-center gap-2">
-                  <Badge variant={pl.resultadoBruto >= 0 ? 'default' : 'destructive'}>
-                    {pl.margenBruto.toFixed(1)}%
-                  </Badge>
-                  <span className={`font-mono font-bold text-base ${pl.resultadoBruto < 0 ? 'text-destructive' : ''}`}>
-                    $ {pl.resultadoBruto.toLocaleString('es-AR')}
-                  </span>
+                  <Badge variant={pl.resultadoBruto >= 0 ? 'default' : 'destructive'}>{pl.margenBruto.toFixed(1)}%</Badge>
+                  <span className={`font-mono font-bold text-base ${pl.resultadoBruto < 0 ? 'text-destructive' : ''}`}>$ {pl.resultadoBruto.toLocaleString('es-AR')}</span>
                 </div>
               </div>
-
               <Separator className="my-3" />
-
               <PLLine label="Gastos Operativos" value={pl.totalGastos} negative bold />
               {Object.entries(pl.gastosPorCategoria).map(([cat, monto]) => (
                 <PLLine key={cat} label={getCatGastoLabel(cat)} value={monto} indent negative />
               ))}
-
               <Separator className="my-3" />
-
               <div className="flex justify-between py-2 bg-muted/30 px-3 rounded-md">
                 <span className="font-bold text-lg">Resultado Neto</span>
                 <div className="flex items-center gap-2">
-                  <Badge variant={pl.resultadoNeto >= 0 ? 'default' : 'destructive'}>
-                    {pl.margenNeto.toFixed(1)}%
-                  </Badge>
-                  <span className={`font-mono font-bold text-lg ${pl.resultadoNeto < 0 ? 'text-destructive' : ''}`}>
-                    $ {pl.resultadoNeto.toLocaleString('es-AR')}
-                  </span>
+                  <Badge variant={pl.resultadoNeto >= 0 ? 'default' : 'destructive'}>{pl.margenNeto.toFixed(1)}%</Badge>
+                  <span className={`font-mono font-bold text-lg ${pl.resultadoNeto < 0 ? 'text-destructive' : ''}`}>$ {pl.resultadoNeto.toLocaleString('es-AR')}</span>
                 </div>
               </div>
             </CardContent>

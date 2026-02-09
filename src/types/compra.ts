@@ -1,33 +1,42 @@
 import type { Tables } from '@/integrations/supabase/types';
 
-export type Compra = Tables<'compras'>;
+export type FacturaProveedor = Tables<'facturas_proveedores'>;
+export type ItemFactura = Tables<'items_factura'>;
 export type PagoProveedor = Tables<'pagos_proveedores'>;
 export type Gasto = Tables<'gastos'>;
 
 // Form types
-export interface CompraFormData {
+export interface FacturaFormData {
   branch_id: string;
   proveedor_id: string;
+  factura_tipo?: string;
+  factura_numero: string;
+  factura_fecha: string;
+  condicion_pago: string;
+  fecha_vencimiento?: string;
+  medio_pago?: string;
+  iva: number;
+  otros_impuestos: number;
+  tipo: string;
+  motivo_extraordinaria?: string;
+  periodo: string;
+  observaciones?: string;
+  items: ItemFacturaFormData[];
+}
+
+export interface ItemFacturaFormData {
   insumo_id: string;
   cantidad: number;
   unidad: string;
   precio_unitario: number;
-  fecha: string;
-  periodo: string;
-  tipo_compra?: 'regular' | 'extraordinaria';
-  motivo_extraordinaria?: string;
-  condicion_pago?: string;
-  medio_pago?: string;
-  factura_tipo?: string;
-  factura_numero?: string;
-  factura_fecha?: string;
-  categoria_pl?: string;
+  subtotal: number;
   afecta_costo_base?: boolean;
+  categoria_pl?: string;
   observaciones?: string;
 }
 
 export interface PagoProveedorFormData {
-  compra_id: string;
+  factura_id: string;
   proveedor_id: string;
   branch_id: string;
   monto: number;
@@ -52,11 +61,6 @@ export interface GastoFormData {
 }
 
 // Constants
-export const TIPO_COMPRA_OPTIONS = [
-  { value: 'regular', label: 'Regular' },
-  { value: 'extraordinaria', label: 'Extraordinaria' },
-] as const;
-
 export const CONDICION_PAGO_OPTIONS = [
   { value: 'contado', label: 'Contado' },
   { value: 'cuenta_corriente', label: 'Cuenta Corriente' },
@@ -73,8 +77,6 @@ export const FACTURA_TIPO_OPTIONS = [
   { value: 'A', label: 'Factura A' },
   { value: 'B', label: 'Factura B' },
   { value: 'C', label: 'Factura C' },
-  { value: 'ticket', label: 'Ticket' },
-  { value: 'sin_factura', label: 'Sin Factura' },
 ] as const;
 
 export const CATEGORIA_GASTO_OPTIONS = [
