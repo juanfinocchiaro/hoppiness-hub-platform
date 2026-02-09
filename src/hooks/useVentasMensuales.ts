@@ -6,8 +6,8 @@ import { toast } from 'sonner';
 interface VentaMensualPayload {
   branch_id?: string;
   periodo?: string;
-  fc_total?: number;
-  ft_total?: number;
+  venta_total?: number;
+  efectivo?: number;
   observaciones?: string;
 }
 
@@ -36,16 +36,18 @@ export function useVentaMensualMutations() {
 
   const create = useMutation({
     mutationFn: async (data: VentaMensualPayload) => {
-      const ventaTotal = (data.fc_total ?? 0) + (data.ft_total ?? 0);
+      const vt = data.venta_total ?? 0;
+      const ef = data.efectivo ?? 0;
+      const fc = vt - ef; // FC = Venta Total - Efectivo
       const { data: result, error } = await supabase
         .from('ventas_mensuales_local')
         .insert({
           branch_id: data.branch_id!,
           periodo: data.periodo!,
-          fc_total: data.fc_total ?? 0,
-          ft_total: data.ft_total ?? 0,
-          venta_total: ventaTotal,
-          efectivo: data.ft_total ?? 0,
+          venta_total: vt,
+          efectivo: ef,
+          fc_total: fc,
+          ft_total: ef, // legacy column
           observaciones: data.observaciones,
           cargado_por: user?.id,
         })
@@ -65,14 +67,16 @@ export function useVentaMensualMutations() {
 
   const update = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: VentaMensualPayload }) => {
-      const ventaTotal = (data.fc_total ?? 0) + (data.ft_total ?? 0);
+      const vt = data.venta_total ?? 0;
+      const ef = data.efectivo ?? 0;
+      const fc = vt - ef;
       const { error } = await supabase
         .from('ventas_mensuales_local')
         .update({
-          fc_total: data.fc_total,
-          ft_total: data.ft_total,
-          venta_total: ventaTotal,
-          efectivo: data.ft_total,
+          venta_total: vt,
+          efectivo: ef,
+          fc_total: fc,
+          ft_total: ef,
           observaciones: data.observaciones,
         })
         .eq('id', id);
