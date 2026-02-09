@@ -153,14 +153,16 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
 
   // Sort team hierarchically by role
   const team = useMemo(() => {
-    return [...rawTeam].sort((a, b) => {
-      const roleA = a.local_role || 'empleado';
-      const roleB = b.local_role || 'empleado';
-      const priorityA = ROLE_PRIORITY[roleA] ?? 99;
-      const priorityB = ROLE_PRIORITY[roleB] ?? 99;
-      if (priorityA !== priorityB) return priorityA - priorityB;
-      return (a.full_name || '').localeCompare(b.full_name || '');
-    });
+    return [...rawTeam]
+      .filter(m => m.local_role !== 'contador_local')
+      .sort((a, b) => {
+        const roleA = a.local_role || 'empleado';
+        const roleB = b.local_role || 'empleado';
+        const priorityA = ROLE_PRIORITY[roleA] ?? 99;
+        const priorityB = ROLE_PRIORITY[roleB] ?? 99;
+        if (priorityA !== priorityB) return priorityA - priorityB;
+        return (a.full_name || '').localeCompare(b.full_name || '');
+      });
   }, [rawTeam]);
 
   // Fetch birthdays from employee_data
