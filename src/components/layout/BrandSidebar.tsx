@@ -32,6 +32,7 @@ import {
   Wallet,
   Package,
   Truck,
+  Landmark,
   CalendarDays,
   Calendar,
   Eye,
@@ -142,6 +143,7 @@ export function BrandSidebar() {
         >
           <NavItemButton to="/mimarca/finanzas/proveedores" icon={Truck} label="Proveedores" />
           <NavItemButton to="/mimarca/finanzas/insumos" icon={Package} label="Insumos" />
+          <NavItemButton to="/mimarca/finanzas/canon" icon={Landmark} label="Canon" />
         </NavSectionGroup>
 
         {/* Personas Section */}
