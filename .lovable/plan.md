@@ -1,62 +1,48 @@
 
 
-## Problema
+# Separar responsabilidades: Compras vs Proveedores
 
-1. **En "Compras y Servicios" los items de canon muestran el UUID** (`00000000...`) en lugar del nombre del insumo ("Canon de Marca 4.5%", "Marketing 0.5%").
-2. **El desglose del canon no muestra claramente los conceptos facturables** (4.5% Uso de Marca y 0.5% Marketing y Publicidad) ni cómo debe pagarse cada parte.
-3. **La factura generada automáticamente necesita que el local entienda de un vistazo**: cuánto pagar en efectivo y cuánto en transferencia.
+## Problema actual
 
-## Solución
+Hay funcionalidades duplicadas entre las dos secciones:
 
-### 1. Mostrar nombre del insumo en la tabla de Compras
+- En **Compras y Servicios** se puede: cargar facturas, ver facturas, pagar facturas y eliminar facturas
+- En **Proveedores** se puede: ver proveedores, crear/editar proveedores, y al entrar a un proveedor ver su cuenta corriente donde tambien se puede pagar
 
-En `ComprasPage.tsx`, la query actual trae `items_factura(*)` sin joinear el nombre del insumo. Se cambiará a:
+El boton de "Pagar" aparece en ambos lados, generando confusion.
 
-```
-items_factura(*, insumos(nombre))
-```
+## Nueva separacion propuesta
 
-Y en la celda que hoy muestra `item.insumo_id?.slice(0,8)...` se mostrará `item.insumos?.nombre ?? item.insumo_id`.
+| Seccion | Responsabilidad |
+|---------|----------------|
+| **Compras y Servicios** | Cargar nuevas facturas, ver listado de facturas, expandir detalle de items, eliminar facturas manuales |
+| **Proveedores** | Ver todos los proveedores (marca + locales), crear/editar proveedores locales, ver cuenta corriente por proveedor, registrar pagos |
 
-**Archivos**: `src/hooks/useCompras.ts` y `src/pages/local/ComprasPage.tsx`
+## Cambios concretos
 
-### 2. Mejorar el detalle expandido de facturas de canon
+### 1. ComprasPage.tsx - Quitar funcionalidad de pago
 
-Cuando se expande una factura de tipo Canon, en lugar de mostrar solo los 2 items genéricos, se mostrará un bloque claro con:
+- Eliminar el boton de "Registrar pago" (icono de tarjeta de credito) de cada fila
+- Eliminar el estado `paying` y el componente `PagoProveedorModal`
+- Eliminar la columna "Saldo" (ya que sin poder pagar ahi, no tiene sentido mostrarla)
+- Mantener: nueva factura, listado, expandir items, eliminar
 
-- Canon 4.5% por Uso de Marca: $X
-- Canon 0.5% por Marketing y Publicidad: $Y
-- Separador con instrucciones de pago:
-  - **Pagar en efectivo**: 5% del efectivo del mes = $Z
-  - **Pagar en transferencia**: 5% del online del mes = $W
+### 2. ComprasPage.tsx - Agregar link al proveedor
 
-Esta info ya existe en el campo `observaciones` de la factura (que contiene VT, Ef, Online). Se parseará para mostrar el desglose.
+- Hacer que el nombre del proveedor en la tabla sea un link que lleve a la cuenta corriente del proveedor (`/milocal/:branchId/finanzas/proveedores/:proveedorId`)
+- Esto conecta ambas secciones de forma natural: "veo la factura -> quiero pagar -> click en el proveedor -> cuenta corriente -> pago"
 
-### 3. Renombrar conceptos en el modal de Ventas Mensuales
+### 3. Sin cambios en Proveedores
 
-En `VentaMensualFormModal.tsx`, cambiar las etiquetas:
-- "Canon 5% Efectivo" a "Canon 4.5% Uso de Marca + 0.5% Mkt (sobre efectivo)"
-- "Canon 5% Online" a "Canon 4.5% Uso de Marca + 0.5% Mkt (sobre online)"
+- `ProveedoresLocalPage.tsx` y `CuentaCorrienteProveedorPage.tsx` ya funcionan correctamente con la logica de cuenta corriente y pagos
 
-O mejor, desglosar en 4 lineas:
-- Uso de Marca 4.5% sobre Efectivo
-- Mkt 0.5% sobre Efectivo
-- Uso de Marca 4.5% sobre Online (transferencia)
-- Mkt 0.5% sobre Online (transferencia)
-- **Pagar en efectivo**: suma de las dos primeras
-- **Pagar en transferencia**: suma de las dos segundas
+## Detalle tecnico
 
-## Detalle Tecnico
+**Archivos a modificar:**
+- `src/pages/local/ComprasPage.tsx`: eliminar import de `PagoProveedorModal`, eliminar estado `paying`, eliminar columna Saldo, eliminar boton pagar, agregar link en nombre de proveedor hacia cuenta corriente
 
-### Archivo 1: `src/hooks/useCompras.ts`
-- Cambiar la query select de `items_factura(*)` a `items_factura(*, insumos(nombre))`.
-
-### Archivo 2: `src/pages/local/ComprasPage.tsx`
-- Linea 125: reemplazar `item.insumo_id?.slice(0, 8)...` por `item.insumos?.nombre || item.insumo_id`.
-
-### Archivo 3: `src/components/finanzas/VentaMensualFormModal.tsx`
-- Reestructurar el bloque de resumen (lineas 147-160) para mostrar el desglose claro con 4.5%/0.5% y las instrucciones de pago en efectivo vs transferencia.
-
-### Archivo 4: `src/pages/admin/VentasMensualesMarcaPage.tsx`
-- Asegurar que el detalle expandido también use la nomenclatura "4.5% Uso de Marca" y "0.5% Marketing y Publicidad" de forma consistente (ya lo tiene parcialmente).
+**Archivos sin cambios:**
+- `src/pages/local/ProveedoresLocalPage.tsx` (ya correcto)
+- `src/pages/local/CuentaCorrienteProveedorPage.tsx` (ya correcto)
+- `src/components/layout/LocalSidebar.tsx` (ya correcto)
 
