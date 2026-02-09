@@ -335,7 +335,7 @@ export default function CoachingPage() {
                   <p className="text-2xl font-bold">
                     {stats.averageScore?.toFixed(1) || '-'}
                   </p>
-                  <p className="text-xs text-muted-foreground">Promedio /4</p>
+                  <p className="text-xs text-muted-foreground">Promedio /5</p>
                 </div>
               </div>
             </CardContent>
@@ -346,8 +346,8 @@ export default function CoachingPage() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex-wrap h-auto gap-1">
-          {/* Tab Mi Encargado - Solo Franquiciado */}
-          {isFranquiciado && (
+          {/* Tab Mi Encargado - Franquiciado o Superadmin */}
+          {(isFranquiciado || isSuperadmin) && (
             <TabsTrigger value="manager" className="gap-2">
               <User className="h-4 w-4" />
               Mi Encargado
@@ -385,8 +385,8 @@ export default function CoachingPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Tab Mi Encargado - Solo Franquiciado */}
-        {isFranquiciado && branchId && (
+        {/* Tab Mi Encargado - Franquiciado o Superadmin */}
+        {(isFranquiciado || isSuperadmin) && branchId && (
           <TabsContent value="manager" className="mt-4">
             <MyManagerCoachingTab branchId={branchId} />
           </TabsContent>
