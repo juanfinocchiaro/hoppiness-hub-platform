@@ -1,109 +1,95 @@
 
-# Plan: Jornada Operativa en Dashboard de Mi Local
 
-## Problema Identificado
+# Plan: Crear Base de Datos del Sistema Financiero (Solo Schema)
 
-A las 00:30 del domingo, el dashboard muestra:
-- Fecha: "domingo 9 feb" (correcto calendario)
-- Turnos: vacíos (incorrecto operativamente)
-- Equipo fichado: 0 (incorrecto, hay gente del cierre)
-- Sin historial de cierres anteriores
+## Alcance
 
-La raíz del problema es que el sistema usa `new Date().toISOString().split('T')[0]` que convierte a UTC, causando un desfase de 3 horas (Argentina es UTC-3).
+Crear todas las tablas, triggers, funciones, vistas e indices del plan financiero MVP. Sin cambios de frontend.
 
-## Soluccion Propuesta
+## Consideraciones Tecnicas Importantes
 
-Implementar el concepto de **Jornada Operativa** ya existente en el editor de horarios, pero aplicado al dashboard de Mi Local.
+Antes de implementar el SQL del plan tal cual, hay correcciones necesarias para que funcione correctamente en este proyecto:
 
-### Regla de Negocio
-- Horas 00:00-04:59 pertenecen a la jornada operativa del DIA ANTERIOR
-- A las 00:30 del domingo, el sistema debe mostrar datos del SABADO
-- El turno de "Noche" del sabado sigue activo hasta que se cierre
+1. **Foreign keys a auth.users**: El plan usa `REFERENCES auth.users(id)` en columnas como `created_by`. Esto NO se debe hacer en este proyecto. Se reemplazara por `UUID` sin FK directa (siguiendo el patron existente donde `profiles.id` es el equivalente).
 
-## Cambios Tecnicos
+2. **CHECK constraints con NOW()**: El plan tiene constraints como `expire_at > now()` que son inmutables y causan fallos. Se usaran triggers de validacion en su lugar.
 
-### 1. Crear Utilidad Centralizada
+3. **RLS Policies**: Se crearan usando las funciones SECURITY DEFINER que ya existen (`is_superadmin`, `can_access_branch`, `is_financial_for_branch`, `has_financial_access`, etc.) y nuevas donde sea necesario.
 
-Archivo nuevo: `src/lib/operationalDate.ts`
+4. **Soft delete pattern**: El plan lo define bien con `deleted_at` + indices parciales `WHERE deleted_at IS NULL`.
+
+## Migraciones (en orden)
+
+Se dividira en 3 migraciones para mantener el orden de dependencias:
+
+### Migracion 1: Tablas base (sin dependencias cruzadas)
 
 ```text
-/**
- * getOperationalDate - Retorna la fecha operativa actual
- * 
- * Regla: Si son las 00:00-04:59, retorna el dia anterior
- * Esto permite que el turno de cierre (Noche/Trasnoche) 
- * permanezca visible hasta que realmente termine
- */
-export function getOperationalDate(): Date
-export function getOperationalDateString(): string // yyyy-MM-dd
-export function isEarlyMorning(): boolean // true si 00:00-04:59
+- categorias_insumo
+- insumos (depende de categorias_insumo)
+- proveedores (depende de branches)
+- periodos (depende de branches)
+- configuracion_impuestos (depende de branches)
+- socios (depende de branches)
+- financial_audit_log (independiente)
 ```
 
-### 2. Modificar ManagerDashboard.tsx
+### Migracion 2: Tablas transaccionales
 
-**Hook `useCurrentlyWorking`** (linea 50):
-- Cambiar: `const today = new Date().toISOString().split('T')[0]`
-- Por: `const today = getOperationalDateString()`
-- Esto mostrara a las personas que ficharon en el turno de cierre
+```text
+- compras (depende de branches, proveedores, insumos)
+- pagos_proveedores (depende de compras, proveedores)
+- gastos (depende de branches)
+- ventas_mensuales_local (depende de branches)
+- canon_liquidaciones (depende de branches, ventas_mensuales_local)
+- pagos_canon (depende de canon_liquidaciones)
+- consumos_manuales (depende de branches)
+- movimientos_socio (depende de socios)
+- distribuciones_utilidades (depende de branches)
+```
 
-**Hook `useTodayClosures`** (linea 158):
-- Ya usa `useDateClosures(branchId, new Date())`
-- Cambiar a usar `getOperationalDate()` para mostrar cierres de la jornada actual
+### Migracion 3: Triggers, funciones y vistas
 
-**Header con fecha** (linea 200):
-- Mostrar "(cierre)" cuando `isEarlyMorning()` es true
-- Ejemplo: "sabado 8 feb (cierre)"
+```text
+- Trigger: calcular_porcentaje_ft (ventas_mensuales_local)
+- Trigger: calcular_canon (canon_liquidaciones)
+- Trigger: actualizar_saldo_compra (pagos_proveedores)
+- Trigger: actualizar_saldo_canon (pagos_canon)
+- Trigger: validar_periodo_abierto (compras, gastos, consumos_manuales)
+- Trigger: check_porcentajes_suman_100 (socios)
+- Trigger: calcular_saldo_socio (movimientos_socio)
+- Trigger: procesar_distribucion_utilidades
+- Trigger: audit_financial_changes (todas las tablas)
+- Vista: precio_promedio_mes
+- Vista: cuenta_corriente_proveedores
+- Vista: balance_socios
+- Funcion helper: get_iibb_alicuota
+```
 
-### 3. Modificar useShiftClosures.ts
+### Migracion 4: RLS Policies
 
-**Funcion `useTodayClosures`** (linea 58):
-- Cambiar: `return useDateClosures(branchId, new Date())`
-- Por: `return useDateClosures(branchId, getOperationalDate())`
+Politicas usando funciones existentes:
 
-### 4. Crear Pagina de Historial de Cierres
+- **Tablas de marca** (categorias_insumo, insumos): superadmin/coordinador pueden escribir, staff puede leer
+- **Tablas por sucursal** (compras, gastos, etc.): `can_access_branch()` para lectura, `is_financial_for_branch()` para escritura
+- **Proveedores**: ambito marca = lectura global, ambito local = solo esa sucursal
+- **Socios**: solo superadmin y franquiciado del local
+- **Audit log**: solo superadmin puede leer, nadie puede escribir directamente (via trigger SECURITY DEFINER)
+- **Periodos**: superadmin puede cerrar/reabrir, franquiciado puede cerrar
 
-Archivo nuevo: `src/pages/local/SalesHistoryPage.tsx`
+## Tablas totales a crear: 15
 
-Contenido:
-- Selector de rango de fechas (ultimos 7/15/30 dias)
-- Tabla con fecha, turno, hamburguesas, vendido, alertas
-- Usa el hook existente `useClosuresByDateRange`
+```text
+categorias_insumo, insumos, proveedores, compras, 
+pagos_proveedores, gastos, ventas_mensuales_local,
+canon_liquidaciones, pagos_canon, consumos_manuales,
+socios, movimientos_socio, distribuciones_utilidades,
+periodos, configuracion_impuestos
+```
 
-### 5. Agregar Link en Dashboard
+(financial_audit_log ya existe como audit_logs - se reutilizara o se creara version financiera separada)
 
-En `ManagerDashboard.tsx`, debajo de la seccion "Ventas Hoy":
-- Agregar boton/link "Ver historial de ventas"
-- Navega a `/milocal/:branchId/ventas/historial`
+## Resultado
 
-### 6. Agregar Ruta y Navegacion
+Base de datos lista para que en futuras iteraciones se conecten los modulos de frontend (Compras, Gastos, Canon, etc.) uno por uno.
 
-**App.tsx**: Agregar ruta `/milocal/:branchId/ventas/historial`
-
-**LocalSidebar.tsx**: Considerar si agregar en menu lateral (opcional, el link desde dashboard puede ser suficiente)
-
-## Flujo de Usuario Resultante
-
-A las 00:30 del domingo:
-1. Dashboard muestra: "sabado 8 feb (cierre)"
-2. Seccion "Ventas Hoy" muestra turnos del sabado (Mediodia, Noche)
-3. "Equipo Ahora" muestra personal que ficho el sabado y sigue trabajando
-4. Link "Ver historial" permite ver cierres anteriores
-
-A las 05:00 del domingo:
-1. Dashboard muestra: "domingo 9 feb"
-2. Turnos se resetean al domingo (vacios)
-3. El sistema "cambia de dia" operativamente
-
-## Archivos a Crear
-- `src/lib/operationalDate.ts` (utilidad centralizada)
-- `src/pages/local/SalesHistoryPage.tsx` (historial de cierres)
-
-## Archivos a Modificar
-- `src/components/local/ManagerDashboard.tsx` (usar fecha operativa + link historial)
-- `src/hooks/useShiftClosures.ts` (usar fecha operativa en useTodayClosures)
-- `src/App.tsx` (agregar ruta de historial)
-
-## Principio de Fuente Unica de Verdad
-- `getOperationalDate()` es LA funcion que define que dia operativo es
-- Todos los componentes que necesiten "hoy" en contexto operativo usan esta funcion
-- No hay logica duplicada de zona horaria/jornada dispersa
