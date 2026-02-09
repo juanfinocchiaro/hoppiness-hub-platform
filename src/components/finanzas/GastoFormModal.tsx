@@ -5,9 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
 import { useGastoMutations } from '@/hooks/useGastos';
-import { CATEGORIA_GASTO_OPTIONS, MEDIO_PAGO_OPTIONS, ESTADO_GASTO_OPTIONS, getCurrentPeriodo } from '@/types/compra';
+import { CATEGORIA_GASTO_OPTIONS, MEDIO_PAGO_OPTIONS, getCurrentPeriodo } from '@/types/compra';
 import type { Gasto } from '@/types/compra';
+
+const ESTADO_OPTIONS = [
+  { value: 'pagado', label: 'Pagado' },
+  { value: 'pendiente', label: 'Pendiente de pago' },
+];
 
 interface GastoFormModalProps {
   open: boolean;
@@ -25,8 +31,10 @@ export function GastoFormModal({ open, onOpenChange, branchId, gasto }: GastoFor
     categoria_principal: '',
     concepto: '',
     monto: '',
-    medio_pago: 'efectivo',
     estado: 'pagado',
+    fecha_vencimiento: '',
+    fecha_pago: '',
+    medio_pago: 'efectivo',
     referencia_pago: '',
     observaciones: '',
   });
@@ -38,8 +46,10 @@ export function GastoFormModal({ open, onOpenChange, branchId, gasto }: GastoFor
         categoria_principal: gasto.categoria_principal,
         concepto: gasto.concepto,
         monto: String(gasto.monto),
-        medio_pago: gasto.medio_pago || 'efectivo',
         estado: gasto.estado || 'pagado',
+        fecha_vencimiento: (gasto as any).fecha_vencimiento || '',
+        fecha_pago: (gasto as any).fecha_pago || '',
+        medio_pago: gasto.medio_pago || 'efectivo',
         referencia_pago: gasto.referencia_pago || '',
         observaciones: gasto.observaciones || '',
       });
@@ -49,8 +59,10 @@ export function GastoFormModal({ open, onOpenChange, branchId, gasto }: GastoFor
         categoria_principal: '',
         concepto: '',
         monto: '',
-        medio_pago: 'efectivo',
         estado: 'pagado',
+        fecha_vencimiento: '',
+        fecha_pago: new Date().toISOString().slice(0, 10),
+        medio_pago: 'efectivo',
         referencia_pago: '',
         observaciones: '',
       });
@@ -60,17 +72,19 @@ export function GastoFormModal({ open, onOpenChange, branchId, gasto }: GastoFor
   const handleSubmit = async () => {
     if (!form.categoria_principal || !form.concepto || !form.monto) return;
 
-    const payload = {
+    const payload: any = {
       branch_id: branchId,
       fecha: form.fecha,
       periodo: getCurrentPeriodo(),
       categoria_principal: form.categoria_principal,
       concepto: form.concepto,
       monto: parseFloat(form.monto),
-      medio_pago: form.medio_pago,
       estado: form.estado,
-      referencia_pago: form.referencia_pago || undefined,
-      observaciones: form.observaciones || undefined,
+      fecha_vencimiento: form.estado === 'pendiente' && form.fecha_vencimiento ? form.fecha_vencimiento : null,
+      fecha_pago: form.estado === 'pagado' && form.fecha_pago ? form.fecha_pago : null,
+      medio_pago: form.estado === 'pagado' ? form.medio_pago : null,
+      referencia_pago: form.estado === 'pagado' ? (form.referencia_pago || null) : null,
+      observaciones: form.observaciones || null,
     };
 
     if (isEditing) {
@@ -94,7 +108,7 @@ export function GastoFormModal({ open, onOpenChange, branchId, gasto }: GastoFor
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Fecha *</Label>
+              <Label>Fecha de factura *</Label>
               <Input type="date" value={form.fecha} onChange={e => set('fecha', e.target.value)} />
             </div>
             <div>
@@ -112,44 +126,61 @@ export function GastoFormModal({ open, onOpenChange, branchId, gasto }: GastoFor
 
           <div>
             <Label>Concepto *</Label>
-            <Input value={form.concepto} onChange={e => set('concepto', e.target.value)} placeholder="Ej: Factura de luz marzo" />
+            <Input value={form.concepto} onChange={e => set('concepto', e.target.value)} placeholder="Ej: Factura EPEC febrero" />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Monto *</Label>
-              <Input type="number" step="0.01" value={form.monto} onChange={e => set('monto', e.target.value)} />
-            </div>
-            <div>
-              <Label>Estado</Label>
-              <Select value={form.estado} onValueChange={v => set('estado', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {ESTADO_GASTO_OPTIONS.map(e => (
-                    <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <Label>Monto *</Label>
+            <Input type="number" step="0.01" value={form.monto} onChange={e => set('monto', e.target.value)} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Medio de Pago</Label>
-              <Select value={form.medio_pago} onValueChange={v => set('medio_pago', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {MEDIO_PAGO_OPTIONS.map(m => (
-                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Referencia</Label>
-              <Input value={form.referencia_pago} onChange={e => set('referencia_pago', e.target.value)} placeholder="Nº comprobante" />
-            </div>
+          <Separator />
+
+          {/* Estado de Pago */}
+          <div>
+            <Label className="text-sm font-semibold">Estado de Pago</Label>
+            <Select value={form.estado} onValueChange={v => set('estado', v)}>
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {ESTADO_OPTIONS.map(e => (
+                  <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
+          {form.estado === 'pendiente' && (
+            <div>
+              <Label>Fecha de vencimiento</Label>
+              <Input type="date" value={form.fecha_vencimiento} onChange={e => set('fecha_vencimiento', e.target.value)} />
+            </div>
+          )}
+
+          {form.estado === 'pagado' && (
+            <div className="space-y-3">
+              <div>
+                <Label>Fecha de pago</Label>
+                <Input type="date" value={form.fecha_pago} onChange={e => set('fecha_pago', e.target.value)} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Medio de Pago</Label>
+                  <Select value={form.medio_pago} onValueChange={v => set('medio_pago', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {MEDIO_PAGO_OPTIONS.map(m => (
+                        <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Referencia</Label>
+                  <Input value={form.referencia_pago} onChange={e => set('referencia_pago', e.target.value)} placeholder="Nº comprobante" />
+                </div>
+              </div>
+            </div>
+          )}
 
           <div>
             <Label>Observaciones</Label>

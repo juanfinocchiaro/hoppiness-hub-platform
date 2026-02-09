@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/page-header';
 import { DataToolbar } from '@/components/ui/data-table-pro';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,10 +8,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Building2, MapPin, Package } from 'lucide-react';
 import { useProveedores } from '@/hooks/useProveedores';
 import { EmptyState } from '@/components/ui/states';
-import type { Proveedor } from '@/types/financial';
 
 export default function ProveedoresLocalPage() {
   const { branchId } = useParams<{ branchId: string }>();
+  const navigate = useNavigate();
   const { data: proveedores, isLoading } = useProveedores(branchId);
   const [search, setSearch] = useState('');
 
@@ -49,7 +49,11 @@ export default function ProveedoresLocalPage() {
                 <EmptyState icon={Package} title="Sin proveedores" description="No hay proveedores disponibles" />
               </TableCell></TableRow>
             ) : filtered.map((row) => (
-              <TableRow key={row.id}>
+              <TableRow
+                key={row.id}
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => navigate(`/milocal/${branchId}/finanzas/proveedores/${row.id}`)}
+              >
                 <TableCell>
                   <p className="font-medium">{row.razon_social}</p>
                   {row.cuit && <p className="text-xs text-muted-foreground">{row.cuit}</p>}

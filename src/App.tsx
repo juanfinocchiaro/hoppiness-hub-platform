@@ -38,6 +38,7 @@ import LiquidacionPage from "./pages/local/LiquidacionPage";
 import MeetingsPage from "./pages/local/MeetingsPage";
 import SalesHistoryPage from "./pages/local/SalesHistoryPage";
 import ProveedoresLocalPage from "./pages/local/ProveedoresLocalPage";
+import CuentaCorrienteProveedorPage from "./pages/local/CuentaCorrienteProveedorPage";
 import InsumosLocalPage from "./pages/local/InsumosLocalPage";
 import ComprasPage from "./pages/local/ComprasPage";
 import GastosPage from "./pages/local/GastosPage";
@@ -170,6 +171,7 @@ const App = () => (
               
               {/* Finanzas */}
               <Route path="finanzas/proveedores" element={<ProveedoresLocalPage />} />
+              <Route path="finanzas/proveedores/:proveedorId" element={<CuentaCorrienteProveedorPage />} />
               <Route path="finanzas/insumos" element={<InsumosLocalPage />} />
               <Route path="finanzas/compras" element={<ComprasPage />} />
               <Route path="finanzas/gastos" element={<GastosPage />} />

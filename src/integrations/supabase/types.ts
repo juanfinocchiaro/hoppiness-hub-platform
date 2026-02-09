@@ -1636,6 +1636,9 @@ export type Database = {
           detalle: Json | null
           estado: string | null
           fecha: string
+          fecha_pago: string | null
+          fecha_vencimiento: string | null
+          gasto_relacionado_id: string | null
           id: string
           medio_pago: string | null
           monto: number
@@ -1656,6 +1659,9 @@ export type Database = {
           detalle?: Json | null
           estado?: string | null
           fecha: string
+          fecha_pago?: string | null
+          fecha_vencimiento?: string | null
+          gasto_relacionado_id?: string | null
           id?: string
           medio_pago?: string | null
           monto: number
@@ -1676,6 +1682,9 @@ export type Database = {
           detalle?: Json | null
           estado?: string | null
           fecha?: string
+          fecha_pago?: string | null
+          fecha_vencimiento?: string | null
+          gasto_relacionado_id?: string | null
           id?: string
           medio_pago?: string | null
           monto?: number
@@ -1698,6 +1707,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_gasto_relacionado_id_fkey"
+            columns: ["gasto_relacionado_id"]
+            isOneToOne: false
+            referencedRelation: "gastos"
             referencedColumns: ["id"]
           },
         ]
@@ -3697,17 +3713,17 @@ export type Database = {
       cuenta_corriente_proveedores: {
         Row: {
           branch_id: string | null
-          branch_nombre: string | null
           cantidad_facturas: number | null
+          cuit: string | null
           facturas_pendientes: number | null
           facturas_vencidas: number | null
+          monto_vencido: number | null
           proveedor_id: string | null
           proximo_vencimiento: string | null
           razon_social: string | null
-          saldo_pendiente: number | null
           total_facturado: number | null
           total_pagado: number | null
-          ultima_compra: string | null
+          total_pendiente: number | null
         }
         Relationships: [
           {
