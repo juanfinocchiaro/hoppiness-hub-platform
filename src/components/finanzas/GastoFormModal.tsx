@@ -102,7 +102,7 @@ export function GastoFormModal({ open, onOpenChange, branchId, gasto }: GastoFor
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Editar Gasto' : 'Registrar Gasto'}</DialogTitle>
+          <DialogTitle>{isEditing ? 'Editar Gasto Menor' : 'Registrar Gasto Menor'}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">

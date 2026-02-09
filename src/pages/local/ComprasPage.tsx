@@ -38,8 +38,8 @@ export default function ComprasPage() {
   return (
     <div className="p-6">
       <PageHeader
-        title="Facturas de Proveedores"
-        subtitle="Registro de compras con detalle de items"
+        title="Compras y Servicios"
+        subtitle="Facturas de proveedores: insumos y servicios"
         actions={
           <Button onClick={() => setModalOpen(true)}>
             <Plus className="w-4 h-4 mr-2" /> Nueva Factura
