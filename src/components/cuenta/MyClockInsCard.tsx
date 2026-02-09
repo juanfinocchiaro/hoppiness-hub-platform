@@ -17,16 +17,63 @@ interface ClockEntry {
   branch?: { name: string };
 }
 
+/** Get local date string (YYYY-MM-DD) from a UTC timestamp, avoiding the new Date('YYYY-MM-DD') UTC parsing bug */
+function toLocalDateKey(utcTimestamp: string): string {
+  const d = new Date(utcTimestamp);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+interface ShiftPair {
+  date: Date;
+  clockIn: ClockEntry | null;
+  clockOut: ClockEntry | null;
+}
+
+/** Pair clock_in/clock_out entries into shifts, handling overnight spans */
+function pairShifts(entries: ClockEntry[]): ShiftPair[] {
+  const sorted = [...entries].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+
+  const shifts: ShiftPair[] = [];
+  let pendingIn: ClockEntry | null = null;
+
+  for (const entry of sorted) {
+    if (entry.entry_type === 'clock_in') {
+      // If there was a previous unpaired clock_in, register it as incomplete
+      if (pendingIn) {
+        shifts.push({ date: new Date(pendingIn.created_at), clockIn: pendingIn, clockOut: null });
+      }
+      pendingIn = entry;
+    } else if (entry.entry_type === 'clock_out') {
+      if (pendingIn) {
+        // Pair with the pending clock_in (even if different calendar day)
+        shifts.push({ date: new Date(pendingIn.created_at), clockIn: pendingIn, clockOut: entry });
+        pendingIn = null;
+      } else {
+        // Orphan clock_out (no matching clock_in)
+        shifts.push({ date: new Date(entry.created_at), clockIn: null, clockOut: entry });
+      }
+    }
+  }
+
+  // Still clocked in
+  if (pendingIn) {
+    shifts.push({ date: new Date(pendingIn.created_at), clockIn: pendingIn, clockOut: null });
+  }
+
+  // Most recent first
+  return shifts.reverse();
+}
+
 export default function MyClockInsCard() {
   const { id: userId } = useEffectiveUser();
   const { branchRoles } = usePermissionsWithImpersonation();
   
-  // Only show for operational employees (not franchise owners)
   const isOperationalEmployee = branchRoles.some(r => 
     r.local_role && r.local_role !== 'franquiciado'
   );
 
-  // Get clock entries for current month from clock_entries table
   const { data: clockEntries, isLoading } = useQuery({
     queryKey: ['my-clock-entries', userId],
     queryFn: async () => {
@@ -43,7 +90,7 @@ export default function MyClockInsCard() {
         .gte('created_at', monthStart.toISOString())
         .lte('created_at', monthEnd.toISOString())
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(50);
       
       if (error) throw error;
       return data as ClockEntry[];
@@ -51,32 +98,22 @@ export default function MyClockInsCard() {
     enabled: !!userId && isOperationalEmployee,
   });
 
-  // Calculate total hours worked this month
+  const shifts = clockEntries ? pairShifts(clockEntries) : [];
+
+  // Calculate total hours from paired shifts
   const calculateTotalHours = () => {
-    if (!clockEntries || clockEntries.length === 0) return { hours: 0, minutes: 0 };
-    
     let totalMinutes = 0;
-    const sortedEntries = [...clockEntries].sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    );
-    
-    let lastClockIn: Date | null = null;
-    
-    for (const entry of sortedEntries) {
-      if (entry.entry_type === 'clock_in') {
-        lastClockIn = new Date(entry.created_at);
-      } else if (entry.entry_type === 'clock_out' && lastClockIn) {
-        const clockOut = new Date(entry.created_at);
-        totalMinutes += differenceInMinutes(clockOut, lastClockIn);
-        lastClockIn = null;
+    for (const shift of shifts) {
+      if (shift.clockIn && shift.clockOut) {
+        totalMinutes += differenceInMinutes(
+          new Date(shift.clockOut.created_at),
+          new Date(shift.clockIn.created_at)
+        );
+      } else if (shift.clockIn && !shift.clockOut) {
+        // Currently working
+        totalMinutes += differenceInMinutes(new Date(), new Date(shift.clockIn.created_at));
       }
     }
-    
-    // If currently clocked in, add time until now
-    if (lastClockIn) {
-      totalMinutes += differenceInMinutes(new Date(), lastClockIn);
-    }
-    
     return {
       hours: Math.floor(totalMinutes / 60),
       minutes: totalMinutes % 60,
@@ -84,37 +121,16 @@ export default function MyClockInsCard() {
   };
 
   const totalTime = calculateTotalHours();
+  const isCurrentlyWorking = shifts.length > 0 && shifts[0].clockIn && !shifts[0].clockOut;
+  const recentShifts = shifts.slice(0, 5);
 
-  // Check if currently clocked in
-  const isCurrentlyWorking = clockEntries?.length 
-    ? clockEntries[0].entry_type === 'clock_in'
-    : false;
-
-  // Group entries by date for display
-  const groupedEntries = clockEntries?.reduce((acc, entry) => {
-    const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
-    if (!acc[date]) acc[date] = [];
-    acc[date].push(entry);
-    return acc;
-  }, {} as Record<string, ClockEntry[]>) || {};
-
-  // Get last 5 unique dates
-  const recentDates = Object.keys(groupedEntries).slice(0, 5);
-
-  // Don't show if not an operational employee (excludes franchisees)
-  if (!isOperationalEmployee) {
-    return null;
-  }
+  if (!isOperationalEmployee) return null;
 
   if (isLoading) {
     return (
       <Card>
-        <CardHeader className="pb-2">
-          <Skeleton className="h-5 w-32" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-20 w-full" />
-        </CardContent>
+        <CardHeader className="pb-2"><Skeleton className="h-5 w-32" /></CardHeader>
+        <CardContent><Skeleton className="h-20 w-full" /></CardContent>
       </Card>
     );
   }
@@ -128,14 +144,11 @@ export default function MyClockInsCard() {
             <CardTitle className="text-lg">Mis Fichajes</CardTitle>
           </div>
           {isCurrentlyWorking && (
-            <Badge className="bg-green-500 text-white animate-pulse">
-              Trabajando
-            </Badge>
+            <Badge className="bg-green-500 text-white animate-pulse">Trabajando</Badge>
           )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Monthly summary */}
         <div className="flex items-center gap-4 p-3 bg-muted rounded-lg">
           <Timer className="w-8 h-8 text-muted-foreground" />
           <div>
@@ -146,57 +159,47 @@ export default function MyClockInsCard() {
           </div>
         </div>
 
-        {/* Recent entries */}
-        {recentDates.length > 0 ? (
+        {recentShifts.length > 0 ? (
           <div className="space-y-2">
             <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-1">
               <Calendar className="w-4 h-4" />
               Últimos fichajes
             </h4>
             <div className="space-y-2">
-              {recentDates.map((date) => {
-                const entries = groupedEntries[date];
-                const dateObj = new Date(date);
-                
-                // Find pairs of clock_in/clock_out
-                const clockIn = entries.find(e => e.entry_type === 'clock_in');
-                const clockOut = entries.find(e => e.entry_type === 'clock_out');
-                
+              {recentShifts.map((shift, i) => {
                 let duration = null;
-                if (clockIn && clockOut) {
+                if (shift.clockIn && shift.clockOut) {
                   const mins = differenceInMinutes(
-                    new Date(clockOut.created_at),
-                    new Date(clockIn.created_at)
+                    new Date(shift.clockOut.created_at),
+                    new Date(shift.clockIn.created_at)
                   );
                   duration = { hours: Math.floor(mins / 60), mins: mins % 60 };
                 }
 
                 return (
-                  <div 
-                    key={date}
+                  <div
+                    key={shift.clockIn?.id || shift.clockOut?.id || i}
                     className="flex items-center justify-between text-sm p-2 rounded hover:bg-muted/50 border-b last:border-0"
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-muted-foreground w-20">
-                        {format(dateObj, "EEE d", { locale: es })}
+                        {format(shift.date, "EEE d", { locale: es })}
                       </span>
                       <div className="flex items-center gap-2 text-xs">
-                        {clockIn && (
+                        {shift.clockIn && (
                           <span className="flex items-center gap-1 text-green-600">
                             <LogIn className="w-3 h-3" />
-                            {format(new Date(clockIn.created_at), 'HH:mm')}
+                            {format(new Date(shift.clockIn.created_at), 'HH:mm')}
                           </span>
                         )}
-                        {clockOut && (
+                        {shift.clockOut && (
                           <span className="flex items-center gap-1 text-red-600">
                             <LogOut className="w-3 h-3" />
-                            {format(new Date(clockOut.created_at), 'HH:mm')}
+                            {format(new Date(shift.clockOut.created_at), 'HH:mm')}
                           </span>
                         )}
-                        {clockIn && !clockOut && (
-                          <Badge variant="outline" className="text-xs animate-pulse">
-                            En curso
-                          </Badge>
+                        {shift.clockIn && !shift.clockOut && (
+                          <Badge variant="outline" className="text-xs animate-pulse">En curso</Badge>
                         )}
                       </div>
                     </div>
