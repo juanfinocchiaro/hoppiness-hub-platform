@@ -197,6 +197,24 @@ export function AppSalesSection({ branchId, data, onChange, subtotal }: AppSales
                       />
                     </div>
                   </div>
+                  {/* Cobrado por Posnet - cambio de forma de pago */}
+                  <div className="pt-2 border-t">
+                    <Label className="text-xs text-muted-foreground">
+                      Cobrado por Posnet
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={data.mas_delivery.cobrado_posnet || ''}
+                      onChange={(e) => handleChange('mas_delivery', 'cobrado_posnet', parseNumber(e))}
+                      className="h-9"
+                      placeholder="0"
+                    />
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      Pedidos que entraron como efectivo pero se cobraron con tarjeta en el local
+                    </p>
+                  </div>
                   <div className="flex items-center gap-2 pt-2 border-t">
                     <span className="text-xs text-muted-foreground">Núcleo: {formatCurrency(getNucleoSum('mas_delivery'))}</span>
                     <span className="text-muted-foreground">→</span>

@@ -127,7 +127,8 @@ export function ShiftClosureModal({
     
     // For invoicing calculation
     const efectivoLocal = totalesLocal.efectivo + ventasApps.pedidosya.efectivo;
-    const efectivoMasDelivery = ventasApps.mas_delivery.efectivo;
+    const cobradoPosnet = ventasApps.mas_delivery.cobrado_posnet || 0;
+    const efectivoMasDelivery = ventasApps.mas_delivery.efectivo - cobradoPosnet;
     const facturacionEsperada = calcularFacturacionEsperada(ventasLocal, ventasApps);
     
     return {
@@ -145,7 +146,7 @@ export function ShiftClosureModal({
   
   // Calculate alerts
   const alertas = useMemo(() => {
-    const posnetDiff = calcularDiferenciaPosnet(ventasLocal);
+    const posnetDiff = calcularDiferenciaPosnet(ventasLocal, ventasApps);
     const appsDiff = calcularDiferenciasApps(ventasApps);
     const cajaAlerta = arqueoCaja.diferencia_caja !== 0;
     const facturacionAlerta = totals.facturacionEsperada > 0 && 
@@ -267,6 +268,7 @@ export function ShiftClosureModal({
             {/* 3. Comparación Posnet */}
             <PosnetComparisonSection
               ventasLocal={ventasLocal}
+              ventasApps={ventasApps}
               onPosnetChange={handlePosnetChange}
             />
             
