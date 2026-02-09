@@ -4001,6 +4001,15 @@ export type Database = {
         }
         Relationships: []
       }
+      rdo_report_data: {
+        Row: {
+          branch_id: string | null
+          periodo: string | null
+          rdo_category_code: string | null
+          total: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       can_access_branch: {
@@ -4053,6 +4062,20 @@ export type Database = {
       get_local_role_for_branch: {
         Args: { _branch_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["local_role_type"]
+      }
+      get_rdo_report: {
+        Args: { _branch_id: string; _periodo: string }
+        Returns: {
+          behavior: string
+          category_code: string
+          category_name: string
+          level: number
+          parent_code: string
+          percentage: number
+          rdo_section: string
+          sort_order: number
+          total: number
+        }[]
       }
       get_user_branches: {
         Args: { _user_id: string }
