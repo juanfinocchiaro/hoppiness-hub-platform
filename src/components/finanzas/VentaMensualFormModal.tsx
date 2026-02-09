@@ -58,8 +58,10 @@ export function VentaMensualFormModal({ open, onOpenChange, branchId, branchName
 
   const ventaTotal = parseFloat(form.venta_total) || 0;
   const efectivo = parseFloat(form.efectivo) || 0;
-  const fc = ventaTotal - efectivo; // Facturación Contable = Venta Total - Efectivo
-  const canon = fc * 0.05;
+  const online = ventaTotal - efectivo;
+  const canonEfectivo = efectivo * 0.05;
+  const canonOnline = online * 0.05;
+  const canonTotal = canonEfectivo + canonOnline;
   const pctEfectivo = ventaTotal > 0 ? ((efectivo / ventaTotal) * 100).toFixed(1) : '0.0';
 
   const handleSubmit = async () => {
@@ -133,18 +135,28 @@ export function VentaMensualFormModal({ open, onOpenChange, branchId, branchName
             </p>
           </div>
 
-          <div className="p-3 rounded-md bg-muted text-sm space-y-1">
+          <div className="p-3 rounded-md bg-muted text-sm space-y-2">
             <div className="flex justify-between">
-              <span>FC (Facturación Contable)</span>
-              <strong className="font-mono">$ {fc.toLocaleString('es-AR')}</strong>
+              <span>Venta Online</span>
+              <strong className="font-mono">$ {online.toLocaleString('es-AR')}</strong>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between text-muted-foreground">
               <span>% Efectivo</span>
               <span className="font-mono">{pctEfectivo}%</span>
             </div>
-            <div className="flex justify-between text-muted-foreground">
-              <span>Canon (5% sobre FC)</span>
-              <span className="font-mono">$ {canon.toLocaleString('es-AR')}</span>
+            <div className="border-t pt-2 mt-2 space-y-1">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Canon 5% Efectivo <span className="text-xs">(pago en efectivo)</span></span>
+                <span className="font-mono">$ {canonEfectivo.toLocaleString('es-AR')}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Canon 5% Online <span className="text-xs">(pago transferencia)</span></span>
+                <span className="font-mono">$ {canonOnline.toLocaleString('es-AR')}</span>
+              </div>
+              <div className="flex justify-between font-semibold">
+                <span>Canon Total</span>
+                <span className="font-mono">$ {canonTotal.toLocaleString('es-AR')}</span>
+              </div>
             </div>
           </div>
 

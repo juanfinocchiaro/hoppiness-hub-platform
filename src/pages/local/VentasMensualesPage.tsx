@@ -104,8 +104,9 @@ export default function VentasMensualesPage() {
               <TableHead>Período</TableHead>
               <TableHead className="text-right">Venta Total</TableHead>
               <TableHead className="text-right">Efectivo</TableHead>
-              <TableHead className="text-right">FC</TableHead>
+              <TableHead className="text-right">Online</TableHead>
               <TableHead className="text-right">% Ef.</TableHead>
+              <TableHead className="text-right">Canon</TableHead>
               <TableHead className="w-[60px]" />
             </TableRow>
           </TableHeader>
@@ -113,14 +114,14 @@ export default function VentasMensualesPage() {
             {isLoading ? (
               Array.from({ length: 4 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 6 }).map((_, j) => (
+                  {Array.from({ length: 7 }).map((_, j) => (
                     <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                   ))}
                 </TableRow>
               ))
             ) : !ventas?.length ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-40">
+                <TableCell colSpan={7} className="h-40">
                   <EmptyState 
                     icon={TrendingUp} 
                     title="Sin ventas cargadas" 
@@ -132,17 +133,19 @@ export default function VentasMensualesPage() {
               ventas.map((row) => {
                 const vt = Number(row.venta_total ?? 0);
                 const ef = Number(row.efectivo ?? 0);
-                const fc = vt - ef;
+                const online = vt - ef;
                 const pctEf = vt > 0 ? ((ef / vt) * 100).toFixed(1) : '0.0';
+                const canon = vt * 0.05;
                 return (
                   <TableRow key={row.id}>
                     <TableCell className="font-medium">{formatPeriodo(row.periodo)}</TableCell>
                     <TableCell className="text-right font-mono font-semibold">$ {vt.toLocaleString('es-AR')}</TableCell>
                     <TableCell className="text-right font-mono">$ {ef.toLocaleString('es-AR')}</TableCell>
-                    <TableCell className="text-right font-mono">$ {fc.toLocaleString('es-AR')}</TableCell>
+                    <TableCell className="text-right font-mono">$ {online.toLocaleString('es-AR')}</TableCell>
                     <TableCell className="text-right">
                       <Badge variant={parseFloat(pctEf) > 30 ? 'destructive' : 'secondary'}>{pctEf}%</Badge>
                     </TableCell>
+                    <TableCell className="text-right font-mono">$ {canon.toLocaleString('es-AR')}</TableCell>
                     <TableCell>
                       <Button variant="ghost" size="icon" onClick={() => handleEditar(row)}>
                         <Pencil className="w-4 h-4" />

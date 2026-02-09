@@ -71,21 +71,23 @@ export default function VentasMensualesMarcaPage() {
     enabled: !!user && !!periodo,
   });
 
-  // Modelo: venta_total = total, efectivo = parte en cash, fc = venta_total - efectivo
+  // Modelo: venta_total = total, efectivo = parte en cash, online = venta_total - efectivo
   const rows = branches?.map(branch => {
     const venta = ventas?.find(v => v.branch_id === branch.id);
     const ventaTotal = Number(venta?.venta_total ?? 0);
     const efectivo = Number(venta?.efectivo ?? 0);
-    const fc = ventaTotal - efectivo;
+    const online = ventaTotal - efectivo;
     const pctEf = ventaTotal > 0 ? ((efectivo / ventaTotal) * 100).toFixed(1) : '-';
-    const canon = fc * 0.05;
-    return { branch, venta, ventaTotal, efectivo, fc, pctEf, canon };
+    const canonEfectivo = efectivo * 0.05;
+    const canonOnline = online * 0.05;
+    const canonTotal = canonEfectivo + canonOnline;
+    return { branch, venta, ventaTotal, efectivo, online, pctEf, canonEfectivo, canonOnline, canonTotal };
   }) || [];
 
   const totVenta = rows.reduce((s, r) => s + (r.venta ? r.ventaTotal : 0), 0);
   const totEfectivo = rows.reduce((s, r) => s + (r.venta ? r.efectivo : 0), 0);
-  const totFC = totVenta - totEfectivo;
-  const totCanon = totFC * 0.05;
+  const totOnline = totVenta - totEfectivo;
+  const totCanon = totVenta * 0.05;
   const cargados = rows.filter(r => r.venta).length;
 
   const openModal = (branchId: string, venta?: any) => {
@@ -115,7 +117,7 @@ export default function VentasMensualesMarcaPage() {
         <div className="flex gap-4 text-sm flex-wrap">
           <span className="text-muted-foreground">Cargados: <strong>{cargados}/{rows.length}</strong></span>
           <span className="text-muted-foreground">Venta: <strong className="font-mono">$ {totVenta.toLocaleString('es-AR')}</strong></span>
-          <span className="text-muted-foreground">FC: <strong className="font-mono">$ {totFC.toLocaleString('es-AR')}</strong></span>
+          <span className="text-muted-foreground">Online: <strong className="font-mono">$ {totOnline.toLocaleString('es-AR')}</strong></span>
           <span className="text-muted-foreground">Canon: <strong className="font-mono">$ {totCanon.toLocaleString('es-AR')}</strong></span>
         </div>
       </div>
@@ -128,9 +130,9 @@ export default function VentasMensualesMarcaPage() {
               <TableHead>Local</TableHead>
               <TableHead className="text-right">Venta Total</TableHead>
               <TableHead className="text-right">Efectivo</TableHead>
-              <TableHead className="text-right">FC</TableHead>
+              <TableHead className="text-right">Online</TableHead>
               <TableHead className="text-right">% Ef.</TableHead>
-              <TableHead>Estado</TableHead>
+              <TableHead className="text-right">Canon</TableHead>
               <TableHead className="w-[80px]" />
             </TableRow>
           </TableHeader>
@@ -150,7 +152,7 @@ export default function VentasMensualesMarcaPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              rows.map(({ branch, venta, ventaTotal, efectivo, fc, pctEf, canon }) => (
+              rows.map(({ branch, venta, ventaTotal, efectivo, online, pctEf, canonTotal }) => (
                 <>
                   <TableRow key={branch.id}>
                     <TableCell>
@@ -168,19 +170,15 @@ export default function VentasMensualesMarcaPage() {
                       {venta ? `$ ${efectivo.toLocaleString('es-AR')}` : '-'}
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      {venta ? `$ ${fc.toLocaleString('es-AR')}` : '-'}
+                      {venta ? `$ ${online.toLocaleString('es-AR')}` : '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       {venta ? (
                         <Badge variant={parseFloat(pctEf) > 30 ? 'destructive' : 'secondary'}>{pctEf}%</Badge>
                       ) : '-'}
                     </TableCell>
-                    <TableCell>
-                      {venta ? (
-                        <Badge variant="default">Cargado</Badge>
-                      ) : (
-                        <Badge variant="outline">Sin cargar</Badge>
-                      )}
+                    <TableCell className="text-right font-mono">
+                      {venta ? `$ ${canonTotal.toLocaleString('es-AR')}` : '-'}
                     </TableCell>
                     <TableCell>
                       {venta ? (
@@ -201,11 +199,11 @@ export default function VentasMensualesMarcaPage() {
                   </TableRow>
                   {expanded === branch.id && venta && (
                     <TableRow key={`${branch.id}-detail`}>
-                      <TableCell colSpan={8} className="bg-muted/30">
+                      <TableCell colSpan={9} className="bg-muted/30">
                         <div className="p-3 space-y-1 text-sm">
-                          <p>Canon (4.5% FC): <strong className="font-mono">$ {(fc * 0.045).toLocaleString('es-AR')}</strong></p>
-                          <p>Marketing (0.5% FC): <strong className="font-mono">$ {(fc * 0.005).toLocaleString('es-AR')}</strong></p>
-                          <p>Total Canon: <strong className="font-mono">$ {canon.toLocaleString('es-AR')}</strong></p>
+                          <p>Canon 5% Efectivo <span className="text-xs text-muted-foreground">(pago en efectivo)</span>: <strong className="font-mono">$ {(efectivo * 0.05).toLocaleString('es-AR')}</strong></p>
+                          <p>Canon 5% Online <span className="text-xs text-muted-foreground">(pago transferencia)</span>: <strong className="font-mono">$ {(online * 0.05).toLocaleString('es-AR')}</strong></p>
+                          <p>Total Canon: <strong className="font-mono">$ {canonTotal.toLocaleString('es-AR')}</strong></p>
                           {venta.observaciones && <p className="text-muted-foreground">Obs: {venta.observaciones}</p>}
                           <p className="text-xs text-muted-foreground">
                             Cargado: {new Date(venta.created_at).toLocaleDateString('es-AR')}
@@ -234,11 +232,11 @@ export default function VentasMensualesMarcaPage() {
                 <p className="text-lg font-bold font-mono">$ {totEfectivo.toLocaleString('es-AR')}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">FC (Contable)</p>
-                <p className="text-lg font-bold font-mono">$ {totFC.toLocaleString('es-AR')}</p>
+                <p className="text-muted-foreground">Venta Online</p>
+                <p className="text-lg font-bold font-mono">$ {totOnline.toLocaleString('es-AR')}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Canon Total</p>
+                <p className="text-muted-foreground">Canon Total (5%)</p>
                 <p className="text-lg font-bold font-mono">$ {totCanon.toLocaleString('es-AR')}</p>
               </div>
             </div>
