@@ -1,43 +1,47 @@
 
 
-## Fix: Reuniones muestra "18 sin leer" contando reuniones canceladas
+## Solución: Cambio de forma de pago en Más Delivery
 
-### Problema
+### El problema
 
-La card de Reuniones en el dashboard de Manantiales muestra **"18 sin leer"** porque esta sumando los participantes sin leer de **todas** las reuniones, incluyendo las **canceladas**.
+Un pedido entra por MásDelivery marcado como "efectivo", pero el cliente retira y paga con tarjeta. Ese cobro pasa por el Posnet del local, pero en Núcleo queda registrado como "Efectivo" de MásDelivery. Resultado: el Posnet muestra mas que lo registrado en tarjetas de Nucleo, generando una diferencia falsa.
 
-Datos actuales:
-- "NOVEDADES" (convocada): 9 participantes sin leer
-- "REUNION PERSONAL NOVEDADES" (**cancelada**): 9 participantes sin leer
-- Total mostrado: 18 -- pero la reunion cancelada no deberia contar
+### La solución
 
-### Solucion
+Agregar un campo **"Cobrado por Posnet"** dentro de la sección de Más Delivery. Este monto:
+1. Se suma al "Total Tarjetas Núcleo" en la comparación con Posnet (para que cuadre)
+2. Se resta del efectivo de MásDelivery para la lógica de facturación (porque ya no es efectivo, es tarjeta)
 
-Filtrar las reuniones canceladas del calculo de `pendingReads` en `MeetingPendingCard.tsx`.
+### Cambios
 
-### Cambio tecnico
+**1. Tipos** (`src/types/shiftClosure.ts`)
+- Agregar campo `cobrado_posnet: number` a `mas_delivery` dentro de `VentasAppsData`
+- Actualizar `calcularTotalTarjetasNucleo()` para sumar `ventasApps.mas_delivery.cobrado_posnet`
+- Actualizar `calcularFacturacionEsperada()` para restar el cobrado_posnet del efectivo MásDelivery (ya no va como efectivo)
+- Actualizar defaults y migration helpers
 
-**Archivo:** `src/components/meetings/MeetingPendingCard.tsx`
+**2. UI de Apps** (`src/components/local/closure/AppSalesSection.tsx`)
+- Agregar input "Cobrado por Posnet" en la card de Más Delivery, con una nota explicativa tipo "Pedidos que entraron como efectivo pero se cobraron con tarjeta en el local"
 
-Linea 27-30, cambiar:
+**3. Comparación Posnet** (`src/components/local/closure/PosnetComparisonSection.tsx`)
+- Recibir `ventasApps` como prop adicional para poder sumar el `cobrado_posnet`
+- Actualizar la función de calculo para incluir ese monto
 
-```typescript
-// Antes (cuenta TODAS las reuniones)
-const pendingReads = meetings?.reduce((acc, m) => {
-  const unread = m.participants?.filter((p: any) => !p.read_at).length || 0;
-  return acc + unread;
-}, 0) || 0;
+**4. Modal principal** (`src/components/local/closure/ShiftClosureModal.tsx`)
+- Pasar `ventasApps` al componente de Posnet
 
-// Despues (excluye canceladas)
-const pendingReads = meetings
-  ?.filter(m => m.status !== 'cancelada')
-  .reduce((acc, m) => {
-    const unread = m.participants?.filter((p: any) => !p.read_at).length || 0;
-    return acc + unread;
-  }, 0) || 0;
-```
+### Flujo del encargado
 
-Tambien se filtrara `lastMeeting` para que no muestre una reunion cancelada como "ultima reunion".
+Antes:
+- MásDelivery: Efectivo = $29.600 (pero el cliente pagó con tarjeta)
+- Posnet: $199.800
+- Nucleo tarjetas: $170.200
+- Diferencia: -$29.600 (error falso)
 
-Solo se modifica 1 archivo, sin cambios de backend.
+Despues:
+- MásDelivery: Efectivo = $0, Cobrado por Posnet = $29.600
+- Posnet: $199.800
+- Nucleo tarjetas: $170.200 + $29.600 = $199.800
+- Diferencia: $0
 
+No requiere cambios en la base de datos (el campo se guarda dentro del JSONB de `ventas_apps`).
