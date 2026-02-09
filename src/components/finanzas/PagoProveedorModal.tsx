@@ -116,9 +116,11 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
 
   const setCanonPreset = () => {
     if (!canonInfo) return;
+    const efectivo = Math.round(canonInfo.pagarEfectivo * 100) / 100;
+    const transferencia = Math.round((saldoPendiente - efectivo) * 100) / 100;
     setLines([
-      { monto: canonInfo.pagarEfectivo.toFixed(2), medio_pago: 'efectivo' },
-      { monto: canonInfo.pagarTransferencia.toFixed(2), medio_pago: 'transferencia' },
+      { monto: efectivo.toFixed(2), medio_pago: 'efectivo' },
+      { monto: transferencia.toFixed(2), medio_pago: 'transferencia' },
     ]);
   };
 
