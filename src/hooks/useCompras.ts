@@ -180,6 +180,7 @@ export function usePagoProveedorMutations() {
       qc.invalidateQueries({ queryKey: ['facturas'] });
       qc.invalidateQueries({ queryKey: ['movimientos-proveedor'] });
       qc.invalidateQueries({ queryKey: ['saldo-proveedor'] });
+      qc.invalidateQueries({ queryKey: ['resumen-proveedor'] });
       toast.success('Pago registrado');
     },
     onError: (e) => toast.error(`Error: ${e.message}`),
@@ -198,6 +199,7 @@ export function usePagoProveedorMutations() {
       qc.invalidateQueries({ queryKey: ['facturas'] });
       qc.invalidateQueries({ queryKey: ['movimientos-proveedor'] });
       qc.invalidateQueries({ queryKey: ['saldo-proveedor'] });
+      qc.invalidateQueries({ queryKey: ['resumen-proveedor'] });
       toast.success('Pago eliminado');
     },
     onError: (e) => toast.error(`Error: ${e.message}`),
