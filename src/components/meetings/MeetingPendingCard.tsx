@@ -20,11 +20,12 @@ export function MeetingPendingCard({ branchId, onCreateMeeting }: MeetingPending
   const { data: stats, isLoading: loadingStats } = useUnreadMeetingsCount(branchId);
   const { data: meetings, isLoading: loadingMeetings } = useBranchMeetings(branchId);
 
-  const lastMeeting = meetings?.[0];
+  const activeMeetings = meetings?.filter(m => m.status !== 'cancelada');
+  const lastMeeting = activeMeetings?.[0];
   const isLoading = loadingStats || loadingMeetings;
 
-  // Count unread participants across all meetings
-  const pendingReads = meetings?.reduce((acc, m) => {
+  // Count unread participants across active meetings only
+  const pendingReads = activeMeetings?.reduce((acc, m) => {
     const unread = m.participants?.filter((p: any) => !p.read_at).length || 0;
     return acc + unread;
   }, 0) || 0;
