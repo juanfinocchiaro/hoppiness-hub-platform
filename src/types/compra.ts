@@ -83,14 +83,11 @@ export const FACTURA_TIPO_OPTIONS = [
 ] as const;
 
 export const CATEGORIA_GASTO_OPTIONS = [
-  { value: 'servicios', label: 'Servicios (Luz, Gas, Internet)' },
-  { value: 'alquileres', label: 'Alquileres' },
-  { value: 'sueldos', label: 'Sueldos y Cargas Sociales' },
-  { value: 'impuestos', label: 'Impuestos' },
-  { value: 'mantenimiento', label: 'Mantenimiento' },
-  { value: 'marketing', label: 'Marketing' },
-  { value: 'logistica', label: 'Logística' },
-  { value: 'administrativos', label: 'Administrativos' },
+  { value: 'caja_chica', label: 'Caja chica' },
+  { value: 'propinas', label: 'Propinas / Gratificaciones' },
+  { value: 'movilidad', label: 'Movilidad / Transporte' },
+  { value: 'mantenimiento_express', label: 'Mantenimiento express' },
+  { value: 'insumos_menores', label: 'Insumos menores (sin factura)' },
   { value: 'varios', label: 'Varios' },
 ] as const;
 
