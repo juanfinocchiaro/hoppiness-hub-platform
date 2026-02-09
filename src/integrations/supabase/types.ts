@@ -1710,6 +1710,8 @@ export type Database = {
           monto: number
           observaciones: string | null
           periodo: string
+          proveedor_id: string | null
+          rdo_category_code: string | null
           referencia_pago: string | null
           subcategoria: string | null
           updated_at: string | null
@@ -1733,6 +1735,8 @@ export type Database = {
           monto: number
           observaciones?: string | null
           periodo: string
+          proveedor_id?: string | null
+          rdo_category_code?: string | null
           referencia_pago?: string | null
           subcategoria?: string | null
           updated_at?: string | null
@@ -1756,6 +1760,8 @@ export type Database = {
           monto?: number
           observaciones?: string | null
           periodo?: string
+          proveedor_id?: string | null
+          rdo_category_code?: string | null
           referencia_pago?: string | null
           subcategoria?: string | null
           updated_at?: string | null
@@ -1781,6 +1787,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "gastos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "cuenta_corriente_proveedores"
+            referencedColumns: ["proveedor_id"]
+          },
+          {
+            foreignKeyName: "gastos_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_rdo_category_code_fkey"
+            columns: ["rdo_category_code"]
+            isOneToOne: false
+            referencedRelation: "rdo_categories"
+            referencedColumns: ["code"]
           },
         ]
       }
@@ -1953,6 +1980,9 @@ export type Database = {
           precio_referencia: number | null
           proveedor_obligatorio_id: string | null
           proveedor_sugerido_id: string | null
+          rdo_category_code: string | null
+          tipo_item: string
+          tracks_stock: boolean
           unidad_base: string
           updated_at: string | null
         }
@@ -1973,6 +2003,9 @@ export type Database = {
           precio_referencia?: number | null
           proveedor_obligatorio_id?: string | null
           proveedor_sugerido_id?: string | null
+          rdo_category_code?: string | null
+          tipo_item?: string
+          tracks_stock?: boolean
           unidad_base: string
           updated_at?: string | null
         }
@@ -1993,6 +2026,9 @@ export type Database = {
           precio_referencia?: number | null
           proveedor_obligatorio_id?: string | null
           proveedor_sugerido_id?: string | null
+          rdo_category_code?: string | null
+          tipo_item?: string
+          tracks_stock?: boolean
           unidad_base?: string
           updated_at?: string | null
         }
@@ -2032,6 +2068,13 @@ export type Database = {
             referencedRelation: "proveedores"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "insumos_rdo_category_code_fkey"
+            columns: ["rdo_category_code"]
+            isOneToOne: false
+            referencedRelation: "rdo_categories"
+            referencedColumns: ["code"]
+          },
         ]
       }
       items_factura: {
@@ -2046,6 +2089,7 @@ export type Database = {
           insumo_id: string | null
           observaciones: string | null
           precio_unitario: number
+          rdo_category_code: string | null
           subtotal: number
           tipo_item: string
           unidad: string | null
@@ -2061,6 +2105,7 @@ export type Database = {
           insumo_id?: string | null
           observaciones?: string | null
           precio_unitario: number
+          rdo_category_code?: string | null
           subtotal: number
           tipo_item?: string
           unidad?: string | null
@@ -2076,6 +2121,7 @@ export type Database = {
           insumo_id?: string | null
           observaciones?: string | null
           precio_unitario?: number
+          rdo_category_code?: string | null
           subtotal?: number
           tipo_item?: string
           unidad?: string | null
@@ -2108,6 +2154,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "insumos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_factura_rdo_category_code_fkey"
+            columns: ["rdo_category_code"]
+            isOneToOne: false
+            referencedRelation: "rdo_categories"
+            referencedColumns: ["code"]
           },
         ]
       }
@@ -2811,9 +2864,11 @@ export type Database = {
           observaciones: string | null
           permite_cuenta_corriente: boolean | null
           razon_social: string
+          rdo_categories_default: string[] | null
           telefono: string | null
           telefono_secundario: string | null
           tipo_especial: string | null
+          tipo_proveedor: string[] | null
           titular_cuenta: string | null
           updated_at: string | null
         }
@@ -2840,9 +2895,11 @@ export type Database = {
           observaciones?: string | null
           permite_cuenta_corriente?: boolean | null
           razon_social: string
+          rdo_categories_default?: string[] | null
           telefono?: string | null
           telefono_secundario?: string | null
           tipo_especial?: string | null
+          tipo_proveedor?: string[] | null
           titular_cuenta?: string | null
           updated_at?: string | null
         }
@@ -2869,9 +2926,11 @@ export type Database = {
           observaciones?: string | null
           permite_cuenta_corriente?: boolean | null
           razon_social?: string
+          rdo_categories_default?: string[] | null
           telefono?: string | null
           telefono_secundario?: string | null
           tipo_especial?: string | null
+          tipo_proveedor?: string[] | null
           titular_cuenta?: string | null
           updated_at?: string | null
         }
