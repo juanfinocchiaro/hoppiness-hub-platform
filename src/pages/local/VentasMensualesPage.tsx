@@ -44,7 +44,6 @@ export default function VentasMensualesPage() {
   const [editing, setEditing] = useState<VentaMensual | null>(null);
   const [periodoParaCargar, setPeriodoParaCargar] = useState(getCurrentPeriodo());
 
-  // Verificar si el período seleccionado ya está cargado
   const periodoYaCargado = ventas?.some(v => v.periodo === periodoParaCargar);
 
   const handleCargarNuevo = () => {
@@ -62,10 +61,9 @@ export default function VentasMensualesPage() {
     <div className="p-6 space-y-6">
       <PageHeader
         title="Ventas Mensuales"
-        subtitle="Registro de facturación contable y total por período"
+        subtitle="Venta total y efectivo por período"
       />
 
-      {/* Selector de período para cargar */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
         <div className="space-y-1">
           <label className="text-sm font-medium">Período a cargar</label>
@@ -83,10 +81,7 @@ export default function VentasMensualesPage() {
             </SelectContent>
           </Select>
         </div>
-        <Button 
-          onClick={handleCargarNuevo}
-          disabled={periodoYaCargado}
-        >
+        <Button onClick={handleCargarNuevo} disabled={periodoYaCargado}>
           <Plus className="w-4 h-4 mr-2" /> 
           Cargar {formatPeriodo(periodoParaCargar)}
         </Button>
@@ -102,16 +97,15 @@ export default function VentasMensualesPage() {
         </Alert>
       )}
 
-      {/* Tabla de historial */}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Período</TableHead>
-              <TableHead className="text-right">Venta Total (FC)</TableHead>
+              <TableHead className="text-right">Venta Total</TableHead>
               <TableHead className="text-right">Efectivo</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead className="text-right">% Efectivo</TableHead>
+              <TableHead className="text-right">FC</TableHead>
+              <TableHead className="text-right">% Ef.</TableHead>
               <TableHead className="w-[60px]" />
             </TableRow>
           </TableHeader>
@@ -136,18 +130,18 @@ export default function VentasMensualesPage() {
               </TableRow>
             ) : (
               ventas.map((row) => {
-                const fc = Number(row.fc_total);
-                const ft = Number(row.ft_total);
-                const total = fc + ft;
-                const pctFt = total > 0 ? ((ft / total) * 100).toFixed(1) : '0.0';
+                const vt = Number(row.venta_total ?? 0);
+                const ef = Number(row.efectivo ?? 0);
+                const fc = vt - ef;
+                const pctEf = vt > 0 ? ((ef / vt) * 100).toFixed(1) : '0.0';
                 return (
                   <TableRow key={row.id}>
                     <TableCell className="font-medium">{formatPeriodo(row.periodo)}</TableCell>
+                    <TableCell className="text-right font-mono font-semibold">$ {vt.toLocaleString('es-AR')}</TableCell>
+                    <TableCell className="text-right font-mono">$ {ef.toLocaleString('es-AR')}</TableCell>
                     <TableCell className="text-right font-mono">$ {fc.toLocaleString('es-AR')}</TableCell>
-                    <TableCell className="text-right font-mono">$ {ft.toLocaleString('es-AR')}</TableCell>
-                    <TableCell className="text-right font-mono font-semibold">$ {total.toLocaleString('es-AR')}</TableCell>
                     <TableCell className="text-right">
-                      <Badge variant={parseFloat(pctFt) > 30 ? 'destructive' : 'secondary'}>{pctFt}%</Badge>
+                      <Badge variant={parseFloat(pctEf) > 30 ? 'destructive' : 'secondary'}>{pctEf}%</Badge>
                     </TableCell>
                     <TableCell>
                       <Button variant="ghost" size="icon" onClick={() => handleEditar(row)}>
