@@ -1,47 +1,61 @@
 
 
-## Solución: Cambio de forma de pago en Más Delivery
+## Checklist de Monitoreo Ultra Smash
 
-### El problema
+### Objetivo
 
-Un pedido entra por MásDelivery marcado como "efectivo", pero el cliente retira y paga con tarjeta. Ese cobro pasa por el Posnet del local, pero en Núcleo queda registrado como "Efectivo" de MásDelivery. Resultado: el Posnet muestra mas que lo registrado en tarjetas de Nucleo, generando una diferencia falsa.
+Agregar un nuevo tipo de visita/checklist llamado **"Ultra Smash"** al sistema de supervisiones, con los 11 puntos de control que definió Ismael para monitorear y entrenar a los cocineros en la técnica correcta de preparación de la hamburguesa Ultrasmash.
 
-### La solución
+### Los 11 items del checklist
 
-Agregar un campo **"Cobrado por Posnet"** dentro de la sección de Más Delivery. Este monto:
-1. Se suma al "Total Tarjetas Núcleo" en la comparación con Posnet (para que cuadre)
-2. Se resta del efectivo de MásDelivery para la lógica de facturación (porque ya no es efectivo, es tarjeta)
+1. Pan enmantecado, condimentación y cheddar en corona antes de tirar la carne
+2. Temperatura correcta de plancha
+3. Bolitas colocadas sin mover
+4. Smash inmediato, firme y centrado
+5. Smash logra expansión pareja
+6. Salado controlado (cantidad correcta)
+7. Bordes crocantes visibles
+8. Cheddar agregado en tiempo correcto
+9. Retiro con espátula afilada
+10. Apilado correcto de medallones
+11. Producto final respeta estándar Ultra Smash
 
-### Cambios
+### Cambios necesarios
 
-**1. Tipos** (`src/types/shiftClosure.ts`)
-- Agregar campo `cobrado_posnet: number` a `mas_delivery` dentro de `VentasAppsData`
-- Actualizar `calcularTotalTarjetasNucleo()` para sumar `ventasApps.mas_delivery.cobrado_posnet`
-- Actualizar `calcularFacturacionEsperada()` para restar el cobrado_posnet del efectivo MásDelivery (ya no va como efectivo)
-- Actualizar defaults y migration helpers
+**1. Base de datos (migración SQL)**
 
-**2. UI de Apps** (`src/components/local/closure/AppSalesSection.tsx`)
-- Agregar input "Cobrado por Posnet" en la card de Más Delivery, con una nota explicativa tipo "Pedidos que entraron como efectivo pero se cobraron con tarjeta en el local"
+- Ampliar el tipo `inspection_type` para aceptar `'ultrasmash'` (actualmente solo `boh` y `foh`)
+- Insertar los 11 templates en `inspection_templates` con `inspection_type = 'ultrasmash'` y categoría `'ultrasmash'` (todos bajo una sola categoría ya que es un checklist técnico enfocado)
 
-**3. Comparación Posnet** (`src/components/local/closure/PosnetComparisonSection.tsx`)
-- Recibir `ventasApps` como prop adicional para poder sumar el `cobrado_posnet`
-- Actualizar la función de calculo para incluir ese monto
+**2. Tipos TypeScript** (`src/types/inspection.ts`)
 
-**4. Modal principal** (`src/components/local/closure/ShiftClosureModal.tsx`)
-- Pasar `ventasApps` al componente de Posnet
+- Agregar `'ultrasmash'` al type `InspectionType`
+- Agregar la etiqueta de categoría `ultrasmash: 'Monitoreo Ultra Smash'` a `CATEGORY_LABELS`
+- Agregar las etiquetas de tipo: `ultrasmash: 'Monitoreo Ultra Smash'` y `ultrasmash: 'Ultra'` a `TYPE_LABELS` y `TYPE_SHORT_LABELS`
 
-### Flujo del encargado
+**3. Página de Nueva Inspección** (`src/pages/admin/NewInspectionPage.tsx`)
 
-Antes:
-- MásDelivery: Efectivo = $29.600 (pero el cliente pagó con tarjeta)
-- Posnet: $199.800
-- Nucleo tarjetas: $170.200
-- Diferencia: -$29.600 (error falso)
+- Agregar una tercera opción de tipo de visita: **"Ultra Smash - Monitoreo de Técnica"** con la descripción "Checklist de preparación Ultrasmash para cocineros (11 items)"
 
-Despues:
-- MásDelivery: Efectivo = $0, Cobrado por Posnet = $29.600
-- Posnet: $199.800
-- Nucleo tarjetas: $170.200 + $29.600 = $199.800
-- Diferencia: $0
+**4. Sin cambios en los demás componentes**
 
-No requiere cambios en la base de datos (el campo se guarda dentro del JSONB de `ventas_apps`).
+Los componentes `InspectionChecklist`, `InspectionItemRow`, `InspectionSummary`, etc. ya funcionan genéricamente con cualquier tipo de inspección. Al agregar los templates en la base de datos, el checklist se genera automáticamente al iniciar una visita de tipo `ultrasmash`.
+
+### Nota sobre permisos
+
+Ismael menciona que estas planillas deberían ser accesibles solo para Dueño de Marca / Coordinador / Encargado Líder. El sistema de supervisiones actual ya está restringido a roles de marca (superadmin, coordinador). No se requieren cambios de permisos adicionales para esta funcionalidad.
+
+### Detalle Tecnico
+
+```text
+inspection_templates (nuevos registros):
++------+------------+------------+-----------+--------------------------------------------------+
+| sort | type       | category   | item_key  | item_label                                       |
++------+------------+------------+-----------+--------------------------------------------------+
+|    1 | ultrasmash | ultrasmash | us_pan    | Pan enmantecado, condimentación y cheddar...     |
+|    2 | ultrasmash | ultrasmash | us_temp   | Temperatura correcta de plancha                  |
+|    3 | ultrasmash | ultrasmash | us_bolit  | Bolitas colocadas sin mover                      |
+|  ... | ...        | ...        | ...       | ...                                              |
+|   11 | ultrasmash | ultrasmash | us_final  | Producto final respeta estándar Ultra Smash      |
++------+------------+------------+-----------+--------------------------------------------------+
+```
