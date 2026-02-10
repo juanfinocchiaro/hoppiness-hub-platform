@@ -53,7 +53,7 @@ export default function InspectionsPage() {
     <div className="p-6 space-y-6">
       <PageHeader
         title="Supervisiones"
-        subtitle="Historial de visitas BOH y FOH a sucursales"
+        subtitle="Historial de visitas BOH, FOH y Ultra Smash a sucursales"
         actions={
           <Button onClick={() => navigate('/mimarca/supervisiones/nueva')}>
             <Plus className="w-4 h-4 mr-2" />
