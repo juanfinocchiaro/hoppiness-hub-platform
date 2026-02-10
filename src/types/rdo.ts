@@ -30,4 +30,5 @@ export type RdoBehavior = keyof typeof RDO_BEHAVIORS;
 export const TIPO_ITEM_OPTIONS = [
   { value: 'ingrediente', label: 'Ingrediente' },
   { value: 'insumo', label: 'Insumo' },
+  { value: 'producto', label: 'Producto' },
 ] as const;

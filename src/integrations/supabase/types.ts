@@ -1988,11 +1988,14 @@ export type Database = {
           descripcion: string | null
           especificacion: Json | null
           id: string
+          margen_bruto: number | null
+          margen_porcentaje: number | null
           motivo_control: string | null
           nivel_control: string
           nombre: string
           precio_maximo_sugerido: number | null
           precio_referencia: number | null
+          precio_venta: number | null
           proveedor_obligatorio_id: string | null
           proveedor_sugerido_id: string | null
           rdo_category_code: string | null
@@ -2016,11 +2019,14 @@ export type Database = {
           descripcion?: string | null
           especificacion?: Json | null
           id?: string
+          margen_bruto?: number | null
+          margen_porcentaje?: number | null
           motivo_control?: string | null
           nivel_control?: string
           nombre: string
           precio_maximo_sugerido?: number | null
           precio_referencia?: number | null
+          precio_venta?: number | null
           proveedor_obligatorio_id?: string | null
           proveedor_sugerido_id?: string | null
           rdo_category_code?: string | null
@@ -2044,11 +2050,14 @@ export type Database = {
           descripcion?: string | null
           especificacion?: Json | null
           id?: string
+          margen_bruto?: number | null
+          margen_porcentaje?: number | null
           motivo_control?: string | null
           nivel_control?: string
           nombre?: string
           precio_maximo_sugerido?: number | null
           precio_referencia?: number | null
+          precio_venta?: number | null
           proveedor_obligatorio_id?: string | null
           proveedor_sugerido_id?: string | null
           rdo_category_code?: string | null
