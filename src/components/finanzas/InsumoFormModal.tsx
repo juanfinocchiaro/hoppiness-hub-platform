@@ -94,13 +94,11 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
       categoria_pl: form.categoria_pl || null,
       precio_referencia: form.precio_referencia || null,
       descripcion: form.descripcion || null,
-      nivel_control: isBrand ? 'obligatorio' : isLocal ? 'libre' : form.nivel_control,
+      nivel_control: isBrand ? form.nivel_control : isLocal ? 'libre' : form.nivel_control,
       motivo_control: form.motivo_control || null,
       precio_maximo_sugerido: form.precio_maximo_sugerido || null,
-      proveedor_obligatorio_id: isBrand ? (form.proveedor_obligatorio_id || null) : null,
-      proveedor_sugerido_id: form.nivel_control === 'semi_libre' ? (form.proveedor_sugerido_id || null) :
-                              form.nivel_control === 'obligatorio' ? null :
-                              (form.proveedor_sugerido_id || null),
+      proveedor_obligatorio_id: form.nivel_control === 'obligatorio' ? (form.proveedor_obligatorio_id || null) : null,
+      proveedor_sugerido_id: form.nivel_control === 'semi_libre' ? (form.proveedor_sugerido_id || null) : null,
       tipo_item: fixedType || form.tipo_item || 'insumo',
       rdo_category_code: form.rdo_category_code || null,
       tracks_stock: form.tracks_stock || false,
@@ -120,7 +118,7 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
   const title = isEdit
     ? `Editar ${typeLabel}`
     : isBrand
-      ? `Nuevo ${typeLabel} Obligatorio`
+      ? `Nuevo ${typeLabel}`
       : `Nuevo ${typeLabel} Local`;
 
   // ── Brand context: compact form ──
@@ -153,11 +151,58 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
               </FormRow>
             </div>
 
+            {/* Nivel de control */}
+            <FormRow label="Nivel de control" required>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => set('nivel_control', 'obligatorio')}
+                  className={`flex-1 px-3 py-2 rounded-md border text-sm font-medium transition-colors ${
+                    form.nivel_control === 'obligatorio'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  🔒 Obligatorio
+                </button>
+                <button
+                  type="button"
+                  onClick={() => set('nivel_control', 'semi_libre')}
+                  className={`flex-1 px-3 py-2 rounded-md border text-sm font-medium transition-colors ${
+                    form.nivel_control === 'semi_libre'
+                      ? 'border-yellow-500 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400'
+                      : 'border-border text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  🟡 Semi-libre
+                </button>
+              </div>
+            </FormRow>
+
             <div className="grid grid-cols-2 gap-3">
-              <FormRow label="Proveedor Obligatorio" required>
-                <Select value={form.proveedor_obligatorio_id || ''} onValueChange={(v) => set('proveedor_obligatorio_id', v)}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+              <FormRow
+                label={form.nivel_control === 'obligatorio' ? 'Proveedor Obligatorio' : 'Proveedor Sugerido'}
+                required={form.nivel_control === 'obligatorio'}
+              >
+                <Select
+                  value={
+                    form.nivel_control === 'obligatorio'
+                      ? (form.proveedor_obligatorio_id || '')
+                      : (form.proveedor_sugerido_id || 'none')
+                  }
+                  onValueChange={(v) => {
+                    if (form.nivel_control === 'obligatorio') {
+                      set('proveedor_obligatorio_id', v);
+                    } else {
+                      set('proveedor_sugerido_id', v === 'none' ? undefined : v);
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar..." />
+                  </SelectTrigger>
                   <SelectContent>
+                    {form.nivel_control === 'semi_libre' && <SelectItem value="none">Ninguno</SelectItem>}
                     {proveedores?.map((p) => (
                       <SelectItem key={p.id} value={p.id}>{p.razon_social}</SelectItem>
                     ))}
