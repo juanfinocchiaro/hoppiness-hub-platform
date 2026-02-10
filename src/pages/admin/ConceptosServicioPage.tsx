@@ -32,7 +32,7 @@ export default function ConceptosServicioPage() {
 
   return (
     <div className="p-6">
-      <PageHeader title="Conceptos de Servicio" subtitle="Servicios, alquileres, canon y otros conceptos abstractos" />
+      <PageHeader title="Servicios Recurrentes" subtitle="Catálogo de servicios que pagan los locales: alquiler, honorarios, servicios públicos, etc. Se usan al cargar facturas." />
       <div className="flex items-center justify-between gap-4 mb-4">
         <DataToolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="Buscar concepto..." />
         <Button size="sm" onClick={() => setShowNew(true)}>
