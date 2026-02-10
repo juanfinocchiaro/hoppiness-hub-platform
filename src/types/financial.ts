@@ -40,7 +40,29 @@ export interface InsumoFormData {
   tipo_item?: 'ingrediente' | 'insumo';
   rdo_category_code?: string;
   tracks_stock?: boolean;
+  unidad_compra?: string;
+  unidad_compra_contenido?: number;
+  unidad_compra_precio?: number;
 }
+
+export const PRESENTACION_OPTIONS = [
+  { value: 'kg', label: 'Kilogramo', unidadBase: 'g', contenidoDefault: 1000 },
+  { value: 'pote', label: 'Pote', unidadBase: 'g', contenidoDefault: null },
+  { value: 'balde', label: 'Balde', unidadBase: 'g', contenidoDefault: null },
+  { value: 'bidon', label: 'Bidón', unidadBase: 'ml', contenidoDefault: null },
+  { value: 'litro', label: 'Litro', unidadBase: 'ml', contenidoDefault: 1000 },
+  { value: 'caja', label: 'Caja', unidadBase: 'un', contenidoDefault: null },
+  { value: 'bolsa', label: 'Bolsa', unidadBase: 'un', contenidoDefault: null },
+  { value: 'pack', label: 'Pack', unidadBase: 'un', contenidoDefault: null },
+  { value: 'unidad', label: 'Unidad', unidadBase: 'un', contenidoDefault: 1 },
+  { value: 'rollo', label: 'Rollo', unidadBase: 'un', contenidoDefault: null },
+] as const;
+
+export const UNIDAD_BASE_OPTIONS = [
+  { value: 'g', label: 'Gramos (g)' },
+  { value: 'ml', label: 'Mililitros (ml)' },
+  { value: 'un', label: 'Unidades (un)' },
+] as const;
 
 export interface CategoriaInsumoFormData {
   nombre: string;

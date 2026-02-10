@@ -1,18 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { FormLayout, FormRow, FormSection } from '@/components/ui/forms-pro';
 import { StickyActions } from '@/components/ui/forms-pro';
 import { Package, Shield, BarChart3 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { LoadingButton } from '@/components/ui/loading-button';
 import { useInsumoMutations } from '@/hooks/useInsumos';
 import { useProveedores } from '@/hooks/useProveedores';
-import { UNIDAD_OPTIONS } from '@/types/financial';
+import { UNIDAD_OPTIONS, PRESENTACION_OPTIONS, UNIDAD_BASE_OPTIONS } from '@/types/financial';
 import { TIPO_ITEM_OPTIONS } from '@/types/rdo';
 import { RdoCategorySelector } from '@/components/rdo/RdoCategorySelector';
 import type { Insumo, InsumoFormData } from '@/types/financial';
@@ -22,7 +22,6 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   insumo?: Insumo | null;
   context?: 'brand' | 'local';
-  /** When set, hides type dropdown and uses this value */
   fixedType?: 'ingrediente' | 'insumo';
 }
 
@@ -35,10 +34,12 @@ interface ExtendedFormData extends InsumoFormData {
 
 const EMPTY: ExtendedFormData = {
   nombre: '',
-  unidad_base: 'kg',
+  unidad_base: 'g',
   nivel_control: 'libre',
   tipo_item: 'insumo',
   tracks_stock: false,
+  unidad_compra: 'kg',
+  unidad_compra_contenido: 1000,
 };
 
 const NIVEL_LABELS = {
@@ -75,6 +76,9 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
         tipo_item: (insumo as any).tipo_item || 'insumo',
         rdo_category_code: (insumo as any).rdo_category_code || undefined,
         tracks_stock: (insumo as any).tracks_stock || false,
+        unidad_compra: (insumo as any).unidad_compra || 'kg',
+        unidad_compra_contenido: (insumo as any).unidad_compra_contenido || undefined,
+        unidad_compra_precio: (insumo as any).unidad_compra_precio || undefined,
       });
     } else {
       setForm({ ...EMPTY, nivel_control: defaultNivel, tipo_item: fixedType || 'insumo' });
@@ -84,6 +88,27 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
   const set = (key: keyof ExtendedFormData, value: any) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
+  // When presentación changes, auto-suggest unidad_base and contenido
+  const handlePresentacionChange = (v: string) => {
+    const opt = PRESENTACION_OPTIONS.find((o) => o.value === v);
+    set('unidad_compra', v);
+    if (opt) {
+      set('unidad_base', opt.unidadBase);
+      if (opt.contenidoDefault) {
+        set('unidad_compra_contenido', opt.contenidoDefault);
+      }
+    }
+  };
+
+  const costoUnidadBase = useMemo(() => {
+    if (form.unidad_compra_contenido && form.unidad_compra_contenido > 0 && form.unidad_compra_precio) {
+      return form.unidad_compra_precio / form.unidad_compra_contenido;
+    }
+    return null;
+  }, [form.unidad_compra_contenido, form.unidad_compra_precio]);
+
+  const unidadBaseLabel = UNIDAD_BASE_OPTIONS.find((u) => u.value === form.unidad_base)?.label || form.unidad_base;
+
   const handleSubmit = async () => {
     if (!form.nombre.trim()) return;
 
@@ -92,7 +117,7 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
       categoria_id: form.categoria_id || null,
       unidad_base: form.unidad_base,
       categoria_pl: form.categoria_pl || null,
-      precio_referencia: form.precio_referencia || null,
+      precio_referencia: costoUnidadBase || form.precio_referencia || null,
       descripcion: form.descripcion || null,
       nivel_control: isBrand ? form.nivel_control : isLocal ? 'libre' : form.nivel_control,
       motivo_control: form.motivo_control || null,
@@ -102,6 +127,9 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
       tipo_item: fixedType || form.tipo_item || 'insumo',
       rdo_category_code: form.rdo_category_code || null,
       tracks_stock: form.tracks_stock || false,
+      unidad_compra: form.unidad_compra || null,
+      unidad_compra_contenido: form.unidad_compra_contenido || null,
+      unidad_compra_precio: form.unidad_compra_precio || null,
     };
 
     if (isEdit) {
@@ -132,92 +160,128 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
 
           <div className="space-y-4">
             <FormRow label="Nombre" required>
-              <Input value={form.nombre} onChange={(e) => set('nombre', e.target.value)} placeholder="Ej: Bolsa FastFood Hoppiness x1000" />
+              <Input value={form.nombre} onChange={(e) => set('nombre', e.target.value)} placeholder="Ej: Salsa Hoppiness" />
             </FormRow>
 
+            {/* Presentación de compra */}
+            <FormSection title="Presentación de compra" icon={Package}>
+              <div className="grid grid-cols-3 gap-3">
+                <FormRow label="Presentación" required>
+                  <Select value={form.unidad_compra || 'kg'} onValueChange={handlePresentacionChange}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {PRESENTACION_OPTIONS.map((p) => (
+                        <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormRow>
+                <FormRow label="Contenido" required hint={form.unidad_base}>
+                  <Input
+                    type="number"
+                    step="1"
+                    value={form.unidad_compra_contenido ?? ''}
+                    onChange={(e) => set('unidad_compra_contenido', e.target.value ? Number(e.target.value) : undefined)}
+                    placeholder="Ej: 4000"
+                  />
+                </FormRow>
+                <FormRow label="Precio ($)" required>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={form.unidad_compra_precio ?? ''}
+                    onChange={(e) => set('unidad_compra_precio', e.target.value ? Number(e.target.value) : undefined)}
+                    placeholder="Ej: 30000"
+                  />
+                </FormRow>
+              </div>
+
+              <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Unidad base:</span>
+                  <Select value={form.unidad_base} onValueChange={(v) => set('unidad_base', v)}>
+                    <SelectTrigger className="h-7 w-auto text-xs px-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {UNIDAD_BASE_OPTIONS.map((u) => (
+                        <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {costoUnidadBase !== null && (
+                  <p className="text-sm font-medium text-primary">
+                    💰 Costo por {form.unidad_base}: ${costoUnidadBase.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                  </p>
+                )}
+              </div>
+            </FormSection>
+
+            {/* Clasificación */}
             <div className="grid grid-cols-2 gap-3">
-              <FormRow label="Unidad" required>
-                <Select value={form.unidad_base} onValueChange={(v) => set('unidad_base', v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {UNIDAD_OPTIONS.map((u) => (
-                      <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormRow>
-              <FormRow label="Categoría" required>
+              <FormRow label="Categoría RDO" required>
                 <RdoCategorySelector value={form.rdo_category_code} onChange={(code) => set('rdo_category_code', code)} itemType={fixedType || form.tipo_item} />
               </FormRow>
+
+              {/* Nivel de control */}
+              <FormRow label="Nivel de control" required>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => set('nivel_control', 'obligatorio')}
+                    className={`flex-1 px-2 py-2 rounded-md border text-xs font-medium transition-colors ${
+                      form.nivel_control === 'obligatorio'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-muted-foreground hover:bg-muted'
+                    }`}
+                  >
+                    🔒 Obligatorio
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => set('nivel_control', 'semi_libre')}
+                    className={`flex-1 px-2 py-2 rounded-md border text-xs font-medium transition-colors ${
+                      form.nivel_control === 'semi_libre'
+                        ? 'border-yellow-500 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400'
+                        : 'border-border text-muted-foreground hover:bg-muted'
+                    }`}
+                  >
+                    🟡 Semi-libre
+                  </button>
+                </div>
+              </FormRow>
             </div>
 
-            {/* Nivel de control */}
-            <FormRow label="Nivel de control" required>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => set('nivel_control', 'obligatorio')}
-                  className={`flex-1 px-3 py-2 rounded-md border text-sm font-medium transition-colors ${
-                    form.nivel_control === 'obligatorio'
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border text-muted-foreground hover:bg-muted'
-                  }`}
-                >
-                  🔒 Obligatorio
-                </button>
-                <button
-                  type="button"
-                  onClick={() => set('nivel_control', 'semi_libre')}
-                  className={`flex-1 px-3 py-2 rounded-md border text-sm font-medium transition-colors ${
-                    form.nivel_control === 'semi_libre'
-                      ? 'border-yellow-500 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400'
-                      : 'border-border text-muted-foreground hover:bg-muted'
-                  }`}
-                >
-                  🟡 Semi-libre
-                </button>
-              </div>
-            </FormRow>
-
-            <div className="grid grid-cols-2 gap-3">
-              <FormRow
-                label={form.nivel_control === 'obligatorio' ? 'Proveedor Obligatorio' : 'Proveedor Sugerido'}
-                required={form.nivel_control === 'obligatorio'}
-              >
-                <Select
-                  value={
-                    form.nivel_control === 'obligatorio'
-                      ? (form.proveedor_obligatorio_id || '')
-                      : (form.proveedor_sugerido_id || 'none')
+            <FormRow
+              label={form.nivel_control === 'obligatorio' ? 'Proveedor Obligatorio' : 'Proveedor Sugerido'}
+              required={form.nivel_control === 'obligatorio'}
+            >
+              <Select
+                value={
+                  form.nivel_control === 'obligatorio'
+                    ? (form.proveedor_obligatorio_id || '')
+                    : (form.proveedor_sugerido_id || 'none')
+                }
+                onValueChange={(v) => {
+                  if (form.nivel_control === 'obligatorio') {
+                    set('proveedor_obligatorio_id', v);
+                  } else {
+                    set('proveedor_sugerido_id', v === 'none' ? undefined : v);
                   }
-                  onValueChange={(v) => {
-                    if (form.nivel_control === 'obligatorio') {
-                      set('proveedor_obligatorio_id', v);
-                    } else {
-                      set('proveedor_sugerido_id', v === 'none' ? undefined : v);
-                    }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {form.nivel_control === 'semi_libre' && <SelectItem value="none">Ninguno</SelectItem>}
-                    {proveedores?.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.razon_social}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormRow>
-              <FormRow label="Precio Ref. ($)">
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={form.precio_referencia ?? ''}
-                  onChange={(e) => set('precio_referencia', e.target.value ? Number(e.target.value) : undefined)}
-                />
-              </FormRow>
-            </div>
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {form.nivel_control === 'semi_libre' && <SelectItem value="none">Ninguno</SelectItem>}
+                  {proveedores?.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.razon_social}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormRow>
 
             <FormRow label="Descripción">
               <Input value={form.descripcion || ''} onChange={(e) => set('descripcion', e.target.value)} placeholder="Opcional" />
@@ -288,7 +352,7 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
     );
   }
 
-  // ── Full form (fallback, not currently used) ──
+  // ── Full form (fallback) ──
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">

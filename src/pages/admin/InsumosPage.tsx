@@ -79,8 +79,8 @@ export default function InsumosPage() {
                   <TableHead>Ingrediente</TableHead>
                   <TableHead>Proveedor</TableHead>
                   <TableHead>Categoría</TableHead>
-                  <TableHead>Unidad</TableHead>
-                  <TableHead>Último Precio</TableHead>
+                  <TableHead>Presentación</TableHead>
+                  <TableHead>Costo / u.base</TableHead>
                   <TableHead className="w-[80px]" />
                 </TableRow>
               </TableHeader>
@@ -107,9 +107,18 @@ export default function InsumosPage() {
                         ) : (provName || '—')}
                       </TableCell>
                       <TableCell className="text-sm">{row.categorias_insumo?.nombre || '—'}</TableCell>
-                      <TableCell><Badge variant="outline">{row.unidad_base}</Badge></TableCell>
                       <TableCell>
-                        {row.precio_referencia ? `$${Number(row.precio_referencia).toLocaleString('es-AR')}` : '—'}
+                        {row.unidad_compra ? (
+                          <span className="text-sm">
+                            <Badge variant="outline">{row.unidad_compra}</Badge>
+                            {row.unidad_compra_contenido && <span className="text-muted-foreground ml-1 text-xs">({row.unidad_compra_contenido} {row.unidad_base})</span>}
+                          </span>
+                        ) : <Badge variant="outline">{row.unidad_base}</Badge>}
+                      </TableCell>
+                      <TableCell>
+                        {row.costo_por_unidad_base
+                          ? <span className="font-medium">${Number(row.costo_por_unidad_base).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}<span className="text-muted-foreground text-xs">/{row.unidad_base}</span></span>
+                          : row.precio_referencia ? `$${Number(row.precio_referencia).toLocaleString('es-AR')}` : '—'}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1 justify-end">
@@ -133,8 +142,8 @@ export default function InsumosPage() {
                   <TableHead>Insumo</TableHead>
                   <TableHead>Proveedor</TableHead>
                   <TableHead>Categoría</TableHead>
-                  <TableHead>Unidad</TableHead>
-                  <TableHead>Último Precio</TableHead>
+                  <TableHead>Presentación</TableHead>
+                  <TableHead>Costo / u.base</TableHead>
                   <TableHead className="w-[80px]" />
                 </TableRow>
               </TableHeader>
@@ -161,9 +170,18 @@ export default function InsumosPage() {
                         ) : (provName || '—')}
                       </TableCell>
                       <TableCell className="text-sm">{row.categorias_insumo?.nombre || '—'}</TableCell>
-                      <TableCell><Badge variant="outline">{row.unidad_base}</Badge></TableCell>
                       <TableCell>
-                        {row.precio_referencia ? `$${Number(row.precio_referencia).toLocaleString('es-AR')}` : '—'}
+                        {row.unidad_compra ? (
+                          <span className="text-sm">
+                            <Badge variant="outline">{row.unidad_compra}</Badge>
+                            {row.unidad_compra_contenido && <span className="text-muted-foreground ml-1 text-xs">({row.unidad_compra_contenido} {row.unidad_base})</span>}
+                          </span>
+                        ) : <Badge variant="outline">{row.unidad_base}</Badge>}
+                      </TableCell>
+                      <TableCell>
+                        {row.costo_por_unidad_base
+                          ? <span className="font-medium">${Number(row.costo_por_unidad_base).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}<span className="text-muted-foreground text-xs">/{row.unidad_base}</span></span>
+                          : row.precio_referencia ? `$${Number(row.precio_referencia).toLocaleString('es-AR')}` : '—'}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1 justify-end">
