@@ -153,7 +153,7 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
   if (isBrand) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
           </DialogHeader>
