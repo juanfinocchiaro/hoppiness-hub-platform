@@ -106,9 +106,16 @@ export default function InsumosPage() {
     return sortRows(filtered || [], sortKey, sortDir);
   }, [insumos, search, sortKey, sortDir]);
 
-  const filteredProductos = useMemo(() => {
+  const filteredProductosOblig = useMemo(() => {
     const filtered = insumos?.filter((i: any) =>
-      i.tipo_item === 'producto' && i.nombre.toLowerCase().includes(search.toLowerCase())
+      i.tipo_item === 'producto' && i.nivel_control !== 'semi_libre' && i.nombre.toLowerCase().includes(search.toLowerCase())
+    );
+    return sortRows(filtered || [], sortKey, sortDir);
+  }, [insumos, search, sortKey, sortDir]);
+
+  const filteredProductosSugeridos = useMemo(() => {
+    const filtered = insumos?.filter((i: any) =>
+      i.tipo_item === 'producto' && i.nivel_control === 'semi_libre' && i.nombre.toLowerCase().includes(search.toLowerCase())
     );
     return sortRows(filtered || [], sortKey, sortDir);
   }, [insumos, search, sortKey, sortDir]);
@@ -370,6 +377,22 @@ export default function InsumosPage() {
         </TabsContent>
 
         <TabsContent value="productos">
+          <div className="flex items-center gap-1 mb-4">
+            <Button
+              variant={proveedorView === 'obligatorio' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setProveedorView('obligatorio')}
+            >
+              Obligatorio ({filteredProductosOblig?.length || 0})
+            </Button>
+            <Button
+              variant={proveedorView === 'sugerido' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setProveedorView('sugerido')}
+            >
+              Sugerido ({filteredProductosSugeridos?.length || 0})
+            </Button>
+          </div>
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -385,11 +408,14 @@ export default function InsumosPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? <SkeletonRows cols={8} /> : !filteredProductos?.length ? (
-                  <TableRow><TableCell colSpan={8} className="h-40">
-                    <EmptyState icon={ShoppingBag} title="Sin productos" description="Agregá tu primer producto de reventa (bebidas, snacks, etc.)" />
-                  </TableCell></TableRow>
-                ) : filteredProductos.map((row: any) => renderProductoRow(row))}
+                {isLoading ? <SkeletonRows cols={8} /> : (() => {
+                  const rows = proveedorView === 'obligatorio' ? filteredProductosOblig : filteredProductosSugeridos;
+                  return !rows?.length ? (
+                    <TableRow><TableCell colSpan={8} className="h-40">
+                      <EmptyState icon={ShoppingBag} title={proveedorView === 'obligatorio' ? 'Sin productos obligatorios' : 'Sin productos sugeridos'} description={proveedorView === 'obligatorio' ? 'Agregá productos con proveedor obligatorio' : 'Agregá productos con proveedor sugerido'} />
+                    </TableCell></TableRow>
+                  ) : rows.map((row: any) => renderProductoRow(row));
+                })()}
               </TableBody>
             </Table>
           </div>
