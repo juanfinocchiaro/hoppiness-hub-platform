@@ -4,13 +4,14 @@
  * Muestra los cierres de ventas de los últimos días con:
  * - Selector de rango de fechas
  * - Tabla con fecha, turno, hamburguesas, vendido, alertas
+ * - Edición de cierres para encargados+
  */
 import { useState, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { format, subDays, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ArrowLeft, AlertCircle, CheckCircle, DollarSign } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertCircle, CheckCircle, DollarSign, Pencil } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,6 +32,11 @@ import {
 } from '@/components/ui/table';
 import { useClosuresByDateRange, getShiftLabel } from '@/hooks/useShiftClosures';
 import { PageHeader } from '@/components/ui/page-header';
+import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import { ShiftClosureModal } from '@/components/local/closure/ShiftClosureModal';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import type { ShiftType } from '@/types/shiftClosure';
 
 const RANGE_OPTIONS = [
   { value: '7', label: 'Últimos 7 días' },
@@ -41,6 +47,24 @@ const RANGE_OPTIONS = [
 export default function SalesHistoryPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const [daysBack, setDaysBack] = useState('7');
+  const [editDate, setEditDate] = useState<Date | null>(null);
+  const [editShift, setEditShift] = useState<ShiftType | null>(null);
+
+  const { isSuperadmin, isEncargado, isFranquiciado } = usePermissionsV2(branchId);
+  const canEdit = isSuperadmin || isEncargado || isFranquiciado;
+
+  const { data: branch } = useQuery({
+    queryKey: ['branch-name', branchId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('branches')
+        .select('name')
+        .eq('id', branchId!)
+        .single();
+      return data;
+    },
+    enabled: !!branchId,
+  });
 
   const today = startOfDay(new Date());
   const fromDate = subDays(today, parseInt(daysBack));
@@ -58,22 +82,18 @@ export default function SalesHistoryPage() {
       minimumFractionDigits: 0,
     }).format(value);
 
-  // Agrupar por fecha para mostrar mejor
   const closuresByDate = useMemo(() => {
     if (!closures) return [];
-    
     const grouped = new Map<string, typeof closures>();
     closures.forEach(c => {
       const existing = grouped.get(c.fecha) || [];
       existing.push(c);
       grouped.set(c.fecha, existing);
     });
-    
     return Array.from(grouped.entries())
-      .sort((a, b) => b[0].localeCompare(a[0])); // Más reciente primero
+      .sort((a, b) => b[0].localeCompare(a[0]));
   }, [closures]);
 
-  // Totales
   const totals = useMemo(() => {
     if (!closures) return { vendido: 0, hamburguesas: 0, alertas: 0 };
     return closures.reduce((acc, c) => ({
@@ -82,6 +102,11 @@ export default function SalesHistoryPage() {
       alertas: acc.alertas + (c.tiene_alerta_facturacion || c.tiene_alerta_posnet || c.tiene_alerta_apps || c.tiene_alerta_caja ? 1 : 0),
     }), { vendido: 0, hamburguesas: 0, alertas: 0 });
   }, [closures]);
+
+  const handleEdit = (fecha: string, turno: string) => {
+    setEditDate(new Date(fecha + 'T12:00:00'));
+    setEditShift(turno as ShiftType);
+  };
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -94,7 +119,6 @@ export default function SalesHistoryPage() {
         ]}
       />
 
-      {/* Filtro + Resumen */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <Select value={daysBack} onValueChange={setDaysBack}>
           <SelectTrigger className="w-48">
@@ -127,7 +151,6 @@ export default function SalesHistoryPage() {
         )}
       </div>
 
-      {/* Tabla */}
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
@@ -150,6 +173,7 @@ export default function SalesHistoryPage() {
                   <TableHead className="text-right">Hamburguesas</TableHead>
                   <TableHead className="text-right">Vendido</TableHead>
                   <TableHead className="text-center">Estado</TableHead>
+                  {canEdit && <TableHead className="w-10" />}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -189,6 +213,18 @@ export default function SalesHistoryPage() {
                             <CheckCircle className="w-4 h-4 text-success mx-auto" />
                           )}
                         </TableCell>
+                        {canEdit && (
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleEdit(closure.fecha, closure.turno)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   })
@@ -198,6 +234,22 @@ export default function SalesHistoryPage() {
           )}
         </CardContent>
       </Card>
+
+      {canEdit && editDate && editShift && (
+        <ShiftClosureModal
+          open={!!editDate}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditDate(null);
+              setEditShift(null);
+            }
+          }}
+          branchId={branchId || ''}
+          branchName={branch?.name || ''}
+          defaultShift={editShift}
+          defaultDate={editDate}
+        />
+      )}
     </div>
   );
 }
