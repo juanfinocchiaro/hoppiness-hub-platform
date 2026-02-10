@@ -109,6 +109,12 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
     return null;
   }, [form.unidad_compra_contenido, form.unidad_compra_precio]);
 
+  const costoConIva = useMemo(() => {
+    if (costoUnidadBase === null) return null;
+    const alicuota = form.default_alicuota_iva != null ? Number(form.default_alicuota_iva) : 0;
+    return costoUnidadBase * (1 + alicuota / 100);
+  }, [costoUnidadBase, form.default_alicuota_iva]);
+
   const unidadBaseLabel = UNIDAD_BASE_OPTIONS.find((u) => u.value === form.unidad_base)?.label || form.unidad_base;
 
   const handleSubmit = async () => {
@@ -166,8 +172,8 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
               <Input value={form.nombre} onChange={(e) => set('nombre', e.target.value)} placeholder="Ej: Salsa Hoppiness" />
             </FormRow>
 
-            {/* Presentación de compra */}
-            <FormSection title="Presentación de compra" icon={Package}>
+            {/* Presentación de compra + IVA */}
+            <FormSection title="Presentación y precio" icon={Package}>
               <div className="grid grid-cols-3 gap-3">
                 <FormRow label="Presentación" required>
                   <Select value={form.unidad_compra || 'kg'} onValueChange={handlePresentacionChange}>
@@ -188,7 +194,7 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
                     placeholder="Ej: 4000"
                   />
                 </FormRow>
-                <FormRow label="Precio ($)" required>
+                <FormRow label="Precio neto ($)" required>
                   <Input
                     type="number"
                     step="0.01"
@@ -199,7 +205,7 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
                 </FormRow>
               </div>
 
-              <div className="flex items-center justify-between mt-2">
+              <div className="grid grid-cols-2 gap-3 mt-2">
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">Unidad base:</span>
                   <Select value={form.unidad_base} onValueChange={(v) => set('unidad_base', v)}>
@@ -213,12 +219,40 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
                     </SelectContent>
                   </Select>
                 </div>
-                {costoUnidadBase !== null && (
-                  <p className="text-sm font-medium text-primary">
-                    💰 Costo por {form.unidad_base}: ${costoUnidadBase.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
-                  </p>
-                )}
+                <FormRow label="IVA habitual" hint="Se precarga en facturas">
+                  <Select value={form.default_alicuota_iva != null ? String(form.default_alicuota_iva) : 'null'} onValueChange={(v) => set('default_alicuota_iva', v === 'null' ? null : Number(v))}>
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="21">21%</SelectItem>
+                      <SelectItem value="10.5">10.5%</SelectItem>
+                      <SelectItem value="27">27%</SelectItem>
+                      <SelectItem value="0">Exento (0%)</SelectItem>
+                      <SelectItem value="null">Sin factura</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormRow>
               </div>
+
+              {costoUnidadBase !== null && (
+                <div className="mt-3 rounded-md border border-border bg-muted/40 p-3 space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Costo neto por {form.unidad_base}:</span>
+                    <span className="font-medium">${costoUnidadBase.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
+                  </div>
+                  {costoConIva !== null && form.default_alicuota_iva != null && form.default_alicuota_iva > 0 && (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">IVA {form.default_alicuota_iva}%:</span>
+                        <span>${(costoConIva - costoUnidadBase).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-semibold border-t border-border pt-1">
+                        <span>Costo final por {form.unidad_base}:</span>
+                        <span className="text-primary">${costoConIva.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </FormSection>
 
             {/* Clasificación */}
@@ -286,23 +320,14 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
               </Select>
             </FormRow>
 
-            <div className="grid grid-cols-2 gap-3">
-              <FormRow label="Alícuota IVA habitual" hint="Se precarga al cargar facturas">
-                <Select value={form.default_alicuota_iva != null ? String(form.default_alicuota_iva) : 'null'} onValueChange={(v) => set('default_alicuota_iva', v === 'null' ? null : Number(v))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="21">21%</SelectItem>
-                    <SelectItem value="10.5">10.5%</SelectItem>
-                    <SelectItem value="27">27%</SelectItem>
-                    <SelectItem value="0">Exento (0%)</SelectItem>
-                    <SelectItem value="null">Sin factura</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FormRow>
-              <FormRow label="Descripción">
-                <Input value={form.descripcion || ''} onChange={(e) => set('descripcion', e.target.value)} placeholder="Opcional" />
-              </FormRow>
-            </div>
+            <FormRow label="Descripción / Notas">
+              <Textarea
+                value={form.descripcion || ''}
+                onChange={(e) => set('descripcion', e.target.value)}
+                placeholder="Observaciones sobre el ingrediente, especificaciones, etc."
+                rows={3}
+              />
+            </FormRow>
 
             <StickyActions>
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
