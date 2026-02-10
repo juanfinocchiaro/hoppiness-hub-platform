@@ -118,8 +118,13 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
       }
 
       if (field === 'insumo_id' && insumos) {
-        const ins = insumos.find(i => i.id === value);
-        if (ins) item.unidad = ins.unidad_base;
+        const ins = insumos.find((i: any) => i.id === value) as any;
+        if (ins) {
+          item.unidad = ins.unidad_base;
+          if (ins.default_alicuota_iva !== undefined) {
+            item.alicuota_iva = ins.default_alicuota_iva;
+          }
+        }
       }
 
       if (field === 'tipo_item' && value === 'servicio') {

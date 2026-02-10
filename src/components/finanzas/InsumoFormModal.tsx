@@ -40,6 +40,7 @@ const EMPTY: ExtendedFormData = {
   tracks_stock: false,
   unidad_compra: 'kg',
   unidad_compra_contenido: 1000,
+  default_alicuota_iva: 21,
 };
 
 const NIVEL_LABELS = {
@@ -79,6 +80,7 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
         unidad_compra: (insumo as any).unidad_compra || 'kg',
         unidad_compra_contenido: (insumo as any).unidad_compra_contenido || undefined,
         unidad_compra_precio: (insumo as any).unidad_compra_precio || undefined,
+        default_alicuota_iva: (insumo as any).default_alicuota_iva ?? 21,
       });
     } else {
       setForm({ ...EMPTY, nivel_control: defaultNivel, tipo_item: fixedType || 'insumo' });
@@ -130,6 +132,7 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
       unidad_compra: form.unidad_compra || null,
       unidad_compra_contenido: form.unidad_compra_contenido || null,
       unidad_compra_precio: form.unidad_compra_precio || null,
+      default_alicuota_iva: form.default_alicuota_iva ?? 21,
     };
 
     if (isEdit) {
@@ -283,9 +286,23 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
               </Select>
             </FormRow>
 
-            <FormRow label="Descripción">
-              <Input value={form.descripcion || ''} onChange={(e) => set('descripcion', e.target.value)} placeholder="Opcional" />
-            </FormRow>
+            <div className="grid grid-cols-2 gap-3">
+              <FormRow label="Alícuota IVA habitual" hint="Se precarga al cargar facturas">
+                <Select value={form.default_alicuota_iva != null ? String(form.default_alicuota_iva) : 'null'} onValueChange={(v) => set('default_alicuota_iva', v === 'null' ? null : Number(v))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="21">21%</SelectItem>
+                    <SelectItem value="10.5">10.5%</SelectItem>
+                    <SelectItem value="27">27%</SelectItem>
+                    <SelectItem value="0">Exento (0%)</SelectItem>
+                    <SelectItem value="null">Sin factura</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormRow>
+              <FormRow label="Descripción">
+                <Input value={form.descripcion || ''} onChange={(e) => set('descripcion', e.target.value)} placeholder="Opcional" />
+              </FormRow>
+            </div>
 
             <StickyActions>
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
