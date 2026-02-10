@@ -77,9 +77,16 @@ export default function InsumosPage() {
     }
   };
 
-  const filteredIngredientes = useMemo(() => {
+  const filteredObligatorios = useMemo(() => {
     const filtered = insumos?.filter((i: any) =>
-      (i.tipo_item === 'ingrediente') && i.nombre.toLowerCase().includes(search.toLowerCase())
+      i.tipo_item === 'ingrediente' && i.nivel_control !== 'semi_libre' && i.nombre.toLowerCase().includes(search.toLowerCase())
+    );
+    return sortRows(filtered || [], sortKey, sortDir);
+  }, [insumos, search, sortKey, sortDir]);
+
+  const filteredSugeridos = useMemo(() => {
+    const filtered = insumos?.filter((i: any) =>
+      i.tipo_item === 'ingrediente' && i.nivel_control === 'semi_libre' && i.nombre.toLowerCase().includes(search.toLowerCase())
     );
     return sortRows(filtered || [], sortKey, sortDir);
   }, [insumos, search, sortKey, sortDir]);
@@ -264,29 +271,59 @@ export default function InsumosPage() {
           }
         />
 
-        <TabsContent value="ingredientes">
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <SortableHead label="Ingrediente" sortKey="nombre" {...headProps} />
-                  <SortableHead label="Proveedor" sortKey="proveedor" {...headProps} />
-                  <SortableHead label="Categoría" sortKey="categoria" {...headProps} />
-                  <SortableHead label="Presentación" sortKey="presentacion" {...headProps} />
-                  <TableHead className="text-right">Neto</TableHead>
-                  <TableHead className="text-right">IVA $</TableHead>
-                  <TableHead className="text-right">Final</TableHead>
-                  <TableHead className="w-[80px]" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? <SkeletonRows cols={8} /> : !filteredIngredientes?.length ? (
-                  <TableRow><TableCell colSpan={8} className="h-40">
-                    <EmptyState icon={Package} title="Sin ingredientes" description="Agregá tu primer ingrediente obligatorio" />
-                  </TableCell></TableRow>
-                ) : filteredIngredientes.map((row: any) => renderRow(row, 'ingrediente'))}
-              </TableBody>
-            </Table>
+        <TabsContent value="ingredientes" className="space-y-8">
+          <div>
+            <h3 className="text-base font-semibold mb-3">Proveedor Obligatorio</h3>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <SortableHead label="Ingrediente" sortKey="nombre" {...headProps} />
+                    <SortableHead label="Proveedor" sortKey="proveedor" {...headProps} />
+                    <SortableHead label="Categoría" sortKey="categoria" {...headProps} />
+                    <SortableHead label="Presentación" sortKey="presentacion" {...headProps} />
+                    <TableHead className="text-right">Neto</TableHead>
+                    <TableHead className="text-right">IVA $</TableHead>
+                    <TableHead className="text-right">Final</TableHead>
+                    <TableHead className="w-[80px]" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? <SkeletonRows cols={8} /> : !filteredObligatorios?.length ? (
+                    <TableRow><TableCell colSpan={8} className="h-40">
+                      <EmptyState icon={Package} title="Sin ingredientes obligatorios" description="Agregá tu primer ingrediente con proveedor obligatorio" />
+                    </TableCell></TableRow>
+                  ) : filteredObligatorios.map((row: any) => renderRow(row, 'ingrediente'))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-base font-semibold mb-3">Proveedor Sugerido</h3>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <SortableHead label="Ingrediente" sortKey="nombre" {...headProps} />
+                    <SortableHead label="Proveedor" sortKey="proveedor" {...headProps} />
+                    <SortableHead label="Categoría" sortKey="categoria" {...headProps} />
+                    <SortableHead label="Presentación" sortKey="presentacion" {...headProps} />
+                    <TableHead className="text-right">Neto</TableHead>
+                    <TableHead className="text-right">IVA $</TableHead>
+                    <TableHead className="text-right">Final</TableHead>
+                    <TableHead className="w-[80px]" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? <SkeletonRows cols={8} /> : !filteredSugeridos?.length ? (
+                    <TableRow><TableCell colSpan={8} className="h-40">
+                      <EmptyState icon={Package} title="Sin ingredientes sugeridos" description="Agregá ingredientes con proveedor sugerido (semi-libre)" />
+                    </TableCell></TableRow>
+                  ) : filteredSugeridos.map((row: any) => renderRow(row, 'ingrediente'))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </TabsContent>
 
