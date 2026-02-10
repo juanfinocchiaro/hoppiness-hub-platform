@@ -136,6 +136,20 @@ export default function NewInspectionPage() {
                 Mostrador, producto, salón, atención (13 ítems)
               </div>
             </div>
+
+            <div 
+              className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                inspectionType === 'ultrasmash' 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border-border hover:border-primary/50'
+              }`}
+              onClick={() => setInspectionType('ultrasmash')}
+            >
+              <div className="font-medium">Ultra Smash - Monitoreo de Técnica</div>
+              <div className="text-sm text-muted-foreground">
+                Checklist de preparación Ultrasmash para cocineros (11 ítems)
+              </div>
+            </div>
           </CardContent>
         </Card>
 

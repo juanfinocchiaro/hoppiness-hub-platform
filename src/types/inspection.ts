@@ -2,7 +2,7 @@
  * Tipos para el Sistema de Supervisiones de Sucursales
  */
 
-export type InspectionType = 'boh' | 'foh';
+export type InspectionType = 'boh' | 'foh' | 'ultrasmash';
 export type InspectionStatus = 'en_curso' | 'completada' | 'cancelada';
 
 export interface InspectionTemplate {
@@ -99,17 +99,20 @@ export const CATEGORY_LABELS: Record<string, string> = {
   producto: 'Producto Final',
   salon: 'Salón y Baños',
   atencion: 'Atención al Cliente',
+  ultrasmash: 'Monitoreo Ultra Smash',
 };
 
 // Type display names
 export const TYPE_LABELS: Record<InspectionType, string> = {
   boh: 'Back-of-House (BOH)',
   foh: 'Front-of-House (FOH)',
+  ultrasmash: 'Monitoreo Ultra Smash',
 };
 
 export const TYPE_SHORT_LABELS: Record<InspectionType, string> = {
   boh: 'BOH',
   foh: 'FOH',
+  ultrasmash: 'Ultra',
 };
 
 export const STATUS_LABELS: Record<InspectionStatus, string> = {
