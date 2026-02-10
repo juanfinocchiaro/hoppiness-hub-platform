@@ -121,13 +121,14 @@ export default function ComprasPage() {
                     {expanded === row.id && row.items_factura?.length > 0 && (
                       <TableRow key={`${row.id}-items`}>
                         <TableCell colSpan={8} className="bg-muted/30 p-0">
-                          <Table>
+                        <Table>
                             <TableHeader>
                               <TableRow>
                                 <TableHead>Concepto</TableHead>
                                 <TableHead className="text-right">Cant.</TableHead>
                                 <TableHead>Ud.</TableHead>
-                                <TableHead className="text-right">P.Unit</TableHead>
+                                <TableHead className="text-right">P.Neto</TableHead>
+                                <TableHead className="text-right">IVA</TableHead>
                                 <TableHead className="text-right">Subtotal</TableHead>
                               </TableRow>
                             </TableHeader>
@@ -138,6 +139,9 @@ export default function ComprasPage() {
                                   <TableCell className="text-right font-mono">{Number(item.cantidad)}</TableCell>
                                   <TableCell className="text-sm">{item.unidad || '-'}</TableCell>
                                   <TableCell className="text-right font-mono">$ {Number(item.precio_unitario).toLocaleString('es-AR')}</TableCell>
+                                  <TableCell className="text-right font-mono text-muted-foreground">
+                                    {item.alicuota_iva != null ? `${item.alicuota_iva}%` : '-'}
+                                  </TableCell>
                                   <TableCell className="text-right font-mono">$ {Number(item.subtotal).toLocaleString('es-AR')}</TableCell>
                                 </TableRow>
                               ))}

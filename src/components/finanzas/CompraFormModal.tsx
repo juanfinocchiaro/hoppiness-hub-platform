@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,13 +6,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Plus, Trash2, Lock, AlertTriangle, CircleDot } from 'lucide-react';
+import { Plus, Trash2, Lock, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useFacturaMutations } from '@/hooks/useCompras';
 import { useProveedores } from '@/hooks/useProveedores';
 import { useInsumos } from '@/hooks/useInsumos';
 import { useConceptosServicio } from '@/hooks/useConceptosServicio';
-import { CONDICION_PAGO_OPTIONS, FACTURA_TIPO_OPTIONS, getCurrentPeriodo } from '@/types/compra';
+import { CONDICION_PAGO_OPTIONS, FACTURA_TIPO_OPTIONS, IVA_OPTIONS, getCurrentPeriodo } from '@/types/compra';
 import { UNIDAD_OPTIONS } from '@/types/financial';
 import { FormSection } from '@/components/ui/forms-pro';
 import type { ItemFacturaFormData } from '@/types/compra';
@@ -36,7 +36,25 @@ const emptyItem = (): ItemFormState => ({
   precio_unitario: 0,
   subtotal: 0,
   afecta_costo_base: true,
+  alicuota_iva: 21,
+  iva_monto: 0,
+  precio_unitario_bruto: 0,
 });
+
+/** Recalculate IVA fields based on neto + alicuota */
+function recalcIva(item: ItemFormState): ItemFormState {
+  const neto = Number(item.precio_unitario) || 0;
+  const alicuota = item.alicuota_iva != null ? Number(item.alicuota_iva) : 0;
+  const ivaMonto = neto * (alicuota / 100);
+  const bruto = neto + ivaMonto;
+  const qty = item.tipo_item === 'servicio' ? 1 : (Number(item.cantidad) || 0);
+  return {
+    ...item,
+    iva_monto: Math.round(ivaMonto * 100) / 100,
+    precio_unitario_bruto: Math.round(bruto * 100) / 100,
+    subtotal: Math.round(bruto * qty * 100) / 100,
+  };
+}
 
 export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
   const { create } = useFacturaMutations();
@@ -50,8 +68,6 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
     factura_numero: '',
     factura_fecha: new Date().toISOString().slice(0, 10),
     condicion_pago: 'contado',
-    iva: '',
-    otros_impuestos: '',
     tipo: 'normal',
     motivo_extraordinaria: '',
     observaciones: '',
@@ -69,7 +85,7 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
 
   useEffect(() => {
     if (open) {
-      setForm(f => ({ ...f, proveedor_id: '', factura_numero: '', observaciones: '', iva: '', otros_impuestos: '', condicion_pago: 'contado' }));
+      setForm(f => ({ ...f, proveedor_id: '', factura_numero: '', observaciones: '', condicion_pago: 'contado' }));
       setItems([emptyItem()]);
     }
   }, [open]);
@@ -82,12 +98,11 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
     }
   }, [form.proveedor_id, selectedProveedor]);
 
-  const updateItem = (idx: number, field: string, value: string | number | boolean) => {
+  const updateItem = (idx: number, field: string, value: string | number | boolean | null) => {
     setItems(prev => {
       const updated = [...prev];
-      const item = { ...updated[idx], [field]: value };
+      let item = { ...updated[idx], [field]: value };
 
-      // When switching tipo_item, reset references
       if (field === 'tipo_item') {
         if (value === 'insumo') {
           item.concepto_servicio_id = undefined;
@@ -99,34 +114,49 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
           item.unidad = '';
         }
         item.precio_unitario = 0;
-        item.subtotal = 0;
+        item.alicuota_iva = 21;
       }
 
-      if (item.tipo_item === 'insumo') {
-        if (field === 'cantidad' || field === 'precio_unitario') {
-          item.subtotal = Number(item.cantidad) * Number(item.precio_unitario);
-        }
-        if (field === 'insumo_id' && insumos) {
-          const ins = insumos.find(i => i.id === value);
-          if (ins) item.unidad = ins.unidad_base;
-        }
-      } else {
-        // Services: subtotal = precio_unitario (quantity is always 1)
-        if (field === 'precio_unitario') {
-          item.subtotal = Number(item.precio_unitario);
-          item.cantidad = 1;
-        }
+      if (field === 'insumo_id' && insumos) {
+        const ins = insumos.find(i => i.id === value);
+        if (ins) item.unidad = ins.unidad_base;
       }
 
+      if (field === 'tipo_item' && value === 'servicio') {
+        item.cantidad = 1;
+      }
+
+      item = recalcIva(item);
       updated[idx] = item;
       return updated;
     });
   };
 
-  const subtotalItems = items.reduce((s, i) => s + (i.subtotal || 0), 0);
-  const ivaNum = parseFloat(form.iva) || 0;
-  const otrosNum = parseFloat(form.otros_impuestos) || 0;
-  const total = subtotalItems + ivaNum + otrosNum;
+  // Totals calculated from items
+  const totals = useMemo(() => {
+    let subtotalNeto = 0;
+    const ivaByRate: Record<number, number> = {};
+
+    items.forEach(item => {
+      const neto = Number(item.precio_unitario) || 0;
+      const qty = item.tipo_item === 'servicio' ? 1 : (Number(item.cantidad) || 0);
+      subtotalNeto += neto * qty;
+
+      const alicuota = item.alicuota_iva != null ? Number(item.alicuota_iva) : -1;
+      if (alicuota >= 0) {
+        const ivaTotalItem = (neto * (alicuota / 100)) * qty;
+        ivaByRate[alicuota] = (ivaByRate[alicuota] || 0) + ivaTotalItem;
+      }
+    });
+
+    const totalIva = Object.values(ivaByRate).reduce((s, v) => s + v, 0);
+    return {
+      subtotalNeto: Math.round(subtotalNeto * 100) / 100,
+      ivaByRate,
+      totalIva: Math.round(totalIva * 100) / 100,
+      total: Math.round((subtotalNeto + totalIva) * 100) / 100,
+    };
+  }, [items]);
 
   const handleSubmit = async () => {
     const validItems = items.filter(i =>
@@ -144,15 +174,14 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
       factura_fecha: form.factura_fecha,
       condicion_pago: form.condicion_pago,
       fecha_vencimiento: computedVencimiento,
-      iva: ivaNum,
-      otros_impuestos: otrosNum,
+      iva: totals.totalIva,
+      otros_impuestos: 0,
       tipo: form.tipo,
       motivo_extraordinaria: form.tipo === 'extraordinaria' ? form.motivo_extraordinaria : undefined,
       periodo: getCurrentPeriodo(),
       observaciones: form.observaciones || undefined,
       items: validItems.map(item => ({
         ...item,
-        // These fields are handled in the hook
       })),
     });
     onOpenChange(false);
@@ -242,8 +271,9 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
 
                     return (
                       <div className="space-y-2">
+                        {/* Row 1: Insumo + Cantidad */}
                         <div className="grid grid-cols-12 gap-2 items-end">
-                          <div className="col-span-4">
+                          <div className="col-span-6">
                             <Label className="text-xs">Insumo *</Label>
                             <Select value={item.insumo_id} onValueChange={v => updateItem(idx, 'insumo_id', v)}>
                               <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
@@ -256,11 +286,11 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="col-span-2">
+                          <div className="col-span-3">
                             <Label className="text-xs">Cant. *</Label>
                             <Input type="number" step="0.01" className="h-9" value={item.cantidad || ''} onChange={e => updateItem(idx, 'cantidad', parseFloat(e.target.value) || 0)} />
                           </div>
-                          <div className="col-span-2">
+                          <div className="col-span-3">
                             <Label className="text-xs">Unidad</Label>
                             <Select value={item.unidad} onValueChange={v => updateItem(idx, 'unidad', v)}>
                               <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
@@ -271,15 +301,42 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="col-span-2">
-                            <Label className="text-xs">P.Unit *</Label>
+                        </div>
+                        {/* Row 2: P.Neto + IVA + Subtotal */}
+                        <div className="grid grid-cols-12 gap-2 items-end">
+                          <div className="col-span-4">
+                            <Label className="text-xs">P.Neto *</Label>
                             <Input type="number" step="0.01" className="h-9" value={item.precio_unitario || ''} onChange={e => updateItem(idx, 'precio_unitario', parseFloat(e.target.value) || 0)} />
                           </div>
-                          <div className="col-span-2">
+                          <div className="col-span-4">
+                            <Label className="text-xs">IVA</Label>
+                            <Select
+                              value={item.alicuota_iva != null ? String(item.alicuota_iva) : 'null'}
+                              onValueChange={v => updateItem(idx, 'alicuota_iva', v === 'null' ? null : parseFloat(v))}
+                            >
+                              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {IVA_OPTIONS.map(o => (
+                                  <SelectItem key={String(o.value)} value={String(o.value)}>{o.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="col-span-4">
                             <Label className="text-xs">Subtotal</Label>
-                            <Input className="h-9 font-mono" value={`$ ${item.subtotal.toLocaleString('es-AR')}`} disabled />
+                            <Input className="h-9 font-mono" value={`$ ${item.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`} disabled />
                           </div>
                         </div>
+                        {/* Desglose */}
+                        {item.precio_unitario > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            Neto: ${Number(item.precio_unitario).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                            {item.alicuota_iva != null && item.alicuota_iva > 0 && (
+                              <> | IVA {item.alicuota_iva}%: ${(item.iva_monto || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</>
+                            )}
+                            {' '}| Bruto: ${(item.precio_unitario_bruto || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                          </p>
+                        )}
                         {selectedInsumo && (
                           <div className="space-y-1">
                             {nivel === 'obligatorio' && (
@@ -310,26 +367,51 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                       </div>
                     );
                   })() : (
-                    <div className="grid grid-cols-12 gap-2 items-end">
-                      <div className="col-span-6">
-                        <Label className="text-xs">Concepto *</Label>
-                        <Select value={item.concepto_servicio_id || ''} onValueChange={v => updateItem(idx, 'concepto_servicio_id', v)}>
-                          <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar concepto..." /></SelectTrigger>
-                          <SelectContent>
-                            {conceptos?.filter((c: any) => c.visible_local !== false).map(c => (
-                              <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-12 gap-2 items-end">
+                        <div className="col-span-5">
+                          <Label className="text-xs">Concepto *</Label>
+                          <Select value={item.concepto_servicio_id || ''} onValueChange={v => updateItem(idx, 'concepto_servicio_id', v)}>
+                            <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar concepto..." /></SelectTrigger>
+                            <SelectContent>
+                              {conceptos?.filter((c: any) => c.visible_local !== false).map(c => (
+                                <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-3">
+                          <Label className="text-xs">Monto Neto *</Label>
+                          <Input type="number" step="0.01" className="h-9" value={item.precio_unitario || ''} onChange={e => updateItem(idx, 'precio_unitario', parseFloat(e.target.value) || 0)} />
+                        </div>
+                        <div className="col-span-2">
+                          <Label className="text-xs">IVA</Label>
+                          <Select
+                            value={item.alicuota_iva != null ? String(item.alicuota_iva) : 'null'}
+                            onValueChange={v => updateItem(idx, 'alicuota_iva', v === 'null' ? null : parseFloat(v))}
+                          >
+                            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {IVA_OPTIONS.map(o => (
+                                <SelectItem key={String(o.value)} value={String(o.value)}>{o.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-2">
+                          <Label className="text-xs">Subtotal</Label>
+                          <Input className="h-9 font-mono" value={`$ ${item.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`} disabled />
+                        </div>
                       </div>
-                      <div className="col-span-3">
-                        <Label className="text-xs">Monto *</Label>
-                        <Input type="number" step="0.01" className="h-9" value={item.precio_unitario || ''} onChange={e => updateItem(idx, 'precio_unitario', parseFloat(e.target.value) || 0)} />
-                      </div>
-                      <div className="col-span-3">
-                        <Label className="text-xs">Subtotal</Label>
-                        <Input className="h-9 font-mono" value={`$ ${item.subtotal.toLocaleString('es-AR')}`} disabled />
-                      </div>
+                      {item.precio_unitario > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          Neto: ${Number(item.precio_unitario).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                          {item.alicuota_iva != null && item.alicuota_iva > 0 && (
+                            <> | IVA {item.alicuota_iva}%: ${(item.iva_monto || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</>
+                          )}
+                          {' '}| Bruto: ${(item.precio_unitario_bruto || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -341,23 +423,25 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
           </FormSection>
 
           <FormSection title="Totales">
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label className="text-xs">Subtotal</Label>
-                <Input className="font-mono" value={`$ ${subtotalItems.toLocaleString('es-AR')}`} disabled />
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal Neto</span>
+                <span className="font-mono">$ {totals.subtotalNeto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
               </div>
-              <div>
-                <Label className="text-xs">IVA</Label>
-                <Input type="number" step="0.01" value={form.iva} onChange={e => set('iva', e.target.value)} />
+              {[21, 10.5, 27].map(rate => {
+                const amount = totals.ivaByRate[rate] || 0;
+                if (amount === 0) return null;
+                return (
+                  <div key={rate} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">IVA {rate}%</span>
+                    <span className="font-mono">$ {Math.round(amount * 100 / 100).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                );
+              })}
+              <div className="border-t pt-2 flex justify-between font-medium">
+                <span>Total Factura</span>
+                <span className="text-lg font-bold font-mono">$ {totals.total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
               </div>
-              <div>
-                <Label className="text-xs">Otros Imp.</Label>
-                <Input type="number" step="0.01" value={form.otros_impuestos} onChange={e => set('otros_impuestos', e.target.value)} />
-              </div>
-            </div>
-            <div className="mt-2 text-right">
-              <span className="text-sm text-muted-foreground mr-2">Total:</span>
-              <span className="text-lg font-bold font-mono">$ {total.toLocaleString('es-AR')}</span>
             </div>
           </FormSection>
 

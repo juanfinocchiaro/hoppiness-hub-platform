@@ -95,6 +95,9 @@ export function useFacturaMutations() {
           subtotal: item.subtotal,
           afecta_costo_base: item.afecta_costo_base ?? true,
           categoria_pl: item.categoria_pl || null,
+          alicuota_iva: item.alicuota_iva ?? null,
+          iva_monto: item.iva_monto ?? null,
+          precio_unitario_bruto: item.precio_unitario_bruto ?? null,
         }));
 
         const { error: iErr } = await supabase

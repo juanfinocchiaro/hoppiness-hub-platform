@@ -2177,6 +2177,7 @@ export type Database = {
       items_factura: {
         Row: {
           afecta_costo_base: boolean | null
+          alicuota_iva: number | null
           cantidad: number
           categoria_pl: string | null
           concepto_servicio_id: string | null
@@ -2184,8 +2185,10 @@ export type Database = {
           factura_id: string
           id: string
           insumo_id: string | null
+          iva_monto: number | null
           observaciones: string | null
           precio_unitario: number
+          precio_unitario_bruto: number | null
           rdo_category_code: string | null
           subtotal: number
           tipo_item: string
@@ -2193,6 +2196,7 @@ export type Database = {
         }
         Insert: {
           afecta_costo_base?: boolean | null
+          alicuota_iva?: number | null
           cantidad?: number
           categoria_pl?: string | null
           concepto_servicio_id?: string | null
@@ -2200,8 +2204,10 @@ export type Database = {
           factura_id: string
           id?: string
           insumo_id?: string | null
+          iva_monto?: number | null
           observaciones?: string | null
           precio_unitario: number
+          precio_unitario_bruto?: number | null
           rdo_category_code?: string | null
           subtotal: number
           tipo_item?: string
@@ -2209,6 +2215,7 @@ export type Database = {
         }
         Update: {
           afecta_costo_base?: boolean | null
+          alicuota_iva?: number | null
           cantidad?: number
           categoria_pl?: string | null
           concepto_servicio_id?: string | null
@@ -2216,8 +2223,10 @@ export type Database = {
           factura_id?: string
           id?: string
           insumo_id?: string | null
+          iva_monto?: number | null
           observaciones?: string | null
           precio_unitario?: number
+          precio_unitario_bruto?: number | null
           rdo_category_code?: string | null
           subtotal?: number
           tipo_item?: string

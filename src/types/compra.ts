@@ -33,7 +33,18 @@ export interface ItemFacturaFormData {
   afecta_costo_base?: boolean;
   categoria_pl?: string;
   observaciones?: string;
+  alicuota_iva?: number | null;
+  iva_monto?: number;
+  precio_unitario_bruto?: number;
 }
+
+export const IVA_OPTIONS = [
+  { value: 21, label: '21%' },
+  { value: 10.5, label: '10.5%' },
+  { value: 27, label: '27%' },
+  { value: 0, label: 'Exento (0%)' },
+  { value: null, label: 'Sin factura' },
+] as const;
 
 export interface PagoProveedorFormData {
   factura_id?: string;
