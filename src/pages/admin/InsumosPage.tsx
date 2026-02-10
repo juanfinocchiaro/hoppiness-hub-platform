@@ -138,29 +138,33 @@ export default function InsumosPage() {
             </span>
           ) : <Badge variant="outline">{row.unidad_base}</Badge>}
         </TableCell>
-        <TableCell className="text-right">
-          {row.costo_por_unidad_base
-            ? <span className="text-sm font-mono">${Number(row.costo_por_unidad_base).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
-            : '—'}
-        </TableCell>
-        <TableCell className="text-right">
-          {(() => {
-            const neto = Number(row.costo_por_unidad_base || 0);
-            const alicuota = row.default_alicuota_iva != null ? Number(row.default_alicuota_iva) : 0;
-            if (!neto) return <span className="text-muted-foreground">—</span>;
-            const ivaMonto = neto * (alicuota / 100);
-            return <span className="text-sm font-mono">${ivaMonto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>;
-          })()}
-        </TableCell>
-        <TableCell className="text-right">
-          {(() => {
-            const neto = Number(row.costo_por_unidad_base || 0);
-            const alicuota = row.default_alicuota_iva != null ? Number(row.default_alicuota_iva) : 0;
-            if (!neto) return <span className="text-muted-foreground">—</span>;
-            const final_ = neto * (1 + alicuota / 100);
-            return <span className="text-sm font-mono font-semibold">${final_.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}<span className="text-muted-foreground text-xs font-normal">/{row.unidad_base}</span></span>;
-          })()}
-        </TableCell>
+        {(() => {
+          const neto = Number(row.unidad_compra_precio || 0);
+          const alicuota = row.default_alicuota_iva != null ? Number(row.default_alicuota_iva) : 0;
+          const ivaMonto = neto * (alicuota / 100);
+          const final_ = neto * (1 + alicuota / 100);
+          const unit = row.unidad_compra || row.unidad_base || 'un';
+          if (!neto) return (
+            <>
+              <TableCell className="text-right"><span className="text-muted-foreground">—</span></TableCell>
+              <TableCell className="text-right"><span className="text-muted-foreground">—</span></TableCell>
+              <TableCell className="text-right"><span className="text-muted-foreground">—</span></TableCell>
+            </>
+          );
+          return (
+            <>
+              <TableCell className="text-right">
+                <span className="text-sm font-mono">${neto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </TableCell>
+              <TableCell className="text-right">
+                <span className="text-sm font-mono">${ivaMonto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </TableCell>
+              <TableCell className="text-right">
+                <span className="text-sm font-mono font-semibold">${final_.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}<span className="text-muted-foreground text-xs font-normal">/{unit}</span></span>
+              </TableCell>
+            </>
+          );
+        })()}
         <TableCell>
           <div className="flex gap-1 justify-end">
             <Button variant="ghost" size="icon" onClick={() => { setFixedType(type); setEditingInsumo(row); setInsumoModalOpen(true); }}><Pencil className="w-4 h-4" /></Button>
