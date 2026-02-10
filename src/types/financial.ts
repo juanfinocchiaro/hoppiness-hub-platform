@@ -43,6 +43,7 @@ export interface InsumoFormData {
   unidad_compra?: string;
   unidad_compra_contenido?: number;
   unidad_compra_precio?: number;
+  default_alicuota_iva?: number | null;
 }
 
 export const PRESENTACION_OPTIONS = [

@@ -1,0 +1,1 @@
+ALTER TABLE public.insumos ADD COLUMN default_alicuota_iva NUMERIC(5,2) DEFAULT 21;

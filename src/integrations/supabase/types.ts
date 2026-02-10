@@ -1983,6 +1983,7 @@ export type Database = {
           costo_por_unidad_base: number | null
           creado_por: string | null
           created_at: string | null
+          default_alicuota_iva: number | null
           deleted_at: string | null
           descripcion: string | null
           especificacion: Json | null
@@ -2010,6 +2011,7 @@ export type Database = {
           costo_por_unidad_base?: number | null
           creado_por?: string | null
           created_at?: string | null
+          default_alicuota_iva?: number | null
           deleted_at?: string | null
           descripcion?: string | null
           especificacion?: Json | null
@@ -2037,6 +2039,7 @@ export type Database = {
           costo_por_unidad_base?: number | null
           creado_por?: string | null
           created_at?: string | null
+          default_alicuota_iva?: number | null
           deleted_at?: string | null
           descripcion?: string | null
           especificacion?: Json | null
