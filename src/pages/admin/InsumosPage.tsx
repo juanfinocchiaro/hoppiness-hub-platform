@@ -21,7 +21,8 @@ export default function InsumosPage() {
   const { softDelete: deleteCat } = useCategoriaInsumoMutations();
 
   const [search, setSearch] = useState('');
-  const [tab, setTab] = useState('insumos');
+  const [tab, setTab] = useState('ingredientes');
+  const [fixedType, setFixedType] = useState<'ingrediente' | 'insumo'>('ingrediente');
 
   const [insumoModalOpen, setInsumoModalOpen] = useState(false);
   const [editingInsumo, setEditingInsumo] = useState<Insumo | null>(null);
@@ -31,8 +32,11 @@ export default function InsumosPage() {
   const [editingCat, setEditingCat] = useState<CategoriaInsumo | null>(null);
   const [deletingCat, setDeletingCat] = useState<CategoriaInsumo | null>(null);
 
+  const filteredIngredientes = insumos?.filter((i: any) =>
+    (i.tipo_item === 'ingrediente') && i.nombre.toLowerCase().includes(search.toLowerCase())
+  );
   const filteredInsumos = insumos?.filter((i: any) =>
-    i.nombre.toLowerCase().includes(search.toLowerCase())
+    (i.tipo_item === 'insumo' || !i.tipo_item) && i.nombre.toLowerCase().includes(search.toLowerCase())
   );
   const filteredCats = categorias?.filter((c) =>
     c.nombre.toLowerCase().includes(search.toLowerCase())
@@ -52,16 +56,21 @@ export default function InsumosPage() {
 
   return (
     <div className="p-6">
-      <PageHeader title="Insumos Obligatorios" subtitle="Insumos que los locales deben comprar exclusivamente al proveedor asignado" />
+      <PageHeader title="Insumos e Ingredientes" subtitle="Catálogo obligatorio de la marca" />
 
       <Tabs value={tab} onValueChange={setTab}>
         <div className="flex items-center justify-between mb-4">
           <TabsList>
+            <TabsTrigger value="ingredientes">Ingredientes</TabsTrigger>
             <TabsTrigger value="insumos">Insumos</TabsTrigger>
             <TabsTrigger value="categorias">Categorías</TabsTrigger>
           </TabsList>
-          {tab === 'insumos' ? (
-            <Button onClick={() => { setEditingInsumo(null); setInsumoModalOpen(true); }}>
+          {tab === 'ingredientes' ? (
+            <Button onClick={() => { setFixedType('ingrediente'); setEditingInsumo(null); setInsumoModalOpen(true); }}>
+              <Plus className="w-4 h-4 mr-2" /> Nuevo Ingrediente
+            </Button>
+          ) : tab === 'insumos' ? (
+            <Button onClick={() => { setFixedType('insumo'); setEditingInsumo(null); setInsumoModalOpen(true); }}>
               <Plus className="w-4 h-4 mr-2" /> Nuevo Insumo
             </Button>
           ) : (
@@ -76,6 +85,52 @@ export default function InsumosPage() {
           onSearchChange={setSearch}
           searchPlaceholder={tab === 'insumos' ? 'Buscar insumo...' : 'Buscar categoría...'}
         />
+
+        <TabsContent value="ingredientes">
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Ingrediente</TableHead>
+                  <TableHead>Proveedor</TableHead>
+                  <TableHead>Categoría</TableHead>
+                  <TableHead>Unidad</TableHead>
+                  <TableHead>Último Precio</TableHead>
+                  <TableHead className="w-[80px]" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? <SkeletonRows cols={6} /> : !filteredIngredientes?.length ? (
+                  <TableRow><TableCell colSpan={6} className="h-40">
+                    <EmptyState icon={Package} title="Sin ingredientes" description="Agregá tu primer ingrediente obligatorio" />
+                  </TableCell></TableRow>
+                ) : filteredIngredientes.map((row: any) => {
+                  const provName = row.proveedor_obligatorio?.razon_social || row.proveedor_sugerido?.razon_social;
+                  return (
+                    <TableRow key={row.id}>
+                      <TableCell>
+                        <p className="font-medium">{row.nombre}</p>
+                        {row.descripcion && <p className="text-xs text-muted-foreground truncate max-w-[200px]">{row.descripcion}</p>}
+                      </TableCell>
+                      <TableCell className="text-sm">{provName || '—'}</TableCell>
+                      <TableCell className="text-sm">{row.categorias_insumo?.nombre || '—'}</TableCell>
+                      <TableCell><Badge variant="outline">{row.unidad_base}</Badge></TableCell>
+                      <TableCell>
+                        {row.precio_referencia ? `$${Number(row.precio_referencia).toLocaleString('es-AR')}` : '—'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1 justify-end">
+                          <Button variant="ghost" size="icon" onClick={() => { setFixedType('ingrediente'); setEditingInsumo(row); setInsumoModalOpen(true); }}><Pencil className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => setDeletingInsumo(row)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
 
         <TabsContent value="insumos">
           <div className="rounded-md border">
@@ -111,7 +166,7 @@ export default function InsumosPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1 justify-end">
-                          <Button variant="ghost" size="icon" onClick={() => { setEditingInsumo(row); setInsumoModalOpen(true); }}><Pencil className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => { setFixedType('insumo'); setEditingInsumo(row); setInsumoModalOpen(true); }}><Pencil className="w-4 h-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => setDeletingInsumo(row)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                         </div>
                       </TableCell>
@@ -158,7 +213,7 @@ export default function InsumosPage() {
         </TabsContent>
       </Tabs>
 
-      <InsumoFormModal open={insumoModalOpen} onOpenChange={(open) => { setInsumoModalOpen(open); if (!open) setEditingInsumo(null); }} insumo={editingInsumo} context="brand" />
+      <InsumoFormModal open={insumoModalOpen} onOpenChange={(open) => { setInsumoModalOpen(open); if (!open) setEditingInsumo(null); }} insumo={editingInsumo} context="brand" fixedType={fixedType} />
       <CategoriaFormModal open={catModalOpen} onOpenChange={(open) => { setCatModalOpen(open); if (!open) setEditingCat(null); }} categoria={editingCat} />
 
       <ConfirmDialog open={!!deletingInsumo} onOpenChange={() => setDeletingInsumo(null)} title="Eliminar insumo" description={`¿Eliminar "${deletingInsumo?.nombre}"?`} confirmLabel="Eliminar" variant="destructive" onConfirm={async () => { if (deletingInsumo) await deleteInsumo.mutateAsync(deletingInsumo.id); setDeletingInsumo(null); }} />

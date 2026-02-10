@@ -23,6 +23,8 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   insumo?: Insumo | null;
   context?: 'brand' | 'local';
+  /** When set, hides type dropdown and uses this value */
+  fixedType?: 'ingrediente' | 'insumo';
 }
 
 interface ExtendedFormData extends InsumoFormData {
@@ -46,7 +48,7 @@ const NIVEL_LABELS = {
   libre: { label: '🟢 Libre', desc: 'Sin restricciones, cualquier marca/proveedor' },
 };
 
-export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand' }: Props) {
+export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand', fixedType }: Props) {
   const { create, update } = useInsumoMutations();
   const { data: categorias } = useCategoriasInsumo();
   const { data: proveedores } = useProveedores();
@@ -56,7 +58,7 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand' 
 
   const defaultNivel = isBrand ? 'obligatorio' : 'libre';
 
-  const [form, setForm] = useState<ExtendedFormData>({ ...EMPTY, nivel_control: defaultNivel });
+  const [form, setForm] = useState<ExtendedFormData>({ ...EMPTY, nivel_control: defaultNivel, tipo_item: fixedType || 'insumo' });
 
   useEffect(() => {
     if (insumo) {
@@ -77,9 +79,9 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand' 
         tracks_stock: (insumo as any).tracks_stock || false,
       });
     } else {
-      setForm({ ...EMPTY, nivel_control: defaultNivel });
+      setForm({ ...EMPTY, nivel_control: defaultNivel, tipo_item: fixedType || 'insumo' });
     }
-  }, [insumo, open, defaultNivel]);
+  }, [insumo, open, defaultNivel, fixedType]);
 
   const set = (key: keyof ExtendedFormData, value: any) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -101,7 +103,7 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand' 
       proveedor_sugerido_id: form.nivel_control === 'semi_libre' ? (form.proveedor_sugerido_id || null) :
                               form.nivel_control === 'obligatorio' ? null :
                               (form.proveedor_sugerido_id || null),
-      tipo_item: form.tipo_item || 'insumo',
+      tipo_item: fixedType || form.tipo_item || 'insumo',
       rdo_category_code: form.rdo_category_code || null,
       tracks_stock: form.tracks_stock || false,
     };
@@ -116,11 +118,12 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand' 
 
   const isPending = create.isPending || update.isPending;
 
+  const typeLabel = fixedType === 'ingrediente' ? 'Ingrediente' : 'Insumo';
   const title = isEdit
-    ? 'Editar Insumo'
+    ? `Editar ${typeLabel}`
     : isBrand
-      ? 'Nuevo Insumo Obligatorio'
-      : 'Nuevo Insumo Local';
+      ? `Nuevo ${typeLabel} Obligatorio`
+      : `Nuevo ${typeLabel} Local`;
 
   // ── Brand context: compact form ──
   if (isBrand) {
@@ -136,17 +139,19 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand' 
               <Input value={form.nombre} onChange={(e) => set('nombre', e.target.value)} placeholder="Ej: Bolsa FastFood Hoppiness x1000" />
             </FormRow>
 
-            <FormLayout columns={2}>
-              <FormRow label="Tipo" required>
-                <Select value={form.tipo_item || 'insumo'} onValueChange={(v) => set('tipo_item', v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {TIPO_ITEM_OPTIONS.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormRow>
+            <FormLayout columns={fixedType ? 1 : 2}>
+              {!fixedType && (
+                <FormRow label="Tipo" required>
+                  <Select value={form.tipo_item || 'insumo'} onValueChange={(v) => set('tipo_item', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {TIPO_ITEM_OPTIONS.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormRow>
+              )}
               <FormRow label="Unidad base" required>
                 <Select value={form.unidad_base} onValueChange={(v) => set('unidad_base', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -203,7 +208,7 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand' 
             <StickyActions>
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
               <LoadingButton loading={isPending} onClick={handleSubmit}>
-                {isEdit ? 'Guardar' : 'Crear Insumo'}
+                {isEdit ? 'Guardar' : `Crear ${typeLabel}`}
               </LoadingButton>
             </StickyActions>
           </div>

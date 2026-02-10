@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Pencil, Trash2, Building2, MapPin, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package } from 'lucide-react';
 import { useProveedores, useProveedorMutations } from '@/hooks/useProveedores';
 import { ProveedorFormModal } from '@/components/finanzas/ProveedorFormModal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -30,7 +30,7 @@ export default function ProveedoresPage() {
     <div className="p-6">
       <PageHeader
         title="Proveedores"
-        subtitle="Gestión de proveedores de la marca y locales"
+        subtitle="Proveedores asignados a items obligatorios de la marca"
         actions={
           <Button onClick={() => { setEditing(null); setModalOpen(true); }}>
             <Plus className="w-4 h-4 mr-2" /> Nuevo Proveedor
@@ -49,7 +49,6 @@ export default function ProveedoresPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Proveedor</TableHead>
-              <TableHead>Ámbito</TableHead>
               <TableHead>Contacto</TableHead>
               <TableHead>Cta. Cte.</TableHead>
               <TableHead className="w-[80px]" />
@@ -59,14 +58,14 @@ export default function ProveedoresPage() {
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 5 }).map((_, j) => (
-                    <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
-                  ))}
+                    {Array.from({ length: 4 }).map((_, j) => (
+                      <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
+                    ))}
                 </TableRow>
               ))
             ) : !filtered?.length ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-40">
+                <TableCell colSpan={4} className="h-40">
                   <EmptyState icon={Package} title="Sin proveedores" description="Agregá tu primer proveedor para empezar" />
                 </TableCell>
               </TableRow>
@@ -76,12 +75,6 @@ export default function ProveedoresPage() {
                   <TableCell>
                     <p className="font-medium">{row.razon_social}</p>
                     {row.cuit && <p className="text-xs text-muted-foreground">{row.cuit}</p>}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={row.ambito === 'marca' ? 'default' : 'secondary'} className="gap-1">
-                      {row.ambito === 'marca' ? <Building2 className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
-                      {row.ambito === 'marca' ? 'Marca' : 'Local'}
-                    </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
@@ -115,6 +108,7 @@ export default function ProveedoresPage() {
         open={modalOpen}
         onOpenChange={(open) => { setModalOpen(open); if (!open) setEditing(null); }}
         proveedor={editing}
+        context="brand"
       />
 
       <ConfirmDialog
