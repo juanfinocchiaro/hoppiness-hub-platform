@@ -138,10 +138,28 @@ export default function InsumosPage() {
             </span>
           ) : <Badge variant="outline">{row.unidad_base}</Badge>}
         </TableCell>
-        <TableCell>
+        <TableCell className="text-right">
           {row.costo_por_unidad_base
-            ? <span className="font-medium">${Number(row.costo_por_unidad_base).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}<span className="text-muted-foreground text-xs">/{row.unidad_base}</span></span>
-            : row.precio_referencia ? `$${Number(row.precio_referencia).toLocaleString('es-AR')}` : '—'}
+            ? <span className="text-sm font-mono">${Number(row.costo_por_unidad_base).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
+            : '—'}
+        </TableCell>
+        <TableCell className="text-right">
+          {(() => {
+            const neto = Number(row.costo_por_unidad_base || 0);
+            const alicuota = row.default_alicuota_iva != null ? Number(row.default_alicuota_iva) : 0;
+            if (!neto) return <span className="text-muted-foreground">—</span>;
+            const ivaMonto = neto * (alicuota / 100);
+            return <span className="text-sm font-mono">${ivaMonto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>;
+          })()}
+        </TableCell>
+        <TableCell className="text-right">
+          {(() => {
+            const neto = Number(row.costo_por_unidad_base || 0);
+            const alicuota = row.default_alicuota_iva != null ? Number(row.default_alicuota_iva) : 0;
+            if (!neto) return <span className="text-muted-foreground">—</span>;
+            const final_ = neto * (1 + alicuota / 100);
+            return <span className="text-sm font-mono font-semibold">${final_.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}<span className="text-muted-foreground text-xs font-normal">/{row.unidad_base}</span></span>;
+          })()}
         </TableCell>
         <TableCell>
           <div className="flex gap-1 justify-end">
@@ -251,13 +269,15 @@ export default function InsumosPage() {
                   <SortableHead label="Proveedor" sortKey="proveedor" {...headProps} />
                   <SortableHead label="Categoría" sortKey="categoria" {...headProps} />
                   <SortableHead label="Presentación" sortKey="presentacion" {...headProps} />
-                  <SortableHead label="Costo / u.base" sortKey="costo" {...headProps} />
+                  <TableHead className="text-right">Neto</TableHead>
+                  <TableHead className="text-right">IVA $</TableHead>
+                  <TableHead className="text-right">Final</TableHead>
                   <TableHead className="w-[80px]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? <SkeletonRows cols={6} /> : !filteredIngredientes?.length ? (
-                  <TableRow><TableCell colSpan={6} className="h-40">
+                {isLoading ? <SkeletonRows cols={8} /> : !filteredIngredientes?.length ? (
+                  <TableRow><TableCell colSpan={8} className="h-40">
                     <EmptyState icon={Package} title="Sin ingredientes" description="Agregá tu primer ingrediente obligatorio" />
                   </TableCell></TableRow>
                 ) : filteredIngredientes.map((row: any) => renderRow(row, 'ingrediente'))}
@@ -275,13 +295,15 @@ export default function InsumosPage() {
                   <SortableHead label="Proveedor" sortKey="proveedor" {...headProps} />
                   <SortableHead label="Categoría" sortKey="categoria" {...headProps} />
                   <SortableHead label="Presentación" sortKey="presentacion" {...headProps} />
-                  <SortableHead label="Costo / u.base" sortKey="costo" {...headProps} />
+                  <TableHead className="text-right">Neto</TableHead>
+                  <TableHead className="text-right">IVA $</TableHead>
+                  <TableHead className="text-right">Final</TableHead>
                   <TableHead className="w-[80px]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? <SkeletonRows cols={6} /> : !filteredInsumos?.length ? (
-                  <TableRow><TableCell colSpan={6} className="h-40">
+                {isLoading ? <SkeletonRows cols={8} /> : !filteredInsumos?.length ? (
+                  <TableRow><TableCell colSpan={8} className="h-40">
                     <EmptyState icon={Package} title="Sin insumos" description="Agregá tu primer insumo obligatorio" />
                   </TableCell></TableRow>
                 ) : filteredInsumos.map((row: any) => renderRow(row, 'insumo'))}
