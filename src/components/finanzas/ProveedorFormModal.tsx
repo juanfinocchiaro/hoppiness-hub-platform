@@ -20,6 +20,8 @@ interface Props {
   proveedor?: Proveedor | null;
   /** Pre-set branch for local-scope creation from Mi Local */
   defaultBranchId?: string;
+  /** When 'brand', hides ámbito selector and forces ambito='marca' */
+  context?: 'brand' | 'local';
 }
 
 const EMPTY: ProveedorFormData = {
@@ -28,7 +30,8 @@ const EMPTY: ProveedorFormData = {
   permite_cuenta_corriente: false,
 };
 
-export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranchId }: Props) {
+export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranchId, context }: Props) {
+  const isBrandContext = context === 'brand';
   const { create, update } = useProveedorMutations();
   const isEdit = !!proveedor;
 
@@ -94,7 +97,7 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranc
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Editar Proveedor' : 'Nuevo Proveedor'}</DialogTitle>
+          <DialogTitle>{isEdit ? 'Editar Proveedor' : isBrandContext ? 'Nuevo Proveedor de Marca' : 'Nuevo Proveedor'}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -111,23 +114,25 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranc
                 <FormRow label="CUIT">
                   <Input value={form.cuit || ''} onChange={(e) => set('cuit', e.target.value)} placeholder="XX-XXXXXXXX-X" />
                 </FormRow>
-                <FormRow label="Ámbito">
-                  {isLocalContext ? (
-                    <div className="flex items-center gap-2 h-10 px-3 border rounded-md bg-muted">
-                      <span className="text-sm text-muted-foreground">Local (esta sucursal)</span>
-                    </div>
-                  ) : (
-                    <Select value={form.ambito} onValueChange={(v) => set('ambito', v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="marca">Marca (todas)</SelectItem>
-                        <SelectItem value="local">Local (una sucursal)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                </FormRow>
+                {!isBrandContext && (
+                  <FormRow label="Ámbito">
+                    {isLocalContext ? (
+                      <div className="flex items-center gap-2 h-10 px-3 border rounded-md bg-muted">
+                        <span className="text-sm text-muted-foreground">Local (esta sucursal)</span>
+                      </div>
+                    ) : (
+                      <Select value={form.ambito} onValueChange={(v) => set('ambito', v)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="marca">Marca (todas)</SelectItem>
+                          <SelectItem value="local">Local (una sucursal)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormRow>
+                )}
               </FormLayout>
-              {form.ambito === 'local' && !isLocalContext && (
+              {form.ambito === 'local' && !isLocalContext && !isBrandContext && (
                 <FormRow label="Sucursal" required>
                   <Select value={form.branch_id || ''} onValueChange={(v) => set('branch_id', v)}>
                     <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
