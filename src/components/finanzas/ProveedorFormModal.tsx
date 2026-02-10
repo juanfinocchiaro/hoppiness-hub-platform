@@ -53,6 +53,8 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranc
         cuit: proveedor.cuit || '',
         contacto: proveedor.contacto || '',
         telefono: proveedor.telefono || '',
+        contacto_secundario: proveedor.contacto_secundario || '',
+        telefono_secundario: proveedor.telefono_secundario || '',
         email: proveedor.email || '',
         direccion: proveedor.direccion || '',
         ambito: proveedor.ambito as 'marca' | 'local',
@@ -60,6 +62,11 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranc
         permite_cuenta_corriente: proveedor.permite_cuenta_corriente || false,
         dias_pago_habitual: proveedor.dias_pago_habitual || undefined,
         descuento_pago_contado: proveedor.descuento_pago_contado || undefined,
+        banco: proveedor.banco || '',
+        numero_cuenta: proveedor.numero_cuenta || '',
+        cbu: proveedor.cbu || '',
+        alias_cbu: proveedor.alias_cbu || '',
+        titular_cuenta: proveedor.titular_cuenta || '',
         observaciones: proveedor.observaciones || '',
       });
     } else if (defaultBranchId) {
