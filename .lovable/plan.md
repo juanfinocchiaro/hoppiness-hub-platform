@@ -1,79 +1,61 @@
 
 
-## Simplificar Insumos: Marca solo carga Obligatorios, precio se actualiza desde compras
+## Flujo Proveedores, Insumos e Ingredientes -- Fases 1 y 2
 
-### Problema
+### Resumen
 
-1. El formulario desde Mi Marca muestra opciones innecesarias (Semi-libre, Libre, Precio maximo, RDO, Stock, etc.)
-2. La marca solo necesita cargar insumos **obligatorios** con proveedor fijo
-3. No tiene sentido que la marca cargue precios manualmente -- el precio real se actualiza cuando los locales registran compras
-4. El modal es largo y requiere scroll
+Implementar la separacion clara de responsabilidades entre Marca y Local segun el documento FLUJO_PROVEEDORES_INSUMOS.md. Se abordan las fases 1 y 2:
 
-### Cambios
+- **Fase 1**: Proveedores de Marca sin selector de "Ambito"
+- **Fase 2**: Insumos e Ingredientes en tabs separadas
 
-**1. Formulario de Mi Marca: compacto y enfocado** (`InsumoFormModal.tsx`)
+Las fases 3 (proveedores local con tabs Marca/Propios) y 4 (compras con items obligatorios vs opcionales) quedan para despues.
 
-- Agregar prop `context: 'brand' | 'local'` (default `'brand'`)
-- Cuando `context = 'brand'`:
-  - Titulo: "Nuevo Insumo Obligatorio"
-  - Nivel de control se fija automaticamente en `'obligatorio'` (sin RadioGroup)
-  - Se ocultan: seccion RDO, Trackea Stock, Precio maximo, seccion de Precios completa
-  - Se muestra un campo opcional "Precio de referencia inicial" con hint: "Se actualizara automaticamente con las compras de los locales"
-  - Proveedor Obligatorio se muestra directamente (no dentro de panel colapsable)
-  - Layout compacto: campos en 2 columnas, sin secciones innecesarias, todo visible sin scroll
-  - Campos: Nombre, Tipo, Unidad, Categoria interna, Proveedor Obligatorio, Precio ref. inicial (opcional), Motivo del control, Descripcion
+---
 
-- Cuando `context = 'local'`:
-  - Titulo: "Nuevo Insumo Local"
-  - Nivel fijo en `'libre'`
-  - Campos minimos: Nombre, Tipo, Unidad, Descripcion
-  - Sin seccion de control ni precios (el precio se carga cuando hacen la compra)
+### Fase 1: Proveedores de Marca sin selector de Ambito
 
-**2. Pagina Mi Marca** (`InsumosPage.tsx`)
+**Archivo: `ProveedorFormModal.tsx`**
+- Agregar prop `context?: 'brand' | 'local'` (default: indefinido para retrocompatibilidad)
+- Cuando `context = 'brand'`: ocultar el selector de "Ambito" y forzar `ambito = 'marca'`. Tambien ocultar el selector de sucursal. El titulo cambia a "Nuevo Proveedor de Marca"
+- El formulario actual ya maneja el caso local via `defaultBranchId`, asi que no hace falta cambiar nada para el local
 
+**Archivo: `ProveedoresPage.tsx` (Mi Marca)**
 - Pasar `context="brand"` al modal
-- En la tabla, reemplazar columna "Precio Ref." por "Ultimo Precio" que muestre el precio de referencia actual (este campo se actualizaria en el futuro desde las compras, por ahora muestra `precio_referencia`)
-- Eliminar columna "Nivel" (todos son obligatorios desde la marca)
+- Eliminar la columna "Ambito" de la tabla (todos son de marca)
+- Actualizar subtitulo a "Proveedores asignados a items obligatorios de la marca"
 
-**3. Pagina Mi Local** (`InsumosLocalPage.tsx`)
+---
 
-- Agregar boton "+ Nuevo Insumo" que abre el modal con `context="local"`
-- Mostrar badge "Obligatorio" en los items que vienen de la marca (nivel_control = obligatorio)
-- Los insumos locales (libre) se muestran con badge "Local"
+### Fase 2: Insumos e Ingredientes en tabs separadas
 
-### Resultado visual - Formulario Marca
+**Archivo: `InsumosPage.tsx` (Mi Marca)**
+- Renombrar titulo: "Insumos e Ingredientes"
+- Subtitulo: "Catalogo obligatorio de la marca"
+- Cambiar las tabs actuales (Insumos | Categorias) a 3 tabs: **Ingredientes** | **Insumos** | **Categorias**
+- Tab Ingredientes: filtra `tipo_item = 'ingrediente'`, boton "+ Nuevo Ingrediente"
+- Tab Insumos: filtra `tipo_item = 'insumo'`, boton "+ Nuevo Insumo"
+- Tab Categorias: queda igual
+- La tabla en cada tab no necesita columna "Tipo" (esta implicito por la tab)
 
-```text
-+----------------------------------------------+
-| Nuevo Insumo Obligatorio                     |
-|----------------------------------------------|
-| Nombre *                                     |
-| [________________________________]           |
-|                                              |
-| Tipo *              Unidad base *            |
-| [Ingrediente v]     [Unidad (un) v]          |
-|                                              |
-| Categoría interna   Proveedor Obligatorio *  |
-| [Sin categoría v]   [SITONAI MAYORISTA v]    |
-|                                              |
-| Precio ref. inicial ($)                      |
-| [________]  (se actualiza con las compras)   |
-|                                              |
-| Motivo del control                           |
-| [Insumo exclusivo de la marca]               |
-|                                              |
-| Descripción (opcional)                       |
-| [________________________________]           |
-|                                              |
-|              [Cancelar]  [Crear Insumo]      |
-+----------------------------------------------+
-```
+**Archivo: `InsumoFormModal.tsx`**
+- Agregar prop `fixedType?: 'ingrediente' | 'insumo'`
+- Cuando viene `fixedType`: ocultar el dropdown de Tipo, usar el valor fijo
+- Titulo dinamico: "Nuevo Ingrediente Obligatorio" / "Nuevo Insumo Obligatorio" (en brand), "Nuevo Ingrediente Local" / "Nuevo Insumo Local" (en local)
+- Al guardar, usar `fixedType` como `tipo_item` en lugar del selector
+
+**Archivo: `BrandSidebar.tsx`**
+- Cambiar el label del item de menu de "Insumos" a "Insumos e Ingredientes"
+
+---
 
 ### Detalle tecnico
 
-- Sin cambios de base de datos
+- Sin cambios de base de datos (el campo `tipo_item` ya existe en la tabla `insumos`)
 - Archivos a modificar:
-  - `src/components/finanzas/InsumoFormModal.tsx` -- agregar prop context, renderizado condicional
-  - `src/pages/admin/InsumosPage.tsx` -- pasar context="brand", simplificar tabla
-  - `src/pages/local/InsumosLocalPage.tsx` -- agregar boton nuevo insumo con context="local", badges
+  1. `src/components/finanzas/ProveedorFormModal.tsx` -- prop context, ocultar ambito en brand
+  2. `src/pages/admin/ProveedoresPage.tsx` -- pasar context="brand", eliminar columna ambito
+  3. `src/components/finanzas/InsumoFormModal.tsx` -- prop fixedType, titulo dinamico
+  4. `src/pages/admin/InsumosPage.tsx` -- 3 tabs, filtro por tipo_item, boton contextual
+  5. `src/components/layout/BrandSidebar.tsx` -- renombrar menu item
 
