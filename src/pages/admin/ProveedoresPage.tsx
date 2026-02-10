@@ -50,22 +50,21 @@ export default function ProveedoresPage() {
             <TableRow>
               <TableHead>Proveedor</TableHead>
               <TableHead>Contacto</TableHead>
-              <TableHead>Cta. Cte.</TableHead>
               <TableHead className="w-[80px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
+              Array.from({ length: 4 }).map((_, i) => (
                 <TableRow key={i}>
-                    {Array.from({ length: 4 }).map((_, j) => (
+                    {Array.from({ length: 3 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                     ))}
                 </TableRow>
               ))
             ) : !filtered?.length ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-40">
+                <TableCell colSpan={3} className="h-40">
                   <EmptyState icon={Package} title="Sin proveedores" description="Agregá tu primer proveedor para empezar" />
                 </TableCell>
               </TableRow>
@@ -81,11 +80,6 @@ export default function ProveedoresPage() {
                       {row.contacto && <p>{row.contacto}</p>}
                       {row.telefono && <p className="text-muted-foreground">{row.telefono}</p>}
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={row.permite_cuenta_corriente ? 'default' : 'outline'}>
-                      {row.permite_cuenta_corriente ? 'Sí' : 'No'}
-                    </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1 justify-end">

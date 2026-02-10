@@ -197,49 +197,51 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranc
             </FormRow>
           </FormSection>
 
-          <FormSection title="Condiciones Comerciales">
-            <FormLayout columns={2}>
-              <FormRow label="Cuenta Corriente">
-                <div className="flex items-center gap-2 pt-1">
-                  <Switch
-                    checked={form.permite_cuenta_corriente || false}
-                    onCheckedChange={(v) => set('permite_cuenta_corriente', v)}
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    {form.permite_cuenta_corriente ? 'Habilitada' : 'No'}
-                  </span>
-                </div>
-              </FormRow>
-              <FormRow label="Plazo de pago (días)">
-                <div className="space-y-1">
+          {!isBrandContext && (
+            <FormSection title="Condiciones Comerciales">
+              <FormLayout columns={2}>
+                <FormRow label="Cuenta Corriente">
+                  <div className="flex items-center gap-2 pt-1">
+                    <Switch
+                      checked={form.permite_cuenta_corriente || false}
+                      onCheckedChange={(v) => set('permite_cuenta_corriente', v)}
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      {form.permite_cuenta_corriente ? 'Habilitada' : 'No'}
+                    </span>
+                  </div>
+                </FormRow>
+                <FormRow label="Plazo de pago (días)">
+                  <div className="space-y-1">
+                    <Input
+                      type="number"
+                      value={form.dias_pago_habitual ?? ''}
+                      onChange={(e) => set('dias_pago_habitual', e.target.value ? Number(e.target.value) : undefined)}
+                      placeholder="Ej: 30"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      El vencimiento de facturas se calculará automáticamente: fecha factura + estos días.
+                    </p>
+                  </div>
+                </FormRow>
+                <FormRow label="Dto. pago contado (%)">
                   <Input
                     type="number"
-                    value={form.dias_pago_habitual ?? ''}
-                    onChange={(e) => set('dias_pago_habitual', e.target.value ? Number(e.target.value) : undefined)}
-                    placeholder="Ej: 30"
+                    step="0.1"
+                    value={form.descuento_pago_contado ?? ''}
+                    onChange={(e) => set('descuento_pago_contado', e.target.value ? Number(e.target.value) : undefined)}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    El vencimiento de facturas se calculará automáticamente: fecha factura + estos días.
-                  </p>
-                </div>
-              </FormRow>
-              <FormRow label="Dto. pago contado (%)">
-                <Input
-                  type="number"
-                  step="0.1"
-                  value={form.descuento_pago_contado ?? ''}
-                  onChange={(e) => set('descuento_pago_contado', e.target.value ? Number(e.target.value) : undefined)}
+                </FormRow>
+              </FormLayout>
+              <FormRow label="Observaciones" className="mt-4">
+                <Textarea
+                  value={form.observaciones || ''}
+                  onChange={(e) => set('observaciones', e.target.value)}
+                  rows={2}
                 />
               </FormRow>
-            </FormLayout>
-            <FormRow label="Observaciones" className="mt-4">
-              <Textarea
-                value={form.observaciones || ''}
-                onChange={(e) => set('observaciones', e.target.value)}
-                rows={2}
-              />
-            </FormRow>
-          </FormSection>
+            </FormSection>
+          )}
 
           <StickyActions>
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>

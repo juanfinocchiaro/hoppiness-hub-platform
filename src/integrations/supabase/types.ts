@@ -2949,6 +2949,71 @@ export type Database = {
           },
         ]
       }
+      proveedor_condiciones_local: {
+        Row: {
+          branch_id: string
+          created_at: string
+          descuento_pago_contado: number | null
+          dias_pago_habitual: number | null
+          id: string
+          observaciones: string | null
+          permite_cuenta_corriente: boolean
+          proveedor_id: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          descuento_pago_contado?: number | null
+          dias_pago_habitual?: number | null
+          id?: string
+          observaciones?: string | null
+          permite_cuenta_corriente?: boolean
+          proveedor_id: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          descuento_pago_contado?: number | null
+          dias_pago_habitual?: number | null
+          id?: string
+          observaciones?: string | null
+          permite_cuenta_corriente?: boolean
+          proveedor_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proveedor_condiciones_local_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedor_condiciones_local_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedor_condiciones_local_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "cuenta_corriente_proveedores"
+            referencedColumns: ["proveedor_id"]
+          },
+          {
+            foreignKeyName: "proveedor_condiciones_local_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proveedores: {
         Row: {
           activo: boolean | null
