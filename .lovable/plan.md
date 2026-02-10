@@ -1,35 +1,79 @@
 
 
-## Importar feriados 2025
+## Simplificar Insumos: Marca solo carga Obligatorios, precio se actualiza desde compras
 
 ### Problema
-Los feriados de 2025 nunca fueron importados a la base de datos. Solo existen los de 2026 (importados el 7 de febrero). Por eso el calendario de horarios no marca ningún día como feriado para fechas de 2025.
 
-### Solución
-Insertar los feriados de Argentina 2025 directamente en la base de datos usando una migración SQL. La función `getArgentinaHolidays()` ya existe en el código y calcula correctamente las fechas, pero la forma más directa es insertar los datos vía SQL.
+1. El formulario desde Mi Marca muestra opciones innecesarias (Semi-libre, Libre, Precio maximo, RDO, Stock, etc.)
+2. La marca solo necesita cargar insumos **obligatorios** con proveedor fijo
+3. No tiene sentido que la marca cargue precios manualmente -- el precio real se actualiza cuando los locales registran compras
+4. El modal es largo y requiere scroll
 
-### Feriados Argentina 2025 a insertar
+### Cambios
 
-| Fecha | Descripción |
-|---|---|
-| 2025-01-01 | Año Nuevo |
-| 2025-03-03 | Carnaval |
-| 2025-03-04 | Carnaval |
-| 2025-03-24 | Día de la Memoria |
-| 2025-04-02 | Día del Veterano y Caídos en Malvinas |
-| 2025-04-17 | Jueves Santo (día no laborable) |
-| 2025-04-18 | Viernes Santo |
-| 2025-05-01 | Día del Trabajador |
-| 2025-05-25 | Día de la Revolución de Mayo |
-| 2025-06-16 | Paso a la Inmortalidad del Gral. Güemes |
-| 2025-06-20 | Paso a la Inmortalidad del Gral. Belgrano |
-| 2025-07-09 | Día de la Independencia |
-| 2025-08-18 | Paso a la Inmortalidad del Gral. San Martín |
-| 2025-10-13 | Día del Respeto a la Diversidad Cultural |
-| 2025-11-24 | Día de la Soberanía Nacional |
-| 2025-12-08 | Inmaculada Concepción de María |
-| 2025-12-25 | Navidad |
+**1. Formulario de Mi Marca: compacto y enfocado** (`InsumoFormModal.tsx`)
 
-### Cambio técnico
+- Agregar prop `context: 'brand' | 'local'` (default `'brand'`)
+- Cuando `context = 'brand'`:
+  - Titulo: "Nuevo Insumo Obligatorio"
+  - Nivel de control se fija automaticamente en `'obligatorio'` (sin RadioGroup)
+  - Se ocultan: seccion RDO, Trackea Stock, Precio maximo, seccion de Precios completa
+  - Se muestra un campo opcional "Precio de referencia inicial" con hint: "Se actualizara automaticamente con las compras de los locales"
+  - Proveedor Obligatorio se muestra directamente (no dentro de panel colapsable)
+  - Layout compacto: campos en 2 columnas, sin secciones innecesarias, todo visible sin scroll
+  - Campos: Nombre, Tipo, Unidad, Categoria interna, Proveedor Obligatorio, Precio ref. inicial (opcional), Motivo del control, Descripcion
 
-Una única migración SQL que inserta los 17 feriados en la tabla `special_days` con `branch_id = NULL` (feriados globales). Sin cambios de código.
+- Cuando `context = 'local'`:
+  - Titulo: "Nuevo Insumo Local"
+  - Nivel fijo en `'libre'`
+  - Campos minimos: Nombre, Tipo, Unidad, Descripcion
+  - Sin seccion de control ni precios (el precio se carga cuando hacen la compra)
+
+**2. Pagina Mi Marca** (`InsumosPage.tsx`)
+
+- Pasar `context="brand"` al modal
+- En la tabla, reemplazar columna "Precio Ref." por "Ultimo Precio" que muestre el precio de referencia actual (este campo se actualizaria en el futuro desde las compras, por ahora muestra `precio_referencia`)
+- Eliminar columna "Nivel" (todos son obligatorios desde la marca)
+
+**3. Pagina Mi Local** (`InsumosLocalPage.tsx`)
+
+- Agregar boton "+ Nuevo Insumo" que abre el modal con `context="local"`
+- Mostrar badge "Obligatorio" en los items que vienen de la marca (nivel_control = obligatorio)
+- Los insumos locales (libre) se muestran con badge "Local"
+
+### Resultado visual - Formulario Marca
+
+```text
++----------------------------------------------+
+| Nuevo Insumo Obligatorio                     |
+|----------------------------------------------|
+| Nombre *                                     |
+| [________________________________]           |
+|                                              |
+| Tipo *              Unidad base *            |
+| [Ingrediente v]     [Unidad (un) v]          |
+|                                              |
+| Categoría interna   Proveedor Obligatorio *  |
+| [Sin categoría v]   [SITONAI MAYORISTA v]    |
+|                                              |
+| Precio ref. inicial ($)                      |
+| [________]  (se actualiza con las compras)   |
+|                                              |
+| Motivo del control                           |
+| [Insumo exclusivo de la marca]               |
+|                                              |
+| Descripción (opcional)                       |
+| [________________________________]           |
+|                                              |
+|              [Cancelar]  [Crear Insumo]      |
++----------------------------------------------+
+```
+
+### Detalle tecnico
+
+- Sin cambios de base de datos
+- Archivos a modificar:
+  - `src/components/finanzas/InsumoFormModal.tsx` -- agregar prop context, renderizado condicional
+  - `src/pages/admin/InsumosPage.tsx` -- pasar context="brand", simplificar tabla
+  - `src/pages/local/InsumosLocalPage.tsx` -- agregar boton nuevo insumo con context="local", badges
+
