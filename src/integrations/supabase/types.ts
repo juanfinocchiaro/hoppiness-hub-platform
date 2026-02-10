@@ -1980,6 +1980,7 @@ export type Database = {
           activo: boolean | null
           categoria_id: string | null
           categoria_pl: string | null
+          costo_por_unidad_base: number | null
           creado_por: string | null
           created_at: string | null
           deleted_at: string | null
@@ -1997,12 +1998,16 @@ export type Database = {
           tipo_item: string
           tracks_stock: boolean
           unidad_base: string
+          unidad_compra: string | null
+          unidad_compra_contenido: number | null
+          unidad_compra_precio: number | null
           updated_at: string | null
         }
         Insert: {
           activo?: boolean | null
           categoria_id?: string | null
           categoria_pl?: string | null
+          costo_por_unidad_base?: number | null
           creado_por?: string | null
           created_at?: string | null
           deleted_at?: string | null
@@ -2020,12 +2025,16 @@ export type Database = {
           tipo_item?: string
           tracks_stock?: boolean
           unidad_base: string
+          unidad_compra?: string | null
+          unidad_compra_contenido?: number | null
+          unidad_compra_precio?: number | null
           updated_at?: string | null
         }
         Update: {
           activo?: boolean | null
           categoria_id?: string | null
           categoria_pl?: string | null
+          costo_por_unidad_base?: number | null
           creado_por?: string | null
           created_at?: string | null
           deleted_at?: string | null
@@ -2043,6 +2052,9 @@ export type Database = {
           tipo_item?: string
           tracks_stock?: boolean
           unidad_base?: string
+          unidad_compra?: string | null
+          unidad_compra_contenido?: number | null
+          unidad_compra_precio?: number | null
           updated_at?: string | null
         }
         Relationships: [
