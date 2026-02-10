@@ -42,7 +42,7 @@ export default function ComprasPage() {
   return (
     <div className="p-6">
       <PageHeader
-        title="Compras y Servicios"
+        title="Facturas"
         subtitle="Facturas de proveedores: insumos y servicios"
         actions={
           <Button onClick={() => setModalOpen(true)}>

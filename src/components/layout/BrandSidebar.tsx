@@ -121,7 +121,7 @@ export function BrandSidebar() {
               <NavItemButton to="/mimarca/finanzas/insumos" icon={Package} label="Insumos e Ingredientes" />
             )}
             {bp.canViewConceptosServicio && (
-              <NavItemButton to="/mimarca/finanzas/conceptos-servicio" icon={FileText} label="Conceptos de Servicio" />
+              <NavItemButton to="/mimarca/finanzas/conceptos-servicio" icon={FileText} label="Servicios Recurrentes" />
             )}
             {bp.canViewProveedoresMarca && (
               <NavItemButton to="/mimarca/finanzas/proveedores" icon={Truck} label="Proveedores" />

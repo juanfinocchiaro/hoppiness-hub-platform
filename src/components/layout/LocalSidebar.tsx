@@ -173,7 +173,7 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
           icon={ShoppingCart}
           forceOpen={isOperacionesActive}
         >
-          <NavItemButton to={`${basePath}/finanzas/compras`} icon={Receipt} label="Compras y Servicios" />
+          <NavItemButton to={`${basePath}/finanzas/compras`} icon={Receipt} label="Facturas" />
           <NavItemButton to={`${basePath}/finanzas/proveedores`} icon={Truck} label="Proveedores" />
         </NavSectionGroup>
       )}
@@ -187,7 +187,7 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
           forceOpen={isFinanzasActive}
         >
           {canViewGastos && (
-            <NavItemButton to={`${basePath}/finanzas/gastos`} icon={Receipt} label="Gastos Menores" />
+            <NavItemButton to={`${basePath}/finanzas/gastos`} icon={Receipt} label="Caja Chica" />
           )}
           {canViewConsumos && (
             <NavItemButton to={`${basePath}/finanzas/consumos`} icon={Package} label="Consumos" />

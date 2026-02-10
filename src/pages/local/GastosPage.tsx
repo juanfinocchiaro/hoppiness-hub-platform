@@ -45,8 +45,8 @@ export default function GastosPage() {
   return (
     <div className="p-6">
       <PageHeader
-        title="Gastos Menores"
-        subtitle="Desembolsos menores sin factura (caja chica, propinas, imprevistos)"
+        title="Caja Chica"
+        subtitle="Desembolsos pequeños sin factura: propinas, viáticos, imprevistos"
         actions={
           <Button onClick={() => { setEditing(null); setModalOpen(true); }}>
             <Plus className="w-4 h-4 mr-2" /> Nuevo Gasto
@@ -85,7 +85,7 @@ export default function GastosPage() {
             ) : !filtered?.length ? (
               <TableRow>
                 <TableCell colSpan={7} className="h-40">
-                  <EmptyState icon={Receipt} title="Sin gastos menores" description="Registrá el primer gasto menor del local" />
+                  <EmptyState icon={Receipt} title="Sin gastos de caja chica" description="Registrá el primer gasto de caja chica del local" />
                 </TableCell>
               </TableRow>
             ) : (
