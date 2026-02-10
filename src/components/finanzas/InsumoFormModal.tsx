@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { FormLayout, FormRow, FormSection } from '@/components/ui/forms-pro';
@@ -11,7 +10,7 @@ import { StickyActions } from '@/components/ui/forms-pro';
 import { Package, Shield, BarChart3 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { LoadingButton } from '@/components/ui/loading-button';
-import { useInsumoMutations, useCategoriasInsumo } from '@/hooks/useInsumos';
+import { useInsumoMutations } from '@/hooks/useInsumos';
 import { useProveedores } from '@/hooks/useProveedores';
 import { UNIDAD_OPTIONS } from '@/types/financial';
 import { TIPO_ITEM_OPTIONS } from '@/types/rdo';
@@ -50,7 +49,6 @@ const NIVEL_LABELS = {
 
 export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand', fixedType }: Props) {
   const { create, update } = useInsumoMutations();
-  const { data: categorias } = useCategoriasInsumo();
   const { data: proveedores } = useProveedores();
   const isEdit = !!insumo;
   const isBrand = context === 'brand';
@@ -139,20 +137,8 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
               <Input value={form.nombre} onChange={(e) => set('nombre', e.target.value)} placeholder="Ej: Bolsa FastFood Hoppiness x1000" />
             </FormRow>
 
-            <FormLayout columns={fixedType ? 1 : 2}>
-              {!fixedType && (
-                <FormRow label="Tipo" required>
-                  <Select value={form.tipo_item || 'insumo'} onValueChange={(v) => set('tipo_item', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {TIPO_ITEM_OPTIONS.map((t) => (
-                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormRow>
-              )}
-              <FormRow label="Unidad base" required>
+            <div className="grid grid-cols-2 gap-3">
+              <FormRow label="Unidad" required>
                 <Select value={form.unidad_base} onValueChange={(v) => set('unidad_base', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -162,20 +148,12 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
                   </SelectContent>
                 </Select>
               </FormRow>
-            </FormLayout>
-
-            <FormLayout columns={2}>
-              <FormRow label="Categoría interna">
-                <Select value={form.categoria_id || 'none'} onValueChange={(v) => set('categoria_id', v === 'none' ? undefined : v)}>
-                  <SelectTrigger><SelectValue placeholder="Sin categoría" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sin categoría</SelectItem>
-                    {categorias?.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <FormRow label="Categoría" required>
+                <RdoCategorySelector value={form.rdo_category_code} onChange={(code) => set('rdo_category_code', code)} itemType={fixedType || form.tipo_item} />
               </FormRow>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
               <FormRow label="Proveedor Obligatorio" required>
                 <Select value={form.proveedor_obligatorio_id || ''} onValueChange={(v) => set('proveedor_obligatorio_id', v)}>
                   <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
@@ -186,23 +164,18 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
                   </SelectContent>
                 </Select>
               </FormRow>
-            </FormLayout>
-
-            <FormRow label="Precio de referencia inicial ($)" hint="Se actualizará automáticamente con las compras de los locales">
-              <Input
-                type="number"
-                step="0.01"
-                value={form.precio_referencia ?? ''}
-                onChange={(e) => set('precio_referencia', e.target.value ? Number(e.target.value) : undefined)}
-              />
-            </FormRow>
-
-            <FormRow label="Motivo del control">
-              <Input value={form.motivo_control || ''} onChange={(e) => set('motivo_control', e.target.value)} placeholder="Ej: Insumo con impresiones de la marca" />
-            </FormRow>
+              <FormRow label="Precio Ref. ($)">
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.precio_referencia ?? ''}
+                  onChange={(e) => set('precio_referencia', e.target.value ? Number(e.target.value) : undefined)}
+                />
+              </FormRow>
+            </div>
 
             <FormRow label="Descripción">
-              <Textarea value={form.descripcion || ''} onChange={(e) => set('descripcion', e.target.value)} rows={2} placeholder="Opcional" />
+              <Input value={form.descripcion || ''} onChange={(e) => set('descripcion', e.target.value)} placeholder="Opcional" />
             </FormRow>
 
             <StickyActions>
@@ -306,30 +279,13 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
                   </Select>
                 </FormRow>
               </FormLayout>
-              <FormRow label="Categoría interna">
-                <Select value={form.categoria_id || 'none'} onValueChange={(v) => set('categoria_id', v === 'none' ? undefined : v)}>
-                  <SelectTrigger><SelectValue placeholder="Sin categoría" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sin categoría</SelectItem>
-                    {categorias?.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormRow>
             </FormLayout>
           </FormSection>
 
-          <FormSection title="Clasificación RDO" icon={BarChart3}>
+          <FormSection title="Categoría" icon={BarChart3}>
             <FormLayout columns={1}>
-              <FormRow label="Categoría RDO" hint="Para el Estado de Resultados">
+              <FormRow label="Categoría" required hint="Para el Estado de Resultados">
                 <RdoCategorySelector value={form.rdo_category_code} onChange={(code) => set('rdo_category_code', code)} itemType={form.tipo_item} />
-              </FormRow>
-              <FormRow label="Trackea Stock">
-                <div className="flex items-center gap-2 pt-1">
-                  <Switch checked={form.tracks_stock || false} onCheckedChange={(v) => set('tracks_stock', v)} />
-                  <span className="text-sm text-muted-foreground">{form.tracks_stock ? 'Sí, controlar stock' : 'No'}</span>
-                </div>
               </FormRow>
             </FormLayout>
           </FormSection>

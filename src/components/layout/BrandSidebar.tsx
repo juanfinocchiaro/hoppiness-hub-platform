@@ -118,7 +118,7 @@ export function BrandSidebar() {
             forceOpen={isCatalogosActive}
           >
             {bp.canViewInsumos && (
-              <NavItemButton to="/mimarca/finanzas/insumos" icon={Package} label="Insumos e Ingredientes" />
+              <NavItemButton to="/mimarca/finanzas/insumos" icon={Package} label="Ingredientes e Insumos" />
             )}
             {bp.canViewConceptosServicio && (
               <NavItemButton to="/mimarca/finanzas/conceptos-servicio" icon={FileText} label="Servicios Recurrentes" />
