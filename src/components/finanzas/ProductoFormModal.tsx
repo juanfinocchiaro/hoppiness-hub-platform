@@ -1,0 +1,255 @@
+import { useState, useEffect, useMemo } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FormRow, FormSection } from '@/components/ui/forms-pro';
+import { StickyActions } from '@/components/ui/forms-pro';
+import { Package, DollarSign } from 'lucide-react';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useInsumoMutations } from '@/hooks/useInsumos';
+import { useProveedores } from '@/hooks/useProveedores';
+import { PRESENTACION_OPTIONS, UNIDAD_BASE_OPTIONS } from '@/types/financial';
+import { RdoCategorySelector } from '@/components/rdo/RdoCategorySelector';
+
+interface Props {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  producto?: any;
+}
+
+export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
+  const { create, update } = useInsumoMutations();
+  const { data: proveedores } = useProveedores();
+  const isEdit = !!producto;
+
+  const [form, setForm] = useState({
+    nombre: '',
+    unidad_compra: 'pack' as string,
+    unidad_compra_contenido: 1,
+    unidad_compra_precio: 0,
+    precio_venta: 0,
+    proveedor_obligatorio_id: '',
+    rdo_category_code: '',
+    descripcion: '',
+    default_alicuota_iva: 21 as number | null,
+  });
+
+  useEffect(() => {
+    if (producto) {
+      setForm({
+        nombre: producto.nombre || '',
+        unidad_compra: producto.unidad_compra || 'pack',
+        unidad_compra_contenido: producto.unidad_compra_contenido || 1,
+        unidad_compra_precio: producto.unidad_compra_precio || 0,
+        precio_venta: producto.precio_venta || 0,
+        proveedor_obligatorio_id: producto.proveedor_obligatorio_id || '',
+        rdo_category_code: producto.rdo_category_code || '',
+        descripcion: producto.descripcion || '',
+        default_alicuota_iva: producto.default_alicuota_iva ?? 21,
+      });
+    } else {
+      setForm({
+        nombre: '',
+        unidad_compra: 'pack',
+        unidad_compra_contenido: 1,
+        unidad_compra_precio: 0,
+        precio_venta: 0,
+        proveedor_obligatorio_id: '',
+        rdo_category_code: '',
+        descripcion: '',
+        default_alicuota_iva: 21,
+      });
+    }
+  }, [producto, open]);
+
+  const set = (key: string, value: any) => setForm(prev => ({ ...prev, [key]: value }));
+
+  const costoUnitario = useMemo(() => {
+    if (form.unidad_compra_contenido > 0 && form.unidad_compra_precio > 0) {
+      return form.unidad_compra_precio / form.unidad_compra_contenido;
+    }
+    return 0;
+  }, [form.unidad_compra_contenido, form.unidad_compra_precio]);
+
+  const margenBruto = form.precio_venta - costoUnitario;
+  const margenPorcentaje = form.precio_venta > 0 ? (margenBruto / form.precio_venta) * 100 : 0;
+
+  const handleSubmit = async () => {
+    if (!form.nombre.trim() || !form.precio_venta) return;
+
+    const payload: any = {
+      nombre: form.nombre,
+      tipo_item: 'producto',
+      unidad_base: 'un',
+      unidad_compra: form.unidad_compra,
+      unidad_compra_contenido: form.unidad_compra_contenido,
+      unidad_compra_precio: form.unidad_compra_precio,
+      precio_venta: form.precio_venta,
+      proveedor_obligatorio_id: form.proveedor_obligatorio_id || null,
+      rdo_category_code: form.rdo_category_code || null,
+      descripcion: form.descripcion || null,
+      nivel_control: 'obligatorio',
+      default_alicuota_iva: form.default_alicuota_iva ?? 21,
+    };
+
+    if (isEdit) {
+      await update.mutateAsync({ id: producto.id, data: payload });
+    } else {
+      await create.mutateAsync(payload);
+    }
+    onOpenChange(false);
+  };
+
+  const isPending = create.isPending || update.isPending;
+
+  const margenColor =
+    margenPorcentaje >= 60 ? 'text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400' :
+    margenPorcentaje >= 40 ? 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-400' :
+    'text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400';
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{isEdit ? 'Editar Producto' : 'Nuevo Producto'}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <FormRow label="Nombre del producto" required>
+            <Input
+              value={form.nombre}
+              onChange={(e) => set('nombre', e.target.value)}
+              placeholder="Ej: Coca-Cola Lata 354ml"
+            />
+          </FormRow>
+
+          <FormSection title="Presentación de compra" icon={Package}>
+            <div className="grid grid-cols-3 gap-3">
+              <FormRow label="Presentación" required>
+                <Select value={form.unidad_compra} onValueChange={(v) => set('unidad_compra', v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {PRESENTACION_OPTIONS.map((p) => (
+                      <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormRow>
+              <FormRow label="Contenido" required hint="unidades">
+                <Input
+                  type="number"
+                  value={form.unidad_compra_contenido || ''}
+                  onChange={(e) => set('unidad_compra_contenido', Number(e.target.value))}
+                  placeholder="Ej: 24"
+                />
+              </FormRow>
+              <FormRow label="Precio neto ($)" required>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.unidad_compra_precio || ''}
+                  onChange={(e) => set('unidad_compra_precio', Number(e.target.value))}
+                  placeholder="Ej: 12000"
+                />
+              </FormRow>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              <div />
+              <FormRow label="IVA habitual" hint="Se precarga en facturas">
+                <Select value={form.default_alicuota_iva != null ? String(form.default_alicuota_iva) : 'null'} onValueChange={(v) => set('default_alicuota_iva', v === 'null' ? null : Number(v))}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="21">21%</SelectItem>
+                    <SelectItem value="10.5">10.5%</SelectItem>
+                    <SelectItem value="27">27%</SelectItem>
+                    <SelectItem value="0">Exento (0%)</SelectItem>
+                    <SelectItem value="null">Sin factura</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormRow>
+            </div>
+            {costoUnitario > 0 && (
+              <p className="text-sm text-muted-foreground mt-2">
+                💰 Costo por unidad: <strong className="text-foreground">${costoUnitario.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
+              </p>
+            )}
+          </FormSection>
+
+          <FormSection title="Precio de venta" icon={DollarSign}>
+            <div className="grid grid-cols-2 gap-4">
+              <FormRow label="Precio de venta ($)" required>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.precio_venta || ''}
+                  onChange={(e) => set('precio_venta', Number(e.target.value))}
+                  placeholder="Ej: 1500"
+                />
+              </FormRow>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Margen</p>
+                {form.precio_venta > 0 && costoUnitario > 0 ? (
+                  <div className="h-9 flex items-center gap-2">
+                    <span className="font-mono font-medium text-sm">
+                      ${margenBruto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${margenColor}`}>
+                      {margenPorcentaje.toFixed(1)}%
+                    </span>
+                  </div>
+                ) : (
+                  <p className="h-9 flex items-center text-sm text-muted-foreground">Completá los precios</p>
+                )}
+              </div>
+            </div>
+
+            {form.precio_venta > 0 && costoUnitario > 0 && (
+              <div className="flex items-center justify-between text-sm bg-muted/50 p-3 rounded-lg mt-2">
+                <span>Costo: <strong>${costoUnitario.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong></span>
+                <span className="text-muted-foreground">→</span>
+                <span>Venta: <strong>${form.precio_venta.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong></span>
+                <span className="text-muted-foreground">→</span>
+                <span className="text-green-600 dark:text-green-400">Ganás: <strong>${margenBruto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong></span>
+              </div>
+            )}
+          </FormSection>
+
+          <div className="grid grid-cols-2 gap-3">
+            <FormRow label="Categoría RDO">
+              <RdoCategorySelector value={form.rdo_category_code} onChange={(code) => set('rdo_category_code', code)} itemType="producto" />
+            </FormRow>
+            <FormRow label="Proveedor">
+              <Select value={form.proveedor_obligatorio_id || 'none'} onValueChange={(v) => set('proveedor_obligatorio_id', v === 'none' ? '' : v)}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin proveedor</SelectItem>
+                  {proveedores?.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.razon_social}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormRow>
+          </div>
+
+          <FormRow label="Descripción / Notas">
+            <Textarea
+              value={form.descripcion || ''}
+              onChange={(e) => set('descripcion', e.target.value)}
+              placeholder="Observaciones sobre el producto"
+              rows={2}
+            />
+          </FormRow>
+
+          <StickyActions>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <LoadingButton loading={isPending} onClick={handleSubmit} disabled={!form.nombre || !form.precio_venta}>
+              {isEdit ? 'Guardar' : 'Crear Producto'}
+            </LoadingButton>
+          </StickyActions>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
