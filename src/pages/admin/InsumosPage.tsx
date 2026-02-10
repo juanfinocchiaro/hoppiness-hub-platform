@@ -59,6 +59,7 @@ export default function InsumosPage() {
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState('ingredientes');
   const [fixedType, setFixedType] = useState<'ingrediente' | 'insumo'>('ingrediente');
+  const [proveedorView, setProveedorView] = useState<'obligatorio' | 'sugerido'>('obligatorio');
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
@@ -91,9 +92,16 @@ export default function InsumosPage() {
     return sortRows(filtered || [], sortKey, sortDir);
   }, [insumos, search, sortKey, sortDir]);
 
-  const filteredInsumos = useMemo(() => {
+  const filteredInsumosOblig = useMemo(() => {
     const filtered = insumos?.filter((i: any) =>
-      (i.tipo_item === 'insumo' || !i.tipo_item) && i.nombre.toLowerCase().includes(search.toLowerCase())
+      (i.tipo_item === 'insumo' || !i.tipo_item) && i.nivel_control !== 'semi_libre' && i.nombre.toLowerCase().includes(search.toLowerCase())
+    );
+    return sortRows(filtered || [], sortKey, sortDir);
+  }, [insumos, search, sortKey, sortDir]);
+
+  const filteredInsumosSugeridos = useMemo(() => {
+    const filtered = insumos?.filter((i: any) =>
+      (i.tipo_item === 'insumo' || !i.tipo_item) && i.nivel_control === 'semi_libre' && i.nombre.toLowerCase().includes(search.toLowerCase())
     );
     return sortRows(filtered || [], sortKey, sortDir);
   }, [insumos, search, sortKey, sortDir]);
@@ -271,63 +279,68 @@ export default function InsumosPage() {
           }
         />
 
-        <TabsContent value="ingredientes" className="space-y-8">
-          <div>
-            <h3 className="text-base font-semibold mb-3">Proveedor Obligatorio</h3>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <SortableHead label="Ingrediente" sortKey="nombre" {...headProps} />
-                    <SortableHead label="Proveedor" sortKey="proveedor" {...headProps} />
-                    <SortableHead label="Categoría" sortKey="categoria" {...headProps} />
-                    <SortableHead label="Presentación" sortKey="presentacion" {...headProps} />
-                    <TableHead className="text-right">Neto</TableHead>
-                    <TableHead className="text-right">IVA $</TableHead>
-                    <TableHead className="text-right">Final</TableHead>
-                    <TableHead className="w-[80px]" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? <SkeletonRows cols={8} /> : !filteredObligatorios?.length ? (
-                    <TableRow><TableCell colSpan={8} className="h-40">
-                      <EmptyState icon={Package} title="Sin ingredientes obligatorios" description="Agregá tu primer ingrediente con proveedor obligatorio" />
-                    </TableCell></TableRow>
-                  ) : filteredObligatorios.map((row: any) => renderRow(row, 'ingrediente'))}
-                </TableBody>
-              </Table>
-            </div>
+        <TabsContent value="ingredientes">
+          <div className="flex items-center gap-1 mb-4">
+            <Button
+              variant={proveedorView === 'obligatorio' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setProveedorView('obligatorio')}
+            >
+              Obligatorio ({filteredObligatorios?.length || 0})
+            </Button>
+            <Button
+              variant={proveedorView === 'sugerido' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setProveedorView('sugerido')}
+            >
+              Sugerido ({filteredSugeridos?.length || 0})
+            </Button>
           </div>
-
-          <div>
-            <h3 className="text-base font-semibold mb-3">Proveedor Sugerido</h3>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <SortableHead label="Ingrediente" sortKey="nombre" {...headProps} />
-                    <SortableHead label="Proveedor" sortKey="proveedor" {...headProps} />
-                    <SortableHead label="Categoría" sortKey="categoria" {...headProps} />
-                    <SortableHead label="Presentación" sortKey="presentacion" {...headProps} />
-                    <TableHead className="text-right">Neto</TableHead>
-                    <TableHead className="text-right">IVA $</TableHead>
-                    <TableHead className="text-right">Final</TableHead>
-                    <TableHead className="w-[80px]" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? <SkeletonRows cols={8} /> : !filteredSugeridos?.length ? (
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <SortableHead label="Ingrediente" sortKey="nombre" {...headProps} />
+                  <SortableHead label="Proveedor" sortKey="proveedor" {...headProps} />
+                  <SortableHead label="Categoría" sortKey="categoria" {...headProps} />
+                  <SortableHead label="Presentación" sortKey="presentacion" {...headProps} />
+                  <TableHead className="text-right">Neto</TableHead>
+                  <TableHead className="text-right">IVA $</TableHead>
+                  <TableHead className="text-right">Final</TableHead>
+                  <TableHead className="w-[80px]" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? <SkeletonRows cols={8} /> : (() => {
+                  const rows = proveedorView === 'obligatorio' ? filteredObligatorios : filteredSugeridos;
+                  return !rows?.length ? (
                     <TableRow><TableCell colSpan={8} className="h-40">
-                      <EmptyState icon={Package} title="Sin ingredientes sugeridos" description="Agregá ingredientes con proveedor sugerido (semi-libre)" />
+                      <EmptyState icon={Package} title={proveedorView === 'obligatorio' ? 'Sin ingredientes obligatorios' : 'Sin ingredientes sugeridos'} description={proveedorView === 'obligatorio' ? 'Agregá ingredientes con proveedor obligatorio' : 'Agregá ingredientes con proveedor sugerido'} />
                     </TableCell></TableRow>
-                  ) : filteredSugeridos.map((row: any) => renderRow(row, 'ingrediente'))}
-                </TableBody>
-              </Table>
-            </div>
+                  ) : rows.map((row: any) => renderRow(row, 'ingrediente'));
+                })()}
+              </TableBody>
+            </Table>
           </div>
         </TabsContent>
 
         <TabsContent value="insumos">
+          <div className="flex items-center gap-1 mb-4">
+            <Button
+              variant={proveedorView === 'obligatorio' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setProveedorView('obligatorio')}
+            >
+              Obligatorio ({filteredInsumosOblig?.length || 0})
+            </Button>
+            <Button
+              variant={proveedorView === 'sugerido' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setProveedorView('sugerido')}
+            >
+              Sugerido ({filteredInsumosSugeridos?.length || 0})
+            </Button>
+          </div>
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -343,11 +356,14 @@ export default function InsumosPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? <SkeletonRows cols={8} /> : !filteredInsumos?.length ? (
-                  <TableRow><TableCell colSpan={8} className="h-40">
-                    <EmptyState icon={Package} title="Sin insumos" description="Agregá tu primer insumo obligatorio" />
-                  </TableCell></TableRow>
-                ) : filteredInsumos.map((row: any) => renderRow(row, 'insumo'))}
+                {isLoading ? <SkeletonRows cols={8} /> : (() => {
+                  const rows = proveedorView === 'obligatorio' ? filteredInsumosOblig : filteredInsumosSugeridos;
+                  return !rows?.length ? (
+                    <TableRow><TableCell colSpan={8} className="h-40">
+                      <EmptyState icon={Package} title={proveedorView === 'obligatorio' ? 'Sin insumos obligatorios' : 'Sin insumos sugeridos'} description={proveedorView === 'obligatorio' ? 'Agregá insumos con proveedor obligatorio' : 'Agregá insumos con proveedor sugerido'} />
+                    </TableCell></TableRow>
+                  ) : rows.map((row: any) => renderRow(row, 'insumo'));
+                })()}
               </TableBody>
             </Table>
           </div>
