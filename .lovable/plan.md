@@ -1,39 +1,33 @@
 
 
-## Renombrar y clarificar: Servicios, Facturas y Caja Chica
+## Nivel de control en el formulario de Marca
+
+### Concepto
+
+La marca crea solo items **Obligatorio** o **Semi-libre**. Los items **Libre** los crea directamente cada local desde su propio panel.
 
 ### Cambios
 
-Son solo cambios de textos y labels, sin logica nueva ni cambios de base de datos.
+**1. Formulario de Marca (`InsumoFormModal.tsx`)**
 
-**1. Mi Marca -- Sidebar y pagina de Conceptos de Servicio**
+- Agregar un selector simple de 2 opciones antes del bloque de proveedor:
+  - **Obligatorio** -- Proveedor fijo definido por la marca (campo requerido)
+  - **Semi-libre** -- Proveedor sugerido, el local puede elegir otro (campo opcional)
+- Segun la opcion:
+  - Obligatorio: campo "Proveedor Obligatorio" (requerido) + Precio Ref.
+  - Semi-libre: campo "Proveedor Sugerido" (opcional) + Precio Ref.
+- Titulo del modal: "Nuevo Ingrediente" / "Nuevo Insumo" (sin "Obligatorio" fijo).
+- Payload: usar el `nivel_control` seleccionado en vez de forzar `'obligatorio'`.
 
-- `BrandSidebar.tsx`: Cambiar label "Conceptos de Servicio" a **"Servicios Recurrentes"**
-- `ConceptosServicioPage.tsx`: 
-  - Titulo: **"Servicios Recurrentes"**
-  - Subtitulo: **"Catalogo de servicios que pagan los locales: alquiler, honorarios, servicios publicos, etc. Se usan al cargar facturas."**
+**2. Tabla de Marca (`InsumosPage.tsx`)**
 
-**2. Mi Local -- Sidebar**
-
-- `LocalSidebar.tsx`:
-  - "Compras y Servicios" pasa a **"Facturas"**
-  - "Gastos Menores" pasa a **"Caja Chica"**
-
-**3. Mi Local -- Paginas**
-
-- `ComprasPage.tsx`:
-  - Titulo: **"Facturas"**
-  - Subtitulo: **"Facturas de proveedores: insumos y servicios"**
-- `GastosPage.tsx`:
-  - Titulo: **"Caja Chica"**
-  - Subtitulo: **"Desembolsos pequenos sin factura: propinas, viaticos, imprevistos"**
-  - Empty state: "Sin gastos de caja chica" en vez de "Sin gastos menores"
+- En la columna "Proveedor", agregar un badge para distinguir:
+  - Obligatorio: nombre del proveedor (sin badge extra, como ahora)
+  - Semi-libre: nombre del proveedor + badge amarillo "Sugerido", o "Sin sugerido" si no hay proveedor
 
 ### Archivos a modificar
 
-1. `src/components/layout/BrandSidebar.tsx` -- 1 label
-2. `src/pages/admin/ConceptosServicioPage.tsx` -- titulo y subtitulo
-3. `src/components/layout/LocalSidebar.tsx` -- 2 labels
-4. `src/pages/local/ComprasPage.tsx` -- titulo
-5. `src/pages/local/GastosPage.tsx` -- titulo, subtitulo, empty state
+1. `src/components/finanzas/InsumoFormModal.tsx` -- Selector de nivel + campos condicionales + titulo + payload
+2. `src/pages/admin/InsumosPage.tsx` -- Badge de nivel en columna Proveedor
 
+No se requieren cambios de base de datos.
