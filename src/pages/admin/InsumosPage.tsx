@@ -90,6 +90,7 @@ export default function InsumosPage() {
                     <EmptyState icon={Package} title="Sin ingredientes" description="Agregá tu primer ingrediente obligatorio" />
                   </TableCell></TableRow>
                 ) : filteredIngredientes.map((row: any) => {
+                  const isSemiLibre = row.nivel_control === 'semi_libre';
                   const provName = row.proveedor_obligatorio?.razon_social || row.proveedor_sugerido?.razon_social;
                   return (
                     <TableRow key={row.id}>
@@ -97,7 +98,14 @@ export default function InsumosPage() {
                         <p className="font-medium">{row.nombre}</p>
                         {row.descripcion && <p className="text-xs text-muted-foreground truncate max-w-[200px]">{row.descripcion}</p>}
                       </TableCell>
-                      <TableCell className="text-sm">{provName || '—'}</TableCell>
+                      <TableCell className="text-sm">
+                        {isSemiLibre ? (
+                          <span className="flex items-center gap-1.5">
+                            {provName || <span className="text-muted-foreground italic">Sin sugerido</span>}
+                            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-700 text-[10px]">Sugerido</Badge>
+                          </span>
+                        ) : (provName || '—')}
+                      </TableCell>
                       <TableCell className="text-sm">{row.categorias_insumo?.nombre || '—'}</TableCell>
                       <TableCell><Badge variant="outline">{row.unidad_base}</Badge></TableCell>
                       <TableCell>
@@ -136,6 +144,7 @@ export default function InsumosPage() {
                     <EmptyState icon={Package} title="Sin insumos" description="Agregá tu primer insumo obligatorio" />
                   </TableCell></TableRow>
                 ) : filteredInsumos.map((row: any) => {
+                  const isSemiLibre = row.nivel_control === 'semi_libre';
                   const provName = row.proveedor_obligatorio?.razon_social || row.proveedor_sugerido?.razon_social;
                   return (
                     <TableRow key={row.id}>
@@ -143,7 +152,14 @@ export default function InsumosPage() {
                         <p className="font-medium">{row.nombre}</p>
                         {row.descripcion && <p className="text-xs text-muted-foreground truncate max-w-[200px]">{row.descripcion}</p>}
                       </TableCell>
-                      <TableCell className="text-sm">{provName || '—'}</TableCell>
+                      <TableCell className="text-sm">
+                        {isSemiLibre ? (
+                          <span className="flex items-center gap-1.5">
+                            {provName || <span className="text-muted-foreground italic">Sin sugerido</span>}
+                            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-700 text-[10px]">Sugerido</Badge>
+                          </span>
+                        ) : (provName || '—')}
+                      </TableCell>
                       <TableCell className="text-sm">{row.categorias_insumo?.nombre || '—'}</TableCell>
                       <TableCell><Badge variant="outline">{row.unidad_base}</Badge></TableCell>
                       <TableCell>
