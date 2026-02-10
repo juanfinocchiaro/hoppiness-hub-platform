@@ -7,13 +7,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Building2, MapPin, Package, Plus, Pencil, Trash2, AlertCircle } from 'lucide-react';
+import { Building2, MapPin, Package, Plus, Pencil, Trash2, AlertCircle, Settings } from 'lucide-react';
 import { useProveedores, useProveedorMutations } from '@/hooks/useProveedores';
 import { ProveedorFormModal } from '@/components/finanzas/ProveedorFormModal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/states';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useCondicionesByBranch } from '@/hooks/useProveedorCondiciones';
+import { CondicionesLocalModal } from '@/components/finanzas/CondicionesLocalModal';
 
 function useSaldosProveedores(branchId: string) {
   const { user } = useAuth();
@@ -44,11 +46,13 @@ export default function ProveedoresLocalPage() {
   const navigate = useNavigate();
   const { data: proveedores, isLoading } = useProveedores(branchId);
   const { data: saldos } = useSaldosProveedores(branchId!);
+  const { data: condicionesMap } = useCondicionesByBranch(branchId);
   const { softDelete } = useProveedorMutations();
   const [search, setSearch] = useState('');
   const [showNew, setShowNew] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [deleting, setDeleting] = useState<any>(null);
+  const [condicionesTarget, setCondicionesTarget] = useState<{ id: string; name: string } | null>(null);
 
   const filtered = proveedores?.filter((p) =>
     p.razon_social.toLowerCase().includes(search.toLowerCase()) ||
@@ -157,21 +161,40 @@ export default function ProveedoresLocalPage() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={row.permite_cuenta_corriente ? 'default' : 'outline'}>
-                      {row.permite_cuenta_corriente ? 'Sí' : 'No'}
-                    </Badge>
+                    {(() => {
+                      const cond = condicionesMap?.[row.id];
+                      if (!cond) return <span className="text-muted-foreground text-xs">Sin configurar</span>;
+                      return (
+                        <div className="flex items-center gap-1">
+                          <Badge variant={cond.permite_cuenta_corriente ? 'default' : 'outline'}>
+                            {cond.permite_cuenta_corriente ? `CC ${cond.dias_pago_habitual ?? ''}d` : 'Contado'}
+                          </Badge>
+                        </div>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell>
-                    {isLocalProvider(row) && (
-                      <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditing(row)}>
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleting(row)}>
-                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                        </Button>
-                      </div>
-                    )}
+                    <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        title="Configurar condiciones"
+                        onClick={() => setCondicionesTarget({ id: row.id, name: row.razon_social })}
+                      >
+                        <Settings className="w-3.5 h-3.5" />
+                      </Button>
+                      {isLocalProvider(row) && (
+                        <>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditing(row)}>
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleting(row)}>
+                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               );
@@ -196,6 +219,15 @@ export default function ProveedoresLocalPage() {
           setDeleting(null);
         }}
       />
+      {condicionesTarget && (
+        <CondicionesLocalModal
+          open={!!condicionesTarget}
+          onOpenChange={() => setCondicionesTarget(null)}
+          proveedorId={condicionesTarget.id}
+          proveedorName={condicionesTarget.name}
+          branchId={branchId!}
+        />
+      )}
     </div>
   );
 }
