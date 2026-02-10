@@ -106,7 +106,7 @@ export default function InsumosPage() {
                           </span>
                         ) : (provName || '—')}
                       </TableCell>
-                      <TableCell className="text-sm">{row.categorias_insumo?.nombre || '—'}</TableCell>
+                      <TableCell className="text-sm">{row.rdo_categories?.name || row.categorias_insumo?.nombre || '—'}</TableCell>
                       <TableCell>
                         {row.unidad_compra ? (
                           <span className="text-sm">
@@ -169,7 +169,7 @@ export default function InsumosPage() {
                           </span>
                         ) : (provName || '—')}
                       </TableCell>
-                      <TableCell className="text-sm">{row.categorias_insumo?.nombre || '—'}</TableCell>
+                      <TableCell className="text-sm">{row.rdo_categories?.name || row.categorias_insumo?.nombre || '—'}</TableCell>
                       <TableCell>
                         {row.unidad_compra ? (
                           <span className="text-sm">
