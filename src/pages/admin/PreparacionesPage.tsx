@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { DataToolbar } from '@/components/ui/data-table-pro';
 import { Button } from '@/components/ui/button';
@@ -18,8 +18,43 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/states';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Plus, Pencil, Trash2, ChefHat, Package, Save, Shuffle, ChevronDown, ChevronUp,
+  Plus, Pencil, Trash2, ChefHat, Package, Save, Shuffle, ChevronDown,
 } from 'lucide-react';
+
+// Animated expandable panel
+function ExpandablePanel({ open, children }: { open: boolean; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number | undefined>(open ? undefined : 0);
+  const [isVisible, setIsVisible] = useState(open);
+
+  useEffect(() => {
+    if (open) {
+      setIsVisible(true);
+      requestAnimationFrame(() => {
+        if (ref.current) setHeight(ref.current.scrollHeight);
+      });
+    } else {
+      if (ref.current) setHeight(ref.current.scrollHeight);
+      requestAnimationFrame(() => setHeight(0));
+    }
+  }, [open]);
+
+  const onTransitionEnd = () => {
+    if (open) setHeight(undefined);
+    else setIsVisible(false);
+  };
+
+  if (!isVisible && !open) return null;
+
+  return (
+    <div
+      style={{ height: height !== undefined ? `${height}px` : 'auto', overflow: 'hidden', transition: 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease' , opacity: open ? 1 : 0 }}
+      onTransitionEnd={onTransitionEnd}
+    >
+      <div ref={ref}>{children}</div>
+    </div>
+  );
+}
 import {
   usePreparaciones,
   usePreparacionIngredientes,
@@ -98,7 +133,7 @@ export default function PreparacionesPage() {
             return (
               <div key={prep.id}>
                 <div
-                  className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                  className={`flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors ${isExpanded ? 'bg-muted/30' : ''}`}
                   onClick={() => toggleExpand(prep.id)}
                 >
                   <div className="flex-1 min-w-0">
@@ -121,9 +156,9 @@ export default function PreparacionesPage() {
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
-                  {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />}
+                  <ChevronDown className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
                 </div>
-                {isExpanded && (
+                <ExpandablePanel open={isExpanded}>
                   <div className="px-4 pb-4 pt-1 bg-muted/30 border-t">
                     {prep.tipo === 'elaborado' ? (
                       <FichaTecnicaTab preparacionId={prep.id} mutations={mutations} onClose={() => setExpandedId(null)} />
@@ -131,7 +166,7 @@ export default function PreparacionesPage() {
                       <OpcionesTab preparacionId={prep.id} mutations={mutations} onClose={() => setExpandedId(null)} />
                     )}
                   </div>
-                )}
+                </ExpandablePanel>
               </div>
             );
           })}
