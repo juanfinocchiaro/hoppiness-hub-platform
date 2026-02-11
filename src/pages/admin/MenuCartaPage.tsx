@@ -54,7 +54,7 @@ export default function MenuCartaPage() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Carta" subtitle="Capa 3 — Lo que ve y compra el cliente (solo lectura)" />
+        <PageHeader title="Items de Venta" subtitle="Lo que ve y compra el cliente" />
         <div className="space-y-4">
           {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-lg" />)}
         </div>
@@ -64,7 +64,7 @@ export default function MenuCartaPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Carta" subtitle="Capa 3 — Lo que ve y compra el cliente · Para editar, usá Centro de Costos" />
+      <PageHeader title="Items de Venta" subtitle="Lo que ve y compra el cliente · Para editar, usá el Centro de Costos" />
 
       <DataToolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="Buscar item..." />
 

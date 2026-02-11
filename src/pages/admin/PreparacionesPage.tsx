@@ -101,7 +101,7 @@ export default function PreparacionesPage() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Preparaciones" subtitle="Capa 2 — Lo que hace la cocina" />
+        <PageHeader title="Recetas" subtitle="Fichas técnicas de lo que se prepara en la cocina" />
         <div className="space-y-4">
           {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
         </div>
@@ -111,19 +111,19 @@ export default function PreparacionesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Preparaciones" subtitle="Capa 2 — Fichas técnicas y componentes intermedios" />
+      <PageHeader title="Recetas" subtitle="Fichas técnicas de lo que se prepara en la cocina" />
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <DataToolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="Buscar preparación..." />
         <Button onClick={() => setIsCreating(true)}>
-          <Plus className="w-4 h-4 mr-2" /> Nueva Preparación
+          <Plus className="w-4 h-4 mr-2" /> Nueva Receta
         </Button>
       </div>
 
       {filteredPreps.length === 0 ? (
         <Card>
           <CardContent className="py-16">
-            <EmptyState icon={ChefHat} title="Sin preparaciones" description="Creá una preparación para empezar a definir fichas técnicas" />
+            <EmptyState icon={ChefHat} title="Sin recetas" description="Creá una receta para empezar a definir fichas técnicas" />
           </CardContent>
         </Card>
       ) : (
@@ -187,7 +187,7 @@ export default function PreparacionesPage() {
         open={!!deletingPrep}
         onOpenChange={() => setDeletingPrep(null)}
         title="Eliminar preparación"
-        description={`¿Eliminar "${deletingPrep?.nombre}"? Los items de carta que la usen perderán su referencia.`}
+        description={`¿Eliminar "${deletingPrep?.nombre}"? Los items de carta que la usen perderán su referencia a esta receta.`}
         confirmLabel="Eliminar"
         variant="destructive"
         onConfirm={async () => {
@@ -243,7 +243,7 @@ function PreparacionFullModal({ open, onOpenChange, preparacion, mutations }: {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEdit ? preparacion.nombre : 'Nueva Preparación'}</DialogTitle>
+          <DialogTitle>{isEdit ? preparacion.nombre : 'Nueva Receta'}</DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>

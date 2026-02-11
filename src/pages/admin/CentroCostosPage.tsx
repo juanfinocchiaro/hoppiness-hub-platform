@@ -108,7 +108,7 @@ export default function CentroCostosPage() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-[250px]">Item</TableHead>
-              <TableHead>Categoría RDO</TableHead>
+              <TableHead>Categoría</TableHead>
               <TableHead className="text-right">Costo</TableHead>
               <TableHead className="text-right">Precio</TableHead>
               <TableHead className="text-right">FC%</TableHead>
@@ -128,7 +128,7 @@ export default function CentroCostosPage() {
                     <p className="text-xs text-muted-foreground">{item.menu_categorias?.nombre || 'Sin categoría'}</p>
                   </div>
                 </TableCell>
-                <TableCell className="text-sm">{item.rdo_categories?.name || <span className="text-muted-foreground italic">—</span>}</TableCell>
+                <TableCell className="text-sm">{item.menu_categorias?.nombre || <span className="text-muted-foreground italic">Sin categoría</span>}</TableCell>
                 <TableCell className="text-right font-mono">{formatCurrency(item.costo_total || 0)}</TableCell>
                 <TableCell className="text-right font-mono font-medium">{formatCurrency(item.precio_base)}</TableCell>
                 <TableCell className="text-right">
@@ -260,17 +260,6 @@ function ItemCartaFormModal({ open, onOpenChange, item, categorias, cmvCategorie
             </FormRow>
           </div>
           <FormRow label="Descripción"><Textarea value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} rows={2} /></FormRow>
-          <FormSection title="Clasificación RDO" icon={Tag}>
-            <FormRow label="Categoría RDO" required>
-              <Select value={form.rdo_category_code || 'none'} onValueChange={(v) => set('rdo_category_code', v === 'none' ? '' : v)}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Seleccionar...</SelectItem>
-                  {cmvCategories.map((c: any) => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </FormRow>
-          </FormSection>
           <FormSection title="Precio" icon={DollarSign}>
             <div className="grid grid-cols-2 gap-3">
               <FormRow label="Precio de venta ($)" required><Input type="number" value={form.precio_base || ''} onChange={(e) => set('precio_base', Number(e.target.value))} /></FormRow>
@@ -358,7 +347,7 @@ function ComposicionModal({ open, onOpenChange, item, preparaciones, insumos, mu
                   <Select value={row.tipo} onValueChange={(v) => updateRow(i, 'tipo', v)}>
                     <SelectTrigger className="h-7 w-[90px] text-xs shrink-0"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="preparacion">Preparación</SelectItem>
+                      <SelectItem value="preparacion">Receta</SelectItem>
                       <SelectItem value="insumo">Insumo</SelectItem>
                     </SelectContent>
                   </Select>
@@ -424,13 +413,9 @@ function ComposicionModal({ open, onOpenChange, item, preparaciones, insumos, mu
 function PrecioModal({ open, onOpenChange, item, cmvCategories, mutations, userId }: any) {
   const [nuevoPrecio, setNuevoPrecio] = useState(item?.precio_base || 0);
   const [motivo, setMotivo] = useState('');
-  const [rdoCode, setRdoCode] = useState(item?.rdo_category_code || '');
 
   const handleSubmit = async () => {
     if (!nuevoPrecio) return;
-    if (rdoCode !== item.rdo_category_code) {
-      await mutations.update.mutateAsync({ id: item.id, data: { rdo_category_code: rdoCode || null } });
-    }
     await mutations.cambiarPrecio.mutateAsync({
       itemId: item.id,
       precioAnterior: item.precio_base,
@@ -450,15 +435,6 @@ function PrecioModal({ open, onOpenChange, item, cmvCategories, mutations, userI
             <div className="flex justify-between"><span className="text-muted-foreground">Precio actual:</span><span className="font-mono">{formatCurrency(item?.precio_base || 0)}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Costo:</span><span className="font-mono">{formatCurrency(item?.costo_total || 0)}</span></div>
           </div>
-          <FormRow label="Categoría RDO">
-            <Select value={rdoCode || 'none'} onValueChange={(v) => setRdoCode(v === 'none' ? '' : v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sin categoría</SelectItem>
-                {cmvCategories.map((c: any) => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </FormRow>
           <FormRow label="Nuevo precio ($)" required>
             <Input type="number" value={nuevoPrecio || ''} onChange={(e) => setNuevoPrecio(Number(e.target.value))} />
           </FormRow>

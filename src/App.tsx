@@ -76,6 +76,7 @@ import ConceptosServicioPage from "./pages/admin/ConceptosServicioPage";
 import MenuCartaPage from "./pages/admin/MenuCartaPage";
 import CentroCostosPage from "./pages/admin/CentroCostosPage";
 import PreparacionesPage from "./pages/admin/PreparacionesPage";
+import CategoriasCartaPage from "./pages/admin/CategoriasCartaPage";
 
 // Mi Local - Comunicaciones
 import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
@@ -230,13 +231,15 @@ const App = () => (
               <Route path="finanzas/canon" element={<CanonPage />} />
               <Route path="finanzas/ventas-mensuales" element={<VentasMensualesMarcaPage />} />
               
-              {/* Menú */}
-              <Route path="menu/carta" element={<MenuCartaPage />} />
-              <Route path="menu/canales" element={<div className="p-6 text-muted-foreground">Canales y Precios — próximamente</div>} />
+              {/* Recetas */}
+              <Route path="recetas" element={<PreparacionesPage />} />
+              
+              {/* Carta */}
+              <Route path="carta" element={<MenuCartaPage />} />
+              <Route path="carta/categorias" element={<CategoriasCartaPage />} />
               
               {/* Centro de Costos */}
               <Route path="centro-costos" element={<CentroCostosPage />} />
-              <Route path="centro-costos/preparaciones" element={<PreparacionesPage />} />
               
               {/* Configuración */}
               <Route path="reglamentos" element={<BrandRegulationsPage />} />
