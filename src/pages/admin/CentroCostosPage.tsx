@@ -17,8 +17,9 @@ import { EmptyState } from '@/components/ui/states';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Percent, AlertTriangle, CheckCircle, TrendingDown, Edit, History, Plus,
-  Trash2, Package, Save, DollarSign, Tag, Layers,
+  Trash2, Package, Save, DollarSign, Tag, Layers, Settings2,
 } from 'lucide-react';
+import { ModificadoresTab } from '@/components/menu/ModificadoresTab';
 import { useItemsCarta, useItemCartaComposicion, useItemCartaHistorial, useItemCartaMutations } from '@/hooks/useItemsCarta';
 import { usePreparaciones } from '@/hooks/usePreparaciones';
 import { useInsumos } from '@/hooks/useInsumos';
@@ -46,7 +47,7 @@ export default function CentroCostosPage() {
   const [precioModal, setPrecioModal] = useState<any>(null);
   const [historialModal, setHistorialModal] = useState<any>(null);
   const [deletingItem, setDeletingItem] = useState<any>(null);
-
+  const [modificadoresItem, setModificadoresItem] = useState<any>(null);
   const cmvCategories = useMemo(() => {
     return rdoCategories?.filter((c: any) => c.level === 3 && (c.parent_code?.startsWith('cmv') || c.code?.startsWith('cmv'))) || [];
   }, [rdoCategories]);
@@ -143,6 +144,9 @@ export default function CentroCostosPage() {
                     <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setComposicionItem(item)}>
                       <Layers className="w-3.5 h-3.5 mr-1" /> Composición
                     </Button>
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setModificadoresItem(item)}>
+                      <Settings2 className="w-3.5 h-3.5 mr-1" /> Modif.
+                    </Button>
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPrecioModal(item)}>
                       <Edit className="w-3.5 h-3.5" />
                     </Button>
@@ -182,7 +186,16 @@ export default function CentroCostosPage() {
         />
       )}
 
-      {/* PRECIO MODAL */}
+      {/* MODIFICADORES MODAL */}
+      {modificadoresItem && (
+        <Dialog open={!!modificadoresItem} onOpenChange={() => setModificadoresItem(null)}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Modificadores: {modificadoresItem.nombre}</DialogTitle></DialogHeader>
+            <ModificadoresTab itemId={modificadoresItem.id} />
+          </DialogContent>
+        </Dialog>
+      )}
+
       {precioModal && (
         <PrecioModal
           open={!!precioModal}
