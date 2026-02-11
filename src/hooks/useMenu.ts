@@ -18,6 +18,77 @@ export function useMenuCategorias() {
   });
 }
 
+// Mutations para categorías
+export function useMenuCategoriaMutations() {
+  const queryClient = useQueryClient();
+
+  const create = useMutation({
+    mutationFn: async (data: { nombre: string; descripcion?: string; orden?: number }) => {
+      const { data: cat, error } = await supabase
+        .from('menu_categorias')
+        .insert({ nombre: data.nombre, descripcion: data.descripcion || null, orden: data.orden || 99 } as any)
+        .select()
+        .single();
+      if (error) throw error;
+      return cat;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['menu-categorias'] });
+      toast.success('Categoría creada');
+    },
+    onError: (e) => toast.error(`Error: ${e.message}`),
+  });
+
+  const update = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { nombre?: string; descripcion?: string; orden?: number } }) => {
+      const { error } = await supabase
+        .from('menu_categorias')
+        .update({ ...data, updated_at: new Date().toISOString() } as any)
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['menu-categorias'] });
+      toast.success('Categoría actualizada');
+    },
+    onError: (e) => toast.error(`Error: ${e.message}`),
+  });
+
+  const reorder = useMutation({
+    mutationFn: async (items: { id: string; orden: number }[]) => {
+      for (const item of items) {
+        const { error } = await supabase
+          .from('menu_categorias')
+          .update({ orden: item.orden, updated_at: new Date().toISOString() } as any)
+          .eq('id', item.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['menu-categorias'] });
+    },
+    onError: (e) => toast.error(`Error al reordenar: ${e.message}`),
+  });
+
+  const softDelete = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('menu_categorias')
+        .update({ activo: false, updated_at: new Date().toISOString() } as any)
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['menu-categorias'] });
+      queryClient.invalidateQueries({ queryKey: ['menu-productos'] });
+      toast.success('Categoría eliminada');
+    },
+    onError: (e) => toast.error(`Error: ${e.message}`),
+  });
+
+  return { create, update, reorder, softDelete };
+}
+
 // Productos del menú con datos relacionados
 export function useMenuProductos() {
   return useQuery({
