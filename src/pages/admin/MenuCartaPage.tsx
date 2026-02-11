@@ -13,9 +13,6 @@ import { FichaTecnicaModal } from '@/components/menu/FichaTecnicaModal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/states';
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(value);
-
 export default function MenuCartaPage() {
   const { data: productos, isLoading } = useMenuProductos();
   const { data: categorias } = useMenuCategorias();
@@ -65,7 +62,6 @@ export default function MenuCartaPage() {
               <TableHead className="w-[300px]">Producto</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Categoría</TableHead>
-              <TableHead className="text-right">Precio Base</TableHead>
               <TableHead className="w-[120px]">Ficha Técnica</TableHead>
               <TableHead className="w-[80px]" />
             </TableRow>
@@ -74,14 +70,14 @@ export default function MenuCartaPage() {
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 6 }).map((_, j) => (
+                  {Array.from({ length: 5 }).map((_, j) => (
                     <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                   ))}
                 </TableRow>
               ))
             ) : !filteredProductos.length ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-40">
+                <TableCell colSpan={5} className="h-40">
                   <EmptyState icon={ChefHat} title="Sin productos" description="Agregá productos a la carta" />
                 </TableCell>
               </TableRow>
@@ -99,9 +95,6 @@ export default function MenuCartaPage() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-sm">{producto.menu_categorias?.nombre || '—'}</TableCell>
-                <TableCell className="text-right font-mono font-medium">
-                  {producto.menu_precios?.precio_base ? formatCurrency(producto.menu_precios.precio_base) : '—'}
-                </TableCell>
                 <TableCell>
                   {producto.tipo === 'elaborado' ? (
                     <Button variant="outline" size="sm" onClick={() => { setSelectedProductoFicha(producto); setFichaTecnicaModalOpen(true); }}>
