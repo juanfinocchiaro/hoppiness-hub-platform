@@ -55,6 +55,42 @@ function ExpandablePanel({ open, children }: { open: boolean; children: React.Re
     </div>
   );
 }
+
+// Inline editable description
+function InlineDescripcion({ prep, mutations }: { prep: any; mutations: any }) {
+  const [value, setValue] = useState(prep.descripcion || '');
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    setValue(prep.descripcion || '');
+    setDirty(false);
+  }, [prep.descripcion]);
+
+  const save = async () => {
+    if (!dirty) return;
+    await mutations.update.mutateAsync({ id: prep.id, data: { descripcion: value } });
+    setDirty(false);
+  };
+
+  return (
+    <div className="flex items-start gap-2 mb-3 pt-2">
+      <Textarea
+        value={value}
+        onChange={(e) => { setValue(e.target.value); setDirty(true); }}
+        placeholder="Descripción de la receta..."
+        rows={1}
+        className="text-sm resize-none min-h-[36px]"
+        onBlur={save}
+        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save(); } }}
+      />
+      {dirty && (
+        <Button size="sm" variant="outline" className="shrink-0" onClick={save} disabled={mutations.update.isPending}>
+          <Save className="w-3.5 h-3.5" />
+        </Button>
+      )}
+    </div>
+  );
+}
 import {
   usePreparaciones,
   usePreparacionIngredientes,
@@ -160,6 +196,7 @@ export default function PreparacionesPage() {
                 </div>
                 <ExpandablePanel open={isExpanded}>
                   <div className="px-4 pb-4 pt-1 bg-muted/30 border-t">
+                    <InlineDescripcion prep={prep} mutations={mutations} />
                     {prep.tipo === 'elaborado' ? (
                       <FichaTecnicaTab preparacionId={prep.id} mutations={mutations} onClose={() => setExpandedId(null)} />
                     ) : (
