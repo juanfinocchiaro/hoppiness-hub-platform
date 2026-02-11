@@ -2417,6 +2417,147 @@ export type Database = {
           },
         ]
       }
+      item_modificadores: {
+        Row: {
+          activo: boolean | null
+          cantidad_ahorro: number | null
+          cantidad_extra: number | null
+          cantidad_nuevo: number | null
+          costo_ahorro: number | null
+          costo_extra: number | null
+          created_at: string | null
+          diferencia_costo: number | null
+          diferencia_precio: number | null
+          id: string
+          ingrediente_extra_id: string | null
+          ingrediente_id: string | null
+          ingrediente_nuevo_id: string | null
+          ingrediente_original_id: string | null
+          item_carta_id: string
+          nombre: string
+          orden: number | null
+          precio_extra: number | null
+          receta_extra_id: string | null
+          receta_id: string | null
+          tipo: string
+          unidad_ahorro: string | null
+          unidad_extra: string | null
+          unidad_nuevo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          cantidad_ahorro?: number | null
+          cantidad_extra?: number | null
+          cantidad_nuevo?: number | null
+          costo_ahorro?: number | null
+          costo_extra?: number | null
+          created_at?: string | null
+          diferencia_costo?: number | null
+          diferencia_precio?: number | null
+          id?: string
+          ingrediente_extra_id?: string | null
+          ingrediente_id?: string | null
+          ingrediente_nuevo_id?: string | null
+          ingrediente_original_id?: string | null
+          item_carta_id: string
+          nombre: string
+          orden?: number | null
+          precio_extra?: number | null
+          receta_extra_id?: string | null
+          receta_id?: string | null
+          tipo: string
+          unidad_ahorro?: string | null
+          unidad_extra?: string | null
+          unidad_nuevo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          cantidad_ahorro?: number | null
+          cantidad_extra?: number | null
+          cantidad_nuevo?: number | null
+          costo_ahorro?: number | null
+          costo_extra?: number | null
+          created_at?: string | null
+          diferencia_costo?: number | null
+          diferencia_precio?: number | null
+          id?: string
+          ingrediente_extra_id?: string | null
+          ingrediente_id?: string | null
+          ingrediente_nuevo_id?: string | null
+          ingrediente_original_id?: string | null
+          item_carta_id?: string
+          nombre?: string
+          orden?: number | null
+          precio_extra?: number | null
+          receta_extra_id?: string | null
+          receta_id?: string | null
+          tipo?: string
+          unidad_ahorro?: string | null
+          unidad_extra?: string | null
+          unidad_nuevo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_modificadores_ingrediente_extra_id_fkey"
+            columns: ["ingrediente_extra_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_modificadores_ingrediente_id_fkey"
+            columns: ["ingrediente_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_modificadores_ingrediente_nuevo_id_fkey"
+            columns: ["ingrediente_nuevo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_modificadores_ingrediente_original_id_fkey"
+            columns: ["ingrediente_original_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_modificadores_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "menu_productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_modificadores_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "v_menu_costos"
+            referencedColumns: ["menu_producto_id"]
+          },
+          {
+            foreignKeyName: "item_modificadores_receta_extra_id_fkey"
+            columns: ["receta_extra_id"]
+            isOneToOne: false
+            referencedRelation: "preparaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_modificadores_receta_id_fkey"
+            columns: ["receta_id"]
+            isOneToOne: false
+            referencedRelation: "preparaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       items_carta: {
         Row: {
           activo: boolean | null
