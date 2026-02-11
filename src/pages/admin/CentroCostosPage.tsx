@@ -349,64 +349,52 @@ function ComposicionModal({ open, onOpenChange, item, preparaciones, insumos, mu
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Composición: {item.nombre}</DialogTitle></DialogHeader>
         <div className="space-y-4">
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[120px]">Tipo</TableHead>
-                  <TableHead>Componente</TableHead>
-                  <TableHead className="w-[80px]">Cantidad</TableHead>
-                  <TableHead className="text-right">Costo Unit.</TableHead>
-                  <TableHead className="text-right">Subtotal</TableHead>
-                  <TableHead className="w-[50px]" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="h-24 text-center text-muted-foreground">Sin composición — agregá componentes</TableCell></TableRow>
-                ) : rows.map((row, i) => (
-                  <TableRow key={i}>
-                    <TableCell>
-                      <Select value={row.tipo} onValueChange={(v) => updateRow(i, 'tipo', v)}>
-                        <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+          {rows.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground border rounded-lg">Sin composición — agregá componentes</div>
+          ) : (
+            <div className="space-y-1">
+              {rows.map((row, i) => (
+                <div key={i} className="flex items-center gap-1.5 border rounded px-2 py-1.5 text-sm">
+                  <Select value={row.tipo} onValueChange={(v) => updateRow(i, 'tipo', v)}>
+                    <SelectTrigger className="h-7 w-[90px] text-xs shrink-0"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="preparacion">Preparación</SelectItem>
+                      <SelectItem value="insumo">Insumo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex-1 min-w-0">
+                    {row.tipo === 'preparacion' ? (
+                      <Select value={row.preparacion_id || 'none'} onValueChange={(v) => updateRow(i, 'preparacion_id', v === 'none' ? '' : v)}>
+                        <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="preparacion">Preparación</SelectItem>
-                          <SelectItem value="insumo">Insumo</SelectItem>
+                          <SelectItem value="none">Seleccionar...</SelectItem>
+                          {preparaciones.map((p: any) => (
+                            <SelectItem key={p.id} value={p.id}>{p.nombre} ({formatCurrency(p.costo_calculado || 0)})</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
-                    </TableCell>
-                    <TableCell>
-                      {row.tipo === 'preparacion' ? (
-                        <Select value={row.preparacion_id || 'none'} onValueChange={(v) => updateRow(i, 'preparacion_id', v === 'none' ? '' : v)}>
-                          <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Seleccionar...</SelectItem>
-                            {preparaciones.map((p: any) => (
-                              <SelectItem key={p.id} value={p.id}>{p.nombre} ({formatCurrency(p.costo_calculado || 0)})</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Select value={row.insumo_id || 'none'} onValueChange={(v) => updateRow(i, 'insumo_id', v === 'none' ? '' : v)}>
-                          <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Seleccionar...</SelectItem>
-                            {insumos.filter((x: any) => x.tipo_item === 'insumo' || x.tipo_item === 'producto').map((ins: any) => (
-                              <SelectItem key={ins.id} value={ins.id}>{ins.nombre} ({formatCurrency(ins.costo_por_unidad_base || 0)})</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </TableCell>
-                    <TableCell><Input type="number" className="w-20" value={row.cantidad} onChange={(e) => updateRow(i, 'cantidad', Number(e.target.value))} /></TableCell>
-                    <TableCell className="text-right font-mono text-sm">{formatCurrency(row._costo)}</TableCell>
-                    <TableCell className="text-right font-mono">{formatCurrency(row.cantidad * row._costo)}</TableCell>
-                    <TableCell><Button variant="ghost" size="icon" onClick={() => removeRow(i)}><Trash2 className="w-4 h-4 text-destructive" /></Button></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                    ) : (
+                      <Select value={row.insumo_id || 'none'} onValueChange={(v) => updateRow(i, 'insumo_id', v === 'none' ? '' : v)}>
+                        <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Seleccionar...</SelectItem>
+                          {insumos.filter((x: any) => x.tipo_item === 'insumo' || x.tipo_item === 'producto').map((ins: any) => (
+                            <SelectItem key={ins.id} value={ins.id}>{ins.nombre} ({formatCurrency(ins.costo_por_unidad_base || 0)})</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                  <Input type="number" className="h-7 w-16 text-xs shrink-0" value={row.cantidad} onChange={(e) => updateRow(i, 'cantidad', Number(e.target.value))} />
+                  <span className="text-xs text-muted-foreground shrink-0">×</span>
+                  <span className="font-mono text-xs w-16 text-right shrink-0">{formatCurrency(row._costo)}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">=</span>
+                  <span className="font-mono text-xs font-semibold w-20 text-right shrink-0">{formatCurrency(row.cantidad * row._costo)}</span>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeRow(i)}><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
+                </div>
+              ))}
+            </div>
+          )}
           <Button variant="outline" onClick={addRow} className="w-full"><Plus className="w-4 h-4 mr-2" /> Agregar Componente</Button>
           <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg flex justify-between items-center">
             <div>
