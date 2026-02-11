@@ -2,27 +2,173 @@ import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { DataToolbar } from '@/components/ui/data-table-pro';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/states';
 import { Skeleton } from '@/components/ui/skeleton';
-import { BookOpen, ChevronUp, ChevronDown } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { BookOpen, ChevronDown, Plus, GripVertical, Pencil, Trash2, Check, X } from 'lucide-react';
 import { useItemsCarta } from '@/hooks/useItemsCarta';
-import { useMenuCategorias } from '@/hooks/useMenu';
+import { useMenuCategorias, useMenuCategoriaMutations } from '@/hooks/useMenu';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(value);
 
+/* ─── Sortable category card ─── */
+interface SortableCatProps {
+  cat: any;
+  items: any[];
+  isOpen: boolean;
+  onToggle: () => void;
+  editingId: string | null;
+  editingNombre: string;
+  setEditingNombre: (v: string) => void;
+  setEditingId: (v: string | null) => void;
+  handleUpdate: () => void;
+  setDeleting: (v: any) => void;
+}
+
+function SortableCategoryCard({
+  cat, items, isOpen, onToggle,
+  editingId, editingNombre, setEditingNombre, setEditingId, handleUpdate, setDeleting,
+}: SortableCatProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  const isEditing = editingId === cat.id;
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={onToggle}>
+      <Card ref={setNodeRef} style={style} className="overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 bg-muted/40 border-b">
+          {/* Drag handle */}
+          <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none shrink-0">
+            <GripVertical className="w-4 h-4 text-muted-foreground" />
+          </button>
+
+          {isEditing ? (
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <Input
+                value={editingNombre}
+                onChange={(e) => setEditingNombre(e.target.value)}
+                className="h-7 w-48 text-sm"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleUpdate();
+                  if (e.key === 'Escape') setEditingId(null);
+                }}
+              />
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleUpdate}>
+                <Check className="w-3.5 h-3.5 text-green-600" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}>
+                <X className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          ) : (
+            <>
+              <CollapsibleTrigger asChild>
+                <button className="flex items-center gap-2 flex-1 min-w-0 text-left">
+                  <span className="font-semibold text-sm">{cat.nombre}</span>
+                  <Badge variant="secondary" className="text-xs font-normal">
+                    {items.length} {items.length === 1 ? 'item' : 'items'}
+                  </Badge>
+                  <ChevronDown className={`w-4 h-4 text-muted-foreground ml-auto transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                </button>
+              </CollapsibleTrigger>
+              <div className="flex items-center gap-0.5 shrink-0">
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingId(cat.id); setEditingNombre(cat.nombre); }}>
+                  <Pencil className="w-3.5 h-3.5" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDeleting(cat)}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+
+        <CollapsibleContent>
+          {items.length === 0 ? (
+            <div className="px-4 py-8 text-center text-sm text-muted-foreground">Sin items en esta categoría</div>
+          ) : (
+            <div className="divide-y">
+              {items.map((item: any) => (
+                <div key={item.id} className="flex items-center justify-between px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-sm">{item.nombre}</p>
+                    {item.descripcion && <p className="text-xs text-muted-foreground truncate max-w-[350px]">{item.descripcion}</p>}
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="font-mono font-medium text-sm">{formatCurrency(item.precio_base)}</span>
+                    {item.fc_actual != null && (
+                      <Badge variant={item.fc_actual <= 32 ? 'default' : item.fc_actual <= 40 ? 'secondary' : 'destructive'} className="text-xs">
+                        FC {item.fc_actual.toFixed(1)}%
+                      </Badge>
+                    )}
+                    {item.disponible_delivery && (
+                      <Badge variant="outline" className="text-xs">Delivery</Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
+  );
+}
+
+/* ─── Main page ─── */
 export default function MenuCartaPage() {
   const { data: items, isLoading: loadingItems } = useItemsCarta();
   const { data: categorias, isLoading: loadingCats } = useMenuCategorias();
+  const { create, update, reorder, softDelete } = useMenuCategoriaMutations();
 
   const [search, setSearch] = useState('');
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
+
+  // Category inline editing
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingNombre, setEditingNombre] = useState('');
+  const [showNew, setShowNew] = useState(false);
+  const [newNombre, setNewNombre] = useState('');
+  const [deleting, setDeleting] = useState<any>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const toggleCat = (catId: string) => {
     setCollapsedCats(prev => {
@@ -51,6 +197,28 @@ export default function MenuCartaPage() {
   const uncategorized = itemsByCategory['sin-categoria'] || [];
   const isLoading = loadingItems || loadingCats;
 
+  const handleCreate = async () => {
+    if (!newNombre.trim()) return;
+    await create.mutateAsync({ nombre: newNombre.trim(), orden: (categorias?.length || 0) + 1 });
+    setNewNombre('');
+    setShowNew(false);
+  };
+
+  const handleUpdate = async () => {
+    if (!editingId || !editingNombre.trim()) return;
+    await update.mutateAsync({ id: editingId, data: { nombre: editingNombre.trim() } });
+    setEditingId(null);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !categorias) return;
+    const oldIndex = categorias.findIndex((c: any) => c.id === active.id);
+    const newIndex = categorias.findIndex((c: any) => c.id === over.id);
+    const reordered = arrayMove(categorias, oldIndex, newIndex);
+    await reorder.mutateAsync(reordered.map((c: any, i: number) => ({ id: c.id, orden: i + 1 })));
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -64,84 +232,102 @@ export default function MenuCartaPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Items de Venta" subtitle="Lo que ve y compra el cliente · Para editar, usá el Centro de Costos" />
+      <PageHeader
+        title="Items de Venta"
+        subtitle="Lo que ve y compra el cliente · Para editar, usá el Centro de Costos"
+        actions={
+          <Button onClick={() => setShowNew(true)} size="sm">
+            <Plus className="w-4 h-4 mr-1.5" /> Nueva Categoría
+          </Button>
+        }
+      />
 
       <DataToolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="Buscar item..." />
+
+      {/* New category inline form */}
+      {showNew && (
+        <Card className="border-dashed border-primary/40">
+          <CardContent className="p-4 flex items-center gap-3">
+            <Input
+              value={newNombre}
+              onChange={(e) => setNewNombre(e.target.value)}
+              placeholder="Nombre de la categoría..."
+              className="max-w-xs"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCreate();
+                if (e.key === 'Escape') { setShowNew(false); setNewNombre(''); }
+              }}
+            />
+            <Button size="sm" onClick={handleCreate} disabled={!newNombre.trim() || create.isPending}>
+              <Check className="w-4 h-4" />
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => { setShowNew(false); setNewNombre(''); }}>
+              <X className="w-4 h-4" />
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {(!categorias || categorias.length === 0) && uncategorized.length === 0 ? (
         <Card>
           <CardContent className="py-16">
-            <EmptyState icon={BookOpen} title="Carta vacía" description="Creá items desde el Centro de Costos" />
+            <EmptyState icon={BookOpen} title="Carta vacía" description="Creá categorías y items desde el Centro de Costos" />
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {categorias?.map((cat: any) => {
-            const catItems = itemsByCategory[cat.id] || [];
-            const isOpen = !collapsedCats.has(cat.id);
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
+          <SortableContext items={categorias?.map((c: any) => c.id) || []} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3">
+              {categorias?.map((cat: any) => (
+                <SortableCategoryCard
+                  key={cat.id}
+                  cat={cat}
+                  items={itemsByCategory[cat.id] || []}
+                  isOpen={!collapsedCats.has(cat.id)}
+                  onToggle={() => toggleCat(cat.id)}
+                  editingId={editingId}
+                  editingNombre={editingNombre}
+                  setEditingNombre={setEditingNombre}
+                  setEditingId={setEditingId}
+                  handleUpdate={handleUpdate}
+                  setDeleting={setDeleting}
+                />
+              ))}
 
-            return (
-              <Collapsible key={cat.id} open={isOpen} onOpenChange={() => toggleCat(cat.id)}>
-                <Card className="overflow-hidden">
-                  <CollapsibleTrigger asChild>
-                    <button className="flex items-center gap-2 px-4 py-3 bg-muted/40 border-b w-full text-left">
-                      <span className="font-semibold text-sm">{cat.nombre}</span>
-                      <Badge variant="secondary" className="text-xs font-normal">
-                        {catItems.length} {catItems.length === 1 ? 'item' : 'items'}
-                      </Badge>
-                      {isOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground ml-auto" /> : <ChevronDown className="w-4 h-4 text-muted-foreground ml-auto" />}
-                    </button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    {catItems.length === 0 ? (
-                      <div className="px-4 py-8 text-center text-sm text-muted-foreground">Sin items en esta categoría</div>
-                    ) : (
-                      <div className="divide-y">
-                        {catItems.map((item: any) => (
-                          <div key={item.id} className="flex items-center justify-between px-4 py-3">
-                            <div className="min-w-0 flex-1">
-                              <p className="font-medium text-sm">{item.nombre}</p>
-                              {item.descripcion && <p className="text-xs text-muted-foreground truncate max-w-[350px]">{item.descripcion}</p>}
-                            </div>
-                            <div className="flex items-center gap-3 shrink-0">
-                              <span className="font-mono font-medium text-sm">{formatCurrency(item.precio_base)}</span>
-                              {item.fc_actual != null && (
-                                <Badge variant={item.fc_actual <= 32 ? 'default' : item.fc_actual <= 40 ? 'secondary' : 'destructive'} className="text-xs">
-                                  FC {item.fc_actual.toFixed(1)}%
-                                </Badge>
-                              )}
-                              {item.disponible_delivery && (
-                                <Badge variant="outline" className="text-xs">Delivery</Badge>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CollapsibleContent>
-                </Card>
-              </Collapsible>
-            );
-          })}
-
-          {uncategorized.length > 0 && (
-            <Card className="overflow-hidden border-dashed">
-              <div className="flex items-center gap-2 px-4 py-3 bg-muted/20 border-b">
-                <span className="font-semibold text-sm text-muted-foreground">Sin categoría</span>
-                <Badge variant="secondary" className="text-xs">{uncategorized.length}</Badge>
-              </div>
-              <div className="divide-y">
-                {uncategorized.map((item: any) => (
-                  <div key={item.id} className="flex items-center justify-between px-4 py-3">
-                    <p className="font-medium text-sm">{item.nombre}</p>
-                    <span className="font-mono font-medium text-sm">{formatCurrency(item.precio_base)}</span>
+              {uncategorized.length > 0 && (
+                <Card className="overflow-hidden border-dashed">
+                  <div className="flex items-center gap-2 px-4 py-3 bg-muted/20 border-b">
+                    <span className="font-semibold text-sm text-muted-foreground">Sin categoría</span>
+                    <Badge variant="secondary" className="text-xs">{uncategorized.length}</Badge>
                   </div>
-                ))}
-              </div>
-            </Card>
-          )}
-        </div>
+                  <div className="divide-y">
+                    {uncategorized.map((item: any) => (
+                      <div key={item.id} className="flex items-center justify-between px-4 py-3">
+                        <p className="font-medium text-sm">{item.nombre}</p>
+                        <span className="font-mono font-medium text-sm">{formatCurrency(item.precio_base)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
+
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={() => setDeleting(null)}
+        title="Eliminar categoría"
+        description={`¿Eliminar "${deleting?.nombre}"? Los items quedarán sin categoría.`}
+        confirmLabel="Eliminar"
+        variant="destructive"
+        onConfirm={async () => {
+          await softDelete.mutateAsync(deleting.id);
+          setDeleting(null);
+        }}
+      />
     </div>
   );
 }
