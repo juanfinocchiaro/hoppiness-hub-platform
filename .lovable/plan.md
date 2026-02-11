@@ -1,69 +1,69 @@
 
 
-## Modificadores Removibles con Drill-Down en Recetas + Componentes Opcionales
+## Grupos de Opcionales para Items de Carta
 
-### Problema actual
-Cuando abrís los modificadores de un item como "Combo Ultracheese con papas y bebida", el selector de removibles solo muestra insumos directos del item. No hace drill-down en las recetas que lo componen (Hamburguesa Ultracheese, Papas fritas), así que no podés ofrecer "Sin Cheddar" o "Sin Pepino" que vienen de la receta interna.
+### Problema
+Actualmente, para representar una bebida variable en un combo, hay que marcar un componente como "opcional" y poner un costo promedio manual. Esto es confuso porque:
+- No queda claro qué opciones existen
+- El costo promedio hay que calcularlo a mano
+- No se ve en el modal de Modificadores
+- No escala si tenés muchos combos
 
-Además, la bebida no está cargada como componente porque es variable (puede ser cualquier gaseosa), y no hay forma de representar eso actualmente.
+### Solucion: Grupos de Opcionales
 
-### Solución propuesta
-
-**1. Drill-down automático de ingredientes desde las recetas**
-
-Al abrir removibles, el sistema va a buscar recursivamente los ingredientes de cada receta que compone el item:
+Un "Grupo de Opcionales" es un componente del item que tiene varias alternativas posibles. Por ejemplo:
 
 ```text
 Combo Ultracheese con papas y bebida
-  └─ Hamburguesa Ultracheese (receta)
-  │    ├─ Pan brioche (insumo) ← aparece como removible
-  │    ├─ Cheddar (insumo) ← aparece como removible  
-  │    ├─ Pepino (insumo) ← aparece como removible
-  │    └─ ...
-  └─ Papas fritas (receta)
-  │    ├─ Papa (insumo) ← no tiene sentido remover
-  │    └─ ...
-  └─ Bebida promedio (componente opcional)
+  ├── Hamburguesa Ultracheese (receta fija)
+  ├── Papas fritas (receta fija)
+  └── [Grupo: Bebida] ← NUEVO
+       ├── Coca-Cola 500ml ($350)
+       ├── Sprite 500ml ($340)
+       ├── Fanta 500ml ($330)
+       └── Costo promedio: $340 (calculado automaticamente)
 ```
 
-Los ingredientes se van a mostrar agrupados por receta de origen para que sea claro de dónde viene cada uno.
+El FC% del combo usa el costo promedio del grupo para el calculo.
 
-**2. Nuevo concepto: Componente Opcional en la composición**
+### Cambios en Base de Datos
 
-Para la bebida, se agrega un campo `es_opcional` y `costo_promedio_override` a la tabla `item_carta_composicion`. Esto permite:
-- Marcar un componente como opcional (no se suma al costo base, o se suma como promedio)
-- Definir un costo promedio manual (ej: promedio de todas las gaseosas = $350)
-- El FC% del item se calcula incluyendo el promedio del componente opcional
+**Nueva tabla `item_carta_grupo_opcional`:**
+- id, item_carta_id, nombre (ej: "Bebida"), orden
+- costo_promedio (calculado automaticamente)
 
-**3. Costeo con promedio**
+**Nueva tabla `item_carta_grupo_opcional_items`:**
+- id, grupo_id, insumo_id o preparacion_id, cantidad
+- costo_unitario (se toma del insumo/receta)
 
-Para el caso de la bebida, tenés dos opciones:
-- Crear una receta/insumo genérico "Bebida promedio" con el costo promedio de las opciones disponibles
-- O usar el campo `costo_promedio_override` directamente en la composición
+**Actualizar funcion `recalcular_costo_item_carta`:**
+- Sumar: costo composicion fija + sum de costo_promedio de cada grupo opcional
 
-El FC% del combo se calcularía: Costo Ultracheese + Costo Papas + Costo Promedio Bebida vs Precio de venta.
+Se eliminan las columnas `es_opcional` y `costo_promedio_override` de `item_carta_composicion` porque el concepto de opcional ahora vive en su propia tabla.
 
-### Cambios técnicos
+### Cambios en UI
 
-**Base de datos:**
-- Agregar columnas `es_opcional BOOLEAN DEFAULT false` y `costo_promedio_override NUMERIC` a `item_carta_composicion`
-- Actualizar la función `recalcular_costo_item_carta` para usar `costo_promedio_override` cuando `es_opcional = true`
+**ComposicionModal (CentroCostosPage.tsx):**
+- Eliminar el toggle "Opcional" y campo "Costo prom" de cada fila
+- Agregar seccion nueva debajo de la composicion fija: "Grupos Opcionales"
+- Boton "Agregar Grupo Opcional" que crea un grupo con nombre
+- Dentro de cada grupo: agregar items (insumos/recetas) con cantidad
+- Mostrar el costo promedio calculado automaticamente
+- El costo total = composicion fija + sum de promedios
 
-**Hook `useItemCartaComposicion`:**
-- Ya trae las preparaciones con su data. Se va a crear un nuevo hook `useItemIngredientesDeepList` que hace el drill-down: para cada preparación en la composición, trae sus `preparacion_ingredientes` con los insumos, y devuelve una lista plana agrupada por receta origen.
+**ModificadoresTab.tsx:**
+- Nueva seccion "Opcionales" (entre Extras y Sustituciones) que muestra los grupos configurados como referencia (solo lectura, informativo)
+- Cada grupo muestra sus items y el costo promedio
 
-**`ModificadoresTab.tsx` - Sección Removibles:**
-- Reemplazar el `ingredientesDelItem` actual por el resultado del drill-down
-- Mostrar los ingredientes agrupados por receta de origen en el selector (ej: "— Hamburguesa Ultracheese —" como grupo, debajo sus ingredientes)
-- Al seleccionar uno, el nombre se auto-genera como "Sin [ingrediente]" y se calcula el ahorro de costo
+### Cambios tecnicos detallados
 
-**`CentroCostosPage.tsx` - Composición:**
-- Agregar un toggle "Opcional" y campo de costo promedio en el editor de composición
-- Los componentes opcionales se muestran con un badge "Opcional" y su costo promedio
+**Archivos a crear:**
+- `src/hooks/useGruposOpcionales.ts` - CRUD para grupos y sus items, calculo de promedio
 
 **Archivos a modificar:**
-- `supabase/migrations/` — nueva migración para columnas en `item_carta_composicion`
-- `src/components/menu/ModificadoresTab.tsx` — drill-down de ingredientes agrupados
-- `src/hooks/useModificadores.ts` o nuevo hook — lógica de drill-down recursivo
-- `src/pages/admin/CentroCostosPage.tsx` — UI de componente opcional en composición
+- `supabase/migrations/` - Nueva migracion con tablas + actualizacion de la funcion de recalculo
+- `src/pages/admin/CentroCostosPage.tsx` - Reemplazar toggle opcional por seccion de grupos en ComposicionModal
+- `src/components/menu/ModificadoresTab.tsx` - Agregar seccion informativa de grupos opcionales
+
+**Migracion de datos:** Si ya hay filas con `es_opcional = true`, se ignoran (el usuario las reconfigura con el nuevo sistema de grupos).
 
