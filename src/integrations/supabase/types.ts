@@ -333,6 +333,45 @@ export type Database = {
         }
         Relationships: []
       }
+      canales_venta: {
+        Row: {
+          activo: boolean | null
+          ajuste_valor: number | null
+          codigo: string
+          created_at: string | null
+          es_base: boolean | null
+          id: string
+          nombre: string
+          orden: number | null
+          tipo_ajuste: string
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          ajuste_valor?: number | null
+          codigo: string
+          created_at?: string | null
+          es_base?: boolean | null
+          id?: string
+          nombre: string
+          orden?: number | null
+          tipo_ajuste?: string
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          ajuste_valor?: number | null
+          codigo?: string
+          created_at?: string | null
+          es_base?: boolean | null
+          id?: string
+          nombre?: string
+          orden?: number | null
+          tipo_ajuste?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       canon_liquidaciones: {
         Row: {
           branch_id: string
@@ -2147,6 +2186,75 @@ export type Database = {
           },
         ]
       }
+      insumos_costos_historial: {
+        Row: {
+          branch_id: string | null
+          costo_anterior: number | null
+          costo_nuevo: number
+          created_at: string | null
+          factura_id: string | null
+          id: string
+          insumo_id: string
+          motivo: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          costo_anterior?: number | null
+          costo_nuevo: number
+          created_at?: string | null
+          factura_id?: string | null
+          id?: string
+          insumo_id: string
+          motivo?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          costo_anterior?: number | null
+          costo_nuevo?: number
+          created_at?: string | null
+          factura_id?: string | null
+          id?: string
+          insumo_id?: string
+          motivo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insumos_costos_historial_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insumos_costos_historial_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insumos_costos_historial_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "cuenta_corriente_marca"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insumos_costos_historial_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "facturas_proveedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insumos_costos_historial_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inversiones: {
         Row: {
           branch_id: string
@@ -2536,6 +2644,307 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_categorias: {
+        Row: {
+          activo: boolean | null
+          created_at: string | null
+          descripcion: string | null
+          id: string
+          nombre: string
+          orden: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          created_at?: string | null
+          descripcion?: string | null
+          id?: string
+          nombre: string
+          orden?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          created_at?: string | null
+          descripcion?: string | null
+          id?: string
+          nombre?: string
+          orden?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      menu_combos: {
+        Row: {
+          cantidad: number
+          categoria_intercambiable_id: string | null
+          combo_id: string
+          created_at: string | null
+          es_intercambiable: boolean | null
+          id: string
+          producto_id: string
+        }
+        Insert: {
+          cantidad?: number
+          categoria_intercambiable_id?: string | null
+          combo_id: string
+          created_at?: string | null
+          es_intercambiable?: boolean | null
+          id?: string
+          producto_id: string
+        }
+        Update: {
+          cantidad?: number
+          categoria_intercambiable_id?: string | null
+          combo_id?: string
+          created_at?: string | null
+          es_intercambiable?: boolean | null
+          id?: string
+          producto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_combos_categoria_intercambiable_id_fkey"
+            columns: ["categoria_intercambiable_id"]
+            isOneToOne: false
+            referencedRelation: "menu_categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_combos_combo_id_fkey"
+            columns: ["combo_id"]
+            isOneToOne: false
+            referencedRelation: "menu_productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_combos_combo_id_fkey"
+            columns: ["combo_id"]
+            isOneToOne: false
+            referencedRelation: "v_menu_costos"
+            referencedColumns: ["menu_producto_id"]
+          },
+          {
+            foreignKeyName: "menu_combos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "menu_productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_combos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_menu_costos"
+            referencedColumns: ["menu_producto_id"]
+          },
+        ]
+      }
+      menu_fichas_tecnicas: {
+        Row: {
+          cantidad: number
+          created_at: string | null
+          id: string
+          insumo_id: string
+          menu_producto_id: string
+          notas: string | null
+          orden: number | null
+          unidad: string
+        }
+        Insert: {
+          cantidad: number
+          created_at?: string | null
+          id?: string
+          insumo_id: string
+          menu_producto_id: string
+          notas?: string | null
+          orden?: number | null
+          unidad: string
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string | null
+          id?: string
+          insumo_id?: string
+          menu_producto_id?: string
+          notas?: string | null
+          orden?: number | null
+          unidad?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_fichas_tecnicas_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_fichas_tecnicas_menu_producto_id_fkey"
+            columns: ["menu_producto_id"]
+            isOneToOne: false
+            referencedRelation: "menu_productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_fichas_tecnicas_menu_producto_id_fkey"
+            columns: ["menu_producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_menu_costos"
+            referencedColumns: ["menu_producto_id"]
+          },
+        ]
+      }
+      menu_precios: {
+        Row: {
+          created_at: string | null
+          fc_objetivo: number | null
+          id: string
+          menu_producto_id: string
+          precio_base: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          fc_objetivo?: number | null
+          id?: string
+          menu_producto_id: string
+          precio_base: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          fc_objetivo?: number | null
+          id?: string
+          menu_producto_id?: string
+          precio_base?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_precios_menu_producto_id_fkey"
+            columns: ["menu_producto_id"]
+            isOneToOne: true
+            referencedRelation: "menu_productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_precios_menu_producto_id_fkey"
+            columns: ["menu_producto_id"]
+            isOneToOne: true
+            referencedRelation: "v_menu_costos"
+            referencedColumns: ["menu_producto_id"]
+          },
+        ]
+      }
+      menu_precios_historial: {
+        Row: {
+          created_at: string | null
+          id: string
+          menu_producto_id: string
+          motivo: string | null
+          precio_anterior: number | null
+          precio_nuevo: number
+          usuario_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          menu_producto_id: string
+          motivo?: string | null
+          precio_anterior?: number | null
+          precio_nuevo: number
+          usuario_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          menu_producto_id?: string
+          motivo?: string | null
+          precio_anterior?: number | null
+          precio_nuevo?: number
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_precios_historial_menu_producto_id_fkey"
+            columns: ["menu_producto_id"]
+            isOneToOne: false
+            referencedRelation: "menu_productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_precios_historial_menu_producto_id_fkey"
+            columns: ["menu_producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_menu_costos"
+            referencedColumns: ["menu_producto_id"]
+          },
+        ]
+      }
+      menu_productos: {
+        Row: {
+          activo: boolean | null
+          categoria_id: string | null
+          created_at: string | null
+          descripcion: string | null
+          disponible_delivery: boolean | null
+          id: string
+          imagen_url: string | null
+          insumo_id: string | null
+          nombre: string
+          nombre_corto: string | null
+          orden: number | null
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          categoria_id?: string | null
+          created_at?: string | null
+          descripcion?: string | null
+          disponible_delivery?: boolean | null
+          id?: string
+          imagen_url?: string | null
+          insumo_id?: string | null
+          nombre: string
+          nombre_corto?: string | null
+          orden?: number | null
+          tipo?: string
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          categoria_id?: string | null
+          created_at?: string | null
+          descripcion?: string | null
+          disponible_delivery?: boolean | null
+          id?: string
+          imagen_url?: string | null
+          insumo_id?: string | null
+          nombre?: string
+          nombre_corto?: string | null
+          orden?: number | null
+          tipo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_productos_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "menu_categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_productos_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
             referencedColumns: ["id"]
           },
         ]
@@ -4345,6 +4754,29 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "rdo_categories"
             referencedColumns: ["code"]
+          },
+        ]
+      }
+      v_menu_costos: {
+        Row: {
+          categoria_id: string | null
+          categoria_nombre: string | null
+          costo_teorico: number | null
+          fc_actual: number | null
+          fc_objetivo: number | null
+          menu_producto_id: string | null
+          nombre: string | null
+          precio_base: number | null
+          precio_sugerido: number | null
+          tipo: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_productos_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "menu_categorias"
+            referencedColumns: ["id"]
           },
         ]
       }

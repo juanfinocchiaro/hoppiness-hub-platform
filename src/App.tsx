@@ -73,6 +73,8 @@ import InsumosPage from "./pages/admin/InsumosPage";
 import CanonPage from "./pages/admin/CanonPage";
 import VentasMensualesMarcaPage from "./pages/admin/VentasMensualesMarcaPage";
 import ConceptosServicioPage from "./pages/admin/ConceptosServicioPage";
+import MenuCartaPage from "./pages/admin/MenuCartaPage";
+import CentroCostosPage from "./pages/admin/CentroCostosPage";
 
 // Mi Local - Comunicaciones
 import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
@@ -226,6 +228,13 @@ const App = () => (
               <Route path="finanzas/conceptos-servicio" element={<ConceptosServicioPage />} />
               <Route path="finanzas/canon" element={<CanonPage />} />
               <Route path="finanzas/ventas-mensuales" element={<VentasMensualesMarcaPage />} />
+              
+              {/* Menú */}
+              <Route path="menu/carta" element={<MenuCartaPage />} />
+              <Route path="menu/canales" element={<div className="p-6 text-muted-foreground">Canales y Precios — próximamente</div>} />
+              
+              {/* Centro de Costos */}
+              <Route path="centro-costos" element={<CentroCostosPage />} />
               
               {/* Configuración */}
               <Route path="reglamentos" element={<BrandRegulationsPage />} />
