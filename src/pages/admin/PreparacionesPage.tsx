@@ -18,7 +18,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/states';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Plus, Pencil, Trash2, ChefHat, Package, Save, Shuffle,
+  Plus, Pencil, Trash2, ChefHat, Package, Save, Shuffle, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import {
   usePreparaciones,
@@ -50,9 +50,9 @@ export default function PreparacionesPage() {
   const mutations = usePreparacionMutations();
 
   const [search, setSearch] = useState('');
-  const [modalPrep, setModalPrep] = useState<any>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [deletingPrep, setDeletingPrep] = useState<any>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const filteredPreps = useMemo(() => {
     return preparaciones?.filter((p: any) => {
@@ -61,9 +61,7 @@ export default function PreparacionesPage() {
     }) || [];
   }, [preparaciones, search]);
 
-  const openCreate = () => { setModalPrep(null); setIsCreating(true); };
-  const openEdit = (prep: any) => { setModalPrep(prep); setIsCreating(true); };
-  const closeModal = () => { setModalPrep(null); setIsCreating(false); };
+  const toggleExpand = (id: string) => setExpandedId(prev => prev === id ? null : id);
 
   if (isLoading) {
     return (
@@ -82,7 +80,7 @@ export default function PreparacionesPage() {
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <DataToolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="Buscar preparación..." />
-        <Button onClick={openCreate}>
+        <Button onClick={() => setIsCreating(true)}>
           <Plus className="w-4 h-4 mr-2" /> Nueva Preparación
         </Button>
       </div>
@@ -94,61 +92,58 @@ export default function PreparacionesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[250px]">Nombre</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead className="text-right">Costo Calculado</TableHead>
-                <TableHead className="w-[120px]">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredPreps.map((prep: any) => (
-                <TableRow key={prep.id} className="cursor-pointer" onClick={() => openEdit(prep)}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{prep.nombre}</p>
-                      {prep.descripcion && <p className="text-xs text-muted-foreground truncate max-w-[250px]">{prep.descripcion}</p>}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={prep.tipo === 'elaborado' ? 'default' : 'secondary'}>
-                      {prep.tipo === 'elaborado' ? '🍳 Elaborado' : '📦 Componente'}
+        <div className="space-y-0 rounded-md border divide-y">
+          {filteredPreps.map((prep: any) => {
+            const isExpanded = expandedId === prep.id;
+            return (
+              <div key={prep.id}>
+                <div
+                  className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => toggleExpand(prep.id)}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium">{prep.nombre}</p>
+                    {prep.descripcion && <p className="text-xs text-muted-foreground truncate">{prep.descripcion}</p>}
+                  </div>
+                  <Badge variant={prep.tipo === 'elaborado' ? 'default' : 'secondary'} className="shrink-0">
+                    {prep.tipo === 'elaborado' ? '🍳 Elaborado' : '📦 Componente'}
+                  </Badge>
+                  {prep.es_intercambiable && (
+                    <Badge variant="outline" className="text-xs shrink-0">
+                      <Shuffle className="w-3 h-3 mr-1" /> Intercambiable
                     </Badge>
-                    {prep.es_intercambiable && (
-                      <Badge variant="outline" className="ml-1 text-xs">
-                        <Shuffle className="w-3 h-3 mr-1" /> Intercambiable
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
+                  )}
+                  <span className="font-mono text-sm shrink-0 w-24 text-right">
                     {prep.costo_calculado > 0 ? formatCurrency(prep.costo_calculado) : '—'}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(prep)}>
-                        <Pencil className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setDeletingPrep(prep)}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  </span>
+                  <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setDeletingPrep(prep)}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                  {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />}
+                </div>
+                {isExpanded && (
+                  <div className="px-4 pb-4 pt-1 bg-muted/30 border-t">
+                    {prep.tipo === 'elaborado' ? (
+                      <FichaTecnicaTab preparacionId={prep.id} mutations={mutations} onClose={() => setExpandedId(null)} />
+                    ) : (
+                      <OpcionesTab preparacionId={prep.id} mutations={mutations} onClose={() => setExpandedId(null)} />
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* ═══ UNIFIED CREATE/EDIT + FICHA MODAL ═══ */}
+      {/* Modal only for NEW preparations */}
       {isCreating && (
         <PreparacionFullModal
           open={isCreating}
-          onOpenChange={(v) => { if (!v) closeModal(); }}
-          preparacion={modalPrep}
+          onOpenChange={(v) => { if (!v) setIsCreating(false); }}
+          preparacion={null}
           mutations={mutations}
         />
       )}
@@ -369,7 +364,6 @@ function FichaTecnicaTab({ preparacionId, mutations, onClose }: { preparacionId:
       })),
     });
     setHasChanges(false);
-    onClose();
   };
 
   return (
