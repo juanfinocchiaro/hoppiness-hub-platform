@@ -76,8 +76,8 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
     return 0;
   }, [form.unidad_compra_contenido, form.unidad_compra_precio]);
 
+  const cmvPorcentaje = form.precio_venta > 0 && costoUnitario > 0 ? (costoUnitario / form.precio_venta) * 100 : 0;
   const margenBruto = form.precio_venta - costoUnitario;
-  const margenPorcentaje = form.precio_venta > 0 ? (margenBruto / form.precio_venta) * 100 : 0;
 
   const handleSubmit = async () => {
     if (!form.nombre.trim() || !form.precio_venta) return;
@@ -108,9 +108,9 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
 
   const isPending = create.isPending || update.isPending;
 
-  const margenColor =
-    margenPorcentaje >= 60 ? 'text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400' :
-    margenPorcentaje >= 40 ? 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-400' :
+  const cmvColor =
+    cmvPorcentaje <= 30 ? 'text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400' :
+    cmvPorcentaje <= 45 ? 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-400' :
     'text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400';
 
   return (
@@ -193,14 +193,14 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
                 />
               </FormRow>
               <div className="space-y-2">
-                <p className="text-sm font-medium">Margen</p>
+                <p className="text-sm font-medium">CMV</p>
                 {form.precio_venta > 0 && costoUnitario > 0 ? (
                   <div className="h-9 flex items-center gap-2">
-                    <span className="font-mono font-medium text-sm">
-                      ${margenBruto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cmvColor}`}>
+                      {cmvPorcentaje.toFixed(1)}%
                     </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${margenColor}`}>
-                      {margenPorcentaje.toFixed(1)}%
+                    <span className="font-mono text-sm text-muted-foreground">
+                      (Margen: ${margenBruto.toLocaleString('es-AR', { minimumFractionDigits: 2 })})
                     </span>
                   </div>
                 ) : (
