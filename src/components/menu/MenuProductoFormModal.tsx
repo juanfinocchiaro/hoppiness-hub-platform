@@ -6,11 +6,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FormRow, FormSection } from '@/components/ui/forms-pro';
 import { StickyActions } from '@/components/ui/forms-pro';
-import { ChefHat, DollarSign } from 'lucide-react';
+import { ChefHat } from 'lucide-react';
 import { LoadingButton } from '@/components/ui/loading-button';
 import { useMenuCategorias, useMenuProductoMutations } from '@/hooks/useMenu';
 import { useInsumos } from '@/hooks/useInsumos';
-import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 
 interface Props {
@@ -36,8 +35,6 @@ export function MenuProductoFormModal({ open, onOpenChange, producto }: Props) {
     tipo: 'elaborado' as 'elaborado' | 'terminado',
     categoria_id: '',
     insumo_id: '',
-    precio_base: 0,
-    fc_objetivo: 32,
     disponible_delivery: true,
   });
 
@@ -50,36 +47,18 @@ export function MenuProductoFormModal({ open, onOpenChange, producto }: Props) {
         tipo: producto.tipo || 'elaborado',
         categoria_id: producto.categoria_id || '',
         insumo_id: producto.insumo_id || '',
-        precio_base: producto.menu_precios?.precio_base || 0,
-        fc_objetivo: producto.menu_precios?.fc_objetivo || 32,
         disponible_delivery: producto.disponible_delivery ?? true,
       });
     } else {
       setForm({
         nombre: '', nombre_corto: '', descripcion: '',
         tipo: 'elaborado', categoria_id: '', insumo_id: '',
-        precio_base: 0, fc_objetivo: 32, disponible_delivery: true,
+        disponible_delivery: true,
       });
     }
   }, [producto, open]);
 
   const set = (key: string, value: any) => setForm(prev => ({ ...prev, [key]: value }));
-
-  const costoTerminado = useMemo(() => {
-    if (form.tipo === 'terminado' && form.insumo_id) {
-      const insumo = productosTerminados.find((i: any) => i.id === form.insumo_id);
-      return insumo?.costo_por_unidad_base || 0;
-    }
-    return 0;
-  }, [form.tipo, form.insumo_id, productosTerminados]);
-
-  const fcActual = form.precio_base > 0 && costoTerminado > 0
-    ? (costoTerminado / form.precio_base * 100)
-    : null;
-
-  const precioSugerido = costoTerminado > 0 && form.fc_objetivo > 0
-    ? Math.round(costoTerminado / (form.fc_objetivo / 100))
-    : null;
 
   const handleSubmit = async () => {
     if (!form.nombre.trim()) return;
@@ -93,8 +72,6 @@ export function MenuProductoFormModal({ open, onOpenChange, producto }: Props) {
       categoria_id: form.categoria_id || null,
       insumo_id: form.tipo === 'terminado' ? form.insumo_id : null,
       disponible_delivery: form.disponible_delivery,
-      precio_base: form.precio_base,
-      fc_objetivo: form.fc_objetivo,
     };
 
     if (isEdit) {
@@ -167,39 +144,6 @@ export function MenuProductoFormModal({ open, onOpenChange, producto }: Props) {
                   </SelectContent>
                 </Select>
               </FormRow>
-            )}
-          </FormSection>
-
-          {/* PRECIO */}
-          <FormSection title="Precio y Food Cost" icon={DollarSign}>
-            <div className="grid grid-cols-2 gap-3">
-              <FormRow label="Precio base ($)">
-                <Input type="number" step="1" value={form.precio_base || ''} onChange={(e) => set('precio_base', Number(e.target.value))} placeholder="0" />
-              </FormRow>
-              <FormRow label="FC objetivo (%)" hint="Default: 32%">
-                <Input type="number" step="1" value={form.fc_objetivo || ''} onChange={(e) => set('fc_objetivo', Number(e.target.value))} placeholder="32" />
-              </FormRow>
-            </div>
-
-            {form.tipo === 'terminado' && costoTerminado > 0 && (
-              <div className="mt-3 p-3 bg-muted/50 rounded-lg space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Costo:</span>
-                  <span className="font-mono">${costoTerminado.toLocaleString('es-AR')}</span>
-                </div>
-                {fcActual !== null && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">FC actual:</span>
-                    <Badge variant={fcActual <= 32 ? 'default' : fcActual <= 40 ? 'secondary' : 'destructive'}>{fcActual.toFixed(1)}%</Badge>
-                  </div>
-                )}
-                {precioSugerido !== null && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Precio sugerido (FC {form.fc_objetivo}%):</span>
-                    <span className="font-mono font-medium text-primary">${precioSugerido.toLocaleString('es-AR')}</span>
-                  </div>
-                )}
-              </div>
             )}
           </FormSection>
 

@@ -2899,6 +2899,7 @@ export type Database = {
           nombre: string
           nombre_corto: string | null
           orden: number | null
+          rdo_category_code: string | null
           tipo: string
           updated_at: string | null
         }
@@ -2914,6 +2915,7 @@ export type Database = {
           nombre: string
           nombre_corto?: string | null
           orden?: number | null
+          rdo_category_code?: string | null
           tipo?: string
           updated_at?: string | null
         }
@@ -2929,6 +2931,7 @@ export type Database = {
           nombre?: string
           nombre_corto?: string | null
           orden?: number | null
+          rdo_category_code?: string | null
           tipo?: string
           updated_at?: string | null
         }
@@ -2946,6 +2949,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "insumos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_productos_rdo_category_code_fkey"
+            columns: ["rdo_category_code"]
+            isOneToOne: false
+            referencedRelation: "rdo_categories"
+            referencedColumns: ["code"]
           },
         ]
       }
@@ -4764,10 +4774,13 @@ export type Database = {
           costo_teorico: number | null
           fc_actual: number | null
           fc_objetivo: number | null
+          insumo_id: string | null
           menu_producto_id: string | null
           nombre: string | null
           precio_base: number | null
           precio_sugerido: number | null
+          rdo_category_code: string | null
+          rdo_category_name: string | null
           tipo: string | null
         }
         Relationships: [
@@ -4777,6 +4790,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "menu_categorias"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_productos_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_productos_rdo_category_code_fkey"
+            columns: ["rdo_category_code"]
+            isOneToOne: false
+            referencedRelation: "rdo_categories"
+            referencedColumns: ["code"]
           },
         ]
       }

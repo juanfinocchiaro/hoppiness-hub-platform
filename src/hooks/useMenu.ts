@@ -81,18 +81,6 @@ export function useMenuProductoMutations() {
         .single();
 
       if (errProducto) throw errProducto;
-
-      if (data.precio_base > 0) {
-        const { error: errPrecio } = await supabase
-          .from('menu_precios')
-          .insert({
-            menu_producto_id: producto.id,
-            precio_base: data.precio_base,
-            fc_objetivo: data.fc_objetivo,
-          } as any);
-        if (errPrecio) throw errPrecio;
-      }
-
       return producto;
     },
     onSuccess: () => {
@@ -119,17 +107,6 @@ export function useMenuProductoMutations() {
         .eq('id', id);
 
       if (errProducto) throw errProducto;
-
-      const { error: errPrecio } = await supabase
-        .from('menu_precios')
-        .upsert({
-          menu_producto_id: id,
-          precio_base: data.precio_base,
-          fc_objetivo: data.fc_objetivo,
-          updated_at: new Date().toISOString(),
-        } as any, { onConflict: 'menu_producto_id' });
-
-      if (errPrecio) throw errPrecio;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['menu-productos'] });
