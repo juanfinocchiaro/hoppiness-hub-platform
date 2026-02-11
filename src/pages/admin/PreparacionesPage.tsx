@@ -56,6 +56,38 @@ function ExpandablePanel({ open, children }: { open: boolean; children: React.Re
   );
 }
 
+// Inline editable name
+function InlineNombre({ prep, mutations }: { prep: any; mutations: any }) {
+  const [value, setValue] = useState(prep.nombre || '');
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => { setValue(prep.nombre || ''); setDirty(false); }, [prep.nombre]);
+
+  const save = async () => {
+    if (!dirty || !value.trim()) return;
+    await mutations.update.mutateAsync({ id: prep.id, data: { nombre: value.trim() } });
+    setDirty(false);
+  };
+
+  return (
+    <div className="flex items-center gap-2 pt-2 mb-1">
+      <Input
+        value={value}
+        onChange={(e) => { setValue(e.target.value); setDirty(true); }}
+        placeholder="Nombre de la receta..."
+        className="text-sm font-semibold h-8"
+        onBlur={save}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } if (e.key === 'Escape') { setValue(prep.nombre); setDirty(false); } }}
+      />
+      {dirty && (
+        <Button size="sm" variant="outline" className="shrink-0 h-8" onClick={save} disabled={mutations.update.isPending}>
+          <Save className="w-3.5 h-3.5" />
+        </Button>
+      )}
+    </div>
+  );
+}
+
 // Inline editable description
 function InlineDescripcion({ prep, mutations }: { prep: any; mutations: any }) {
   const [value, setValue] = useState(prep.descripcion || '');
@@ -73,7 +105,7 @@ function InlineDescripcion({ prep, mutations }: { prep: any; mutations: any }) {
   };
 
   return (
-    <div className="flex items-start gap-2 mb-3 pt-2">
+    <div className="flex items-start gap-2 mb-3">
       <Textarea
         value={value}
         onChange={(e) => { setValue(e.target.value); setDirty(true); }}
@@ -196,6 +228,7 @@ export default function PreparacionesPage() {
                 </div>
                 <ExpandablePanel open={isExpanded}>
                   <div className="px-4 pb-4 pt-1 bg-muted/30 border-t">
+                    <InlineNombre prep={prep} mutations={mutations} />
                     <InlineDescripcion prep={prep} mutations={mutations} />
                     {prep.tipo === 'elaborado' ? (
                       <FichaTecnicaTab preparacionId={prep.id} mutations={mutations} onClose={() => setExpandedId(null)} />
