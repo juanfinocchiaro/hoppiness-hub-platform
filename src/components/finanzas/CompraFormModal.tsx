@@ -6,13 +6,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Plus, Trash2, Lock, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Lock, AlertTriangle, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useFacturaMutations } from '@/hooks/useCompras';
 import { useProveedores } from '@/hooks/useProveedores';
 import { useInsumos } from '@/hooks/useInsumos';
 import { useConceptosServicio } from '@/hooks/useConceptosServicio';
-import { CONDICION_PAGO_OPTIONS, FACTURA_TIPO_OPTIONS, IVA_OPTIONS, getCurrentPeriodo } from '@/types/compra';
+import { CONDICION_PAGO_OPTIONS, FACTURA_TIPO_OPTIONS, IVA_OPTIONS, getCurrentPeriodo, calcularCostoReal, calcularCreditoFiscal } from '@/types/compra';
 import { UNIDAD_OPTIONS } from '@/types/financial';
 import { FormSection } from '@/components/ui/forms-pro';
 import type { ItemFacturaFormData } from '@/types/compra';
@@ -39,6 +39,10 @@ const emptyItem = (): ItemFormState => ({
   alicuota_iva: 21,
   iva_monto: 0,
   precio_unitario_bruto: 0,
+  precio_bruto: 0,
+  descuento_porcentaje: 0,
+  descuento_monto: 0,
+  precio_neto: 0,
 });
 
 /** Recalculate IVA fields based on neto + alicuota */
@@ -52,7 +56,8 @@ function recalcIva(item: ItemFormState): ItemFormState {
     ...item,
     iva_monto: Math.round(ivaMonto * 100) / 100,
     precio_unitario_bruto: Math.round(bruto * 100) / 100,
-    subtotal: Math.round(bruto * qty * 100) / 100,
+    subtotal: Math.round(neto * qty * 100) / 100,
+    precio_neto: neto,
   };
 }
 
@@ -73,6 +78,19 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
     observaciones: '',
   });
 
+  // Fiscal detail state
+  const [impuestos, setImpuestos] = useState({
+    imp_internos: 0,
+    iva_21: 0,
+    iva_105: 0,
+    perc_iva: 0,
+    perc_provincial: 0,
+    perc_municipal: 0,
+  });
+
+  const setImp = (key: string, value: number) =>
+    setImpuestos(prev => ({ ...prev, [key]: value }));
+
   const selectedProveedor = proveedores?.find(p => p.id === form.proveedor_id);
   const computedVencimiento = (() => {
     if (form.condicion_pago !== 'cuenta_corriente' || !selectedProveedor?.dias_pago_habitual) return undefined;
@@ -87,6 +105,7 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
     if (open) {
       setForm(f => ({ ...f, proveedor_id: '', factura_numero: '', observaciones: '', condicion_pago: 'contado' }));
       setItems([emptyItem()]);
+      setImpuestos({ imp_internos: 0, iva_21: 0, iva_105: 0, perc_iva: 0, perc_provincial: 0, perc_municipal: 0 });
     }
   }, [open]);
 
@@ -121,9 +140,7 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
         const ins = insumos.find((i: any) => i.id === value) as any;
         if (ins) {
           item.unidad = ins.unidad_base;
-          if (ins.default_alicuota_iva !== undefined) {
-            item.alicuota_iva = ins.default_alicuota_iva;
-          }
+          // No longer pre-load IVA from catalog
         }
       }
 
@@ -140,28 +157,39 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
   // Totals calculated from items
   const totals = useMemo(() => {
     let subtotalNeto = 0;
-    const ivaByRate: Record<number, number> = {};
 
     items.forEach(item => {
       const neto = Number(item.precio_unitario) || 0;
       const qty = item.tipo_item === 'servicio' ? 1 : (Number(item.cantidad) || 0);
       subtotalNeto += neto * qty;
-
-      const alicuota = item.alicuota_iva != null ? Number(item.alicuota_iva) : -1;
-      if (alicuota >= 0) {
-        const ivaTotalItem = (neto * (alicuota / 100)) * qty;
-        ivaByRate[alicuota] = (ivaByRate[alicuota] || 0) + ivaTotalItem;
-      }
     });
 
-    const totalIva = Object.values(ivaByRate).reduce((s, v) => s + v, 0);
+    const totalImpuestos = impuestos.imp_internos + impuestos.iva_21 + impuestos.iva_105 + impuestos.perc_iva + impuestos.perc_provincial + impuestos.perc_municipal;
+    const totalFactura = Math.round((subtotalNeto + totalImpuestos) * 100) / 100;
+
+    const costoRealData = {
+      subtotal_neto: subtotalNeto,
+      imp_internos: impuestos.imp_internos,
+      perc_provincial: impuestos.perc_provincial,
+      perc_municipal: impuestos.perc_municipal,
+    };
+    const costoReal = Math.round(calcularCostoReal(costoRealData) * 100) / 100;
+
+    const creditoFiscal = Math.round(calcularCreditoFiscal({
+      iva_21: impuestos.iva_21,
+      iva_105: impuestos.iva_105,
+      perc_iva: impuestos.perc_iva,
+    }) * 100) / 100;
+
     return {
       subtotalNeto: Math.round(subtotalNeto * 100) / 100,
-      ivaByRate,
-      totalIva: Math.round(totalIva * 100) / 100,
-      total: Math.round((subtotalNeto + totalIva) * 100) / 100,
+      totalImpuestos: Math.round(totalImpuestos * 100) / 100,
+      totalFactura,
+      costoReal,
+      creditoFiscal,
+      totalIva: impuestos.iva_21 + impuestos.iva_105,
     };
-  }, [items]);
+  }, [items, impuestos]);
 
   const handleSubmit = async () => {
     const validItems = items.filter(i =>
@@ -180,19 +208,30 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
       condicion_pago: form.condicion_pago,
       fecha_vencimiento: computedVencimiento,
       iva: totals.totalIva,
-      otros_impuestos: 0,
+      otros_impuestos: impuestos.imp_internos + impuestos.perc_iva + impuestos.perc_provincial + impuestos.perc_municipal,
       tipo: form.tipo,
       motivo_extraordinaria: form.tipo === 'extraordinaria' ? form.motivo_extraordinaria : undefined,
       periodo: getCurrentPeriodo(),
       observaciones: form.observaciones || undefined,
-      items: validItems.map(item => ({
-        ...item,
-      })),
+      items: validItems.map(item => ({ ...item })),
+      // Fiscal detail fields
+      subtotal_bruto: totals.subtotalNeto, // For now bruto = neto (no item-level discounts yet)
+      total_descuentos: 0,
+      subtotal_neto: totals.subtotalNeto,
+      imp_internos: impuestos.imp_internos,
+      iva_21: impuestos.iva_21,
+      iva_105: impuestos.iva_105,
+      perc_iva: impuestos.perc_iva,
+      perc_provincial: impuestos.perc_provincial,
+      perc_municipal: impuestos.perc_municipal,
+      total_factura: totals.totalFactura,
     });
     onOpenChange(false);
   };
 
   const set = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }));
+
+  const fmt = (n: number) => n.toLocaleString('es-AR', { minimumFractionDigits: 2 });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -276,7 +315,6 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
 
                     return (
                       <div className="space-y-2">
-                        {/* Row 1: Insumo + Cantidad */}
                         <div className="grid grid-cols-12 gap-2 items-end">
                           <div className="col-span-6">
                             <Label className="text-xs">Insumo *</Label>
@@ -307,41 +345,16 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                             </Select>
                           </div>
                         </div>
-                        {/* Row 2: P.Neto + IVA + Subtotal */}
                         <div className="grid grid-cols-12 gap-2 items-end">
-                          <div className="col-span-4">
-                            <Label className="text-xs">P.Neto *</Label>
+                          <div className="col-span-6">
+                            <Label className="text-xs">P. Neto unit. *</Label>
                             <Input type="number" step="0.01" className="h-9" value={item.precio_unitario || ''} onChange={e => updateItem(idx, 'precio_unitario', parseFloat(e.target.value) || 0)} />
                           </div>
-                          <div className="col-span-4">
-                            <Label className="text-xs">IVA</Label>
-                            <Select
-                              value={item.alicuota_iva != null ? String(item.alicuota_iva) : 'null'}
-                              onValueChange={v => updateItem(idx, 'alicuota_iva', v === 'null' ? null : parseFloat(v))}
-                            >
-                              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {IVA_OPTIONS.map(o => (
-                                  <SelectItem key={String(o.value)} value={String(o.value)}>{o.label}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="col-span-4">
-                            <Label className="text-xs">Subtotal</Label>
-                            <Input className="h-9 font-mono" value={`$ ${item.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`} disabled />
+                          <div className="col-span-6">
+                            <Label className="text-xs">Subtotal Neto</Label>
+                            <Input className="h-9 font-mono" value={`$ ${fmt(item.subtotal)}`} disabled />
                           </div>
                         </div>
-                        {/* Desglose */}
-                        {item.precio_unitario > 0 && (
-                          <p className="text-xs text-muted-foreground">
-                            Neto: ${Number(item.precio_unitario).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                            {item.alicuota_iva != null && item.alicuota_iva > 0 && (
-                              <> | IVA {item.alicuota_iva}%: ${(item.iva_monto || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</>
-                            )}
-                            {' '}| Bruto: ${(item.precio_unitario_bruto || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                          </p>
-                        )}
                         {selectedInsumo && (
                           <div className="space-y-1">
                             {nivel === 'obligatorio' && (
@@ -374,7 +387,7 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                   })() : (
                     <div className="space-y-2">
                       <div className="grid grid-cols-12 gap-2 items-end">
-                        <div className="col-span-5">
+                        <div className="col-span-6">
                           <Label className="text-xs">Concepto *</Label>
                           <Select value={item.concepto_servicio_id || ''} onValueChange={v => updateItem(idx, 'concepto_servicio_id', v)}>
                             <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar concepto..." /></SelectTrigger>
@@ -389,34 +402,11 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                           <Label className="text-xs">Monto Neto *</Label>
                           <Input type="number" step="0.01" className="h-9" value={item.precio_unitario || ''} onChange={e => updateItem(idx, 'precio_unitario', parseFloat(e.target.value) || 0)} />
                         </div>
-                        <div className="col-span-2">
-                          <Label className="text-xs">IVA</Label>
-                          <Select
-                            value={item.alicuota_iva != null ? String(item.alicuota_iva) : 'null'}
-                            onValueChange={v => updateItem(idx, 'alicuota_iva', v === 'null' ? null : parseFloat(v))}
-                          >
-                            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {IVA_OPTIONS.map(o => (
-                                <SelectItem key={String(o.value)} value={String(o.value)}>{o.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="col-span-2">
+                        <div className="col-span-3">
                           <Label className="text-xs">Subtotal</Label>
-                          <Input className="h-9 font-mono" value={`$ ${item.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`} disabled />
+                          <Input className="h-9 font-mono" value={`$ ${fmt(item.subtotal)}`} disabled />
                         </div>
                       </div>
-                      {item.precio_unitario > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          Neto: ${Number(item.precio_unitario).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                          {item.alicuota_iva != null && item.alicuota_iva > 0 && (
-                            <> | IVA {item.alicuota_iva}%: ${(item.iva_monto || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</>
-                          )}
-                          {' '}| Bruto: ${(item.precio_unitario_bruto || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                        </p>
-                      )}
                     </div>
                   )}
                 </div>
@@ -427,26 +417,86 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
             </div>
           </FormSection>
 
+          {/* Fiscal Detail Section */}
+          <FormSection title="Impuestos (según factura)">
+            <div className="space-y-3">
+              {/* Subtotal */}
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal Neto (items)</span>
+                <span className="font-mono font-medium">$ {fmt(totals.subtotalNeto)}</span>
+              </div>
+
+              <div className="border-t pt-3 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Info className="w-3 h-3" /> Completá solo los impuestos que figuran en la factura
+                </p>
+
+                {/* IVA */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">IVA 21% <span className="text-primary">(CF)</span></Label>
+                    <Input type="number" step="0.01" className="h-9" value={impuestos.iva_21 || ''} onChange={e => setImp('iva_21', parseFloat(e.target.value) || 0)} placeholder="0.00" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">IVA 10.5% <span className="text-primary">(CF)</span></Label>
+                    <Input type="number" step="0.01" className="h-9" value={impuestos.iva_105 || ''} onChange={e => setImp('iva_105', parseFloat(e.target.value) || 0)} placeholder="0.00" />
+                  </div>
+                </div>
+
+                {/* Impuestos internos */}
+                <div>
+                  <Label className="text-xs">Impuestos Internos</Label>
+                  <Input type="number" step="0.01" className="h-9" value={impuestos.imp_internos || ''} onChange={e => setImp('imp_internos', parseFloat(e.target.value) || 0)} placeholder="0.00" />
+                </div>
+
+                {/* Percepciones */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs">Perc. IVA <span className="text-primary">(CF)</span></Label>
+                    <Input type="number" step="0.01" className="h-9" value={impuestos.perc_iva || ''} onChange={e => setImp('perc_iva', parseFloat(e.target.value) || 0)} placeholder="0.00" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Perc. IIBB Provincial</Label>
+                    <Input type="number" step="0.01" className="h-9" value={impuestos.perc_provincial || ''} onChange={e => setImp('perc_provincial', parseFloat(e.target.value) || 0)} placeholder="0.00" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Perc. Municipal</Label>
+                    <Input type="number" step="0.01" className="h-9" value={impuestos.perc_municipal || ''} onChange={e => setImp('perc_municipal', parseFloat(e.target.value) || 0)} placeholder="0.00" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </FormSection>
+
+          {/* Totals */}
           <FormSection title="Totales">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal Neto</span>
-                <span className="font-mono">$ {totals.subtotalNeto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                <span className="font-mono">$ {fmt(totals.subtotalNeto)}</span>
               </div>
-              {[21, 10.5, 27].map(rate => {
-                const amount = totals.ivaByRate[rate] || 0;
-                if (amount === 0) return null;
-                return (
-                  <div key={rate} className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">IVA {rate}%</span>
-                    <span className="font-mono">$ {Math.round(amount * 100 / 100).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                );
-              })}
+              {totals.totalImpuestos > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Total Impuestos</span>
+                  <span className="font-mono">$ {fmt(totals.totalImpuestos)}</span>
+                </div>
+              )}
               <div className="border-t pt-2 flex justify-between font-medium">
-                <span>Total Factura</span>
-                <span className="text-lg font-bold font-mono">$ {totals.total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                <span>TOTAL FACTURA (a pagar)</span>
+                <span className="text-lg font-bold font-mono">$ {fmt(totals.totalFactura)}</span>
               </div>
+              {totals.creditoFiscal > 0 && (
+                <>
+                  <div className="border-t pt-2 flex justify-between text-sm">
+                    <span className="text-muted-foreground">Crédito Fiscal recuperable</span>
+                    <span className="font-mono text-primary">- $ {fmt(totals.creditoFiscal)}</span>
+                  </div>
+                  <div className="flex justify-between font-medium text-sm">
+                    <span>COSTO REAL (centro de costos)</span>
+                    <span className="font-mono font-semibold">$ {fmt(totals.costoReal)}</span>
+                  </div>
+                </>
+              )}
             </div>
           </FormSection>
 

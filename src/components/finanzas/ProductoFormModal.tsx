@@ -34,7 +34,6 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
     proveedor_obligatorio_id: '',
     rdo_category_code: '',
     descripcion: '',
-    default_alicuota_iva: 21 as number | null,
   });
 
   useEffect(() => {
@@ -49,7 +48,6 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
         proveedor_obligatorio_id: producto.proveedor_obligatorio_id || producto.proveedor_sugerido_id || '',
         rdo_category_code: producto.rdo_category_code || '',
         descripcion: producto.descripcion || '',
-        default_alicuota_iva: producto.default_alicuota_iva ?? 21,
       });
     } else {
       setForm({
@@ -62,7 +60,6 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
         proveedor_obligatorio_id: '',
         rdo_category_code: '',
         descripcion: '',
-        default_alicuota_iva: 21,
       });
     }
   }, [producto, open]);
@@ -95,7 +92,7 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
       proveedor_sugerido_id: form.nivel_control === 'semi_libre' ? (form.proveedor_obligatorio_id || null) : null,
       rdo_category_code: form.rdo_category_code || null,
       descripcion: form.descripcion || null,
-      default_alicuota_iva: form.default_alicuota_iva ?? 21,
+      default_alicuota_iva: null,
     };
 
     if (isEdit) {
@@ -149,7 +146,7 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
                   placeholder="Ej: 24"
                 />
               </FormRow>
-              <FormRow label="Precio neto ($)" required>
+              <FormRow label="Costo del pack ($)" required hint="con todo incluido">
                 <Input
                   type="number"
                   step="0.01"
@@ -159,25 +156,13 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
                 />
               </FormRow>
             </div>
-            <div className="grid grid-cols-2 gap-3 mt-2">
-              <div />
-              <FormRow label="IVA habitual" hint="Se precarga en facturas">
-                <Select value={form.default_alicuota_iva != null ? String(form.default_alicuota_iva) : 'null'} onValueChange={(v) => set('default_alicuota_iva', v === 'null' ? null : Number(v))}>
-                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="21">21%</SelectItem>
-                    <SelectItem value="10.5">10.5%</SelectItem>
-                    <SelectItem value="27">27%</SelectItem>
-                    <SelectItem value="0">Exento (0%)</SelectItem>
-                    <SelectItem value="null">Sin factura</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FormRow>
-            </div>
             {costoUnitario > 0 && (
-              <p className="text-sm text-muted-foreground mt-2">
-                💰 Costo por unidad: <strong className="text-foreground">${costoUnitario.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
-              </p>
+              <div className="mt-3 rounded-md border border-border bg-muted/40 p-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Costo por unidad:</span>
+                  <span className="font-semibold text-primary">${costoUnitario.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
             )}
           </FormSection>
 

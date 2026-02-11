@@ -40,7 +40,6 @@ const EMPTY: ExtendedFormData = {
   tracks_stock: false,
   unidad_compra: 'kg',
   unidad_compra_contenido: 1000,
-  default_alicuota_iva: 21,
 };
 
 const NIVEL_LABELS = {
@@ -80,7 +79,7 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
         unidad_compra: (insumo as any).unidad_compra || 'kg',
         unidad_compra_contenido: (insumo as any).unidad_compra_contenido || undefined,
         unidad_compra_precio: (insumo as any).unidad_compra_precio || undefined,
-        default_alicuota_iva: (insumo as any).default_alicuota_iva ?? 21,
+        default_alicuota_iva: null,
       });
     } else {
       setForm({ ...EMPTY, nivel_control: defaultNivel, tipo_item: fixedType || 'insumo' });
@@ -109,11 +108,7 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
     return null;
   }, [form.unidad_compra_contenido, form.unidad_compra_precio]);
 
-  const costoConIva = useMemo(() => {
-    if (costoUnidadBase === null) return null;
-    const alicuota = form.default_alicuota_iva != null ? Number(form.default_alicuota_iva) : 0;
-    return costoUnidadBase * (1 + alicuota / 100);
-  }, [costoUnidadBase, form.default_alicuota_iva]);
+  const costoConIva = null; // No longer used in brand context
 
   const unidadBaseLabel = UNIDAD_BASE_OPTIONS.find((u) => u.value === form.unidad_base)?.label || form.unidad_base;
 
@@ -138,7 +133,7 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
       unidad_compra: form.unidad_compra || null,
       unidad_compra_contenido: form.unidad_compra_contenido || null,
       unidad_compra_precio: form.unidad_compra_precio || null,
-      default_alicuota_iva: form.default_alicuota_iva ?? 21,
+      default_alicuota_iva: null,
     };
 
     if (isEdit) {
@@ -194,7 +189,7 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
                     placeholder="Ej: 4000"
                   />
                 </FormRow>
-                <FormRow label="Precio neto ($)" required>
+                <FormRow label="Costo ($)" required hint="con todo incluido">
                   <Input
                     type="number"
                     step="0.01"
@@ -205,8 +200,7 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
                 </FormRow>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mt-2">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mt-2">
                   <span className="text-xs text-muted-foreground">Unidad base:</span>
                   <Select value={form.unidad_base} onValueChange={(v) => set('unidad_base', v)}>
                     <SelectTrigger className="h-7 w-auto text-xs px-2">
@@ -218,39 +212,14 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-                <FormRow label="IVA habitual" hint="Se precarga en facturas">
-                  <Select value={form.default_alicuota_iva != null ? String(form.default_alicuota_iva) : 'null'} onValueChange={(v) => set('default_alicuota_iva', v === 'null' ? null : Number(v))}>
-                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="21">21%</SelectItem>
-                      <SelectItem value="10.5">10.5%</SelectItem>
-                      <SelectItem value="27">27%</SelectItem>
-                      <SelectItem value="0">Exento (0%)</SelectItem>
-                      <SelectItem value="null">Sin factura</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FormRow>
               </div>
 
               {costoUnidadBase !== null && (
-                <div className="mt-3 rounded-md border border-border bg-muted/40 p-3 space-y-1">
+                <div className="mt-3 rounded-md border border-border bg-muted/40 p-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Costo neto por {form.unidad_base}:</span>
-                    <span className="font-medium">${costoUnidadBase.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
+                    <span className="text-muted-foreground">Costo por {unidadBaseLabel}:</span>
+                    <span className="font-semibold text-primary">${costoUnidadBase.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
                   </div>
-                  {costoConIva !== null && form.default_alicuota_iva != null && form.default_alicuota_iva > 0 && (
-                    <>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">IVA {form.default_alicuota_iva}%:</span>
-                        <span>${(costoConIva - costoUnidadBase).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
-                      </div>
-                      <div className="flex justify-between text-sm font-semibold border-t border-border pt-1">
-                        <span>Costo final por {form.unidad_base}:</span>
-                        <span className="text-primary">${costoConIva.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
-                      </div>
-                    </>
-                  )}
                 </div>
               )}
             </FormSection>
