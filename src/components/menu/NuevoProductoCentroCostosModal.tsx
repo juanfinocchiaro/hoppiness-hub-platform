@@ -5,11 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FormRow, FormSection } from '@/components/ui/forms-pro';
 import { StickyActions } from '@/components/ui/forms-pro';
-import { ChefHat, DollarSign, Tag } from 'lucide-react';
+import { ChefHat, DollarSign, Tag, Eye } from 'lucide-react';
 import { LoadingButton } from '@/components/ui/loading-button';
 import { useInsumos } from '@/hooks/useInsumos';
 import { useRdoCategories } from '@/hooks/useRdoCategories';
 import { useMenuProductoMutations, useCambiarPrecioMutation } from '@/hooks/useMenu';
+import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,6 +42,7 @@ export function NuevoProductoCentroCostosModal({ open, onOpenChange }: Props) {
     rdo_category_code: '',
     precio_venta: 0,
     fc_objetivo: 32,
+    visible_en_carta: true,
   });
 
   useEffect(() => {
@@ -48,6 +50,7 @@ export function NuevoProductoCentroCostosModal({ open, onOpenChange }: Props) {
       setForm({
         nombre: '', tipo: 'elaborado', insumo_id: '',
         rdo_category_code: '', precio_venta: 0, fc_objetivo: 32,
+        visible_en_carta: true,
       });
     }
   }, [open]);
@@ -84,6 +87,7 @@ export function NuevoProductoCentroCostosModal({ open, onOpenChange }: Props) {
           tipo: form.tipo,
           insumo_id: form.tipo === 'terminado' ? form.insumo_id : null,
           rdo_category_code: form.rdo_category_code,
+          visible_en_carta: form.visible_en_carta,
         } as any)
         .select()
         .single();
@@ -214,6 +218,17 @@ export function NuevoProductoCentroCostosModal({ open, onOpenChange }: Props) {
               </div>
             )}
           </FormSection>
+
+          {/* VISIBILIDAD */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Visible en la carta</span>
+              <Switch checked={form.visible_en_carta} onCheckedChange={(v) => set('visible_en_carta', v)} />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Desactivá para productos base que solo se usan en combos
+            </p>
+          </div>
 
           <StickyActions>
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>

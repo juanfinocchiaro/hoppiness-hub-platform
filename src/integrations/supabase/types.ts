@@ -2902,6 +2902,7 @@ export type Database = {
           rdo_category_code: string | null
           tipo: string
           updated_at: string | null
+          visible_en_carta: boolean | null
         }
         Insert: {
           activo?: boolean | null
@@ -2918,6 +2919,7 @@ export type Database = {
           rdo_category_code?: string | null
           tipo?: string
           updated_at?: string | null
+          visible_en_carta?: boolean | null
         }
         Update: {
           activo?: boolean | null
@@ -2934,6 +2936,7 @@ export type Database = {
           rdo_category_code?: string | null
           tipo?: string
           updated_at?: string | null
+          visible_en_carta?: boolean | null
         }
         Relationships: [
           {
