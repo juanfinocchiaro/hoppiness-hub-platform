@@ -30,6 +30,7 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
     unidad_compra_contenido: 1,
     unidad_compra_precio: 0,
     precio_venta: 0,
+    nivel_control: 'obligatorio' as string,
     proveedor_obligatorio_id: '',
     rdo_category_code: '',
     descripcion: '',
@@ -44,7 +45,8 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
         unidad_compra_contenido: producto.unidad_compra_contenido || 1,
         unidad_compra_precio: producto.unidad_compra_precio || 0,
         precio_venta: producto.precio_venta || 0,
-        proveedor_obligatorio_id: producto.proveedor_obligatorio_id || '',
+        nivel_control: producto.nivel_control || 'obligatorio',
+        proveedor_obligatorio_id: producto.proveedor_obligatorio_id || producto.proveedor_sugerido_id || '',
         rdo_category_code: producto.rdo_category_code || '',
         descripcion: producto.descripcion || '',
         default_alicuota_iva: producto.default_alicuota_iva ?? 21,
@@ -56,6 +58,7 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
         unidad_compra_contenido: 1,
         unidad_compra_precio: 0,
         precio_venta: 0,
+        nivel_control: 'obligatorio',
         proveedor_obligatorio_id: '',
         rdo_category_code: '',
         descripcion: '',
@@ -87,10 +90,11 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
       unidad_compra_contenido: form.unidad_compra_contenido,
       unidad_compra_precio: form.unidad_compra_precio,
       precio_venta: form.precio_venta,
-      proveedor_obligatorio_id: form.proveedor_obligatorio_id || null,
+      nivel_control: form.nivel_control,
+      proveedor_obligatorio_id: form.nivel_control === 'obligatorio' ? (form.proveedor_obligatorio_id || null) : null,
+      proveedor_sugerido_id: form.nivel_control === 'semi_libre' ? (form.proveedor_obligatorio_id || null) : null,
       rdo_category_code: form.rdo_category_code || null,
       descripcion: form.descripcion || null,
-      nivel_control: 'obligatorio',
       default_alicuota_iva: form.default_alicuota_iva ?? 21,
     };
 
@@ -216,7 +220,16 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
             )}
           </FormSection>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
+            <FormRow label="Nivel de control">
+              <Select value={form.nivel_control} onValueChange={(v) => set('nivel_control', v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="obligatorio">Obligatorio</SelectItem>
+                  <SelectItem value="semi_libre">Sugerido</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormRow>
             <FormRow label="Categoría RDO">
               <RdoCategorySelector value={form.rdo_category_code} onChange={(code) => set('rdo_category_code', code)} itemType="producto" />
             </FormRow>
