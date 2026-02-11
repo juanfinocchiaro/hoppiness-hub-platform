@@ -12,6 +12,7 @@ import { useRdoReport } from '@/hooks/useRdoReport';
 import { getCurrentPeriodo } from '@/types/compra';
 import { RDO_SECTIONS } from '@/types/rdo';
 import type { RdoReportLine } from '@/types/rdo';
+import { CmvDrillDown } from './CmvDrillDown';
 
 function useVentasData(branchId: string, periodo: string) {
   const { user } = useAuth();
@@ -123,15 +124,22 @@ function SectionBlock({ title, lines, ventas }: { title: string; lines: RdoRepor
             expanded={!!expandedParents[parent.category_code]}
             onToggle={() => toggleParent(parent.category_code)}
           >
-            {children.map(child => (
-              <RdoLine
-                key={child.category_code}
-                label={child.category_name}
-                value={child.total}
-                pct={child.percentage}
-                indent={2}
-              />
-            ))}
+            {children.map(child => {
+              const isCmv = child.category_code.startsWith('cmv');
+              return (
+                <div key={child.category_code}>
+                  <RdoLine
+                    label={child.category_name}
+                    value={child.total}
+                    pct={child.percentage}
+                    indent={2}
+                  />
+                  {isCmv && expandedParents[parent.category_code] && (
+                    <CmvDrillDown rdoCategoryCode={child.category_code} />
+                  )}
+                </div>
+              );
+            })}
           </CollapsibleRow>
         );
       })}

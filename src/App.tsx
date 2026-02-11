@@ -75,6 +75,7 @@ import VentasMensualesMarcaPage from "./pages/admin/VentasMensualesMarcaPage";
 import ConceptosServicioPage from "./pages/admin/ConceptosServicioPage";
 import MenuCartaPage from "./pages/admin/MenuCartaPage";
 import CentroCostosPage from "./pages/admin/CentroCostosPage";
+import PreparacionesPage from "./pages/admin/PreparacionesPage";
 
 // Mi Local - Comunicaciones
 import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
@@ -235,6 +236,7 @@ const App = () => (
               
               {/* Centro de Costos */}
               <Route path="centro-costos" element={<CentroCostosPage />} />
+              <Route path="centro-costos/preparaciones" element={<PreparacionesPage />} />
               
               {/* Configuración */}
               <Route path="reglamentos" element={<BrandRegulationsPage />} />

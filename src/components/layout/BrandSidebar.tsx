@@ -33,6 +33,7 @@ import {
   Calculator,
   BookOpen,
   CreditCard,
+  ChefHat,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -68,7 +69,7 @@ export function BrandSidebar() {
   const isComunicacionActive = location.pathname.includes('/mimarca/mensajes') || location.pathname.includes('/mimarca/comunicados') || location.pathname.includes('/mimarca/reuniones');
   const isConfigActive = location.pathname.includes('/mimarca/reglamentos') || location.pathname.includes('/mimarca/configuracion');
   const isMenuActive = location.pathname.includes('/mimarca/menu');
-  const isCentroCostosActive = location.pathname.includes('/mimarca/centro-costos');
+  const isCentroCostosActive = location.pathname.includes('/mimarca/centro-costos') || location.pathname.includes('/mimarca/centro-costos/preparaciones');
 
   // Section visibility
   const canSeeRed = bp.canViewLocales;
@@ -149,6 +150,7 @@ export function BrandSidebar() {
         {canSeeCentroCostos && (
           <NavSectionGroup id="centro-costos" label="Centro de Costos" icon={Calculator} forceOpen={isCentroCostosActive}>
             <NavItemButton to="/mimarca/centro-costos" icon={Calculator} label="Panel de Control" />
+            <NavItemButton to="/mimarca/centro-costos/preparaciones" icon={ChefHat} label="Preparaciones" />
           </NavSectionGroup>
         )}
 
