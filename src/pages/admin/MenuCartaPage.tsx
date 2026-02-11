@@ -178,7 +178,8 @@ export default function MenuCartaPage() {
             const isEditing = editingCatId === cat.id;
 
             return (
-              <Card key={cat.id} className="overflow-hidden">
+              <Collapsible key={cat.id} open={isOpen} onOpenChange={() => toggleCat(cat.id)}>
+              <Card className="overflow-hidden">
                 {/* Category Header */}
                 <div className="flex items-center gap-2 px-4 py-3 bg-muted/40 border-b">
                   {/* Reorder arrows */}
@@ -220,7 +221,7 @@ export default function MenuCartaPage() {
                       </Button>
                     </div>
                   ) : (
-                    <CollapsibleTrigger asChild onClick={() => toggleCat(cat.id)}>
+                    <CollapsibleTrigger asChild>
                       <button className="flex items-center gap-2 flex-1 text-left">
                         <span className="font-semibold text-sm">{cat.nombre}</span>
                         <Badge variant="secondary" className="text-xs font-normal">
@@ -261,8 +262,7 @@ export default function MenuCartaPage() {
                 </div>
 
                 {/* Products list */}
-                <Collapsible open={isOpen}>
-                  <CollapsibleContent>
+                <CollapsibleContent>
                     {catProducts.length === 0 ? (
                       <div className="px-4 py-8 text-center text-sm text-muted-foreground">
                         Sin productos en esta categoría
@@ -307,9 +307,9 @@ export default function MenuCartaPage() {
                         ))}
                       </div>
                     )}
-                  </CollapsibleContent>
-                </Collapsible>
+                </CollapsibleContent>
               </Card>
+              </Collapsible>
             );
           })}
 
