@@ -16,9 +16,10 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   producto?: any;
+  preselectedCategoriaId?: string | null;
 }
 
-export function MenuProductoFormModal({ open, onOpenChange, producto }: Props) {
+export function MenuProductoFormModal({ open, onOpenChange, producto, preselectedCategoriaId }: Props) {
   const { create, update } = useMenuProductoMutations();
   const { data: categorias } = useMenuCategorias();
   const { data: insumos } = useInsumos();
@@ -52,11 +53,11 @@ export function MenuProductoFormModal({ open, onOpenChange, producto }: Props) {
     } else {
       setForm({
         nombre: '', nombre_corto: '', descripcion: '',
-        tipo: 'elaborado', categoria_id: '', insumo_id: '',
+        tipo: 'elaborado', categoria_id: preselectedCategoriaId || '', insumo_id: '',
         disponible_delivery: true,
       });
     }
-  }, [producto, open]);
+  }, [producto, open, preselectedCategoriaId]);
 
   const set = (key: string, value: any) => setForm(prev => ({ ...prev, [key]: value }));
 
