@@ -374,41 +374,28 @@ function FichaTecnicaTab({ preparacionId, mutations, onClose }: { preparacionId:
 
   return (
     <div className="space-y-4">
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[100px]">Tipo</TableHead>
-              <TableHead className="w-[220px]">Ingrediente / Preparación</TableHead>
-              <TableHead className="w-[100px]">Cantidad</TableHead>
-              <TableHead className="w-[80px]">Unidad</TableHead>
-              <TableHead className="text-right">Costo Unit.</TableHead>
-              <TableHead className="text-right">Subtotal</TableHead>
-              <TableHead className="w-[50px]" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">Sin ingredientes — agregá el primero</TableCell></TableRow>
-            ) : items.map((item, index) => {
-              const isPrep = item.tipo_linea === 'preparacion';
-              const costoUnit = isPrep ? (item.sub_preparacion?.costo_calculado || 0) : (item.insumo?.costo_por_unidad_base || 0);
-              const subtotal = isPrep ? (item.cantidad || 0) * costoUnit : calcSubtotal(item.cantidad, costoUnit, item.unidad);
-              return (
-                <TableRow key={index}>
-                  <TableCell>
-                    <Select value={item.tipo_linea} onValueChange={(v) => updateItem(index, 'tipo_linea', v)}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="insumo">Insumo</SelectItem>
-                        <SelectItem value="preparacion">Preparación</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
+      {items.length === 0 ? (
+        <div className="py-10 text-center text-muted-foreground border rounded-lg">Sin ingredientes — agregá el primero</div>
+      ) : (
+        <div className="space-y-2">
+          {items.map((item, index) => {
+            const isPrep = item.tipo_linea === 'preparacion';
+            const costoUnit = isPrep ? (item.sub_preparacion?.costo_calculado || 0) : (item.insumo?.costo_por_unidad_base || 0);
+            const subtotal = isPrep ? (item.cantidad || 0) * costoUnit : calcSubtotal(item.cantidad, costoUnit, item.unidad);
+            return (
+              <div key={index} className="border rounded-lg p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Select value={item.tipo_linea} onValueChange={(v) => updateItem(index, 'tipo_linea', v)}>
+                    <SelectTrigger className="h-8 w-[110px] text-xs shrink-0"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="insumo">Insumo</SelectItem>
+                      <SelectItem value="preparacion">Preparación</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex-1 min-w-0">
                     {isPrep ? (
                       <Select value={item.sub_preparacion_id || 'none'} onValueChange={(v) => updateItem(index, 'sub_preparacion_id', v === 'none' ? '' : v)}>
-                        <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                        <SelectTrigger className="h-8"><SelectValue placeholder="Seleccionar preparación..." /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">Seleccionar...</SelectItem>
                           {preparacionesDisponibles.map((p: any) => (
@@ -418,7 +405,7 @@ function FichaTecnicaTab({ preparacionId, mutations, onClose }: { preparacionId:
                       </Select>
                     ) : (
                       <Select value={item.insumo_id || 'none'} onValueChange={(v) => updateItem(index, 'insumo_id', v === 'none' ? '' : v)}>
-                        <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                        <SelectTrigger className="h-8"><SelectValue placeholder="Seleccionar insumo..." /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">Seleccionar...</SelectItem>
                           {ingredientesDisponibles.map((ing: any) => (
@@ -427,33 +414,38 @@ function FichaTecnicaTab({ preparacionId, mutations, onClose }: { preparacionId:
                         </SelectContent>
                       </Select>
                     )}
-                  </TableCell>
-                  <TableCell><Input type="number" step="0.01" value={item.cantidad || ''} onChange={(e) => updateItem(index, 'cantidad', Number(e.target.value))} className="w-24" /></TableCell>
-                  <TableCell>
-                    <span className="text-sm text-muted-foreground">{item.unidad || '—'}</span>
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-sm">{costoUnit > 0 ? formatCurrency(costoUnit) : '—'}</TableCell>
-                  <TableCell className="text-right font-mono">{subtotal > 0 ? formatCurrency(subtotal) : '—'}</TableCell>
-                  <TableCell><Button variant="ghost" size="icon" onClick={() => removeItem(index)}><Trash2 className="w-4 h-4 text-destructive" /></Button></TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => removeItem(index)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-muted-foreground">Cant:</span>
+                    <Input type="number" step="0.01" value={item.cantidad || ''} onChange={(e) => updateItem(index, 'cantidad', Number(e.target.value))} className="h-7 w-20 text-sm" />
+                    <span className="text-muted-foreground">{item.unidad || '—'}</span>
+                  </div>
+                  <span className="text-muted-foreground ml-auto">×</span>
+                  <span className="font-mono">{costoUnit > 0 ? formatCurrency(costoUnit) : '—'}</span>
+                  <span className="text-muted-foreground">=</span>
+                  <span className="font-mono font-medium">{subtotal > 0 ? formatCurrency(subtotal) : '—'}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
       <div className="flex gap-2">
-        <Button variant="outline" onClick={() => addItem('insumo')} className="flex-1"><Plus className="w-4 h-4 mr-2" /> Agregar Insumo</Button>
-        <Button variant="outline" onClick={() => addItem('preparacion')} className="flex-1"><ChefHat className="w-4 h-4 mr-2" /> Agregar Preparación</Button>
+        <Button variant="outline" size="sm" onClick={() => addItem('insumo')} className="flex-1"><Plus className="w-4 h-4 mr-1" /> Insumo</Button>
+        <Button variant="outline" size="sm" onClick={() => addItem('preparacion')} className="flex-1"><ChefHat className="w-4 h-4 mr-1" /> Preparación</Button>
       </div>
 
-      <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg flex justify-between items-center">
+      <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg flex justify-between items-center">
         <div>
-          <p className="text-sm text-muted-foreground">Costo Total de la Preparación</p>
-          <p className="text-2xl font-bold font-mono text-primary">{formatCurrency(costoTotal)}</p>
+          <p className="text-xs text-muted-foreground">Costo Total</p>
+          <p className="text-xl font-bold font-mono text-primary">{formatCurrency(costoTotal)}</p>
         </div>
         {hasChanges && (
-          <LoadingButton loading={mutations.saveIngredientes.isPending} onClick={handleSave}>
-            <Save className="w-4 h-4 mr-2" /> Guardar Ficha
+          <LoadingButton loading={mutations.saveIngredientes.isPending} onClick={handleSave} size="sm">
+            <Save className="w-4 h-4 mr-1" /> Guardar Ficha
           </LoadingButton>
         )}
       </div>
