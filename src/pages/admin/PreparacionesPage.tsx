@@ -171,9 +171,35 @@ function calcSubtotal(cantidad: number, costoUnit: number, unidad: string) {
   return cantidad * costoUnit * mult;
 }
 
+/* ─── Inline category selector ─── */
+function InlineCategoria({ prep, mutations, categorias }: { prep: any; mutations: any; categorias: any[] | undefined }) {
+  const current = prep.categoria_preparacion_id || '';
+  const save = async (value: string) => {
+    const newVal = value === '_none' ? null : value;
+    if (newVal === (prep.categoria_preparacion_id || null)) return;
+    await mutations.update.mutateAsync({ id: prep.id, data: { categoria_preparacion_id: newVal } });
+  };
+  return (
+    <div className="flex items-center gap-2 mb-3">
+      <span className="text-xs text-muted-foreground shrink-0">Categoría:</span>
+      <Select value={current || '_none'} onValueChange={save}>
+        <SelectTrigger className="h-8 text-xs w-48">
+          <SelectValue placeholder="Sin categoría" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="_none">Sin categoría</SelectItem>
+          {categorias?.map((c: any) => (
+            <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 /* ─── Recipe row (used inside category cards and uncategorized) ─── */
-function PrepRow({ prep, isExpanded, onToggle, mutations, onDelete }: {
-  prep: any; isExpanded: boolean; onToggle: () => void; mutations: any; onDelete: () => void;
+function PrepRow({ prep, isExpanded, onToggle, mutations, onDelete, categorias }: {
+  prep: any; isExpanded: boolean; onToggle: () => void; mutations: any; onDelete: () => void; categorias: any[] | undefined;
 }) {
   return (
     <div>
@@ -206,6 +232,7 @@ function PrepRow({ prep, isExpanded, onToggle, mutations, onDelete }: {
       <ExpandablePanel open={isExpanded}>
         <div className="px-4 pb-4 pt-1 bg-muted/30 border-t">
           <InlineNombre prep={prep} mutations={mutations} />
+          <InlineCategoria prep={prep} mutations={mutations} categorias={categorias} />
           <InlineDescripcion prep={prep} mutations={mutations} />
           {prep.tipo === 'elaborado' ? (
             <FichaTecnicaTab preparacionId={prep.id} mutations={mutations} onClose={onToggle} />
@@ -222,12 +249,12 @@ function PrepRow({ prep, isExpanded, onToggle, mutations, onDelete }: {
 function SortableCategoryCard({
   cat, items, isOpen, onToggle,
   editingId, editingNombre, setEditingNombre, setEditingId, handleUpdateCat, setDeletingCat,
-  expandedId, setExpandedId, mutations, setDeletingPrep,
+  expandedId, setExpandedId, mutations, setDeletingPrep, categorias,
 }: {
   cat: any; items: any[]; isOpen: boolean; onToggle: () => void;
   editingId: string | null; editingNombre: string; setEditingNombre: (v: string) => void;
   setEditingId: (v: string | null) => void; handleUpdateCat: () => void; setDeletingCat: (v: any) => void;
-  expandedId: string | null; setExpandedId: (v: string | null) => void; mutations: any; setDeletingPrep: (v: any) => void;
+  expandedId: string | null; setExpandedId: (v: string | null) => void; mutations: any; setDeletingPrep: (v: any) => void; categorias: any[] | undefined;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : undefined };
@@ -280,6 +307,7 @@ function SortableCategoryCard({
                   onToggle={() => setExpandedId(expandedId === prep.id ? null : prep.id)}
                   mutations={mutations}
                   onDelete={() => setDeletingPrep(prep)}
+                  categorias={categorias}
                 />
               ))}
             </div>
@@ -433,6 +461,7 @@ export default function PreparacionesPage() {
                   setExpandedId={setExpandedId}
                   mutations={mutations}
                   setDeletingPrep={setDeletingPrep}
+                  categorias={categorias}
                 />
               ))}
 
@@ -451,6 +480,7 @@ export default function PreparacionesPage() {
                         onToggle={() => setExpandedId(expandedId === prep.id ? null : prep.id)}
                         mutations={mutations}
                         onDelete={() => setDeletingPrep(prep)}
+                        categorias={categorias}
                       />
                     ))}
                   </div>
