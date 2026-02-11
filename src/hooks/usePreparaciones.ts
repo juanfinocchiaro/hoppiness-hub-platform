@@ -25,7 +25,7 @@ export function usePreparacionIngredientes(preparacionId: string | undefined) {
       if (!preparacionId) return [];
       const { data, error } = await supabase
         .from('preparacion_ingredientes')
-        .select(`*, insumos(id, nombre, unidad_base, costo_por_unidad_base)`)
+        .select(`*, insumos(id, nombre, unidad_base, costo_por_unidad_base), preparaciones!preparacion_ingredientes_sub_preparacion_id_fkey(id, nombre, costo_calculado)`)
         .eq('preparacion_id', preparacionId)
         .order('orden');
       if (error) throw error;
@@ -118,7 +118,8 @@ export function usePreparacionMutations() {
           .from('preparacion_ingredientes')
           .insert(items.map((item, index) => ({
             preparacion_id,
-            insumo_id: item.insumo_id,
+            insumo_id: item.insumo_id || null,
+            sub_preparacion_id: item.sub_preparacion_id || null,
             cantidad: item.cantidad,
             unidad: item.unidad,
             orden: index,

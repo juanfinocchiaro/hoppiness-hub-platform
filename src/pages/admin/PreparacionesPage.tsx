@@ -294,10 +294,15 @@ function PreparacionFullModal({ open, onOpenChange, preparacion, mutations }: {
 function FichaTecnicaTab({ preparacionId, mutations, onClose }: { preparacionId: string; mutations: any; onClose: () => void }) {
   const { data: ingredientesActuales } = usePreparacionIngredientes(preparacionId);
   const { data: insumos } = useInsumos();
+  const { data: preparaciones } = usePreparaciones();
 
   const ingredientesDisponibles = useMemo(() => {
     return insumos?.filter((i: any) => i.tipo_item === 'ingrediente' || i.tipo_item === 'insumo') || [];
   }, [insumos]);
+
+  const preparacionesDisponibles = useMemo(() => {
+    return preparaciones?.filter((p: any) => p.id !== preparacionId) || [];
+  }, [preparaciones, preparacionId]);
 
   const [items, setItems] = useState<any[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
@@ -305,35 +310,63 @@ function FichaTecnicaTab({ preparacionId, mutations, onClose }: { preparacionId:
   useEffect(() => {
     if (ingredientesActuales) {
       setItems(ingredientesActuales.map((item: any) => ({
-        insumo_id: item.insumo_id,
+        tipo_linea: item.sub_preparacion_id ? 'preparacion' : 'insumo',
+        insumo_id: item.insumo_id || '',
+        sub_preparacion_id: item.sub_preparacion_id || '',
         cantidad: item.cantidad,
         unidad: item.unidad,
         insumo: item.insumos,
+        sub_preparacion: item.preparaciones,
       })));
       setHasChanges(false);
     }
   }, [ingredientesActuales]);
 
-  const addItem = () => { setItems([...items, { insumo_id: '', cantidad: 0, unidad: '', insumo: null }]); setHasChanges(true); };
+  const addItem = (tipo: 'insumo' | 'preparacion' = 'insumo') => {
+    setItems([...items, { tipo_linea: tipo, insumo_id: '', sub_preparacion_id: '', cantidad: 0, unidad: tipo === 'preparacion' ? 'un' : '', insumo: null, sub_preparacion: null }]);
+    setHasChanges(true);
+  };
   const removeItem = (i: number) => { setItems(items.filter((_, idx) => idx !== i)); setHasChanges(true); };
   const updateItem = (index: number, field: string, value: any) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
+    if (field === 'tipo_linea') {
+      newItems[index].insumo_id = '';
+      newItems[index].sub_preparacion_id = '';
+      newItems[index].insumo = null;
+      newItems[index].sub_preparacion = null;
+      newItems[index].unidad = value === 'preparacion' ? 'un' : '';
+    }
     if (field === 'insumo_id') {
       const ins = ingredientesDisponibles.find((i: any) => i.id === value);
       newItems[index].insumo = ins;
       newItems[index].unidad = ins?.unidad_base || 'g';
     }
+    if (field === 'sub_preparacion_id') {
+      const prep = preparacionesDisponibles.find((p: any) => p.id === value);
+      newItems[index].sub_preparacion = prep;
+      newItems[index].unidad = 'un';
+    }
     setItems(newItems);
     setHasChanges(true);
   };
 
-  const costoTotal = useMemo(() => items.reduce((t, item) => t + calcSubtotal(item.cantidad, item.insumo?.costo_por_unidad_base || 0, item.unidad), 0), [items]);
+  const costoTotal = useMemo(() => items.reduce((t, item) => {
+    if (item.tipo_linea === 'preparacion') {
+      return t + (item.cantidad || 0) * (item.sub_preparacion?.costo_calculado || 0);
+    }
+    return t + calcSubtotal(item.cantidad, item.insumo?.costo_por_unidad_base || 0, item.unidad);
+  }, 0), [items]);
 
   const handleSave = async () => {
     await mutations.saveIngredientes.mutateAsync({
       preparacion_id: preparacionId,
-      items: items.filter(i => i.insumo_id && i.cantidad > 0),
+      items: items.filter(i => (i.insumo_id || i.sub_preparacion_id) && i.cantidad > 0).map(i => ({
+        insumo_id: i.tipo_linea === 'insumo' ? i.insumo_id : null,
+        sub_preparacion_id: i.tipo_linea === 'preparacion' ? i.sub_preparacion_id : null,
+        cantidad: i.cantidad,
+        unidad: i.unidad,
+      })),
     });
     setHasChanges(false);
     onClose();
@@ -345,9 +378,10 @@ function FichaTecnicaTab({ preparacionId, mutations, onClose }: { preparacionId:
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[250px]">Ingrediente</TableHead>
+              <TableHead className="w-[100px]">Tipo</TableHead>
+              <TableHead className="w-[220px]">Ingrediente / Preparación</TableHead>
               <TableHead className="w-[100px]">Cantidad</TableHead>
-              <TableHead className="w-[120px]">Unidad</TableHead>
+              <TableHead className="w-[80px]">Unidad</TableHead>
               <TableHead className="text-right">Costo Unit.</TableHead>
               <TableHead className="text-right">Subtotal</TableHead>
               <TableHead className="w-[50px]" />
@@ -355,22 +389,44 @@ function FichaTecnicaTab({ preparacionId, mutations, onClose }: { preparacionId:
           </TableHeader>
           <TableBody>
             {items.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="h-24 text-center text-muted-foreground">Sin ingredientes — agregá el primero</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">Sin ingredientes — agregá el primero</TableCell></TableRow>
             ) : items.map((item, index) => {
-              const costoUnit = item.insumo?.costo_por_unidad_base || 0;
-              const subtotal = calcSubtotal(item.cantidad, costoUnit, item.unidad);
+              const isPrep = item.tipo_linea === 'preparacion';
+              const costoUnit = isPrep ? (item.sub_preparacion?.costo_calculado || 0) : (item.insumo?.costo_por_unidad_base || 0);
+              const subtotal = isPrep ? (item.cantidad || 0) * costoUnit : calcSubtotal(item.cantidad, costoUnit, item.unidad);
               return (
                 <TableRow key={index}>
                   <TableCell>
-                    <Select value={item.insumo_id || 'none'} onValueChange={(v) => updateItem(index, 'insumo_id', v === 'none' ? '' : v)}>
-                      <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                    <Select value={item.tipo_linea} onValueChange={(v) => updateItem(index, 'tipo_linea', v)}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">Seleccionar...</SelectItem>
-                        {ingredientesDisponibles.map((ing: any) => (
-                          <SelectItem key={ing.id} value={ing.id}>{ing.nombre} (${ing.costo_por_unidad_base?.toFixed(2)}/{ing.unidad_base})</SelectItem>
-                        ))}
+                        <SelectItem value="insumo">Insumo</SelectItem>
+                        <SelectItem value="preparacion">Preparación</SelectItem>
                       </SelectContent>
                     </Select>
+                  </TableCell>
+                  <TableCell>
+                    {isPrep ? (
+                      <Select value={item.sub_preparacion_id || 'none'} onValueChange={(v) => updateItem(index, 'sub_preparacion_id', v === 'none' ? '' : v)}>
+                        <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Seleccionar...</SelectItem>
+                          {preparacionesDisponibles.map((p: any) => (
+                            <SelectItem key={p.id} value={p.id}>{p.nombre} ({formatCurrency(p.costo_calculado || 0)})</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Select value={item.insumo_id || 'none'} onValueChange={(v) => updateItem(index, 'insumo_id', v === 'none' ? '' : v)}>
+                        <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Seleccionar...</SelectItem>
+                          {ingredientesDisponibles.map((ing: any) => (
+                            <SelectItem key={ing.id} value={ing.id}>{ing.nombre} (${ing.costo_por_unidad_base?.toFixed(2)}/{ing.unidad_base})</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </TableCell>
                   <TableCell><Input type="number" step="0.01" value={item.cantidad || ''} onChange={(e) => updateItem(index, 'cantidad', Number(e.target.value))} className="w-24" /></TableCell>
                   <TableCell>
@@ -385,7 +441,10 @@ function FichaTecnicaTab({ preparacionId, mutations, onClose }: { preparacionId:
           </TableBody>
         </Table>
       </div>
-      <Button variant="outline" onClick={addItem} className="w-full"><Plus className="w-4 h-4 mr-2" /> Agregar Ingrediente</Button>
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={() => addItem('insumo')} className="flex-1"><Plus className="w-4 h-4 mr-2" /> Agregar Insumo</Button>
+        <Button variant="outline" onClick={() => addItem('preparacion')} className="flex-1"><ChefHat className="w-4 h-4 mr-2" /> Agregar Preparación</Button>
+      </div>
 
       <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg flex justify-between items-center">
         <div>

@@ -3496,27 +3496,30 @@ export type Database = {
           cantidad: number
           created_at: string | null
           id: string
-          insumo_id: string
+          insumo_id: string | null
           orden: number | null
           preparacion_id: string
+          sub_preparacion_id: string | null
           unidad: string
         }
         Insert: {
           cantidad: number
           created_at?: string | null
           id?: string
-          insumo_id: string
+          insumo_id?: string | null
           orden?: number | null
           preparacion_id: string
+          sub_preparacion_id?: string | null
           unidad?: string
         }
         Update: {
           cantidad?: number
           created_at?: string | null
           id?: string
-          insumo_id?: string
+          insumo_id?: string | null
           orden?: number | null
           preparacion_id?: string
+          sub_preparacion_id?: string | null
           unidad?: string
         }
         Relationships: [
@@ -3530,6 +3533,13 @@ export type Database = {
           {
             foreignKeyName: "preparacion_ingredientes_preparacion_id_fkey"
             columns: ["preparacion_id"]
+            isOneToOne: false
+            referencedRelation: "preparaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "preparacion_ingredientes_sub_preparacion_id_fkey"
+            columns: ["sub_preparacion_id"]
             isOneToOne: false
             referencedRelation: "preparaciones"
             referencedColumns: ["id"]
