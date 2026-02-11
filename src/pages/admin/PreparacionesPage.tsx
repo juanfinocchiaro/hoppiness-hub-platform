@@ -314,12 +314,16 @@ function FichaTecnicaTab({ preparacionId, mutations }: { preparacionId: string; 
     }
   }, [ingredientesActuales]);
 
-  const addItem = () => { setItems([...items, { insumo_id: '', cantidad: 0, unidad: 'g', insumo: null }]); setHasChanges(true); };
+  const addItem = () => { setItems([...items, { insumo_id: '', cantidad: 0, unidad: '', insumo: null }]); setHasChanges(true); };
   const removeItem = (i: number) => { setItems(items.filter((_, idx) => idx !== i)); setHasChanges(true); };
   const updateItem = (index: number, field: string, value: any) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
-    if (field === 'insumo_id') newItems[index].insumo = ingredientesDisponibles.find((i: any) => i.id === value);
+    if (field === 'insumo_id') {
+      const ins = ingredientesDisponibles.find((i: any) => i.id === value);
+      newItems[index].insumo = ins;
+      newItems[index].unidad = ins?.unidad_base || 'g';
+    }
     setItems(newItems);
     setHasChanges(true);
   };
@@ -369,10 +373,7 @@ function FichaTecnicaTab({ preparacionId, mutations }: { preparacionId: string; 
                   </TableCell>
                   <TableCell><Input type="number" step="0.01" value={item.cantidad || ''} onChange={(e) => updateItem(index, 'cantidad', Number(e.target.value))} className="w-24" /></TableCell>
                   <TableCell>
-                    <Select value={item.unidad} onValueChange={(v) => updateItem(index, 'unidad', v)}>
-                      <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
-                      <SelectContent>{UNIDADES.map((u) => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <span className="text-sm text-muted-foreground">{item.unidad || '—'}</span>
                   </TableCell>
                   <TableCell className="text-right font-mono text-sm">{costoUnit > 0 ? formatCurrency(costoUnit) : '—'}</TableCell>
                   <TableCell className="text-right font-mono">{subtotal > 0 ? formatCurrency(subtotal) : '—'}</TableCell>
