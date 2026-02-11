@@ -160,6 +160,8 @@ export function ModificadoresTab({ itemId }: Props) {
           {showNewExtra && (
             <NewExtraForm
               itemId={itemId}
+              ingredientes={ingredientesDelItem}
+              deepGroups={deepGroups || []}
               insumos={insumos || []}
               recetas={recetas || []}
               onCreate={create}
@@ -321,7 +323,7 @@ function NewRemovibleForm({ itemId, ingredientes, deepGroups, insumos, onCreate,
 }
 
 /* ═══ NEW EXTRA FORM ═══ */
-function NewExtraForm({ itemId, insumos, recetas, onCreate, onClose }: any) {
+function NewExtraForm({ itemId, ingredientes, deepGroups, insumos, recetas, onCreate, onClose }: any) {
   const [tipo, setTipo] = useState<'ingrediente' | 'receta'>('ingrediente');
   const [selectedId, setSelectedId] = useState('');
   const [cantidad, setCantidad] = useState(1);
@@ -329,15 +331,29 @@ function NewExtraForm({ itemId, insumos, recetas, onCreate, onClose }: any) {
   const [precio, setPrecio] = useState(0);
   const [nombre, setNombre] = useState('');
 
-  const selectedItem = tipo === 'ingrediente'
-    ? insumos?.find((i: any) => i.id === selectedId)
-    : recetas?.find((r: any) => r.id === selectedId);
+  const hasDeepGroups = deepGroups && deepGroups.length > 0;
+
+  const selectedItem = useMemo(() => {
+    if (tipo === 'receta') return recetas?.find((r: any) => r.id === selectedId);
+    // Check deep ingredients first, then all insumos
+    const fromDeep = ingredientes?.find((i: any) => i.id === selectedId);
+    if (fromDeep) return fromDeep;
+    return insumos?.find((i: any) => i.id === selectedId);
+  }, [tipo, selectedId, ingredientes, insumos, recetas]);
 
   const costoCalculado = selectedItem
     ? (tipo === 'ingrediente'
         ? (selectedItem.costo_por_unidad_base || 0) * cantidad
         : (selectedItem.costo_calculado || 0) * cantidad)
     : 0;
+
+  const handleSelect = (v: string) => {
+    setSelectedId(v);
+    const item = tipo === 'ingrediente'
+      ? (ingredientes?.find((i: any) => i.id === v) || insumos?.find((i: any) => i.id === v))
+      : recetas?.find((r: any) => r.id === v);
+    setNombre(`Extra ${item?.nombre || ''}`);
+  };
 
   const handleSave = async () => {
     if (!selectedId || !precio) return;
@@ -370,13 +386,29 @@ function NewExtraForm({ itemId, insumos, recetas, onCreate, onClose }: any) {
             <SelectItem value="receta">Receta</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={selectedId} onValueChange={(v) => { setSelectedId(v); const item = (tipo === 'ingrediente' ? insumos : recetas)?.find((i: any) => i.id === v); setNombre(`Extra ${item?.nombre || ''}`); }}>
+        <Select value={selectedId} onValueChange={handleSelect}>
           <SelectTrigger className="text-sm"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
           <SelectContent>
-            {tipo === 'ingrediente'
-              ? insumos?.map((i: any) => <SelectItem key={i.id} value={i.id}>{i.nombre}</SelectItem>)
-              : recetas?.map((r: any) => <SelectItem key={r.id} value={r.id}>{r.nombre}</SelectItem>)
-            }
+            {tipo === 'ingrediente' ? (
+              hasDeepGroups ? (
+                <>
+                  {deepGroups.map((group: any) => (
+                    <SelectGroup key={group.receta_id}>
+                      <SelectLabel className="text-xs font-semibold text-primary">— {group.receta_nombre} —</SelectLabel>
+                      {group.ingredientes.map((ing: any) => (
+                        <SelectItem key={`${group.receta_id}-${ing.insumo_id}`} value={ing.insumo_id}>
+                          {ing.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ))}
+                </>
+              ) : (
+                insumos?.map((i: any) => <SelectItem key={i.id} value={i.id}>{i.nombre}</SelectItem>)
+              )
+            ) : (
+              recetas?.map((r: any) => <SelectItem key={r.id} value={r.id}>{r.nombre}</SelectItem>)
+            )}
           </SelectContent>
         </Select>
       </div>
