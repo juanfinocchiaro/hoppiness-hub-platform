@@ -48,7 +48,7 @@ export default function CentroCostosPage() {
   const [deletingItem, setDeletingItem] = useState<any>(null);
 
   const cmvCategories = useMemo(() => {
-    return rdoCategories?.filter((c: any) => c.parent_code === 'CMV' || c.code?.startsWith('cmv')) || [];
+    return rdoCategories?.filter((c: any) => c.level === 3 && (c.parent_code?.startsWith('cmv') || c.code?.startsWith('cmv'))) || [];
   }, [rdoCategories]);
 
   const stats = useMemo(() => {
