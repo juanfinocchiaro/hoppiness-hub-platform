@@ -278,10 +278,10 @@ function PreparacionFullModal({ open, onOpenChange, preparacion, mutations }: {
           {/* ─── TAB: Ficha Técnica / Opciones ─── */}
           <TabsContent value="ficha" className="mt-4">
             {savedId && effectiveTipo === 'elaborado' && (
-              <FichaTecnicaTab preparacionId={savedId} mutations={mutations} />
+              <FichaTecnicaTab preparacionId={savedId} mutations={mutations} onClose={() => onOpenChange(false)} />
             )}
             {savedId && effectiveTipo === 'componente_terminado' && (
-              <OpcionesTab preparacionId={savedId} mutations={mutations} />
+              <OpcionesTab preparacionId={savedId} mutations={mutations} onClose={() => onOpenChange(false)} />
             )}
           </TabsContent>
         </Tabs>
@@ -291,7 +291,7 @@ function PreparacionFullModal({ open, onOpenChange, preparacion, mutations }: {
 }
 
 // ═══ FICHA TÉCNICA TAB (Elaborado) ═══
-function FichaTecnicaTab({ preparacionId, mutations }: { preparacionId: string; mutations: any }) {
+function FichaTecnicaTab({ preparacionId, mutations, onClose }: { preparacionId: string; mutations: any; onClose: () => void }) {
   const { data: ingredientesActuales } = usePreparacionIngredientes(preparacionId);
   const { data: insumos } = useInsumos();
 
@@ -336,6 +336,7 @@ function FichaTecnicaTab({ preparacionId, mutations }: { preparacionId: string; 
       items: items.filter(i => i.insumo_id && i.cantidad > 0),
     });
     setHasChanges(false);
+    onClose();
   };
 
   return (
@@ -402,7 +403,7 @@ function FichaTecnicaTab({ preparacionId, mutations }: { preparacionId: string; 
 }
 
 // ═══ OPCIONES TAB (Componente Terminado) ═══
-function OpcionesTab({ preparacionId, mutations }: { preparacionId: string; mutations: any }) {
+function OpcionesTab({ preparacionId, mutations, onClose }: { preparacionId: string; mutations: any; onClose: () => void }) {
   const { data: opcionesActuales } = usePreparacionOpciones(preparacionId);
   const { data: insumos } = useInsumos();
 
@@ -425,6 +426,7 @@ function OpcionesTab({ preparacionId, mutations }: { preparacionId: string; muta
   const handleSave = async () => {
     await mutations.saveOpciones.mutateAsync({ preparacion_id: preparacionId, insumo_ids: selectedIds });
     setHasChanges(false);
+    onClose();
   };
 
   return (
