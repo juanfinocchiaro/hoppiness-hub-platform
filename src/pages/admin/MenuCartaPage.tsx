@@ -59,6 +59,7 @@ export default function MenuCartaPage() {
     const map: Record<string, any[]> = {};
     const filtered = (productos || []).filter((p: any) => {
       if (p.tipo === 'combo') return false;
+      if (p.visible_en_carta === false) return false;
       if (!search) return true;
       return p.nombre.toLowerCase().includes(search.toLowerCase());
     });

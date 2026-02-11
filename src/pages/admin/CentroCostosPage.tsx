@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Percent, AlertTriangle, CheckCircle, TrendingDown, Edit, History, Plus } from 'lucide-react';
+import { Percent, AlertTriangle, CheckCircle, TrendingDown, Edit, History, Plus, Eye, EyeOff } from 'lucide-react';
 import { useCentroCostos, useCambiarPrecioMutation, useHistorialPrecios } from '@/hooks/useMenu';
 import { useAuth } from '@/hooks/useAuth';
 import { useRdoCategories } from '@/hooks/useRdoCategories';
@@ -163,6 +163,7 @@ export default function CentroCostosPage() {
               <TableHead className="text-right">Costo Teórico</TableHead>
               <TableHead className="text-right">Precio Actual</TableHead>
               <TableHead className="text-right">FC%</TableHead>
+              <TableHead>Visible</TableHead>
               <TableHead className="text-right">Precio Sugerido</TableHead>
               <TableHead className="w-[120px]">Acciones</TableHead>
             </TableRow>
@@ -197,6 +198,17 @@ export default function CentroCostosPage() {
                       {p.fc_actual?.toFixed(1)}%
                     </Badge>
                   ) : '—'}
+                </TableCell>
+                <TableCell>
+                  {p.visible_en_carta !== false ? (
+                    <Badge variant="default" className="text-xs">
+                      <Eye className="w-3 h-3 mr-1" /> Sí
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-xs">
+                      <EyeOff className="w-3 h-3 mr-1" /> No
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell className="text-right">
                   {p.precio_sugerido && p.precio_sugerido !== p.precio_base ? (

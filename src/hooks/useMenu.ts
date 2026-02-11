@@ -147,6 +147,7 @@ export function useMenuProductoMutations() {
           categoria_id: data.categoria_id,
           insumo_id: data.insumo_id,
           disponible_delivery: data.disponible_delivery,
+          visible_en_carta: data.visible_en_carta ?? true,
         } as any)
         .select()
         .single();
@@ -173,6 +174,7 @@ export function useMenuProductoMutations() {
           categoria_id: data.categoria_id,
           insumo_id: data.insumo_id,
           disponible_delivery: data.disponible_delivery,
+          visible_en_carta: data.visible_en_carta ?? true,
           updated_at: new Date().toISOString(),
         } as any)
         .eq('id', id);

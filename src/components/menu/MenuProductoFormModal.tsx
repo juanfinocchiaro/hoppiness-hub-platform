@@ -37,6 +37,7 @@ export function MenuProductoFormModal({ open, onOpenChange, producto, preselecte
     categoria_id: '',
     insumo_id: '',
     disponible_delivery: true,
+    visible_en_carta: true,
   });
 
   useEffect(() => {
@@ -49,12 +50,13 @@ export function MenuProductoFormModal({ open, onOpenChange, producto, preselecte
         categoria_id: producto.categoria_id || '',
         insumo_id: producto.insumo_id || '',
         disponible_delivery: producto.disponible_delivery ?? true,
+        visible_en_carta: producto.visible_en_carta ?? true,
       });
     } else {
       setForm({
         nombre: '', nombre_corto: '', descripcion: '',
         tipo: 'elaborado', categoria_id: preselectedCategoriaId || '', insumo_id: '',
-        disponible_delivery: true,
+        disponible_delivery: true, visible_en_carta: true,
       });
     }
   }, [producto, open, preselectedCategoriaId]);
@@ -73,6 +75,7 @@ export function MenuProductoFormModal({ open, onOpenChange, producto, preselecte
       categoria_id: form.categoria_id || null,
       insumo_id: form.tipo === 'terminado' ? form.insumo_id : null,
       disponible_delivery: form.disponible_delivery,
+      visible_en_carta: form.visible_en_carta,
     };
 
     if (isEdit) {
@@ -152,6 +155,17 @@ export function MenuProductoFormModal({ open, onOpenChange, producto, preselecte
           <div className="flex items-center justify-between">
             <span className="text-sm">Disponible para delivery</span>
             <Switch checked={form.disponible_delivery} onCheckedChange={(v) => set('disponible_delivery', v)} />
+          </div>
+
+          {/* VISIBILIDAD */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Visible en la carta</span>
+              <Switch checked={form.visible_en_carta} onCheckedChange={(v) => set('visible_en_carta', v)} />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Desactivá esto para productos base que solo se usan en combos
+            </p>
           </div>
 
           <StickyActions>
