@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, Ban, PlusCircle, ArrowRightLeft, X } from 'lucide-react';
 import { useModificadores, useModificadoresMutations } from '@/hooks/useModificadores';
 import { useInsumos } from '@/hooks/useInsumos';
 import { usePreparaciones } from '@/hooks/usePreparaciones';
 import { useItemCartaComposicion } from '@/hooks/useItemsCarta';
+import { useItemIngredientesDeepList } from '@/hooks/useItemIngredientesDeepList';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const formatCurrency = (value: number) =>
@@ -25,30 +26,25 @@ export function ModificadoresTab({ itemId }: Props) {
   const { data: insumos } = useInsumos();
   const { data: recetas } = usePreparaciones();
   const { data: composicion } = useItemCartaComposicion(itemId);
+  const { data: deepGroups } = useItemIngredientesDeepList(itemId);
 
   const [showNewRemovible, setShowNewRemovible] = useState(false);
   const [showNewExtra, setShowNewExtra] = useState(false);
   const [showNewSustitucion, setShowNewSustitucion] = useState(false);
 
-  // Get ingredients from item's recipes (for removibles/sustituciones)
+  // Flat list for backward compat + grouped data for selector
   const ingredientesDelItem = useMemo(() => {
-    if (!composicion) return [];
-    const ingredientes: any[] = [];
-    composicion.forEach((comp: any) => {
-      if (comp.preparacion_id && comp.preparaciones) {
-        // The composition has a preparacion — we'd need its ficha tecnica
-        // For now, list the preparacion itself as a removable reference
-      }
-      if (comp.insumo_id && comp.insumos) {
-        ingredientes.push({
-          ...comp.insumos,
-          cantidad: comp.cantidad,
-          unidad: comp.insumos.unidad_base || 'un',
-        });
-      }
-    });
-    return ingredientes;
-  }, [composicion]);
+    if (!deepGroups) return [];
+    return deepGroups.flatMap(g => g.ingredientes.map(ing => ({
+      id: ing.insumo_id,
+      nombre: ing.nombre,
+      cantidad: ing.cantidad,
+      unidad: ing.unidad,
+      costo_por_unidad_base: ing.costo_por_unidad_base,
+      _fromItem: true,
+      _recetaOrigen: ing.receta_origen,
+    })));
+  }, [deepGroups]);
 
   const removibles = modificadores?.filter((m: any) => m.tipo === 'removible') || [];
   const extras = modificadores?.filter((m: any) => m.tipo === 'extra') || [];
@@ -106,6 +102,7 @@ export function ModificadoresTab({ itemId }: Props) {
             <NewRemovibleForm
               itemId={itemId}
               ingredientes={ingredientesDelItem}
+              deepGroups={deepGroups || []}
               insumos={insumos || []}
               onCreate={create}
               onClose={() => setShowNewRemovible(false)}
@@ -232,11 +229,11 @@ export function ModificadoresTab({ itemId }: Props) {
 }
 
 /* ═══ NEW REMOVIBLE FORM ═══ */
-function NewRemovibleForm({ itemId, ingredientes, insumos, onCreate, onClose }: any) {
+function NewRemovibleForm({ itemId, ingredientes, deepGroups, insumos, onCreate, onClose }: any) {
   const [selectedId, setSelectedId] = useState('');
   const [nombre, setNombre] = useState('');
 
-  // Combine item ingredients + all insumos for selection
+  // Flat list from deep groups + other insumos not in item
   const allInsumos = useMemo(() => {
     const fromItem = ingredientes.map((i: any) => ({ ...i, _fromItem: true }));
     const others = (insumos || []).filter((i: any) => !ingredientes.some((fi: any) => fi.id === i.id));
@@ -244,6 +241,12 @@ function NewRemovibleForm({ itemId, ingredientes, insumos, onCreate, onClose }: 
   }, [ingredientes, insumos]);
 
   const selected = allInsumos.find((i: any) => i.id === selectedId);
+
+  const handleSelect = (v: string) => {
+    setSelectedId(v);
+    const ins = allInsumos.find((i: any) => i.id === v);
+    setNombre(`Sin ${ins?.nombre || ''}`);
+  };
 
   const handleSave = async () => {
     if (!selectedId) return;
@@ -260,20 +263,46 @@ function NewRemovibleForm({ itemId, ingredientes, insumos, onCreate, onClose }: 
     onClose();
   };
 
+  const hasDeepGroups = deepGroups && deepGroups.length > 0;
+  const otherInsumos = (insumos || []).filter((i: any) => !ingredientes.some((fi: any) => fi.id === i.id));
+
   return (
     <div className="p-4 border-2 border-dashed rounded-lg space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">Nuevo removible</p>
         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}><X className="w-3.5 h-3.5" /></Button>
       </div>
-      <Select value={selectedId} onValueChange={(v) => { setSelectedId(v); const ins = allInsumos.find((i: any) => i.id === v); setNombre(`Sin ${ins?.nombre || ''}`); }}>
+      <Select value={selectedId} onValueChange={handleSelect}>
         <SelectTrigger><SelectValue placeholder="Seleccionar ingrediente..." /></SelectTrigger>
         <SelectContent>
-          {allInsumos.map((ing: any) => (
-            <SelectItem key={ing.id} value={ing.id}>
-              {ing.nombre} {ing._fromItem ? '(del item)' : ''}
-            </SelectItem>
-          ))}
+          {hasDeepGroups ? (
+            <>
+              {deepGroups.map((group: any) => (
+                <SelectGroup key={group.receta_id}>
+                  <SelectLabel className="text-xs font-semibold text-primary">— {group.receta_nombre} —</SelectLabel>
+                  {group.ingredientes.map((ing: any) => (
+                    <SelectItem key={`${group.receta_id}-${ing.insumo_id}`} value={ing.insumo_id}>
+                      {ing.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              ))}
+              {otherInsumos.length > 0 && (
+                <SelectGroup>
+                  <SelectLabel className="text-xs font-semibold text-muted-foreground">— Otros insumos —</SelectLabel>
+                  {otherInsumos.map((ins: any) => (
+                    <SelectItem key={ins.id} value={ins.id}>{ins.nombre}</SelectItem>
+                  ))}
+                </SelectGroup>
+              )}
+            </>
+          ) : (
+            allInsumos.map((ing: any) => (
+              <SelectItem key={ing.id} value={ing.id}>
+                {ing.nombre} {ing._fromItem ? '(del item)' : ''}
+              </SelectItem>
+            ))
+          )}
         </SelectContent>
       </Select>
       <Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre (ej: Sin Queso)" className="text-sm" />

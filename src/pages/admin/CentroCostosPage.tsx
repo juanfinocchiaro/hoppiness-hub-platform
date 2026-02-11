@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { DataToolbar } from '@/components/ui/data-table-pro';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingButton } from '@/components/ui/loading-button';
@@ -304,6 +305,8 @@ function ComposicionModal({ open, onOpenChange, item, preparaciones, insumos, mu
         preparacion_id: c.preparacion_id || '',
         insumo_id: c.insumo_id || '',
         cantidad: c.cantidad,
+        es_opcional: c.es_opcional || false,
+        costo_promedio_override: c.costo_promedio_override ?? null,
         _label: c.preparaciones?.nombre || c.insumos?.nombre || '',
         _costo: c.preparaciones?.costo_calculado || c.insumos?.costo_por_unidad_base || 0,
       })));
@@ -311,7 +314,7 @@ function ComposicionModal({ open, onOpenChange, item, preparaciones, insumos, mu
     }
   }, [composicionActual]);
 
-  const addRow = () => { setRows([...rows, { tipo: 'preparacion', preparacion_id: '', insumo_id: '', cantidad: 1, _label: '', _costo: 0 }]); setHasChanges(true); };
+  const addRow = () => { setRows([...rows, { tipo: 'preparacion', preparacion_id: '', insumo_id: '', cantidad: 1, es_opcional: false, costo_promedio_override: null, _label: '', _costo: 0 }]); setHasChanges(true); };
   const removeRow = (i: number) => { setRows(rows.filter((_, idx) => idx !== i)); setHasChanges(true); };
 
   const updateRow = (i: number, field: string, value: any) => {
@@ -332,7 +335,13 @@ function ComposicionModal({ open, onOpenChange, item, preparaciones, insumos, mu
     setHasChanges(true);
   };
 
-  const costoTotal = rows.reduce((t, r) => t + r.cantidad * r._costo, 0);
+  const costoTotal = rows.reduce((t, r) => {
+    if (r.es_opcional && r.costo_promedio_override != null) {
+      return t + r.cantidad * r.costo_promedio_override;
+    }
+    if (r.es_opcional) return t; // optional without override = 0
+    return t + r.cantidad * r._costo;
+  }, 0);
 
   const handleSave = async () => {
     await mutations.saveComposicion.mutateAsync({
@@ -341,9 +350,17 @@ function ComposicionModal({ open, onOpenChange, item, preparaciones, insumos, mu
         preparacion_id: r.tipo === 'preparacion' ? r.preparacion_id : undefined,
         insumo_id: r.tipo === 'insumo' ? r.insumo_id : undefined,
         cantidad: r.cantidad,
+        es_opcional: r.es_opcional || false,
+        costo_promedio_override: r.es_opcional ? r.costo_promedio_override : null,
       })),
     });
     setHasChanges(false);
+  };
+
+  const getRowCost = (row: any) => {
+    if (row.es_opcional && row.costo_promedio_override != null) return row.costo_promedio_override;
+    if (row.es_opcional) return 0;
+    return row._costo;
   };
 
   return (
@@ -354,45 +371,73 @@ function ComposicionModal({ open, onOpenChange, item, preparaciones, insumos, mu
           {rows.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground border rounded-lg">Sin composición — agregá componentes</div>
           ) : (
-            <div className="space-y-1">
+            <div className="space-y-2">
               {rows.map((row, i) => (
-                <div key={i} className="flex items-center gap-1.5 border rounded px-2 py-1.5 text-sm">
-                  <Select value={row.tipo} onValueChange={(v) => updateRow(i, 'tipo', v)}>
-                    <SelectTrigger className="h-7 w-[90px] text-xs shrink-0"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="preparacion">Receta</SelectItem>
-                      <SelectItem value="insumo">Insumo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <div className="flex-1 min-w-0">
-                    {row.tipo === 'preparacion' ? (
-                      <Select value={row.preparacion_id || 'none'} onValueChange={(v) => updateRow(i, 'preparacion_id', v === 'none' ? '' : v)}>
-                        <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Seleccionar...</SelectItem>
-                          {preparaciones.map((p: any) => (
-                            <SelectItem key={p.id} value={p.id}>{p.nombre} ({formatCurrency(p.costo_calculado || 0)})</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Select value={row.insumo_id || 'none'} onValueChange={(v) => updateRow(i, 'insumo_id', v === 'none' ? '' : v)}>
-                        <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Seleccionar...</SelectItem>
-                          {insumos.filter((x: any) => x.tipo_item === 'insumo' || x.tipo_item === 'producto').map((ins: any) => (
-                            <SelectItem key={ins.id} value={ins.id}>{ins.nombre} ({formatCurrency(ins.costo_por_unidad_base || 0)})</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                <div key={i} className="border rounded-lg px-3 py-2 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <Select value={row.tipo} onValueChange={(v) => updateRow(i, 'tipo', v)}>
+                      <SelectTrigger className="h-7 w-[90px] text-xs shrink-0"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="preparacion">Receta</SelectItem>
+                        <SelectItem value="insumo">Insumo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="flex-1 min-w-0">
+                      {row.tipo === 'preparacion' ? (
+                        <Select value={row.preparacion_id || 'none'} onValueChange={(v) => updateRow(i, 'preparacion_id', v === 'none' ? '' : v)}>
+                          <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Seleccionar...</SelectItem>
+                            {preparaciones.map((p: any) => (
+                              <SelectItem key={p.id} value={p.id}>{p.nombre} ({formatCurrency(p.costo_calculado || 0)})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Select value={row.insumo_id || 'none'} onValueChange={(v) => updateRow(i, 'insumo_id', v === 'none' ? '' : v)}>
+                          <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Seleccionar...</SelectItem>
+                            {insumos.filter((x: any) => x.tipo_item === 'insumo' || x.tipo_item === 'producto').map((ins: any) => (
+                              <SelectItem key={ins.id} value={ins.id}>{ins.nombre} ({formatCurrency(ins.costo_por_unidad_base || 0)})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                    <Input type="number" className="h-7 w-16 text-xs shrink-0" value={row.cantidad} onChange={(e) => updateRow(i, 'cantidad', Number(e.target.value))} />
+                    <span className="text-xs text-muted-foreground shrink-0">×</span>
+                    <span className="font-mono text-xs w-16 text-right shrink-0">{formatCurrency(getRowCost(row))}</span>
+                    <span className="text-xs text-muted-foreground shrink-0">=</span>
+                    <span className="font-mono text-xs font-semibold w-20 text-right shrink-0">{formatCurrency(row.cantidad * getRowCost(row))}</span>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeRow(i)}><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
+                  </div>
+                  {/* Optional toggle row */}
+                  <div className="flex items-center gap-3 pl-1">
+                    <div className="flex items-center gap-1.5">
+                      <Switch
+                        checked={row.es_opcional}
+                        onCheckedChange={(checked) => updateRow(i, 'es_opcional', checked)}
+                        className="scale-75"
+                      />
+                      <span className="text-xs text-muted-foreground">Opcional</span>
+                    </div>
+                    {row.es_opcional && (
+                      <>
+                        <Badge variant="outline" className="text-xs">Opcional</Badge>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground">Costo prom:</span>
+                          <Input
+                            type="number"
+                            className="h-6 w-20 text-xs"
+                            placeholder="$0"
+                            value={row.costo_promedio_override ?? ''}
+                            onChange={(e) => updateRow(i, 'costo_promedio_override', e.target.value ? Number(e.target.value) : null)}
+                          />
+                        </div>
+                      </>
                     )}
                   </div>
-                  <Input type="number" className="h-7 w-16 text-xs shrink-0" value={row.cantidad} onChange={(e) => updateRow(i, 'cantidad', Number(e.target.value))} />
-                  <span className="text-xs text-muted-foreground shrink-0">×</span>
-                  <span className="font-mono text-xs w-16 text-right shrink-0">{formatCurrency(row._costo)}</span>
-                  <span className="text-xs text-muted-foreground shrink-0">=</span>
-                  <span className="font-mono text-xs font-semibold w-20 text-right shrink-0">{formatCurrency(row.cantidad * row._costo)}</span>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeRow(i)}><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
                 </div>
               ))}
             </div>

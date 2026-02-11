@@ -2360,7 +2360,9 @@ export type Database = {
       item_carta_composicion: {
         Row: {
           cantidad: number
+          costo_promedio_override: number | null
           created_at: string | null
+          es_opcional: boolean
           id: string
           insumo_id: string | null
           item_carta_id: string
@@ -2369,7 +2371,9 @@ export type Database = {
         }
         Insert: {
           cantidad?: number
+          costo_promedio_override?: number | null
           created_at?: string | null
+          es_opcional?: boolean
           id?: string
           insumo_id?: string | null
           item_carta_id: string
@@ -2378,7 +2382,9 @@ export type Database = {
         }
         Update: {
           cantidad?: number
+          costo_promedio_override?: number | null
           created_at?: string | null
+          es_opcional?: boolean
           id?: string
           insumo_id?: string | null
           item_carta_id?: string
