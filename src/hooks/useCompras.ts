@@ -50,10 +50,21 @@ export function useFacturaMutations() {
   const { user } = useAuth();
 
   const create = useMutation({
-    mutationFn: async (data: FacturaFormData) => {
+    mutationFn: async (data: FacturaFormData & {
+      subtotal_bruto?: number;
+      total_descuentos?: number;
+      subtotal_neto?: number;
+      imp_internos?: number;
+      iva_21?: number;
+      iva_105?: number;
+      perc_iva?: number;
+      perc_provincial?: number;
+      perc_municipal?: number;
+      total_factura?: number;
+    }) => {
       // 1. Create factura header
       const subtotalItems = data.items.reduce((s, i) => s + i.subtotal, 0);
-      const total = subtotalItems + (data.iva || 0) + (data.otros_impuestos || 0);
+      const total = (data.total_factura != null) ? data.total_factura : subtotalItems + (data.iva || 0) + (data.otros_impuestos || 0);
       const estadoPago = data.condicion_pago === 'contado' ? 'pagado' : 'pendiente';
 
       const { data: factura, error: fErr } = await supabase
@@ -77,7 +88,18 @@ export function useFacturaMutations() {
           periodo: data.periodo,
           observaciones: data.observaciones || null,
           created_by: user?.id,
-        })
+          // Fiscal detail columns
+          subtotal_bruto: data.subtotal_bruto ?? null,
+          total_descuentos: data.total_descuentos ?? 0,
+          subtotal_neto: data.subtotal_neto ?? null,
+          imp_internos: data.imp_internos ?? 0,
+          iva_21: data.iva_21 ?? 0,
+          iva_105: data.iva_105 ?? 0,
+          perc_iva: data.perc_iva ?? 0,
+          perc_provincial: data.perc_provincial ?? 0,
+          perc_municipal: data.perc_municipal ?? 0,
+          total_factura: data.total_factura ?? null,
+        } as any)
         .select()
         .single();
       if (fErr) throw fErr;

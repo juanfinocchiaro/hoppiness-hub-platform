@@ -1552,6 +1552,7 @@ export type Database = {
         Row: {
           branch_id: string
           condicion_pago: string | null
+          costo_real: number | null
           created_at: string | null
           created_by: string | null
           deleted_at: string | null
@@ -1562,21 +1563,32 @@ export type Database = {
           factura_url: string | null
           fecha_vencimiento: string | null
           id: string
+          imp_internos: number | null
           iva: number | null
+          iva_105: number | null
+          iva_21: number | null
           motivo_extraordinaria: string | null
           observaciones: string | null
           otros_impuestos: number | null
+          perc_iva: number | null
+          perc_municipal: number | null
+          perc_provincial: number | null
           periodo: string
           proveedor_id: string
           saldo_pendiente: number | null
           subtotal: number
+          subtotal_bruto: number | null
+          subtotal_neto: number | null
           tipo: string | null
           total: number
+          total_descuentos: number | null
+          total_factura: number | null
           updated_at: string | null
         }
         Insert: {
           branch_id: string
           condicion_pago?: string | null
+          costo_real?: number | null
           created_at?: string | null
           created_by?: string | null
           deleted_at?: string | null
@@ -1587,21 +1599,32 @@ export type Database = {
           factura_url?: string | null
           fecha_vencimiento?: string | null
           id?: string
+          imp_internos?: number | null
           iva?: number | null
+          iva_105?: number | null
+          iva_21?: number | null
           motivo_extraordinaria?: string | null
           observaciones?: string | null
           otros_impuestos?: number | null
+          perc_iva?: number | null
+          perc_municipal?: number | null
+          perc_provincial?: number | null
           periodo: string
           proveedor_id: string
           saldo_pendiente?: number | null
           subtotal?: number
+          subtotal_bruto?: number | null
+          subtotal_neto?: number | null
           tipo?: string | null
           total?: number
+          total_descuentos?: number | null
+          total_factura?: number | null
           updated_at?: string | null
         }
         Update: {
           branch_id?: string
           condicion_pago?: string | null
+          costo_real?: number | null
           created_at?: string | null
           created_by?: string | null
           deleted_at?: string | null
@@ -1612,16 +1635,26 @@ export type Database = {
           factura_url?: string | null
           fecha_vencimiento?: string | null
           id?: string
+          imp_internos?: number | null
           iva?: number | null
+          iva_105?: number | null
+          iva_21?: number | null
           motivo_extraordinaria?: string | null
           observaciones?: string | null
           otros_impuestos?: number | null
+          perc_iva?: number | null
+          perc_municipal?: number | null
+          perc_provincial?: number | null
           periodo?: string
           proveedor_id?: string
           saldo_pendiente?: number | null
           subtotal?: number
+          subtotal_bruto?: number | null
+          subtotal_neto?: number | null
           tipo?: string | null
           total?: number
+          total_descuentos?: number | null
+          total_factura?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2194,11 +2227,15 @@ export type Database = {
           categoria_pl: string | null
           concepto_servicio_id: string | null
           created_at: string | null
+          descuento_monto: number | null
+          descuento_porcentaje: number | null
           factura_id: string
           id: string
           insumo_id: string | null
           iva_monto: number | null
           observaciones: string | null
+          precio_bruto: number | null
+          precio_neto: number | null
           precio_unitario: number
           precio_unitario_bruto: number | null
           rdo_category_code: string | null
@@ -2213,11 +2250,15 @@ export type Database = {
           categoria_pl?: string | null
           concepto_servicio_id?: string | null
           created_at?: string | null
+          descuento_monto?: number | null
+          descuento_porcentaje?: number | null
           factura_id: string
           id?: string
           insumo_id?: string | null
           iva_monto?: number | null
           observaciones?: string | null
+          precio_bruto?: number | null
+          precio_neto?: number | null
           precio_unitario: number
           precio_unitario_bruto?: number | null
           rdo_category_code?: string | null
@@ -2232,11 +2273,15 @@ export type Database = {
           categoria_pl?: string | null
           concepto_servicio_id?: string | null
           created_at?: string | null
+          descuento_monto?: number | null
+          descuento_porcentaje?: number | null
           factura_id?: string
           id?: string
           insumo_id?: string | null
           iva_monto?: number | null
           observaciones?: string | null
+          precio_bruto?: number | null
+          precio_neto?: number | null
           precio_unitario?: number
           precio_unitario_bruto?: number | null
           rdo_category_code?: string | null

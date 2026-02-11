@@ -36,6 +36,35 @@ export interface ItemFacturaFormData {
   alicuota_iva?: number | null;
   iva_monto?: number;
   precio_unitario_bruto?: number;
+  precio_bruto?: number;
+  descuento_porcentaje?: number;
+  descuento_monto?: number;
+  precio_neto?: number;
+}
+
+// === Fiscal detail types for CompraFormModal ===
+export interface ImpuestosFactura {
+  subtotal_bruto: number;
+  total_descuentos: number;
+  subtotal_neto: number;
+  imp_internos: number;
+  iva_21: number;
+  iva_105: number;
+  perc_iva: number;
+  perc_provincial: number;
+  perc_municipal: number;
+  total_factura: number;
+  costo_real: number;
+}
+
+/** Calculate costo_real: subtotal_neto + imp_internos + perc_provincial + perc_municipal */
+export function calcularCostoReal(imp: Pick<ImpuestosFactura, 'subtotal_neto' | 'imp_internos' | 'perc_provincial' | 'perc_municipal'>): number {
+  return (imp.subtotal_neto || 0) + (imp.imp_internos || 0) + (imp.perc_provincial || 0) + (imp.perc_municipal || 0);
+}
+
+/** Calculate crédito fiscal: IVA 21% + IVA 10.5% + Perc. IVA */
+export function calcularCreditoFiscal(imp: Pick<ImpuestosFactura, 'iva_21' | 'iva_105' | 'perc_iva'>): number {
+  return (imp.iva_21 || 0) + (imp.iva_105 || 0) + (imp.perc_iva || 0);
 }
 
 export const IVA_OPTIONS = [
