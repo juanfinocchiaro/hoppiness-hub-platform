@@ -371,57 +371,50 @@ function FichaTecnicaTab({ preparacionId, mutations, onClose }: { preparacionId:
       {items.length === 0 ? (
         <div className="py-10 text-center text-muted-foreground border rounded-lg">Sin ingredientes — agregá el primero</div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-1">
           {items.map((item, index) => {
             const isPrep = item.tipo_linea === 'preparacion';
             const costoUnit = isPrep ? (item.sub_preparacion?.costo_calculado || 0) : (item.insumo?.costo_por_unidad_base || 0);
             const subtotal = isPrep ? (item.cantidad || 0) * costoUnit : calcSubtotal(item.cantidad, costoUnit, item.unidad);
             return (
-              <div key={index} className="border rounded-lg p-3 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Select value={item.tipo_linea} onValueChange={(v) => updateItem(index, 'tipo_linea', v)}>
-                    <SelectTrigger className="h-8 w-[110px] text-xs shrink-0"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="insumo">Insumo</SelectItem>
-                      <SelectItem value="preparacion">Preparación</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <div className="flex-1 min-w-0">
-                    {isPrep ? (
-                      <Select value={item.sub_preparacion_id || 'none'} onValueChange={(v) => updateItem(index, 'sub_preparacion_id', v === 'none' ? '' : v)}>
-                        <SelectTrigger className="h-8"><SelectValue placeholder="Seleccionar preparación..." /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Seleccionar...</SelectItem>
-                          {preparacionesDisponibles.map((p: any) => (
-                            <SelectItem key={p.id} value={p.id}>{p.nombre} ({formatCurrency(p.costo_calculado || 0)})</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Select value={item.insumo_id || 'none'} onValueChange={(v) => updateItem(index, 'insumo_id', v === 'none' ? '' : v)}>
-                        <SelectTrigger className="h-8"><SelectValue placeholder="Seleccionar insumo..." /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Seleccionar...</SelectItem>
-                          {ingredientesDisponibles.map((ing: any) => (
-                            <SelectItem key={ing.id} value={ing.id}>{ing.nombre} (${ing.costo_por_unidad_base?.toFixed(2)}/{ing.unidad_base})</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => removeItem(index)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+              <div key={index} className="flex items-center gap-1.5 border rounded px-2 py-1.5 text-sm">
+                <Select value={item.tipo_linea} onValueChange={(v) => updateItem(index, 'tipo_linea', v)}>
+                  <SelectTrigger className="h-7 w-[90px] text-xs shrink-0"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="insumo">Insumo</SelectItem>
+                    <SelectItem value="preparacion">Preparación</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="flex-1 min-w-0">
+                  {isPrep ? (
+                    <Select value={item.sub_preparacion_id || 'none'} onValueChange={(v) => updateItem(index, 'sub_preparacion_id', v === 'none' ? '' : v)}>
+                      <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Seleccionar...</SelectItem>
+                        {preparacionesDisponibles.map((p: any) => (
+                          <SelectItem key={p.id} value={p.id}>{p.nombre} ({formatCurrency(p.costo_calculado || 0)})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Select value={item.insumo_id || 'none'} onValueChange={(v) => updateItem(index, 'insumo_id', v === 'none' ? '' : v)}>
+                      <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Seleccionar...</SelectItem>
+                        {ingredientesDisponibles.map((ing: any) => (
+                          <SelectItem key={ing.id} value={ing.id}>{ing.nombre} (${ing.costo_por_unidad_base?.toFixed(2)}/{ing.unidad_base})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-muted-foreground">Cant:</span>
-                    <Input type="number" step="0.01" value={item.cantidad || ''} onChange={(e) => updateItem(index, 'cantidad', Number(e.target.value))} className="h-7 w-20 text-sm" />
-                    <span className="text-muted-foreground">{item.unidad || '—'}</span>
-                  </div>
-                  <span className="text-muted-foreground ml-auto">×</span>
-                  <span className="font-mono">{costoUnit > 0 ? formatCurrency(costoUnit) : '—'}</span>
-                  <span className="text-muted-foreground">=</span>
-                  <span className="font-mono font-medium">{subtotal > 0 ? formatCurrency(subtotal) : '—'}</span>
-                </div>
+                <Input type="number" step="0.01" value={item.cantidad || ''} onChange={(e) => updateItem(index, 'cantidad', Number(e.target.value))} className="h-7 w-16 text-xs shrink-0" />
+                <span className="text-xs text-muted-foreground w-6 shrink-0">{item.unidad || '—'}</span>
+                <span className="text-xs text-muted-foreground shrink-0">×</span>
+                <span className="font-mono text-xs w-16 text-right shrink-0">{costoUnit > 0 ? formatCurrency(costoUnit) : '—'}</span>
+                <span className="text-xs text-muted-foreground shrink-0">=</span>
+                <span className="font-mono text-xs font-semibold w-20 text-right shrink-0">{subtotal > 0 ? formatCurrency(subtotal) : '—'}</span>
+                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeItem(index)}><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
               </div>
             );
           })}
