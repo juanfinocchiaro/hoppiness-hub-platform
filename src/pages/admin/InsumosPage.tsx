@@ -192,11 +192,13 @@ export default function InsumosPage() {
   };
 
   const renderProductoRow = (row: any) => {
-    const provName = row.proveedor_obligatorio?.razon_social || '—';
-    const margen = row.margen_porcentaje != null ? Number(row.margen_porcentaje) : null;
-    const margenColor =
-      margen != null && margen >= 60 ? 'border-green-500 text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400' :
-      margen != null && margen >= 40 ? 'border-yellow-500 text-yellow-600 bg-yellow-50 dark:bg-yellow-900/30 dark:text-yellow-400' :
+    const provName = row.proveedor_obligatorio?.razon_social || row.proveedor_sugerido?.razon_social;
+    const costo = Number(row.costo_por_unidad_base || 0);
+    const venta = Number(row.precio_venta || 0);
+    const cmv = venta > 0 && costo > 0 ? (costo / venta) * 100 : null;
+    const cmvColor =
+      cmv != null && cmv <= 30 ? 'border-green-500 text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400' :
+      cmv != null && cmv <= 45 ? 'border-yellow-500 text-yellow-600 bg-yellow-50 dark:bg-yellow-900/30 dark:text-yellow-400' :
       'border-red-500 text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400';
 
     return (
@@ -205,7 +207,7 @@ export default function InsumosPage() {
           <p className="font-medium">{row.nombre}</p>
           {row.descripcion && <p className="text-xs text-muted-foreground truncate max-w-[200px]">{row.descripcion}</p>}
         </TableCell>
-        <TableCell className="text-sm">{provName}</TableCell>
+        <TableCell className="text-sm">{provName || <span className="text-muted-foreground italic">—</span>}</TableCell>
         <TableCell className="text-sm">{row.rdo_categories?.name || '—'}</TableCell>
         <TableCell>
           {row.unidad_compra && (
@@ -226,9 +228,9 @@ export default function InsumosPage() {
             : '—'}
         </TableCell>
         <TableCell>
-          {margen != null && (
-            <Badge variant="outline" className={margenColor}>
-              {margen.toFixed(0)}%
+          {cmv != null && (
+            <Badge variant="outline" className={cmvColor}>
+              {cmv.toFixed(0)}%
             </Badge>
           )}
         </TableCell>
@@ -397,7 +399,7 @@ export default function InsumosPage() {
                   <SortableHead label="Presentación" sortKey="presentacion" {...headProps} />
                   <SortableHead label="Costo" sortKey="costo" {...headProps} />
                   <SortableHead label="P. Venta" sortKey="precio_venta" {...headProps} />
-                  <SortableHead label="Margen" sortKey="margen" {...headProps} />
+                  <SortableHead label="CMV" sortKey="margen" {...headProps} />
                   <TableHead className="w-[80px]" />
                 </TableRow>
               </TableHeader>
