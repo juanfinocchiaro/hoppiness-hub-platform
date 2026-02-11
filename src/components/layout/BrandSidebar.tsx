@@ -152,7 +152,6 @@ export function BrandSidebar() {
         {canSeeCarta && (
           <NavSectionGroup id="carta" label="Carta" icon={UtensilsCrossed} forceOpen={isCartaActive}>
             <NavItemButton to="/mimarca/carta" icon={BookOpen} label="Items de Venta" />
-            <NavItemButton to="/mimarca/carta/categorias" icon={FolderOpen} label="Categorías" />
           </NavSectionGroup>
         )}
 

@@ -236,7 +236,6 @@ const App = () => (
               
               {/* Carta */}
               <Route path="carta" element={<MenuCartaPage />} />
-              <Route path="carta/categorias" element={<CategoriasCartaPage />} />
               
               {/* Centro de Costos */}
               <Route path="centro-costos" element={<CentroCostosPage />} />
