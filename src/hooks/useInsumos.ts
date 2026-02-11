@@ -109,9 +109,10 @@ export function useInsumoMutations() {
       if (error) throw error;
       return result;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['insumos'] });
-      toast.success('Insumo creado');
+      const label = variables.tipo_item === 'producto' ? 'Producto' : variables.tipo_item === 'ingrediente' ? 'Ingrediente' : 'Insumo';
+      toast.success(`${label} creado`);
     },
     onError: (e) => toast.error(`Error: ${e.message}`),
   });
@@ -123,10 +124,13 @@ export function useInsumoMutations() {
         .update(data)
         .eq('id', id);
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['insumos'] });
-      toast.success('Insumo actualizado');
+      const tipo = variables.data.tipo_item;
+      const label = tipo === 'producto' ? 'Producto' : tipo === 'ingrediente' ? 'Ingrediente' : 'Insumo';
+      toast.success(`${label} actualizado`);
     },
     onError: (e) => toast.error(`Error: ${e.message}`),
   });
