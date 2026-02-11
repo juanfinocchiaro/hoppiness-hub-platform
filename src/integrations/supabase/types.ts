@@ -2327,6 +2327,171 @@ export type Database = {
           },
         ]
       }
+      item_carta_composicion: {
+        Row: {
+          cantidad: number
+          created_at: string | null
+          id: string
+          insumo_id: string | null
+          item_carta_id: string
+          orden: number | null
+          preparacion_id: string | null
+        }
+        Insert: {
+          cantidad?: number
+          created_at?: string | null
+          id?: string
+          insumo_id?: string | null
+          item_carta_id: string
+          orden?: number | null
+          preparacion_id?: string | null
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string | null
+          id?: string
+          insumo_id?: string | null
+          item_carta_id?: string
+          orden?: number | null
+          preparacion_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_carta_composicion_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_carta_composicion_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "items_carta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_carta_composicion_preparacion_id_fkey"
+            columns: ["preparacion_id"]
+            isOneToOne: false
+            referencedRelation: "preparaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_carta_precios_historial: {
+        Row: {
+          created_at: string | null
+          id: string
+          item_carta_id: string
+          motivo: string | null
+          precio_anterior: number | null
+          precio_nuevo: number
+          usuario_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          item_carta_id: string
+          motivo?: string | null
+          precio_anterior?: number | null
+          precio_nuevo: number
+          usuario_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          item_carta_id?: string
+          motivo?: string | null
+          precio_anterior?: number | null
+          precio_nuevo?: number
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_carta_precios_historial_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "items_carta"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      items_carta: {
+        Row: {
+          activo: boolean | null
+          categoria_carta_id: string | null
+          costo_total: number | null
+          created_at: string | null
+          deleted_at: string | null
+          descripcion: string | null
+          disponible_delivery: boolean | null
+          fc_actual: number | null
+          fc_objetivo: number | null
+          id: string
+          imagen_url: string | null
+          nombre: string
+          nombre_corto: string | null
+          orden: number | null
+          precio_base: number
+          rdo_category_code: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          categoria_carta_id?: string | null
+          costo_total?: number | null
+          created_at?: string | null
+          deleted_at?: string | null
+          descripcion?: string | null
+          disponible_delivery?: boolean | null
+          fc_actual?: number | null
+          fc_objetivo?: number | null
+          id?: string
+          imagen_url?: string | null
+          nombre: string
+          nombre_corto?: string | null
+          orden?: number | null
+          precio_base?: number
+          rdo_category_code?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          categoria_carta_id?: string | null
+          costo_total?: number | null
+          created_at?: string | null
+          deleted_at?: string | null
+          descripcion?: string | null
+          disponible_delivery?: boolean | null
+          fc_actual?: number | null
+          fc_objetivo?: number | null
+          id?: string
+          imagen_url?: string | null
+          nombre?: string
+          nombre_corto?: string | null
+          orden?: number | null
+          precio_base?: number
+          rdo_category_code?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "items_carta_categoria_carta_id_fkey"
+            columns: ["categoria_carta_id"]
+            isOneToOne: false
+            referencedRelation: "menu_categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_carta_rdo_category_code_fkey"
+            columns: ["rdo_category_code"]
+            isOneToOne: false
+            referencedRelation: "rdo_categories"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       items_factura: {
         Row: {
           afecta_costo_base: boolean | null
@@ -3323,6 +3488,135 @@ export type Database = {
           permission_key?: string
           permission_label?: string
           scope?: string
+        }
+        Relationships: []
+      }
+      preparacion_ingredientes: {
+        Row: {
+          cantidad: number
+          created_at: string | null
+          id: string
+          insumo_id: string
+          orden: number | null
+          preparacion_id: string
+          unidad: string
+        }
+        Insert: {
+          cantidad: number
+          created_at?: string | null
+          id?: string
+          insumo_id: string
+          orden?: number | null
+          preparacion_id: string
+          unidad?: string
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string | null
+          id?: string
+          insumo_id?: string
+          orden?: number | null
+          preparacion_id?: string
+          unidad?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preparacion_ingredientes_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "preparacion_ingredientes_preparacion_id_fkey"
+            columns: ["preparacion_id"]
+            isOneToOne: false
+            referencedRelation: "preparaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      preparacion_opciones: {
+        Row: {
+          created_at: string | null
+          id: string
+          insumo_id: string
+          orden: number | null
+          preparacion_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          insumo_id: string
+          orden?: number | null
+          preparacion_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          insumo_id?: string
+          orden?: number | null
+          preparacion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preparacion_opciones_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "preparacion_opciones_preparacion_id_fkey"
+            columns: ["preparacion_id"]
+            isOneToOne: false
+            referencedRelation: "preparaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      preparaciones: {
+        Row: {
+          activo: boolean | null
+          costo_calculado: number | null
+          costo_manual: number | null
+          created_at: string | null
+          deleted_at: string | null
+          descripcion: string | null
+          es_intercambiable: boolean | null
+          id: string
+          metodo_costeo: string | null
+          nombre: string
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          costo_calculado?: number | null
+          costo_manual?: number | null
+          created_at?: string | null
+          deleted_at?: string | null
+          descripcion?: string | null
+          es_intercambiable?: boolean | null
+          id?: string
+          metodo_costeo?: string | null
+          nombre: string
+          tipo?: string
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          costo_calculado?: number | null
+          costo_manual?: number | null
+          created_at?: string | null
+          deleted_at?: string | null
+          descripcion?: string | null
+          es_intercambiable?: boolean | null
+          id?: string
+          metodo_costeo?: string | null
+          nombre?: string
+          tipo?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -4937,6 +5231,14 @@ export type Database = {
         | { Args: { _user_id: string }; Returns: boolean }
       is_staff_member: { Args: { _user_id: string }; Returns: boolean }
       is_superadmin: { Args: { _user_id: string }; Returns: boolean }
+      recalcular_costo_item_carta: {
+        Args: { _item_id: string }
+        Returns: undefined
+      }
+      recalcular_costo_preparacion: {
+        Args: { _prep_id: string }
+        Returns: number
+      }
       sync_orphan_users: {
         Args: never
         Returns: {
