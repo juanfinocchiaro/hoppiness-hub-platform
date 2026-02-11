@@ -155,7 +155,7 @@ function EmployeeRow({ summary, expanded, onToggle }: {
                     >
                       <div className="flex items-center gap-2">
                         <CalendarDays className="w-4 h-4 text-muted-foreground" />
-                        <span>{format(new Date(entry.date), 'EEE d MMM', { locale: es })}</span>
+                        <span>{format(new Date(entry.date + 'T12:00:00'), 'EEE d MMM', { locale: es })}</span>
                         {entry.isHoliday && <Badge variant="outline" className="text-xs">Feriado</Badge>}
                         {entry.isDayOff && <Badge variant="outline" className="text-xs">Franco</Badge>}
                       </div>
