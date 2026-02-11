@@ -77,7 +77,7 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
   const margenBruto = form.precio_venta - costoUnitario;
 
   const handleSubmit = async () => {
-    if (!form.nombre.trim() || !form.precio_venta) return;
+    if (!form.nombre.trim()) return;
 
     const payload: any = {
       nombre: form.nombre,
@@ -166,44 +166,6 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
             )}
           </FormSection>
 
-          <FormSection title="Precio de venta" icon={DollarSign}>
-            <div className="grid grid-cols-2 gap-4">
-              <FormRow label="Precio de venta ($)" required>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={form.precio_venta || ''}
-                  onChange={(e) => set('precio_venta', Number(e.target.value))}
-                  placeholder="Ej: 1500"
-                />
-              </FormRow>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">CMV</p>
-                {form.precio_venta > 0 && costoUnitario > 0 ? (
-                  <div className="h-9 flex items-center gap-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cmvColor}`}>
-                      {cmvPorcentaje.toFixed(1)}%
-                    </span>
-                    <span className="font-mono text-sm text-muted-foreground">
-                      (Margen: ${margenBruto.toLocaleString('es-AR', { minimumFractionDigits: 2 })})
-                    </span>
-                  </div>
-                ) : (
-                  <p className="h-9 flex items-center text-sm text-muted-foreground">Completá los precios</p>
-                )}
-              </div>
-            </div>
-
-            {form.precio_venta > 0 && costoUnitario > 0 && (
-              <div className="flex items-center justify-between text-sm bg-muted/50 p-3 rounded-lg mt-2">
-                <span>Costo: <strong>${costoUnitario.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong></span>
-                <span className="text-muted-foreground">→</span>
-                <span>Venta: <strong>${form.precio_venta.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong></span>
-                <span className="text-muted-foreground">→</span>
-                <span className="text-green-600 dark:text-green-400">Ganás: <strong>${margenBruto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong></span>
-              </div>
-            )}
-          </FormSection>
 
           <div className="grid grid-cols-3 gap-3">
             <FormRow label="Nivel de control">
@@ -242,7 +204,7 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
 
           <StickyActions>
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <LoadingButton loading={isPending} onClick={handleSubmit} disabled={!form.nombre || !form.precio_venta}>
+            <LoadingButton loading={isPending} onClick={handleSubmit} disabled={!form.nombre}>
               {isEdit ? 'Guardar' : 'Crear Producto'}
             </LoadingButton>
           </StickyActions>

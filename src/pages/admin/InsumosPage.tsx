@@ -193,13 +193,6 @@ export default function InsumosPage() {
 
   const renderProductoRow = (row: any) => {
     const provName = row.proveedor_obligatorio?.razon_social || row.proveedor_sugerido?.razon_social;
-    const costo = Number(row.costo_por_unidad_base || 0);
-    const venta = Number(row.precio_venta || 0);
-    const cmv = venta > 0 && costo > 0 ? (costo / venta) * 100 : null;
-    const cmvColor =
-      cmv != null && cmv <= 30 ? 'border-green-500 text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400' :
-      cmv != null && cmv <= 45 ? 'border-yellow-500 text-yellow-600 bg-yellow-50 dark:bg-yellow-900/30 dark:text-yellow-400' :
-      'border-red-500 text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400';
 
     return (
       <TableRow key={row.id}>
@@ -221,18 +214,6 @@ export default function InsumosPage() {
           {row.costo_por_unidad_base
             ? <span className="font-mono text-sm">${Number(row.costo_por_unidad_base).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
             : '—'}
-        </TableCell>
-        <TableCell>
-          {row.precio_venta
-            ? <span className="font-mono font-medium text-sm">${Number(row.precio_venta).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-            : '—'}
-        </TableCell>
-        <TableCell>
-          {cmv != null && (
-            <Badge variant="outline" className={cmvColor}>
-              {cmv.toFixed(0)}%
-            </Badge>
-          )}
         </TableCell>
         <TableCell>
           <div className="flex gap-1 justify-end">
@@ -398,16 +379,14 @@ export default function InsumosPage() {
                   <SortableHead label="Categoría" sortKey="categoria" {...headProps} />
                   <SortableHead label="Presentación" sortKey="presentacion" {...headProps} />
                   <SortableHead label="Costo" sortKey="costo" {...headProps} />
-                  <SortableHead label="P. Venta" sortKey="precio_venta" {...headProps} />
-                  <SortableHead label="CMV" sortKey="margen" {...headProps} />
                   <TableHead className="w-[80px]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? <SkeletonRows cols={8} /> : (() => {
+              {isLoading ? <SkeletonRows cols={6} /> : (() => {
                   const rows = proveedorView === 'obligatorio' ? filteredProductosOblig : filteredProductosSugeridos;
                   return !rows?.length ? (
-                    <TableRow><TableCell colSpan={8} className="h-40">
+                    <TableRow><TableCell colSpan={6} className="h-40">
                       <EmptyState icon={ShoppingBag} title={proveedorView === 'obligatorio' ? 'Sin productos obligatorios' : 'Sin productos sugeridos'} description={proveedorView === 'obligatorio' ? 'Agregá productos con proveedor obligatorio' : 'Agregá productos con proveedor sugerido'} />
                     </TableCell></TableRow>
                   ) : rows.map((row: any) => renderProductoRow(row));
