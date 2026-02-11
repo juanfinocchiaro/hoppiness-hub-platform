@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormRow, FormSection } from '@/components/ui/forms-pro';
 import { StickyActions } from '@/components/ui/forms-pro';
 import { LoadingButton } from '@/components/ui/loading-button';
@@ -17,7 +18,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/states';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Plus, Pencil, Trash2, FileText, ChefHat, Package, Save, Shuffle,
+  Plus, Pencil, Trash2, ChefHat, Package, Save, Shuffle,
 } from 'lucide-react';
 import {
   usePreparaciones,
@@ -46,13 +47,11 @@ function calcSubtotal(cantidad: number, costoUnit: number, unidad: string) {
 
 export default function PreparacionesPage() {
   const { data: preparaciones, isLoading } = usePreparaciones();
-  const { data: insumos } = useInsumos();
   const mutations = usePreparacionMutations();
 
   const [search, setSearch] = useState('');
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [editingPrep, setEditingPrep] = useState<any>(null);
-  const [fichaModalPrep, setFichaModalPrep] = useState<any>(null);
+  const [modalPrep, setModalPrep] = useState<any>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const [deletingPrep, setDeletingPrep] = useState<any>(null);
 
   const filteredPreps = useMemo(() => {
@@ -62,34 +61,9 @@ export default function PreparacionesPage() {
     }) || [];
   }, [preparaciones, search]);
 
-  // ─── Create/Edit Modal State ───
-  const [form, setForm] = useState({ nombre: '', descripcion: '', tipo: 'elaborado', es_intercambiable: false, metodo_costeo: 'promedio' });
-  const set = (k: string, v: any) => setForm(prev => ({ ...prev, [k]: v }));
-
-  useEffect(() => {
-    if (editingPrep) {
-      setForm({
-        nombre: editingPrep.nombre,
-        descripcion: editingPrep.descripcion || '',
-        tipo: editingPrep.tipo,
-        es_intercambiable: editingPrep.es_intercambiable || false,
-        metodo_costeo: editingPrep.metodo_costeo || 'promedio',
-      });
-    } else {
-      setForm({ nombre: '', descripcion: '', tipo: 'elaborado', es_intercambiable: false, metodo_costeo: 'promedio' });
-    }
-  }, [editingPrep, createModalOpen]);
-
-  const handleSavePrep = async () => {
-    if (!form.nombre.trim()) return;
-    if (editingPrep) {
-      await mutations.update.mutateAsync({ id: editingPrep.id, data: form });
-    } else {
-      await mutations.create.mutateAsync(form);
-    }
-    setCreateModalOpen(false);
-    setEditingPrep(null);
-  };
+  const openCreate = () => { setModalPrep(null); setIsCreating(true); };
+  const openEdit = (prep: any) => { setModalPrep(prep); setIsCreating(true); };
+  const closeModal = () => { setModalPrep(null); setIsCreating(false); };
 
   if (isLoading) {
     return (
@@ -108,7 +82,7 @@ export default function PreparacionesPage() {
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <DataToolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="Buscar preparación..." />
-        <Button onClick={() => { setEditingPrep(null); setCreateModalOpen(true); }}>
+        <Button onClick={openCreate}>
           <Plus className="w-4 h-4 mr-2" /> Nueva Preparación
         </Button>
       </div>
@@ -127,12 +101,12 @@ export default function PreparacionesPage() {
                 <TableHead className="w-[250px]">Nombre</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead className="text-right">Costo Calculado</TableHead>
-                <TableHead className="w-[180px]">Acciones</TableHead>
+                <TableHead className="w-[120px]">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredPreps.map((prep: any) => (
-                <TableRow key={prep.id}>
+                <TableRow key={prep.id} className="cursor-pointer" onClick={() => openEdit(prep)}>
                   <TableCell>
                     <div>
                       <p className="font-medium">{prep.nombre}</p>
@@ -153,12 +127,8 @@ export default function PreparacionesPage() {
                     {prep.costo_calculado > 0 ? formatCurrency(prep.costo_calculado) : '—'}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setFichaModalPrep(prep)}>
-                        <FileText className="w-3.5 h-3.5 mr-1" />
-                        {prep.tipo === 'elaborado' ? 'Ficha' : 'Opciones'}
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => { setEditingPrep(prep); setCreateModalOpen(true); }}>
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(prep)}>
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setDeletingPrep(prep)}>
@@ -173,13 +143,89 @@ export default function PreparacionesPage() {
         </div>
       )}
 
-      {/* ═══ CREATE/EDIT MODAL ═══ */}
-      <Dialog open={createModalOpen} onOpenChange={(v) => { setCreateModalOpen(v); if (!v) setEditingPrep(null); }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingPrep ? 'Editar' : 'Nueva'} Preparación</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
+      {/* ═══ UNIFIED CREATE/EDIT + FICHA MODAL ═══ */}
+      {isCreating && (
+        <PreparacionFullModal
+          open={isCreating}
+          onOpenChange={(v) => { if (!v) closeModal(); }}
+          preparacion={modalPrep}
+          mutations={mutations}
+        />
+      )}
+
+      <ConfirmDialog
+        open={!!deletingPrep}
+        onOpenChange={() => setDeletingPrep(null)}
+        title="Eliminar preparación"
+        description={`¿Eliminar "${deletingPrep?.nombre}"? Los items de carta que la usen perderán su referencia.`}
+        confirmLabel="Eliminar"
+        variant="destructive"
+        onConfirm={async () => {
+          await mutations.softDelete.mutateAsync(deletingPrep.id);
+          setDeletingPrep(null);
+        }}
+      />
+    </div>
+  );
+}
+
+// ═══ UNIFIED MODAL: General + Ficha Técnica / Opciones ═══
+function PreparacionFullModal({ open, onOpenChange, preparacion, mutations }: {
+  open: boolean; onOpenChange: (v: boolean) => void; preparacion: any; mutations: any;
+}) {
+  const isEdit = !!preparacion;
+  const [form, setForm] = useState({ nombre: '', descripcion: '', tipo: 'elaborado', es_intercambiable: false, metodo_costeo: 'promedio' });
+  const set = (k: string, v: any) => setForm(prev => ({ ...prev, [k]: v }));
+  const [savedId, setSavedId] = useState<string | null>(preparacion?.id || null);
+  const [activeTab, setActiveTab] = useState('general');
+
+  useEffect(() => {
+    if (preparacion) {
+      setForm({
+        nombre: preparacion.nombre,
+        descripcion: preparacion.descripcion || '',
+        tipo: preparacion.tipo,
+        es_intercambiable: preparacion.es_intercambiable || false,
+        metodo_costeo: preparacion.metodo_costeo || 'promedio',
+      });
+      setSavedId(preparacion.id);
+    } else {
+      setForm({ nombre: '', descripcion: '', tipo: 'elaborado', es_intercambiable: false, metodo_costeo: 'promedio' });
+      setSavedId(null);
+    }
+  }, [preparacion, open]);
+
+  const handleSaveGeneral = async () => {
+    if (!form.nombre.trim()) return;
+    if (isEdit || savedId) {
+      await mutations.update.mutateAsync({ id: savedId || preparacion.id, data: form });
+    } else {
+      const result = await mutations.create.mutateAsync(form);
+      setSavedId(result.id);
+      // Auto-switch to ficha tab after creation
+      setActiveTab('ficha');
+    }
+  };
+
+  const effectiveTipo = form.tipo;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{isEdit ? preparacion.nombre : 'Nueva Preparación'}</DialogTitle>
+        </DialogHeader>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="w-full">
+            <TabsTrigger value="general" className="flex-1">General</TabsTrigger>
+            <TabsTrigger value="ficha" className="flex-1" disabled={!savedId}>
+              {effectiveTipo === 'elaborado' ? '🍳 Ficha Técnica' : '📦 Opciones'}
+            </TabsTrigger>
+          </TabsList>
+
+          {/* ─── TAB: General ─── */}
+          <TabsContent value="general" className="space-y-4 mt-4">
             <FormRow label="Nombre" required>
               <Input value={form.nombre} onChange={(e) => set('nombre', e.target.value)} placeholder="Ej: Hamburguesa Clásica" />
             </FormRow>
@@ -191,12 +237,12 @@ export default function PreparacionesPage() {
                 <button type="button" onClick={() => set('tipo', 'elaborado')}
                   className={`p-3 rounded-lg border-2 text-left transition-colors ${form.tipo === 'elaborado' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}>
                   <p className="font-medium text-sm">🍳 Elaborado</p>
-                  <p className="text-xs text-muted-foreground">Tiene ficha técnica</p>
+                  <p className="text-xs text-muted-foreground">Tiene ficha técnica con ingredientes</p>
                 </button>
                 <button type="button" onClick={() => set('tipo', 'componente_terminado')}
                   className={`p-3 rounded-lg border-2 text-left transition-colors ${form.tipo === 'componente_terminado' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}>
                   <p className="font-medium text-sm">📦 Componente</p>
-                  <p className="text-xs text-muted-foreground">Porción de terminado</p>
+                  <p className="text-xs text-muted-foreground">Porción de insumo terminado</p>
                 </button>
               </div>
             </FormSection>
@@ -222,53 +268,32 @@ export default function PreparacionesPage() {
             )}
 
             <StickyActions>
-              <Button variant="outline" onClick={() => { setCreateModalOpen(false); setEditingPrep(null); }}>Cancelar</Button>
-              <LoadingButton loading={mutations.create.isPending || mutations.update.isPending} onClick={handleSavePrep} disabled={!form.nombre}>
-                {editingPrep ? 'Guardar' : 'Crear'}
+              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+              <LoadingButton loading={mutations.create.isPending || mutations.update.isPending} onClick={handleSaveGeneral} disabled={!form.nombre}>
+                {savedId ? 'Guardar Cambios' : 'Crear y Continuar →'}
               </LoadingButton>
             </StickyActions>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </TabsContent>
 
-      {/* ═══ FICHA TÉCNICA / OPCIONES MODAL ═══ */}
-      {fichaModalPrep && (
-        fichaModalPrep.tipo === 'elaborado' ? (
-          <FichaTecnicaPreparacionModal
-            open={!!fichaModalPrep}
-            onOpenChange={() => setFichaModalPrep(null)}
-            preparacion={fichaModalPrep}
-          />
-        ) : (
-          <OpcionesPreparacionModal
-            open={!!fichaModalPrep}
-            onOpenChange={() => setFichaModalPrep(null)}
-            preparacion={fichaModalPrep}
-          />
-        )
-      )}
-
-      <ConfirmDialog
-        open={!!deletingPrep}
-        onOpenChange={() => setDeletingPrep(null)}
-        title="Eliminar preparación"
-        description={`¿Eliminar "${deletingPrep?.nombre}"? Los items de carta que la usen perderán su referencia.`}
-        confirmLabel="Eliminar"
-        variant="destructive"
-        onConfirm={async () => {
-          await mutations.softDelete.mutateAsync(deletingPrep.id);
-          setDeletingPrep(null);
-        }}
-      />
-    </div>
+          {/* ─── TAB: Ficha Técnica / Opciones ─── */}
+          <TabsContent value="ficha" className="mt-4">
+            {savedId && effectiveTipo === 'elaborado' && (
+              <FichaTecnicaTab preparacionId={savedId} mutations={mutations} />
+            )}
+            {savedId && effectiveTipo === 'componente_terminado' && (
+              <OpcionesTab preparacionId={savedId} mutations={mutations} />
+            )}
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-// ═══ FICHA TÉCNICA MODAL (Elaborado) ═══
-function FichaTecnicaPreparacionModal({ open, onOpenChange, preparacion }: { open: boolean; onOpenChange: (v: boolean) => void; preparacion: any }) {
-  const { data: ingredientesActuales } = usePreparacionIngredientes(preparacion?.id);
+// ═══ FICHA TÉCNICA TAB (Elaborado) ═══
+function FichaTecnicaTab({ preparacionId, mutations }: { preparacionId: string; mutations: any }) {
+  const { data: ingredientesActuales } = usePreparacionIngredientes(preparacionId);
   const { data: insumos } = useInsumos();
-  const mutations = usePreparacionMutations();
 
   const ingredientesDisponibles = useMemo(() => {
     return insumos?.filter((i: any) => i.tipo_item === 'ingrediente' || i.tipo_item === 'insumo') || [];
@@ -287,7 +312,7 @@ function FichaTecnicaPreparacionModal({ open, onOpenChange, preparacion }: { ope
       })));
       setHasChanges(false);
     }
-  }, [ingredientesActuales, open]);
+  }, [ingredientesActuales]);
 
   const addItem = () => { setItems([...items, { insumo_id: '', cantidad: 0, unidad: 'g', insumo: null }]); setHasChanges(true); };
   const removeItem = (i: number) => { setItems(items.filter((_, idx) => idx !== i)); setHasChanges(true); };
@@ -303,88 +328,82 @@ function FichaTecnicaPreparacionModal({ open, onOpenChange, preparacion }: { ope
 
   const handleSave = async () => {
     await mutations.saveIngredientes.mutateAsync({
-      preparacion_id: preparacion.id,
+      preparacion_id: preparacionId,
       items: items.filter(i => i.insumo_id && i.cantidad > 0),
     });
     setHasChanges(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Ficha Técnica: {preparacion.nombre}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[280px]">Ingrediente</TableHead>
-                  <TableHead className="w-[100px]">Cantidad</TableHead>
-                  <TableHead className="w-[120px]">Unidad</TableHead>
-                  <TableHead className="text-right">Costo Unit.</TableHead>
-                  <TableHead className="text-right">Subtotal</TableHead>
-                  <TableHead className="w-[50px]" />
+    <div className="space-y-4">
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[250px]">Ingrediente</TableHead>
+              <TableHead className="w-[100px]">Cantidad</TableHead>
+              <TableHead className="w-[120px]">Unidad</TableHead>
+              <TableHead className="text-right">Costo Unit.</TableHead>
+              <TableHead className="text-right">Subtotal</TableHead>
+              <TableHead className="w-[50px]" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.length === 0 ? (
+              <TableRow><TableCell colSpan={6} className="h-24 text-center text-muted-foreground">Sin ingredientes — agregá el primero</TableCell></TableRow>
+            ) : items.map((item, index) => {
+              const costoUnit = item.insumo?.costo_por_unidad_base || 0;
+              const subtotal = calcSubtotal(item.cantidad, costoUnit, item.unidad);
+              return (
+                <TableRow key={index}>
+                  <TableCell>
+                    <Select value={item.insumo_id || 'none'} onValueChange={(v) => updateItem(index, 'insumo_id', v === 'none' ? '' : v)}>
+                      <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Seleccionar...</SelectItem>
+                        {ingredientesDisponibles.map((ing: any) => (
+                          <SelectItem key={ing.id} value={ing.id}>{ing.nombre} (${ing.costo_por_unidad_base?.toFixed(2)}/{ing.unidad_base})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell><Input type="number" step="0.01" value={item.cantidad || ''} onChange={(e) => updateItem(index, 'cantidad', Number(e.target.value))} className="w-24" /></TableCell>
+                  <TableCell>
+                    <Select value={item.unidad} onValueChange={(v) => updateItem(index, 'unidad', v)}>
+                      <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+                      <SelectContent>{UNIDADES.map((u) => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm">{costoUnit > 0 ? formatCurrency(costoUnit) : '—'}</TableCell>
+                  <TableCell className="text-right font-mono">{subtotal > 0 ? formatCurrency(subtotal) : '—'}</TableCell>
+                  <TableCell><Button variant="ghost" size="icon" onClick={() => removeItem(index)}><Trash2 className="w-4 h-4 text-destructive" /></Button></TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="h-24 text-center text-muted-foreground">Sin ingredientes</TableCell></TableRow>
-                ) : items.map((item, index) => {
-                  const costoUnit = item.insumo?.costo_por_unidad_base || 0;
-                  const subtotal = calcSubtotal(item.cantidad, costoUnit, item.unidad);
-                  return (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <Select value={item.insumo_id || 'none'} onValueChange={(v) => updateItem(index, 'insumo_id', v === 'none' ? '' : v)}>
-                          <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Seleccionar...</SelectItem>
-                            {ingredientesDisponibles.map((ing: any) => (
-                              <SelectItem key={ing.id} value={ing.id}>{ing.nombre} (${ing.costo_por_unidad_base?.toFixed(2)}/{ing.unidad_base})</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell><Input type="number" step="0.01" value={item.cantidad || ''} onChange={(e) => updateItem(index, 'cantidad', Number(e.target.value))} className="w-24" /></TableCell>
-                      <TableCell>
-                        <Select value={item.unidad} onValueChange={(v) => updateItem(index, 'unidad', v)}>
-                          <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
-                          <SelectContent>{UNIDADES.map((u) => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-sm">{costoUnit > 0 ? formatCurrency(costoUnit) : '—'}</TableCell>
-                      <TableCell className="text-right font-mono">{subtotal > 0 ? formatCurrency(subtotal) : '—'}</TableCell>
-                      <TableCell><Button variant="ghost" size="icon" onClick={() => removeItem(index)}><Trash2 className="w-4 h-4 text-destructive" /></Button></TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-          <Button variant="outline" onClick={addItem} className="w-full"><Plus className="w-4 h-4 mr-2" /> Agregar Ingrediente</Button>
-          <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg flex justify-between items-center">
-            <div>
-              <p className="text-sm text-muted-foreground">Costo Total</p>
-              <p className="text-2xl font-bold font-mono text-primary">{formatCurrency(costoTotal)}</p>
-            </div>
-          </div>
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>{hasChanges ? 'Cancelar' : 'Cerrar'}</Button>
-            {hasChanges && <LoadingButton loading={mutations.saveIngredientes.isPending} onClick={handleSave}><Save className="w-4 h-4 mr-2" /> Guardar</LoadingButton>}
-          </div>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+      <Button variant="outline" onClick={addItem} className="w-full"><Plus className="w-4 h-4 mr-2" /> Agregar Ingrediente</Button>
+
+      <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg flex justify-between items-center">
+        <div>
+          <p className="text-sm text-muted-foreground">Costo Total de la Preparación</p>
+          <p className="text-2xl font-bold font-mono text-primary">{formatCurrency(costoTotal)}</p>
         </div>
-      </DialogContent>
-    </Dialog>
+        {hasChanges && (
+          <LoadingButton loading={mutations.saveIngredientes.isPending} onClick={handleSave}>
+            <Save className="w-4 h-4 mr-2" /> Guardar Ficha
+          </LoadingButton>
+        )}
+      </div>
+    </div>
   );
 }
 
-// ═══ OPCIONES MODAL (Componente Terminado) ═══
-function OpcionesPreparacionModal({ open, onOpenChange, preparacion }: { open: boolean; onOpenChange: (v: boolean) => void; preparacion: any }) {
-  const { data: opcionesActuales } = usePreparacionOpciones(preparacion?.id);
+// ═══ OPCIONES TAB (Componente Terminado) ═══
+function OpcionesTab({ preparacionId, mutations }: { preparacionId: string; mutations: any }) {
+  const { data: opcionesActuales } = usePreparacionOpciones(preparacionId);
   const { data: insumos } = useInsumos();
-  const mutations = usePreparacionMutations();
 
   const productosDisponibles = useMemo(() => insumos?.filter((i: any) => i.tipo_item === 'producto') || [], [insumos]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -395,7 +414,7 @@ function OpcionesPreparacionModal({ open, onOpenChange, preparacion }: { open: b
       setSelectedIds(opcionesActuales.map((o: any) => o.insumo_id));
       setHasChanges(false);
     }
-  }, [opcionesActuales, open]);
+  }, [opcionesActuales]);
 
   const toggleOption = (id: string) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -403,40 +422,36 @@ function OpcionesPreparacionModal({ open, onOpenChange, preparacion }: { open: b
   };
 
   const handleSave = async () => {
-    await mutations.saveOpciones.mutateAsync({ preparacion_id: preparacion.id, insumo_ids: selectedIds });
+    await mutations.saveOpciones.mutateAsync({ preparacion_id: preparacionId, insumo_ids: selectedIds });
     setHasChanges(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Opciones: {preparacion.nombre}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">Seleccioná los productos intercambiables para este componente:</p>
-          <div className="space-y-2 max-h-[300px] overflow-y-auto">
-            {productosDisponibles.map((prod: any) => (
-              <button
-                key={prod.id}
-                type="button"
-                onClick={() => toggleOption(prod.id)}
-                className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-colors text-left ${selectedIds.includes(prod.id) ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}
-              >
-                <div>
-                  <p className="font-medium text-sm">{prod.nombre}</p>
-                  <p className="text-xs text-muted-foreground">{formatCurrency(prod.costo_por_unidad_base || 0)}</p>
-                </div>
-                {selectedIds.includes(prod.id) && <Badge variant="default">✓</Badge>}
-              </button>
-            ))}
-          </div>
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cerrar</Button>
-            {hasChanges && <LoadingButton loading={mutations.saveOpciones.isPending} onClick={handleSave}><Save className="w-4 h-4 mr-2" /> Guardar</LoadingButton>}
-          </div>
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">Seleccioná los productos intercambiables para este componente:</p>
+      <div className="space-y-2 max-h-[300px] overflow-y-auto">
+        {productosDisponibles.map((prod: any) => (
+          <button
+            key={prod.id}
+            type="button"
+            onClick={() => toggleOption(prod.id)}
+            className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-colors text-left ${selectedIds.includes(prod.id) ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}
+          >
+            <div>
+              <p className="font-medium text-sm">{prod.nombre}</p>
+              <p className="text-xs text-muted-foreground">{formatCurrency(prod.costo_por_unidad_base || 0)}</p>
+            </div>
+            {selectedIds.includes(prod.id) && <Badge variant="default">✓</Badge>}
+          </button>
+        ))}
+      </div>
+      {hasChanges && (
+        <div className="flex justify-end">
+          <LoadingButton loading={mutations.saveOpciones.isPending} onClick={handleSave}>
+            <Save className="w-4 h-4 mr-2" /> Guardar Opciones
+          </LoadingButton>
         </div>
-      </DialogContent>
-    </Dialog>
+      )}
+    </div>
   );
 }
