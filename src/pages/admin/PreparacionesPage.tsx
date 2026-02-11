@@ -304,7 +304,7 @@ function FichaTecnicaTab({ preparacionId, mutations, onClose }: { preparacionId:
 
   useEffect(() => {
     if (ingredientesActuales) {
-      setItems(ingredientesActuales.map((item: any) => ({
+      const mapped = ingredientesActuales.map((item: any) => ({
         tipo_linea: item.sub_preparacion_id ? 'preparacion' : 'insumo',
         insumo_id: item.insumo_id || '',
         sub_preparacion_id: item.sub_preparacion_id || '',
@@ -312,7 +312,17 @@ function FichaTecnicaTab({ preparacionId, mutations, onClose }: { preparacionId:
         unidad: item.unidad,
         insumo: item.insumos,
         sub_preparacion: item.preparaciones,
-      })));
+      }));
+      mapped.sort((a: any, b: any) => {
+        const costA = a.tipo_linea === 'preparacion'
+          ? (a.cantidad || 0) * (a.sub_preparacion?.costo_calculado || 0)
+          : calcSubtotal(a.cantidad, a.insumo?.costo_por_unidad_base || 0, a.unidad);
+        const costB = b.tipo_linea === 'preparacion'
+          ? (b.cantidad || 0) * (b.sub_preparacion?.costo_calculado || 0)
+          : calcSubtotal(b.cantidad, b.insumo?.costo_por_unidad_base || 0, b.unidad);
+        return costB - costA;
+      });
+      setItems(mapped);
       setHasChanges(false);
     }
   }, [ingredientesActuales]);
