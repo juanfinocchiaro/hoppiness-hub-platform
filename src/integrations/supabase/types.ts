@@ -2360,9 +2360,7 @@ export type Database = {
       item_carta_composicion: {
         Row: {
           cantidad: number
-          costo_promedio_override: number | null
           created_at: string | null
-          es_opcional: boolean
           id: string
           insumo_id: string | null
           item_carta_id: string
@@ -2371,9 +2369,7 @@ export type Database = {
         }
         Insert: {
           cantidad?: number
-          costo_promedio_override?: number | null
           created_at?: string | null
-          es_opcional?: boolean
           id?: string
           insumo_id?: string | null
           item_carta_id: string
@@ -2382,9 +2378,7 @@ export type Database = {
         }
         Update: {
           cantidad?: number
-          costo_promedio_override?: number | null
           created_at?: string | null
-          es_opcional?: boolean
           id?: string
           insumo_id?: string | null
           item_carta_id?: string
@@ -2408,6 +2402,96 @@ export type Database = {
           },
           {
             foreignKeyName: "item_carta_composicion_preparacion_id_fkey"
+            columns: ["preparacion_id"]
+            isOneToOne: false
+            referencedRelation: "preparaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_carta_grupo_opcional: {
+        Row: {
+          costo_promedio: number | null
+          created_at: string
+          id: string
+          item_carta_id: string
+          nombre: string
+          orden: number
+          updated_at: string
+        }
+        Insert: {
+          costo_promedio?: number | null
+          created_at?: string
+          id?: string
+          item_carta_id: string
+          nombre: string
+          orden?: number
+          updated_at?: string
+        }
+        Update: {
+          costo_promedio?: number | null
+          created_at?: string
+          id?: string
+          item_carta_id?: string
+          nombre?: string
+          orden?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_carta_grupo_opcional_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "items_carta"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_carta_grupo_opcional_items: {
+        Row: {
+          cantidad: number
+          costo_unitario: number | null
+          created_at: string
+          grupo_id: string
+          id: string
+          insumo_id: string | null
+          preparacion_id: string | null
+        }
+        Insert: {
+          cantidad?: number
+          costo_unitario?: number | null
+          created_at?: string
+          grupo_id: string
+          id?: string
+          insumo_id?: string | null
+          preparacion_id?: string | null
+        }
+        Update: {
+          cantidad?: number
+          costo_unitario?: number | null
+          created_at?: string
+          grupo_id?: string
+          id?: string
+          insumo_id?: string | null
+          preparacion_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_carta_grupo_opcional_items_grupo_id_fkey"
+            columns: ["grupo_id"]
+            isOneToOne: false
+            referencedRelation: "item_carta_grupo_opcional"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_carta_grupo_opcional_items_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_carta_grupo_opcional_items_preparacion_id_fkey"
             columns: ["preparacion_id"]
             isOneToOne: false
             referencedRelation: "preparaciones"

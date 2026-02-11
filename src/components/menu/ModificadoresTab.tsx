@@ -5,12 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Ban, PlusCircle, ArrowRightLeft, X } from 'lucide-react';
+import { Plus, Trash2, Ban, PlusCircle, ArrowRightLeft, X, Package } from 'lucide-react';
 import { useModificadores, useModificadoresMutations } from '@/hooks/useModificadores';
 import { useInsumos } from '@/hooks/useInsumos';
 import { usePreparaciones } from '@/hooks/usePreparaciones';
 import { useItemCartaComposicion } from '@/hooks/useItemsCarta';
 import { useItemIngredientesDeepList } from '@/hooks/useItemIngredientesDeepList';
+import { useGruposOpcionales } from '@/hooks/useGruposOpcionales';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const formatCurrency = (value: number) =>
@@ -27,6 +28,7 @@ export function ModificadoresTab({ itemId }: Props) {
   const { data: recetas } = usePreparaciones();
   const { data: composicion } = useItemCartaComposicion(itemId);
   const { data: deepGroups } = useItemIngredientesDeepList(itemId);
+  const { data: gruposOpcionales } = useGruposOpcionales(itemId);
 
   const [showNewRemovible, setShowNewRemovible] = useState(false);
   const [showNewExtra, setShowNewExtra] = useState(false);
@@ -170,6 +172,45 @@ export function ModificadoresTab({ itemId }: Props) {
           )}
         </CardContent>
       </Card>
+
+      {/* ═══ OPCIONALES (read-only, from grupos) ═══ */}
+      {gruposOpcionales && gruposOpcionales.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Package className="w-4 h-4 text-amber-600" />
+              Opcionales
+              <Badge variant="secondary" className="ml-1">{gruposOpcionales.length}</Badge>
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Grupos de opciones configurados en la composición del item. Solo lectura.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {gruposOpcionales.map((grupo: any) => (
+              <div key={grupo.id} className="p-3 border rounded-lg space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-amber-600 border-amber-600/30">GRUPO</Badge>
+                    <span className="font-medium text-sm">{grupo.nombre}</span>
+                  </div>
+                  <span className="font-mono text-sm">Prom: {formatCurrency(grupo.costo_promedio || 0)}</span>
+                </div>
+                {grupo.items && grupo.items.length > 0 && (
+                  <div className="pl-6 space-y-0.5">
+                    {grupo.items.map((gi: any) => (
+                      <div key={gi.id} className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{gi.insumos?.nombre || gi.preparaciones?.nombre || '—'}</span>
+                        <span className="font-mono">{formatCurrency(gi.cantidad * gi.costo_unitario)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* ═══ SUSTITUCIONES ═══ */}
       <Card>
