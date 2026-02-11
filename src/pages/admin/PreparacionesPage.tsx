@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -18,8 +17,31 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/states';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Plus, Pencil, Trash2, ChefHat, Package, Save, Shuffle, ChevronDown,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
+  Plus, Pencil, Trash2, ChefHat, Package, Save, Shuffle, ChevronDown, GripVertical, Check, X,
 } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 
 // Animated expandable panel
 function ExpandablePanel({ open, children }: { open: boolean; children: React.ReactNode }) {
@@ -129,6 +151,7 @@ import {
   usePreparacionOpciones,
   usePreparacionMutations,
 } from '@/hooks/usePreparaciones';
+import { useCategoriasPreparacion, useCategoriaPreparacionMutations } from '@/hooks/useCategoriasPreparacion';
 import { useInsumos } from '@/hooks/useInsumos';
 
 const formatCurrency = (value: number) =>
@@ -148,14 +171,156 @@ function calcSubtotal(cantidad: number, costoUnit: number, unidad: string) {
   return cantidad * costoUnit * mult;
 }
 
+/* ─── Recipe row (used inside category cards and uncategorized) ─── */
+function PrepRow({ prep, isExpanded, onToggle, mutations, onDelete }: {
+  prep: any; isExpanded: boolean; onToggle: () => void; mutations: any; onDelete: () => void;
+}) {
+  return (
+    <div>
+      <div
+        className={`flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors ${isExpanded ? 'bg-muted/30' : ''}`}
+        onClick={onToggle}
+      >
+        <div className="flex-1 min-w-0">
+          <p className="font-medium">{prep.nombre}</p>
+          {prep.descripcion && <p className="text-xs text-muted-foreground truncate">{prep.descripcion}</p>}
+        </div>
+        <Badge variant={prep.tipo === 'elaborado' ? 'default' : 'secondary'} className="shrink-0">
+          {prep.tipo === 'elaborado' ? '🍳 Elaborado' : '📦 Componente'}
+        </Badge>
+        {prep.es_intercambiable && (
+          <Badge variant="outline" className="text-xs shrink-0">
+            <Shuffle className="w-3 h-3 mr-1" /> Intercambiable
+          </Badge>
+        )}
+        <span className="font-mono text-sm shrink-0 w-24 text-right">
+          {prep.costo_calculado > 0 ? formatCurrency(prep.costo_calculado) : '—'}
+        </span>
+        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onDelete}>
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+        <ChevronDown className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+      </div>
+      <ExpandablePanel open={isExpanded}>
+        <div className="px-4 pb-4 pt-1 bg-muted/30 border-t">
+          <InlineNombre prep={prep} mutations={mutations} />
+          <InlineDescripcion prep={prep} mutations={mutations} />
+          {prep.tipo === 'elaborado' ? (
+            <FichaTecnicaTab preparacionId={prep.id} mutations={mutations} onClose={onToggle} />
+          ) : (
+            <OpcionesTab preparacionId={prep.id} mutations={mutations} onClose={onToggle} />
+          )}
+        </div>
+      </ExpandablePanel>
+    </div>
+  );
+}
+
+/* ─── Sortable category card ─── */
+function SortableCategoryCard({
+  cat, items, isOpen, onToggle,
+  editingId, editingNombre, setEditingNombre, setEditingId, handleUpdateCat, setDeletingCat,
+  expandedId, setExpandedId, mutations, setDeletingPrep,
+}: {
+  cat: any; items: any[]; isOpen: boolean; onToggle: () => void;
+  editingId: string | null; editingNombre: string; setEditingNombre: (v: string) => void;
+  setEditingId: (v: string | null) => void; handleUpdateCat: () => void; setDeletingCat: (v: any) => void;
+  expandedId: string | null; setExpandedId: (v: string | null) => void; mutations: any; setDeletingPrep: (v: any) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : undefined };
+  const isEditing = editingId === cat.id;
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={onToggle}>
+      <Card ref={setNodeRef} style={style} className="overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 bg-muted/40 border-b">
+          <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none shrink-0">
+            <GripVertical className="w-4 h-4 text-muted-foreground" />
+          </button>
+          {isEditing ? (
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <Input value={editingNombre} onChange={(e) => setEditingNombre(e.target.value)} className="h-7 w-48 text-sm" autoFocus
+                onKeyDown={(e) => { if (e.key === 'Enter') handleUpdateCat(); if (e.key === 'Escape') setEditingId(null); }} />
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleUpdateCat}><Check className="w-3.5 h-3.5 text-green-600" /></Button>
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}><X className="w-3.5 h-3.5" /></Button>
+            </div>
+          ) : (
+            <>
+              <CollapsibleTrigger asChild>
+                <button className="flex items-center gap-2 flex-1 min-w-0 text-left">
+                  <span className="font-semibold text-sm">{cat.nombre}</span>
+                  <Badge variant="secondary" className="text-xs font-normal">{items.length}</Badge>
+                  <ChevronDown className={`w-4 h-4 text-muted-foreground ml-auto transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                </button>
+              </CollapsibleTrigger>
+              <div className="flex items-center gap-0.5 shrink-0">
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingId(cat.id); setEditingNombre(cat.nombre); }}>
+                  <Pencil className="w-3.5 h-3.5" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDeletingCat(cat)}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+        <CollapsibleContent>
+          {items.length === 0 ? (
+            <div className="px-4 py-8 text-center text-sm text-muted-foreground">Sin recetas en esta categoría</div>
+          ) : (
+            <div className="divide-y">
+              {items.map((prep: any) => (
+                <PrepRow
+                  key={prep.id}
+                  prep={prep}
+                  isExpanded={expandedId === prep.id}
+                  onToggle={() => setExpandedId(expandedId === prep.id ? null : prep.id)}
+                  mutations={mutations}
+                  onDelete={() => setDeletingPrep(prep)}
+                />
+              ))}
+            </div>
+          )}
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
+  );
+}
+
 export default function PreparacionesPage() {
-  const { data: preparaciones, isLoading } = usePreparaciones();
+  const { data: preparaciones, isLoading: loadingPreps } = usePreparaciones();
+  const { data: categorias, isLoading: loadingCats } = useCategoriasPreparacion();
   const mutations = usePreparacionMutations();
+  const catMutations = useCategoriaPreparacionMutations();
 
   const [search, setSearch] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [deletingPrep, setDeletingPrep] = useState<any>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Category state
+  const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [editingCatNombre, setEditingCatNombre] = useState('');
+  const [showNewCat, setShowNewCat] = useState(false);
+  const [newCatNombre, setNewCatNombre] = useState('');
+  const [deletingCat, setDeletingCat] = useState<any>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const toggleCat = (catId: string) => {
+    setCollapsedCats(prev => {
+      const next = new Set(prev);
+      if (next.has(catId)) next.delete(catId); else next.add(catId);
+      return next;
+    });
+  };
 
   const filteredPreps = useMemo(() => {
     return preparaciones?.filter((p: any) => {
@@ -164,7 +329,40 @@ export default function PreparacionesPage() {
     }) || [];
   }, [preparaciones, search]);
 
-  const toggleExpand = (id: string) => setExpandedId(prev => prev === id ? null : id);
+  const prepsByCategory = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    for (const p of filteredPreps) {
+      const catId = p.categoria_preparacion_id || 'sin-categoria';
+      if (!map[catId]) map[catId] = [];
+      map[catId].push(p);
+    }
+    return map;
+  }, [filteredPreps]);
+
+  const uncategorized = prepsByCategory['sin-categoria'] || [];
+  const isLoading = loadingPreps || loadingCats;
+
+  const handleCreateCat = async () => {
+    if (!newCatNombre.trim()) return;
+    await catMutations.create.mutateAsync({ nombre: newCatNombre.trim(), orden: (categorias?.length || 0) + 1 });
+    setNewCatNombre('');
+    setShowNewCat(false);
+  };
+
+  const handleUpdateCat = async () => {
+    if (!editingCatId || !editingCatNombre.trim()) return;
+    await catMutations.update.mutateAsync({ id: editingCatId, data: { nombre: editingCatNombre.trim() } });
+    setEditingCatId(null);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !categorias) return;
+    const oldIndex = categorias.findIndex((c: any) => c.id === active.id);
+    const newIndex = categorias.findIndex((c: any) => c.id === over.id);
+    const reordered = arrayMove(categorias, oldIndex, newIndex);
+    await catMutations.reorder.mutateAsync(reordered.map((c: any, i: number) => ({ id: c.id, orden: i + 1 })));
+  };
 
   if (isLoading) {
     return (
@@ -179,77 +377,97 @@ export default function PreparacionesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Recetas" subtitle="Fichas técnicas de lo que se prepara en la cocina" />
+      <PageHeader
+        title="Recetas"
+        subtitle="Fichas técnicas de lo que se prepara en la cocina"
+        actions={
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowNewCat(true)}>
+              <Plus className="w-4 h-4 mr-1.5" /> Categoría
+            </Button>
+            <Button size="sm" onClick={() => setIsCreating(true)}>
+              <Plus className="w-4 h-4 mr-1.5" /> Nueva Receta
+            </Button>
+          </div>
+        }
+      />
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <DataToolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="Buscar preparación..." />
-        <Button onClick={() => setIsCreating(true)}>
-          <Plus className="w-4 h-4 mr-2" /> Nueva Receta
-        </Button>
-      </div>
+      <DataToolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="Buscar receta..." />
 
-      {filteredPreps.length === 0 ? (
+      {/* New category inline form */}
+      {showNewCat && (
+        <Card className="border-dashed border-primary/40">
+          <CardContent className="p-4 flex items-center gap-3">
+            <Input value={newCatNombre} onChange={(e) => setNewCatNombre(e.target.value)} placeholder="Nombre de la categoría..." className="max-w-xs" autoFocus
+              onKeyDown={(e) => { if (e.key === 'Enter') handleCreateCat(); if (e.key === 'Escape') { setShowNewCat(false); setNewCatNombre(''); } }} />
+            <Button size="sm" onClick={handleCreateCat} disabled={!newCatNombre.trim() || catMutations.create.isPending}><Check className="w-4 h-4" /></Button>
+            <Button size="sm" variant="ghost" onClick={() => { setShowNewCat(false); setNewCatNombre(''); }}><X className="w-4 h-4" /></Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {(!categorias || categorias.length === 0) && filteredPreps.length === 0 ? (
         <Card>
           <CardContent className="py-16">
             <EmptyState icon={ChefHat} title="Sin recetas" description="Creá una receta para empezar a definir fichas técnicas" />
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-0 rounded-md border divide-y">
-          {filteredPreps.map((prep: any) => {
-            const isExpanded = expandedId === prep.id;
-            return (
-              <div key={prep.id}>
-                <div
-                  className={`flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors ${isExpanded ? 'bg-muted/30' : ''}`}
-                  onClick={() => toggleExpand(prep.id)}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium">{prep.nombre}</p>
-                    {prep.descripcion && <p className="text-xs text-muted-foreground truncate">{prep.descripcion}</p>}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
+          <SortableContext items={categorias?.map((c: any) => c.id) || []} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3">
+              {categorias?.map((cat: any) => (
+                <SortableCategoryCard
+                  key={cat.id}
+                  cat={cat}
+                  items={prepsByCategory[cat.id] || []}
+                  isOpen={!collapsedCats.has(cat.id)}
+                  onToggle={() => toggleCat(cat.id)}
+                  editingId={editingCatId}
+                  editingNombre={editingCatNombre}
+                  setEditingNombre={setEditingCatNombre}
+                  setEditingId={setEditingCatId}
+                  handleUpdateCat={handleUpdateCat}
+                  setDeletingCat={setDeletingCat}
+                  expandedId={expandedId}
+                  setExpandedId={setExpandedId}
+                  mutations={mutations}
+                  setDeletingPrep={setDeletingPrep}
+                />
+              ))}
+
+              {uncategorized.length > 0 && (
+                <Card className="overflow-hidden border-dashed">
+                  <div className="flex items-center gap-2 px-4 py-3 bg-muted/20 border-b">
+                    <span className="font-semibold text-sm text-muted-foreground">Sin categoría</span>
+                    <Badge variant="secondary" className="text-xs">{uncategorized.length}</Badge>
                   </div>
-                  <Badge variant={prep.tipo === 'elaborado' ? 'default' : 'secondary'} className="shrink-0">
-                    {prep.tipo === 'elaborado' ? '🍳 Elaborado' : '📦 Componente'}
-                  </Badge>
-                  {prep.es_intercambiable && (
-                    <Badge variant="outline" className="text-xs shrink-0">
-                      <Shuffle className="w-3 h-3 mr-1" /> Intercambiable
-                    </Badge>
-                  )}
-                  <span className="font-mono text-sm shrink-0 w-24 text-right">
-                    {prep.costo_calculado > 0 ? formatCurrency(prep.costo_calculado) : '—'}
-                  </span>
-                  <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setDeletingPrep(prep)}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
+                  <div className="divide-y">
+                    {uncategorized.map((prep: any) => (
+                      <PrepRow
+                        key={prep.id}
+                        prep={prep}
+                        isExpanded={expandedId === prep.id}
+                        onToggle={() => setExpandedId(expandedId === prep.id ? null : prep.id)}
+                        mutations={mutations}
+                        onDelete={() => setDeletingPrep(prep)}
+                      />
+                    ))}
                   </div>
-                  <ChevronDown className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
-                </div>
-                <ExpandablePanel open={isExpanded}>
-                  <div className="px-4 pb-4 pt-1 bg-muted/30 border-t">
-                    <InlineNombre prep={prep} mutations={mutations} />
-                    <InlineDescripcion prep={prep} mutations={mutations} />
-                    {prep.tipo === 'elaborado' ? (
-                      <FichaTecnicaTab preparacionId={prep.id} mutations={mutations} onClose={() => setExpandedId(null)} />
-                    ) : (
-                      <OpcionesTab preparacionId={prep.id} mutations={mutations} onClose={() => setExpandedId(null)} />
-                    )}
-                  </div>
-                </ExpandablePanel>
-              </div>
-            );
-          })}
-        </div>
+                </Card>
+              )}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
-      {/* Modal only for NEW preparations */}
       {isCreating && (
         <PreparacionFullModal
           open={isCreating}
           onOpenChange={(v) => { if (!v) setIsCreating(false); }}
           preparacion={null}
           mutations={mutations}
+          categorias={categorias || []}
         />
       )}
 
@@ -265,16 +483,29 @@ export default function PreparacionesPage() {
           setDeletingPrep(null);
         }}
       />
+
+      <ConfirmDialog
+        open={!!deletingCat}
+        onOpenChange={() => setDeletingCat(null)}
+        title="Eliminar categoría"
+        description={`¿Eliminar "${deletingCat?.nombre}"? Las recetas quedarán sin categoría.`}
+        confirmLabel="Eliminar"
+        variant="destructive"
+        onConfirm={async () => {
+          await catMutations.softDelete.mutateAsync(deletingCat.id);
+          setDeletingCat(null);
+        }}
+      />
     </div>
   );
 }
 
 // ═══ UNIFIED MODAL: General + Ficha Técnica / Opciones ═══
-function PreparacionFullModal({ open, onOpenChange, preparacion, mutations }: {
-  open: boolean; onOpenChange: (v: boolean) => void; preparacion: any; mutations: any;
+function PreparacionFullModal({ open, onOpenChange, preparacion, mutations, categorias }: {
+  open: boolean; onOpenChange: (v: boolean) => void; preparacion: any; mutations: any; categorias: any[];
 }) {
   const isEdit = !!preparacion;
-  const [form, setForm] = useState({ nombre: '', descripcion: '', tipo: 'elaborado', es_intercambiable: false, metodo_costeo: 'promedio' });
+  const [form, setForm] = useState({ nombre: '', descripcion: '', tipo: 'elaborado', es_intercambiable: false, metodo_costeo: 'promedio', categoria_preparacion_id: '' });
   const set = (k: string, v: any) => setForm(prev => ({ ...prev, [k]: v }));
   const [savedId, setSavedId] = useState<string | null>(preparacion?.id || null);
   const [activeTab, setActiveTab] = useState('general');
@@ -287,10 +518,11 @@ function PreparacionFullModal({ open, onOpenChange, preparacion, mutations }: {
         tipo: preparacion.tipo,
         es_intercambiable: preparacion.es_intercambiable || false,
         metodo_costeo: preparacion.metodo_costeo || 'promedio',
+        categoria_preparacion_id: preparacion.categoria_preparacion_id || '',
       });
       setSavedId(preparacion.id);
     } else {
-      setForm({ nombre: '', descripcion: '', tipo: 'elaborado', es_intercambiable: false, metodo_costeo: 'promedio' });
+      setForm({ nombre: '', descripcion: '', tipo: 'elaborado', es_intercambiable: false, metodo_costeo: 'promedio', categoria_preparacion_id: '' });
       setSavedId(null);
     }
   }, [preparacion, open]);
@@ -331,6 +563,17 @@ function PreparacionFullModal({ open, onOpenChange, preparacion, mutations }: {
             </FormRow>
             <FormRow label="Descripción">
               <Textarea value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} rows={2} />
+            </FormRow>
+            <FormRow label="Categoría">
+              <Select value={form.categoria_preparacion_id || 'none'} onValueChange={(v) => set('categoria_preparacion_id', v === 'none' ? '' : v)}>
+                <SelectTrigger><SelectValue placeholder="Sin categoría" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin categoría</SelectItem>
+                  {categorias.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>{cat.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </FormRow>
             <FormSection title="Tipo" icon={ChefHat}>
               <div className="grid grid-cols-2 gap-3">

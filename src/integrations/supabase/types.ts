@@ -505,6 +505,36 @@ export type Database = {
         }
         Relationships: []
       }
+      categorias_preparacion: {
+        Row: {
+          activo: boolean
+          created_at: string
+          deleted_at: string | null
+          id: string
+          nombre: string
+          orden: number
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          nombre: string
+          orden?: number
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          nombre?: string
+          orden?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clock_entries: {
         Row: {
           branch_id: string
@@ -3729,6 +3759,7 @@ export type Database = {
       preparaciones: {
         Row: {
           activo: boolean | null
+          categoria_preparacion_id: string | null
           costo_calculado: number | null
           costo_manual: number | null
           created_at: string | null
@@ -3743,6 +3774,7 @@ export type Database = {
         }
         Insert: {
           activo?: boolean | null
+          categoria_preparacion_id?: string | null
           costo_calculado?: number | null
           costo_manual?: number | null
           created_at?: string | null
@@ -3757,6 +3789,7 @@ export type Database = {
         }
         Update: {
           activo?: boolean | null
+          categoria_preparacion_id?: string | null
           costo_calculado?: number | null
           costo_manual?: number | null
           created_at?: string | null
@@ -3769,7 +3802,15 @@ export type Database = {
           tipo?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "preparaciones_categoria_preparacion_id_fkey"
+            columns: ["categoria_preparacion_id"]
+            isOneToOne: false
+            referencedRelation: "categorias_preparacion"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
