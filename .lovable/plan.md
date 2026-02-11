@@ -1,88 +1,53 @@
 
-## Simplificacion de Catalogos + Detalle Fiscal en Compras
 
-Este plan tiene dos partes bien diferenciadas, tal como describe el documento subido.
+## Permitir sub-preparaciones en fichas técnicas
 
----
+### Problema actual
+La ficha técnica de una preparación solo permite agregar **insumos** (Capa 1). No se pueden agregar **otras preparaciones** (Capa 2) como componentes. Ejemplo: la "Hamburguesa Wesley" necesita incluir "Cebolla Crispi" (que es una preparación hecha de harina, cebolla y sal), pero hoy no hay forma de hacerlo.
 
-### PARTE 1: Simplificar formularios de catalogo
+### Solucion
+Agregar una columna opcional `sub_preparacion_id` a la tabla `preparacion_ingredientes`, de modo que cada linea de la ficha pueda ser un insumo O una sub-preparacion.
 
-**Problema**: Los formularios de Ingredientes/Insumos y Productos piden "Precio neto" e "IVA habitual", pero en la practica el usuario carga el costo total del pack (con todo incluido). El IVA detallado corresponde a la carga de compras/facturas, no al catalogo.
+### Cambios
 
-**Cambios:**
+**1. Migración de base de datos**
+- Agregar columna `sub_preparacion_id UUID` (nullable, FK a `preparaciones`) en `preparacion_ingredientes`
+- Hacer `insumo_id` nullable (ya que ahora una linea puede ser insumo O preparacion, no ambos)
+- Actualizar la funcion `recalcular_costo_preparacion` para sumar tambien el `costo_calculado` de sub-preparaciones
 
-**1. ProductoFormModal.tsx**
-- Eliminar campo "IVA habitual" y su selector
-- Renombrar "Precio neto ($)" a **"Costo del pack ($)"** con hint "(con todo incluido)"
-- Eliminar la fila vacia con el selector de IVA
-- El costo por unidad se calcula igual: precio_pack / contenido
-- Destacar el costo unitario con un card visual mas prominente
-- Mantener CMV y margen como estan
-- En el payload, enviar `default_alicuota_iva: null` (ya no se define en catalogo)
+**2. Hook `usePreparaciones.ts`**
+- Actualizar la query de `usePreparacionIngredientes` para hacer join tambien con `preparaciones` cuando hay `sub_preparacion_id`
+- Actualizar `saveIngredientes` para guardar `sub_preparacion_id` cuando corresponda
 
-**2. InsumoFormModal.tsx (contexto brand)**
-- Eliminar campo "IVA habitual" y su selector (lineas 222-233)
-- Renombrar "Precio neto ($)" a **"Costo ($)"** con hint "(con todo incluido)"
-- Eliminar el bloque de desglose neto/IVA/final (lineas 236-255) y reemplazar con un simple "Costo por [unidad_base]: $X.XX"
-- En el payload, enviar `default_alicuota_iva: null`
+**3. UI en `PreparacionesPage.tsx` - FichaTecnicaTab**
+- Agregar un selector de tipo por linea: "Insumo" o "Preparacion"
+- Si elige "Preparacion": mostrar dropdown con las preparaciones disponibles (excluyendo la actual para evitar referencia circular)
+- Si elige "Insumo": comportamiento actual
+- Mostrar el costo calculado de la sub-preparacion como costo unitario
+- La unidad para sub-preparaciones sera "un" (unidad/porcion)
 
-**3. Estado del form**: Eliminar `default_alicuota_iva` del estado local en ambos modales (ya no se muestra ni edita).
+### Flujo del usuario (ejemplo)
 
----
+1. Crear preparacion "Cebolla Crispi" (tipo elaborado)
+2. Cargar su ficha: harina 50g, cebolla 100g, sal 5g
+3. Crear preparacion "Hamburguesa Wesley" (tipo elaborado)
+4. En su ficha, agregar:
+   - Ingrediente: Pan brioche 1 un
+   - Ingrediente: Carne smash 150g
+   - **Preparacion: Cebolla Crispi 1 un** (toma el costo calculado automaticamente)
+   - Ingrediente: Queso cheddar 30g
 
-### PARTE 2: Detalle fiscal completo en Compras
+### Seccion tecnica
 
-**Problema**: Facturas de proveedores como Quilmes tienen multiples impuestos (internos, percepciones provinciales/municipales, IVA) y el formulario actual solo soporta un campo generico de IVA.
+```text
+preparacion_ingredientes
+  - insumo_id (nullable) -----> insumos
+  - sub_preparacion_id (nullable, NEW) -----> preparaciones
+  - CHECK: exactamente uno de los dos debe ser NOT NULL
+```
 
-**Cambios en base de datos:**
-
-**4. Migracion SQL** - Agregar columnas a `facturas_proveedores`:
-- `subtotal_bruto` (DECIMAL 12,2)
-- `total_descuentos` (DECIMAL 12,2, default 0)
-- `subtotal_neto` (DECIMAL 12,2)
-- `imp_internos` (DECIMAL 12,2, default 0) - campo unico para todos los impuestos internos
-- `iva_21` (DECIMAL 12,2, default 0)
-- `iva_105` (DECIMAL 12,2, default 0)
-- `perc_iva` (DECIMAL 12,2, default 0)
-- `perc_provincial` (DECIMAL 12,2, default 0)
-- `perc_municipal` (DECIMAL 12,2, default 0)
-- `total_factura` (DECIMAL 12,2)
-- `costo_real` (DECIMAL 12,2) - calculado sin IVA recuperable
-
-**5. Trigger** - `calcular_costo_real_factura()`: calcula automaticamente `costo_real = subtotal_neto + imp_internos + perc_provincial + perc_municipal` (excluye IVA y perc_iva porque son credito fiscal recuperable).
-
-**6. Agregar columnas a `items_factura`:**
-- `precio_bruto` (DECIMAL 12,2)
-- `descuento_porcentaje` (DECIMAL 5,2, default 0)
-- `descuento_monto` (DECIMAL 12,2, default 0)
-- `precio_neto` (DECIMAL 12,2) - bruto menos descuento
-
-**Cambios en codigo:**
-
-**7. src/types/compra.ts** - Agregar:
-- Interface `ImpuestosFactura` con todos los campos fiscales
-- Interface `FacturaItemForm` con precio bruto y descuento
-- Helpers: `calcularCostoReal()` y `calcularCreditoFiscal()`
-- Actualizar `FacturaFormData` e `ItemFacturaFormData` con los campos nuevos
-
-**8. src/components/finanzas/CompraFormModal.tsx** - Redisenar:
-- Mantener cabecera existente (proveedor, tipo, numero, fecha)
-- Items: agregar columnas "P. Bruto" y "Desc %" por item, calcular P. Neto automaticamente
-- Nueva seccion "Impuestos (segun factura)": mostrar subtotales calculados (bruto, descuentos, neto) y campos editables para cada tipo de impuesto
-- Marcar con "(CF)" los impuestos que son credito fiscal (IVA 21%, IVA 10.5%, Perc. IVA)
-- Totales finales: "TOTAL FACTURA (a pagar)" y "COSTO REAL (para centro de costos)"
-
-**9. src/hooks/useCompras.ts** - Actualizar la mutacion `create` para enviar los campos nuevos de impuestos al guardar.
-
----
-
-### Seccion tecnica: Archivos a modificar
-
-| Archivo | Cambio |
-|---------|--------|
-| `src/components/finanzas/ProductoFormModal.tsx` | Eliminar IVA, renombrar campo, mejorar visual costo |
-| `src/components/finanzas/InsumoFormModal.tsx` | Eliminar IVA, renombrar campo, simplificar desglose |
-| `src/components/finanzas/CompraFormModal.tsx` | Agregar seccion completa de impuestos |
-| `src/types/compra.ts` | Agregar tipos e interfaces fiscales |
-| `src/hooks/useCompras.ts` | Actualizar mutacion con campos nuevos |
-| Nueva migracion SQL | Columnas de impuestos + trigger costo_real |
+Funcion `recalcular_costo_preparacion` actualizada:
+```sql
+-- Lineas con insumo: cantidad * costo_por_unidad_base * factor_unidad
+-- Lineas con sub_preparacion: cantidad * preparaciones.costo_calculado
+```
