@@ -2619,6 +2619,45 @@ export type Database = {
           },
         ]
       }
+      item_extra_asignaciones: {
+        Row: {
+          created_at: string | null
+          extra_id: string
+          id: string
+          item_carta_id: string
+          orden: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          extra_id: string
+          id?: string
+          item_carta_id: string
+          orden?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          extra_id?: string
+          id?: string
+          item_carta_id?: string
+          orden?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_extra_asignaciones_extra_id_fkey"
+            columns: ["extra_id"]
+            isOneToOne: false
+            referencedRelation: "items_carta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_extra_asignaciones_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "items_carta"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_modificadores: {
         Row: {
           activo: boolean | null
@@ -2771,6 +2810,7 @@ export type Database = {
           orden: number | null
           precio_base: number
           rdo_category_code: string | null
+          tipo: string
           updated_at: string | null
         }
         Insert: {
@@ -2790,6 +2830,7 @@ export type Database = {
           orden?: number | null
           precio_base?: number
           rdo_category_code?: string | null
+          tipo?: string
           updated_at?: string | null
         }
         Update: {
@@ -2809,6 +2850,7 @@ export type Database = {
           orden?: number | null
           precio_base?: number
           rdo_category_code?: string | null
+          tipo?: string
           updated_at?: string | null
         }
         Relationships: [
