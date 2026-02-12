@@ -193,7 +193,6 @@ export default function MenuCartaPage() {
   const itemsByCategory = useMemo(() => {
     const map: Record<string, any[]> = {};
     const filtered = (items || []).filter((item: any) => {
-      if (item.tipo === 'extra') return false;
       if (!search) return true;
       return item.nombre.toLowerCase().includes(search.toLowerCase());
     });
