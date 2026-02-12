@@ -124,7 +124,7 @@ export function useItemCartaMutations() {
   const saveComposicion = useMutation({
     mutationFn: async ({ item_carta_id, items }: {
       item_carta_id: string;
-      items: { preparacion_id?: string; insumo_id?: string; cantidad: number; es_removible?: boolean; es_extra?: boolean }[];
+      items: { preparacion_id?: string; insumo_id?: string; cantidad: number; es_removible?: boolean }[];
     }) => {
       await supabase.from('item_carta_composicion').delete().eq('item_carta_id', item_carta_id);
 
@@ -137,7 +137,6 @@ export function useItemCartaMutations() {
             insumo_id: item.insumo_id || null,
             cantidad: item.cantidad,
             es_removible: item.es_removible || false,
-            es_extra: item.es_extra || false,
             orden: index,
           })) as any);
         if (error) throw error;

@@ -2125,6 +2125,7 @@ export type Database = {
           precio_venta: number | null
           proveedor_obligatorio_id: string | null
           proveedor_sugerido_id: string | null
+          puede_ser_extra: boolean
           rdo_category_code: string | null
           tipo_item: string
           tracks_stock: boolean
@@ -2157,6 +2158,7 @@ export type Database = {
           precio_venta?: number | null
           proveedor_obligatorio_id?: string | null
           proveedor_sugerido_id?: string | null
+          puede_ser_extra?: boolean
           rdo_category_code?: string | null
           tipo_item?: string
           tracks_stock?: boolean
@@ -2189,6 +2191,7 @@ export type Database = {
           precio_venta?: number | null
           proveedor_obligatorio_id?: string | null
           proveedor_sugerido_id?: string | null
+          puede_ser_extra?: boolean
           rdo_category_code?: string | null
           tipo_item?: string
           tracks_stock?: boolean
@@ -2388,7 +2391,6 @@ export type Database = {
         Row: {
           cantidad: number
           created_at: string | null
-          es_extra: boolean | null
           es_removible: boolean | null
           id: string
           insumo_id: string | null
@@ -2399,7 +2401,6 @@ export type Database = {
         Insert: {
           cantidad?: number
           created_at?: string | null
-          es_extra?: boolean | null
           es_removible?: boolean | null
           id?: string
           insumo_id?: string | null
@@ -2410,7 +2411,6 @@ export type Database = {
         Update: {
           cantidad?: number
           created_at?: string | null
-          es_extra?: boolean | null
           es_removible?: boolean | null
           id?: string
           insumo_id?: string | null
@@ -2435,6 +2435,55 @@ export type Database = {
           },
           {
             foreignKeyName: "item_carta_composicion_preparacion_id_fkey"
+            columns: ["preparacion_id"]
+            isOneToOne: false
+            referencedRelation: "preparaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_carta_extras: {
+        Row: {
+          created_at: string
+          id: string
+          insumo_id: string | null
+          item_carta_id: string
+          orden: number
+          preparacion_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          insumo_id?: string | null
+          item_carta_id: string
+          orden?: number
+          preparacion_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          insumo_id?: string | null
+          item_carta_id?: string
+          orden?: number
+          preparacion_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_carta_extras_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_carta_extras_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "items_carta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_carta_extras_preparacion_id_fkey"
             columns: ["preparacion_id"]
             isOneToOne: false
             referencedRelation: "preparaciones"
@@ -3886,6 +3935,7 @@ export type Database = {
           metodo_costeo: string | null
           nombre: string
           precio_extra: number | null
+          puede_ser_extra: boolean
           tipo: string
           updated_at: string | null
         }
@@ -3902,6 +3952,7 @@ export type Database = {
           metodo_costeo?: string | null
           nombre: string
           precio_extra?: number | null
+          puede_ser_extra?: boolean
           tipo?: string
           updated_at?: string | null
         }
@@ -3918,6 +3969,7 @@ export type Database = {
           metodo_costeo?: string | null
           nombre?: string
           precio_extra?: number | null
+          puede_ser_extra?: boolean
           tipo?: string
           updated_at?: string | null
         }
