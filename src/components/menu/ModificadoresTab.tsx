@@ -106,6 +106,7 @@ export function ModificadoresTab({ itemId }: Props) {
               ingredientes={ingredientesDelItem}
               deepGroups={deepGroups || []}
               insumos={insumos || []}
+              composicion={composicion || []}
               onCreate={create}
               onClose={() => setShowNewRemovible(false)}
             />
@@ -272,9 +273,23 @@ export function ModificadoresTab({ itemId }: Props) {
 }
 
 /* ═══ NEW REMOVIBLE FORM ═══ */
-function NewRemovibleForm({ itemId, ingredientes, deepGroups, insumos, onCreate, onClose }: any) {
+function NewRemovibleForm({ itemId, ingredientes, deepGroups, insumos, composicion, onCreate, onClose }: any) {
   const [selectedId, setSelectedId] = useState('');
+  const [selectedType, setSelectedType] = useState<'insumo' | 'receta'>('insumo');
   const [nombre, setNombre] = useState('');
+
+  // Recipes from item composition (preparaciones only)
+  const recetasDelItem = useMemo(() => {
+    if (!composicion) return [];
+    return composicion
+      .filter((c: any) => c.preparacion_id && c.preparaciones)
+      .map((c: any) => ({
+        id: c.preparacion_id,
+        nombre: c.preparaciones.nombre,
+        costo_calculado: c.preparaciones.costo_calculado || 0,
+        cantidad: c.cantidad,
+      }));
+  }, [composicion]);
 
   // Flat list from deep groups + other insumos not in item
   const allInsumos = useMemo(() => {
@@ -283,31 +298,63 @@ function NewRemovibleForm({ itemId, ingredientes, deepGroups, insumos, onCreate,
     return [...fromItem, ...others];
   }, [ingredientes, insumos]);
 
-  const selected = allInsumos.find((i: any) => i.id === selectedId);
+  const selectedInsumo = selectedType === 'insumo' ? allInsumos.find((i: any) => i.id === selectedId) : null;
+  const selectedReceta = selectedType === 'receta' ? recetasDelItem.find((r: any) => r.id === selectedId) : null;
 
   const handleSelect = (v: string) => {
-    setSelectedId(v);
-    const ins = allInsumos.find((i: any) => i.id === v);
-    setNombre(`Sin ${ins?.nombre || ''}`);
+    // Check if it's a recipe (prefixed with "receta:")
+    if (v.startsWith('receta:')) {
+      const recetaId = v.slice(7);
+      setSelectedId(recetaId);
+      setSelectedType('receta');
+      const rec = recetasDelItem.find((r: any) => r.id === recetaId);
+      setNombre(`Sin ${rec?.nombre || ''}`);
+    } else {
+      setSelectedId(v);
+      setSelectedType('insumo');
+      const ins = allInsumos.find((i: any) => i.id === v);
+      setNombre(`Sin ${ins?.nombre || ''}`);
+    }
   };
+
+  const costoAhorro = selectedType === 'receta' && selectedReceta
+    ? (selectedReceta.costo_calculado * (selectedReceta.cantidad || 1))
+    : selectedInsumo
+      ? (selectedInsumo.costo_por_unidad_base || 0) * (selectedInsumo.cantidad || 1)
+      : 0;
 
   const handleSave = async () => {
     if (!selectedId) return;
-    const displayName = nombre.trim() || `Sin ${selected?.nombre}`;
-    await onCreate.mutateAsync({
-      item_carta_id: itemId,
-      tipo: 'removible',
-      nombre: displayName,
-      ingrediente_id: selectedId,
-      cantidad_ahorro: selected?.cantidad || 0,
-      unidad_ahorro: selected?.unidad || selected?.unidad_base || 'un',
-      costo_ahorro: (selected?.costo_por_unidad_base || 0) * (selected?.cantidad || 1),
-    });
+    const displayName = nombre.trim() || `Sin ${selectedType === 'receta' ? selectedReceta?.nombre : selectedInsumo?.nombre}`;
+
+    if (selectedType === 'receta') {
+      await onCreate.mutateAsync({
+        item_carta_id: itemId,
+        tipo: 'removible',
+        nombre: displayName,
+        receta_id: selectedId,
+        ingrediente_id: null,
+        cantidad_ahorro: selectedReceta?.cantidad || 1,
+        unidad_ahorro: 'un',
+        costo_ahorro: costoAhorro,
+      });
+    } else {
+      await onCreate.mutateAsync({
+        item_carta_id: itemId,
+        tipo: 'removible',
+        nombre: displayName,
+        ingrediente_id: selectedId,
+        cantidad_ahorro: selectedInsumo?.cantidad || 0,
+        unidad_ahorro: selectedInsumo?.unidad || selectedInsumo?.unidad_base || 'un',
+        costo_ahorro: costoAhorro,
+      });
+    }
     onClose();
   };
 
   const hasDeepGroups = deepGroups && deepGroups.length > 0;
   const otherInsumos = (insumos || []).filter((i: any) => !ingredientes.some((fi: any) => fi.id === i.id));
+  const selectValue = selectedType === 'receta' ? `receta:${selectedId}` : selectedId;
 
   return (
     <div className="p-4 border-2 border-dashed rounded-lg space-y-3">
@@ -315,9 +362,21 @@ function NewRemovibleForm({ itemId, ingredientes, deepGroups, insumos, onCreate,
         <p className="text-sm font-medium">Nuevo removible</p>
         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}><X className="w-3.5 h-3.5" /></Button>
       </div>
-      <Select value={selectedId} onValueChange={handleSelect}>
-        <SelectTrigger><SelectValue placeholder="Seleccionar ingrediente..." /></SelectTrigger>
+      <Select value={selectValue} onValueChange={handleSelect}>
+        <SelectTrigger><SelectValue placeholder="Seleccionar ingrediente o receta..." /></SelectTrigger>
         <SelectContent>
+          {/* Recipes from composition */}
+          {recetasDelItem.length > 0 && (
+            <SelectGroup>
+              <SelectLabel className="text-xs font-semibold text-amber-600">— Recetas del item —</SelectLabel>
+              {recetasDelItem.map((rec: any) => (
+                <SelectItem key={`receta-${rec.id}`} value={`receta:${rec.id}`}>
+                  {rec.nombre} ({formatCurrency(rec.costo_calculado * (rec.cantidad || 1))})
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          )}
+          {/* Ingredients grouped by recipe */}
           {hasDeepGroups ? (
             <>
               {deepGroups.map((group: any) => (
@@ -349,10 +408,13 @@ function NewRemovibleForm({ itemId, ingredientes, deepGroups, insumos, onCreate,
         </SelectContent>
       </Select>
       <Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre (ej: Sin Queso)" className="text-sm" />
-      {selected && (
+      {(selectedInsumo || selectedReceta) && (
         <div className="p-2 bg-muted/50 rounded text-xs">
-          <strong>{nombre || `Sin ${selected.nombre}`}</strong>
-          {selected.cantidad > 0 && <span className="ml-2 text-muted-foreground">Ahorro: {formatCurrency((selected.costo_por_unidad_base || 0) * selected.cantidad)}</span>}
+          <strong>{nombre || `Sin ${selectedReceta?.nombre || selectedInsumo?.nombre}`}</strong>
+          <span className="ml-2 text-muted-foreground">
+            Ahorro: {formatCurrency(costoAhorro)}
+            {selectedType === 'receta' && <Badge variant="outline" className="ml-2 text-amber-600 border-amber-600/30 text-[10px]">Receta</Badge>}
+          </span>
         </div>
       )}
       <div className="flex justify-end gap-2">
