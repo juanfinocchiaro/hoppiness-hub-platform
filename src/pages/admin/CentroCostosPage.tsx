@@ -73,19 +73,22 @@ function enrich(items: any[]): EI[] {
   });
 }
 
-interface CG { nombre: string; id: string; items: EI[]; cmv: number; obj: number; margen: number; color: 'ok'|'warn'|'danger'; }
+interface CG { nombre: string; id: string; items: EI[]; cmv: number; obj: number; margen: number; color: 'ok'|'warn'|'danger'; hidden?: boolean; orden?: number; }
 
-function groupByCat(items: EI[]): CG[] {
+function groupByCat(items: EI[], categorias?: any[]): CG[] {
   const m = new Map<string, EI[]>();
   items.forEach(i => { if (!m.has(i.catId)) m.set(i.catId, []); m.get(i.catId)!.push(i); });
+  const catMap = new Map<string, any>();
+  (categorias || []).forEach((c: any) => catMap.set(c.id, c));
   return Array.from(m.entries()).map(([id, ci]) => {
     const w = ci.filter(i => i.hasComp && i.hasPrice);
     const n = w.length || 1;
     const cmv = w.reduce((s, i) => s + i.fc, 0) / n;
     const obj = w.reduce((s, i) => s + i.fcObj, 0) / n;
     const mg = w.reduce((s, i) => s + i.margen, 0) / n;
-    return { nombre: ci[0]?.cat, id, items: ci, cmv, obj, margen: mg, color: fcColor(cmv, obj) };
-  });
+    const cat = catMap.get(id);
+    return { nombre: ci[0]?.cat, id, items: ci, cmv, obj, margen: mg, color: fcColor(cmv, obj), hidden: cat?.visible_en_carta === false, orden: cat?.orden ?? 999 };
+  }).sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
 }
 
 type Tab = 'analisis' | 'simulador' | 'actualizar';
@@ -124,7 +127,7 @@ export default function CentroCostosPage() {
 
   const cmvCats = useMemo(() => rdoCategories?.filter((c: any) => c.level === 3 && (c.parent_code?.startsWith('cmv') || c.code?.startsWith('cmv'))) || [], [rdoCategories]);
   const ei = useMemo(() => enrich(items || []), [items]);
-  const cats = useMemo(() => groupByCat(ei), [ei]);
+  const cats = useMemo(() => groupByCat(ei, categorias), [ei, categorias]);
 
   // Global stats
   const gs = useMemo(() => {
@@ -255,12 +258,13 @@ function AnalisisTab({ items, cats, gs, loading }: {
        filtered.length === 0 ? <EmptyState icon={Package} title="Sin items" description="Creá un item de carta" /> : (
         <div className="space-y-2">
           {filtered.map(g => (
-            <div key={g.id} className="border rounded-lg overflow-hidden">
-              <button className="w-full flex items-center justify-between px-4 py-3 bg-muted/40 hover:bg-muted/60 transition-colors" onClick={() => toggle(g.id)}>
+            <div key={g.id} className={`border rounded-lg overflow-hidden ${g.hidden ? 'opacity-60 border-dashed' : ''}`}>
+              <button className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${g.hidden ? 'bg-muted/20 hover:bg-muted/30' : 'bg-muted/40 hover:bg-muted/60'}`} onClick={() => toggle(g.id)}>
                 <div className="flex items-center gap-3">
                   {expanded.has(g.id) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                  <span className="font-semibold text-sm">{g.nombre}</span>
+                  <span className={`font-semibold text-sm ${g.hidden ? 'text-muted-foreground' : ''}`}>{g.nombre}</span>
                   <Badge variant="outline" className="text-xs">{g.items.length}</Badge>
+                  {g.hidden && <Badge variant="secondary" className="text-xs font-normal">Oculta en Carta</Badge>}
                 </div>
                 <div className="flex items-center gap-4 text-sm">
                   <span className="text-xs text-muted-foreground">CMV</span>
