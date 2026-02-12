@@ -42,11 +42,11 @@ export default function ComprasPage() {
   return (
     <div className="p-6">
       <PageHeader
-        title="Facturas"
-        subtitle="Facturas de proveedores: insumos y servicios"
+        title="Compras"
+        subtitle="Registrá compras con o sin comprobante"
         actions={
           <Button onClick={() => setModalOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" /> Nueva Factura
+            <Plus className="w-4 h-4 mr-2" /> Nueva Compra
           </Button>
         }
       />
@@ -79,7 +79,7 @@ export default function ComprasPage() {
             ) : !filtered?.length ? (
               <TableRow>
                 <TableCell colSpan={8} className="h-40">
-                  <EmptyState icon={ShoppingCart} title="Sin facturas" description="Registrá tu primera factura de proveedor" />
+                  <EmptyState icon={ShoppingCart} title="Sin compras" description="Registrá tu primera compra" />
                 </TableCell>
               </TableRow>
             ) : (
