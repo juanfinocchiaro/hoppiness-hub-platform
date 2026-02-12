@@ -280,7 +280,7 @@ export default function MenuCartaPage() {
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
           <SortableContext items={categorias?.map((c: any) => c.id) || []} strategy={verticalListSortingStrategy}>
             <div className="space-y-3">
-              {categorias?.map((cat: any) => (
+              {categorias?.filter((cat: any) => (itemsByCategory[cat.id] || []).length > 0).map((cat: any) => (
                 <SortableCategoryCard
                   key={cat.id}
                   cat={cat}
