@@ -1,36 +1,31 @@
 
 
-## Ocultar Extras/Modificadores de la Carta
+## Ocultar categorias vacias en la Carta
 
 ### Problema
-La pagina "Items de Venta" (Carta) muestra todos los items activos, incluyendo los de tipo `extra` (como "Extra Carne 45g") que no se venden de forma independiente. Solo los items de tipo `item` deberian aparecer ahi.
+La pagina "Items de Venta" (Carta) muestra TODAS las categorias, incluso las que quedan con 0 items despues de filtrar los extras. Por eso "EXTRAS/MODIFICADORES" aparece vacia (todos sus items son `tipo=extra` y se filtran correctamente, pero la categoria sigue visible).
+
+### Causa raiz
+El filtro de `tipo === 'extra'` que agregamos funciona bien para los items, pero el renderizado de categorias itera sobre TODAS las categorias activas sin verificar si tienen items visibles.
 
 ### Solucion
-Filtrar la query de la Carta para excluir items con `tipo = 'extra'`.
+En `MenuCartaPage.tsx`, filtrar las categorias para mostrar solo las que tienen al menos 1 item visible.
 
-### Cambios
+### Cambio tecnico
 
-**1. `src/pages/admin/MenuCartaPage.tsx`**
-- En el `useMemo` que agrupa items por categoria, agregar un filtro que excluya items donde `tipo === 'extra'`.
-- Esto hara que la categoria "EXTRAS/MODIFICADORES" aparezca vacia (0 items) o directamente no se muestre si no tiene items visibles.
+**`src/pages/admin/MenuCartaPage.tsx`**
 
-**2. Alternativa mas limpia (opcional):** Tambien se podria filtrar desde el hook `useItemsCarta`, pero como el Centro de Costos SI necesita ver los extras, es mejor filtrar solo en la pagina de Carta.
-
-### Detalle tecnico
-
-En `MenuCartaPage.tsx`, dentro del `useMemo` de `itemsByCategory` (linea ~168), se agrega la condicion:
+En la seccion donde se renderizan las categorias (dentro del `SortableContext`), cambiar el `.map` de categorias para saltar las que no tienen items visibles:
 
 ```text
-const filtered = (items || []).filter((item) => {
-  if (item.tipo === 'extra') return false;  // <-- nueva linea
-  if (!search) return true;
-  return item.nombre.toLowerCase().includes(search.toLowerCase());
-});
+{categorias?.filter((cat: any) => (itemsByCategory[cat.id] || []).length > 0).map((cat: any) => (
+  <SortableCategoryCard ... />
+))}
 ```
 
-Con esto, las categorias que solo contengan extras (como "EXTRAS/MODIFICADORES") mostraran "0 items" en la Carta, lo cual es correcto ya que esos items se gestionan desde el Centro de Costos, dentro de la composicion de cada producto.
+Esto oculta cualquier categoria cuyo contenido filtrado sea 0 items (como EXTRAS/MODIFICADORES), mientras que ACOMPAÑAMIENTOS (que tiene el Pote de barbacoa, tipo=`item`) se sigue mostrando correctamente.
 
 ### Impacto
-- Centro de Costos: sin cambios, sigue mostrando todo.
-- Carta: solo muestra items vendibles al publico.
-- No requiere cambios de base de datos.
+- Solo afecta la vista de Carta
+- No afecta Centro de Costos ni la base de datos
+- Las categorias siguen existiendo, simplemente no se muestran cuando no tienen items visibles en Carta
