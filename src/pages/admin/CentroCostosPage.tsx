@@ -79,7 +79,7 @@ export default function CentroCostosPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <PageHeader title="Centro de Costos" subtitle="Capa 3 — Items de carta con precio y composición" />
+        <PageHeader title="Control de Costos" subtitle="Items de carta con precio, composición y FC%" />
         <Button onClick={() => { setEditingItem(null); setCreateOpen(true); }}>
           <Plus className="w-4 h-4 mr-2" /> Nuevo Item
         </Button>
@@ -381,10 +381,10 @@ function ComposicionModal({ open, onOpenChange, item, preparaciones, insumos, mu
                 {rows.map((row, i) => (
                   <div key={i} className="flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2">
                     <Select value={row.tipo} onValueChange={(v) => updateRow(i, 'tipo', v)}>
-                      <SelectTrigger className="h-7 w-[90px] text-xs shrink-0"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-7 w-[100px] text-xs shrink-0"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="preparacion">Receta</SelectItem>
-                        <SelectItem value="insumo">Insumo</SelectItem>
+                        <SelectItem value="insumo">Catálogo</SelectItem>
                       </SelectContent>
                     </Select>
                     <div className="flex-1 min-w-0">
@@ -403,9 +403,39 @@ function ComposicionModal({ open, onOpenChange, item, preparaciones, insumos, mu
                           <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">Seleccionar...</SelectItem>
-                            {insumos.filter((x: any) => x.tipo_item === 'insumo' || x.tipo_item === 'producto').map((ins: any) => (
-                              <SelectItem key={ins.id} value={ins.id}>{ins.nombre} ({formatCurrency(ins.costo_por_unidad_base || 0)})</SelectItem>
-                            ))}
+                            {(() => {
+                              const productos = insumos.filter((x: any) => x.tipo_item === 'producto');
+                              const ingredientes = insumos.filter((x: any) => x.tipo_item === 'ingrediente');
+                              const insumosItems = insumos.filter((x: any) => x.tipo_item === 'insumo' || !x.tipo_item);
+                              return (
+                                <>
+                                  {productos.length > 0 && (
+                                    <>
+                                      <SelectItem value="__header_prod" disabled className="text-xs font-semibold text-muted-foreground">── Productos ──</SelectItem>
+                                      {productos.map((ins: any) => (
+                                        <SelectItem key={ins.id} value={ins.id}>{ins.nombre} ({formatCurrency(ins.costo_por_unidad_base || 0)})</SelectItem>
+                                      ))}
+                                    </>
+                                  )}
+                                  {ingredientes.length > 0 && (
+                                    <>
+                                      <SelectItem value="__header_ing" disabled className="text-xs font-semibold text-muted-foreground">── Ingredientes ──</SelectItem>
+                                      {ingredientes.map((ins: any) => (
+                                        <SelectItem key={ins.id} value={ins.id}>{ins.nombre} ({formatCurrency(ins.costo_por_unidad_base || 0)})</SelectItem>
+                                      ))}
+                                    </>
+                                  )}
+                                  {insumosItems.length > 0 && (
+                                    <>
+                                      <SelectItem value="__header_ins" disabled className="text-xs font-semibold text-muted-foreground">── Insumos ──</SelectItem>
+                                      {insumosItems.map((ins: any) => (
+                                        <SelectItem key={ins.id} value={ins.id}>{ins.nombre} ({formatCurrency(ins.costo_por_unidad_base || 0)})</SelectItem>
+                                      ))}
+                                    </>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </SelectContent>
                         </Select>
                       )}
@@ -588,7 +618,7 @@ function GrupoOpcionalEditor({ grupo, itemId, insumos, preparaciones, mutations 
           <Select value={ei.tipo} onValueChange={(v) => updateItem(i, 'tipo', v)}>
             <SelectTrigger className="h-6 w-[80px] text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="insumo">Insumo</SelectItem>
+              <SelectItem value="insumo">Catálogo</SelectItem>
               <SelectItem value="preparacion">Receta</SelectItem>
             </SelectContent>
           </Select>
@@ -598,9 +628,28 @@ function GrupoOpcionalEditor({ grupo, itemId, insumos, preparaciones, mutations 
                 <SelectTrigger className="h-6 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Seleccionar...</SelectItem>
-                  {insumos.filter((x: any) => x.tipo_item === 'insumo' || x.tipo_item === 'producto').map((ins: any) => (
-                    <SelectItem key={ins.id} value={ins.id}>{ins.nombre}</SelectItem>
-                  ))}
+                  {(() => {
+                    const selectedIds = editItems.filter((_, idx) => idx !== i).map(item => item.insumo_id).filter(Boolean);
+                    const available = insumos.filter((x: any) => (x.tipo_item === 'insumo' || x.tipo_item === 'producto') && !selectedIds.includes(x.id));
+                    const productos = available.filter((x: any) => x.tipo_item === 'producto');
+                    const otros = available.filter((x: any) => x.tipo_item !== 'producto');
+                    return (
+                      <>
+                        {productos.length > 0 && (
+                          <>
+                            <SelectItem value="__h_prod" disabled className="text-xs font-semibold text-muted-foreground">── Productos ──</SelectItem>
+                            {productos.map((ins: any) => <SelectItem key={ins.id} value={ins.id}>{ins.nombre}</SelectItem>)}
+                          </>
+                        )}
+                        {otros.length > 0 && (
+                          <>
+                            <SelectItem value="__h_ins" disabled className="text-xs font-semibold text-muted-foreground">── Insumos ──</SelectItem>
+                            {otros.map((ins: any) => <SelectItem key={ins.id} value={ins.id}>{ins.nombre}</SelectItem>)}
+                          </>
+                        )}
+                      </>
+                    );
+                  })()}
                 </SelectContent>
               </Select>
             ) : (
@@ -608,9 +657,12 @@ function GrupoOpcionalEditor({ grupo, itemId, insumos, preparaciones, mutations 
                 <SelectTrigger className="h-6 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Seleccionar...</SelectItem>
-                  {preparaciones.map((p: any) => (
-                    <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
-                  ))}
+                  {(() => {
+                    const selectedIds = editItems.filter((_, idx) => idx !== i).map(item => item.preparacion_id).filter(Boolean);
+                    return preparaciones.filter((p: any) => !selectedIds.includes(p.id)).map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
+                    ));
+                  })()}
                 </SelectContent>
               </Select>
             )}

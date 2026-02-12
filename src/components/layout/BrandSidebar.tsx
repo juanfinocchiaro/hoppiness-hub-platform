@@ -35,6 +35,7 @@ import {
   CreditCard,
   ChefHat,
   FolderOpen,
+  Beef,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -64,25 +65,19 @@ export function BrandSidebar() {
 
   // Active section detection
   const isRedActive = location.pathname.includes('/mimarca/locales') || location.pathname.includes('/mimarca/supervisiones');
-  const isCatalogosActive = location.pathname.includes('/mimarca/finanzas/insumos') || location.pathname.includes('/mimarca/finanzas/proveedores') || location.pathname.includes('/mimarca/finanzas/conceptos-servicio');
-  const isFinanzasActive = (location.pathname.includes('/mimarca/finanzas') && !isCatalogosActive);
+  const isMenuEngActive = location.pathname.includes('/mimarca/finanzas/insumos') || location.pathname.includes('/mimarca/finanzas/proveedores') || location.pathname.includes('/mimarca/recetas') || location.pathname.includes('/mimarca/carta') || location.pathname === '/mimarca/centro-costos';
+  const isFinanzasActive = location.pathname.includes('/mimarca/finanzas') && !location.pathname.includes('/mimarca/finanzas/insumos') && !location.pathname.includes('/mimarca/finanzas/proveedores');
   const isPersonasActive = location.pathname.includes('/mimarca/usuarios') || location.pathname.includes('/mimarca/equipo-central') || location.pathname.includes('/mimarca/coaching');
   const isComunicacionActive = location.pathname.includes('/mimarca/mensajes') || location.pathname.includes('/mimarca/comunicados') || location.pathname.includes('/mimarca/reuniones');
   const isConfigActive = location.pathname.includes('/mimarca/reglamentos') || location.pathname.includes('/mimarca/configuracion');
-  const isRecetasActive = location.pathname.includes('/mimarca/recetas');
-  const isCartaActive = location.pathname.includes('/mimarca/carta');
-  const isCentroCostosActive = location.pathname === '/mimarca/centro-costos';
 
   // Section visibility
   const canSeeRed = bp.canViewLocales;
-  const canSeeCatalogos = bp.canViewInsumos || bp.canViewConceptosServicio || bp.canViewProveedoresMarca;
-  const canSeeFinanzas = bp.canViewVentasMensuales || bp.canViewCanon;
+  const canSeeMenuEng = bp.canViewInsumos || bp.canViewProveedoresMarca;
+  const canSeeFinanzas = bp.canViewVentasMensuales || bp.canViewCanon || bp.canViewConceptosServicio;
   const canSeePersonas = bp.canViewCentralTeam || bp.canCoachManagers || bp.canViewCoaching || bp.canSearchUsers;
   const canSeeComunicacion = bp.canViewContactMessages || bp.canManageMessages || bp.canViewMeetings;
   const canSeeConfig = bp.canEditBrandConfig || isSuperadmin;
-  const canSeeRecetas = bp.canViewInsumos && isSuperadmin;
-  const canSeeCarta = bp.canViewInsumos;
-  const canSeeCentroCostos = bp.canViewInsumos && isSuperadmin;
 
   return (
     <>
@@ -121,44 +116,29 @@ export function BrandSidebar() {
           </NavSectionGroup>
         )}
 
-        {/* ═══ CATÁLOGOS MARCA ═══ */}
-        {canSeeCatalogos && (
+        {/* ═══ INGENIERÍA DE MENÚ ═══ */}
+        {canSeeMenuEng && (
           <NavSectionGroup
-            id="catalogos"
-            label="Catálogos Marca"
-            icon={Package}
-            forceOpen={isCatalogosActive}
+            id="menu-eng"
+            label="Ingeniería de Menú"
+            icon={Beef}
+            forceOpen={isMenuEngActive}
           >
             {bp.canViewInsumos && (
-              <NavItemButton to="/mimarca/finanzas/insumos" icon={Package} label="Ingredientes e Insumos" />
-            )}
-            {bp.canViewConceptosServicio && (
-              <NavItemButton to="/mimarca/finanzas/conceptos-servicio" icon={FileText} label="Servicios Recurrentes" />
+              <NavItemButton to="/mimarca/finanzas/insumos" icon={Package} label="Catálogo de Compras" />
             )}
             {bp.canViewProveedoresMarca && (
               <NavItemButton to="/mimarca/finanzas/proveedores" icon={Truck} label="Proveedores" />
             )}
-          </NavSectionGroup>
-        )}
-
-        {/* ═══ RECETAS ═══ */}
-        {canSeeRecetas && (
-          <NavSectionGroup id="recetas" label="Recetas" icon={ChefHat} forceOpen={isRecetasActive}>
-            <NavItemButton to="/mimarca/recetas" icon={FileText} label="Todas las Recetas" />
-          </NavSectionGroup>
-        )}
-
-        {/* ═══ CARTA ═══ */}
-        {canSeeCarta && (
-          <NavSectionGroup id="carta" label="Carta" icon={UtensilsCrossed} forceOpen={isCartaActive}>
-            <NavItemButton to="/mimarca/carta" icon={BookOpen} label="Items de Venta" />
-          </NavSectionGroup>
-        )}
-
-        {/* ═══ CENTRO DE COSTOS ═══ */}
-        {canSeeCentroCostos && (
-          <NavSectionGroup id="centro-costos" label="Centro de Costos" icon={Calculator} forceOpen={isCentroCostosActive}>
-            <NavItemButton to="/mimarca/centro-costos" icon={Calculator} label="Panel de Control" />
+            {bp.canViewInsumos && isSuperadmin && (
+              <NavItemButton to="/mimarca/recetas" icon={ChefHat} label="Recetas" />
+            )}
+            {bp.canViewInsumos && (
+              <NavItemButton to="/mimarca/carta" icon={BookOpen} label="Carta" />
+            )}
+            {bp.canViewInsumos && isSuperadmin && (
+              <NavItemButton to="/mimarca/centro-costos" icon={Calculator} label="Control de Costos" />
+            )}
           </NavSectionGroup>
         )}
 
@@ -175,6 +155,9 @@ export function BrandSidebar() {
             )}
             {bp.canViewCanon && (
               <NavItemButton to="/mimarca/finanzas/canon" icon={Landmark} label="Canon" />
+            )}
+            {bp.canViewConceptosServicio && (
+              <NavItemButton to="/mimarca/finanzas/conceptos-servicio" icon={FileText} label="Servicios Recurrentes" />
             )}
           </NavSectionGroup>
         )}
