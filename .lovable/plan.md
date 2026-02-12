@@ -1,46 +1,36 @@
 
 
-## Extras con columnas completas de rentabilidad
+## Ocultar Extras/Modificadores de la Carta
 
-### Que cambia
+### Problema
+La pagina "Items de Venta" (Carta) muestra todos los items activos, incluyendo los de tipo `extra` (como "Extra Carne 45g") que no se venden de forma independiente. Solo los items de tipo `item` deberian aparecer ahi.
 
-La seccion "Extras Disponibles" dentro de Analisis pasa de tener 5 columnas basicas (Nombre, Tipo, Costo, P. Extra, FC%) a tener las mismas columnas que los items regulares de arriba, con edicion inline y calculos en tiempo real.
+### Solucion
+Filtrar la query de la Carta para excluir items con `tipo = 'extra'`.
 
-### Como queda
+### Cambios
+
+**1. `src/pages/admin/MenuCartaPage.tsx`**
+- En el `useMemo` que agrupa items por categoria, agregar un filtro que excluya items donde `tipo === 'extra'`.
+- Esto hara que la categoria "EXTRAS/MODIFICADORES" aparezca vacia (0 items) o directamente no se muestre si no tiene items visibles.
+
+**2. Alternativa mas limpia (opcional):** Tambien se podria filtrar desde el hook `useItemsCarta`, pero como el Centro de Costos SI necesita ver los extras, es mejor filtrar solo en la pagina de Carta.
+
+### Detalle tecnico
+
+En `MenuCartaPage.tsx`, dentro del `useMemo` de `itemsByCategory` (linea ~168), se agrega la condicion:
 
 ```text
-v  Extras Disponibles (2)
-
-  Buscar extra...
-
-  Nombre              | Tipo   | Costo  | P. Carta (c/IVA) | P. Neto (s/IVA) | Obj.  | FC%      | Margen   | Sugerido
-  Cebolla Crispy      | Receta | $6     | [___]             | $0              | 32.0% | —        | —        | $23
-  Provoleta grillada  | Receta | $461   | [$1.800]          | $1.488          | 32.0% | 31.0%    | $1.027   | $1.743
+const filtered = (items || []).filter((item) => {
+  if (item.tipo === 'extra') return false;  // <-- nueva linea
+  if (!search) return true;
+  return item.nombre.toLowerCase().includes(search.toLowerCase());
+});
 ```
 
-### Detalles
+Con esto, las categorias que solo contengan extras (como "EXTRAS/MODIFICADORES") mostraran "0 items" en la Carta, lo cual es correcto ya que esos items se gestionan desde el Centro de Costos, dentro de la composicion de cada producto.
 
-- **P. Carta (c/IVA)**: es el `precio_extra` actual, editable inline (el que antes se llamaba "P. Extra")
-- **P. Neto (s/IVA)**: calculado como `precio_extra / 1.21` (solo lectura)
-- **Obj.**: FC% objetivo. Se usa un default de 32% (igual que los items). No se almacena por ahora en la tabla de extras, se usa el default fijo
-- **FC%**: `costo / pNeto * 100` con badge semaforo
-- **Margen**: `pNeto - costo`
-- **Sugerido**: `(costo / (obj / 100)) * 1.21` — el precio con IVA que deberia tener para cumplir el objetivo
-
-Los calculos reusan las funciones `neto()`, `calcFC()`, `calcMargen()`, `calcSugerido()` que ya existen en el archivo.
-
-### Cambios tecnicos
-
-**Archivo: `src/pages/admin/CentroCostosPage.tsx`**
-
-Modificar `ExtrasSection`:
-
-1. Reemplazar las columnas del `TableHeader` por: Nombre, Tipo, Costo, P. Carta (c/IVA), P. Neto (s/IVA), Obj., FC%, Margen, Sugerido
-2. En cada fila, calcular todos los valores derivados usando las funciones existentes (`neto`, `calcFC`, `calcMargen`, `calcSugerido`) con un `fcObj` default de 32
-3. El input editable sigue siendo el precio con IVA (renombrado de "P. Extra" a "P. Carta c/IVA")
-4. Mostrar P. Neto, Margen y Sugerido como valores calculados (solo lectura, font-mono)
-5. FC% mantiene el badge con semaforo de color
-6. Margen en verde si positivo, rojo si negativo (mismo estilo que arriba)
-7. Sugerido resaltado en rojo si la diferencia con el precio actual es grande
-
-No se crean archivos nuevos ni se modifica la base de datos.
+### Impacto
+- Centro de Costos: sin cambios, sigue mostrando todo.
+- Carta: solo muestra items vendibles al publico.
+- No requiere cambios de base de datos.
