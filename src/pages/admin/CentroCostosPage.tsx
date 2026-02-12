@@ -307,7 +307,7 @@ function AnalisisTab({ items, cats, gs, loading, onQueuePrice }: {
                             <TableCell className="text-right font-mono text-sm text-muted-foreground">{fmtPct(i.fcObj)}</TableCell>
                             <TableCell className="text-right">{i.hasComp && i.hasPrice ? <Badge variant={badgeVar[i.color]}>{fmtPct(i.fc)}</Badge> : '—'}</TableCell>
                             <TableCell className="text-right font-mono text-sm">{i.hasComp && i.hasPrice ? <span className={i.margen > 0 ? 'text-green-600' : 'text-red-600'}>{fmt(i.margen)}</span> : '—'}</TableCell>
-                            <TableCell className="text-right">{i.hasComp && i.pSug > 0 ? (() => { const rounded = Math.round(i.pSug / 100) * 100; return <div className="flex flex-col items-end gap-0.5"><span className={`font-mono text-sm ${gap > 100 ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>{fmt(i.pSug)}</span><button onClick={(e) => { e.stopPropagation(); onQueuePrice?.(i.id, rounded); }} className="font-mono text-xs text-primary hover:text-primary/80 hover:underline cursor-pointer transition-colors" title="Aplicar precio redondeado">≈ {fmt(rounded)}</button></div>; })() : '—'}</TableCell>
+                            <TableCell className="text-right">{i.hasComp && i.pSug > 0 ? (() => { const rounded = Math.round(i.pSug / 100) * 100; const diffPct = i.precio > 0 ? ((rounded - i.precio) / i.precio) * 100 : 0; const diffAbs = rounded - i.precio; const isUp = diffAbs > 0; const isDown = diffAbs < 0; return <div className="flex flex-col items-end gap-0.5"><span className={`font-mono text-sm ${gap > 100 ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>{fmt(i.pSug)}</span><button onClick={(e) => { e.stopPropagation(); onQueuePrice?.(i.id, rounded); }} className="font-mono text-xs text-primary hover:text-primary/80 hover:underline cursor-pointer transition-colors" title="Aplicar precio redondeado">≈ {fmt(rounded)}</button>{Math.abs(diffAbs) > 0 && <span className={`text-[10px] font-mono ${isUp ? 'text-green-600' : isDown ? 'text-red-600' : 'text-muted-foreground'}`}>{isUp ? '+' : ''}{diffPct.toFixed(1)}% ({isUp ? '+' : ''}{fmt(diffAbs)})</span>}</div>; })() : '—'}</TableCell>
                           </TableRow>
                           {isOpen && (
                             <TableRow>
@@ -392,10 +392,13 @@ function SimuladorTab({ items, gs, sim, setSim, onApply }: {
         <TableHead className="w-[220px]">Item</TableHead><TableHead>Categoría</TableHead>
         <TableHead className="text-right">Costo</TableHead><TableHead className="text-right">P. Actual</TableHead>
         <TableHead className="text-right">FC% Actual</TableHead><TableHead className="text-right w-[130px]">P. Nuevo</TableHead>
-        <TableHead className="text-right">FC% Nuevo</TableHead><TableHead className="text-right">Δ Margen</TableHead>
+        <TableHead className="text-right">FC% Nuevo</TableHead><TableHead className="text-right">Variación</TableHead><TableHead className="text-right">Δ Margen</TableHead>
       </TableRow></TableHeader><TableBody>
-        {simItems.length === 0 ? <TableRow><TableCell colSpan={8} className="h-32"><EmptyState icon={Calculator} title="Sin items" description="Necesitás items con precio y composición" /></TableCell></TableRow> :
-        simItems.map(i => (
+        {simItems.length === 0 ? <TableRow><TableCell colSpan={9} className="h-32"><EmptyState icon={Calculator} title="Sin items" description="Necesitás items con precio y composición" /></TableCell></TableRow> :
+        simItems.map(i => {
+          const diffPct = i.precio > 0 ? ((i.np - i.precio) / i.precio) * 100 : 0;
+          const diffAbs = i.np - i.precio;
+          return (
           <TableRow key={i.id} className={i.changed ? 'bg-primary/5' : ''}>
             <TableCell className="font-medium text-sm">{i.nombre}</TableCell>
             <TableCell className="text-sm text-muted-foreground">{i.cat}</TableCell>
@@ -404,9 +407,10 @@ function SimuladorTab({ items, gs, sim, setSim, onApply }: {
             <TableCell className="text-right"><Badge variant={badgeVar[i.color]} className="text-xs">{fmtPct(i.fc)}</Badge></TableCell>
             <TableCell className="text-right"><Input type="number" className="h-7 w-[110px] text-right font-mono text-sm ml-auto" value={sim[i.id] ?? i.precio} onChange={e => setSim({ ...sim, [i.id]: parseFloat(e.target.value) || 0 })} /></TableCell>
             <TableCell className="text-right"><Badge variant={badgeVar[fcColor(i.nfc, i.fcObj)]} className="text-xs">{fmtPct(i.nfc)}</Badge></TableCell>
+            <TableCell className="text-right font-mono text-xs">{i.changed ? <span className={diffAbs > 0 ? 'text-green-600' : diffAbs < 0 ? 'text-red-600' : 'text-muted-foreground'}>{diffAbs > 0 ? '+' : ''}{diffPct.toFixed(1)}% ({diffAbs > 0 ? '+' : ''}{fmt(diffAbs)})</span> : <span className="text-muted-foreground">—</span>}</TableCell>
             <TableCell className="text-right font-mono text-sm">{i.changed ? <span className={i.dm > 0 ? 'text-green-600' : 'text-red-600'}>{i.dm > 0 ? '+' : ''}{fmt(i.dm)}</span> : <span className="text-muted-foreground">—</span>}</TableCell>
-          </TableRow>
-        ))}
+          </TableRow>);
+        })}
       </TableBody></Table></div>
     </div>
   );
