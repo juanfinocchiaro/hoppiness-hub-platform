@@ -538,27 +538,38 @@ function ExtrasSection({ preparaciones, insumos }: { preparaciones: any[]; insum
       {extrasOpen && (
         <div className="p-4 space-y-4">
           <DataToolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="Buscar extra..." />
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
           <TableHeader>
             <TableRow className="text-xs">
-              <TableHead className="w-[280px]">Nombre</TableHead>
-              <TableHead className="w-[100px]">Tipo</TableHead>
-              <TableHead className="text-right w-[120px]">Costo</TableHead>
-              <TableHead className="text-right w-[140px]">P. Extra</TableHead>
-              <TableHead className="text-right w-[100px]">FC%</TableHead>
+              <TableHead className="w-[200px]">Nombre</TableHead>
+              <TableHead className="w-[80px]">Tipo</TableHead>
+              <TableHead className="text-right">Costo</TableHead>
+              <TableHead className="text-right"><span>P. Carta</span> <span className="text-muted-foreground font-normal">(c/IVA)</span></TableHead>
+              <TableHead className="text-right"><span>P. Neto</span> <span className="text-muted-foreground font-normal">(s/IVA)</span></TableHead>
+              <TableHead className="text-right">Obj.</TableHead>
+              <TableHead className="text-right">FC%</TableHead>
+              <TableHead className="text-right">Margen</TableHead>
+              <TableHead className="text-right">Sugerido</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.map(row => {
               const pe = row.precioExtra;
-              const fc = pe && pe > 0 ? calcFC(row.costo, pe) : null;
-              const fcCol = fc != null ? (fc <= 30 ? 'ok' : fc <= 45 ? 'warn' : 'danger') as 'ok'|'warn'|'danger' : null;
+              const hasPE = pe != null && pe > 0;
+              const hasCost = row.costo > 0;
+              const fcObj = 32;
+              const pNeto = hasPE ? neto(pe!) : 0;
+              const fc = hasPE && hasCost ? calcFC(row.costo, pe!) : null;
+              const fcCol = fc != null ? fcColor(fc, fcObj) : null;
+              const margen = hasPE ? calcMargen(row.costo, pe!) : null;
+              const pSug = hasCost ? calcSugerido(row.costo, fcObj) : 0;
+              const gap = hasPE ? pSug - pe! : 0;
               return (
                 <TableRow key={`${row.tipo}-${row.id}`}>
                   <TableCell className="font-medium text-sm">{row.nombre}</TableCell>
                   <TableCell><Badge variant="outline" className="text-xs">{row.tipo}</Badge></TableCell>
-                  <TableCell className="text-right font-mono text-sm">{row.costo > 0 ? fmt(row.costo) : '—'}</TableCell>
+                  <TableCell className="text-right font-mono text-sm">{hasCost ? fmt(row.costo) : '—'}</TableCell>
                   <TableCell className="text-right">
                     <Input
                       type="number"
@@ -569,12 +580,24 @@ function ExtrasSection({ preparaciones, insumos }: { preparaciones: any[]; insum
                       onBlur={() => handleBlur(row)}
                     />
                   </TableCell>
+                  <TableCell className="text-right font-mono text-sm text-muted-foreground">{hasPE ? fmt(pNeto) : '—'}</TableCell>
+                  <TableCell className="text-right font-mono text-sm text-muted-foreground">{fmtPct(fcObj)}</TableCell>
                   <TableCell className="text-right">
                     {fc != null && fcCol ? (
-                      <Badge variant={badgeVar[fcCol]} className="text-xs">{fmtPct(fc)}</Badge>
+                      <Badge variant={badgeVar[fcCol]}>{fmtPct(fc)}</Badge>
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm">
+                    {margen != null && hasPE ? (
+                      <span className={margen > 0 ? 'text-green-600' : 'text-red-600'}>{fmt(margen)}</span>
+                    ) : '—'}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {pSug > 0 ? (
+                      <span className={`font-mono text-sm ${gap > 100 ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>{fmt(pSug)}</span>
+                    ) : '—'}
                   </TableCell>
                 </TableRow>
               );
@@ -584,7 +607,7 @@ function ExtrasSection({ preparaciones, insumos }: { preparaciones: any[]; insum
           </div>
           <p className="text-xs text-muted-foreground">
             {allExtras.length} extra{allExtras.length !== 1 ? 's' : ''} disponible{allExtras.length !== 1 ? 's' : ''} · 
-            FC% = costo / (precio / 1.21) × 100
+            FC% = costo / (precio / 1.21) × 100 · Obj. = 32%
           </p>
         </div>
       )}
