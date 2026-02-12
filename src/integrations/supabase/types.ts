@@ -2113,6 +2113,7 @@ export type Database = {
           deleted_at: string | null
           descripcion: string | null
           especificacion: Json | null
+          fc_objetivo_extra: number | null
           id: string
           margen_bruto: number | null
           margen_porcentaje: number | null
@@ -2146,6 +2147,7 @@ export type Database = {
           deleted_at?: string | null
           descripcion?: string | null
           especificacion?: Json | null
+          fc_objetivo_extra?: number | null
           id?: string
           margen_bruto?: number | null
           margen_porcentaje?: number | null
@@ -2179,6 +2181,7 @@ export type Database = {
           deleted_at?: string | null
           descripcion?: string | null
           especificacion?: Json | null
+          fc_objetivo_extra?: number | null
           id?: string
           margen_bruto?: number | null
           margen_porcentaje?: number | null
@@ -2391,7 +2394,7 @@ export type Database = {
         Row: {
           cantidad: number
           created_at: string | null
-          es_removible: boolean | null
+          es_extra: boolean | null
           id: string
           insumo_id: string | null
           item_carta_id: string
@@ -2401,7 +2404,7 @@ export type Database = {
         Insert: {
           cantidad?: number
           created_at?: string | null
-          es_removible?: boolean | null
+          es_extra?: boolean | null
           id?: string
           insumo_id?: string | null
           item_carta_id: string
@@ -2411,7 +2414,7 @@ export type Database = {
         Update: {
           cantidad?: number
           created_at?: string | null
-          es_removible?: boolean | null
+          es_extra?: boolean | null
           id?: string
           insumo_id?: string | null
           item_carta_id?: string
@@ -2619,45 +2622,6 @@ export type Database = {
           },
         ]
       }
-      item_extra_asignaciones: {
-        Row: {
-          created_at: string | null
-          extra_id: string
-          id: string
-          item_carta_id: string
-          orden: number | null
-        }
-        Insert: {
-          created_at?: string | null
-          extra_id: string
-          id?: string
-          item_carta_id: string
-          orden?: number | null
-        }
-        Update: {
-          created_at?: string | null
-          extra_id?: string
-          id?: string
-          item_carta_id?: string
-          orden?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "item_extra_asignaciones_extra_id_fkey"
-            columns: ["extra_id"]
-            isOneToOne: false
-            referencedRelation: "items_carta"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "item_extra_asignaciones_item_carta_id_fkey"
-            columns: ["item_carta_id"]
-            isOneToOne: false
-            referencedRelation: "items_carta"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       item_modificadores: {
         Row: {
           activo: boolean | null
@@ -2788,6 +2752,48 @@ export type Database = {
             columns: ["receta_id"]
             isOneToOne: false
             referencedRelation: "preparaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_removibles: {
+        Row: {
+          activo: boolean | null
+          created_at: string | null
+          id: string
+          insumo_id: string
+          item_carta_id: string
+          nombre_display: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          created_at?: string | null
+          id?: string
+          insumo_id: string
+          item_carta_id: string
+          nombre_display?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          created_at?: string | null
+          id?: string
+          insumo_id?: string
+          item_carta_id?: string
+          nombre_display?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_removibles_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_removibles_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "items_carta"
             referencedColumns: ["id"]
           },
         ]
@@ -3973,6 +3979,7 @@ export type Database = {
           deleted_at: string | null
           descripcion: string | null
           es_intercambiable: boolean | null
+          fc_objetivo_extra: number | null
           id: string
           metodo_costeo: string | null
           nombre: string
@@ -3990,6 +3997,7 @@ export type Database = {
           deleted_at?: string | null
           descripcion?: string | null
           es_intercambiable?: boolean | null
+          fc_objetivo_extra?: number | null
           id?: string
           metodo_costeo?: string | null
           nombre: string
@@ -4007,6 +4015,7 @@ export type Database = {
           deleted_at?: string | null
           descripcion?: string | null
           es_intercambiable?: boolean | null
+          fc_objetivo_extra?: number | null
           id?: string
           metodo_costeo?: string | null
           nombre?: string

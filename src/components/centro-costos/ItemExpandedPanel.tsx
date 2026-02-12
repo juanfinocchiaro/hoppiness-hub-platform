@@ -8,16 +8,16 @@ import { LoadingButton } from '@/components/ui/loading-button';
 import { FormRow, FormSection } from '@/components/ui/forms-pro';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
-  Layers, Tag, Plus, Trash2, Save, DollarSign, Clock, ChevronUp, Sparkles, ListChecks,
+  Layers, Tag, Plus, Trash2, Save, DollarSign, Clock, ChevronUp, Sparkles, Ban,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useItemCartaComposicion, useItemCartaHistorial, useItemCartaMutations, useItemsCarta } from '@/hooks/useItemsCarta';
-import { useExtraAsignaciones, useExtraAsignacionesMutations, useExtraEnItems } from '@/hooks/useExtraAsignaciones';
+import { useItemCartaComposicion, useItemCartaHistorial, useItemCartaMutations } from '@/hooks/useItemsCarta';
 import { useGruposOpcionales, useGruposOpcionalesMutations } from '@/hooks/useGruposOpcionales';
 import { usePreparaciones } from '@/hooks/usePreparaciones';
 import { useInsumos } from '@/hooks/useInsumos';
 import { useMenuCategorias } from '@/hooks/useMenu';
+import { useItemIngredientesDeepList } from '@/hooks/useItemIngredientesDeepList';
+import { useItemRemovibles, useItemRemoviblesMutations } from '@/hooks/useItemRemovibles';
 
 const IVA = 1.21;
 const fmt = (v: number) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(v);
@@ -30,7 +30,7 @@ function fcColor(real: number, obj: number): 'ok' | 'warn' | 'danger' {
 }
 const badgeVar = { ok: 'default' as const, warn: 'secondary' as const, danger: 'destructive' as const };
 
-type PanelTab = 'composicion' | 'editar' | 'historial' | 'asignados';
+type PanelTab = 'composicion' | 'editar' | 'historial';
 
 interface Props {
   item: any;
@@ -42,20 +42,18 @@ export function ItemExpandedPanel({ item, onClose, onDeleted }: Props) {
   const [activeTab, setActiveTab] = useState<PanelTab>('composicion');
   const [showDelete, setShowDelete] = useState(false);
   const mutations = useItemCartaMutations();
-  const isExtra = item.tipo === 'extra';
 
-  const tabs: { id: PanelTab; label: string; icon: any; show: boolean }[] = [
-    { id: 'composicion', label: 'Composición', icon: Layers, show: true },
-    { id: 'asignados', label: 'Asignados', icon: ListChecks, show: isExtra },
-    { id: 'editar', label: 'Editar', icon: DollarSign, show: true },
-    { id: 'historial', label: 'Historial', icon: Clock, show: true },
+  const tabs: { id: PanelTab; label: string; icon: any }[] = [
+    { id: 'composicion', label: 'Composición', icon: Layers },
+    { id: 'editar', label: 'Editar', icon: DollarSign },
+    { id: 'historial', label: 'Historial', icon: Clock },
   ];
 
   return (
     <div className="bg-muted/30 border-x border-b rounded-b-lg">
       <div className="flex items-center justify-between px-4 pt-3 pb-0 border-b">
         <div className="flex gap-1">
-          {tabs.filter(t => t.show).map(t => {
+          {tabs.map(t => {
             const I = t.icon;
             return (
               <button
@@ -85,7 +83,6 @@ export function ItemExpandedPanel({ item, onClose, onDeleted }: Props) {
 
       <div className="p-4">
         {activeTab === 'composicion' && <ComposicionInline item={item} mutations={mutations} />}
-        {activeTab === 'asignados' && isExtra && <AsignadosInline item={item} />}
         {activeTab === 'editar' && <EditarInline item={item} mutations={mutations} onSaved={onClose} />}
         {activeTab === 'historial' && <HistorialInline item={item} />}
       </div>
@@ -107,28 +104,26 @@ export function ItemExpandedPanel({ item, onClose, onDeleted }: Props) {
   );
 }
 
-// ═══ COMPOSICIÓN INLINE ═══
+// ═══ COMPOSICIÓN INLINE (new model: es_extra + item_removibles) ═══
 function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
   const { data: composicionActual } = useItemCartaComposicion(item?.id);
   const { data: grupos } = useGruposOpcionales(item?.id);
   const { data: preparaciones } = usePreparaciones();
   const { data: insumos } = useInsumos();
-  const { data: allItems } = useItemsCarta();
   const gruposMutations = useGruposOpcionalesMutations();
 
-  // New extras system
-  const { data: asignaciones } = useExtraAsignaciones(item?.id);
-  const asignacionesMutations = useExtraAsignacionesMutations();
-  const [selectedExtraIds, setSelectedExtraIds] = useState<string[]>([]);
-  const [hasExtraChanges, setHasExtraChanges] = useState(false);
-
-  const isExtra = item.tipo === 'extra';
-  const availableExtras = useMemo(() => (allItems || []).filter((i: any) => i.tipo === 'extra' && i.activo && !i.deleted_at), [allItems]);
+  // Deep ingredients for removibles
+  const { data: deepGroups } = useItemIngredientesDeepList(item?.id);
+  const { data: removibles } = useItemRemovibles(item?.id);
+  const removiblesMutations = useItemRemoviblesMutations();
 
   const [rows, setRows] = useState<any[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [grupoNuevoNombre, setGrupoNuevoNombre] = useState('');
   const [showNewGrupo, setShowNewGrupo] = useState(false);
+
+  // Extra adding
+  const [showAddExtra, setShowAddExtra] = useState(false);
 
   useEffect(() => {
     if (composicionActual) {
@@ -137,34 +132,65 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
         preparacion_id: c.preparacion_id || '',
         insumo_id: c.insumo_id || '',
         cantidad: c.cantidad,
-        es_removible: c.es_removible || false,
+        es_extra: c.es_extra || false,
         _label: c.preparaciones?.nombre || c.insumos?.nombre || '',
         _costo: c.preparaciones?.costo_calculado || c.insumos?.costo_por_unidad_base || 0,
+        _precioExtra: c.preparaciones?.precio_extra || c.insumos?.precio_extra || 0,
       })));
       setHasChanges(false);
     }
   }, [composicionActual]);
 
-  useEffect(() => { if (asignaciones) { setSelectedExtraIds(asignaciones.map((a: any) => a.extra_id)); setHasExtraChanges(false); } }, [asignaciones]);
-
-  const addRow = () => { setRows([...rows, { tipo: 'preparacion', preparacion_id: '', insumo_id: '', cantidad: 1, es_removible: false, _label: '', _costo: 0 }]); setHasChanges(true); };
+  const addRow = () => { setRows([...rows, { tipo: 'preparacion', preparacion_id: '', insumo_id: '', cantidad: 1, es_extra: false, _label: '', _costo: 0, _precioExtra: 0 }]); setHasChanges(true); };
+  const addExtraRow = (tipo: string, id: string, label: string, costo: number, precioExtra: number) => {
+    setRows([...rows, {
+      tipo,
+      preparacion_id: tipo === 'preparacion' ? id : '',
+      insumo_id: tipo === 'insumo' ? id : '',
+      cantidad: 0,
+      es_extra: true,
+      _label: label,
+      _costo: costo,
+      _precioExtra: precioExtra,
+    }]);
+    setHasChanges(true);
+    setShowAddExtra(false);
+  };
   const removeRow = (i: number) => { setRows(rows.filter((_, idx) => idx !== i)); setHasChanges(true); };
   const updateRow = (i: number, field: string, value: any) => {
     const nr = [...rows]; nr[i] = { ...nr[i], [field]: value };
-    if (field === 'tipo') { nr[i].preparacion_id = ''; nr[i].insumo_id = ''; nr[i]._costo = 0; nr[i]._label = ''; }
-    if (field === 'preparacion_id') { const p = (preparaciones || []).find((x: any) => x.id === value); nr[i]._label = p?.nombre || ''; nr[i]._costo = p?.costo_calculado || 0; }
-    if (field === 'insumo_id') { const ins = (insumos || []).find((x: any) => x.id === value); nr[i]._label = ins?.nombre || ''; nr[i]._costo = ins?.costo_por_unidad_base || 0; }
+    if (field === 'tipo') { nr[i].preparacion_id = ''; nr[i].insumo_id = ''; nr[i]._costo = 0; nr[i]._label = ''; nr[i]._precioExtra = 0; }
+    if (field === 'preparacion_id') { const p = (preparaciones || []).find((x: any) => x.id === value); nr[i]._label = p?.nombre || ''; nr[i]._costo = p?.costo_calculado || 0; nr[i]._precioExtra = p?.precio_extra || 0; }
+    if (field === 'insumo_id') { const ins = (insumos || []).find((x: any) => x.id === value); nr[i]._label = ins?.nombre || ''; nr[i]._costo = ins?.costo_por_unidad_base || 0; nr[i]._precioExtra = ins?.precio_extra || 0; }
     setRows(nr); setHasChanges(true);
   };
 
-  const toggleExtra = (extraId: string) => {
-    setSelectedExtraIds(prev => prev.includes(extraId) ? prev.filter(id => id !== extraId) : [...prev, extraId]);
-    setHasExtraChanges(true);
-  };
+  // Base components (cantidad > 0) and extras (es_extra = true)
+  const baseRows = rows.filter(r => r.cantidad > 0);
+  const extraRows = rows.filter(r => r.es_extra);
 
-  const costoFijo = rows.reduce((t, r) => t + r.cantidad * r._costo, 0);
+  const costoFijo = baseRows.reduce((t, r) => t + r.cantidad * r._costo, 0);
   const costoGrupos = (grupos || []).reduce((t: number, g: any) => t + (g.costo_promedio || 0), 0);
   const costoTotal = costoFijo + costoGrupos;
+
+  // Removibles: flatten deep ingredients and check against item_removibles
+  const removibleSet = useMemo(() => new Set((removibles || []).map((r: any) => r.insumo_id)), [removibles]);
+  const allDeepIngredients = useMemo(() => {
+    if (!deepGroups) return [];
+    return deepGroups.flatMap(g => g.ingredientes.map(ing => ({ ...ing, receta_nombre: g.receta_nombre })));
+  }, [deepGroups]);
+  // Deduplicate by insumo_id
+  const uniqueIngredients = useMemo(() => {
+    const map = new Map<string, any>();
+    for (const ing of allDeepIngredients) {
+      if (!map.has(ing.insumo_id)) map.set(ing.insumo_id, ing);
+    }
+    return Array.from(map.values());
+  }, [allDeepIngredients]);
+
+  const handleToggleRemovible = async (insumoId: string, activo: boolean) => {
+    await removiblesMutations.toggle.mutateAsync({ item_carta_id: item.id, insumo_id: insumoId, activo });
+  };
 
   const handleSave = async () => {
     await mutations.saveComposicion.mutateAsync({
@@ -173,15 +199,10 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
         preparacion_id: r.tipo === 'preparacion' ? r.preparacion_id : undefined,
         insumo_id: r.tipo === 'insumo' ? r.insumo_id : undefined,
         cantidad: r.cantidad,
-        es_removible: r.es_removible,
+        es_extra: r.es_extra,
       })),
     });
     setHasChanges(false);
-  };
-
-  const handleSaveExtras = async () => {
-    await asignacionesMutations.saveAsignaciones.mutateAsync({ item_carta_id: item.id, extra_ids: selectedExtraIds });
-    setHasExtraChanges(false);
   };
 
   const handleCreateGrupo = async () => {
@@ -191,7 +212,18 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
     setShowNewGrupo(false);
   };
 
-  const renderInsumoSelect = (row: any, i: number) => {
+  const renderComponentSelect = (row: any, i: number) => {
+    if (row.tipo === 'preparacion') {
+      return (
+        <Select value={row.preparacion_id || 'none'} onValueChange={v => updateRow(i, 'preparacion_id', v === 'none' ? '' : v)}>
+          <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Seleccionar...</SelectItem>
+            {(preparaciones || []).map((p: any) => <SelectItem key={p.id} value={p.id}>{p.nombre} ({fmt(p.costo_calculado || 0)})</SelectItem>)}
+          </SelectContent>
+        </Select>
+      );
+    }
     const allInsumos = insumos || [];
     const productos = allInsumos.filter((x: any) => x.tipo_item === 'producto');
     const ingredientes = allInsumos.filter((x: any) => x.tipo_item === 'ingrediente');
@@ -209,11 +241,18 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
     );
   };
 
+  // Available extras to add (recetas/insumos not already in composition)
+  const usedPrepIds = new Set(rows.filter(r => r.preparacion_id).map(r => r.preparacion_id));
+  const usedInsumoIds = new Set(rows.filter(r => r.insumo_id).map(r => r.insumo_id));
+  const availablePreps = (preparaciones || []).filter((p: any) => !usedPrepIds.has(p.id) && p.precio_extra > 0);
+  const availableInsumos = (insumos || []).filter((ins: any) => !usedInsumoIds.has(ins.id) && ins.precio_extra > 0);
+
   return (
     <div className="space-y-4">
       {/* ── COMPOSICIÓN FIJA ── */}
       <FormSection title="Composición Fija" icon={Layers}>
-        {rows.length === 0 ? (
+        <p className="text-xs text-muted-foreground mb-2">Componentes base del producto (cantidad &gt; 0).</p>
+        {baseRows.length === 0 ? (
           <div className="py-4 text-center text-muted-foreground border rounded-lg text-sm">Sin componentes fijos</div>
         ) : (
           <div className="space-y-2">
@@ -222,87 +261,171 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
               <span className="flex-1">Componente</span>
               <span className="w-16 shrink-0 text-right">Cant.</span>
               <span className="w-20 shrink-0 text-right">Subtotal</span>
-              <span className="w-14 shrink-0 text-center">SIN</span>
+              <span className="w-14 shrink-0 text-center">Extra</span>
               <span className="w-6 shrink-0" />
             </div>
-            {rows.map((row, i) => (
-              <div key={i} className="flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2">
-                <Select value={row.tipo} onValueChange={v => updateRow(i, 'tipo', v)}>
-                  <SelectTrigger className="h-7 w-[100px] text-xs shrink-0"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="preparacion">Receta</SelectItem><SelectItem value="insumo">Catálogo</SelectItem></SelectContent>
-                </Select>
-                <div className="flex-1 min-w-0">
-                  {row.tipo === 'preparacion' ? (
-                    <Select value={row.preparacion_id || 'none'} onValueChange={v => updateRow(i, 'preparacion_id', v === 'none' ? '' : v)}>
-                      <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Seleccionar...</SelectItem>
-                        {(preparaciones || []).map((p: any) => <SelectItem key={p.id} value={p.id}>{p.nombre} ({fmt(p.costo_calculado || 0)})</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  ) : renderInsumoSelect(row, i)}
+            {rows.map((row, i) => {
+              if (row.cantidad <= 0 && !row.es_extra) return null; // skip orphans
+              if (row.es_extra && row.cantidad === 0) return null; // pure extras shown below
+              return (
+                <div key={i} className="flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2">
+                  <Select value={row.tipo} onValueChange={v => updateRow(i, 'tipo', v)}>
+                    <SelectTrigger className="h-7 w-[100px] text-xs shrink-0"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="preparacion">Receta</SelectItem><SelectItem value="insumo">Catálogo</SelectItem></SelectContent>
+                  </Select>
+                  <div className="flex-1 min-w-0">{renderComponentSelect(row, i)}</div>
+                  <Input type="number" className="h-7 w-16 text-xs shrink-0" value={row.cantidad} onChange={e => updateRow(i, 'cantidad', Number(e.target.value))} />
+                  <span className="font-mono text-xs font-semibold w-20 text-right shrink-0">{fmt(row.cantidad * row._costo)}</span>
+                  <div className="w-14 shrink-0 flex justify-center">
+                    <Switch checked={row.es_extra} onCheckedChange={v => updateRow(i, 'es_extra', v)} className="scale-75" />
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeRow(i)}>
+                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                  </Button>
                 </div>
-                <Input type="number" className="h-7 w-16 text-xs shrink-0" value={row.cantidad} onChange={e => updateRow(i, 'cantidad', Number(e.target.value))} />
-                <span className="font-mono text-xs font-semibold w-20 text-right shrink-0">{fmt(row.cantidad * row._costo)}</span>
-                <div className="w-14 shrink-0 flex justify-center">
-                  <Switch checked={row.es_removible} onCheckedChange={v => updateRow(i, 'es_removible', v)} className="scale-75" />
-                </div>
-                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeRow(i)}>
-                  <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                </Button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
         <Button variant="outline" onClick={addRow} className="w-full mt-2"><Plus className="w-4 h-4 mr-2" /> Agregar Componente</Button>
       </FormSection>
 
-      {/* ── EXTRAS QUE ACEPTA (only for tipo=item) ── */}
-      {!isExtra && (
-        <FormSection title="Extras que acepta" icon={Sparkles}>
-          <p className="text-xs text-muted-foreground mb-2">Seleccioná qué extras con cargo puede pedir el cliente.</p>
-          {availableExtras.length > 0 ? (
-            <div className="space-y-1">
-              {availableExtras.map((extra: any) => {
-                const isSelected = selectedExtraIds.includes(extra.id);
-                const fc = extra.precio_base > 0 && extra.costo_total > 0 ? calcFC(extra.costo_total, extra.precio_base) : null;
-                return (
-                  <label key={extra.id} className={`flex items-center gap-3 px-3 py-2 border rounded-lg cursor-pointer transition-colors ${isSelected ? 'border-primary bg-primary/5' : 'hover:bg-muted/40'}`}>
-                    <input type="checkbox" checked={isSelected} onChange={() => toggleExtra(extra.id)} className="accent-primary" />
-                    <span className="flex-1 text-sm font-medium">{extra.nombre}</span>
-                    <span className="font-mono text-xs text-muted-foreground">{fmt(extra.costo_total || 0)}</span>
-                    <span className="font-mono text-xs">{extra.precio_base > 0 ? fmt(extra.precio_base) : <span className="text-muted-foreground">Sin precio</span>}</span>
-                    {fc !== null && <Badge variant={fc <= 30 ? 'default' : fc <= 45 ? 'secondary' : 'destructive'} className="text-xs">{fmtPct(fc)}</Badge>}
-                  </label>
-                );
-              })}
+      {/* ── EXTRAS DISPONIBLES ── */}
+      <FormSection title="Extras Disponibles" icon={Sparkles}>
+        <p className="text-xs text-muted-foreground mb-2">
+          Solo se pueden agregar cosas que son parte de este producto. Precio del extra viene de la receta/insumo.
+        </p>
+        {extraRows.length === 0 ? (
+          <div className="py-3 text-center text-xs text-muted-foreground border rounded-lg">
+            Sin extras. Agregá un componente como extra o usá "+ Agregar Extra".
+          </div>
+        ) : (
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-3 py-1">
+              <span className="flex-1">Extra</span>
+              <span className="w-16 text-right">Costo</span>
+              <span className="w-16 text-right">Precio</span>
+              <span className="w-14 text-right">FC%</span>
+              <span className="w-6" />
             </div>
-          ) : (
-            <div className="py-3 text-center text-xs text-muted-foreground border rounded-lg">
-              No hay extras creados. Creá uno desde "Nuevo Item" → tipo Extra.
+            {extraRows.map((row, i) => {
+              const realIdx = rows.indexOf(row);
+              const costo = row._costo;
+              const precio = row._precioExtra || 0;
+              const fc = precio > 0 ? calcFC(costo, precio) : 0;
+              return (
+                <div key={realIdx} className="flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2">
+                  <span className="flex-1 text-sm font-medium truncate">{row._label || 'Sin seleccionar'}</span>
+                  <span className="font-mono text-xs w-16 text-right">{fmt(costo)}</span>
+                  <span className="font-mono text-xs w-16 text-right">{precio > 0 ? fmt(precio) : <span className="text-yellow-600">Sin precio</span>}</span>
+                  {precio > 0 && (
+                    <Badge variant={badgeVar[fcColor(fc, 30)]} className="text-xs w-14 justify-center">{fmtPct(fc)}</Badge>
+                  )}
+                  {!precio && <span className="w-14" />}
+                  <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeRow(realIdx)}>
+                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {showAddExtra ? (
+          <div className="border-2 border-dashed rounded-lg p-3 space-y-2">
+            <p className="text-xs font-medium">Seleccioná receta o insumo con precio extra:</p>
+            {availablePreps.length > 0 && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Recetas</p>
+                <div className="space-y-1">
+                  {availablePreps.map((p: any) => (
+                    <button key={p.id} className="w-full text-left px-3 py-1.5 border rounded text-sm hover:bg-muted/40 transition-colors flex justify-between"
+                      onClick={() => addExtraRow('preparacion', p.id, p.nombre, p.costo_calculado || 0, p.precio_extra)}>
+                      <span>{p.nombre}</span>
+                      <span className="font-mono text-xs text-muted-foreground">{fmt(p.precio_extra)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {availableInsumos.length > 0 && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Insumos</p>
+                <div className="space-y-1">
+                  {availableInsumos.map((ins: any) => (
+                    <button key={ins.id} className="w-full text-left px-3 py-1.5 border rounded text-sm hover:bg-muted/40 transition-colors flex justify-between"
+                      onClick={() => addExtraRow('insumo', ins.id, ins.nombre, ins.costo_por_unidad_base || 0, ins.precio_extra)}>
+                      <span>{ins.nombre}</span>
+                      <span className="font-mono text-xs text-muted-foreground">{fmt(ins.precio_extra)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {availablePreps.length === 0 && availableInsumos.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-2">No hay recetas/insumos con precio_extra disponibles.</p>
+            )}
+            <Button variant="ghost" size="sm" onClick={() => setShowAddExtra(false)}>Cancelar</Button>
+          </div>
+        ) : (
+          <Button variant="outline" onClick={() => setShowAddExtra(true)} className="w-full mt-2">
+            <Plus className="w-4 h-4 mr-2" /> Agregar Extra
+          </Button>
+        )}
+      </FormSection>
+
+      {/* ── REMOVIBLES (auto-discovered from deep ingredients) ── */}
+      <FormSection title="Removibles" icon={Ban}>
+        <p className="text-xs text-muted-foreground mb-2">
+          Ingredientes que el cliente puede pedir SIN (sin descuento). Se descubren automáticamente de las recetas.
+        </p>
+        {uniqueIngredients.length === 0 ? (
+          <div className="py-3 text-center text-xs text-muted-foreground border rounded-lg">
+            Sin ingredientes descubiertos. Agregá recetas a la composición.
+          </div>
+        ) : (
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-3 py-1">
+              <span className="flex-1">Ingrediente</span>
+              <span className="w-[140px]">Receta origen</span>
+              <span className="w-24 text-center">Disponible SIN</span>
             </div>
-          )}
-        </FormSection>
-      )}
+            {uniqueIngredients.map(ing => {
+              const isActive = removibleSet.has(ing.insumo_id);
+              return (
+                <div key={ing.insumo_id} className={`flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2 ${isActive ? 'border-primary/40 bg-primary/5' : ''}`}>
+                  <span className="flex-1 text-sm">{ing.nombre}</span>
+                  <span className="w-[140px] text-xs text-muted-foreground truncate">{ing.receta_nombre}</span>
+                  <div className="w-24 flex justify-center">
+                    <Switch
+                      checked={isActive}
+                      onCheckedChange={v => handleToggleRemovible(ing.insumo_id, v)}
+                      className="scale-75"
+                      disabled={removiblesMutations.toggle.isPending}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </FormSection>
 
       {/* ── GRUPOS OPCIONALES ── */}
-      {!isExtra && (
-        <FormSection title="Grupos Opcionales" icon={Tag}>
-          <p className="text-xs text-muted-foreground mb-2">Para componentes variables (ej: bebida).</p>
-          {(grupos || []).map((grupo: any) => (
-            <GrupoEditorInline key={grupo.id} grupo={grupo} itemId={item.id} insumos={insumos || []} preparaciones={preparaciones || []} mutations={gruposMutations} />
-          ))}
-          {showNewGrupo ? (
-            <div className="flex items-center gap-2 p-3 border-2 border-dashed rounded-lg">
-              <Input value={grupoNuevoNombre} onChange={e => setGrupoNuevoNombre(e.target.value)} placeholder="Nombre del grupo (ej: Bebida)" className="text-sm h-8" onKeyDown={e => e.key === 'Enter' && handleCreateGrupo()} />
-              <Button size="sm" className="h-8" onClick={handleCreateGrupo} disabled={!grupoNuevoNombre.trim() || gruposMutations.createGrupo.isPending}>Crear</Button>
-              <Button variant="ghost" size="sm" className="h-8" onClick={() => { setShowNewGrupo(false); setGrupoNuevoNombre(''); }}>Cancelar</Button>
-            </div>
-          ) : (
-            <Button variant="outline" onClick={() => setShowNewGrupo(true)} className="w-full"><Plus className="w-4 h-4 mr-2" /> Agregar Grupo Opcional</Button>
-          )}
-        </FormSection>
-      )}
+      <FormSection title="Grupos Opcionales" icon={Tag}>
+        <p className="text-xs text-muted-foreground mb-2">Para componentes variables (ej: bebida).</p>
+        {(grupos || []).map((grupo: any) => (
+          <GrupoEditorInline key={grupo.id} grupo={grupo} itemId={item.id} insumos={insumos || []} preparaciones={preparaciones || []} mutations={gruposMutations} />
+        ))}
+        {showNewGrupo ? (
+          <div className="flex items-center gap-2 p-3 border-2 border-dashed rounded-lg">
+            <Input value={grupoNuevoNombre} onChange={e => setGrupoNuevoNombre(e.target.value)} placeholder="Nombre del grupo (ej: Bebida)" className="text-sm h-8" onKeyDown={e => e.key === 'Enter' && handleCreateGrupo()} />
+            <Button size="sm" className="h-8" onClick={handleCreateGrupo} disabled={!grupoNuevoNombre.trim() || gruposMutations.createGrupo.isPending}>Crear</Button>
+            <Button variant="ghost" size="sm" className="h-8" onClick={() => { setShowNewGrupo(false); setGrupoNuevoNombre(''); }}>Cancelar</Button>
+          </div>
+        ) : (
+          <Button variant="outline" onClick={() => setShowNewGrupo(true)} className="w-full"><Plus className="w-4 h-4 mr-2" /> Agregar Grupo Opcional</Button>
+        )}
+      </FormSection>
 
       {/* Summary */}
       <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
@@ -323,81 +446,13 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
         </div>
       </div>
 
-      {(hasChanges || hasExtraChanges) && (
+      {hasChanges && (
         <div className="flex justify-end gap-2">
-          {hasChanges && (
-            <LoadingButton loading={mutations.saveComposicion.isPending} onClick={handleSave}>
-              <Save className="w-4 h-4 mr-2" /> Guardar Composición
-            </LoadingButton>
-          )}
-          {hasExtraChanges && (
-            <LoadingButton loading={asignacionesMutations.saveAsignaciones.isPending} onClick={handleSaveExtras}>
-              <Save className="w-4 h-4 mr-2" /> Guardar Extras
-            </LoadingButton>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ═══ ASIGNADOS TAB (for extras: shows which items accept this extra) ═══
-function AsignadosInline({ item }: { item: any }) {
-  const { data: enItems } = useExtraEnItems(item?.id);
-  const { data: allItems } = useItemsCarta();
-  const asignacionesMutations = useExtraAsignacionesMutations();
-  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
-  const [hasChanges, setHasChanges] = useState(false);
-
-  const regularItems = useMemo(() => (allItems || []).filter((i: any) => (i.tipo === 'item' || !i.tipo) && i.activo && !i.deleted_at), [allItems]);
-
-  useEffect(() => {
-    if (enItems) {
-      setSelectedItemIds(enItems.map((a: any) => a.item_carta_id));
-      setHasChanges(false);
-    }
-  }, [enItems]);
-
-  const toggleItem = (itemId: string) => {
-    setSelectedItemIds(prev => prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]);
-    setHasChanges(true);
-  };
-
-  const handleSave = async () => {
-    await asignacionesMutations.saveExtraEnItems.mutateAsync({ extra_id: item.id, item_ids: selectedItemIds });
-    setHasChanges(false);
-  };
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <p className="text-sm font-medium mb-1">Items que aceptan este extra</p>
-        <p className="text-xs text-muted-foreground mb-3">Marcá en qué productos de carta está disponible "{item.nombre}".</p>
-      </div>
-      {regularItems.length > 0 ? (
-        <div className="space-y-1 max-h-[300px] overflow-y-auto">
-          {regularItems.map((ri: any) => {
-            const isSelected = selectedItemIds.includes(ri.id);
-            return (
-              <label key={ri.id} className={`flex items-center gap-3 px-3 py-2 border rounded-lg cursor-pointer transition-colors ${isSelected ? 'border-primary bg-primary/5' : 'hover:bg-muted/40'}`}>
-                <input type="checkbox" checked={isSelected} onChange={() => toggleItem(ri.id)} className="accent-primary" />
-                <span className="flex-1 text-sm">{ri.nombre}</span>
-                <span className="text-xs text-muted-foreground">{ri.menu_categorias?.nombre || 'Sin cat.'}</span>
-              </label>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="py-4 text-center text-sm text-muted-foreground border rounded-lg">No hay items de carta</div>
-      )}
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">{selectedItemIds.length} de {regularItems.length} items seleccionados</p>
-        {hasChanges && (
-          <LoadingButton loading={asignacionesMutations.saveExtraEnItems.isPending} onClick={handleSave} size="sm">
-            <Save className="w-3.5 h-3.5 mr-1.5" /> Guardar
+          <LoadingButton loading={mutations.saveComposicion.isPending} onClick={handleSave}>
+            <Save className="w-4 h-4 mr-2" /> Guardar Composición
           </LoadingButton>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
