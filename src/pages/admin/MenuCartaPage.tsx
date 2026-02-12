@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/states';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { BookOpen, ChevronDown, Plus, GripVertical, Pencil, Trash2, Check, X } from 'lucide-react';
+import { BookOpen, ChevronDown, Plus, GripVertical, Pencil, Trash2, Check, X, Eye, EyeOff } from 'lucide-react';
 import { useItemsCarta } from '@/hooks/useItemsCarta';
 import { useMenuCategorias, useMenuCategoriaMutations } from '@/hooks/useMenu';
 import {
@@ -50,11 +50,12 @@ interface SortableCatProps {
   setEditingId: (v: string | null) => void;
   handleUpdate: () => void;
   setDeleting: (v: any) => void;
+  onToggleVisibility: (cat: any) => void;
 }
 
 function SortableCategoryCard({
   cat, items, isOpen, onToggle,
-  editingId, editingNombre, setEditingNombre, setEditingId, handleUpdate, setDeleting,
+  editingId, editingNombre, setEditingNombre, setEditingId, handleUpdate, setDeleting, onToggleVisibility,
 }: SortableCatProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id });
   const style = {
@@ -106,6 +107,15 @@ function SortableCategoryCard({
                 </button>
               </CollapsibleTrigger>
               <div className="flex items-center gap-0.5 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  title={cat.visible_en_carta === false ? 'Mostrar en Carta' : 'Ocultar de Carta'}
+                  onClick={() => onToggleVisibility(cat)}
+                >
+                  {cat.visible_en_carta === false ? <EyeOff className="w-3.5 h-3.5 text-muted-foreground" /> : <Eye className="w-3.5 h-3.5" />}
+                </Button>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingId(cat.id); setEditingNombre(cat.nombre); }}>
                   <Pencil className="w-3.5 h-3.5" />
                 </Button>
@@ -153,7 +163,7 @@ function SortableCategoryCard({
 export default function MenuCartaPage() {
   const { data: items, isLoading: loadingItems } = useItemsCarta();
   const { data: categorias, isLoading: loadingCats } = useMenuCategorias();
-  const { create, update, reorder, softDelete } = useMenuCategoriaMutations();
+  const { create, update, reorder, softDelete, toggleVisibility } = useMenuCategoriaMutations();
 
   const [search, setSearch] = useState('');
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
@@ -280,7 +290,7 @@ export default function MenuCartaPage() {
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
           <SortableContext items={categorias?.map((c: any) => c.id) || []} strategy={verticalListSortingStrategy}>
             <div className="space-y-3">
-              {categorias?.filter((cat: any) => (itemsByCategory[cat.id] || []).length > 0).map((cat: any) => (
+              {categorias?.filter((cat: any) => cat.visible_en_carta !== false).map((cat: any) => (
                 <SortableCategoryCard
                   key={cat.id}
                   cat={cat}
@@ -293,8 +303,34 @@ export default function MenuCartaPage() {
                   setEditingId={setEditingId}
                   handleUpdate={handleUpdate}
                   setDeleting={setDeleting}
+                  onToggleVisibility={(c) => toggleVisibility.mutate({ id: c.id, visible: !c.visible_en_carta })}
                 />
               ))}
+
+              {/* Hidden categories section */}
+              {categorias?.some((cat: any) => cat.visible_en_carta === false) && (
+                <div className="pt-4 border-t">
+                  <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
+                    <EyeOff className="w-3.5 h-3.5" /> Categorías ocultas
+                  </p>
+                  <div className="space-y-2">
+                    {categorias?.filter((cat: any) => cat.visible_en_carta === false).map((cat: any) => (
+                      <div key={cat.id} className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/30 border border-dashed">
+                        <span className="text-sm text-muted-foreground">{cat.nombre}</span>
+                        <Badge variant="secondary" className="text-xs">{(itemsByCategory[cat.id] || []).length} items</Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="ml-auto h-7 text-xs"
+                          onClick={() => toggleVisibility.mutate({ id: cat.id, visible: true })}
+                        >
+                          <Eye className="w-3.5 h-3.5 mr-1" /> Mostrar
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {uncategorized.length > 0 && (
                 <Card className="overflow-hidden border-dashed">

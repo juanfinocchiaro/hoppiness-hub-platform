@@ -3216,6 +3216,7 @@ export type Database = {
           nombre: string
           orden: number | null
           updated_at: string | null
+          visible_en_carta: boolean
         }
         Insert: {
           activo?: boolean | null
@@ -3225,6 +3226,7 @@ export type Database = {
           nombre: string
           orden?: number | null
           updated_at?: string | null
+          visible_en_carta?: boolean
         }
         Update: {
           activo?: boolean | null
@@ -3234,6 +3236,7 @@ export type Database = {
           nombre?: string
           orden?: number | null
           updated_at?: string | null
+          visible_en_carta?: boolean
         }
         Relationships: []
       }
