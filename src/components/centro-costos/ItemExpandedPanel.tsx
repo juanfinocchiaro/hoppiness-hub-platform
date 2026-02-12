@@ -173,8 +173,9 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
   const costoGrupos = (grupos || []).reduce((t: number, g: any) => t + (g.costo_promedio || 0), 0);
   const costoTotal = costoFijo + costoGrupos;
 
-  // Removibles: flatten deep ingredients and check against item_removibles
-  const removibleSet = useMemo(() => new Set((removibles || []).map((r: any) => r.insumo_id)), [removibles]);
+  // Removibles: flatten deep ingredients + composition-level preps
+  const removibleInsumoSet = useMemo(() => new Set((removibles || []).filter((r: any) => r.insumo_id).map((r: any) => r.insumo_id)), [removibles]);
+  const removiblePrepSet = useMemo(() => new Set((removibles || []).filter((r: any) => r.preparacion_id).map((r: any) => r.preparacion_id)), [removibles]);
   const allDeepIngredients = useMemo(() => {
     if (!deepGroups) return [];
     return deepGroups.flatMap(g => g.ingredientes.map(ing => ({ ...ing, receta_nombre: g.receta_nombre })));
@@ -187,9 +188,22 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
     }
     return Array.from(map.values());
   }, [allDeepIngredients]);
+  // Composition-level preparations (can also be removed as "SIN")
+  const compositionPreps = useMemo(() => {
+    if (!composicionActual) return [];
+    return (composicionActual as any[])
+      .filter((c: any) => c.preparacion_id && c.preparaciones)
+      .map((c: any) => ({
+        preparacion_id: c.preparacion_id,
+        nombre: c.preparaciones.nombre,
+      }));
+  }, [composicionActual]);
 
-  const handleToggleRemovible = async (insumoId: string, activo: boolean) => {
-    await removiblesMutations.toggle.mutateAsync({ item_carta_id: item.id, insumo_id: insumoId, activo });
+  const handleToggleRemovibleInsumo = async (insumoId: string, activo: boolean) => {
+    await removiblesMutations.toggleInsumo.mutateAsync({ item_carta_id: item.id, insumo_id: insumoId, activo });
+  };
+  const handleToggleRemoviblePrep = async (prepId: string, activo: boolean) => {
+    await removiblesMutations.togglePreparacion.mutateAsync({ item_carta_id: item.id, preparacion_id: prepId, activo });
   };
 
   const handleSave = async () => {
@@ -373,24 +387,41 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
         )}
       </FormSection>
 
-      {/* ── REMOVIBLES (auto-discovered from deep ingredients) ── */}
+      {/* ── REMOVIBLES (auto-discovered from deep ingredients + preps) ── */}
       <FormSection title="Removibles" icon={Ban}>
         <p className="text-xs text-muted-foreground mb-2">
-          Ingredientes que el cliente puede pedir SIN (sin descuento). Se descubren automáticamente de las recetas.
+          Ingredientes y preparaciones que el cliente puede pedir SIN (sin descuento).
         </p>
-        {uniqueIngredients.length === 0 ? (
+        {uniqueIngredients.length === 0 && compositionPreps.length === 0 ? (
           <div className="py-3 text-center text-xs text-muted-foreground border rounded-lg">
             Sin ingredientes descubiertos. Agregá recetas a la composición.
           </div>
         ) : (
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-3 py-1">
-              <span className="flex-1">Ingrediente</span>
-              <span className="w-[140px]">Receta origen</span>
+              <span className="flex-1">Componente</span>
+              <span className="w-[140px]">Origen</span>
               <span className="w-24 text-center">Disponible SIN</span>
             </div>
+            {compositionPreps.map(prep => {
+              const isActive = removiblePrepSet.has(prep.preparacion_id);
+              return (
+                <div key={`prep-${prep.preparacion_id}`} className={`flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2 ${isActive ? 'border-primary/40 bg-primary/5' : ''}`}>
+                  <span className="flex-1 text-sm font-medium">{prep.nombre}</span>
+                  <span className="w-[140px] text-xs text-muted-foreground">Preparación</span>
+                  <div className="w-24 flex justify-center">
+                    <Switch
+                      checked={isActive}
+                      onCheckedChange={v => handleToggleRemoviblePrep(prep.preparacion_id, v)}
+                      className="scale-75"
+                      disabled={removiblesMutations.togglePreparacion.isPending}
+                    />
+                  </div>
+                </div>
+              );
+            })}
             {uniqueIngredients.map(ing => {
-              const isActive = removibleSet.has(ing.insumo_id);
+              const isActive = removibleInsumoSet.has(ing.insumo_id);
               return (
                 <div key={ing.insumo_id} className={`flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2 ${isActive ? 'border-primary/40 bg-primary/5' : ''}`}>
                   <span className="flex-1 text-sm">{ing.nombre}</span>
@@ -398,9 +429,9 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
                   <div className="w-24 flex justify-center">
                     <Switch
                       checked={isActive}
-                      onCheckedChange={v => handleToggleRemovible(ing.insumo_id, v)}
+                      onCheckedChange={v => handleToggleRemovibleInsumo(ing.insumo_id, v)}
                       className="scale-75"
-                      disabled={removiblesMutations.toggle.isPending}
+                      disabled={removiblesMutations.toggleInsumo.isPending}
                     />
                   </div>
                 </div>

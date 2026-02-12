@@ -8,7 +8,7 @@ export function useItemRemovibles(itemId: string | undefined) {
       if (!itemId) return [];
       const { data, error } = await supabase
         .from('item_removibles' as any)
-        .select('*, insumos(id, nombre)')
+        .select('*, insumos(id, nombre), preparaciones(id, nombre)')
         .eq('item_carta_id', itemId)
         .eq('activo', true);
       if (error) throw error;
@@ -21,7 +21,7 @@ export function useItemRemovibles(itemId: string | undefined) {
 export function useItemRemoviblesMutations() {
   const qc = useQueryClient();
 
-  const toggle = useMutation({
+  const toggleInsumo = useMutation({
     mutationFn: async ({ item_carta_id, insumo_id, activo }: {
       item_carta_id: string; insumo_id: string; activo: boolean;
     }) => {
@@ -29,7 +29,7 @@ export function useItemRemoviblesMutations() {
         const { error } = await supabase
           .from('item_removibles' as any)
           .upsert(
-            { item_carta_id, insumo_id, activo: true },
+            { item_carta_id, insumo_id, preparacion_id: null, activo: true },
             { onConflict: 'item_carta_id,insumo_id' }
           );
         if (error) throw error;
@@ -46,5 +46,33 @@ export function useItemRemoviblesMutations() {
     },
   });
 
-  return { toggle };
+  const togglePreparacion = useMutation({
+    mutationFn: async ({ item_carta_id, preparacion_id, activo }: {
+      item_carta_id: string; preparacion_id: string; activo: boolean;
+    }) => {
+      if (activo) {
+        const { error } = await supabase
+          .from('item_removibles' as any)
+          .upsert(
+            { item_carta_id, preparacion_id, insumo_id: null, activo: true },
+            { onConflict: 'item_carta_id,preparacion_id' }
+          );
+        if (error) throw error;
+      } else {
+        await supabase
+          .from('item_removibles' as any)
+          .delete()
+          .eq('item_carta_id', item_carta_id)
+          .eq('preparacion_id', preparacion_id);
+      }
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['item-removibles', vars.item_carta_id] });
+    },
+  });
+
+  // Keep backward compat
+  const toggle = toggleInsumo;
+
+  return { toggle, toggleInsumo, togglePreparacion };
 }
