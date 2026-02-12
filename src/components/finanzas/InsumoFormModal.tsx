@@ -253,7 +253,7 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
                   {costoConIva !== null && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Precio con IVA ({form.default_alicuota_iva}%):</span>
-                      <span className="font-mono">${costoConIva.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 0 })}</span>
+                      <span className="font-mono">${costoConIva.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                   )}
                   <p className="text-xs text-muted-foreground mt-1">💡 Las recetas y el FC% se calculan siempre con precio neto</p>
