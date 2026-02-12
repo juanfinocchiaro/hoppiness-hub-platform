@@ -75,6 +75,7 @@ export function useItemCartaMutations() {
       precio_base: number;
       fc_objetivo?: number;
       disponible_delivery?: boolean;
+      tipo?: string;
     }) => {
       const { data: item, error } = await supabase
         .from('items_carta')
