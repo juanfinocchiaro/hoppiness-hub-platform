@@ -146,46 +146,26 @@ function InlineDescripcion({ prep, mutations }: { prep: any; mutations: any }) {
   );
 }
 
-// Inline precio extra editor
-function InlinePrecioExtra({ prep, mutations }: { prep: any; mutations: any }) {
-  const [value, setValue] = useState(prep.precio_extra ?? '');
-  const [dirty, setDirty] = useState(false);
+// Toggle "Puede ser extra"
+function InlinePuedeSerExtra({ prep, mutations }: { prep: any; mutations: any }) {
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => { setValue(prep.precio_extra ?? ''); setDirty(false); }, [prep.precio_extra]);
-
-  const save = async () => {
-    if (!dirty) return;
-    const numVal = value === '' || value === null ? null : Number(value);
-    await mutations.update.mutateAsync({ id: prep.id, data: { precio_extra: numVal } });
-    setDirty(false);
+  const toggle = async (checked: boolean) => {
+    setSaving(true);
+    try {
+      await mutations.update.mutateAsync({ id: prep.id, data: { puede_ser_extra: checked } });
+    } finally {
+      setSaving(false);
+    }
   };
-
-  const costo = prep.costo_calculado || 0;
-  const precioExtra = value !== '' && value !== null ? Number(value) : null;
-  const fcExtra = precioExtra && precioExtra > 0 && costo > 0 ? (costo / (precioExtra / 1.21)) * 100 : null;
 
   return (
     <div className="flex items-center gap-3 mb-3">
-      <span className="text-xs text-muted-foreground shrink-0">Precio como extra ($):</span>
-      <Input
-        type="number"
-        value={value}
-        onChange={(e) => { setValue(e.target.value === '' ? '' : Number(e.target.value)); setDirty(true); }}
-        placeholder="No disponible"
-        className="h-8 w-28 text-sm"
-        onBlur={save}
-        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } }}
-      />
-      {fcExtra !== null && (
-        <Badge variant={fcExtra <= 45 ? fcExtra <= 30 ? 'default' : 'secondary' : 'destructive'} className="text-xs shrink-0">
-          FC {fcExtra.toFixed(0)}%
-        </Badge>
-      )}
-      {dirty && (
-        <Button size="sm" variant="outline" className="shrink-0 h-8" onClick={save} disabled={mutations.update.isPending}>
-          <Save className="w-3.5 h-3.5" />
-        </Button>
-      )}
+      <span className="text-xs text-muted-foreground shrink-0">Puede ser extra:</span>
+      <Switch checked={prep.puede_ser_extra || false} onCheckedChange={toggle} disabled={saving} />
+      <span className="text-xs text-muted-foreground">
+        {prep.puede_ser_extra ? 'Disponible como extra en items de carta' : 'No disponible como extra'}
+      </span>
     </div>
   );
 }
@@ -279,7 +259,7 @@ function PrepRow({ prep, isExpanded, onToggle, mutations, onDelete, categorias }
           <InlineNombre prep={prep} mutations={mutations} />
           <InlineCategoria prep={prep} mutations={mutations} categorias={categorias} />
           <InlineDescripcion prep={prep} mutations={mutations} />
-          <InlinePrecioExtra prep={prep} mutations={mutations} />
+          <InlinePuedeSerExtra prep={prep} mutations={mutations} />
           {prep.tipo === 'elaborado' ? (
             <FichaTecnicaTab preparacionId={prep.id} mutations={mutations} onClose={onToggle} />
           ) : (

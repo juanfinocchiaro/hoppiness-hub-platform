@@ -24,6 +24,7 @@ import { ItemExpandedPanel } from '@/components/centro-costos/ItemExpandedPanel'
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useItemsCarta, useItemCartaComposicion, useItemCartaHistorial, useItemCartaMutations } from '@/hooks/useItemsCarta';
+import { useItemExtras, useItemExtrasMutations } from '@/hooks/useItemExtras';
 import { useGruposOpcionales, useGruposOpcionalesMutations } from '@/hooks/useGruposOpcionales';
 import { usePreparaciones } from '@/hooks/usePreparaciones';
 import { useInsumos } from '@/hooks/useInsumos';
@@ -501,32 +502,62 @@ function ItemFormModal({ open, onOpenChange, item, categorias, cmvCats, mutation
   </DialogContent></Dialog>);
 }
 
-// ─── Composición Modal (preserved grouped selects) ───
+// ─── Composición Modal (simplified: no Extra/P.Extra in composition, separate Extras section) ───
 function ComposicionModal({ open, onOpenChange, item, preparaciones, insumos, mutations }: any) {
   const { data: composicionActual } = useItemCartaComposicion(item?.id);
+  const { data: extrasActuales } = useItemExtras(item?.id);
   const { data: grupos } = useGruposOpcionales(item?.id);
   const gruposMutations = useGruposOpcionalesMutations();
+  const extrasMutations = useItemExtrasMutations();
   const [rows, setRows] = useState<any[]>([]);
+  const [extraRows, setExtraRows] = useState<any[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
+  const [hasExtraChanges, setHasExtraChanges] = useState(false);
   const [grupoNuevoNombre, setGrupoNuevoNombre] = useState('');
   const [showNewGrupo, setShowNewGrupo] = useState(false);
 
-  useEffect(() => { if (composicionActual) { setRows(composicionActual.map((c: any) => ({ tipo: c.preparacion_id ? 'preparacion' : 'insumo', preparacion_id: c.preparacion_id || '', insumo_id: c.insumo_id || '', cantidad: c.cantidad, es_removible: c.es_removible || false, es_extra: c.es_extra || false, _label: c.preparaciones?.nombre || c.insumos?.nombre || '', _costo: c.preparaciones?.costo_calculado || c.insumos?.costo_por_unidad_base || 0, _precio_extra: c.preparaciones?.precio_extra || c.insumos?.precio_extra || null }))); setHasChanges(false); } }, [composicionActual]);
+  useEffect(() => { if (composicionActual) { setRows(composicionActual.map((c: any) => ({ tipo: c.preparacion_id ? 'preparacion' : 'insumo', preparacion_id: c.preparacion_id || '', insumo_id: c.insumo_id || '', cantidad: c.cantidad, es_removible: c.es_removible || false, _label: c.preparaciones?.nombre || c.insumos?.nombre || '', _costo: c.preparaciones?.costo_calculado || c.insumos?.costo_por_unidad_base || 0 }))); setHasChanges(false); } }, [composicionActual]);
 
-  const addRow = () => { setRows([...rows, { tipo: 'preparacion', preparacion_id: '', insumo_id: '', cantidad: 1, es_removible: false, es_extra: false, _label: '', _costo: 0, _precio_extra: null }]); setHasChanges(true); };
+  useEffect(() => { if (extrasActuales) { setExtraRows(extrasActuales.map((e: any) => ({ tipo: e.preparacion_id ? 'preparacion' : 'insumo', preparacion_id: e.preparacion_id || '', insumo_id: e.insumo_id || '', _nombre: e.preparaciones?.nombre || e.insumos?.nombre || '', _costo: e.preparaciones?.costo_calculado || e.insumos?.costo_por_unidad_base || 0, _precio_extra: e.preparaciones?.precio_extra || e.insumos?.precio_extra || null }))); setHasExtraChanges(false); } }, [extrasActuales]);
+
+  const addRow = () => { setRows([...rows, { tipo: 'preparacion', preparacion_id: '', insumo_id: '', cantidad: 1, es_removible: false, _label: '', _costo: 0 }]); setHasChanges(true); };
   const removeRow = (i: number) => { setRows(rows.filter((_, idx) => idx !== i)); setHasChanges(true); };
   const updateRow = (i: number, field: string, value: any) => {
     const nr = [...rows]; nr[i] = { ...nr[i], [field]: value };
-    if (field === 'tipo') { nr[i].preparacion_id = ''; nr[i].insumo_id = ''; nr[i]._costo = 0; nr[i]._label = ''; nr[i]._precio_extra = null; nr[i].es_extra = false; }
-    if (field === 'preparacion_id') { const p = preparaciones.find((x: any) => x.id === value); nr[i]._label = p?.nombre || ''; nr[i]._costo = p?.costo_calculado || 0; nr[i]._precio_extra = p?.precio_extra || null; if (!p?.precio_extra) nr[i].es_extra = false; }
-    if (field === 'insumo_id') { const ins = insumos.find((x: any) => x.id === value); nr[i]._label = ins?.nombre || ''; nr[i]._costo = ins?.costo_por_unidad_base || 0; nr[i]._precio_extra = ins?.precio_extra || null; if (!ins?.precio_extra) nr[i].es_extra = false; }
+    if (field === 'tipo') { nr[i].preparacion_id = ''; nr[i].insumo_id = ''; nr[i]._costo = 0; nr[i]._label = ''; }
+    if (field === 'preparacion_id') { const p = preparaciones.find((x: any) => x.id === value); nr[i]._label = p?.nombre || ''; nr[i]._costo = p?.costo_calculado || 0; }
+    if (field === 'insumo_id') { const ins = insumos.find((x: any) => x.id === value); nr[i]._label = ins?.nombre || ''; nr[i]._costo = ins?.costo_por_unidad_base || 0; }
     setRows(nr); setHasChanges(true);
   };
   const costoFijo = rows.reduce((t, r) => t + r.cantidad * r._costo, 0);
   const costoGrupos = (grupos || []).reduce((t: number, g: any) => t + (g.costo_promedio || 0), 0);
   const costoTotal = costoFijo + costoGrupos;
-  const handleSave = async () => { await mutations.saveComposicion.mutateAsync({ item_carta_id: item.id, items: rows.filter(r => r.preparacion_id || r.insumo_id).map(r => ({ preparacion_id: r.tipo === 'preparacion' ? r.preparacion_id : undefined, insumo_id: r.tipo === 'insumo' ? r.insumo_id : undefined, cantidad: r.cantidad, es_removible: r.es_removible, es_extra: r.es_extra })) }); setHasChanges(false); };
+  const handleSave = async () => { await mutations.saveComposicion.mutateAsync({ item_carta_id: item.id, items: rows.filter(r => r.preparacion_id || r.insumo_id).map(r => ({ preparacion_id: r.tipo === 'preparacion' ? r.preparacion_id : undefined, insumo_id: r.tipo === 'insumo' ? r.insumo_id : undefined, cantidad: r.cantidad, es_removible: r.es_removible })) }); setHasChanges(false); };
+  const handleSaveExtras = async () => { await extrasMutations.saveExtras.mutateAsync({ item_carta_id: item.id, extras: extraRows.filter(r => r.preparacion_id || r.insumo_id).map(r => ({ preparacion_id: r.tipo === 'preparacion' ? r.preparacion_id : null, insumo_id: r.tipo === 'insumo' ? r.insumo_id : null })) }); setHasExtraChanges(false); };
   const handleCreateGrupo = async () => { if (!grupoNuevoNombre.trim()) return; await gruposMutations.createGrupo.mutateAsync({ item_carta_id: item.id, nombre: grupoNuevoNombre.trim(), orden: (grupos?.length || 0) }); setGrupoNuevoNombre(''); setShowNewGrupo(false); };
+
+  const availableExtras = useMemo(() => {
+    const usedPrepIds = new Set(extraRows.filter(r => r.tipo === 'preparacion').map(r => r.preparacion_id));
+    const usedInsIds = new Set(extraRows.filter(r => r.tipo === 'insumo').map(r => r.insumo_id));
+    return {
+      preps: (preparaciones || []).filter((p: any) => p.puede_ser_extra && !usedPrepIds.has(p.id)),
+      ins: (insumos || []).filter((i: any) => i.puede_ser_extra && !usedInsIds.has(i.id)),
+    };
+  }, [preparaciones, insumos, extraRows]);
+
+  const addExtra = (tipo: 'preparacion' | 'insumo', id: string) => {
+    const source: any = tipo === 'preparacion' ? preparaciones.find((p: any) => p.id === id) : insumos.find((i: any) => i.id === id);
+    if (!source) return;
+    setExtraRows([...extraRows, { tipo, preparacion_id: tipo === 'preparacion' ? id : '', insumo_id: tipo === 'insumo' ? id : '', _nombre: source.nombre, _costo: tipo === 'preparacion' ? (source.costo_calculado || 0) : (source.costo_por_unidad_base || 0), _precio_extra: source.precio_extra || null }]);
+    setHasExtraChanges(true);
+  };
+  const removeExtra = (i: number) => { setExtraRows(extraRows.filter((_, idx) => idx !== i)); setHasExtraChanges(true); };
+
+  const handleUpdatePrecioExtra = async (row: any, newPrice: number | null) => {
+    const tipo = row.tipo as 'preparacion' | 'insumo';
+    const id = tipo === 'preparacion' ? row.preparacion_id : row.insumo_id;
+    await extrasMutations.updatePrecioExtra.mutateAsync({ tipo, id, precio_extra: newPrice });
+  };
 
   // Grouped insumo select renderer
   const renderInsumoSelect = (row: any, i: number) => {
@@ -548,18 +579,16 @@ function ComposicionModal({ open, onOpenChange, item, preparaciones, insumos, mu
 
   return (<Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto"><DialogHeader><DialogTitle>Composición: {item.nombre}</DialogTitle></DialogHeader>
     <div className="space-y-4">
+      {/* ── COMPOSICIÓN FIJA ── */}
       <FormSection title="Composición Fija" icon={Layers}>
         {rows.length === 0 ? <div className="py-4 text-center text-muted-foreground border rounded-lg text-sm">Sin componentes fijos</div> : (
           <div className="space-y-2">
-            {/* Header */}
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-3 py-1">
               <span className="w-[100px] shrink-0">Tipo</span>
               <span className="flex-1">Componente</span>
               <span className="w-16 shrink-0 text-right">Cant.</span>
               <span className="w-20 shrink-0 text-right">Subtotal</span>
               <span className="w-14 shrink-0 text-center">SIN</span>
-              <span className="w-14 shrink-0 text-center">Extra</span>
-              <span className="w-20 shrink-0 text-right">P. Extra</span>
               <span className="w-6 shrink-0" />
             </div>
             {rows.map((row, i) => (
@@ -568,27 +597,9 @@ function ComposicionModal({ open, onOpenChange, item, preparaciones, insumos, mu
                 <div className="flex-1 min-w-0">{row.tipo === 'preparacion' ? <Select value={row.preparacion_id || 'none'} onValueChange={v => updateRow(i, 'preparacion_id', v === 'none' ? '' : v)}><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger><SelectContent><SelectItem value="none">Seleccionar...</SelectItem>{preparaciones.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.nombre} ({fmt(p.costo_calculado || 0)})</SelectItem>)}</SelectContent></Select> : renderInsumoSelect(row, i)}</div>
                 <Input type="number" className="h-7 w-16 text-xs shrink-0" value={row.cantidad} onChange={e => updateRow(i, 'cantidad', Number(e.target.value))} />
                 <span className="font-mono text-xs font-semibold w-20 text-right shrink-0">{fmt(row.cantidad * row._costo)}</span>
-                {/* Removible toggle */}
                 <div className="w-14 shrink-0 flex justify-center">
                   <Switch checked={row.es_removible} onCheckedChange={v => updateRow(i, 'es_removible', v)} className="scale-75" />
                 </div>
-                {/* Extra toggle */}
-                <div className="w-14 shrink-0 flex justify-center">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span>
-                          <Switch checked={row.es_extra} onCheckedChange={v => updateRow(i, 'es_extra', v)} disabled={!row._precio_extra} className="scale-75" />
-                        </span>
-                      </TooltipTrigger>
-                      {!row._precio_extra && <TooltipContent><p className="text-xs">Definí el precio extra en la receta/insumo</p></TooltipContent>}
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                {/* P. Extra readonly */}
-                <span className="font-mono text-xs w-20 text-right shrink-0 text-muted-foreground">
-                  {row._precio_extra ? fmt(row._precio_extra) : '—'}
-                </span>
                 <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeRow(i)}><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
               </div>
             ))}
@@ -596,18 +607,68 @@ function ComposicionModal({ open, onOpenChange, item, preparaciones, insumos, mu
         )}
         <Button variant="outline" onClick={addRow} className="w-full mt-2"><Plus className="w-4 h-4 mr-2" /> Agregar Componente</Button>
       </FormSection>
+
+      {/* ── EXTRAS DISPONIBLES ── */}
+      <FormSection title="Extras Disponibles" icon={Settings2}>
+        <p className="text-xs text-muted-foreground mb-2">Agregados independientes. El precio se propaga a todos los items.</p>
+        {extraRows.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-3 py-1">
+              <span className="flex-1">Extra</span>
+              <span className="w-14 shrink-0 text-center">Tipo</span>
+              <span className="w-20 shrink-0 text-right">Costo</span>
+              <span className="w-24 shrink-0 text-right">P. Extra</span>
+              <span className="w-16 shrink-0 text-right">FC%</span>
+              <span className="w-6 shrink-0" />
+            </div>
+            {extraRows.map((row, i) => {
+              const costo = row._costo || 0;
+              const precio = row._precio_extra || 0;
+              const fcExtra = precio > 0 && costo > 0 ? (costo / (precio / IVA)) * 100 : null;
+              return (
+                <div key={i} className="flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2">
+                  <span className="flex-1 min-w-0 text-sm font-medium truncate">{row._nombre}</span>
+                  <Badge variant="outline" className="w-14 shrink-0 text-xs justify-center">{row.tipo === 'preparacion' ? 'Receta' : 'Insumo'}</Badge>
+                  <span className="font-mono text-xs w-20 text-right shrink-0">{fmt(costo)}</span>
+                  <span className="font-mono text-xs w-24 text-right shrink-0">{precio > 0 ? fmt(precio) : <span className="text-muted-foreground">Sin precio</span>}</span>
+                  <span className="w-16 shrink-0 text-right">{fcExtra !== null ? <Badge variant={fcExtra <= 30 ? 'default' : fcExtra <= 45 ? 'secondary' : 'destructive'} className="text-xs">{fmtPct(fcExtra)}</Badge> : <span className="text-xs text-muted-foreground">—</span>}</span>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeExtra(i)}><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {(availableExtras.preps.length > 0 || availableExtras.ins.length > 0) && (
+          <Select value="none" onValueChange={v => { if (v === 'none') return; const [tipo, id] = v.split('::'); addExtra(tipo as any, id); }}>
+            <SelectTrigger className="h-8 text-xs mt-2"><SelectValue placeholder="+ Agregar Extra..." /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">+ Agregar Extra...</SelectItem>
+              {availableExtras.preps.length > 0 && <><SelectItem value="__h_r" disabled className="text-xs font-semibold text-muted-foreground">── Recetas ──</SelectItem>{availableExtras.preps.map((p: any) => <SelectItem key={p.id} value={`preparacion::${p.id}`}>{p.nombre} ({fmt(p.costo_calculado || 0)})</SelectItem>)}</>}
+              {availableExtras.ins.length > 0 && <><SelectItem value="__h_i" disabled className="text-xs font-semibold text-muted-foreground">── Insumos ──</SelectItem>{availableExtras.ins.map((i: any) => <SelectItem key={i.id} value={`insumo::${i.id}`}>{i.nombre} ({fmt(i.costo_por_unidad_base || 0)})</SelectItem>)}</>}
+            </SelectContent>
+          </Select>
+        )}
+      </FormSection>
+
+      {/* ── GRUPOS OPCIONALES ── */}
       <FormSection title="Grupos Opcionales" icon={Tag}>
         <p className="text-xs text-muted-foreground mb-2">Para componentes variables (ej: bebida).</p>
         {(grupos || []).map((grupo: any) => <GrupoEditor key={grupo.id} grupo={grupo} itemId={item.id} insumos={insumos} preparaciones={preparaciones} mutations={gruposMutations} />)}
         {showNewGrupo ? <div className="flex items-center gap-2 p-3 border-2 border-dashed rounded-lg"><Input value={grupoNuevoNombre} onChange={e => setGrupoNuevoNombre(e.target.value)} placeholder="Nombre del grupo (ej: Bebida)" className="text-sm h-8" onKeyDown={e => e.key === 'Enter' && handleCreateGrupo()} /><Button size="sm" className="h-8" onClick={handleCreateGrupo} disabled={!grupoNuevoNombre.trim() || gruposMutations.createGrupo.isPending}>Crear</Button><Button variant="ghost" size="sm" className="h-8" onClick={() => { setShowNewGrupo(false); setGrupoNuevoNombre(''); }}>Cancelar</Button></div> : <Button variant="outline" onClick={() => setShowNewGrupo(true)} className="w-full"><Plus className="w-4 h-4 mr-2" /> Agregar Grupo Opcional</Button>}
       </FormSection>
+
+      {/* Summary */}
       <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg"><div className="space-y-1 text-sm">
         <div className="flex justify-between"><span className="text-muted-foreground">Comp. fija:</span><span className="font-mono">{fmt(costoFijo)}</span></div>
         {costoGrupos > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Grupos (prom.):</span><span className="font-mono">{fmt(costoGrupos)}</span></div>}
         <div className="flex justify-between items-center pt-2 border-t"><div><p className="text-sm text-muted-foreground">Costo Total</p><p className="text-2xl font-bold font-mono text-primary">{fmt(costoTotal)}</p></div>
         {item.precio_base > 0 && <div className="text-right"><p className="text-sm text-muted-foreground">FC% (s/neto)</p><Badge variant={badgeVar[fcColor(calcFC(costoTotal, item.precio_base), item.fc_objetivo || 32)]} className="text-lg px-3 py-1">{fmtPct(calcFC(costoTotal, item.precio_base))}</Badge></div>}
         </div></div></div>
-      <div className="flex justify-end gap-3"><Button variant="outline" onClick={() => onOpenChange(false)}>{hasChanges ? 'Cancelar' : 'Cerrar'}</Button>{hasChanges && <LoadingButton loading={mutations.saveComposicion.isPending} onClick={handleSave}><Save className="w-4 h-4 mr-2" /> Guardar</LoadingButton>}</div>
+      <div className="flex justify-end gap-3">
+        <Button variant="outline" onClick={() => onOpenChange(false)}>{(hasChanges || hasExtraChanges) ? 'Cancelar' : 'Cerrar'}</Button>
+        {hasExtraChanges && <LoadingButton loading={extrasMutations.saveExtras.isPending} onClick={handleSaveExtras}><Save className="w-4 h-4 mr-2" /> Guardar Extras</LoadingButton>}
+        {hasChanges && <LoadingButton loading={mutations.saveComposicion.isPending} onClick={handleSave}><Save className="w-4 h-4 mr-2" /> Guardar Composición</LoadingButton>}
+      </div>
     </div>
   </DialogContent></Dialog>);
 }
