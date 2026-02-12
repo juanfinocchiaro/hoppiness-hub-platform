@@ -2761,25 +2761,28 @@ export type Database = {
           activo: boolean | null
           created_at: string | null
           id: string
-          insumo_id: string
+          insumo_id: string | null
           item_carta_id: string
           nombre_display: string | null
+          preparacion_id: string | null
         }
         Insert: {
           activo?: boolean | null
           created_at?: string | null
           id?: string
-          insumo_id: string
+          insumo_id?: string | null
           item_carta_id: string
           nombre_display?: string | null
+          preparacion_id?: string | null
         }
         Update: {
           activo?: boolean | null
           created_at?: string | null
           id?: string
-          insumo_id?: string
+          insumo_id?: string | null
           item_carta_id?: string
           nombre_display?: string | null
+          preparacion_id?: string | null
         }
         Relationships: [
           {
@@ -2794,6 +2797,13 @@ export type Database = {
             columns: ["item_carta_id"]
             isOneToOne: false
             referencedRelation: "items_carta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_removibles_preparacion_id_fkey"
+            columns: ["preparacion_id"]
+            isOneToOne: false
+            referencedRelation: "preparaciones"
             referencedColumns: ["id"]
           },
         ]
