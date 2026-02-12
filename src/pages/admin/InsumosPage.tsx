@@ -136,6 +136,7 @@ export default function InsumosPage() {
 
   const renderRow = (row: any, type: 'ingrediente' | 'insumo') => {
     const provName = row.proveedor_obligatorio?.razon_social || row.proveedor_sugerido?.razon_social;
+    const costo = Number(row.costo_por_unidad_base || row.precio_referencia || 0);
     return (
       <TableRow key={row.id}>
         <TableCell>
@@ -154,33 +155,11 @@ export default function InsumosPage() {
             </span>
           ) : <Badge variant="outline">{row.unidad_base}</Badge>}
         </TableCell>
-        {(() => {
-          const neto = Number(row.unidad_compra_precio || 0);
-          const alicuota = row.default_alicuota_iva != null ? Number(row.default_alicuota_iva) : 0;
-          const ivaMonto = neto * (alicuota / 100);
-          const final_ = neto * (1 + alicuota / 100);
-          const unit = row.unidad_compra || row.unidad_base || 'un';
-          if (!neto) return (
-            <>
-              <TableCell className="text-right"><span className="text-muted-foreground">—</span></TableCell>
-              <TableCell className="text-right"><span className="text-muted-foreground">—</span></TableCell>
-              <TableCell className="text-right"><span className="text-muted-foreground">—</span></TableCell>
-            </>
-          );
-          return (
-            <>
-              <TableCell className="text-right">
-                <span className="text-sm font-mono">${neto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </TableCell>
-              <TableCell className="text-right">
-                <span className="text-sm font-mono">${ivaMonto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </TableCell>
-              <TableCell className="text-right">
-                <span className="text-sm font-mono font-semibold">${final_.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}<span className="text-muted-foreground text-xs font-normal">/{unit}</span></span>
-              </TableCell>
-            </>
-          );
-        })()}
+        <TableCell>
+          {costo
+            ? <span className="font-mono text-sm">${costo.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+            : '—'}
+        </TableCell>
         <TableCell>
           <div className="flex gap-1 justify-end">
             <Button variant="ghost" size="icon" onClick={() => { setFixedType(type); setEditingInsumo(row); setInsumoModalOpen(true); }}><Pencil className="w-4 h-4" /></Button>
@@ -288,17 +267,15 @@ export default function InsumosPage() {
                   <SortableHead label="Proveedor" sortKey="proveedor" {...headProps} />
                   <SortableHead label="Categoría" sortKey="categoria" {...headProps} />
                   <SortableHead label="Presentación" sortKey="presentacion" {...headProps} />
-                  <TableHead className="text-right">Neto</TableHead>
-                  <TableHead className="text-right">IVA $</TableHead>
-                  <TableHead className="text-right">Final</TableHead>
+                  <SortableHead label="Costo" sortKey="costo" {...headProps} />
                   <TableHead className="w-[80px]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? <SkeletonRows cols={8} /> : (() => {
+                {isLoading ? <SkeletonRows cols={6} /> : (() => {
                   const rows = proveedorView === 'obligatorio' ? filteredObligatorios : filteredSugeridos;
                   return !rows?.length ? (
-                    <TableRow><TableCell colSpan={8} className="h-40">
+                    <TableRow><TableCell colSpan={6} className="h-40">
                       <EmptyState icon={Package} title={proveedorView === 'obligatorio' ? 'Sin ingredientes obligatorios' : 'Sin ingredientes sugeridos'} description={proveedorView === 'obligatorio' ? 'Agregá ingredientes con proveedor obligatorio' : 'Agregá ingredientes con proveedor sugerido'} />
                     </TableCell></TableRow>
                   ) : rows.map((row: any) => renderRow(row, 'ingrediente'));
@@ -333,17 +310,15 @@ export default function InsumosPage() {
                   <SortableHead label="Proveedor" sortKey="proveedor" {...headProps} />
                   <SortableHead label="Categoría" sortKey="categoria" {...headProps} />
                   <SortableHead label="Presentación" sortKey="presentacion" {...headProps} />
-                  <TableHead className="text-right">Neto</TableHead>
-                  <TableHead className="text-right">IVA $</TableHead>
-                  <TableHead className="text-right">Final</TableHead>
+                  <SortableHead label="Costo" sortKey="costo" {...headProps} />
                   <TableHead className="w-[80px]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? <SkeletonRows cols={8} /> : (() => {
+                {isLoading ? <SkeletonRows cols={6} /> : (() => {
                   const rows = proveedorView === 'obligatorio' ? filteredInsumosOblig : filteredInsumosSugeridos;
                   return !rows?.length ? (
-                    <TableRow><TableCell colSpan={8} className="h-40">
+                    <TableRow><TableCell colSpan={6} className="h-40">
                       <EmptyState icon={Package} title={proveedorView === 'obligatorio' ? 'Sin insumos obligatorios' : 'Sin insumos sugeridos'} description={proveedorView === 'obligatorio' ? 'Agregá insumos con proveedor obligatorio' : 'Agregá insumos con proveedor sugerido'} />
                     </TableCell></TableRow>
                   ) : rows.map((row: any) => renderRow(row, 'insumo'));
