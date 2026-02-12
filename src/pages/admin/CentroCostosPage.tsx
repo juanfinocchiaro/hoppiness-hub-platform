@@ -358,7 +358,7 @@ function SimuladorTab({ items, gs, sim, setSim, onApply }: {
   }, [simItems]);
 
   const doBulk = () => { if (!bulkPct) return; const n: Record<string,number> = {}; workable.forEach(i => { n[i.id] = Math.round(i.precio * (1 + bulkPct / 100)); }); setSim(n); };
-  const doTarget = () => { const n: Record<string,number> = {}; workable.forEach(i => { n[i.id] = Math.round(calcSugerido(i.costo, i.fcObj)); }); setSim(n); };
+  const doTarget = () => { const n: Record<string,number> = {}; workable.forEach(i => { n[i.id] = Math.round(calcSugerido(i.costo, i.fcObj) / 100) * 100; }); setSim(n); };
 
   return (
     <div className="space-y-6">
