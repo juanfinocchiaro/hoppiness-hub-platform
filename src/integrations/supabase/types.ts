@@ -333,6 +333,30 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_sidebar_order: {
+        Row: {
+          id: string
+          section_id: string
+          sort_order: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          section_id: string
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          section_id?: string
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       canales_venta: {
         Row: {
           activo: boolean | null
