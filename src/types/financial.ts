@@ -58,6 +58,7 @@ export const PRESENTACION_OPTIONS = [
   { value: 'unidad', label: 'Unidad', unidadBase: 'un', contenidoDefault: 1 },
   { value: 'rollo', label: 'Rollo', unidadBase: 'un', contenidoDefault: null },
   { value: 'horma', label: 'Horma', unidadBase: 'g', contenidoDefault: null },
+  { value: 'bandeja', label: 'Bandeja', unidadBase: 'g', contenidoDefault: null },
 ] as const;
 
 export const UNIDAD_BASE_OPTIONS = [
