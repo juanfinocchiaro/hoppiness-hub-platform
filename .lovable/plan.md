@@ -1,69 +1,45 @@
 
 
-## Grupos de Opcionales para Items de Carta
+## Filtrar ingredientes ya seleccionados en la Ficha Tecnica de Recetas
 
 ### Problema
-Actualmente, para representar una bebida variable en un combo, hay que marcar un componente como "opcional" y poner un costo promedio manual. Esto es confuso porque:
-- No queda claro qué opciones existen
-- El costo promedio hay que calcularlo a mano
-- No se ve en el modal de Modificadores
-- No escala si tenés muchos combos
+Cuando estas editando una receta y ya seleccionaste un insumo o una preparacion, ese mismo item sigue apareciendo en el dropdown para nuevas lineas. Esto puede causar duplicados accidentales.
 
-### Solucion: Grupos de Opcionales
+### Solucion
+Filtrar automaticamente los insumos y preparaciones ya seleccionados del listado de opciones disponibles en cada fila. Si un insumo ya esta en la fila 1, no aparece en el dropdown de la fila 2 (pero si sigue visible en el dropdown de la fila 1, donde ya esta seleccionado).
 
-Un "Grupo de Opcionales" es un componente del item que tiene varias alternativas posibles. Por ejemplo:
+Esto funciona correctamente incluso con recetas que contienen sub-recetas, ya que los insumos y las preparaciones se manejan en listas separadas.
 
-```text
-Combo Ultracheese con papas y bebida
-  ├── Hamburguesa Ultracheese (receta fija)
-  ├── Papas fritas (receta fija)
-  └── [Grupo: Bebida] ← NUEVO
-       ├── Coca-Cola 500ml ($350)
-       ├── Sprite 500ml ($340)
-       ├── Fanta 500ml ($330)
-       └── Costo promedio: $340 (calculado automaticamente)
+---
+
+### Detalles tecnicos
+
+**Archivo**: `src/pages/admin/PreparacionesPage.tsx`
+
+**Cambio en `FichaTecnicaTab`** (lineas ~762-808):
+
+Para cada fila del editor, calcular las opciones disponibles excluyendo los IDs ya usados en otras filas:
+
+1. **Insumos**: Recopilar todos los `insumo_id` ya seleccionados en otras filas (excluyendo la fila actual). Filtrar `ingredientesDisponibles` para no mostrar esos IDs.
+
+2. **Preparaciones**: Recopilar todos los `sub_preparacion_id` ya seleccionados en otras filas (excluyendo la fila actual). Filtrar `preparacionesDisponibles` para no mostrar esos IDs.
+
+Logica por fila:
+```
+const usedInsumoIds = items
+  .filter((_, idx) => idx !== index)
+  .map(i => i.insumo_id)
+  .filter(Boolean);
+
+const usedPrepIds = items
+  .filter((_, idx) => idx !== index)
+  .map(i => i.sub_preparacion_id)
+  .filter(Boolean);
+
+// Filtrar opciones
+ingredientesDisponibles.filter(i => !usedInsumoIds.includes(i.id))
+preparacionesDisponibles.filter(p => !usedPrepIds.includes(p.id))
 ```
 
-El FC% del combo usa el costo promedio del grupo para el calculo.
-
-### Cambios en Base de Datos
-
-**Nueva tabla `item_carta_grupo_opcional`:**
-- id, item_carta_id, nombre (ej: "Bebida"), orden
-- costo_promedio (calculado automaticamente)
-
-**Nueva tabla `item_carta_grupo_opcional_items`:**
-- id, grupo_id, insumo_id o preparacion_id, cantidad
-- costo_unitario (se toma del insumo/receta)
-
-**Actualizar funcion `recalcular_costo_item_carta`:**
-- Sumar: costo composicion fija + sum de costo_promedio de cada grupo opcional
-
-Se eliminan las columnas `es_opcional` y `costo_promedio_override` de `item_carta_composicion` porque el concepto de opcional ahora vive en su propia tabla.
-
-### Cambios en UI
-
-**ComposicionModal (CentroCostosPage.tsx):**
-- Eliminar el toggle "Opcional" y campo "Costo prom" de cada fila
-- Agregar seccion nueva debajo de la composicion fija: "Grupos Opcionales"
-- Boton "Agregar Grupo Opcional" que crea un grupo con nombre
-- Dentro de cada grupo: agregar items (insumos/recetas) con cantidad
-- Mostrar el costo promedio calculado automaticamente
-- El costo total = composicion fija + sum de promedios
-
-**ModificadoresTab.tsx:**
-- Nueva seccion "Opcionales" (entre Extras y Sustituciones) que muestra los grupos configurados como referencia (solo lectura, informativo)
-- Cada grupo muestra sus items y el costo promedio
-
-### Cambios tecnicos detallados
-
-**Archivos a crear:**
-- `src/hooks/useGruposOpcionales.ts` - CRUD para grupos y sus items, calculo de promedio
-
-**Archivos a modificar:**
-- `supabase/migrations/` - Nueva migracion con tablas + actualizacion de la funcion de recalculo
-- `src/pages/admin/CentroCostosPage.tsx` - Reemplazar toggle opcional por seccion de grupos en ComposicionModal
-- `src/components/menu/ModificadoresTab.tsx` - Agregar seccion informativa de grupos opcionales
-
-**Migracion de datos:** Si ya hay filas con `es_opcional = true`, se ignoran (el usuario las reconfigura con el nuevo sistema de grupos).
+Tambien se aplicara el mismo patron al componente `FichaTecnicaModal` (`src/components/menu/FichaTecnicaModal.tsx`) y al `OpcionesTab` dentro de `PreparacionesPage.tsx` para mantener consistencia en todo el sistema.
 
