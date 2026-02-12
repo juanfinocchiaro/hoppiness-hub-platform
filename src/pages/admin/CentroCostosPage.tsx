@@ -17,9 +17,9 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   AlertTriangle, CheckCircle, Plus, Trash2, Package, Save, DollarSign, Tag,
   Layers, Settings2, BarChart3, Calculator, ArrowRight, ChevronDown, ChevronRight,
-  Target, MoreHorizontal,
+  Target,
 } from 'lucide-react';
-import { ModificadoresTab } from '@/components/menu/ModificadoresTab';
+import { ItemExpandedPanel } from '@/components/centro-costos/ItemExpandedPanel';
 import { useItemsCarta, useItemCartaComposicion, useItemCartaHistorial, useItemCartaMutations } from '@/hooks/useItemsCarta';
 import { useGruposOpcionales, useGruposOpcionalesMutations } from '@/hooks/useGruposOpcionales';
 import { usePreparaciones } from '@/hooks/usePreparaciones';
@@ -102,10 +102,6 @@ export default function CentroCostosPage() {
   const [tab, setTab] = useState<Tab>('analisis');
   const [createOpen, setCreateOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [compItem, setCompItem] = useState<any>(null);
-  const [modItem, setModItem] = useState<any>(null);
-  const [histItem, setHistItem] = useState<any>(null);
-  const [delItem, setDelItem] = useState<any>(null);
   const [simPrices, setSimPrices] = useState<Record<string, number>>({});
   const [pending, setPending] = useState<Record<string, number>>({});
 
@@ -133,14 +129,6 @@ export default function CentroCostosPage() {
 
   const applySim = () => { setPending(p => ({ ...p, ...simPrices })); setTab('actualizar'); };
 
-  const openAction = (action: string, raw: any) => {
-    if (action === 'comp') setCompItem(raw);
-    else if (action === 'mod') setModItem(raw);
-    else if (action === 'edit') { setEditingItem(raw); setCreateOpen(true); }
-    else if (action === 'hist') setHistItem(raw);
-    else if (action === 'del') setDelItem(raw);
-  };
-
   const tabs: { id: Tab; label: string; icon: any; count?: number }[] = [
     { id: 'analisis', label: 'Análisis', icon: BarChart3 },
     { id: 'simulador', label: 'Simulador', icon: Calculator },
@@ -165,16 +153,12 @@ export default function CentroCostosPage() {
         ); })}
       </div></div>
 
-      {tab === 'analisis' && <AnalisisTab items={ei} cats={cats} gs={gs} loading={isLoading} onAction={openAction} />}
+      {tab === 'analisis' && <AnalisisTab items={ei} cats={cats} gs={gs} loading={isLoading} />}
       {tab === 'simulador' && <SimuladorTab items={ei} gs={gs} sim={simPrices} setSim={setSimPrices} onApply={applySim} />}
       {tab === 'actualizar' && <ActualizarTab items={ei} pending={pending} setPending={setPending} mutations={mutations} userId={user?.id} />}
 
       {/* MODALS */}
       <ItemFormModal open={createOpen} onOpenChange={v => { setCreateOpen(v); if (!v) setEditingItem(null); }} item={editingItem} categorias={categorias} cmvCats={cmvCats} mutations={mutations} />
-      {compItem && <ComposicionModal open={!!compItem} onOpenChange={() => setCompItem(null)} item={compItem} preparaciones={preparaciones || []} insumos={insumos || []} mutations={mutations} />}
-      {modItem && <Dialog open={!!modItem} onOpenChange={() => setModItem(null)}><DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto"><DialogHeader><DialogTitle>Modificadores: {modItem.nombre}</DialogTitle></DialogHeader><ModificadoresTab itemId={modItem.id} /></DialogContent></Dialog>}
-      {histItem && <HistorialModal open={!!histItem} onOpenChange={() => setHistItem(null)} item={histItem} />}
-      <ConfirmDialog open={!!delItem} onOpenChange={() => setDelItem(null)} title="Eliminar item" description={`¿Eliminar "${delItem?.nombre}"?`} confirmLabel="Eliminar" variant="destructive" onConfirm={async () => { await mutations.softDelete.mutateAsync(delItem.id); setDelItem(null); }} />
     </div>
   );
 }
@@ -182,15 +166,16 @@ export default function CentroCostosPage() {
 // ═══════════════════════════════════════
 // ═══ TAB 1: ANÁLISIS (solo lectura) ═══
 // ═══════════════════════════════════════
-function AnalisisTab({ items, cats, gs, loading, onAction }: {
+function AnalisisTab({ items, cats, gs, loading }: {
   items: EI[]; cats: CG[]; gs: any; loading: boolean;
-  onAction: (action: string, raw: any) => void;
 }) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all'|'ok'|'warn'|'danger'>('all');
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  useEffect(() => { setExpanded(new Set(cats.map(c => c.id))); }, [cats.length]);
-  const toggle = (id: string) => setExpanded(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  useEffect(() => { setExpandedCats(new Set(cats.map(c => c.id))); }, [cats.length]);
+  const toggleCat = (id: string) => setExpandedCats(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleItem = (id: string) => setExpandedItemId(prev => prev === id ? null : id);
 
   const filtered = useMemo(() => cats.map(g => ({
     ...g, items: g.items.filter(i => {
@@ -247,9 +232,9 @@ function AnalisisTab({ items, cats, gs, loading, onAction }: {
         <div className="space-y-2">
           {filtered.map(g => (
             <div key={g.id} className="border rounded-lg overflow-hidden">
-              <button className="w-full flex items-center justify-between px-4 py-3 bg-muted/40 hover:bg-muted/60 transition-colors" onClick={() => toggle(g.id)}>
+              <button className="w-full flex items-center justify-between px-4 py-3 bg-muted/40 hover:bg-muted/60 transition-colors" onClick={() => toggleCat(g.id)}>
                 <div className="flex items-center gap-3">
-                  {expanded.has(g.id) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  {expandedCats.has(g.id) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                   <span className="font-semibold text-sm">{g.nombre}</span>
                   <Badge variant="outline" className="text-xs">{g.items.length}</Badge>
                 </div>
@@ -260,7 +245,7 @@ function AnalisisTab({ items, cats, gs, loading, onAction }: {
                   <span className="text-xs text-muted-foreground">Margen {fmt(g.margen)}</span>
                 </div>
               </button>
-              {expanded.has(g.id) && (
+              {expandedCats.has(g.id) && (
                 <Table>
                   <TableHeader><TableRow className="text-xs">
                     <TableHead className="w-[220px]">Item</TableHead>
@@ -271,28 +256,47 @@ function AnalisisTab({ items, cats, gs, loading, onAction }: {
                     <TableHead className="text-right">Obj.</TableHead>
                     <TableHead className="text-right">Margen</TableHead>
                     <TableHead className="text-right">Sugerido</TableHead>
-                    <TableHead className="w-[50px]" />
                   </TableRow></TableHeader>
                   <TableBody>
                     {g.items.map(i => {
                       const gap = i.pSug - i.precio;
+                      const isExpanded = expandedItemId === i.id;
                       return (
-                        <TableRow key={i.id} className={!i.hasComp ? 'opacity-50' : ''}>
-                          <TableCell>
-                            <p className="font-medium text-sm">{i.nombre}</p>
-                            {!i.hasComp && <p className="text-xs text-yellow-600">⚠ Sin composición</p>}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-sm">{i.costo > 0 ? fmt(i.costo) : '—'}</TableCell>
-                          <TableCell className="text-right font-mono text-sm">{fmt(i.precio)}</TableCell>
-                          <TableCell className="text-right font-mono text-sm text-muted-foreground">{i.hasPrice ? fmt(i.pNeto) : '—'}</TableCell>
-                          <TableCell className="text-right">{i.hasComp && i.hasPrice ? <Badge variant={badgeVar[i.color]}>{fmtPct(i.fc)}</Badge> : '—'}</TableCell>
-                          <TableCell className="text-right font-mono text-sm text-muted-foreground">{fmtPct(i.fcObj)}</TableCell>
-                          <TableCell className="text-right font-mono text-sm">{i.hasComp && i.hasPrice ? <span className={i.margen > 0 ? 'text-green-600' : 'text-red-600'}>{fmt(i.margen)}</span> : '—'}</TableCell>
-                          <TableCell className="text-right">{i.hasComp && i.pSug > 0 ? <span className={`font-mono text-sm ${gap > 100 ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>{fmt(i.pSug)}</span> : '—'}</TableCell>
-                          <TableCell>
-                            <ItemActions onAction={a => onAction(a, i.raw)} />
-                          </TableCell>
-                        </TableRow>
+                        <>
+                          <TableRow
+                            key={i.id}
+                            className={`cursor-pointer transition-colors ${!i.hasComp ? 'opacity-50' : ''} ${isExpanded ? 'bg-primary/5 border-b-0' : 'hover:bg-muted/40'}`}
+                            onClick={() => toggleItem(i.id)}
+                          >
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <ChevronRight className={`w-3.5 h-3.5 shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                                <div>
+                                  <p className="font-medium text-sm">{i.nombre}</p>
+                                  {!i.hasComp && <p className="text-xs text-yellow-600">⚠ Sin composición</p>}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm">{i.costo > 0 ? fmt(i.costo) : '—'}</TableCell>
+                            <TableCell className="text-right font-mono text-sm">{fmt(i.precio)}</TableCell>
+                            <TableCell className="text-right font-mono text-sm text-muted-foreground">{i.hasPrice ? fmt(i.pNeto) : '—'}</TableCell>
+                            <TableCell className="text-right">{i.hasComp && i.hasPrice ? <Badge variant={badgeVar[i.color]}>{fmtPct(i.fc)}</Badge> : '—'}</TableCell>
+                            <TableCell className="text-right font-mono text-sm text-muted-foreground">{fmtPct(i.fcObj)}</TableCell>
+                            <TableCell className="text-right font-mono text-sm">{i.hasComp && i.hasPrice ? <span className={i.margen > 0 ? 'text-green-600' : 'text-red-600'}>{fmt(i.margen)}</span> : '—'}</TableCell>
+                            <TableCell className="text-right">{i.hasComp && i.pSug > 0 ? <span className={`font-mono text-sm ${gap > 100 ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>{fmt(i.pSug)}</span> : '—'}</TableCell>
+                          </TableRow>
+                          {isExpanded && (
+                            <TableRow key={`${i.id}-panel`}>
+                              <TableCell colSpan={8} className="p-0">
+                                <ItemExpandedPanel
+                                  item={i.raw}
+                                  onClose={() => setExpandedItemId(null)}
+                                  onDeleted={() => setExpandedItemId(null)}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
                       );
                     })}
                   </TableBody>
@@ -308,21 +312,6 @@ function AnalisisTab({ items, cats, gs, loading, onAction }: {
         </div>
       )}
     </div>
-  );
-}
-
-function ItemActions({ onAction }: { onAction: (a: string) => void }) {
-  return (
-    <Select onValueChange={onAction}>
-      <SelectTrigger className="h-7 w-8 p-0 border-0 [&>svg]:hidden"><MoreHorizontal className="w-4 h-4 mx-auto" /></SelectTrigger>
-      <SelectContent align="end">
-        <SelectItem value="comp">Composición</SelectItem>
-        <SelectItem value="mod">Modificadores</SelectItem>
-        <SelectItem value="edit">Editar item</SelectItem>
-        <SelectItem value="hist">Historial precios</SelectItem>
-        <SelectItem value="del">Eliminar</SelectItem>
-      </SelectContent>
-    </Select>
   );
 }
 
