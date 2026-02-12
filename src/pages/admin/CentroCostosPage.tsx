@@ -89,7 +89,7 @@ function groupByCat(items: EI[]): CG[] {
   });
 }
 
-type Tab = 'analisis' | 'simulador' | 'actualizar' | 'extras';
+type Tab = 'analisis' | 'simulador' | 'actualizar';
 
 // ═══════════════════════════════════════
 // ═══ MAIN PAGE ═══
@@ -158,7 +158,6 @@ export default function CentroCostosPage() {
     { id: 'analisis', label: 'Análisis', icon: BarChart3 },
     { id: 'simulador', label: 'Simulador', icon: Calculator },
     { id: 'actualizar', label: 'Actualizar Precios', icon: DollarSign, count: Object.keys(pending).length || undefined },
-    { id: 'extras', label: 'Extras', icon: Package },
   ];
 
   return (
@@ -184,10 +183,9 @@ export default function CentroCostosPage() {
         ); })}
       </div></div>
 
-      {tab === 'analisis' && <AnalisisTab items={ei} cats={cats} gs={gs} loading={isLoading} onAction={() => {}} />}
+      {tab === 'analisis' && <AnalisisTab items={ei} cats={cats} gs={gs} loading={isLoading} onAction={() => {}} preparaciones={preparaciones || []} insumos={insumos || []} />}
       {tab === 'simulador' && <SimuladorTab items={ei} gs={gs} sim={simPrices} setSim={setSimPrices} onApply={applySim} />}
       {tab === 'actualizar' && <ActualizarTab items={ei} pending={pending} setPending={setPending} mutations={mutations} userId={user?.id} />}
-      {tab === 'extras' && <ExtrasTab preparaciones={preparaciones || []} insumos={insumos || []} />}
 
       {/* MODALS */}
       <ItemFormModal open={createOpen} onOpenChange={v => { setCreateOpen(v); if (!v) setEditingItem(null); }} item={editingItem} categorias={categorias} cmvCats={cmvCats} mutations={mutations} />
@@ -201,9 +199,10 @@ export default function CentroCostosPage() {
 // ═══════════════════════════════════════
 // ═══ TAB 1: ANÁLISIS (solo lectura) ═══
 // ═══════════════════════════════════════
-function AnalisisTab({ items, cats, gs, loading, onAction }: {
+function AnalisisTab({ items, cats, gs, loading, onAction, preparaciones, insumos }: {
   items: EI[]; cats: CG[]; gs: any; loading: boolean;
   onAction: (action: string, raw: any) => void;
+  preparaciones: any[]; insumos: any[];
 }) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all'|'ok'|'warn'|'danger'>('all');
@@ -338,6 +337,9 @@ function AnalisisTab({ items, cats, gs, loading, onAction }: {
           </div>
         </div>
       )}
+
+      {/* Extras section inline */}
+      <ExtrasSection preparaciones={preparaciones} insumos={insumos} />
     </div>
   );
 }
@@ -474,12 +476,13 @@ function ActualizarTab({ items, pending, setPending, mutations, userId }: {
 }
 
 // ═══════════════════════════════════════
-// ═══ TAB 4: EXTRAS ═══
+// ═══ EXTRAS SECTION (inside Análisis) ═══
 // ═══════════════════════════════════════
-function ExtrasTab({ preparaciones, insumos }: { preparaciones: any[]; insumos: any[] }) {
+function ExtrasSection({ preparaciones, insumos }: { preparaciones: any[]; insumos: any[] }) {
   const { updatePrecioExtra } = useItemExtrasMutations();
   const [search, setSearch] = useState('');
   const [editValues, setEditValues] = useState<Record<string, string>>({});
+  const [extrasOpen, setExtrasOpen] = useState(true);
 
   interface ExtraRow { id: string; nombre: string; tipo: 'Receta' | 'Insumo'; costo: number; precioExtra: number | null; }
 
@@ -519,15 +522,24 @@ function ExtrasTab({ preparaciones, insumos }: { preparaciones: any[]; insumos: 
     setEditValues(p => ({ ...p, [key]: v }));
   };
 
-  if (allExtras.length === 0) {
-    return <div className="py-16"><EmptyState icon={Package} title="Sin extras configurados" description="Marcá recetas o insumos como 'Puede ser extra' para verlos acá." /></div>;
-  }
+
+  if (allExtras.length === 0) return null;
 
   return (
-    <div className="space-y-4">
-      <DataToolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="Buscar extra..." />
-      <div className="rounded-md border">
-        <Table>
+    <div className="border rounded-lg overflow-hidden">
+      <button className="w-full flex items-center justify-between px-4 py-3 bg-muted/40 hover:bg-muted/60 transition-colors" onClick={() => setExtrasOpen(o => !o)}>
+        <div className="flex items-center gap-3">
+          {extrasOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          <Package className="w-4 h-4 text-muted-foreground" />
+          <span className="font-semibold text-sm">Extras Disponibles</span>
+          <Badge variant="outline" className="text-xs">{allExtras.length}</Badge>
+        </div>
+      </button>
+      {extrasOpen && (
+        <div className="p-4 space-y-4">
+          <DataToolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="Buscar extra..." />
+          <div className="rounded-md border">
+            <Table>
           <TableHeader>
             <TableRow className="text-xs">
               <TableHead className="w-[280px]">Nombre</TableHead>
@@ -569,11 +581,13 @@ function ExtrasTab({ preparaciones, insumos }: { preparaciones: any[]; insumos: 
             })}
           </TableBody>
         </Table>
-      </div>
-      <p className="text-xs text-muted-foreground">
-        {allExtras.length} extra{allExtras.length !== 1 ? 's' : ''} disponible{allExtras.length !== 1 ? 's' : ''} · 
-        FC% = costo / (precio / 1.21) × 100
-      </p>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {allExtras.length} extra{allExtras.length !== 1 ? 's' : ''} disponible{allExtras.length !== 1 ? 's' : ''} · 
+            FC% = costo / (precio / 1.21) × 100
+          </p>
+        </div>
+      )}
     </div>
   );
 }
