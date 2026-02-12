@@ -86,7 +86,22 @@ export function useMenuCategoriaMutations() {
     onError: (e) => toast.error(`Error: ${e.message}`),
   });
 
-  return { create, update, reorder, softDelete };
+  const toggleVisibility = useMutation({
+    mutationFn: async ({ id, visible }: { id: string; visible: boolean }) => {
+      const { error } = await supabase
+        .from('menu_categorias')
+        .update({ visible_en_carta: visible, updated_at: new Date().toISOString() } as any)
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['menu-categorias'] });
+      toast.success('Visibilidad actualizada');
+    },
+    onError: (e) => toast.error(`Error: ${e.message}`),
+  });
+
+  return { create, update, reorder, softDelete, toggleVisibility };
 }
 
 // Productos del menú con datos relacionados
