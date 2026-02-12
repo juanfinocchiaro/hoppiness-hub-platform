@@ -2676,15 +2676,8 @@ export type Database = {
             foreignKeyName: "item_modificadores_item_carta_id_fkey"
             columns: ["item_carta_id"]
             isOneToOne: false
-            referencedRelation: "menu_productos"
+            referencedRelation: "items_carta"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "item_modificadores_item_carta_id_fkey"
-            columns: ["item_carta_id"]
-            isOneToOne: false
-            referencedRelation: "v_menu_costos"
-            referencedColumns: ["menu_producto_id"]
           },
           {
             foreignKeyName: "item_modificadores_receta_extra_id_fkey"
