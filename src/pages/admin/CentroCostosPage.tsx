@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { DataToolbar } from '@/components/ui/data-table-pro';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -17,8 +17,9 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   AlertTriangle, CheckCircle, Plus, Trash2, Package, Save, DollarSign, Tag,
   Layers, Settings2, BarChart3, Calculator, ArrowRight, ChevronDown, ChevronRight,
-  Target, MoreHorizontal,
+  Target, MoreHorizontal, RefreshCw,
 } from 'lucide-react';
+import { ItemExpandedPanel } from '@/components/centro-costos/ItemExpandedPanel';
 import { ModificadoresTab } from '@/components/menu/ModificadoresTab';
 import { useItemsCarta, useItemCartaComposicion, useItemCartaHistorial, useItemCartaMutations } from '@/hooks/useItemsCarta';
 import { useGruposOpcionales, useGruposOpcionalesMutations } from '@/hooks/useGruposOpcionales';
@@ -91,7 +92,7 @@ type Tab = 'analisis' | 'simulador' | 'actualizar';
 // ═══ MAIN PAGE ═══
 // ═══════════════════════════════════════
 export default function CentroCostosPage() {
-  const { data: items, isLoading } = useItemsCarta();
+  const { data: items, isLoading, refetch, isFetching } = useItemsCarta();
   const { data: preparaciones } = usePreparaciones();
   const { data: insumos } = useInsumos();
   const { data: categorias } = useMenuCategorias();
@@ -151,7 +152,12 @@ export default function CentroCostosPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <PageHeader title="Control de Costos" subtitle="Análisis de márgenes, simulación y ajuste de precios" />
-        <Button onClick={() => { setEditingItem(null); setCreateOpen(true); }}><Plus className="w-4 h-4 mr-2" /> Nuevo Item</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} /> Actualizar
+          </Button>
+          <Button onClick={() => { setEditingItem(null); setCreateOpen(true); }}><Plus className="w-4 h-4 mr-2" /> Nuevo Item</Button>
+        </div>
       </div>
 
       {/* TAB BAR */}
@@ -165,7 +171,7 @@ export default function CentroCostosPage() {
         ); })}
       </div></div>
 
-      {tab === 'analisis' && <AnalisisTab items={ei} cats={cats} gs={gs} loading={isLoading} onAction={openAction} />}
+      {tab === 'analisis' && <AnalisisTab items={ei} cats={cats} gs={gs} loading={isLoading} onAction={() => {}} />}
       {tab === 'simulador' && <SimuladorTab items={ei} gs={gs} sim={simPrices} setSim={setSimPrices} onApply={applySim} />}
       {tab === 'actualizar' && <ActualizarTab items={ei} pending={pending} setPending={setPending} mutations={mutations} userId={user?.id} />}
 
@@ -189,6 +195,7 @@ function AnalisisTab({ items, cats, gs, loading, onAction }: {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all'|'ok'|'warn'|'danger'>('all');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   useEffect(() => { setExpanded(new Set(cats.map(c => c.id))); }, [cats.length]);
   const toggle = (id: string) => setExpanded(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
@@ -271,28 +278,39 @@ function AnalisisTab({ items, cats, gs, loading, onAction }: {
                     <TableHead className="text-right">FC%</TableHead>
                     <TableHead className="text-right">Margen</TableHead>
                     <TableHead className="text-right">Sugerido</TableHead>
-                    <TableHead className="w-[50px]" />
                   </TableRow></TableHeader>
                   <TableBody>
                     {g.items.map(i => {
                       const gap = i.pSug - i.precio;
+                      const isOpen = expandedItemId === i.id;
                       return (
-                        <TableRow key={i.id} className={!i.hasComp ? 'opacity-50' : ''}>
-                          <TableCell>
-                            <p className="font-medium text-sm">{i.nombre}</p>
-                            {!i.hasComp && <p className="text-xs text-yellow-600">⚠ Sin composición</p>}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-sm">{i.costo > 0 ? fmt(i.costo) : '—'}</TableCell>
-                          <TableCell className="text-right font-mono text-sm">{fmt(i.precio)}</TableCell>
-                          <TableCell className="text-right font-mono text-sm text-muted-foreground">{i.hasPrice ? fmt(i.pNeto) : '—'}</TableCell>
-                          <TableCell className="text-right font-mono text-sm text-muted-foreground">{fmtPct(i.fcObj)}</TableCell>
-                          <TableCell className="text-right">{i.hasComp && i.hasPrice ? <Badge variant={badgeVar[i.color]}>{fmtPct(i.fc)}</Badge> : '—'}</TableCell>
-                          <TableCell className="text-right font-mono text-sm">{i.hasComp && i.hasPrice ? <span className={i.margen > 0 ? 'text-green-600' : 'text-red-600'}>{fmt(i.margen)}</span> : '—'}</TableCell>
-                          <TableCell className="text-right">{i.hasComp && i.pSug > 0 ? <span className={`font-mono text-sm ${gap > 100 ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>{fmt(i.pSug)}</span> : '—'}</TableCell>
-                          <TableCell>
-                            <ItemActions onAction={a => onAction(a, i.raw)} />
-                          </TableCell>
-                        </TableRow>
+                        <React.Fragment key={i.id}>
+                          <TableRow className={`cursor-pointer transition-colors ${isOpen ? 'bg-primary/5' : ''} ${!i.hasComp ? 'opacity-50' : ''}`} onClick={() => setExpandedItemId(isOpen ? null : i.id)}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {isOpen ? <ChevronDown className="w-3.5 h-3.5 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 shrink-0" />}
+                                <div>
+                                  <p className="font-medium text-sm">{i.nombre}</p>
+                                  {!i.hasComp && <p className="text-xs text-yellow-600">⚠ Sin composición</p>}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm">{i.costo > 0 ? fmt(i.costo) : '—'}</TableCell>
+                            <TableCell className="text-right font-mono text-sm">{fmt(i.precio)}</TableCell>
+                            <TableCell className="text-right font-mono text-sm text-muted-foreground">{i.hasPrice ? fmt(i.pNeto) : '—'}</TableCell>
+                            <TableCell className="text-right font-mono text-sm text-muted-foreground">{fmtPct(i.fcObj)}</TableCell>
+                            <TableCell className="text-right">{i.hasComp && i.hasPrice ? <Badge variant={badgeVar[i.color]}>{fmtPct(i.fc)}</Badge> : '—'}</TableCell>
+                            <TableCell className="text-right font-mono text-sm">{i.hasComp && i.hasPrice ? <span className={i.margen > 0 ? 'text-green-600' : 'text-red-600'}>{fmt(i.margen)}</span> : '—'}</TableCell>
+                            <TableCell className="text-right">{i.hasComp && i.pSug > 0 ? <span className={`font-mono text-sm ${gap > 100 ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>{fmt(i.pSug)}</span> : '—'}</TableCell>
+                          </TableRow>
+                          {isOpen && (
+                            <TableRow>
+                              <TableCell colSpan={8} className="p-0">
+                                <ItemExpandedPanel item={i.raw} onClose={() => setExpandedItemId(null)} onDeleted={() => setExpandedItemId(null)} />
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
                       );
                     })}
                   </TableBody>
@@ -308,21 +326,6 @@ function AnalisisTab({ items, cats, gs, loading, onAction }: {
         </div>
       )}
     </div>
-  );
-}
-
-function ItemActions({ onAction }: { onAction: (a: string) => void }) {
-  return (
-    <Select onValueChange={onAction}>
-      <SelectTrigger className="h-7 w-8 p-0 border-0 [&>svg]:hidden"><MoreHorizontal className="w-4 h-4 mx-auto" /></SelectTrigger>
-      <SelectContent align="end">
-        <SelectItem value="comp">Composición</SelectItem>
-        <SelectItem value="mod">Modificadores</SelectItem>
-        <SelectItem value="edit">Editar item</SelectItem>
-        <SelectItem value="hist">Historial precios</SelectItem>
-        <SelectItem value="del">Eliminar</SelectItem>
-      </SelectContent>
-    </Select>
   );
 }
 
