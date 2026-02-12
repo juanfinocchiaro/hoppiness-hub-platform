@@ -307,7 +307,7 @@ function AnalisisTab({ items, cats, gs, loading }: {
                             <TableCell className="text-right font-mono text-sm text-muted-foreground">{fmtPct(i.fcObj)}</TableCell>
                             <TableCell className="text-right">{i.hasComp && i.hasPrice ? <Badge variant={badgeVar[i.color]}>{fmtPct(i.fc)}</Badge> : '—'}</TableCell>
                             <TableCell className="text-right font-mono text-sm">{i.hasComp && i.hasPrice ? <span className={i.margen > 0 ? 'text-green-600' : 'text-red-600'}>{fmt(i.margen)}</span> : '—'}</TableCell>
-                            <TableCell className="text-right">{i.hasComp && i.pSug > 0 ? <span className={`font-mono text-sm ${gap > 100 ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>{fmt(i.pSug)}</span> : '—'}</TableCell>
+                            <TableCell className="text-right">{i.hasComp && i.pSug > 0 ? <div className="flex flex-col items-end gap-0.5"><span className={`font-mono text-sm ${gap > 100 ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>{fmt(i.pSug)}</span><span className="font-mono text-xs text-muted-foreground/70">≈ {fmt(Math.round(i.pSug / 100) * 100)}</span></div> : '—'}</TableCell>
                           </TableRow>
                           {isOpen && (
                             <TableRow>
