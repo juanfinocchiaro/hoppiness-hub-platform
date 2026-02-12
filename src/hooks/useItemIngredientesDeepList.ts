@@ -11,16 +11,24 @@ export interface DeepIngredient {
   receta_origen_id: string;
 }
 
+export interface DeepSubPrep {
+  preparacion_id: string;
+  nombre: string;
+  receta_origen: string;
+  receta_origen_id: string;
+}
+
 export interface DeepIngredientGroup {
   receta_id: string;
   receta_nombre: string;
   ingredientes: DeepIngredient[];
+  sub_preparaciones: DeepSubPrep[];
 }
 
 /**
  * For a given item_carta, fetches composition → for each preparacion,
- * fetches its preparacion_ingredientes (insumos) recursively.
- * Returns ingredients grouped by recipe of origin.
+ * fetches its preparacion_ingredientes (insumos AND sub-preparations) recursively.
+ * Returns ingredients and sub-preparations grouped by recipe of origin.
  */
 export function useItemIngredientesDeepList(itemId: string | undefined) {
   return useQuery({
@@ -50,26 +58,44 @@ export function useItemIngredientesDeepList(itemId: string | undefined) {
             .from('preparacion_ingredientes')
             .select(`
               *,
-              insumos(id, nombre, costo_por_unidad_base, unidad_base)
+              insumos(id, nombre, costo_por_unidad_base, unidad_base),
+              sub_prep:preparaciones!preparacion_ingredientes_sub_preparacion_id_fkey(id, nombre)
             `)
             .eq('preparacion_id', comp.preparacion_id)
-            .not('insumo_id', 'is', null)
             .order('orden');
           if (ingError) throw ingError;
 
-          if (ingredientes && ingredientes.length > 0) {
+          const insumoItems: DeepIngredient[] = [];
+          const subPrepItems: DeepSubPrep[] = [];
+
+          for (const ing of (ingredientes || [])) {
+            if (ing.insumo_id && (ing as any).insumos) {
+              insumoItems.push({
+                insumo_id: (ing as any).insumos.id || ing.insumo_id,
+                nombre: (ing as any).insumos.nombre || 'Desconocido',
+                cantidad: ing.cantidad,
+                unidad: ing.unidad || (ing as any).insumos.unidad_base || 'un',
+                costo_por_unidad_base: (ing as any).insumos.costo_por_unidad_base || 0,
+                receta_origen: prep.nombre,
+                receta_origen_id: prep.id,
+              });
+            }
+            if (ing.sub_preparacion_id && (ing as any).sub_prep) {
+              subPrepItems.push({
+                preparacion_id: (ing as any).sub_prep.id || ing.sub_preparacion_id,
+                nombre: (ing as any).sub_prep.nombre || 'Desconocido',
+                receta_origen: prep.nombre,
+                receta_origen_id: prep.id,
+              });
+            }
+          }
+
+          if (insumoItems.length > 0 || subPrepItems.length > 0) {
             groups.push({
               receta_id: prep.id,
               receta_nombre: prep.nombre,
-              ingredientes: ingredientes.map((ing: any) => ({
-                insumo_id: ing.insumos?.id || ing.insumo_id,
-                nombre: ing.insumos?.nombre || 'Desconocido',
-                cantidad: ing.cantidad,
-                unidad: ing.unidad || ing.insumos?.unidad_base || 'un',
-                costo_por_unidad_base: ing.insumos?.costo_por_unidad_base || 0,
-                receta_origen: prep.nombre,
-                receta_origen_id: prep.id,
-              })),
+              ingredientes: insumoItems,
+              sub_preparaciones: subPrepItems,
             });
           }
         }
@@ -94,6 +120,7 @@ export function useItemIngredientesDeepList(itemId: string | undefined) {
               receta_id: '__direct__',
               receta_nombre: 'Insumos directos',
               ingredientes: [ingredient],
+              sub_preparaciones: [],
             });
           }
         }
