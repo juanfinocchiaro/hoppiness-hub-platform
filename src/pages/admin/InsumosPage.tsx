@@ -139,6 +139,8 @@ export default function InsumosPage() {
     const costoCompra = Number(row.unidad_compra_precio || 0);
     const costoUnitario = Number(row.costo_por_unidad_base || row.precio_referencia || 0);
     const unit = row.unidad_base || 'un';
+    const iva = row.default_alicuota_iva;
+    const costoConIva = iva && costoCompra ? costoCompra * (1 + iva / 100) : null;
     return (
       <TableRow key={row.id}>
         <TableCell>
@@ -158,9 +160,13 @@ export default function InsumosPage() {
           ) : <Badge variant="outline">{row.unidad_base}</Badge>}
         </TableCell>
         <TableCell>
-          {costoCompra
-            ? <span className="font-mono text-sm">${costoCompra.toLocaleString('es-AR', { minimumFractionDigits: 2 })}<span className="text-muted-foreground text-xs font-normal">/{row.unidad_compra || unit}</span></span>
-            : <span className="text-muted-foreground">—</span>}
+          {costoCompra ? (
+            <div>
+              <span className="font-mono text-sm">${costoCompra.toLocaleString('es-AR', { minimumFractionDigits: 2 })}<span className="text-muted-foreground text-xs font-normal">/{row.unidad_compra || unit}</span></span>
+              {iva != null && <span className="text-muted-foreground text-xs ml-1">+{iva}%</span>}
+              {costoConIva && <p className="text-xs text-muted-foreground font-mono">${costoConIva.toLocaleString('es-AR', { maximumFractionDigits: 0 })} c/IVA</p>}
+            </div>
+          ) : <span className="text-muted-foreground">—</span>}
         </TableCell>
         <TableCell>
           {costoUnitario
@@ -181,6 +187,8 @@ export default function InsumosPage() {
     const provName = row.proveedor_obligatorio?.razon_social || row.proveedor_sugerido?.razon_social;
     const costoCompra = Number(row.unidad_compra_precio || 0);
     const costoUnitario = Number(row.costo_por_unidad_base || 0);
+    const iva = row.default_alicuota_iva;
+    const costoConIva = iva && costoCompra ? costoCompra * (1 + iva / 100) : null;
 
     return (
       <TableRow key={row.id}>
@@ -199,9 +207,13 @@ export default function InsumosPage() {
           )}
         </TableCell>
         <TableCell>
-          {costoCompra
-            ? <span className="font-mono text-sm">${costoCompra.toLocaleString('es-AR', { minimumFractionDigits: 2 })}<span className="text-muted-foreground text-xs font-normal">/{row.unidad_compra || 'un'}</span></span>
-            : <span className="text-muted-foreground">—</span>}
+          {costoCompra ? (
+            <div>
+              <span className="font-mono text-sm">${costoCompra.toLocaleString('es-AR', { minimumFractionDigits: 2 })}<span className="text-muted-foreground text-xs font-normal">/{row.unidad_compra || 'un'}</span></span>
+              {iva != null && <span className="text-muted-foreground text-xs ml-1">+{iva}%</span>}
+              {costoConIva && <p className="text-xs text-muted-foreground font-mono">${costoConIva.toLocaleString('es-AR', { maximumFractionDigits: 0 })} c/IVA</p>}
+            </div>
+          ) : <span className="text-muted-foreground">—</span>}
         </TableCell>
         <TableCell>
           {costoUnitario
@@ -220,7 +232,7 @@ export default function InsumosPage() {
 
   return (
     <div className="p-6">
-      <PageHeader title="Ingredientes, Insumos y Productos" subtitle="Catálogo obligatorio de la marca" />
+      <PageHeader title="Catálogo de Compras" subtitle="Ingredientes, insumos y productos de la marca" />
 
       <Tabs value={tab} onValueChange={setTab}>
         <div className="flex items-center justify-between mb-4">
@@ -281,7 +293,7 @@ export default function InsumosPage() {
                   <SortableHead label="Proveedor" sortKey="proveedor" {...headProps} />
                   <SortableHead label="Categoría" sortKey="categoria" {...headProps} />
                   <SortableHead label="Presentación" sortKey="presentacion" {...headProps} />
-                  <TableHead>Costo Compra</TableHead>
+                  <TableHead>Costo Neto</TableHead>
                   <TableHead>Costo Unitario</TableHead>
                   <TableHead className="w-[80px]" />
                 </TableRow>
@@ -325,7 +337,7 @@ export default function InsumosPage() {
                   <SortableHead label="Proveedor" sortKey="proveedor" {...headProps} />
                   <SortableHead label="Categoría" sortKey="categoria" {...headProps} />
                   <SortableHead label="Presentación" sortKey="presentacion" {...headProps} />
-                  <TableHead>Costo Compra</TableHead>
+                  <TableHead>Costo Neto</TableHead>
                   <TableHead>Costo Unitario</TableHead>
                   <TableHead className="w-[80px]" />
                 </TableRow>
@@ -369,7 +381,7 @@ export default function InsumosPage() {
                   <SortableHead label="Proveedor" sortKey="proveedor" {...headProps} />
                   <SortableHead label="Categoría" sortKey="categoria" {...headProps} />
                   <SortableHead label="Presentación" sortKey="presentacion" {...headProps} />
-                  <TableHead>Costo Compra</TableHead>
+                  <TableHead>Costo Neto</TableHead>
                   <TableHead>Costo Unitario</TableHead>
                   <TableHead className="w-[80px]" />
                 </TableRow>
