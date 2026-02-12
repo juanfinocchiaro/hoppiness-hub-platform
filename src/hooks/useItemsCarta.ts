@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 export function useItemsCarta() {
   return useQuery({
     queryKey: ['items-carta'],
+    refetchOnMount: 'always',
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('items_carta')
