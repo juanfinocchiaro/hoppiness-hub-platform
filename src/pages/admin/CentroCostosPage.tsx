@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
+import { supabase } from '@/integrations/supabase/client';
 import { DataToolbar } from '@/components/ui/data-table-pro';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -99,6 +100,17 @@ export default function CentroCostosPage() {
   const { data: rdoCategories } = useRdoCategories();
   const { user } = useAuth();
   const mutations = useItemCartaMutations();
+  const [recalculating, setRecalculating] = useState(false);
+
+  const handleRecalculate = useCallback(async () => {
+    setRecalculating(true);
+    try {
+      await supabase.rpc('recalcular_todos_los_costos' as any);
+      await refetch();
+    } finally {
+      setRecalculating(false);
+    }
+  }, [refetch]);
 
   const [tab, setTab] = useState<Tab>('analisis');
   const [createOpen, setCreateOpen] = useState(false);
@@ -153,8 +165,8 @@ export default function CentroCostosPage() {
       <div className="flex items-center justify-between">
         <PageHeader title="Control de Costos" subtitle="Análisis de márgenes, simulación y ajuste de precios" />
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} /> Actualizar
+          <Button variant="outline" size="sm" onClick={handleRecalculate} disabled={recalculating || isFetching}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${recalculating || isFetching ? 'animate-spin' : ''}`} /> {recalculating ? 'Recalculando...' : 'Actualizar Costos'}
           </Button>
           <Button onClick={() => { setEditingItem(null); setCreateOpen(true); }}><Plus className="w-4 h-4 mr-2" /> Nuevo Item</Button>
         </div>

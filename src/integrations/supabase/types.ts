@@ -5538,6 +5538,7 @@ export type Database = {
         Args: { _prep_id: string }
         Returns: number
       }
+      recalcular_todos_los_costos: { Args: never; Returns: undefined }
       sync_orphan_users: {
         Args: never
         Returns: {
