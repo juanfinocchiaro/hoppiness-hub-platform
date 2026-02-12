@@ -178,7 +178,7 @@ export default function CentroCostosPage() {
         ); })}
       </div></div>
 
-      {tab === 'analisis' && <AnalisisTab items={ei} cats={cats} gs={gs} loading={isLoading} />}
+      {tab === 'analisis' && <AnalisisTab items={ei} cats={cats} gs={gs} loading={isLoading} onQueuePrice={(id, price) => { setPending(p => ({ ...p, [id]: price })); setTab('actualizar'); }} />}
       {tab === 'simulador' && <SimuladorTab items={ei} gs={gs} sim={simPrices} setSim={setSimPrices} onApply={applySim} />}
       {tab === 'actualizar' && <ActualizarTab items={ei} pending={pending} setPending={setPending} mutations={mutations} userId={user?.id} />}
 
@@ -194,8 +194,8 @@ export default function CentroCostosPage() {
 // ═══════════════════════════════════════
 // ═══ TAB 1: ANÁLISIS (solo lectura) ═══
 // ═══════════════════════════════════════
-function AnalisisTab({ items, cats, gs, loading }: {
-  items: EI[]; cats: CG[]; gs: any; loading: boolean;
+function AnalisisTab({ items, cats, gs, loading, onQueuePrice }: {
+  items: EI[]; cats: CG[]; gs: any; loading: boolean; onQueuePrice?: (id: string, price: number) => void;
 }) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all'|'ok'|'warn'|'danger'>('all');
@@ -307,7 +307,7 @@ function AnalisisTab({ items, cats, gs, loading }: {
                             <TableCell className="text-right font-mono text-sm text-muted-foreground">{fmtPct(i.fcObj)}</TableCell>
                             <TableCell className="text-right">{i.hasComp && i.hasPrice ? <Badge variant={badgeVar[i.color]}>{fmtPct(i.fc)}</Badge> : '—'}</TableCell>
                             <TableCell className="text-right font-mono text-sm">{i.hasComp && i.hasPrice ? <span className={i.margen > 0 ? 'text-green-600' : 'text-red-600'}>{fmt(i.margen)}</span> : '—'}</TableCell>
-                            <TableCell className="text-right">{i.hasComp && i.pSug > 0 ? <div className="flex flex-col items-end gap-0.5"><span className={`font-mono text-sm ${gap > 100 ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>{fmt(i.pSug)}</span><span className="font-mono text-xs text-muted-foreground/70">≈ {fmt(Math.round(i.pSug / 100) * 100)}</span></div> : '—'}</TableCell>
+                            <TableCell className="text-right">{i.hasComp && i.pSug > 0 ? (() => { const rounded = Math.round(i.pSug / 100) * 100; return <div className="flex flex-col items-end gap-0.5"><span className={`font-mono text-sm ${gap > 100 ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>{fmt(i.pSug)}</span><button onClick={(e) => { e.stopPropagation(); onQueuePrice?.(i.id, rounded); }} className="font-mono text-xs text-primary hover:text-primary/80 hover:underline cursor-pointer transition-colors" title="Aplicar precio redondeado">≈ {fmt(rounded)}</button></div>; })() : '—'}</TableCell>
                           </TableRow>
                           {isOpen && (
                             <TableRow>
