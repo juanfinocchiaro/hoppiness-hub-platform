@@ -1,31 +1,35 @@
 
 
-## Permitir remover recetas completas en Modificadores
+## Unificar el calculo de FC% en toda la app
 
-### Problema actual
-El selector de "Removibles" solo muestra ingredientes individuales (insumos) extraidos de las recetas. No permite seleccionar una receta completa de la composicion del item (ej: "Sin Lechuga en Hebras" donde esa lechuga es una receta/preparacion).
+### Situacion actual
 
-### Lo bueno
-La tabla `item_modificadores` ya tiene la columna `receta_id` para soportar esto. Solo falta el cambio en el frontend.
+Hay dos calculos distintos de Food Cost:
 
-### Cambios en `ModificadoresTab.tsx`
+- **Centro de Costos** (correcto): calcula FC = Costo / Precio Neto (precio / 1.21), es decir descuenta el IVA antes de calcular.
+- **Base de datos / Carta** (incorrecto): la funcion `recalcular_costo_item_carta` guarda `fc_actual = costo / precio * 100`, usando el precio con IVA incluido.
 
-**Modificar `NewRemovibleForm`:**
+Resultado: la Carta muestra un FC% menor al real (ej: 23% en vez de 27.9%).
 
-1. Agregar las recetas de la composicion del item como opciones seleccionables en el selector, en un grupo separado arriba de los ingredientes (ej: "-- Recetas del item --").
-2. Trackear si el usuario selecciono un insumo o una receta (`selectedType: 'insumo' | 'receta'`).
-3. Al guardar:
-   - Si es receta: enviar `receta_id` en vez de `ingrediente_id`, usando `costo_calculado` de la receta como `costo_ahorro`.
-   - Si es insumo: mantener el comportamiento actual con `ingrediente_id`.
+### Solucion
+
+**Un solo cambio en la base de datos** para que el `fc_actual` guardado ya sea el correcto (sobre precio neto). Asi la Carta, el Centro de Costos y cualquier otro lugar que lea `fc_actual` muestran lo mismo.
+
+No hace falta tocar el frontend: la Carta ya lee `fc_actual` directo, y el Centro de Costos ya calcula bien por su cuenta (que ahora va a coincidir).
 
 ### Detalle tecnico
 
-Se necesita acceder a la composicion del item para obtener las recetas. El componente ya recibe `deepGroups` que contiene `receta_id` y `receta_nombre`. Tambien se pasa `composicion` desde el padre para obtener el `costo_calculado` de cada receta.
+1. **Migrar la funcion `recalcular_costo_item_carta`**: cambiar la linea que calcula `fc_actual` de:
+   ```
+   fc_actual = costo / precio * 100
+   ```
+   a:
+   ```
+   fc_actual = costo / (precio / 1.21) * 100
+   ```
 
-Cambios puntuales:
-- En el `Select`, agregar un `SelectGroup` con header "-- Recetas --" que liste las preparaciones de la composicion.
-- Al seleccionar una receta, auto-completar nombre como "Sin [nombre receta]" y calcular el ahorro usando `costo_calculado`.
-- Al guardar, pasar `receta_id` en lugar de `ingrediente_id` cuando corresponda.
+2. **Ejecutar `recalcular_todos_los_costos()`** para que todos los items existentes se actualicen con la formula corregida.
 
-No se requieren cambios en la base de datos ni migraciones.
+3. **Actualizar la vista `v_menu_costos`** (usada por el viejo sistema de menu) para que tambien divida por 1.21, manteniendo consistencia en toda la app.
 
+Resultado: un solo calculo, un solo valor, consistente en todas las pantallas.
