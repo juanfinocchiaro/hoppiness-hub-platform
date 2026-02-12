@@ -258,13 +258,13 @@ function AnalisisTab({ items, cats, gs, loading }: {
        filtered.length === 0 ? <EmptyState icon={Package} title="Sin items" description="Creá un item de carta" /> : (
         <div className="space-y-2">
           {filtered.map(g => (
-            <div key={g.id} className={`border rounded-lg overflow-hidden ${g.hidden ? 'opacity-60 border-dashed' : ''}`}>
-              <button className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${g.hidden ? 'bg-muted/20 hover:bg-muted/30' : 'bg-muted/40 hover:bg-muted/60'}`} onClick={() => toggle(g.id)}>
+            <div key={g.id} className={`border rounded-lg overflow-hidden ${g.hidden ? 'border-amber-300' : ''}`}>
+              <button className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${g.hidden ? 'bg-amber-50 hover:bg-amber-100/80 dark:bg-amber-950/20 dark:hover:bg-amber-950/30' : 'bg-muted/40 hover:bg-muted/60'}`} onClick={() => toggle(g.id)}>
                 <div className="flex items-center gap-3">
                   {expanded.has(g.id) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                  <span className={`font-semibold text-sm ${g.hidden ? 'text-muted-foreground' : ''}`}>{g.nombre}</span>
+                  <span className={`font-semibold text-sm ${g.hidden ? 'text-amber-700 dark:text-amber-400' : ''}`}>{g.nombre}</span>
                   <Badge variant="outline" className="text-xs">{g.items.length}</Badge>
-                  {g.hidden && <Badge variant="secondary" className="text-xs font-normal">Oculta en Carta</Badge>}
+                  {g.hidden && <Badge className="text-xs font-normal bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400">Oculta en Carta</Badge>}
                 </div>
                 <div className="flex items-center gap-4 text-sm">
                   <span className="text-xs text-muted-foreground">CMV</span>
