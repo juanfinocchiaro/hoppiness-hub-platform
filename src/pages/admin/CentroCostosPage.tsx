@@ -89,7 +89,7 @@ function groupByCat(items: EI[]): CG[] {
   });
 }
 
-type Tab = 'analisis' | 'simulador' | 'actualizar';
+type Tab = 'analisis' | 'simulador' | 'actualizar' | 'extras';
 
 // ═══════════════════════════════════════
 // ═══ MAIN PAGE ═══
@@ -158,6 +158,7 @@ export default function CentroCostosPage() {
     { id: 'analisis', label: 'Análisis', icon: BarChart3 },
     { id: 'simulador', label: 'Simulador', icon: Calculator },
     { id: 'actualizar', label: 'Actualizar Precios', icon: DollarSign, count: Object.keys(pending).length || undefined },
+    { id: 'extras', label: 'Extras', icon: Package },
   ];
 
   return (
@@ -186,6 +187,7 @@ export default function CentroCostosPage() {
       {tab === 'analisis' && <AnalisisTab items={ei} cats={cats} gs={gs} loading={isLoading} onAction={() => {}} />}
       {tab === 'simulador' && <SimuladorTab items={ei} gs={gs} sim={simPrices} setSim={setSimPrices} onApply={applySim} />}
       {tab === 'actualizar' && <ActualizarTab items={ei} pending={pending} setPending={setPending} mutations={mutations} userId={user?.id} />}
+      {tab === 'extras' && <ExtrasTab preparaciones={preparaciones || []} insumos={insumos || []} />}
 
       {/* MODALS */}
       <ItemFormModal open={createOpen} onOpenChange={v => { setCreateOpen(v); if (!v) setEditingItem(null); }} item={editingItem} categorias={categorias} cmvCats={cmvCats} mutations={mutations} />
@@ -467,6 +469,111 @@ function ActualizarTab({ items, pending, setPending, mutations, userId }: {
           </TableRow>
         ))}
       </TableBody></Table></div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════
+// ═══ TAB 4: EXTRAS ═══
+// ═══════════════════════════════════════
+function ExtrasTab({ preparaciones, insumos }: { preparaciones: any[]; insumos: any[] }) {
+  const { updatePrecioExtra } = useItemExtrasMutations();
+  const [search, setSearch] = useState('');
+  const [editValues, setEditValues] = useState<Record<string, string>>({});
+
+  interface ExtraRow { id: string; nombre: string; tipo: 'Receta' | 'Insumo'; costo: number; precioExtra: number | null; }
+
+  const allExtras = useMemo<ExtraRow[]>(() => {
+    const preps: ExtraRow[] = preparaciones
+      .filter((p: any) => p.puede_ser_extra)
+      .map((p: any) => ({ id: p.id, nombre: p.nombre, tipo: 'Receta' as const, costo: Number(p.costo_calculado) || 0, precioExtra: p.precio_extra }));
+    const ins: ExtraRow[] = insumos
+      .filter((i: any) => i.puede_ser_extra)
+      .map((i: any) => ({ id: i.id, nombre: i.nombre, tipo: 'Insumo' as const, costo: Number(i.costo_por_unidad_base) || 0, precioExtra: i.precio_extra }));
+    return [...preps, ...ins].sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [preparaciones, insumos]);
+
+  const filtered = useMemo(() => {
+    if (!search) return allExtras;
+    const q = search.toLowerCase();
+    return allExtras.filter(e => e.nombre.toLowerCase().includes(q));
+  }, [allExtras, search]);
+
+  const handleBlur = (row: ExtraRow) => {
+    const key = `${row.tipo}-${row.id}`;
+    const val = editValues[key];
+    if (val === undefined) return;
+    const num = val === '' ? null : Number(val);
+    if (num === row.precioExtra) return;
+    updatePrecioExtra.mutate({ tipo: row.tipo === 'Receta' ? 'preparacion' : 'insumo', id: row.id, precio_extra: num });
+  };
+
+  const getDisplayValue = (row: ExtraRow) => {
+    const key = `${row.tipo}-${row.id}`;
+    if (editValues[key] !== undefined) return editValues[key];
+    return row.precioExtra != null ? String(row.precioExtra) : '';
+  };
+
+  const setVal = (row: ExtraRow, v: string) => {
+    const key = `${row.tipo}-${row.id}`;
+    setEditValues(p => ({ ...p, [key]: v }));
+  };
+
+  if (allExtras.length === 0) {
+    return <div className="py-16"><EmptyState icon={Package} title="Sin extras configurados" description="Marcá recetas o insumos como 'Puede ser extra' para verlos acá." /></div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <DataToolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="Buscar extra..." />
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow className="text-xs">
+              <TableHead className="w-[280px]">Nombre</TableHead>
+              <TableHead className="w-[100px]">Tipo</TableHead>
+              <TableHead className="text-right w-[120px]">Costo</TableHead>
+              <TableHead className="text-right w-[140px]">P. Extra</TableHead>
+              <TableHead className="text-right w-[100px]">FC%</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.map(row => {
+              const pe = row.precioExtra;
+              const fc = pe && pe > 0 ? calcFC(row.costo, pe) : null;
+              const fcCol = fc != null ? (fc <= 30 ? 'ok' : fc <= 45 ? 'warn' : 'danger') as 'ok'|'warn'|'danger' : null;
+              return (
+                <TableRow key={`${row.tipo}-${row.id}`}>
+                  <TableCell className="font-medium text-sm">{row.nombre}</TableCell>
+                  <TableCell><Badge variant="outline" className="text-xs">{row.tipo}</Badge></TableCell>
+                  <TableCell className="text-right font-mono text-sm">{row.costo > 0 ? fmt(row.costo) : '—'}</TableCell>
+                  <TableCell className="text-right">
+                    <Input
+                      type="number"
+                      className="w-28 h-8 text-right font-mono text-sm ml-auto"
+                      placeholder="—"
+                      value={getDisplayValue(row)}
+                      onChange={e => setVal(row, e.target.value)}
+                      onBlur={() => handleBlur(row)}
+                    />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {fc != null && fcCol ? (
+                      <Badge variant={badgeVar[fcCol]} className="text-xs">{fmtPct(fc)}</Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {allExtras.length} extra{allExtras.length !== 1 ? 's' : ''} disponible{allExtras.length !== 1 ? 's' : ''} · 
+        FC% = costo / (precio / 1.21) × 100
+      </p>
     </div>
   );
 }
