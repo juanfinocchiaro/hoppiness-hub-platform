@@ -131,6 +131,8 @@ export function FichaTecnicaModal({ open, onOpenChange, producto }: Props) {
                 ) : items.map((item, index) => {
                   const costoUnit = item.insumo?.costo_por_unidad_base || 0;
                   const subtotal = calcSubtotal(item.cantidad, costoUnit, item.unidad);
+                  const usedIds = items.filter((_, idx) => idx !== index).map(i => i.insumo_id).filter(Boolean);
+                  const filteredInsumos = ingredientesDisponibles.filter((i: any) => !usedIds.includes(i.id));
 
                   return (
                     <TableRow key={index}>
@@ -139,7 +141,7 @@ export function FichaTecnicaModal({ open, onOpenChange, producto }: Props) {
                           <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">Seleccionar...</SelectItem>
-                            {ingredientesDisponibles.map((ing: any) => (
+                            {filteredInsumos.map((ing: any) => (
                               <SelectItem key={ing.id} value={ing.id}>
                                 {ing.nombre} (${ing.costo_por_unidad_base?.toFixed(2)}/{ing.unidad_base})
                               </SelectItem>
