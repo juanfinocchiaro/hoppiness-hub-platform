@@ -1,45 +1,31 @@
 
 
-## Filtrar ingredientes ya seleccionados en la Ficha Tecnica de Recetas
+## Permitir remover recetas completas en Modificadores
 
-### Problema
-Cuando estas editando una receta y ya seleccionaste un insumo o una preparacion, ese mismo item sigue apareciendo en el dropdown para nuevas lineas. Esto puede causar duplicados accidentales.
+### Problema actual
+El selector de "Removibles" solo muestra ingredientes individuales (insumos) extraidos de las recetas. No permite seleccionar una receta completa de la composicion del item (ej: "Sin Lechuga en Hebras" donde esa lechuga es una receta/preparacion).
 
-### Solucion
-Filtrar automaticamente los insumos y preparaciones ya seleccionados del listado de opciones disponibles en cada fila. Si un insumo ya esta en la fila 1, no aparece en el dropdown de la fila 2 (pero si sigue visible en el dropdown de la fila 1, donde ya esta seleccionado).
+### Lo bueno
+La tabla `item_modificadores` ya tiene la columna `receta_id` para soportar esto. Solo falta el cambio en el frontend.
 
-Esto funciona correctamente incluso con recetas que contienen sub-recetas, ya que los insumos y las preparaciones se manejan en listas separadas.
+### Cambios en `ModificadoresTab.tsx`
 
----
+**Modificar `NewRemovibleForm`:**
 
-### Detalles tecnicos
+1. Agregar las recetas de la composicion del item como opciones seleccionables en el selector, en un grupo separado arriba de los ingredientes (ej: "-- Recetas del item --").
+2. Trackear si el usuario selecciono un insumo o una receta (`selectedType: 'insumo' | 'receta'`).
+3. Al guardar:
+   - Si es receta: enviar `receta_id` en vez de `ingrediente_id`, usando `costo_calculado` de la receta como `costo_ahorro`.
+   - Si es insumo: mantener el comportamiento actual con `ingrediente_id`.
 
-**Archivo**: `src/pages/admin/PreparacionesPage.tsx`
+### Detalle tecnico
 
-**Cambio en `FichaTecnicaTab`** (lineas ~762-808):
+Se necesita acceder a la composicion del item para obtener las recetas. El componente ya recibe `deepGroups` que contiene `receta_id` y `receta_nombre`. Tambien se pasa `composicion` desde el padre para obtener el `costo_calculado` de cada receta.
 
-Para cada fila del editor, calcular las opciones disponibles excluyendo los IDs ya usados en otras filas:
+Cambios puntuales:
+- En el `Select`, agregar un `SelectGroup` con header "-- Recetas --" que liste las preparaciones de la composicion.
+- Al seleccionar una receta, auto-completar nombre como "Sin [nombre receta]" y calcular el ahorro usando `costo_calculado`.
+- Al guardar, pasar `receta_id` en lugar de `ingrediente_id` cuando corresponda.
 
-1. **Insumos**: Recopilar todos los `insumo_id` ya seleccionados en otras filas (excluyendo la fila actual). Filtrar `ingredientesDisponibles` para no mostrar esos IDs.
-
-2. **Preparaciones**: Recopilar todos los `sub_preparacion_id` ya seleccionados en otras filas (excluyendo la fila actual). Filtrar `preparacionesDisponibles` para no mostrar esos IDs.
-
-Logica por fila:
-```
-const usedInsumoIds = items
-  .filter((_, idx) => idx !== index)
-  .map(i => i.insumo_id)
-  .filter(Boolean);
-
-const usedPrepIds = items
-  .filter((_, idx) => idx !== index)
-  .map(i => i.sub_preparacion_id)
-  .filter(Boolean);
-
-// Filtrar opciones
-ingredientesDisponibles.filter(i => !usedInsumoIds.includes(i.id))
-preparacionesDisponibles.filter(p => !usedPrepIds.includes(p.id))
-```
-
-Tambien se aplicara el mismo patron al componente `FichaTecnicaModal` (`src/components/menu/FichaTecnicaModal.tsx`) y al `OpcionesTab` dentro de `PreparacionesPage.tsx` para mantener consistencia en todo el sistema.
+No se requieren cambios en la base de datos ni migraciones.
 
