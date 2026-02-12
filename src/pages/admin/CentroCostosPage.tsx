@@ -21,7 +21,8 @@ import {
   Target, MoreHorizontal, RefreshCw,
 } from 'lucide-react';
 import { ItemExpandedPanel } from '@/components/centro-costos/ItemExpandedPanel';
-import { ModificadoresTab } from '@/components/menu/ModificadoresTab';
+import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useItemsCarta, useItemCartaComposicion, useItemCartaHistorial, useItemCartaMutations } from '@/hooks/useItemsCarta';
 import { useGruposOpcionales, useGruposOpcionalesMutations } from '@/hooks/useGruposOpcionales';
 import { usePreparaciones } from '@/hooks/usePreparaciones';
@@ -116,7 +117,6 @@ export default function CentroCostosPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [compItem, setCompItem] = useState<any>(null);
-  const [modItem, setModItem] = useState<any>(null);
   const [histItem, setHistItem] = useState<any>(null);
   const [delItem, setDelItem] = useState<any>(null);
   const [simPrices, setSimPrices] = useState<Record<string, number>>({});
@@ -148,7 +148,6 @@ export default function CentroCostosPage() {
 
   const openAction = (action: string, raw: any) => {
     if (action === 'comp') setCompItem(raw);
-    else if (action === 'mod') setModItem(raw);
     else if (action === 'edit') { setEditingItem(raw); setCreateOpen(true); }
     else if (action === 'hist') setHistItem(raw);
     else if (action === 'del') setDelItem(raw);
@@ -190,7 +189,6 @@ export default function CentroCostosPage() {
       {/* MODALS */}
       <ItemFormModal open={createOpen} onOpenChange={v => { setCreateOpen(v); if (!v) setEditingItem(null); }} item={editingItem} categorias={categorias} cmvCats={cmvCats} mutations={mutations} />
       {compItem && <ComposicionModal open={!!compItem} onOpenChange={() => setCompItem(null)} item={compItem} preparaciones={preparaciones || []} insumos={insumos || []} mutations={mutations} />}
-      {modItem && <Dialog open={!!modItem} onOpenChange={() => setModItem(null)}><DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto"><DialogHeader><DialogTitle>Modificadores: {modItem.nombre}</DialogTitle></DialogHeader><ModificadoresTab itemId={modItem.id} /></DialogContent></Dialog>}
       {histItem && <HistorialModal open={!!histItem} onOpenChange={() => setHistItem(null)} item={histItem} />}
       <ConfirmDialog open={!!delItem} onOpenChange={() => setDelItem(null)} title="Eliminar item" description={`¿Eliminar "${delItem?.nombre}"?`} confirmLabel="Eliminar" variant="destructive" onConfirm={async () => { await mutations.softDelete.mutateAsync(delItem.id); setDelItem(null); }} />
     </div>
@@ -513,21 +511,21 @@ function ComposicionModal({ open, onOpenChange, item, preparaciones, insumos, mu
   const [grupoNuevoNombre, setGrupoNuevoNombre] = useState('');
   const [showNewGrupo, setShowNewGrupo] = useState(false);
 
-  useEffect(() => { if (composicionActual) { setRows(composicionActual.map((c: any) => ({ tipo: c.preparacion_id ? 'preparacion' : 'insumo', preparacion_id: c.preparacion_id || '', insumo_id: c.insumo_id || '', cantidad: c.cantidad, _label: c.preparaciones?.nombre || c.insumos?.nombre || '', _costo: c.preparaciones?.costo_calculado || c.insumos?.costo_por_unidad_base || 0 }))); setHasChanges(false); } }, [composicionActual]);
+  useEffect(() => { if (composicionActual) { setRows(composicionActual.map((c: any) => ({ tipo: c.preparacion_id ? 'preparacion' : 'insumo', preparacion_id: c.preparacion_id || '', insumo_id: c.insumo_id || '', cantidad: c.cantidad, es_removible: c.es_removible || false, es_extra: c.es_extra || false, _label: c.preparaciones?.nombre || c.insumos?.nombre || '', _costo: c.preparaciones?.costo_calculado || c.insumos?.costo_por_unidad_base || 0, _precio_extra: c.preparaciones?.precio_extra || c.insumos?.precio_extra || null }))); setHasChanges(false); } }, [composicionActual]);
 
-  const addRow = () => { setRows([...rows, { tipo: 'preparacion', preparacion_id: '', insumo_id: '', cantidad: 1, _label: '', _costo: 0 }]); setHasChanges(true); };
+  const addRow = () => { setRows([...rows, { tipo: 'preparacion', preparacion_id: '', insumo_id: '', cantidad: 1, es_removible: false, es_extra: false, _label: '', _costo: 0, _precio_extra: null }]); setHasChanges(true); };
   const removeRow = (i: number) => { setRows(rows.filter((_, idx) => idx !== i)); setHasChanges(true); };
   const updateRow = (i: number, field: string, value: any) => {
     const nr = [...rows]; nr[i] = { ...nr[i], [field]: value };
-    if (field === 'tipo') { nr[i].preparacion_id = ''; nr[i].insumo_id = ''; nr[i]._costo = 0; nr[i]._label = ''; }
-    if (field === 'preparacion_id') { const p = preparaciones.find((x: any) => x.id === value); nr[i]._label = p?.nombre || ''; nr[i]._costo = p?.costo_calculado || 0; }
-    if (field === 'insumo_id') { const ins = insumos.find((x: any) => x.id === value); nr[i]._label = ins?.nombre || ''; nr[i]._costo = ins?.costo_por_unidad_base || 0; }
+    if (field === 'tipo') { nr[i].preparacion_id = ''; nr[i].insumo_id = ''; nr[i]._costo = 0; nr[i]._label = ''; nr[i]._precio_extra = null; nr[i].es_extra = false; }
+    if (field === 'preparacion_id') { const p = preparaciones.find((x: any) => x.id === value); nr[i]._label = p?.nombre || ''; nr[i]._costo = p?.costo_calculado || 0; nr[i]._precio_extra = p?.precio_extra || null; if (!p?.precio_extra) nr[i].es_extra = false; }
+    if (field === 'insumo_id') { const ins = insumos.find((x: any) => x.id === value); nr[i]._label = ins?.nombre || ''; nr[i]._costo = ins?.costo_por_unidad_base || 0; nr[i]._precio_extra = ins?.precio_extra || null; if (!ins?.precio_extra) nr[i].es_extra = false; }
     setRows(nr); setHasChanges(true);
   };
   const costoFijo = rows.reduce((t, r) => t + r.cantidad * r._costo, 0);
   const costoGrupos = (grupos || []).reduce((t: number, g: any) => t + (g.costo_promedio || 0), 0);
   const costoTotal = costoFijo + costoGrupos;
-  const handleSave = async () => { await mutations.saveComposicion.mutateAsync({ item_carta_id: item.id, items: rows.filter(r => r.preparacion_id || r.insumo_id).map(r => ({ preparacion_id: r.tipo === 'preparacion' ? r.preparacion_id : undefined, insumo_id: r.tipo === 'insumo' ? r.insumo_id : undefined, cantidad: r.cantidad })) }); setHasChanges(false); };
+  const handleSave = async () => { await mutations.saveComposicion.mutateAsync({ item_carta_id: item.id, items: rows.filter(r => r.preparacion_id || r.insumo_id).map(r => ({ preparacion_id: r.tipo === 'preparacion' ? r.preparacion_id : undefined, insumo_id: r.tipo === 'insumo' ? r.insumo_id : undefined, cantidad: r.cantidad, es_removible: r.es_removible, es_extra: r.es_extra })) }); setHasChanges(false); };
   const handleCreateGrupo = async () => { if (!grupoNuevoNombre.trim()) return; await gruposMutations.createGrupo.mutateAsync({ item_carta_id: item.id, nombre: grupoNuevoNombre.trim(), orden: (grupos?.length || 0) }); setGrupoNuevoNombre(''); setShowNewGrupo(false); };
 
   // Grouped insumo select renderer
@@ -548,18 +546,54 @@ function ComposicionModal({ open, onOpenChange, item, preparaciones, insumos, mu
     );
   };
 
-  return (<Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto"><DialogHeader><DialogTitle>Composición: {item.nombre}</DialogTitle></DialogHeader>
+  return (<Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto"><DialogHeader><DialogTitle>Composición: {item.nombre}</DialogTitle></DialogHeader>
     <div className="space-y-4">
       <FormSection title="Composición Fija" icon={Layers}>
-        {rows.length === 0 ? <div className="py-4 text-center text-muted-foreground border rounded-lg text-sm">Sin componentes fijos</div> : <div className="space-y-2">{rows.map((row, i) => (
-          <div key={i} className="flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2">
-            <Select value={row.tipo} onValueChange={v => updateRow(i, 'tipo', v)}><SelectTrigger className="h-7 w-[100px] text-xs shrink-0"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="preparacion">Receta</SelectItem><SelectItem value="insumo">Catálogo</SelectItem></SelectContent></Select>
-            <div className="flex-1 min-w-0">{row.tipo === 'preparacion' ? <Select value={row.preparacion_id || 'none'} onValueChange={v => updateRow(i, 'preparacion_id', v === 'none' ? '' : v)}><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger><SelectContent><SelectItem value="none">Seleccionar...</SelectItem>{preparaciones.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.nombre} ({fmt(p.costo_calculado || 0)})</SelectItem>)}</SelectContent></Select> : renderInsumoSelect(row, i)}</div>
-            <Input type="number" className="h-7 w-16 text-xs shrink-0" value={row.cantidad} onChange={e => updateRow(i, 'cantidad', Number(e.target.value))} />
-            <span className="text-xs text-muted-foreground shrink-0">×</span><span className="font-mono text-xs w-16 text-right shrink-0">{fmt(row._costo)}</span><span className="text-xs text-muted-foreground shrink-0">=</span><span className="font-mono text-xs font-semibold w-20 text-right shrink-0">{fmt(row.cantidad * row._costo)}</span>
-            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeRow(i)}><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
+        {rows.length === 0 ? <div className="py-4 text-center text-muted-foreground border rounded-lg text-sm">Sin componentes fijos</div> : (
+          <div className="space-y-2">
+            {/* Header */}
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-3 py-1">
+              <span className="w-[100px] shrink-0">Tipo</span>
+              <span className="flex-1">Componente</span>
+              <span className="w-16 shrink-0 text-right">Cant.</span>
+              <span className="w-20 shrink-0 text-right">Subtotal</span>
+              <span className="w-14 shrink-0 text-center">SIN</span>
+              <span className="w-14 shrink-0 text-center">Extra</span>
+              <span className="w-20 shrink-0 text-right">P. Extra</span>
+              <span className="w-6 shrink-0" />
+            </div>
+            {rows.map((row, i) => (
+              <div key={i} className="flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2">
+                <Select value={row.tipo} onValueChange={v => updateRow(i, 'tipo', v)}><SelectTrigger className="h-7 w-[100px] text-xs shrink-0"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="preparacion">Receta</SelectItem><SelectItem value="insumo">Catálogo</SelectItem></SelectContent></Select>
+                <div className="flex-1 min-w-0">{row.tipo === 'preparacion' ? <Select value={row.preparacion_id || 'none'} onValueChange={v => updateRow(i, 'preparacion_id', v === 'none' ? '' : v)}><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger><SelectContent><SelectItem value="none">Seleccionar...</SelectItem>{preparaciones.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.nombre} ({fmt(p.costo_calculado || 0)})</SelectItem>)}</SelectContent></Select> : renderInsumoSelect(row, i)}</div>
+                <Input type="number" className="h-7 w-16 text-xs shrink-0" value={row.cantidad} onChange={e => updateRow(i, 'cantidad', Number(e.target.value))} />
+                <span className="font-mono text-xs font-semibold w-20 text-right shrink-0">{fmt(row.cantidad * row._costo)}</span>
+                {/* Removible toggle */}
+                <div className="w-14 shrink-0 flex justify-center">
+                  <Switch checked={row.es_removible} onCheckedChange={v => updateRow(i, 'es_removible', v)} className="scale-75" />
+                </div>
+                {/* Extra toggle */}
+                <div className="w-14 shrink-0 flex justify-center">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>
+                          <Switch checked={row.es_extra} onCheckedChange={v => updateRow(i, 'es_extra', v)} disabled={!row._precio_extra} className="scale-75" />
+                        </span>
+                      </TooltipTrigger>
+                      {!row._precio_extra && <TooltipContent><p className="text-xs">Definí el precio extra en la receta/insumo</p></TooltipContent>}
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                {/* P. Extra readonly */}
+                <span className="font-mono text-xs w-20 text-right shrink-0 text-muted-foreground">
+                  {row._precio_extra ? fmt(row._precio_extra) : '—'}
+                </span>
+                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeRow(i)}><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
+              </div>
+            ))}
           </div>
-        ))}</div>}
+        )}
         <Button variant="outline" onClick={addRow} className="w-full mt-2"><Plus className="w-4 h-4 mr-2" /> Agregar Componente</Button>
       </FormSection>
       <FormSection title="Grupos Opcionales" icon={Tag}>

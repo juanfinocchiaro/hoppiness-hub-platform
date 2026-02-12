@@ -8,10 +8,10 @@ import { LoadingButton } from '@/components/ui/loading-button';
 import { FormRow, FormSection } from '@/components/ui/forms-pro';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
-  Layers, Tag, Plus, Trash2, Save, DollarSign,
-  Settings2, Clock, ChevronUp,
+  Layers, Tag, Plus, Trash2, Save, DollarSign, Clock, ChevronUp,
 } from 'lucide-react';
-import { ModificadoresTab } from '@/components/menu/ModificadoresTab';
+import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useItemCartaComposicion, useItemCartaHistorial, useItemCartaMutations } from '@/hooks/useItemsCarta';
 import { useGruposOpcionales, useGruposOpcionalesMutations } from '@/hooks/useGruposOpcionales';
 import { usePreparaciones } from '@/hooks/usePreparaciones';
@@ -29,7 +29,7 @@ function fcColor(real: number, obj: number): 'ok' | 'warn' | 'danger' {
 }
 const badgeVar = { ok: 'default' as const, warn: 'secondary' as const, danger: 'destructive' as const };
 
-type PanelTab = 'composicion' | 'modificadores' | 'editar' | 'historial';
+type PanelTab = 'composicion' | 'editar' | 'historial';
 
 interface Props {
   item: any;
@@ -44,7 +44,6 @@ export function ItemExpandedPanel({ item, onClose, onDeleted }: Props) {
 
   const tabs: { id: PanelTab; label: string; icon: any }[] = [
     { id: 'composicion', label: 'Composición', icon: Layers },
-    { id: 'modificadores', label: 'Modificadores', icon: Settings2 },
     { id: 'editar', label: 'Editar', icon: DollarSign },
     { id: 'historial', label: 'Historial', icon: Clock },
   ];
@@ -85,7 +84,6 @@ export function ItemExpandedPanel({ item, onClose, onDeleted }: Props) {
       {/* Content */}
       <div className="p-4">
         {activeTab === 'composicion' && <ComposicionInline item={item} mutations={mutations} />}
-        {activeTab === 'modificadores' && <ModificadoresTab itemId={item.id} />}
         {activeTab === 'editar' && <EditarInline item={item} mutations={mutations} onSaved={onClose} />}
         {activeTab === 'historial' && <HistorialInline item={item} />}
       </div>
@@ -127,20 +125,23 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
         preparacion_id: c.preparacion_id || '',
         insumo_id: c.insumo_id || '',
         cantidad: c.cantidad,
+        es_removible: c.es_removible || false,
+        es_extra: c.es_extra || false,
         _label: c.preparaciones?.nombre || c.insumos?.nombre || '',
         _costo: c.preparaciones?.costo_calculado || c.insumos?.costo_por_unidad_base || 0,
+        _precio_extra: c.preparaciones?.precio_extra || c.insumos?.precio_extra || null,
       })));
       setHasChanges(false);
     }
   }, [composicionActual]);
 
-  const addRow = () => { setRows([...rows, { tipo: 'preparacion', preparacion_id: '', insumo_id: '', cantidad: 1, _label: '', _costo: 0 }]); setHasChanges(true); };
+  const addRow = () => { setRows([...rows, { tipo: 'preparacion', preparacion_id: '', insumo_id: '', cantidad: 1, es_removible: false, es_extra: false, _label: '', _costo: 0, _precio_extra: null }]); setHasChanges(true); };
   const removeRow = (i: number) => { setRows(rows.filter((_, idx) => idx !== i)); setHasChanges(true); };
   const updateRow = (i: number, field: string, value: any) => {
     const nr = [...rows]; nr[i] = { ...nr[i], [field]: value };
-    if (field === 'tipo') { nr[i].preparacion_id = ''; nr[i].insumo_id = ''; nr[i]._costo = 0; nr[i]._label = ''; }
-    if (field === 'preparacion_id') { const p = (preparaciones || []).find((x: any) => x.id === value); nr[i]._label = p?.nombre || ''; nr[i]._costo = p?.costo_calculado || 0; }
-    if (field === 'insumo_id') { const ins = (insumos || []).find((x: any) => x.id === value); nr[i]._label = ins?.nombre || ''; nr[i]._costo = ins?.costo_por_unidad_base || 0; }
+    if (field === 'tipo') { nr[i].preparacion_id = ''; nr[i].insumo_id = ''; nr[i]._costo = 0; nr[i]._label = ''; nr[i]._precio_extra = null; nr[i].es_extra = false; }
+    if (field === 'preparacion_id') { const p = (preparaciones || []).find((x: any) => x.id === value); nr[i]._label = p?.nombre || ''; nr[i]._costo = p?.costo_calculado || 0; nr[i]._precio_extra = p?.precio_extra || null; if (!p?.precio_extra) nr[i].es_extra = false; }
+    if (field === 'insumo_id') { const ins = (insumos || []).find((x: any) => x.id === value); nr[i]._label = ins?.nombre || ''; nr[i]._costo = ins?.costo_por_unidad_base || 0; nr[i]._precio_extra = ins?.precio_extra || null; if (!ins?.precio_extra) nr[i].es_extra = false; }
     setRows(nr); setHasChanges(true);
   };
 
@@ -155,6 +156,8 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
         preparacion_id: r.tipo === 'preparacion' ? r.preparacion_id : undefined,
         insumo_id: r.tipo === 'insumo' ? r.insumo_id : undefined,
         cantidad: r.cantidad,
+        es_removible: r.es_removible,
+        es_extra: r.es_extra,
       })),
     });
     setHasChanges(false);
@@ -192,6 +195,17 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
           <div className="py-4 text-center text-muted-foreground border rounded-lg text-sm">Sin componentes fijos</div>
         ) : (
           <div className="space-y-2">
+            {/* Header */}
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-3 py-1">
+              <span className="w-[100px] shrink-0">Tipo</span>
+              <span className="flex-1">Componente</span>
+              <span className="w-16 shrink-0 text-right">Cant.</span>
+              <span className="w-20 shrink-0 text-right">Subtotal</span>
+              <span className="w-14 shrink-0 text-center">SIN</span>
+              <span className="w-14 shrink-0 text-center">Extra</span>
+              <span className="w-20 shrink-0 text-right">P. Extra</span>
+              <span className="w-6 shrink-0" />
+            </div>
             {rows.map((row, i) => (
               <div key={i} className="flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2">
                 <Select value={row.tipo} onValueChange={v => updateRow(i, 'tipo', v)}>
@@ -210,10 +224,28 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
                   ) : renderInsumoSelect(row, i)}
                 </div>
                 <Input type="number" className="h-7 w-16 text-xs shrink-0" value={row.cantidad} onChange={e => updateRow(i, 'cantidad', Number(e.target.value))} />
-                <span className="text-xs text-muted-foreground shrink-0">×</span>
-                <span className="font-mono text-xs w-16 text-right shrink-0">{fmt(row._costo)}</span>
-                <span className="text-xs text-muted-foreground shrink-0">=</span>
                 <span className="font-mono text-xs font-semibold w-20 text-right shrink-0">{fmt(row.cantidad * row._costo)}</span>
+                {/* Removible toggle */}
+                <div className="w-14 shrink-0 flex justify-center">
+                  <Switch checked={row.es_removible} onCheckedChange={v => updateRow(i, 'es_removible', v)} className="scale-75" />
+                </div>
+                {/* Extra toggle */}
+                <div className="w-14 shrink-0 flex justify-center">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>
+                          <Switch checked={row.es_extra} onCheckedChange={v => updateRow(i, 'es_extra', v)} disabled={!row._precio_extra} className="scale-75" />
+                        </span>
+                      </TooltipTrigger>
+                      {!row._precio_extra && <TooltipContent><p className="text-xs">Definí el precio extra en la receta/insumo</p></TooltipContent>}
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                {/* P. Extra readonly */}
+                <span className="font-mono text-xs w-20 text-right shrink-0 text-muted-foreground">
+                  {row._precio_extra ? fmt(row._precio_extra) : '—'}
+                </span>
                 <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeRow(i)}>
                   <Trash2 className="w-3.5 h-3.5 text-destructive" />
                 </Button>

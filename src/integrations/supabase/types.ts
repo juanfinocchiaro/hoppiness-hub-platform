@@ -2119,6 +2119,7 @@ export type Database = {
           motivo_control: string | null
           nivel_control: string
           nombre: string
+          precio_extra: number | null
           precio_maximo_sugerido: number | null
           precio_referencia: number | null
           precio_venta: number | null
@@ -2150,6 +2151,7 @@ export type Database = {
           motivo_control?: string | null
           nivel_control?: string
           nombre: string
+          precio_extra?: number | null
           precio_maximo_sugerido?: number | null
           precio_referencia?: number | null
           precio_venta?: number | null
@@ -2181,6 +2183,7 @@ export type Database = {
           motivo_control?: string | null
           nivel_control?: string
           nombre?: string
+          precio_extra?: number | null
           precio_maximo_sugerido?: number | null
           precio_referencia?: number | null
           precio_venta?: number | null
@@ -2385,6 +2388,8 @@ export type Database = {
         Row: {
           cantidad: number
           created_at: string | null
+          es_extra: boolean | null
+          es_removible: boolean | null
           id: string
           insumo_id: string | null
           item_carta_id: string
@@ -2394,6 +2399,8 @@ export type Database = {
         Insert: {
           cantidad?: number
           created_at?: string | null
+          es_extra?: boolean | null
+          es_removible?: boolean | null
           id?: string
           insumo_id?: string | null
           item_carta_id: string
@@ -2403,6 +2410,8 @@ export type Database = {
         Update: {
           cantidad?: number
           created_at?: string | null
+          es_extra?: boolean | null
+          es_removible?: boolean | null
           id?: string
           insumo_id?: string | null
           item_carta_id?: string
@@ -3876,6 +3885,7 @@ export type Database = {
           id: string
           metodo_costeo: string | null
           nombre: string
+          precio_extra: number | null
           tipo: string
           updated_at: string | null
         }
@@ -3891,6 +3901,7 @@ export type Database = {
           id?: string
           metodo_costeo?: string | null
           nombre: string
+          precio_extra?: number | null
           tipo?: string
           updated_at?: string | null
         }
@@ -3906,6 +3917,7 @@ export type Database = {
           id?: string
           metodo_costeo?: string | null
           nombre?: string
+          precio_extra?: number | null
           tipo?: string
           updated_at?: string | null
         }
