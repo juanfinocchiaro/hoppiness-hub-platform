@@ -764,6 +764,10 @@ function FichaTecnicaTab({ preparacionId, mutations, onClose }: { preparacionId:
             const isPrep = item.tipo_linea === 'preparacion';
             const costoUnit = isPrep ? (item.sub_preparacion?.costo_calculado || 0) : (item.insumo?.costo_por_unidad_base || 0);
             const subtotal = isPrep ? (item.cantidad || 0) * costoUnit : calcSubtotal(item.cantidad, costoUnit, item.unidad);
+            const usedInsumoIds = items.filter((_, idx) => idx !== index).map(i => i.insumo_id).filter(Boolean);
+            const usedPrepIds = items.filter((_, idx) => idx !== index).map(i => i.sub_preparacion_id).filter(Boolean);
+            const filteredInsumos = ingredientesDisponibles.filter((i: any) => !usedInsumoIds.includes(i.id));
+            const filteredPreps = preparacionesDisponibles.filter((p: any) => !usedPrepIds.includes(p.id));
             return (
               <div key={index} className="flex items-center gap-1.5 border rounded px-2 py-1.5 text-sm">
                 <Select value={item.tipo_linea} onValueChange={(v) => updateItem(index, 'tipo_linea', v)}>
@@ -779,7 +783,7 @@ function FichaTecnicaTab({ preparacionId, mutations, onClose }: { preparacionId:
                       <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Seleccionar...</SelectItem>
-                        {preparacionesDisponibles.map((p: any) => (
+                        {filteredPreps.map((p: any) => (
                           <SelectItem key={p.id} value={p.id}>{p.nombre} ({formatCurrency(p.costo_calculado || 0)})</SelectItem>
                         ))}
                       </SelectContent>
@@ -789,7 +793,7 @@ function FichaTecnicaTab({ preparacionId, mutations, onClose }: { preparacionId:
                       <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Seleccionar...</SelectItem>
-                        {ingredientesDisponibles.map((ing: any) => (
+                        {filteredInsumos.map((ing: any) => (
                           <SelectItem key={ing.id} value={ing.id}>{ing.nombre} (${ing.costo_por_unidad_base?.toFixed(2)}/{ing.unidad_base})</SelectItem>
                         ))}
                       </SelectContent>
