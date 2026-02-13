@@ -2394,7 +2394,6 @@ export type Database = {
         Row: {
           cantidad: number
           created_at: string | null
-          es_extra: boolean | null
           id: string
           insumo_id: string | null
           item_carta_id: string
@@ -2404,7 +2403,6 @@ export type Database = {
         Insert: {
           cantidad?: number
           created_at?: string | null
-          es_extra?: boolean | null
           id?: string
           insumo_id?: string | null
           item_carta_id: string
@@ -2414,7 +2412,6 @@ export type Database = {
         Update: {
           cantidad?: number
           created_at?: string | null
-          es_extra?: boolean | null
           id?: string
           insumo_id?: string | null
           item_carta_id?: string
@@ -2622,6 +2619,42 @@ export type Database = {
           },
         ]
       }
+      item_extra_asignaciones: {
+        Row: {
+          created_at: string | null
+          extra_id: string
+          id: string
+          item_carta_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          extra_id: string
+          id?: string
+          item_carta_id: string
+        }
+        Update: {
+          created_at?: string | null
+          extra_id?: string
+          id?: string
+          item_carta_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_extra_asignaciones_extra_id_fkey"
+            columns: ["extra_id"]
+            isOneToOne: false
+            referencedRelation: "items_carta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_extra_asignaciones_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "items_carta"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_modificadores: {
         Row: {
           activo: boolean | null
@@ -2812,6 +2845,8 @@ export type Database = {
         Row: {
           activo: boolean | null
           categoria_carta_id: string | null
+          composicion_ref_insumo_id: string | null
+          composicion_ref_preparacion_id: string | null
           costo_total: number | null
           created_at: string | null
           deleted_at: string | null
@@ -2832,6 +2867,8 @@ export type Database = {
         Insert: {
           activo?: boolean | null
           categoria_carta_id?: string | null
+          composicion_ref_insumo_id?: string | null
+          composicion_ref_preparacion_id?: string | null
           costo_total?: number | null
           created_at?: string | null
           deleted_at?: string | null
@@ -2852,6 +2889,8 @@ export type Database = {
         Update: {
           activo?: boolean | null
           categoria_carta_id?: string | null
+          composicion_ref_insumo_id?: string | null
+          composicion_ref_preparacion_id?: string | null
           costo_total?: number | null
           created_at?: string | null
           deleted_at?: string | null
@@ -2875,6 +2914,20 @@ export type Database = {
             columns: ["categoria_carta_id"]
             isOneToOne: false
             referencedRelation: "menu_categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_carta_composicion_ref_insumo_id_fkey"
+            columns: ["composicion_ref_insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_carta_composicion_ref_preparacion_id_fkey"
+            columns: ["composicion_ref_preparacion_id"]
+            isOneToOne: false
+            referencedRelation: "preparaciones"
             referencedColumns: ["id"]
           },
           {

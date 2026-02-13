@@ -525,9 +525,9 @@ function ComposicionModal({ open, onOpenChange, item, preparaciones, insumos, mu
   const [grupoNuevoNombre, setGrupoNuevoNombre] = useState('');
   const [showNewGrupo, setShowNewGrupo] = useState(false);
 
-  useEffect(() => { if (composicionActual) { setRows(composicionActual.map((c: any) => ({ tipo: c.preparacion_id ? 'preparacion' : 'insumo', preparacion_id: c.preparacion_id || '', insumo_id: c.insumo_id || '', cantidad: c.cantidad, es_extra: c.es_extra || false, _label: c.preparaciones?.nombre || c.insumos?.nombre || '', _costo: c.preparaciones?.costo_calculado || c.insumos?.costo_por_unidad_base || 0 }))); setHasChanges(false); } }, [composicionActual]);
+  useEffect(() => { if (composicionActual) { setRows(composicionActual.map((c: any) => ({ tipo: c.preparacion_id ? 'preparacion' : 'insumo', preparacion_id: c.preparacion_id || '', insumo_id: c.insumo_id || '', cantidad: c.cantidad, _label: c.preparaciones?.nombre || c.insumos?.nombre || '', _costo: c.preparaciones?.costo_calculado || c.insumos?.costo_por_unidad_base || 0 }))); setHasChanges(false); } }, [composicionActual]);
 
-  const addRow = () => { setRows([...rows, { tipo: 'preparacion', preparacion_id: '', insumo_id: '', cantidad: 1, es_extra: false, _label: '', _costo: 0 }]); setHasChanges(true); };
+  const addRow = () => { setRows([...rows, { tipo: 'preparacion', preparacion_id: '', insumo_id: '', cantidad: 1, _label: '', _costo: 0 }]); setHasChanges(true); };
   const removeRow = (i: number) => { setRows(rows.filter((_, idx) => idx !== i)); setHasChanges(true); };
   const updateRow = (i: number, field: string, value: any) => {
     const nr = [...rows]; nr[i] = { ...nr[i], [field]: value };
@@ -546,7 +546,6 @@ function ComposicionModal({ open, onOpenChange, item, preparaciones, insumos, mu
         preparacion_id: r.tipo === 'preparacion' ? r.preparacion_id : undefined,
         insumo_id: r.tipo === 'insumo' ? r.insumo_id : undefined,
         cantidad: r.cantidad,
-        es_extra: r.es_extra,
       })),
     });
     setHasChanges(false);
@@ -580,7 +579,6 @@ function ComposicionModal({ open, onOpenChange, item, preparaciones, insumos, mu
               <span className="flex-1">Componente</span>
               <span className="w-16 shrink-0 text-right">Cant.</span>
               <span className="w-20 shrink-0 text-right">Subtotal</span>
-              <span className="w-14 shrink-0 text-center">Extra</span>
               <span className="w-6 shrink-0" />
             </div>
             {rows.map((row, i) => (
@@ -589,9 +587,6 @@ function ComposicionModal({ open, onOpenChange, item, preparaciones, insumos, mu
                 <div className="flex-1 min-w-0">{row.tipo === 'preparacion' ? <Select value={row.preparacion_id || 'none'} onValueChange={v => updateRow(i, 'preparacion_id', v === 'none' ? '' : v)}><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger><SelectContent><SelectItem value="none">Seleccionar...</SelectItem>{preparaciones.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.nombre} ({fmt(p.costo_calculado || 0)})</SelectItem>)}</SelectContent></Select> : renderInsumoSelect(row, i)}</div>
                 <Input type="number" className="h-7 w-16 text-xs shrink-0" value={row.cantidad} onChange={e => updateRow(i, 'cantidad', Number(e.target.value))} />
                 <span className="font-mono text-xs font-semibold w-20 text-right shrink-0">{fmt(row.cantidad * row._costo)}</span>
-                <div className="w-14 shrink-0 flex justify-center">
-                  <Switch checked={row.es_extra} onCheckedChange={v => updateRow(i, 'es_extra', v)} className="scale-75" />
-                </div>
                 <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeRow(i)}><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
               </div>
             ))}

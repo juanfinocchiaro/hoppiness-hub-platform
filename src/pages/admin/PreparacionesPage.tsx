@@ -146,29 +146,7 @@ function InlineDescripcion({ prep, mutations }: { prep: any; mutations: any }) {
   );
 }
 
-// Toggle "Puede ser extra"
-function InlinePuedeSerExtra({ prep, mutations }: { prep: any; mutations: any }) {
-  const [saving, setSaving] = useState(false);
-
-  const toggle = async (checked: boolean) => {
-    setSaving(true);
-    try {
-      await mutations.update.mutateAsync({ id: prep.id, data: { puede_ser_extra: checked } });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="flex items-center gap-3 mb-3">
-      <span className="text-xs text-muted-foreground shrink-0">Puede ser extra:</span>
-      <Switch checked={prep.puede_ser_extra || false} onCheckedChange={toggle} disabled={saving} />
-      <span className="text-xs text-muted-foreground">
-        {prep.puede_ser_extra ? 'Disponible como extra en items de carta' : 'No disponible como extra'}
-      </span>
-    </div>
-  );
-}
+// Toggle "Puede ser extra" — REMOVED in V3 (extras auto-discovered from composition)
 
 import {
   usePreparaciones,
@@ -259,7 +237,7 @@ function PrepRow({ prep, isExpanded, onToggle, mutations, onDelete, categorias }
           <InlineNombre prep={prep} mutations={mutations} />
           <InlineCategoria prep={prep} mutations={mutations} categorias={categorias} />
           <InlineDescripcion prep={prep} mutations={mutations} />
-          <InlinePuedeSerExtra prep={prep} mutations={mutations} />
+          
           {prep.tipo === 'elaborado' ? (
             <FichaTecnicaTab preparacionId={prep.id} mutations={mutations} onClose={onToggle} />
           ) : (
