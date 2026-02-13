@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/ui/states';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { BookOpen, ChevronDown, Plus, GripVertical, Pencil, Trash2, Check, X, Eye, EyeOff } from 'lucide-react';
+import { ProductPreviewPanel } from '@/components/menu/ProductPreviewPanel';
 import { useItemsCarta } from '@/hooks/useItemsCarta';
 import { useMenuCategorias, useMenuCategoriaMutations } from '@/hooks/useMenu';
 import {
@@ -51,11 +52,14 @@ interface SortableCatProps {
   handleUpdate: () => void;
   setDeleting: (v: any) => void;
   onToggleVisibility: (cat: any) => void;
+  expandedItemId: string | null;
+  setExpandedItemId: (id: string | null) => void;
 }
 
 function SortableCategoryCard({
   cat, items, isOpen, onToggle,
   editingId, editingNombre, setEditingNombre, setEditingId, handleUpdate, setDeleting, onToggleVisibility,
+  expandedItemId, setExpandedItemId,
 }: SortableCatProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id });
   const style = {
@@ -132,25 +136,35 @@ function SortableCategoryCard({
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">Sin items en esta categoría</div>
           ) : (
             <div className="divide-y">
-              {items.map((item: any) => (
-                <div key={item.id} className="flex items-center justify-between px-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm">{item.nombre}</p>
-                    {item.descripcion && <p className="text-xs text-muted-foreground truncate max-w-[350px]">{item.descripcion}</p>}
+              {items.map((item: any) => {
+                const isItemExpanded = expandedItemId === item.id;
+                return (
+                  <div key={item.id}>
+                    <div
+                      className={`flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors ${isItemExpanded ? 'bg-muted/20' : ''}`}
+                      onClick={() => setExpandedItemId(isItemExpanded ? null : item.id)}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm">{item.nombre}</p>
+                        {item.descripcion && <p className="text-xs text-muted-foreground truncate max-w-[350px]">{item.descripcion}</p>}
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="font-mono font-medium text-sm">{formatCurrency(item.precio_base)}</span>
+                        {item.fc_actual != null && (
+                          <Badge variant={item.fc_actual <= 32 ? 'default' : item.fc_actual <= 40 ? 'secondary' : 'destructive'} className="text-xs">
+                            FC {item.fc_actual.toFixed(1)}%
+                          </Badge>
+                        )}
+                        {item.disponible_delivery && (
+                          <Badge variant="outline" className="text-xs">Delivery</Badge>
+                        )}
+                        {item.imagen_url && <span className="text-xs">📷</span>}
+                      </div>
+                    </div>
+                    {isItemExpanded && <ProductPreviewPanel item={item} />}
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="font-mono font-medium text-sm">{formatCurrency(item.precio_base)}</span>
-                    {item.fc_actual != null && (
-                      <Badge variant={item.fc_actual <= 32 ? 'default' : item.fc_actual <= 40 ? 'secondary' : 'destructive'} className="text-xs">
-                        FC {item.fc_actual.toFixed(1)}%
-                      </Badge>
-                    )}
-                    {item.disponible_delivery && (
-                      <Badge variant="outline" className="text-xs">Delivery</Badge>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CollapsibleContent>
@@ -167,6 +181,7 @@ export default function MenuCartaPage() {
 
   const [search, setSearch] = useState('');
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
 
   // Category inline editing
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -303,6 +318,8 @@ export default function MenuCartaPage() {
                   handleUpdate={handleUpdate}
                   setDeleting={setDeleting}
                   onToggleVisibility={(c) => toggleVisibility.mutate({ id: c.id, visible: !c.visible_en_carta })}
+                  expandedItemId={expandedItemId}
+                  setExpandedItemId={setExpandedItemId}
                 />
               ))}
 
