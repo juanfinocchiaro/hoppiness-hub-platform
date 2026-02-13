@@ -56,7 +56,7 @@ export function useExtraAutoDiscovery(itemId: string | undefined) {
           tipo: 'insumo',
           ref_id: ing.insumo_id,
           nombre: ing.nombre,
-          costo: ing.costo_por_unidad_base || 0,
+          costo: (ing.costo_por_unidad_base || 0) * (ing.cantidad || 1),
           origen: group.receta_nombre,
         });
       }
