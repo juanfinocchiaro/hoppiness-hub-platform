@@ -32,6 +32,18 @@ async function findExistingExtra(
     .eq(field, refId)
     .maybeSingle();
   if (!data) return null;
+
+  // If extra references a deleted preparation, treat as non-existent
+  if (tipo === 'preparacion') {
+    const { data: prep } = await supabase
+      .from('preparaciones')
+      .select('id')
+      .eq('id', refId)
+      .is('deleted_at', null)
+      .maybeSingle();
+    if (!prep) return null;
+  }
+
   return { id: data.id, activo: data.activo ?? true, deleted_at: data.deleted_at ?? null };
 }
 
