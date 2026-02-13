@@ -171,7 +171,7 @@ export function ProductPreviewPanel({ item }: Props) {
           {activeExtras.length > 0 && (
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground">
-                Extras · Elegí hasta {activeExtras.length}
+                Extras · Agregá hasta 10
               </p>
               {activeExtras.map((e, i) => (
                 <div key={e.id || i} className="flex items-center justify-between text-sm pl-2">
@@ -193,17 +193,16 @@ export function ProductPreviewPanel({ item }: Props) {
           {(removibles || []).length > 0 && (
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground">
-                ¿Sacar algo? · Elegí hasta {(removibles || []).length}
+                ¿Sacar algo?
               </p>
               {(removibles || []).map((r: any) => {
                 const nombre = r.nombre_display || `Sin ${r.insumos?.nombre || r.preparaciones?.nombre || '?'}`;
                 return (
                   <div key={r.id} className="flex items-center justify-between text-sm pl-2">
                     <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full border border-muted-foreground/40" />
+                      <span className="w-3.5 h-3.5 rounded border border-muted-foreground/40" />
                       <span>{nombre}</span>
                     </div>
-                    <span className="text-xs font-mono text-muted-foreground">+$0</span>
                   </div>
                 );
               })}
