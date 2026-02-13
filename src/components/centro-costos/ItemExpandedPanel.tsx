@@ -19,7 +19,7 @@ import { useMenuCategorias } from '@/hooks/useMenu';
 import { useItemIngredientesDeepList } from '@/hooks/useItemIngredientesDeepList';
 import { useItemRemovibles, useItemRemoviblesMutations } from '@/hooks/useItemRemovibles';
 import { useExtraAutoDiscovery, useExtraAssignableItems } from '@/hooks/useExtraAutoDiscovery';
-import { useToggleExtra, useToggleExtraAssignment } from '@/hooks/useToggleExtra';
+import { useToggleExtra } from '@/hooks/useToggleExtra';
 
 const IVA = 1.21;
 const fmt = (v: number) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(v);
@@ -118,37 +118,28 @@ export function ItemExpandedPanel({ item, onClose, onDeleted }: Props) {
 // ═══ ASIGNADOS TAB (for tipo='extra') ═══
 function AsignadosInline({ item }: { item: any }) {
   const { productItems, assignedSet } = useExtraAssignableItems(item);
-  const toggleAssignment = useToggleExtraAssignment();
+  const assignedProducts = productItems.filter((p: any) => assignedSet.has(p.id));
 
   return (
     <div className="space-y-4">
       <FormSection title="Productos que ofrecen este extra" icon={Link2}>
         <p className="text-xs text-muted-foreground mb-2">
-          Activá/desactivá en qué productos aparece este extra.
+          Productos que actualmente incluyen este extra en su carta. Para modificar, usá la pestaña Composición de cada producto.
         </p>
-        {productItems.length === 0 ? (
-          <div className="py-3 text-center text-xs text-muted-foreground border rounded-lg">
-            No hay productos disponibles.
+        {assignedProducts.length === 0 ? (
+          <div className="py-6 text-center text-sm text-muted-foreground border rounded-lg">
+            Ningún producto ofrece este extra. Asignalo desde la pestaña <strong>Composición</strong> de cada producto.
           </div>
         ) : (
           <div className="space-y-1">
-            {productItems.map((prod: any) => {
-              const isAssigned = assignedSet.has(prod.id);
-              return (
-                <div key={prod.id} className={`flex items-center gap-2 text-sm border rounded-lg px-3 py-2 ${isAssigned ? 'border-primary/40 bg-primary/5' : ''}`}>
-                  <Switch
-                    checked={isAssigned}
-                    onCheckedChange={v => toggleAssignment.mutate({ item_carta_id: prod.id, extra_id: item.id, activo: v })}
-                    className="scale-75"
-                    disabled={toggleAssignment.isPending}
-                  />
-                  <span className="flex-1 text-sm">{prod.nombre}</span>
-                  {prod.categoria_carta_id && prod.menu_categorias && (
-                    <Badge variant="outline" className="text-xs">{(prod as any).menu_categorias.nombre}</Badge>
-                  )}
-                </div>
-              );
-            })}
+            {assignedProducts.map((prod: any) => (
+              <div key={prod.id} className="flex items-center gap-2 text-sm border rounded-lg px-3 py-2">
+                <span className="flex-1">{prod.nombre}</span>
+                {prod.menu_categorias && (
+                  <Badge variant="outline" className="text-xs">{(prod as any).menu_categorias.nombre}</Badge>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </FormSection>
