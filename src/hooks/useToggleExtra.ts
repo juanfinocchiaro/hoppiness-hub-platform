@@ -57,6 +57,7 @@ export function useToggleExtra() {
       ref_id,
       nombre,
       costo,
+      cantidad = 1,
       activo,
     }: {
       item_carta_id: string;
@@ -64,6 +65,7 @@ export function useToggleExtra() {
       ref_id: string;
       nombre: string;
       costo: number;
+      cantidad?: number;
       activo: boolean;
     }) => {
       if (activo) {
@@ -99,7 +101,29 @@ export function useToggleExtra() {
           if (error) throw error;
         }
 
-        // 2. Create assignment
+        // 2. Create/update composition row so RPC calculates cost correctly
+        // Delete any existing composition for this extra first
+        await supabase
+          .from('item_carta_composicion')
+          .delete()
+          .eq('item_carta_id', extraId);
+
+        const compRow: any = {
+          item_carta_id: extraId,
+          preparacion_id: tipo === 'preparacion' ? ref_id : null,
+          insumo_id: tipo === 'insumo' ? ref_id : null,
+          cantidad: cantidad,
+          orden: 0,
+        };
+        const { error: compError } = await supabase
+          .from('item_carta_composicion')
+          .insert(compRow);
+        if (compError) throw compError;
+
+        // Recalculate cost via RPC (now uses standard path with composition)
+        await supabase.rpc('recalcular_costo_item_carta', { _item_id: extraId });
+
+        // 3. Create assignment
         const { error: asigError } = await supabase
           .from('item_extra_asignaciones' as any)
           .upsert(
@@ -126,6 +150,12 @@ export function useToggleExtra() {
 
           // Soft-delete the extra item if no other product uses it
           if ((count ?? 0) === 0) {
+            // Remove composition rows
+            await supabase
+              .from('item_carta_composicion')
+              .delete()
+              .eq('item_carta_id', existing.id);
+
             await supabase
               .from('items_carta')
               .update({ activo: false, deleted_at: new Date().toISOString() } as any)

@@ -514,6 +514,7 @@ function ExtraRow({ d, itemId, toggleExtra }: {
             ref_id: d.ref_id,
             nombre: d.nombre,
             costo: d.costo,
+            cantidad: d.cantidad,
             activo: v,
           })}
           className="scale-75"

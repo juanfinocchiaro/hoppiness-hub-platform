@@ -9,6 +9,7 @@ export interface DiscoveredExtra {
   ref_id: string;
   nombre: string;
   costo: number;
+  cantidad: number;
   origen: string;
   extra_id: string | null;
   extra_nombre: string;
@@ -46,6 +47,7 @@ export function useExtraAutoDiscovery(itemId: string | undefined) {
       ref_id: string;
       nombre: string;
       costo: number;
+      cantidad: number;
       origen: string;
     }[] = [];
 
@@ -57,6 +59,7 @@ export function useExtraAutoDiscovery(itemId: string | undefined) {
           ref_id: ing.insumo_id,
           nombre: ing.nombre,
           costo: (ing.costo_por_unidad_base || 0) * (ing.cantidad || 1),
+          cantidad: ing.cantidad || 1,
           origen: group.receta_nombre,
         });
       }
@@ -66,6 +69,7 @@ export function useExtraAutoDiscovery(itemId: string | undefined) {
           ref_id: sp.preparacion_id,
           nombre: sp.nombre,
           costo: 0,
+          cantidad: 1,
           origen: group.receta_nombre,
         });
       }
@@ -89,6 +93,7 @@ export function useExtraAutoDiscovery(itemId: string | undefined) {
       );
       return {
         ...d,
+        cantidad: d.cantidad,
         extra_id: existing?.id || null,
         extra_nombre: existing?.nombre || `Extra ${d.nombre}`,
         extra_precio: existing?.precio_base || 0,
