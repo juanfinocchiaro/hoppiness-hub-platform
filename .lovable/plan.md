@@ -1,52 +1,44 @@
 
-## Corregir cálculo de costo de extras: usar porción en vez de unidad base
+
+## Corregir duplicados en composición de extras
 
 ### Problema
+El extra "Medallón con queso" muestra $2,430 porque tiene **2 filas duplicadas** en `item_carta_composicion` apuntando a la misma receta "Carne 90g con queso cheddar" ($1,215 x 2 = $2,430). Lo mismo pasa con "Queso cheddar" que también tiene duplicados.
 
-Los extras como "Bastones de muzzarella" y "Bacon ahumado" muestran el costo de 1 unidad base del insumo en vez de la porción real que lleva la receta:
-
-- **Bastones de muzzarella**: muestra $18 (1g) en vez de ~$1,455 (80g que lleva la receta)
-- **Bacon ahumado**: muestra $127 (1 feta) en vez de ~$380 (3 fetas que lleva la receta)
-
-### Causa raíz
-
-El flujo actual tiene un conflicto:
-1. Cuando se activa un extra, `useToggleExtra` guarda correctamente `costo_total = costo_por_unidad_base * cantidad`
-2. Pero la función RPC `recalcular_costo_item_carta` (que se ejecuta en recálculos masivos y triggers) **sobreescribe** ese costo usando solo `costo_por_unidad_base` (sin multiplicar por cantidad), porque los extras no tienen filas en `item_carta_composicion`
-
-El RPC tiene dos caminos:
-- **Camino estándar** (con composición): `SUM(cantidad * costo)` -- correcto
-- **Camino fallback** (sin composición, usado por extras): `costo_por_unidad_base` directo -- **incorrecto, falta la cantidad**
+Esto ocurrió porque la migración SQL que ejecutamos insertó filas sin verificar que el toggle ya las había creado.
 
 ### Solución
 
-Crear una fila en `item_carta_composicion` para cada extra al momento de activarlo, con la cantidad correcta de la porción. Así el RPC siempre usa el camino estándar que multiplica `cantidad * costo`.
+**Migración SQL** (único cambio necesario):
 
-### Cambios
+1. Eliminar las filas duplicadas, conservando solo una por extra
+2. Recalcular el costo de los extras afectados
 
-**1. `src/hooks/useToggleExtra.ts`**
+```sql
+-- Eliminar duplicados conservando la fila más antigua
+DELETE FROM item_carta_composicion
+WHERE id IN (
+  SELECT id FROM (
+    SELECT id, ROW_NUMBER() OVER (
+      PARTITION BY item_carta_id, preparacion_id, insumo_id 
+      ORDER BY created_at ASC
+    ) as rn
+    FROM item_carta_composicion
+    WHERE item_carta_id IN (
+      SELECT id FROM items_carta WHERE tipo = 'extra' AND activo = true
+    )
+  ) sub WHERE rn > 1
+);
 
-- Agregar parámetro `cantidad` a la mutación (default 1)
-- Al crear o reactivar un extra, crear/actualizar una fila en `item_carta_composicion` con la cantidad y referencia correcta
-- Al desactivar, eliminar la fila de composición del extra
+-- Recalcular costos
+SELECT recalcular_costo_item_carta(id) 
+FROM items_carta 
+WHERE tipo = 'extra' AND activo = true AND deleted_at IS NULL;
+```
 
-**2. `src/hooks/useExtraAutoDiscovery.ts`**
-
-- Agregar campo `cantidad` al tipo `DiscoveredExtra`
-- Pasar la cantidad de la porción desde `deepGroups` (ya disponible como `ing.cantidad`)
-- Para sub-preparaciones, usar cantidad 1 (ya representa la porción completa de la receta)
-
-**3. Componente que llama a `useToggleExtra`** (donde se activa/desactiva el toggle de extras)
-
-- Pasar la `cantidad` del `DiscoveredExtra` al llamar la mutación
-
-**4. Migración SQL: corregir datos existentes**
-
-- Para cada extra activo sin composición, crear la fila en `item_carta_composicion` con la cantidad correcta basada en las recetas que lo originaron
-- Ejecutar `recalcular_costo_item_carta` para cada extra para actualizar los costos
+No hay cambios de código necesarios: el `useToggleExtra` ya tiene la lógica correcta de `DELETE` antes de `INSERT` (lineas 106-109), que previene futuros duplicados.
 
 ### Resultado
-
-- Los costos de extras reflejarán la porción real de la receta
-- Los recálculos masivos ya no sobreescribirán el costo correcto
-- Los nuevos extras se crearán siempre con su fila de composición
+- "Medallón con queso" pasará de $2,430 a ~$1,215 (el costo real de la receta)
+- "Queso cheddar" también se corregirá
+- No se repetirá porque el código ya previene duplicados
