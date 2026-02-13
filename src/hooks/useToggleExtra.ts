@@ -99,7 +99,7 @@ export function useToggleExtra() {
         if (asigError) throw asigError;
 
       } else {
-        // Deactivate: remove assignment only
+        // Deactivate: remove assignment and soft-delete if orphaned
         const existing = await findExistingExtra(tipo, ref_id);
         if (existing) {
           await supabase
@@ -107,6 +107,20 @@ export function useToggleExtra() {
             .delete()
             .eq('item_carta_id', item_carta_id)
             .eq('extra_id', existing.id);
+
+          // Check if extra has any remaining assignments
+          const { count } = await supabase
+            .from('item_extra_asignaciones' as any)
+            .select('id', { count: 'exact', head: true })
+            .eq('extra_id', existing.id);
+
+          // Soft-delete the extra item if no other product uses it
+          if ((count ?? 0) === 0) {
+            await supabase
+              .from('items_carta')
+              .update({ activo: false, deleted_at: new Date().toISOString() } as any)
+              .eq('id', existing.id);
+          }
         }
       }
     },

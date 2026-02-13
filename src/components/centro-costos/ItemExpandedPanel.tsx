@@ -46,6 +46,7 @@ export function ItemExpandedPanel({ item, onClose, onDeleted }: Props) {
   const mutations = useItemCartaMutations();
 
   const isExtra = item.tipo === 'extra';
+  const isAutoExtra = isExtra && (item.composicion_ref_preparacion_id || item.composicion_ref_insumo_id);
 
   const tabs: { id: PanelTab; label: string; icon: any }[] = isExtra
     ? [
@@ -82,9 +83,13 @@ export function ItemExpandedPanel({ item, onClose, onDeleted }: Props) {
           })}
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => setShowDelete(true)}>
-            <Trash2 className="w-3.5 h-3.5 mr-1" /> Eliminar
-          </Button>
+          {isAutoExtra ? (
+            <span className="text-xs text-muted-foreground mr-2">Gestionado desde composición</span>
+          ) : (
+            <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => setShowDelete(true)}>
+              <Trash2 className="w-3.5 h-3.5 mr-1" /> Eliminar
+            </Button>
+          )}
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
             <ChevronUp className="w-4 h-4" />
           </Button>
