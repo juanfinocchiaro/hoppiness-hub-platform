@@ -8,7 +8,7 @@ import { LoadingButton } from '@/components/ui/loading-button';
 import { FormRow, FormSection } from '@/components/ui/forms-pro';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
-  Layers, Tag, Plus, Trash2, Save, DollarSign, Clock, ChevronUp, Sparkles, Ban,
+  Layers, Tag, Plus, Trash2, Save, DollarSign, Clock, ChevronUp, Sparkles, Ban, Link2,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useItemCartaComposicion, useItemCartaHistorial, useItemCartaMutations } from '@/hooks/useItemsCarta';
@@ -18,6 +18,8 @@ import { useInsumos } from '@/hooks/useInsumos';
 import { useMenuCategorias } from '@/hooks/useMenu';
 import { useItemIngredientesDeepList } from '@/hooks/useItemIngredientesDeepList';
 import { useItemRemovibles, useItemRemoviblesMutations } from '@/hooks/useItemRemovibles';
+import { useExtraAutoDiscovery, useExtraAssignableItems } from '@/hooks/useExtraAutoDiscovery';
+import { useToggleExtra, useToggleExtraAssignment } from '@/hooks/useToggleExtra';
 
 const IVA = 1.21;
 const fmt = (v: number) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(v);
@@ -30,7 +32,7 @@ function fcColor(real: number, obj: number): 'ok' | 'warn' | 'danger' {
 }
 const badgeVar = { ok: 'default' as const, warn: 'secondary' as const, danger: 'destructive' as const };
 
-type PanelTab = 'composicion' | 'editar' | 'historial';
+type PanelTab = 'composicion' | 'asignados' | 'editar' | 'historial';
 
 interface Props {
   item: any;
@@ -39,15 +41,23 @@ interface Props {
 }
 
 export function ItemExpandedPanel({ item, onClose, onDeleted }: Props) {
-  const [activeTab, setActiveTab] = useState<PanelTab>('composicion');
+  const [activeTab, setActiveTab] = useState<PanelTab>(item.tipo === 'extra' ? 'asignados' : 'composicion');
   const [showDelete, setShowDelete] = useState(false);
   const mutations = useItemCartaMutations();
 
-  const tabs: { id: PanelTab; label: string; icon: any }[] = [
-    { id: 'composicion', label: 'Composición', icon: Layers },
-    { id: 'editar', label: 'Editar', icon: DollarSign },
-    { id: 'historial', label: 'Historial', icon: Clock },
-  ];
+  const isExtra = item.tipo === 'extra';
+
+  const tabs: { id: PanelTab; label: string; icon: any }[] = isExtra
+    ? [
+        { id: 'asignados', label: 'Asignados', icon: Link2 },
+        { id: 'editar', label: 'Editar', icon: DollarSign },
+        { id: 'historial', label: 'Historial', icon: Clock },
+      ]
+    : [
+        { id: 'composicion', label: 'Composición', icon: Layers },
+        { id: 'editar', label: 'Editar', icon: DollarSign },
+        { id: 'historial', label: 'Historial', icon: Clock },
+      ];
 
   return (
     <div className="bg-muted/30 border-x border-b rounded-b-lg">
@@ -83,6 +93,7 @@ export function ItemExpandedPanel({ item, onClose, onDeleted }: Props) {
 
       <div className="p-4">
         {activeTab === 'composicion' && <ComposicionInline item={item} mutations={mutations} />}
+        {activeTab === 'asignados' && <AsignadosInline item={item} />}
         {activeTab === 'editar' && <EditarInline item={item} mutations={mutations} onSaved={onClose} />}
         {activeTab === 'historial' && <HistorialInline item={item} />}
       </div>
@@ -104,7 +115,48 @@ export function ItemExpandedPanel({ item, onClose, onDeleted }: Props) {
   );
 }
 
-// ═══ COMPOSICIÓN INLINE (new model: es_extra + item_removibles) ═══
+// ═══ ASIGNADOS TAB (for tipo='extra') ═══
+function AsignadosInline({ item }: { item: any }) {
+  const { productItems, assignedSet } = useExtraAssignableItems(item);
+  const toggleAssignment = useToggleExtraAssignment();
+
+  return (
+    <div className="space-y-4">
+      <FormSection title="Productos que ofrecen este extra" icon={Link2}>
+        <p className="text-xs text-muted-foreground mb-2">
+          Activá/desactivá en qué productos aparece este extra.
+        </p>
+        {productItems.length === 0 ? (
+          <div className="py-3 text-center text-xs text-muted-foreground border rounded-lg">
+            No hay productos disponibles.
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {productItems.map((prod: any) => {
+              const isAssigned = assignedSet.has(prod.id);
+              return (
+                <div key={prod.id} className={`flex items-center gap-2 text-sm border rounded-lg px-3 py-2 ${isAssigned ? 'border-primary/40 bg-primary/5' : ''}`}>
+                  <Switch
+                    checked={isAssigned}
+                    onCheckedChange={v => toggleAssignment.mutate({ item_carta_id: prod.id, extra_id: item.id, activo: v })}
+                    className="scale-75"
+                    disabled={toggleAssignment.isPending}
+                  />
+                  <span className="flex-1 text-sm">{prod.nombre}</span>
+                  {prod.categoria_carta_id && prod.menu_categorias && (
+                    <Badge variant="outline" className="text-xs">{(prod as any).menu_categorias.nombre}</Badge>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </FormSection>
+    </div>
+  );
+}
+
+// ═══ COMPOSICIÓN INLINE (V3: auto-discovery extras + removibles) ═══
 function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
   const { data: composicionActual } = useItemCartaComposicion(item?.id);
   const { data: grupos } = useGruposOpcionales(item?.id);
@@ -117,13 +169,14 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
   const { data: removibles } = useItemRemovibles(item?.id);
   const removiblesMutations = useItemRemoviblesMutations();
 
+  // Auto-discovery extras
+  const discoveredExtras = useExtraAutoDiscovery(item?.id);
+  const toggleExtra = useToggleExtra();
+
   const [rows, setRows] = useState<any[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [grupoNuevoNombre, setGrupoNuevoNombre] = useState('');
   const [showNewGrupo, setShowNewGrupo] = useState(false);
-
-  // Extra adding
-  const [showAddExtra, setShowAddExtra] = useState(false);
 
   useEffect(() => {
     if (composicionActual) {
@@ -132,55 +185,46 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
         preparacion_id: c.preparacion_id || '',
         insumo_id: c.insumo_id || '',
         cantidad: c.cantidad,
-        es_extra: c.es_extra || false,
         _label: c.preparaciones?.nombre || c.insumos?.nombre || '',
         _costo: c.preparaciones?.costo_calculado || c.insumos?.costo_por_unidad_base || 0,
-        _precioExtra: c.preparaciones?.precio_extra || c.insumos?.precio_extra || 0,
       })));
       setHasChanges(false);
     }
   }, [composicionActual]);
 
-  const addRow = () => { setRows([...rows, { tipo: 'preparacion', preparacion_id: '', insumo_id: '', cantidad: 1, es_extra: false, _label: '', _costo: 0, _precioExtra: 0 }]); setHasChanges(true); };
-  const addExtraRow = (tipo: string, id: string, label: string, costo: number, precioExtra: number) => {
-    setRows([...rows, {
-      tipo,
-      preparacion_id: tipo === 'preparacion' ? id : '',
-      insumo_id: tipo === 'insumo' ? id : '',
-      cantidad: 0,
-      es_extra: true,
-      _label: label,
-      _costo: costo,
-      _precioExtra: precioExtra,
-    }]);
-    setHasChanges(true);
-    setShowAddExtra(false);
-  };
+  const addRow = () => { setRows([...rows, { tipo: 'preparacion', preparacion_id: '', insumo_id: '', cantidad: 1, _label: '', _costo: 0 }]); setHasChanges(true); };
   const removeRow = (i: number) => { setRows(rows.filter((_, idx) => idx !== i)); setHasChanges(true); };
   const updateRow = (i: number, field: string, value: any) => {
     const nr = [...rows]; nr[i] = { ...nr[i], [field]: value };
-    if (field === 'tipo') { nr[i].preparacion_id = ''; nr[i].insumo_id = ''; nr[i]._costo = 0; nr[i]._label = ''; nr[i]._precioExtra = 0; }
-    if (field === 'preparacion_id') { const p = (preparaciones || []).find((x: any) => x.id === value); nr[i]._label = p?.nombre || ''; nr[i]._costo = p?.costo_calculado || 0; nr[i]._precioExtra = p?.precio_extra || 0; }
-    if (field === 'insumo_id') { const ins = (insumos || []).find((x: any) => x.id === value); nr[i]._label = ins?.nombre || ''; nr[i]._costo = ins?.costo_por_unidad_base || 0; nr[i]._precioExtra = ins?.precio_extra || 0; }
+    if (field === 'tipo') { nr[i].preparacion_id = ''; nr[i].insumo_id = ''; nr[i]._costo = 0; nr[i]._label = ''; }
+    if (field === 'preparacion_id') { const p = (preparaciones || []).find((x: any) => x.id === value); nr[i]._label = p?.nombre || ''; nr[i]._costo = p?.costo_calculado || 0; }
+    if (field === 'insumo_id') { const ins = (insumos || []).find((x: any) => x.id === value); nr[i]._label = ins?.nombre || ''; nr[i]._costo = ins?.costo_por_unidad_base || 0; }
     setRows(nr); setHasChanges(true);
   };
 
-  // Base components (cantidad > 0) and extras (es_extra = true)
+  // Only base components (cantidad > 0)
   const baseRows = rows.filter(r => r.cantidad > 0);
-  const extraRows = rows.filter(r => r.es_extra);
 
   const costoFijo = baseRows.reduce((t, r) => t + r.cantidad * r._costo, 0);
   const costoGrupos = (grupos || []).reduce((t: number, g: any) => t + (g.costo_promedio || 0), 0);
   const costoTotal = costoFijo + costoGrupos;
 
-  // Removibles: flatten deep ingredients + composition-level preps
+  // Removibles: deep ingredients + deep sub-preps (NOT composition-level recipes)
   const removibleInsumoSet = useMemo(() => new Set((removibles || []).filter((r: any) => r.insumo_id).map((r: any) => r.insumo_id)), [removibles]);
   const removiblePrepSet = useMemo(() => new Set((removibles || []).filter((r: any) => r.preparacion_id).map((r: any) => r.preparacion_id)), [removibles]);
+  const removiblesMap = useMemo(() => {
+    const map = new Map<string, any>();
+    for (const r of (removibles || [])) {
+      const key = r.insumo_id || r.preparacion_id;
+      if (key) map.set(key, r);
+    }
+    return map;
+  }, [removibles]);
+
   const allDeepIngredients = useMemo(() => {
     if (!deepGroups) return [];
     return deepGroups.flatMap(g => g.ingredientes.map(ing => ({ ...ing, receta_nombre: g.receta_nombre })));
   }, [deepGroups]);
-  // Deduplicate by insumo_id
   const uniqueIngredients = useMemo(() => {
     const map = new Map<string, any>();
     for (const ing of allDeepIngredients) {
@@ -188,7 +232,7 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
     }
     return Array.from(map.values());
   }, [allDeepIngredients]);
-  // Sub-preparations discovered inside recipes (e.g. "Tomate en fetas" inside "Hamburguesa American")
+  // Sub-preparations (NOT composition-level recipes per spec)
   const deepSubPreps = useMemo(() => {
     if (!deepGroups) return [];
     const map = new Map<string, any>();
@@ -201,45 +245,31 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
     }
     return Array.from(map.values());
   }, [deepGroups]);
-  // Composition-level preparations (can also be removed as "SIN")
-  const compositionPreps = useMemo(() => {
-    if (!composicionActual) return [];
-    return (composicionActual as any[])
-      .filter((c: any) => c.preparacion_id && c.preparaciones)
-      .map((c: any) => ({
-        preparacion_id: c.preparacion_id,
-        nombre: c.preparaciones.nombre,
-      }));
-  }, [composicionActual]);
-  // Merge composition-level preps + deep sub-preps, dedup by preparacion_id
-  const allRemoviblePreps = useMemo(() => {
-    const map = new Map<string, any>();
-    for (const p of compositionPreps) {
-      map.set(p.preparacion_id, { ...p, origen: 'Preparación' });
-    }
-    for (const sp of deepSubPreps) {
-      if (!map.has(sp.preparacion_id)) {
-        map.set(sp.preparacion_id, { preparacion_id: sp.preparacion_id, nombre: sp.nombre, origen: sp.receta_nombre });
-      }
-    }
-    return Array.from(map.values());
-  }, [compositionPreps, deepSubPreps]);
 
-  const handleToggleRemovibleInsumo = async (insumoId: string, activo: boolean) => {
-    await removiblesMutations.toggleInsumo.mutateAsync({ item_carta_id: item.id, insumo_id: insumoId, activo });
+  const handleToggleRemovibleInsumo = async (insumoId: string, nombre: string, activo: boolean) => {
+    await removiblesMutations.toggleInsumo.mutateAsync({
+      item_carta_id: item.id,
+      insumo_id: insumoId,
+      activo,
+      nombre_display: activo ? `Sin ${nombre}` : undefined,
+    });
   };
-  const handleToggleRemoviblePrep = async (prepId: string, activo: boolean) => {
-    await removiblesMutations.togglePreparacion.mutateAsync({ item_carta_id: item.id, preparacion_id: prepId, activo });
+  const handleToggleRemoviblePrep = async (prepId: string, nombre: string, activo: boolean) => {
+    await removiblesMutations.togglePreparacion.mutateAsync({
+      item_carta_id: item.id,
+      preparacion_id: prepId,
+      activo,
+      nombre_display: activo ? `Sin ${nombre}` : undefined,
+    });
   };
 
   const handleSave = async () => {
     await mutations.saveComposicion.mutateAsync({
       item_carta_id: item.id,
-      items: rows.filter(r => r.preparacion_id || r.insumo_id).map(r => ({
+      items: rows.filter(r => (r.preparacion_id || r.insumo_id) && r.cantidad > 0).map(r => ({
         preparacion_id: r.tipo === 'preparacion' ? r.preparacion_id : undefined,
         insumo_id: r.tipo === 'insumo' ? r.insumo_id : undefined,
         cantidad: r.cantidad,
-        es_extra: r.es_extra,
       })),
     });
     setHasChanges(false);
@@ -281,17 +311,11 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
     );
   };
 
-  // Available extras to add (recetas/insumos not already in composition)
-  const usedPrepIds = new Set(rows.filter(r => r.preparacion_id).map(r => r.preparacion_id));
-  const usedInsumoIds = new Set(rows.filter(r => r.insumo_id).map(r => r.insumo_id));
-  const availablePreps = (preparaciones || []).filter((p: any) => !usedPrepIds.has(p.id) && p.precio_extra > 0);
-  const availableInsumos = (insumos || []).filter((ins: any) => !usedInsumoIds.has(ins.id) && ins.precio_extra > 0);
-
   return (
     <div className="space-y-4">
       {/* ── COMPOSICIÓN FIJA ── */}
       <FormSection title="Composición Fija" icon={Layers}>
-        <p className="text-xs text-muted-foreground mb-2">Componentes base del producto (cantidad &gt; 0).</p>
+        <p className="text-xs text-muted-foreground mb-2">Componentes base del producto.</p>
         {baseRows.length === 0 ? (
           <div className="py-4 text-center text-muted-foreground border rounded-lg text-sm">Sin componentes fijos</div>
         ) : (
@@ -301,12 +325,10 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
               <span className="flex-1">Componente</span>
               <span className="w-16 shrink-0 text-right">Cant.</span>
               <span className="w-20 shrink-0 text-right">Subtotal</span>
-              <span className="w-14 shrink-0 text-center">Extra</span>
               <span className="w-6 shrink-0" />
             </div>
             {rows.map((row, i) => {
-              if (row.cantidad <= 0 && !row.es_extra) return null; // skip orphans
-              if (row.es_extra && row.cantidad === 0) return null; // pure extras shown below
+              if (row.cantidad <= 0) return null;
               return (
                 <div key={i} className="flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2">
                   <Select value={row.tipo} onValueChange={v => updateRow(i, 'tipo', v)}>
@@ -316,9 +338,6 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
                   <div className="flex-1 min-w-0">{renderComponentSelect(row, i)}</div>
                   <Input type="number" className="h-7 w-16 text-xs shrink-0" value={row.cantidad} onChange={e => updateRow(i, 'cantidad', Number(e.target.value))} />
                   <span className="font-mono text-xs font-semibold w-20 text-right shrink-0">{fmt(row.cantidad * row._costo)}</span>
-                  <div className="w-14 shrink-0 flex justify-center">
-                    <Switch checked={row.es_extra} onCheckedChange={v => updateRow(i, 'es_extra', v)} className="scale-75" />
-                  </div>
                   <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeRow(i)}>
                     <Trash2 className="w-3.5 h-3.5 text-destructive" />
                   </Button>
@@ -330,95 +349,63 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
         <Button variant="outline" onClick={addRow} className="w-full mt-2"><Plus className="w-4 h-4 mr-2" /> Agregar Componente</Button>
       </FormSection>
 
-      {/* ── EXTRAS DISPONIBLES ── */}
+      {/* ── EXTRAS DISPONIBLES (auto-discovery V3) ── */}
       <FormSection title="Extras Disponibles" icon={Sparkles}>
         <p className="text-xs text-muted-foreground mb-2">
-          Solo se pueden agregar cosas que son parte de este producto. Precio del extra viene de la receta/insumo.
+          Componentes que se pueden ofrecer como extra con cargo. Los extras se gestionan y les ponés precio en EXTRAS/MODIFICADORES del Análisis.
         </p>
-        {extraRows.length === 0 ? (
+        {discoveredExtras.length === 0 ? (
           <div className="py-3 text-center text-xs text-muted-foreground border rounded-lg">
-            Sin extras. Agregá un componente como extra o usá "+ Agregar Extra".
+            Sin componentes descubiertos. Agregá recetas a la composición.
           </div>
         ) : (
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-3 py-1">
-              <span className="flex-1">Extra</span>
-              <span className="w-16 text-right">Costo</span>
-              <span className="w-16 text-right">Precio</span>
-              <span className="w-14 text-right">FC%</span>
-              <span className="w-6" />
+              <span className="flex-1">Componente</span>
+              <span className="w-[120px]">Origen</span>
+              <span className="w-14 text-center">Extra</span>
+              <span className="w-20 text-right">Estado</span>
             </div>
-            {extraRows.map((row, i) => {
-              const realIdx = rows.indexOf(row);
-              const costo = row._costo;
-              const precio = row._precioExtra || 0;
-              const fc = precio > 0 ? calcFC(costo, precio) : 0;
-              return (
-                <div key={realIdx} className="flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2">
-                  <span className="flex-1 text-sm font-medium truncate">{row._label || 'Sin seleccionar'}</span>
-                  <span className="font-mono text-xs w-16 text-right">{fmt(costo)}</span>
-                  <span className="font-mono text-xs w-16 text-right">{precio > 0 ? fmt(precio) : <span className="text-yellow-600">Sin precio</span>}</span>
-                  {precio > 0 && (
-                    <Badge variant={badgeVar[fcColor(fc, 30)]} className="text-xs w-14 justify-center">{fmtPct(fc)}</Badge>
-                  )}
-                  {!precio && <span className="w-14" />}
-                  <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeRow(realIdx)}>
-                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                  </Button>
+            {discoveredExtras.map(d => (
+              <div key={`${d.tipo}:${d.ref_id}`} className={`flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2 ${d.activo ? 'border-primary/40 bg-primary/5' : ''}`}>
+                <span className="flex-1 text-sm font-medium truncate">{d.nombre}</span>
+                <span className="w-[120px] text-xs text-muted-foreground truncate">{d.origen}</span>
+                <div className="w-14 flex justify-center">
+                  <Switch
+                    checked={d.activo}
+                    onCheckedChange={v => toggleExtra.mutate({
+                      item_carta_id: item.id,
+                      tipo: d.tipo,
+                      ref_id: d.ref_id,
+                      nombre: d.nombre,
+                      costo: d.costo,
+                      activo: v,
+                    })}
+                    className="scale-75"
+                    disabled={toggleExtra.isPending}
+                  />
                 </div>
-              );
-            })}
-          </div>
-        )}
-        {showAddExtra ? (
-          <div className="border-2 border-dashed rounded-lg p-3 space-y-2">
-            <p className="text-xs font-medium">Seleccioná receta o insumo con precio extra:</p>
-            {availablePreps.length > 0 && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Recetas</p>
-                <div className="space-y-1">
-                  {availablePreps.map((p: any) => (
-                    <button key={p.id} className="w-full text-left px-3 py-1.5 border rounded text-sm hover:bg-muted/40 transition-colors flex justify-between"
-                      onClick={() => addExtraRow('preparacion', p.id, p.nombre, p.costo_calculado || 0, p.precio_extra)}>
-                      <span>{p.nombre}</span>
-                      <span className="font-mono text-xs text-muted-foreground">{fmt(p.precio_extra)}</span>
-                    </button>
-                  ))}
-                </div>
+                <span className="w-20 text-right text-xs font-mono">
+                  {d.activo ? (
+                    d.extra_precio > 0 ? (
+                      <span className="text-foreground">{fmt(d.extra_precio)}</span>
+                    ) : (
+                      <span className="text-yellow-600">⚠ $0</span>
+                    )
+                  ) : null}
+                </span>
               </div>
-            )}
-            {availableInsumos.length > 0 && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Insumos</p>
-                <div className="space-y-1">
-                  {availableInsumos.map((ins: any) => (
-                    <button key={ins.id} className="w-full text-left px-3 py-1.5 border rounded text-sm hover:bg-muted/40 transition-colors flex justify-between"
-                      onClick={() => addExtraRow('insumo', ins.id, ins.nombre, ins.costo_por_unidad_base || 0, ins.precio_extra)}>
-                      <span>{ins.nombre}</span>
-                      <span className="font-mono text-xs text-muted-foreground">{fmt(ins.precio_extra)}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {availablePreps.length === 0 && availableInsumos.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-2">No hay recetas/insumos con precio_extra disponibles.</p>
-            )}
-            <Button variant="ghost" size="sm" onClick={() => setShowAddExtra(false)}>Cancelar</Button>
+            ))}
           </div>
-        ) : (
-          <Button variant="outline" onClick={() => setShowAddExtra(true)} className="w-full mt-2">
-            <Plus className="w-4 h-4 mr-2" /> Agregar Extra
-          </Button>
         )}
       </FormSection>
 
-      {/* ── REMOVIBLES (auto-discovered from deep ingredients + preps) ── */}
+      {/* ── REMOVIBLES (deep ingredients + sub-preps, NOT composition-level recipes) ── */}
       <FormSection title="Removibles" icon={Ban}>
         <p className="text-xs text-muted-foreground mb-2">
-          Ingredientes y preparaciones que el cliente puede pedir SIN (sin descuento).
+          Ingredientes que el cliente puede pedir SIN (sin descuento).
         </p>
-        {uniqueIngredients.length === 0 && allRemoviblePreps.length === 0 ? (
+        {uniqueIngredients.length === 0 && deepSubPreps.length === 0 ? (
           <div className="py-3 text-center text-xs text-muted-foreground border rounded-lg">
             Sin ingredientes descubiertos. Agregá recetas a la composición.
           </div>
@@ -426,41 +413,42 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-3 py-1">
               <span className="flex-1">Componente</span>
-              <span className="w-[140px]">Origen</span>
-              <span className="w-24 text-center">Disponible SIN</span>
+              <span className="w-[120px]">Origen</span>
+              <span className="w-[140px]">Nombre carta</span>
+              <span className="w-14 text-center">SIN</span>
             </div>
-            {allRemoviblePreps.map(prep => {
-              const isActive = removiblePrepSet.has(prep.preparacion_id);
+            {deepSubPreps.map(sp => {
+              const isActive = removiblePrepSet.has(sp.preparacion_id);
+              const existing = removiblesMap.get(sp.preparacion_id);
               return (
-                <div key={`prep-${prep.preparacion_id}`} className={`flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2 ${isActive ? 'border-primary/40 bg-primary/5' : ''}`}>
-                  <span className="flex-1 text-sm font-medium">{prep.nombre}</span>
-                  <span className="w-[140px] text-xs text-muted-foreground truncate">{prep.origen}</span>
-                  <div className="w-24 flex justify-center">
-                    <Switch
-                      checked={isActive}
-                      onCheckedChange={v => handleToggleRemoviblePrep(prep.preparacion_id, v)}
-                      className="scale-75"
-                      disabled={removiblesMutations.togglePreparacion.isPending}
-                    />
-                  </div>
-                </div>
+                <RemovibleRow
+                  key={`prep-${sp.preparacion_id}`}
+                  nombre={sp.nombre}
+                  origen={sp.receta_nombre}
+                  isActive={isActive}
+                  nombreDisplay={existing?.nombre_display || ''}
+                  onToggle={v => handleToggleRemoviblePrep(sp.preparacion_id, sp.nombre, v)}
+                  onUpdateNombre={nombre => removiblesMutations.updateNombreDisplay.mutate({ id: existing?.id, nombre_display: nombre })}
+                  isPending={removiblesMutations.togglePreparacion.isPending}
+                  hasExisting={!!existing}
+                />
               );
             })}
             {uniqueIngredients.map(ing => {
               const isActive = removibleInsumoSet.has(ing.insumo_id);
+              const existing = removiblesMap.get(ing.insumo_id);
               return (
-                <div key={ing.insumo_id} className={`flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2 ${isActive ? 'border-primary/40 bg-primary/5' : ''}`}>
-                  <span className="flex-1 text-sm">{ing.nombre}</span>
-                  <span className="w-[140px] text-xs text-muted-foreground truncate">{ing.receta_nombre}</span>
-                  <div className="w-24 flex justify-center">
-                    <Switch
-                      checked={isActive}
-                      onCheckedChange={v => handleToggleRemovibleInsumo(ing.insumo_id, v)}
-                      className="scale-75"
-                      disabled={removiblesMutations.toggleInsumo.isPending}
-                    />
-                  </div>
-                </div>
+                <RemovibleRow
+                  key={ing.insumo_id}
+                  nombre={ing.nombre}
+                  origen={ing.receta_nombre}
+                  isActive={isActive}
+                  nombreDisplay={existing?.nombre_display || ''}
+                  onToggle={v => handleToggleRemovibleInsumo(ing.insumo_id, ing.nombre, v)}
+                  onUpdateNombre={nombre => removiblesMutations.updateNombreDisplay.mutate({ id: existing?.id, nombre_display: nombre })}
+                  isPending={removiblesMutations.toggleInsumo.isPending}
+                  hasExisting={!!existing}
+                />
               );
             })}
           </div>
@@ -510,6 +498,42 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
           </LoadingButton>
         </div>
       )}
+    </div>
+  );
+}
+
+// ═══ REMOVIBLE ROW (with editable nombre_display) ═══
+function RemovibleRow({ nombre, origen, isActive, nombreDisplay, onToggle, onUpdateNombre, isPending, hasExisting }: {
+  nombre: string; origen: string; isActive: boolean; nombreDisplay: string;
+  onToggle: (v: boolean) => void; onUpdateNombre: (n: string) => void;
+  isPending: boolean; hasExisting: boolean;
+}) {
+  const [localNombre, setLocalNombre] = useState(nombreDisplay);
+  useEffect(() => { setLocalNombre(nombreDisplay); }, [nombreDisplay]);
+
+  return (
+    <div className={`flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2 ${isActive ? 'border-primary/40 bg-primary/5' : ''}`}>
+      <span className="flex-1 text-sm truncate">{nombre}</span>
+      <span className="w-[120px] text-xs text-muted-foreground truncate">{origen}</span>
+      <div className="w-[140px]">
+        {isActive && hasExisting ? (
+          <Input
+            value={localNombre}
+            onChange={e => setLocalNombre(e.target.value)}
+            onBlur={() => { if (localNombre !== nombreDisplay) onUpdateNombre(localNombre); }}
+            className="h-6 text-xs"
+            placeholder="Sin ..."
+          />
+        ) : null}
+      </div>
+      <div className="w-14 flex justify-center">
+        <Switch
+          checked={isActive}
+          onCheckedChange={onToggle}
+          className="scale-75"
+          disabled={isPending}
+        />
+      </div>
     </div>
   );
 }
@@ -657,32 +681,33 @@ function EditarInline({ item, mutations, onSaved }: { item: any; mutations: any;
       <FormRow label="Descripción"><Textarea value={form.descripcion} onChange={e => set('descripcion', e.target.value)} rows={2} /></FormRow>
       <div className="grid grid-cols-2 gap-3">
         <FormRow label="Precio carta (con IVA)" required><Input type="number" value={form.precio_base || ''} onChange={e => set('precio_base', Number(e.target.value))} /></FormRow>
-        <FormRow label="CMV Objetivo (%)" hint="Meta de food cost"><Input type="number" value={form.fc_objetivo || ''} onChange={e => set('fc_objetivo', Number(e.target.value))} /></FormRow>
+        <FormRow label="FC% Objetivo"><Input type="number" value={form.fc_objetivo || ''} onChange={e => set('fc_objetivo', Number(e.target.value))} /></FormRow>
       </div>
-      {form.precio_base > 0 && <p className="text-xs text-muted-foreground">Precio neto (sin IVA): {fmt(form.precio_base / IVA)}</p>}
-      <div className="flex justify-end">
-        <LoadingButton loading={mutations.update.isPending} onClick={submit} disabled={!form.nombre || !form.precio_base}>
-          <Save className="w-4 h-4 mr-2" /> Guardar Cambios
-        </LoadingButton>
+      <div className="flex items-center gap-2">
+        <Switch checked={form.disponible_delivery} onCheckedChange={v => set('disponible_delivery', v)} />
+        <span className="text-sm text-muted-foreground">Disponible en delivery</span>
       </div>
+      <LoadingButton loading={mutations.update.isPending} onClick={submit} className="w-full"><Save className="w-4 h-4 mr-2" /> Guardar Cambios</LoadingButton>
     </div>
   );
 }
 
 // ═══ HISTORIAL INLINE ═══
 function HistorialInline({ item }: { item: any }) {
-  const { data: historial } = useItemCartaHistorial(item?.id);
+  const { data: historial, isLoading } = useItemCartaHistorial(item?.id);
+  if (isLoading) return <p className="text-sm text-muted-foreground">Cargando historial...</p>;
+  if (!historial || historial.length === 0) return <p className="text-sm text-muted-foreground">Sin historial de precios.</p>;
   return (
-    <div className="space-y-2 max-h-[300px] overflow-y-auto">
-      {historial?.length ? historial.map((h: any) => (
-        <div key={h.id} className="flex justify-between items-center p-2 border rounded text-sm">
-          <div>
-            <span className="font-mono">{fmt(h.precio_anterior || 0)} → {fmt(h.precio_nuevo)}</span>
-            {h.motivo && <p className="text-xs text-muted-foreground">{h.motivo}</p>}
-          </div>
-          <span className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleDateString('es-AR')}</span>
+    <div className="space-y-2">
+      {historial.map((h: any) => (
+        <div key={h.id} className="flex items-center gap-3 text-sm border rounded-lg px-3 py-2">
+          <span className="text-xs text-muted-foreground w-32">{new Date(h.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+          <span className="font-mono text-destructive">{fmt(h.precio_anterior)}</span>
+          <span className="text-muted-foreground">→</span>
+          <span className="font-mono text-primary font-semibold">{fmt(h.precio_nuevo)}</span>
+          {h.motivo && <span className="text-xs text-muted-foreground truncate flex-1">({h.motivo})</span>}
         </div>
-      )) : <p className="text-sm text-muted-foreground text-center py-4">Sin historial de precios</p>}
+      ))}
     </div>
   );
 }

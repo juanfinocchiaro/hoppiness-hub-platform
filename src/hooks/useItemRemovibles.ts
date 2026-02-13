@@ -22,14 +22,14 @@ export function useItemRemoviblesMutations() {
   const qc = useQueryClient();
 
   const toggleInsumo = useMutation({
-    mutationFn: async ({ item_carta_id, insumo_id, activo }: {
-      item_carta_id: string; insumo_id: string; activo: boolean;
+    mutationFn: async ({ item_carta_id, insumo_id, activo, nombre_display }: {
+      item_carta_id: string; insumo_id: string; activo: boolean; nombre_display?: string;
     }) => {
       if (activo) {
         const { error } = await supabase
           .from('item_removibles' as any)
           .upsert(
-            { item_carta_id, insumo_id, preparacion_id: null, activo: true },
+            { item_carta_id, insumo_id, preparacion_id: null, activo: true, nombre_display: nombre_display || null },
             { onConflict: 'item_carta_id,insumo_id' }
           );
         if (error) throw error;
@@ -47,14 +47,14 @@ export function useItemRemoviblesMutations() {
   });
 
   const togglePreparacion = useMutation({
-    mutationFn: async ({ item_carta_id, preparacion_id, activo }: {
-      item_carta_id: string; preparacion_id: string; activo: boolean;
+    mutationFn: async ({ item_carta_id, preparacion_id, activo, nombre_display }: {
+      item_carta_id: string; preparacion_id: string; activo: boolean; nombre_display?: string;
     }) => {
       if (activo) {
         const { error } = await supabase
           .from('item_removibles' as any)
           .upsert(
-            { item_carta_id, preparacion_id, insumo_id: null, activo: true },
+            { item_carta_id, preparacion_id, insumo_id: null, activo: true, nombre_display: nombre_display || null },
             { onConflict: 'item_carta_id,preparacion_id' }
           );
         if (error) throw error;
@@ -71,8 +71,21 @@ export function useItemRemoviblesMutations() {
     },
   });
 
+  const updateNombreDisplay = useMutation({
+    mutationFn: async ({ id, nombre_display }: { id: string; nombre_display: string }) => {
+      const { error } = await supabase
+        .from('item_removibles' as any)
+        .update({ nombre_display })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['item-removibles'] });
+    },
+  });
+
   // Keep backward compat
   const toggle = toggleInsumo;
 
-  return { toggle, toggleInsumo, togglePreparacion };
+  return { toggle, toggleInsumo, togglePreparacion, updateNombreDisplay };
 }
