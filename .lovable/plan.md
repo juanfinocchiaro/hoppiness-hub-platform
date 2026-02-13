@@ -1,45 +1,28 @@
 
 
-## Limpiar extra huérfano "Bacon" y prevenir recurrencia
+## Corregir demora en descubrimiento de Extras y Removibles tras cambio de composicion
 
-### Problema
-El extra **"Bacon"** (`7d20e1ec`) referencia a la preparación **"Porción Bacon"** (`8196d9ce`) que ya fue eliminada (`activo=false, deleted_at` set). Sin embargo, el extra sigue activo y asignado al Baconator, causando duplicación con "Bacon ahumado" que es el correcto.
+### Causa
+Cuando guardas la composicion de un item, la mutacion `saveComposicion` en `useItemsCarta.ts` solo invalida dos queries en su `onSuccess`:
+- `item-carta-composicion` (la composicion directa)
+- `items-carta` (la lista general)
 
-Estado actual en la base de datos:
+Pero **no invalida** `item-ingredientes-deep`, que es la query que hace la exploracion recursiva de ingredientes. Esa query es la que alimenta tanto "Extras Disponibles" como "Removibles". Al no invalidarla, React Query usa los datos cacheados hasta que el refetch automatico ocurra en segundo plano, lo cual puede tardar varios segundos.
 
-```text
-Extra "Bacon" (7d20e1ec)
-  ref: Porción Bacon (8196d9ce) -- ELIMINADA
-  asignado a: Baconator -- HUERFANO
+### Solucion
 
-Extra "Bacon ahumado" (659f886f)
-  ref: Panceta feteada horneada (insumo activo)
-  asignado a: Bacon Burger, Baconator -- CORRECTO
+**Archivo: `src/hooks/useItemsCarta.ts`** (linea ~148-151)
+
+Agregar la invalidacion de `item-ingredientes-deep` en el `onSuccess` de `saveComposicion`:
+
+```typescript
+onSuccess: (_, vars) => {
+  qc.invalidateQueries({ queryKey: ['item-carta-composicion', vars.item_carta_id] });
+  qc.invalidateQueries({ queryKey: ['item-ingredientes-deep', vars.item_carta_id] });
+  qc.invalidateQueries({ queryKey: ['items-carta'] });
+  toast.success('Composición guardada');
+},
 ```
 
-### Solución (2 pasos)
-
-**1. Migración SQL: eliminar el extra huérfano**
-
-```sql
--- Eliminar la asignación huérfana del Baconator
-DELETE FROM item_extra_asignaciones 
-WHERE extra_id = '7d20e1ec-d7ab-439f-ac01-be06912c7cf2';
-
--- Soft-delete el extra "Bacon" huérfano
-UPDATE items_carta 
-SET activo = false, deleted_at = NOW() 
-WHERE id = '7d20e1ec-d7ab-439f-ac01-be06912c7cf2';
-```
-
-**2. Archivo: `src/hooks/useToggleExtra.ts` - Prevenir reactivación de extras con referencia eliminada**
-
-En la función `findExistingExtra` (que busca si ya existe un extra para un componente), agregar validación: si el extra referencia una preparación, verificar que la preparación siga activa. Si está eliminada, ignorar ese extra y crear uno nuevo.
-
-Cambio concreto en `findExistingExtra`: para extras tipo preparación, hacer un JOIN o query adicional para verificar que la preparación referenciada no esté eliminada. Si `deleted_at IS NOT NULL` en la preparación, retornar `null` como si no existiera el extra.
-
-### Resultado
-- Solo quedará "Bacon ahumado" como extra para bacon
-- El sistema no reactivará extras cuya preparación de referencia fue eliminada
-- No se crearán más huérfanos en el futuro
+Con este unico cambio, al guardar la composicion, el descubrimiento profundo se re-ejecuta inmediatamente y los extras y removibles aparecen al instante.
 
