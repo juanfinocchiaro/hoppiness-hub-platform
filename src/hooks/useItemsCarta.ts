@@ -147,6 +147,7 @@ export function useItemCartaMutations() {
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['item-carta-composicion', vars.item_carta_id] });
+      qc.invalidateQueries({ queryKey: ['item-ingredientes-deep', vars.item_carta_id] });
       qc.invalidateQueries({ queryKey: ['items-carta'] });
       toast.success('Composición guardada');
     },
