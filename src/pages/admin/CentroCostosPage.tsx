@@ -68,7 +68,7 @@ function enrich(items: any[]): EI[] {
       margen: p > 0 ? calcMargen(c, p) : 0,
       pSug: c > 0 ? calcSugerido(c, obj) : 0,
       color: p > 0 && c > 0 ? fcColor(fc, obj) : 'warn',
-      hasComp: c > 0, hasPrice: p > 0, raw: it,
+      hasComp: c > 0 || !!it.composicion_ref_preparacion_id || !!it.composicion_ref_insumo_id, hasPrice: p > 0, raw: it,
     };
   });
 }
