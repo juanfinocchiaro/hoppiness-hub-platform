@@ -79,14 +79,12 @@ export function useToggleExtra() {
           extraId = data.id;
         } else {
           extraId = existing.id;
-          // Reactivate if soft-deleted
-          if (!existing.activo || existing.deleted_at) {
-            const { error } = await supabase
-              .from('items_carta')
-              .update({ activo: true, deleted_at: null } as any)
-              .eq('id', extraId);
-            if (error) throw error;
-          }
+          // Always update cost + reactivate if needed
+          const { error } = await supabase
+            .from('items_carta')
+            .update({ activo: true, deleted_at: null, costo_total: costo } as any)
+            .eq('id', extraId);
+          if (error) throw error;
         }
 
         // 2. Create assignment
