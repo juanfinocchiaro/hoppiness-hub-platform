@@ -1,92 +1,45 @@
 
-## Descubrimiento recursivo de ingredientes en sub-preparaciones
+
+## Limpiar extra huérfano "Bacon" y prevenir recurrencia
 
 ### Problema
-La receta "Hamburguesa Baconator" tiene como ingrediente la sub-preparacion "Carne 90g con queso cheddar y bacon". El sistema detecta esa sub-preparacion pero **no entra dentro de ella** para descubrir sus insumos (como "Bacon ahumado"). Por eso el bacon no aparece en la lista de Extras Disponibles.
+El extra **"Bacon"** (`7d20e1ec`) referencia a la preparación **"Porción Bacon"** (`8196d9ce`) que ya fue eliminada (`activo=false, deleted_at` set). Sin embargo, el extra sigue activo y asignado al Baconator, causando duplicación con "Bacon ahumado" que es el correcto.
 
-La estructura real es:
-
-```text
-Hamburguesa Baconator (item_carta)
-  └── Hamburguesa Baconator (preparacion, via composicion)
-        ├── Pan Golden Kalis (insumo) ← SI aparece
-        ├── Salsa Hoppiness (insumo) ← SI aparece
-        ├── Queso Cheddar (insumo) ← SI aparece
-        └── Carne 90g con queso cheddar y bacon (sub-preparacion)
-              ├── Carne 90g (insumo) ← NO aparece
-              ├── Bacon ahumado (insumo) ← NO aparece
-              └── Queso cheddar (insumo) ← NO aparece
-```
-
-### Solucion
-
-**Archivo: `src/hooks/useItemIngredientesDeepList.ts`**
-
-Agregar recursion: cuando se encuentra una sub-preparacion, buscar tambien SUS ingredientes. Implementar una funcion interna `fetchPrepIngredients(prepId, prepNombre)` que se llame recursivamente para cada sub-preparacion encontrada, con un limite de profundidad (3 niveles) para evitar loops infinitos.
-
-Cambios concretos:
-
-1. Extraer la logica de busqueda de ingredientes a una funcion recursiva `fetchRecursive(prepId, prepNombre, depth)`
-2. Cuando se encuentra un `sub_preparacion_id`, ademas de agregarlo como sub-prep descubierta, llamar recursivamente para obtener sus insumos internos
-3. Los insumos encontrados en niveles mas profundos se agregan como un grupo nuevo con el nombre de la sub-receta como `receta_nombre`
-4. Limite de profundidad = 3 para evitar ciclos
-
-Ejemplo del resultado esperado despues del fix:
+Estado actual en la base de datos:
 
 ```text
-Extras Disponibles:
-  Pan Golden Kalis          (origen: Hamburguesa Baconator)
-  Salsa Hoppiness           (origen: Hamburguesa Baconator)
-  Queso Cheddar             (origen: Hamburguesa Baconator)
-  Carne 90g con queso...    (origen: Hamburguesa Baconator)  ← sub-prep como extra
-  Carne 90g                 (origen: Carne 90g con queso...) ← NUEVO
-  Bacon ahumado             (origen: Carne 90g con queso...) ← NUEVO
-  Queso cheddar             (origen: Carne 90g con queso...) ← NUEVO (dedup si ya existe)
+Extra "Bacon" (7d20e1ec)
+  ref: Porción Bacon (8196d9ce) -- ELIMINADA
+  asignado a: Baconator -- HUERFANO
+
+Extra "Bacon ahumado" (659f886f)
+  ref: Panceta feteada horneada (insumo activo)
+  asignado a: Bacon Burger, Baconator -- CORRECTO
 ```
 
-### Detalles tecnicos
+### Solución (2 pasos)
 
-La funcion recursiva reemplaza el bloque actual de lineas 54-100:
+**1. Migración SQL: eliminar el extra huérfano**
 
-```typescript
-async function fetchPrepIngredients(
-  prepId: string, 
-  prepNombre: string, 
-  depth: number,
-  groups: DeepIngredientGroup[]
-) {
-  if (depth > 3) return; // safety limit
-  
-  const { data: ingredientes } = await supabase
-    .from('preparacion_ingredientes')
-    .select(`*, insumos(...), sub_prep:preparaciones!...fkey(id, nombre)`)
-    .eq('preparacion_id', prepId)
-    .order('orden');
+```sql
+-- Eliminar la asignación huérfana del Baconator
+DELETE FROM item_extra_asignaciones 
+WHERE extra_id = '7d20e1ec-d7ab-439f-ac01-be06912c7cf2';
 
-  const insumoItems = [];
-  const subPrepItems = [];
-
-  for (const ing of ingredientes || []) {
-    if (ing.insumo_id) { /* push to insumoItems */ }
-    if (ing.sub_preparacion_id) {
-      /* push to subPrepItems */
-      // RECURSE into sub-preparation
-      await fetchPrepIngredients(
-        ing.sub_preparacion_id, 
-        sub_prep.nombre, 
-        depth + 1, 
-        groups
-      );
-    }
-  }
-
-  if (insumoItems.length > 0 || subPrepItems.length > 0) {
-    groups.push({ receta_id: prepId, receta_nombre: prepNombre, ingredientes: insumoItems, sub_preparaciones: subPrepItems });
-  }
-}
+-- Soft-delete el extra "Bacon" huérfano
+UPDATE items_carta 
+SET activo = false, deleted_at = NOW() 
+WHERE id = '7d20e1ec-d7ab-439f-ac01-be06912c7cf2';
 ```
 
-### Impacto
-- Todos los productos con sub-preparaciones mostraran los ingredientes profundos en "Extras Disponibles"
-- La deduplicacion existente en `useExtraAutoDiscovery` (por `tipo:ref_id`) evita que aparezcan duplicados si un insumo esta en multiples niveles
-- No se requieren cambios en la base de datos
+**2. Archivo: `src/hooks/useToggleExtra.ts` - Prevenir reactivación de extras con referencia eliminada**
+
+En la función `findExistingExtra` (que busca si ya existe un extra para un componente), agregar validación: si el extra referencia una preparación, verificar que la preparación siga activa. Si está eliminada, ignorar ese extra y crear uno nuevo.
+
+Cambio concreto en `findExistingExtra`: para extras tipo preparación, hacer un JOIN o query adicional para verificar que la preparación referenciada no esté eliminada. Si `deleted_at IS NOT NULL` en la preparación, retornar `null` como si no existiera el extra.
+
+### Resultado
+- Solo quedará "Bacon ahumado" como extra para bacon
+- El sistema no reactivará extras cuya preparación de referencia fue eliminada
+- No se crearán más huérfanos en el futuro
+
