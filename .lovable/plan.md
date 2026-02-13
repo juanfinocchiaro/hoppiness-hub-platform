@@ -1,30 +1,31 @@
 
 
-## Fix: "Sin composición" falso para extras con referencia directa
+## Proteger extras auto-generados de eliminacion manual
 
-### Problema raíz
-"Extra Porcion Bacon" muestra "Sin composición" y costo $0, pero **sí tiene composición**: su campo `composicion_ref_preparacion_id` apunta a la receta "Porcion Bacon" (costo real: $380.27).
+### Problema
+Los extras que se crean automaticamente (al activar el toggle en "Extras Disponibles") son items_carta con tipo='extra' y una referencia directa (`composicion_ref_preparacion_id` o `composicion_ref_insumo_id`). Actualmente el boton "Eliminar" en el panel expandido permite borrarlos manualmente, lo que deja registros huerfanos en `item_extra_asignaciones` y rompe la logica de auto-discovery.
 
-El problema tiene dos capas:
-
-1. **La función de base de datos `recalcular_costo_item_carta`** solo busca en la tabla `item_carta_composicion`. Los extras tipo `composicion_ref_preparacion_id` / `composicion_ref_insumo_id` no tienen registros ahí -- usan una referencia directa. Por eso el costo queda en $0.
-
-2. **El indicador visual `hasComp`** en `CentroCostosPage.tsx` usa `costo > 0` como proxy de "tiene composición". Si el costo es $0 (por el bug anterior), muestra falsamente "Sin composición".
+El ciclo de vida correcto es: el toggle de extras es la UNICA forma de crear/desactivar estos extras. Si se desactiva el toggle, el extra se soft-deletea automaticamente.
 
 ### Cambios
 
-**Migración SQL** - Actualizar `recalcular_costo_item_carta`:
-- Agregar un paso que detecte si el item tiene `composicion_ref_preparacion_id` o `composicion_ref_insumo_id`
-- Si no hay registros en `item_carta_composicion` pero sí hay referencia directa, usar el costo de la preparación o insumo referenciado
-- Esto cubre el caso de extras auto-generados que no pasan por la tabla de composición
+**`src/components/centro-costos/ItemExpandedPanel.tsx`**
+- Detectar si un item es un extra auto-generado: `item.tipo === 'extra' && (item.composicion_ref_preparacion_id || item.composicion_ref_insumo_id)`
+- Para esos items, **ocultar el boton "Eliminar"** del panel expandido
+- Opcionalmente mostrar un texto informativo: "Este extra se gestiona desde la composicion del producto"
 
-**`src/pages/admin/CentroCostosPage.tsx`** - Mejorar `hasComp`:
-- Cambiar la lógica de `hasComp: c > 0` a incluir también extras con referencia directa:
-  ```
-  hasComp: c > 0 || !!it.composicion_ref_preparacion_id || !!it.composicion_ref_insumo_id
-  ```
-- Esto evita el falso "Sin composición" mientras el costo se recalcula
+**`src/hooks/useToggleExtra.ts`**
+- Cuando se desactiva un extra (activo = false):
+  1. Eliminar la asignacion de `item_extra_asignaciones` (ya lo hace)
+  2. **Ademas**, verificar si el extra tiene otras asignaciones activas en otros productos
+  3. Si no tiene ninguna asignacion restante, hacer soft-delete del item extra (`activo: false, deleted_at: now()`)
+  4. Esto mantiene la base de datos limpia sin dejar extras huerfanos
+
+**`src/pages/admin/CentroCostosPage.tsx`**
+- En la tabla principal, ocultar el boton de eliminar (icono Trash2) para extras auto-generados, igual que en el panel expandido
 
 ### Resultado esperado
-- "Extra Porcion Bacon" mostrará costo $380.27 y FC% calculado correctamente
-- No se mostrará "Sin composición" para extras que tienen referencia a receta/insumo
+- Los extras auto-generados no se pueden eliminar manualmente
+- Al desactivar el toggle, el extra se limpia automaticamente (asignacion + soft-delete si no tiene otros usos)
+- Al reactivar el toggle, el extra se re-crea o reactiva correctamente (esto ya funciona)
+- Se evitan los problemas como el del bacon con papas fritas
