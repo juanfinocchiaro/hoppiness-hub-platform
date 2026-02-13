@@ -354,38 +354,17 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-3 py-1">
               <span className="flex-1">Componente</span>
               <span className="w-[120px]">Origen</span>
+              <span className="w-[140px]">Nombre carta</span>
               <span className="w-14 text-center">Extra</span>
               <span className="w-20 text-right">Estado</span>
             </div>
             {discoveredExtras.map(d => (
-              <div key={`${d.tipo}:${d.ref_id}`} className={`flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2 ${d.activo ? 'border-primary/40 bg-primary/5' : ''}`}>
-                <span className="flex-1 text-sm font-medium truncate">{d.nombre}</span>
-                <span className="w-[120px] text-xs text-muted-foreground truncate">{d.origen}</span>
-                <div className="w-14 flex justify-center">
-                  <Switch
-                    checked={d.activo}
-                    onCheckedChange={v => toggleExtra.mutate({
-                      item_carta_id: item.id,
-                      tipo: d.tipo,
-                      ref_id: d.ref_id,
-                      nombre: d.nombre,
-                      costo: d.costo,
-                      activo: v,
-                    })}
-                    className="scale-75"
-                    disabled={toggleExtra.isPending}
-                  />
-                </div>
-                <span className="w-20 text-right text-xs font-mono">
-                  {d.activo ? (
-                    d.extra_precio > 0 ? (
-                      <span className="text-foreground">{fmt(d.extra_precio)}</span>
-                    ) : (
-                      <span className="text-yellow-600">⚠ $0</span>
-                    )
-                  ) : null}
-                </span>
-              </div>
+              <ExtraRow
+                key={`${d.tipo}:${d.ref_id}`}
+                d={d}
+                itemId={item.id}
+                toggleExtra={toggleExtra}
+              />
             ))}
           </div>
         )}
@@ -489,6 +468,62 @@ function ComposicionInline({ item, mutations }: { item: any; mutations: any }) {
           </LoadingButton>
         </div>
       )}
+    </div>
+  );
+}
+
+// ═══ EXTRA ROW (with editable nombre_carta) ═══
+function ExtraRow({ d, itemId, toggleExtra }: {
+  d: any; itemId: string; toggleExtra: any;
+}) {
+  const [localNombre, setLocalNombre] = useState(d.extra_nombre || '');
+  useEffect(() => { setLocalNombre(d.extra_nombre || ''); }, [d.extra_nombre]);
+
+  const handleSaveNombre = async () => {
+    if (!d.extra_id || localNombre === d.extra_nombre) return;
+    const { supabase } = await import('@/integrations/supabase/client');
+    await supabase.from('items_carta').update({ nombre: localNombre } as any).eq('id', d.extra_id);
+  };
+
+  return (
+    <div className={`flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2 ${d.activo ? 'border-primary/40 bg-primary/5' : ''}`}>
+      <span className="flex-1 text-sm font-medium truncate">{d.nombre}</span>
+      <span className="w-[120px] text-xs text-muted-foreground truncate">{d.origen}</span>
+      <div className="w-[140px]">
+        {d.activo && d.extra_id ? (
+          <Input
+            value={localNombre}
+            onChange={e => setLocalNombre(e.target.value)}
+            onBlur={handleSaveNombre}
+            className="h-6 text-xs"
+            placeholder="Extra ..."
+          />
+        ) : null}
+      </div>
+      <div className="w-14 flex justify-center">
+        <Switch
+          checked={d.activo}
+          onCheckedChange={v => toggleExtra.mutate({
+            item_carta_id: itemId,
+            tipo: d.tipo,
+            ref_id: d.ref_id,
+            nombre: d.nombre,
+            costo: d.costo,
+            activo: v,
+          })}
+          className="scale-75"
+          disabled={toggleExtra.isPending}
+        />
+      </div>
+      <span className="w-20 text-right text-xs font-mono">
+        {d.activo ? (
+          d.extra_precio > 0 ? (
+            <span className="text-foreground">{fmt(d.extra_precio)}</span>
+          ) : (
+            <span className="text-yellow-600">⚠ $0</span>
+          )
+        ) : null}
+      </span>
     </div>
   );
 }

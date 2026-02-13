@@ -71,19 +71,6 @@ export function useExtraAutoDiscovery(itemId: string | undefined) {
       }
     }
 
-    // Recipes directly in composition (as potential extras)
-    for (const comp of (composicion || [])) {
-      if (comp.preparacion_id && (comp as any).preparaciones) {
-        discovered.push({
-          tipo: 'preparacion',
-          ref_id: comp.preparacion_id,
-          nombre: (comp as any).preparaciones.nombre,
-          costo: (comp as any).preparaciones.costo_calculado || 0,
-          origen: 'Composición',
-        });
-      }
-    }
-
     // Deduplicate by tipo:ref_id
     const unique = new Map<string, typeof discovered[0]>();
     for (const d of discovered) {
