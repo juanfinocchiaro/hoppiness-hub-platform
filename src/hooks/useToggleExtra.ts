@@ -12,20 +12,27 @@ async function getExtrasCategoryId(): Promise<string | null> {
   return (data as any)?.id || null;
 }
 
+interface ExistingExtra {
+  id: string;
+  activo: boolean;
+  deleted_at: string | null;
+}
+
 async function findExistingExtra(
   tipo: 'preparacion' | 'insumo',
   refId: string
-): Promise<string | null> {
+): Promise<ExistingExtra | null> {
   const field = tipo === 'preparacion'
     ? 'composicion_ref_preparacion_id'
     : 'composicion_ref_insumo_id';
   const { data } = await supabase
     .from('items_carta')
-    .select('id')
+    .select('id, activo, deleted_at')
     .eq('tipo', 'extra')
     .eq(field, refId)
     .maybeSingle();
-  return data?.id || null;
+  if (!data) return null;
+  return { id: data.id, activo: data.activo ?? true, deleted_at: data.deleted_at ?? null };
 }
 
 export function useToggleExtra() {
@@ -49,9 +56,10 @@ export function useToggleExtra() {
     }) => {
       if (activo) {
         // 1. Find or create the extra item
-        let extraId = await findExistingExtra(tipo, ref_id);
+        let existing = await findExistingExtra(tipo, ref_id);
+        let extraId: string;
 
-        if (!extraId) {
+        if (!existing) {
           const catId = await getExtrasCategoryId();
           const { data, error } = await supabase
             .from('items_carta')
@@ -69,6 +77,16 @@ export function useToggleExtra() {
             .single();
           if (error) throw error;
           extraId = data.id;
+        } else {
+          extraId = existing.id;
+          // Reactivate if soft-deleted
+          if (!existing.activo || existing.deleted_at) {
+            const { error } = await supabase
+              .from('items_carta')
+              .update({ activo: true, deleted_at: null } as any)
+              .eq('id', extraId);
+            if (error) throw error;
+          }
         }
 
         // 2. Create assignment
@@ -82,13 +100,13 @@ export function useToggleExtra() {
 
       } else {
         // Deactivate: remove assignment only
-        const extraId = await findExistingExtra(tipo, ref_id);
-        if (extraId) {
+        const existing = await findExistingExtra(tipo, ref_id);
+        if (existing) {
           await supabase
             .from('item_extra_asignaciones' as any)
             .delete()
             .eq('item_carta_id', item_carta_id)
-            .eq('extra_id', extraId);
+            .eq('extra_id', existing.id);
         }
       }
     },

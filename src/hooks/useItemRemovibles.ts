@@ -26,13 +26,25 @@ export function useItemRemoviblesMutations() {
       item_carta_id: string; insumo_id: string; activo: boolean; nombre_display?: string;
     }) => {
       if (activo) {
-        const { error } = await supabase
+        // Check if record already exists (avoid upsert with partial indexes)
+        const { data: existing } = await supabase
           .from('item_removibles' as any)
-          .upsert(
-            { item_carta_id, insumo_id, preparacion_id: null, activo: true, nombre_display: nombre_display || null },
-            { onConflict: 'item_carta_id,insumo_id' }
-          );
-        if (error) throw error;
+          .select('id')
+          .eq('item_carta_id', item_carta_id)
+          .eq('insumo_id', insumo_id)
+          .maybeSingle();
+        if (existing) {
+          const { error } = await supabase
+            .from('item_removibles' as any)
+            .update({ activo: true, nombre_display: nombre_display || null })
+            .eq('id', (existing as any).id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('item_removibles' as any)
+            .insert({ item_carta_id, insumo_id, preparacion_id: null, activo: true, nombre_display: nombre_display || null });
+          if (error) throw error;
+        }
       } else {
         await supabase
           .from('item_removibles' as any)
@@ -51,13 +63,24 @@ export function useItemRemoviblesMutations() {
       item_carta_id: string; preparacion_id: string; activo: boolean; nombre_display?: string;
     }) => {
       if (activo) {
-        const { error } = await supabase
+        const { data: existing } = await supabase
           .from('item_removibles' as any)
-          .upsert(
-            { item_carta_id, preparacion_id, insumo_id: null, activo: true, nombre_display: nombre_display || null },
-            { onConflict: 'item_carta_id,preparacion_id' }
-          );
-        if (error) throw error;
+          .select('id')
+          .eq('item_carta_id', item_carta_id)
+          .eq('preparacion_id', preparacion_id)
+          .maybeSingle();
+        if (existing) {
+          const { error } = await supabase
+            .from('item_removibles' as any)
+            .update({ activo: true, nombre_display: nombre_display || null })
+            .eq('id', (existing as any).id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('item_removibles' as any)
+            .insert({ item_carta_id, preparacion_id, insumo_id: null, activo: true, nombre_display: nombre_display || null });
+          if (error) throw error;
+        }
       } else {
         await supabase
           .from('item_removibles' as any)
