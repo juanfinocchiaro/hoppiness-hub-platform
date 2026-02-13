@@ -1,55 +1,92 @@
 
-## Actualizar costo de extras existentes al reactivar
+## Descubrimiento recursivo de ingredientes en sub-preparaciones
 
 ### Problema
-El fix anterior corrige el calculo de costo en la fase de descubrimiento (frontend), pero:
-1. Los extras ya creados en la base de datos conservan el `costo_total` viejo (ej: "Bacon ahumado" = $127 en vez de $380)
-2. Cuando se reactiva un extra existente via toggle, `useToggleExtra` no actualiza el `costo_total`
+La receta "Hamburguesa Baconator" tiene como ingrediente la sub-preparacion "Carne 90g con queso cheddar y bacon". El sistema detecta esa sub-preparacion pero **no entra dentro de ella** para descubrir sus insumos (como "Bacon ahumado"). Por eso el bacon no aparece en la lista de Extras Disponibles.
 
-### Solucion (2 cambios)
+La estructura real es:
 
-**1. Archivo: `src/hooks/useToggleExtra.ts`**
-
-Cuando se activa un extra y ya existe en la base de datos, ademas de reactivarlo, actualizar el `costo_total` con el valor correcto que viene del parametro `costo`:
-
+```text
+Hamburguesa Baconator (item_carta)
+  └── Hamburguesa Baconator (preparacion, via composicion)
+        ├── Pan Golden Kalis (insumo) ← SI aparece
+        ├── Salsa Hoppiness (insumo) ← SI aparece
+        ├── Queso Cheddar (insumo) ← SI aparece
+        └── Carne 90g con queso cheddar y bacon (sub-preparacion)
+              ├── Carne 90g (insumo) ← NO aparece
+              ├── Bacon ahumado (insumo) ← NO aparece
+              └── Queso cheddar (insumo) ← NO aparece
 ```
-// Bloque de reactivacion (aprox linea 65-72)
-// ANTES: solo reactiva
-if (!existing.activo || existing.deleted_at) {
-  await supabase.from('items_carta').update({ activo: true, deleted_at: null }).eq('id', extraId);
+
+### Solucion
+
+**Archivo: `src/hooks/useItemIngredientesDeepList.ts`**
+
+Agregar recursion: cuando se encuentra una sub-preparacion, buscar tambien SUS ingredientes. Implementar una funcion interna `fetchPrepIngredients(prepId, prepNombre)` que se llame recursivamente para cada sub-preparacion encontrada, con un limite de profundidad (3 niveles) para evitar loops infinitos.
+
+Cambios concretos:
+
+1. Extraer la logica de busqueda de ingredientes a una funcion recursiva `fetchRecursive(prepId, prepNombre, depth)`
+2. Cuando se encuentra un `sub_preparacion_id`, ademas de agregarlo como sub-prep descubierta, llamar recursivamente para obtener sus insumos internos
+3. Los insumos encontrados en niveles mas profundos se agregan como un grupo nuevo con el nombre de la sub-receta como `receta_nombre`
+4. Limite de profundidad = 3 para evitar ciclos
+
+Ejemplo del resultado esperado despues del fix:
+
+```text
+Extras Disponibles:
+  Pan Golden Kalis          (origen: Hamburguesa Baconator)
+  Salsa Hoppiness           (origen: Hamburguesa Baconator)
+  Queso Cheddar             (origen: Hamburguesa Baconator)
+  Carne 90g con queso...    (origen: Hamburguesa Baconator)  ← sub-prep como extra
+  Carne 90g                 (origen: Carne 90g con queso...) ← NUEVO
+  Bacon ahumado             (origen: Carne 90g con queso...) ← NUEVO
+  Queso cheddar             (origen: Carne 90g con queso...) ← NUEVO (dedup si ya existe)
+```
+
+### Detalles tecnicos
+
+La funcion recursiva reemplaza el bloque actual de lineas 54-100:
+
+```typescript
+async function fetchPrepIngredients(
+  prepId: string, 
+  prepNombre: string, 
+  depth: number,
+  groups: DeepIngredientGroup[]
+) {
+  if (depth > 3) return; // safety limit
+  
+  const { data: ingredientes } = await supabase
+    .from('preparacion_ingredientes')
+    .select(`*, insumos(...), sub_prep:preparaciones!...fkey(id, nombre)`)
+    .eq('preparacion_id', prepId)
+    .order('orden');
+
+  const insumoItems = [];
+  const subPrepItems = [];
+
+  for (const ing of ingredientes || []) {
+    if (ing.insumo_id) { /* push to insumoItems */ }
+    if (ing.sub_preparacion_id) {
+      /* push to subPrepItems */
+      // RECURSE into sub-preparation
+      await fetchPrepIngredients(
+        ing.sub_preparacion_id, 
+        sub_prep.nombre, 
+        depth + 1, 
+        groups
+      );
+    }
+  }
+
+  if (insumoItems.length > 0 || subPrepItems.length > 0) {
+    groups.push({ receta_id: prepId, receta_nombre: prepNombre, ingredientes: insumoItems, sub_preparaciones: subPrepItems });
+  }
 }
-
-// DESPUES: reactiva Y actualiza costo
-await supabase.from('items_carta')
-  .update({ activo: true, deleted_at: null, costo_total: costo })
-  .eq('id', extraId);
 ```
 
-Nota: se actualiza siempre (no solo cuando esta inactivo) para que al hacer toggle off/on se recalcule el costo aunque el extra ya estuviera activo.
-
-**2. Migracion SQL: actualizar extras existentes**
-
-Correr un UPDATE unico para recalcular el `costo_total` de todos los extras tipo insumo que esten activos, multiplicando el costo unitario del insumo por la cantidad que se usa en las recetas que lo contienen:
-
-```sql
-UPDATE items_carta ic
-SET costo_total = sub.costo_porcion
-FROM (
-  SELECT ic2.id AS extra_id, 
-         MAX(pi.cantidad * i.costo_por_unidad_base) AS costo_porcion
-  FROM items_carta ic2
-  JOIN insumos i ON i.id = ic2.composicion_ref_insumo_id
-  JOIN preparacion_ingredientes pi ON pi.insumo_id = i.id
-  WHERE ic2.tipo = 'extra' 
-    AND ic2.composicion_ref_insumo_id IS NOT NULL
-    AND ic2.activo = true
-  GROUP BY ic2.id
-) sub
-WHERE ic.id = sub.extra_id;
-```
-
-Esto usa MAX para tomar la porcion mas grande entre todas las recetas que usan ese insumo, que es el escenario mas conservador.
-
-### Resultado
-- "Bacon ahumado" pasara de $127 a $380 (3 fetas x $126.76)
-- Futuros toggles siempre actualizaran el costo al valor correcto de la porcion
+### Impacto
+- Todos los productos con sub-preparaciones mostraran los ingredientes profundos en "Extras Disponibles"
+- La deduplicacion existente en `useExtraAutoDiscovery` (por `tipo:ref_id`) evita que aparezcan duplicados si un insumo esta en multiples niveles
+- No se requieren cambios en la base de datos
