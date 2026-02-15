@@ -64,7 +64,7 @@ export interface InspectionItem {
   item_label: string;
   complies: boolean | null; // null = N/A
   observations: string | null;
-  photo_url: string | null;
+  photo_urls: string[];
   sort_order: number;
 }
 
@@ -79,7 +79,7 @@ export interface CreateInspectionInput {
 export interface UpdateInspectionItemInput {
   complies: boolean | null;
   observations?: string;
-  photo_url?: string;
+  photo_urls?: string[];
 }
 
 // For completing an inspection

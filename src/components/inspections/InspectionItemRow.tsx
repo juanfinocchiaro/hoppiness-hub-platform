@@ -1,15 +1,10 @@
 /**
  * InspectionItemRow - Fila individual del checklist de inspección
- * 
- * UX simplificado (Feb 2026):
- * - Solo ✓ (cumple) y ✗ (no cumple), botones más grandes y separados
- * - Click en activo lo desactiva (vuelve a pendiente)
- * - Estado "pendiente" visual cuando no se tocó (gris neutro)
- * - Sin botón de reset (—), el reset es hacer click de nuevo
+ * Soporta múltiples fotos por hallazgo (photo_urls array)
  */
 
 import { useState } from 'react';
-import { Camera, Check, X, MessageSquare, Loader2 } from 'lucide-react';
+import { Camera, Check, X, MessageSquare, Loader2, Trash2, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -29,7 +24,8 @@ export function InspectionItemRow({ item, inspectionId, readOnly = false }: Insp
   const updateItem = useUpdateInspectionItem();
   const uploadPhoto = useUploadInspectionPhoto();
 
-  // Toggle logic: if already selected, deselect (null). Otherwise, set value.
+  const photos = item.photo_urls || [];
+
   const handleComplianceToggle = (value: boolean) => {
     if (readOnly) return;
     const newValue = item.complies === value ? null : value;
@@ -59,10 +55,22 @@ export function InspectionItemRow({ item, inspectionId, readOnly = false }: Insp
       file,
     });
 
+    // Append to existing photos array
+    const newPhotos = [...photos, url];
     updateItem.mutate({
       itemId: item.id,
       inspectionId,
-      data: { complies: item.complies, observations, photo_url: url },
+      data: { complies: item.complies, observations, photo_urls: newPhotos },
+    });
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    if (readOnly) return;
+    const newPhotos = photos.filter((_, i) => i !== index);
+    updateItem.mutate({
+      itemId: item.id,
+      inspectionId,
+      data: { complies: item.complies, observations, photo_urls: newPhotos },
     });
   };
 
@@ -82,27 +90,14 @@ export function InspectionItemRow({ item, inspectionId, readOnly = false }: Insp
           )}>
             {item.item_label}
           </p>
-          
-          {/* Photo indicator */}
-          {item.photo_url && (
-            <a
-              href={item.photo_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-primary hover:underline mt-1 inline-block"
-            >
-              📷 Ver foto
-            </a>
-          )}
         </div>
 
-        {/* Controls - larger buttons with more spacing */}
+        {/* Controls */}
         <div className="flex items-center gap-2 shrink-0">
           {isLoading ? (
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           ) : (
             <>
-              {/* Cumple - toggle on/off */}
               <Button
                 type="button"
                 variant={item.complies === true ? 'default' : 'outline'}
@@ -115,12 +110,11 @@ export function InspectionItemRow({ item, inspectionId, readOnly = false }: Insp
                 )}
                 onClick={() => handleComplianceToggle(true)}
                 disabled={readOnly}
-                title="Cumple (click de nuevo para quitar)"
+                title="Cumple"
               >
                 <Check className="w-5 h-5" />
               </Button>
 
-              {/* No cumple - toggle on/off */}
               <Button
                 type="button"
                 variant={item.complies === false ? 'destructive' : 'outline'}
@@ -133,15 +127,13 @@ export function InspectionItemRow({ item, inspectionId, readOnly = false }: Insp
                 )}
                 onClick={() => handleComplianceToggle(false)}
                 disabled={readOnly}
-                title="No cumple (click de nuevo para quitar)"
+                title="No cumple"
               >
                 <X className="w-5 h-5" />
               </Button>
 
-              {/* Separator */}
               <div className="w-px h-6 bg-border mx-1" />
 
-              {/* Observations toggle */}
               <Button
                 type="button"
                 variant={showObservations || observations ? 'secondary' : 'ghost'}
@@ -153,7 +145,6 @@ export function InspectionItemRow({ item, inspectionId, readOnly = false }: Insp
                 <MessageSquare className="w-4 h-4" />
               </Button>
 
-              {/* Photo upload */}
               {!readOnly && (
                 <label className="cursor-pointer">
                   <input
@@ -165,14 +156,19 @@ export function InspectionItemRow({ item, inspectionId, readOnly = false }: Insp
                   />
                   <Button
                     type="button"
-                    variant={item.photo_url ? 'secondary' : 'ghost'}
+                    variant={photos.length > 0 ? 'secondary' : 'ghost'}
                     size="icon"
                     className="h-9 w-9"
                     asChild
-                    title="Subir foto"
+                    title={`Subir foto (${photos.length})`}
                   >
-                    <span>
+                    <span className="relative">
                       <Camera className="w-4 h-4" />
+                      {photos.length > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                          {photos.length}
+                        </span>
+                      )}
                     </span>
                   </Button>
                 </label>
@@ -181,6 +177,33 @@ export function InspectionItemRow({ item, inspectionId, readOnly = false }: Insp
           )}
         </div>
       </div>
+
+      {/* Photos gallery */}
+      {photos.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {photos.map((url, idx) => (
+            <div key={idx} className="relative group">
+              <a href={url} target="_blank" rel="noopener noreferrer">
+                <img 
+                  src={url} 
+                  alt={`Foto ${idx + 1}`} 
+                  className="h-16 w-16 object-cover rounded border border-border hover:opacity-80 transition-opacity"
+                />
+              </a>
+              {!readOnly && (
+                <button
+                  type="button"
+                  className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => handleRemovePhoto(idx)}
+                  title="Eliminar foto"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Observations textarea */}
       {showObservations && (

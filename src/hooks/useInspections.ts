@@ -212,7 +212,7 @@ export function useCreateInspection() {
         sort_order: t.sort_order,
         complies: null,
         observations: null,
-        photo_url: null,
+        photo_urls: [],
       }));
 
       const { error: itemsError } = await supabase
@@ -251,13 +251,16 @@ export function useUpdateInspectionItem() {
       inspectionId: string;
       data: UpdateInspectionItemInput;
     }) => {
+      const updateData: Record<string, unknown> = {
+        complies: data.complies,
+        observations: data.observations || null,
+      };
+      if (data.photo_urls !== undefined) {
+        updateData.photo_urls = data.photo_urls;
+      }
       const { error } = await supabase
         .from('inspection_items')
-        .update({
-          complies: data.complies,
-          observations: data.observations || null,
-          photo_url: data.photo_url || null,
-        })
+        .update(updateData)
         .eq('id', itemId);
 
       if (error) throw error;
@@ -277,7 +280,7 @@ export function useUpdateInspectionItem() {
           ...previousInspection,
           items: previousInspection.items.map(item =>
             item.id === itemId
-              ? { ...item, complies: data.complies, observations: data.observations ?? item.observations, photo_url: data.photo_url ?? item.photo_url }
+              ? { ...item, complies: data.complies, observations: data.observations ?? item.observations, photo_urls: data.photo_urls ?? item.photo_urls }
               : item
           ),
         });
