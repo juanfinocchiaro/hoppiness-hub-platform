@@ -12,6 +12,7 @@ import {
   FileText,
   MessageSquare,
   ClipboardList,
+  ClipboardCheck,
   ShoppingCart,
   Receipt,
   Settings,
@@ -228,6 +229,15 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
           to={`${basePath}/equipo/comunicados`}
           icon={MessageSquare}
           label="Comunicados"
+        />
+      )}
+
+      {/* Supervisiones - Link directo para encargados/franquiciados */}
+      {(permissions.isFranquiciado || permissions.canViewTeam) && (
+        <NavDashboardLink
+          to={`${basePath}/supervisiones`}
+          icon={ClipboardCheck}
+          label="Supervisiones"
         />
       )}
 

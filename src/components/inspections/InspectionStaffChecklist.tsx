@@ -9,7 +9,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, X, UserPlus, Trash2, Shirt, Sparkles, MessageSquare } from 'lucide-react';
+import { Check, X, UserPlus, Trash2, Shirt, Sparkles, MessageSquare, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -211,9 +211,16 @@ export function InspectionStaffChecklist({
     },
   });
 
-  const handleAddStaff = () => {
-    if (!selectedUserId) return;
-    addStaff.mutate(selectedUserId);
+  const handleAddStaff = (userId: string) => {
+    if (!userId) return;
+    addStaff.mutate(userId);
+  };
+
+  const handleBulkAddAll = async () => {
+    if (availableStaff.length === 0) return;
+    for (const staff of availableStaff) {
+      await addStaff.mutateAsync(staff.id);
+    }
   };
 
   const handleToggleEvaluation = (
@@ -260,27 +267,40 @@ export function InspectionStaffChecklist({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Add staff selector */}
+        {/* Add staff controls */}
         {!readOnly && availableStaff.length > 0 && (
-          <div className="flex gap-2">
-            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Agregar empleado presente..." />
-              </SelectTrigger>
-              <SelectContent>
-                {availableStaff.map(staff => (
-                  <SelectItem key={staff.id} value={staff.id}>
-                    {staff.full_name} ({ROLE_LABELS[staff.local_role] || staff.local_role})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button 
-              onClick={handleAddStaff} 
-              disabled={!selectedUserId || addStaff.isPending}
-            >
-              <UserPlus className="w-4 h-4" />
-            </Button>
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Agregar empleado presente..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableStaff.map(staff => (
+                    <SelectItem key={staff.id} value={staff.id}>
+                      {staff.full_name} ({ROLE_LABELS[staff.local_role] || staff.local_role})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button 
+                onClick={() => handleAddStaff(selectedUserId)} 
+                disabled={!selectedUserId || addStaff.isPending}
+              >
+                <UserPlus className="w-4 h-4" />
+              </Button>
+            </div>
+            {presentStaff.length === 0 && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleBulkAddAll}
+                disabled={addStaff.isPending}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Cargar todo el equipo ({availableStaff.length})
+              </Button>
+            )}
           </div>
         )}
 

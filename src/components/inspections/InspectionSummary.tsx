@@ -175,16 +175,31 @@ export function InspectionSummary({ inspection, items = [] }: InspectionSummaryP
             <CardTitle className="text-base text-destructive">Hallazgos</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-3 text-sm">
               {nonCompliantItems.map(item => (
-                <li key={item.id} className="flex items-start gap-2">
-                  <XCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-medium">{item.item_label}</span>
-                    {item.observations && (
-                      <p className="text-muted-foreground mt-0.5">{item.observations}</p>
-                    )}
+                <li key={item.id} className="space-y-1">
+                  <div className="flex items-start gap-2">
+                    <XCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-medium">{item.item_label}</span>
+                      {item.observations && (
+                        <p className="text-muted-foreground mt-0.5">{item.observations}</p>
+                      )}
+                    </div>
                   </div>
+                  {item.photo_urls && item.photo_urls.length > 0 && (
+                    <div className="ml-6 flex flex-wrap gap-2 mt-1">
+                      {item.photo_urls.map((url, idx) => (
+                        <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
+                          <img 
+                            src={url} 
+                            alt={`Evidencia ${idx + 1}`} 
+                            className="h-16 w-16 object-cover rounded border border-border hover:opacity-80 transition-opacity"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

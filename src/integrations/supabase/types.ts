@@ -1993,7 +1993,7 @@ export type Database = {
           item_key: string
           item_label: string
           observations: string | null
-          photo_url: string | null
+          photo_urls: string[] | null
           sort_order: number
         }
         Insert: {
@@ -2005,7 +2005,7 @@ export type Database = {
           item_key: string
           item_label: string
           observations?: string | null
-          photo_url?: string | null
+          photo_urls?: string[] | null
           sort_order?: number
         }
         Update: {
@@ -2017,7 +2017,7 @@ export type Database = {
           item_key?: string
           item_label?: string
           observations?: string | null
-          photo_url?: string | null
+          photo_urls?: string[] | null
           sort_order?: number
         }
         Relationships: [
