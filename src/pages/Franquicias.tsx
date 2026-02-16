@@ -29,7 +29,7 @@ import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import { FranchiseFormSection } from '@/components/landing';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
-import heroBurger from '@/assets/hero-burger.jpg';
+import heroWall from '@/assets/hero-wall.webp';
 import local1 from '@/assets/local-1.jpg';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 
@@ -124,7 +124,7 @@ export default function Franquicias() {
       <section className="relative min-h-[70vh] flex items-center">
         <div 
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${heroBurger})` }}
+          style={{ backgroundImage: `url(${heroWall})` }}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/90 to-primary/80" />
         

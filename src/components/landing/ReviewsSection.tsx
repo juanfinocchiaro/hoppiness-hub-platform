@@ -55,10 +55,10 @@ export function ReviewsSection() {
     <section className="py-20 px-4 bg-secondary/50">
       <div className="container mx-auto max-w-4xl">
         <h2 className="text-4xl font-black mb-4 font-brand text-center text-primary">
-          EN BOCA DE NUESTROS FANS
+          LO QUE DICE EL CLUB
         </h2>
         <p className="text-center text-muted-foreground mb-12 text-lg">
-          Lo que dicen nuestros clientes fanáticos
+          Todos nuestros clubes con 4.5+ estrellas en Google Maps
         </p>
 
         {/* Lista vertical de reviews */}
@@ -99,7 +99,7 @@ export function ReviewsSection() {
         </div>
 
         <p className="text-center text-muted-foreground mt-8 text-sm">
-          Reseñas de Google Maps • Todos nuestros locales con 4.5+ estrellas
+          Reseñas reales de Google Maps
         </p>
       </div>
     </section>

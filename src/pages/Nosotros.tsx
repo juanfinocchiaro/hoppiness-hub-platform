@@ -3,47 +3,47 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
   Beef, 
-  Heart, 
-  Users, 
-  Rocket,
+  RefreshCw, 
+  Smile, 
+  Wrench,
   ShoppingBag,
+  Users,
   Users2
 } from 'lucide-react';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
-import heroBurger from '@/assets/hero-burger.jpg';
+import heroWall from '@/assets/hero-wall.webp';
 import juanHoppiness from '@/assets/juan-hoppiness.jpg';
-import aperturaLocal from '@/assets/apertura-local.jpg';
+import process125 from '@/assets/hoppiness-125.webp';
+import team139 from '@/assets/hoppiness-139.webp';
+import team152 from '@/assets/hoppiness-152.webp';
 import team1 from '@/assets/team-1.jpg';
 import team2 from '@/assets/team-2.jpg';
 import team3 from '@/assets/team-3.jpg';
-import team4 from '@/assets/team-4.jpg';
-import team5 from '@/assets/team-5.jpg';
-import team6 from '@/assets/team-6.jpg';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 
 export default function Nosotros() {
   const valores = [
     {
       icon: Beef,
-      title: 'Calidad Premium',
-      description: 'Seleccionamos las mejores materias primas del mercado. La calidad es nuestra prioridad absoluta.'
+      title: 'Culto al sabor',
+      description: 'Le metemos garra y corazón a cada receta, usando los mejores ingredientes para que cada mordisco sea tu propia fiesta.'
     },
     {
-      icon: Heart,
-      title: 'Pasión',
-      description: 'Amamos lo que hacemos. Cada hamburguesa es preparada con dedicación y amor por nuestro oficio.'
+      icon: RefreshCw,
+      title: 'Adaptabilidad',
+      description: 'No nos dormimos en los laureles. Estamos siempre atentos a lo que se viene, probando cosas nuevas para que siempre tengas una buena excusa para volver.'
     },
     {
-      icon: Users,
-      title: 'Comunidad',
-      description: 'Más que clientes, somos una familia. El Club Hoppiness es un lugar de encuentro y pertenencia.'
+      icon: Smile,
+      title: 'Optimismo',
+      description: 'Acá siempre hay buena vibra. Un ambiente amigable para que vengas a disfrutar con quien quieras. Queremos que te sientas como en casa.'
     },
     {
-      icon: Rocket,
-      title: 'Innovación',
-      description: 'Siempre buscando mejorar. Nuevas recetas, mejores procesos, experiencias únicas.'
+      icon: Wrench,
+      title: 'Resolución',
+      description: 'Si hay un problema, le buscamos la vuelta. Nos encantan los desafíos y aprendemos de los errores. Tu experiencia tiene que ser siempre de primera.'
     }
   ];
 
@@ -56,7 +56,7 @@ export default function Nosotros() {
       <section className="relative h-[50vh] min-h-[400px] flex items-center">
         <div 
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${heroBurger})` }}
+          style={{ backgroundImage: `url(${heroWall})` }}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/85 to-primary/70" />
         
@@ -78,21 +78,20 @@ export default function Nosotros() {
                 QUIÉNES SOMOS
               </h2>
               <p className="text-lg text-muted-foreground mb-6">
-                Hoppiness Club nació en Córdoba en 2018, fundado por Juan Finocchiaro, como un club de cerveza y encuentro.
-                Desde el inicio la idea fue crear una marca con identidad, producto cuidado y una experiencia simple, bien hecha.
+                Hoppiness Club nació en Córdoba en 2018 como un club de cerveza y encuentro. Desde el primer día la idea fue clara: crear algo con identidad propia, producto cuidado y una experiencia simple, bien hecha.
               </p>
               <p className="text-lg text-muted-foreground mb-6">
-                En 2019 dimos el primer salto con un nuevo punto en Nueva Córdoba. Y cuando llegó la pandemia, tomamos una decisión que marcó el rumbo: nos enfocamos 100% en hamburguesas y empezamos a construir un modelo basado en calidad, consistencia y operación.
+                En 2019 abrimos en Nueva Córdoba. Cuando llegó la pandemia, tomamos una decisión que nos marcó para siempre: foco total en hamburguesas. Ahí empezó el Culto al Sabor.
               </p>
               <p className="text-lg text-muted-foreground mb-6">
-                Ese cambio fue una evolución natural: pasamos de ser un lugar de encuentro a ser una hamburguesería especializada, con recetas estandarizadas, procesos claros y un equipo entrenado para sostener el mismo nivel en cada servicio.
+                Pasamos de ser un bar a ser una hamburguesería especializada, con recetas de autor, procesos estandarizados y un equipo entrenado para sostener el mismo nivel en cada servicio, en cada local, todos los días.
               </p>
               <p className="text-lg text-muted-foreground mb-6">
-                Hoy Hoppiness Club es una marca cordobesa en expansión, con múltiples sucursales y una comunidad fiel. Y seguimos sosteniendo lo de siempre: producto fuerte, identidad clara y una forma de trabajar que permite crecer sin perder calidad.
+                Hoy somos una marca cordobesa en expansión, con múltiples clubes y una comunidad que nos elige. Y seguimos sosteniendo lo de siempre: producto fuerte, identidad clara y muchas ganas de seguir creciendo.
               </p>
               <div className="border-t pt-6 mt-6">
                 <p className="text-lg font-medium text-foreground italic">
-                  Una marca con historia real, producto probado y estándares listos para escalar.
+                  Una marca con historia real, producto probado y un club que no para de crecer.
                 </p>
               </div>
             </div>
@@ -155,27 +154,27 @@ export default function Nosotros() {
               className="rounded-2xl shadow-card hover:shadow-elevated transition-all w-full h-64 object-cover"
             />
             <img 
-              src={team2} 
-              alt="Equipo en cocina" 
+              src={process125} 
+              alt="Proceso de elaboración" 
               className="rounded-2xl shadow-card hover:shadow-elevated transition-all w-full h-64 object-cover md:translate-y-8"
             />
             <img 
-              src={team3} 
-              alt="Celebración de cumpleaños del equipo" 
+              src={team2} 
+              alt="Equipo en cocina" 
               className="rounded-2xl shadow-card hover:shadow-elevated transition-all w-full h-64 object-cover"
             />
             <img 
-              src={team4} 
-              alt="Equipo de cocina" 
+              src={team139} 
+              alt="Equipo Hoppiness" 
               className="rounded-2xl shadow-card hover:shadow-elevated transition-all w-full h-64 object-cover md:-translate-y-4"
             />
             <img 
-              src={team5} 
-              alt="Equipo tomando selfie" 
+              src={team3} 
+              alt="Celebración del equipo" 
               className="rounded-2xl shadow-card hover:shadow-elevated transition-all w-full h-64 object-cover md:translate-y-4"
             />
             <img 
-              src={team6} 
+              src={team152} 
               alt="Equipo en local" 
               className="rounded-2xl shadow-card hover:shadow-elevated transition-all w-full h-64 object-cover md:-translate-y-8"
             />
