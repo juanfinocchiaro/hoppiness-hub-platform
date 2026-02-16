@@ -60,6 +60,10 @@ html, body {
     --warning: 48 100% 56%;
     --warning-foreground: 234 100% 15%;
 
+    /* Info - Hoppiness Celeste (#1FB4FF) */
+    --info: 202 100% 56%;
+    --info-foreground: 0 0% 100%;
+
     /* Success */
     --success: 142 70% 45%;
     --success-foreground: 0 0% 100%;
@@ -212,6 +216,10 @@ html, body {
 
   .bg-hoppiness-yellow {
     background-color: #ffd41f;
+  }
+
+  .bg-hoppiness-celeste {
+    background-color: #1FB4FF;
   }
 
   .text-hoppiness-blue {

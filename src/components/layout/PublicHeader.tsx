@@ -29,8 +29,8 @@ export function PublicHeader() {
   const [open, setOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname.startsWith(path);
+  const isHome = location.pathname === '/';
 
-  // Use effective user for display (impersonated or real)
   const userName = effectiveUser.full_name || effectiveUser.email?.split('@')[0] || 'Usuario';
   const userEmail = effectiveUser.email || '';
 
@@ -58,13 +58,24 @@ export function PublicHeader() {
             </Button>
           </Link>
           <Button 
-            variant="ghost" 
             size="sm" 
-            className="text-primary-foreground hover:bg-primary-foreground/10"
+            className="bg-accent hover:bg-accent/90 text-accent-foreground"
             onClick={() => window.open('https://pedidos.masdelivery.com/hoppiness', '_blank')}
           >
-            Pedir
+            <ShoppingBag className="w-4 h-4 mr-1" />
+            Pedí Online
           </Button>
+          {isHome && (
+            <a href="#clubes">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-primary-foreground hover:bg-primary-foreground/10"
+              >
+                Nuestros Clubes
+              </Button>
+            </a>
+          )}
           <Link to="/nosotros">
             <Button 
               variant="ghost" 
@@ -76,16 +87,6 @@ export function PublicHeader() {
               Nosotros
             </Button>
           </Link>
-          <Link to="/franquicias">
-            <Button 
-              size="sm" 
-              className={`bg-accent hover:bg-accent/90 text-accent-foreground ${
-                isActive('/franquicias') ? 'ring-2 ring-white/50' : ''
-              }`}
-            >
-              Franquicias
-            </Button>
-          </Link>
           <Link to="/contacto">
             <Button 
               variant="ghost" 
@@ -95,6 +96,17 @@ export function PublicHeader() {
               }`}
             >
               Contacto
+            </Button>
+          </Link>
+          <Link to="/franquicias">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className={`text-primary-foreground hover:bg-primary-foreground/10 ${
+                isActive('/franquicias') ? 'bg-primary-foreground/20' : ''
+              }`}
+            >
+              Franquicias
             </Button>
           </Link>
           
@@ -163,7 +175,7 @@ export function PublicHeader() {
             </DropdownMenu>
           ) : (
             <Link to="/ingresar">
-              <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+              <Button size="sm" variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/10">
                 Ingresar
               </Button>
             </Link>
@@ -173,9 +185,8 @@ export function PublicHeader() {
         {/* Mobile Nav */}
         <div className="flex md:hidden items-center gap-2">
           <Button 
-            variant="ghost" 
             size="icon" 
-            className="text-primary-foreground hover:bg-primary-foreground/10"
+            className="bg-accent hover:bg-accent/90 text-accent-foreground h-9 w-9"
             onClick={() => window.open('https://pedidos.masdelivery.com/hoppiness', '_blank')}
           >
             <ShoppingBag className="w-5 h-5" />
@@ -206,8 +217,16 @@ export function PublicHeader() {
                   onClick={() => { window.open('https://pedidos.masdelivery.com/hoppiness', '_blank'); setOpen(false); }}
                 >
                   <ShoppingBag className="w-4 h-4 mr-2" />
-                  Pedir
+                  Pedí Online
                 </Button>
+                {isHome && (
+                  <a href="#clubes" onClick={() => setOpen(false)}>
+                    <Button variant="ghost" className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10">
+                      <Store className="w-4 h-4 mr-2" />
+                      Nuestros Clubes
+                    </Button>
+                  </a>
+                )}
                 <Link to="/nosotros" onClick={() => setOpen(false)}>
                   <Button 
                     variant="ghost" 
