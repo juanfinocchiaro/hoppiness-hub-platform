@@ -16,12 +16,12 @@ import { PublicFooter } from '@/components/layout/PublicFooter';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 import heroWall from '@/assets/hero-wall.webp';
 import juanHoppiness from '@/assets/juan-hoppiness.jpg';
-import process125 from '@/assets/hoppiness-125.webp';
-import team139 from '@/assets/hoppiness-139.webp';
-import team152 from '@/assets/hoppiness-152.webp';
 import team1 from '@/assets/team-1.jpg';
 import team2 from '@/assets/team-2.jpg';
 import team3 from '@/assets/team-3.jpg';
+import team4 from '@/assets/team-4.jpg';
+import team5 from '@/assets/team-5.jpg';
+import team6 from '@/assets/team-6.jpg';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 
 export default function Nosotros() {
@@ -160,8 +160,8 @@ export default function Nosotros() {
               className="rounded-2xl shadow-card hover:shadow-elevated transition-all w-full h-64 object-cover"
             />
             <img 
-              src={process125} 
-              alt="Proceso de elaboración" 
+              src={team5} 
+              alt="Equipo sacándose una selfie en el local" 
               className="rounded-2xl shadow-card hover:shadow-elevated transition-all w-full h-64 object-cover md:translate-y-8"
             />
             <img 
@@ -170,8 +170,8 @@ export default function Nosotros() {
               className="rounded-2xl shadow-card hover:shadow-elevated transition-all w-full h-64 object-cover"
             />
             <img 
-              src={team139} 
-              alt="Equipo Hoppiness" 
+              src={team4} 
+              alt="Equipo de cocina con delantales Hoppiness" 
               className="rounded-2xl shadow-card hover:shadow-elevated transition-all w-full h-64 object-cover md:-translate-y-4"
             />
             <img 
@@ -180,8 +180,8 @@ export default function Nosotros() {
               className="rounded-2xl shadow-card hover:shadow-elevated transition-all w-full h-64 object-cover md:translate-y-4"
             />
             <img 
-              src={team152} 
-              alt="Equipo en local" 
+              src={team6} 
+              alt="Equipo pasándola bien en el local" 
               className="rounded-2xl shadow-card hover:shadow-elevated transition-all w-full h-64 object-cover md:-translate-y-8"
             />
           </div>
