@@ -8,7 +8,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { MapPin, Clock, ExternalLink, CalendarClock } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { MapPin, Clock, ExternalLink, CalendarClock, ShoppingBag } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 type PublicStatus = 'active' | 'coming_soon';
 
@@ -140,7 +142,6 @@ export function LocationsSection() {
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {isLoading ? (
-            // Skeletons while loading
             Array.from({ length: 5 }).map((_, i) => (
               <Card key={i} className="shadow-card">
                 <CardContent className="p-6">
@@ -150,6 +151,11 @@ export function LocationsSection() {
                 </CardContent>
               </Card>
             ))
+          ) : totalCount === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <MapPin className="w-12 h-12 mx-auto mb-4 text-muted-foreground/40" />
+              <p className="text-muted-foreground">No hay locales disponibles en este momento.</p>
+            </div>
           ) : (
             <>
               {/* Locales Activos */}
@@ -166,15 +172,26 @@ export function LocationsSection() {
                       <MapPin className="w-4 h-4 shrink-0" />
                       {branch.address}
                     </p>
-                    <a 
-                      href={getGoogleMapsUrl(branch.name, branch.city)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-primary hover:underline inline-flex items-center gap-1"
-                    >
-                      Ver en Google Maps
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
+                    <div className="flex items-center gap-3">
+                      <a 
+                        href={getGoogleMapsUrl(branch.name, branch.city)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+                      >
+                        Ver en Google Maps
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                      <Link to="/pedir" className="ml-auto">
+                        <Button
+                          size="sm"
+                          className="bg-accent hover:bg-accent/90 text-accent-foreground"
+                        >
+                          <ShoppingBag className="w-3 h-3 mr-1" />
+                          Pedir
+                        </Button>
+                      </Link>
+                    </div>
                   </CardContent>
                 </Card>
               ))}

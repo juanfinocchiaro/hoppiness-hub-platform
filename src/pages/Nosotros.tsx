@@ -10,7 +10,8 @@ import {
   Users,
   Users2
 } from 'lucide-react';
-import { PublicHeader } from '@/components/layout/PublicHeader';
+import { SEO } from '@/components/SEO';
+import { PublicHeader, MobileOrderFAB } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 import heroWall from '@/assets/hero-wall.webp';
@@ -49,6 +50,11 @@ export default function Nosotros() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Nosotros"
+        description="Conocé la historia de Hoppiness Club: desde un club de cerveza en Cofico hasta la hamburguesería más premiada de Córdoba."
+        path="/nosotros"
+      />
       <ImpersonationBanner />
       <PublicHeader />
       
@@ -211,14 +217,15 @@ export default function Nosotros() {
             Sumate al culto al sabor como cliente o como franquiciado
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="lg" 
-              className="bg-accent hover:bg-accent/90 text-accent-foreground"
-              onClick={() => window.open('https://pedidos.masdelivery.com/hoppiness', '_blank')}
-            >
-              <ShoppingBag className="w-5 h-5 mr-2" />
-              Pedir Ahora
-            </Button>
+            <Link to="/pedir">
+              <Button 
+                size="lg" 
+                className="bg-accent hover:bg-accent/90 text-accent-foreground"
+              >
+                <ShoppingBag className="w-5 h-5 mr-2" />
+                Pedir Ahora
+              </Button>
+            </Link>
             <Link to="/franquicias">
               <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
                 <Users className="w-5 h-5 mr-2" />
@@ -230,6 +237,7 @@ export default function Nosotros() {
       </section>
 
       <PublicFooter />
+      <MobileOrderFAB />
     </div>
   );
 }

@@ -25,7 +25,8 @@ import {
   Trophy,
   Factory
 } from 'lucide-react';
-import { PublicHeader } from '@/components/layout/PublicHeader';
+import { SEO } from '@/components/SEO';
+import { PublicHeader, MobileOrderFAB } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import { FranchiseFormSection } from '@/components/landing';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
@@ -117,6 +118,11 @@ export default function Franquicias() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Franquicias"
+        description="Abrí tu propia franquicia Hoppiness Club. Modelo probado, recupero en 18-24 meses, recetas propias y capacitación completa."
+        path="/franquicias"
+      />
       <ImpersonationBanner />
       <PublicHeader />
 
@@ -372,6 +378,7 @@ export default function Franquicias() {
       </section>
 
       <PublicFooter />
+      <MobileOrderFAB />
     </div>
   );
 }

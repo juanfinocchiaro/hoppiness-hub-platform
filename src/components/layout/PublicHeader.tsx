@@ -57,25 +57,24 @@ export function PublicHeader() {
               Inicio
             </Button>
           </Link>
-          <Button 
-            size="sm" 
-            className="bg-accent hover:bg-accent/90 text-accent-foreground"
-            onClick={() => window.open('https://pedidos.masdelivery.com/hoppiness', '_blank')}
-          >
-            <ShoppingBag className="w-4 h-4 mr-1" />
-            Pedí Online
-          </Button>
-          {isHome && (
-            <a href="#clubes">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-primary-foreground hover:bg-primary-foreground/10"
-              >
-                Nuestros Clubes
-              </Button>
-            </a>
-          )}
+          <Link to="/pedir">
+            <Button 
+              size="sm" 
+              className="bg-accent hover:bg-accent/90 text-accent-foreground"
+            >
+              <ShoppingBag className="w-4 h-4 mr-1" />
+              Pedí Online
+            </Button>
+          </Link>
+          <a href={isHome ? '#clubes' : '/#clubes'}>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-primary-foreground hover:bg-primary-foreground/10"
+            >
+              Nuestros Clubes
+            </Button>
+          </a>
           <Link to="/nosotros">
             <Button 
               variant="ghost" 
@@ -184,13 +183,14 @@ export function PublicHeader() {
 
         {/* Mobile Nav */}
         <div className="flex md:hidden items-center gap-2">
-          <Button 
-            size="icon" 
-            className="bg-accent hover:bg-accent/90 text-accent-foreground h-9 w-9"
-            onClick={() => window.open('https://pedidos.masdelivery.com/hoppiness', '_blank')}
-          >
-            <ShoppingBag className="w-5 h-5" />
-          </Button>
+          <Link to="/pedir">
+            <Button 
+              size="icon" 
+              className="bg-accent hover:bg-accent/90 text-accent-foreground h-9 w-9"
+            >
+              <ShoppingBag className="w-5 h-5" />
+            </Button>
+          </Link>
           
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
@@ -211,22 +211,21 @@ export function PublicHeader() {
                     Inicio
                   </Button>
                 </Link>
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10"
-                  onClick={() => { window.open('https://pedidos.masdelivery.com/hoppiness', '_blank'); setOpen(false); }}
-                >
-                  <ShoppingBag className="w-4 h-4 mr-2" />
-                  Pedí Online
-                </Button>
-                {isHome && (
-                  <a href="#clubes" onClick={() => setOpen(false)}>
-                    <Button variant="ghost" className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10">
-                      <Store className="w-4 h-4 mr-2" />
-                      Nuestros Clubes
-                    </Button>
-                  </a>
-                )}
+                <Link to="/pedir" onClick={() => setOpen(false)}>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10"
+                  >
+                    <ShoppingBag className="w-4 h-4 mr-2" />
+                    Pedí Online
+                  </Button>
+                </Link>
+                <a href={isHome ? '#clubes' : '/#clubes'} onClick={() => setOpen(false)}>
+                  <Button variant="ghost" className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10">
+                    <Store className="w-4 h-4 mr-2" />
+                    Nuestros Clubes
+                  </Button>
+                </a>
                 <Link to="/nosotros" onClick={() => setOpen(false)}>
                   <Button 
                     variant="ghost" 
@@ -331,5 +330,17 @@ export function PublicHeader() {
         </div>
       </div>
     </header>
+  );
+}
+
+export function MobileOrderFAB() {
+  return (
+    <Link
+      to="/pedir"
+      className="fixed bottom-6 right-6 z-50 md:hidden bg-accent hover:bg-accent/90 text-accent-foreground rounded-full p-4 shadow-elevated transition-transform active:scale-95"
+      aria-label="Pedí Online"
+    >
+      <ShoppingBag className="w-6 h-6" />
+    </Link>
   );
 }

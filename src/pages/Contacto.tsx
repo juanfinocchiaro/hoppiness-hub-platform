@@ -37,6 +37,7 @@ import {
   FileText,
   Loader2
 } from 'lucide-react';
+import { SEO } from '@/components/SEO';
 import { PublicHeader } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import { cn } from '@/lib/utils';
@@ -238,9 +239,20 @@ export default function Contacto() {
   const handleAccordionChange = (value: string | undefined) => {
     setOpenAccordion(value);
     if (value) {
-      setFormData({ ...initialFormData, subject: value as SubjectType });
+      setFormData(prev => ({
+        ...initialFormData,
+        name: prev.name,
+        email: prev.email,
+        phone: prev.phone,
+        subject: value as SubjectType,
+      }));
     } else {
-      setFormData(initialFormData);
+      setFormData(prev => ({
+        ...initialFormData,
+        name: prev.name,
+        email: prev.email,
+        phone: prev.phone,
+      }));
     }
     setCvFile(null);
   };
@@ -249,6 +261,18 @@ export default function Contacto() {
     e.preventDefault();
     if (!formData.subject) {
       toast.error('Seleccioná un tipo de consulta');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error('Ingresá un email válido');
+      return;
+    }
+
+    const phoneClean = formData.phone.replace(/[\s\-()]/g, '');
+    if (phoneClean.length < 8) {
+      toast.error('Ingresá un teléfono válido');
       return;
     }
     
@@ -266,12 +290,15 @@ export default function Contacto() {
           .from('cv-uploads')
           .upload(fileName, cvFile);
 
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage
-            .from('cv-uploads')
-            .getPublicUrl(fileName);
-          cvUrl = urlData?.publicUrl || fileName;
+        if (uploadError) {
+          toast.error('Error al subir el CV. Intentá de nuevo.');
+          setLoading(false);
+          return;
         }
+        const { data: urlData } = supabase.storage
+          .from('cv-uploads')
+          .getPublicUrl(fileName);
+        cvUrl = urlData?.publicUrl || fileName;
       }
 
       const insertData: Record<string, unknown> = {
@@ -717,6 +744,11 @@ ${formData.message || 'Sin mensaje adicional'}
     const successMsg = getSuccessMessage(formData.subject as SubjectType);
     return (
       <div className="min-h-screen bg-background">
+        <SEO
+          title="Contacto"
+          description="Contactanos para consultas, franquicias, empleo, proveedores o problemas con pedidos. Te respondemos en menos de 24 horas."
+          path="/contacto"
+        />
         <ImpersonationBanner />
         <PublicHeader />
         
@@ -744,6 +776,11 @@ ${formData.message || 'Sin mensaje adicional'}
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Contacto"
+        description="Contactanos para consultas, franquicias, empleo, proveedores o problemas con pedidos. Te respondemos en menos de 24 horas."
+        path="/contacto"
+      />
       <ImpersonationBanner />
       <PublicHeader />
       

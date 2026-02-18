@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { 
   ShoppingBag, 
@@ -5,7 +6,8 @@ import {
   ArrowRight,
   Music
 } from 'lucide-react';
-import { PublicHeader } from '@/components/layout/PublicHeader';
+import { SEO } from '@/components/SEO';
+import { PublicHeader, MobileOrderFAB } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 import { 
@@ -15,7 +17,6 @@ import {
   FranchiseHero, 
   WhyHoppinessSection,
   TimelineSection,
-  FranchiseFormSection,
   LocationsSection,
   ReviewsSection
 } from '@/components/landing';
@@ -28,6 +29,7 @@ import process125 from '@/assets/hoppiness-125.webp';
 export default function Index() {
   return (
     <div className="min-h-screen bg-background">
+      <SEO path="/" />
       <ImpersonationBanner />
       <PublicHeader />
 
@@ -60,14 +62,15 @@ export default function Index() {
               Más de 15 creaciones de autor. Recetas propias. Culto al sabor desde 2018.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button 
-                size="lg" 
-                className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8"
-                onClick={() => window.open('https://pedidos.masdelivery.com/hoppiness', '_blank')}
-              >
-                <ShoppingBag className="w-5 h-5 mr-2" />
-                Pedí tu Hamburguesa
-              </Button>
+              <Link to="/pedir">
+                <Button 
+                  size="lg" 
+                  className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8"
+                >
+                  <ShoppingBag className="w-5 h-5 mr-2" />
+                  Pedí tu Hamburguesa
+                </Button>
+              </Link>
               <a href="#clubes">
                 <Button size="lg" variant="outline" className="border-2 border-white/80 text-white bg-white/5 hover:bg-white/15 backdrop-blur-sm text-lg px-8">
                   Conocé nuestros Clubes
@@ -118,15 +121,16 @@ export default function Index() {
                 Nuestros clubes están diseñados con mucha onda: un estilo descontracturado donde venís a pasarla bien, 
                 ya sea solo, con amigos o con la familia.
               </p>
-              <Button 
-                size="lg" 
-                className="group"
-                onClick={() => window.open('https://pedidos.masdelivery.com/hoppiness', '_blank')}
-              >
-                <ShoppingBag className="w-5 h-5 mr-2" />
-                Pedí Ahora
-                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-              </Button>
+              <Link to="/pedir">
+                <Button 
+                  size="lg" 
+                  className="group"
+                >
+                  <ShoppingBag className="w-5 h-5 mr-2" />
+                  Pedí Ahora
+                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="col-span-2 grid grid-rows-2 gap-4">
@@ -205,10 +209,8 @@ export default function Index() {
       {/* Timeline */}
       <TimelineSection />
 
-      {/* Formulario de Franquicias */}
-      <FranchiseFormSection />
-
       <PublicFooter />
+      <MobileOrderFAB />
     </div>
   );
 }

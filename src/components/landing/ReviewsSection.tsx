@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Star, MapPin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Star, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
 
 // Reseñas reales de Google Maps de diferentes locales
 const reviews = [
@@ -50,7 +52,12 @@ const reviews = [
   },
 ];
 
+const INITIAL_COUNT = 3;
+
 export function ReviewsSection() {
+  const [showAll, setShowAll] = useState(false);
+  const visibleReviews = showAll ? reviews : reviews.slice(0, INITIAL_COUNT);
+
   return (
     <section className="py-20 px-4 bg-secondary/50">
       <div className="container mx-auto max-w-4xl">
@@ -63,7 +70,7 @@ export function ReviewsSection() {
 
         {/* Lista vertical de reviews */}
         <div className="space-y-4">
-          {reviews.map((review, i) => (
+          {visibleReviews.map((review, i) => (
             <Card key={i} className="shadow-card hover:shadow-elevated transition-all">
               <CardContent className="p-5 flex gap-4">
                 {/* Avatar placeholder */}
@@ -98,7 +105,29 @@ export function ReviewsSection() {
           ))}
         </div>
 
-        <p className="text-center text-muted-foreground mt-8 text-sm">
+        {reviews.length > INITIAL_COUNT && (
+          <div className="text-center mt-8">
+            <Button
+              variant="ghost"
+              className="text-primary"
+              onClick={() => setShowAll(prev => !prev)}
+            >
+              {showAll ? (
+                <>
+                  Ver menos
+                  <ChevronUp className="w-4 h-4 ml-1" />
+                </>
+              ) : (
+                <>
+                  Ver las {reviews.length} reseñas
+                  <ChevronDown className="w-4 h-4 ml-1" />
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+
+        <p className="text-center text-muted-foreground mt-4 text-sm">
           Reseñas reales de Google Maps
         </p>
       </div>

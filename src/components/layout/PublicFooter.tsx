@@ -40,12 +40,9 @@ export function PublicFooter() {
           <div>
             <h4 className="font-bold mb-4 font-brand">ENLACES</h4>
             <div className="space-y-2 text-sm">
-              <button 
-                onClick={() => window.open('https://pedidos.masdelivery.com/hoppiness', '_blank')}
-                className="block text-background/70 hover:text-background text-left"
-              >
+              <Link to="/pedir" className="block text-background/70 hover:text-background">
                 Pedí Online
-              </button>
+              </Link>
               <Link to="/nosotros" className="block text-background/70 hover:text-background">Nosotros</Link>
               <Link to="/franquicias" className="block text-background/70 hover:text-background">Franquicias</Link>
               <a href="/#clubes" className="block text-background/70 hover:text-background">Nuestros Clubes</a>
@@ -57,8 +54,8 @@ export function PublicFooter() {
             <h4 className="font-bold mb-4 font-brand">SUMATE</h4>
             <div className="space-y-2 text-sm">
               <Link to="/franquicias" className="block text-background/70 hover:text-background">Abrí tu Franquicia</Link>
-              <Link to="/contacto?tab=empleo" className="block text-background/70 hover:text-background">Trabajá con nosotros</Link>
-              <Link to="/contacto?tab=proveedores" className="block text-background/70 hover:text-background">Proveedores</Link>
+              <Link to="/contacto?asunto=empleo" className="block text-background/70 hover:text-background">Trabajá con nosotros</Link>
+              <Link to="/contacto?asunto=proveedor" className="block text-background/70 hover:text-background">Proveedores</Link>
               {user ? (
                 <Link to="/cuenta" className="block text-background/70 hover:text-background">Mi Cuenta</Link>
               ) : (

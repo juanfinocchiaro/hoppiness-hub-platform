@@ -1,20 +1,17 @@
-import { useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Store, Users, Handshake, ArrowRight } from 'lucide-react';
-import { FranquiciasModal } from './FranquiciasModal';
-import { EmpleoModal } from './EmpleoModal';
-import { ProveedoresModal } from './ProveedoresModal';
 
 interface SumateCardProps {
   icon: React.ReactNode;
   title: string;
   description: string;
   buttonText: string;
-  onClick: () => void;
+  to: string;
 }
 
-function SumateCard({ icon, title, description, buttonText, onClick }: SumateCardProps) {
+function SumateCard({ icon, title, description, buttonText, to }: SumateCardProps) {
   return (
     <Card className="group bg-card hover:shadow-elevated transition-all duration-300 hover:-translate-y-1 border-border/50">
       <CardContent className="p-8 flex flex-col items-center text-center gap-4">
@@ -23,24 +20,21 @@ function SumateCard({ icon, title, description, buttonText, onClick }: SumateCar
         </div>
         <h3 className="text-xl font-bold">{title}</h3>
         <p className="text-muted-foreground text-sm">{description}</p>
-        <Button 
-          variant="ghost" 
-          className="mt-2 text-primary hover:text-primary/80 group-hover:translate-x-1 transition-transform"
-          onClick={onClick}
-        >
-          {buttonText}
-          <ArrowRight className="w-4 h-4 ml-1" />
-        </Button>
+        <Link to={to}>
+          <Button 
+            variant="ghost" 
+            className="mt-2 text-primary hover:text-primary/80 group-hover:translate-x-1 transition-transform"
+          >
+            {buttonText}
+            <ArrowRight className="w-4 h-4 ml-1" />
+          </Button>
+        </Link>
       </CardContent>
     </Card>
   );
 }
 
 export function SumateSection() {
-  const [franquiciasOpen, setFranquiciasOpen] = useState(false);
-  const [empleoOpen, setEmpleoOpen] = useState(false);
-  const [proveedoresOpen, setProveedoresOpen] = useState(false);
-
   return (
     <section className="py-20 px-4 bg-secondary/30">
       <div className="container mx-auto max-w-6xl">
@@ -59,7 +53,7 @@ export function SumateSection() {
             title="Franquicias"
             description="Abrí tu propio Hoppiness Club y sé parte de nuestra red de locales."
             buttonText="Más info"
-            onClick={() => setFranquiciasOpen(true)}
+            to="/franquicias"
           />
           
           <SumateCard
@@ -67,7 +61,7 @@ export function SumateSection() {
             title="Trabajá con nosotros"
             description="Sumate al equipo y formá parte de la mejor hamburguesería."
             buttonText="Postulate"
-            onClick={() => setEmpleoOpen(true)}
+            to="/contacto?asunto=empleo"
           />
           
           <SumateCard
@@ -75,14 +69,10 @@ export function SumateSection() {
             title="Proveedores"
             description="¿Querés ser proveedor de Hoppiness Club? Contactanos."
             buttonText="Contactanos"
-            onClick={() => setProveedoresOpen(true)}
+            to="/contacto?asunto=proveedor"
           />
         </div>
       </div>
-
-      <FranquiciasModal open={franquiciasOpen} onOpenChange={setFranquiciasOpen} />
-      <EmpleoModal open={empleoOpen} onOpenChange={setEmpleoOpen} />
-      <ProveedoresModal open={proveedoresOpen} onOpenChange={setProveedoresOpen} />
     </section>
   );
 }

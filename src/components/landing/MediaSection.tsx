@@ -9,14 +9,12 @@ const businessMedia = [
     quote: 'Es 100% cordobesa, vende 600 hamburguesas por día y planea expandirse con franquicias',
     year: '2021',
     context: 'Nota sobre crecimiento y modelo de negocio',
-    url: '#',
   },
   {
     source: 'La Voz del Interior',
     quote: 'La hamburguesa que rompe todos los estándares',
     year: '2022',
     context: 'Perfil de marca y expansión',
-    url: '#',
   },
 ];
 

@@ -47,7 +47,7 @@ export function FranchiseFormSection() {
         subject: 'franquicia',
         message: formData.message.trim() || `Experiencia: ${formData.hasExperience || 'No especificado'}`,
         franchise_has_zone: formData.city.trim(),
-        investment_range: formData.investmentRange || null,
+        franchise_investment_capital: formData.investmentRange || null,
       });
 
       if (error) throw error;
