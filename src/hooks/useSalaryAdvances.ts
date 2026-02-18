@@ -282,6 +282,82 @@ export function useCreateAdvance() {
   });
 }
 
+interface ApproveAdvanceParams {
+  advanceId: string;
+  paymentMethod: 'cash' | 'transfer';
+  shiftId?: string;
+}
+
+export function useApproveAdvance() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: ApproveAdvanceParams) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No autenticado');
+      
+      const isCash = params.paymentMethod === 'cash';
+      const status = isCash ? 'paid' : 'transferred';
+      
+      const { data, error } = await supabase
+        .from('salary_advances')
+        .update({
+          status,
+          payment_method: params.paymentMethod,
+          authorized_by: user.id,
+          authorized_at: new Date().toISOString(),
+          paid_by: user.id,
+          paid_at: new Date().toISOString(),
+          transferred_by: !isCash ? user.id : null,
+          transferred_at: !isCash ? new Date().toISOString() : null,
+          shift_id: isCash ? params.shiftId : null,
+        })
+        .eq('id', params.advanceId)
+        .eq('status', 'pending')
+        .select('branch_id')
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: salaryAdvanceKeys.all });
+      toast.success('Adelanto aprobado');
+    },
+    onError: (error) => {
+      if (import.meta.env.DEV) console.error('Error al aprobar adelanto:', error);
+      toast.error('Error al aprobar el adelanto');
+    },
+  });
+}
+
+export function useRejectAdvance() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (advanceId: string) => {
+      const { data, error } = await supabase
+        .from('salary_advances')
+        .update({ status: 'cancelled' })
+        .eq('id', advanceId)
+        .eq('status', 'pending')
+        .select('branch_id')
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: salaryAdvanceKeys.all });
+      toast.success('Solicitud rechazada');
+    },
+    onError: (error) => {
+      if (import.meta.env.DEV) console.error('Error al rechazar:', error);
+      toast.error('Error al rechazar la solicitud');
+    },
+  });
+}
+
 export function useMarkAdvanceTransferred() {
   const queryClient = useQueryClient();
   
@@ -312,6 +388,49 @@ export function useMarkAdvanceTransferred() {
     onError: (error) => {
       if (import.meta.env.DEV) console.error('Error:', error);
       toast.error('Error al marcar transferencia');
+    },
+  });
+}
+
+interface RequestAdvanceParams {
+  branchId: string;
+  amount: number;
+  reason?: string;
+}
+
+export function useRequestAdvance() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: RequestAdvanceParams) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No autenticado');
+      
+      const { data, error } = await supabase
+        .from('salary_advances')
+        .insert({
+          branch_id: params.branchId,
+          employee_id: user.id,
+          user_id: user.id,
+          amount: params.amount,
+          reason: params.reason || null,
+          payment_method: 'cash',
+          status: 'pending',
+          created_by: user.id,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: salaryAdvanceKeys.all });
+      toast.success('Solicitud de adelanto enviada');
+    },
+    onError: (error) => {
+      if (import.meta.env.DEV) console.error('Error al solicitar adelanto:', error);
+      toast.error('Error al enviar la solicitud');
     },
   });
 }

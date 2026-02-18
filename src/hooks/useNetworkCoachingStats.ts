@@ -51,11 +51,12 @@ export function useNetworkCoachingStats() {
     queryKey: ['network-coaching-stats', currentMonth, currentYear],
     queryFn: async (): Promise<NetworkCoachingStats> => {
       // 1. Obtener todas las sucursales activas
-      const { data: branches } = await supabase
+      const { data: branches, error: branchesErr } = await supabase
         .from('branches')
         .select('id, name')
         .eq('is_active', true);
 
+      if (branchesErr) throw branchesErr;
       if (!branches?.length) {
         return {
           totalEmployees: 0,
@@ -74,12 +75,14 @@ export function useNetworkCoachingStats() {
       const branchMap = new Map(branches.map(b => [b.id, b.name]));
 
       // 2. Obtener empleados y cajeros por sucursal
-      const { data: staffRoles } = await supabase
+      const { data: staffRoles, error: staffErr } = await supabase
         .from('user_branch_roles')
         .select('user_id, branch_id')
         .in('branch_id', branchIds)
         .in('local_role', ['empleado', 'cajero'])
         .eq('is_active', true);
+
+      if (staffErr) throw staffErr;
 
       const staffByBranch = new Map<string, string[]>();
       staffRoles?.forEach(r => {
@@ -89,19 +92,23 @@ export function useNetworkCoachingStats() {
       });
 
       // 3. Obtener coachings de este mes
-      const { data: thisMonthCoachings } = await supabase
+      const { data: thisMonthCoachings, error: coachingsErr } = await supabase
         .from('coachings')
         .select('id, user_id, branch_id, overall_score, acknowledged_at')
         .in('branch_id', branchIds)
         .eq('coaching_month', currentMonth)
         .eq('coaching_year', currentYear);
 
+      if (coachingsErr) throw coachingsErr;
+
       // 4. Obtener perfiles para top/low performers
       const coachingUserIds = [...new Set(thisMonthCoachings?.map(c => c.user_id) ?? [])];
-      const { data: profiles } = await supabase
+      const { data: profiles, error: profilesErr } = await supabase
         .from('profiles')
         .select('id, full_name')
         .in('id', coachingUserIds);
+
+      if (profilesErr) throw profilesErr;
 
       const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]) ?? []);
 
@@ -160,12 +167,14 @@ export function useNetworkCoachingStats() {
         const targetMonth = targetDate.getMonth() + 1;
         const targetYear = targetDate.getFullYear();
         
-        const { data: monthData } = await supabase
+        const { data: monthData, error: monthErr } = await supabase
           .from('coachings')
           .select('overall_score')
           .in('branch_id', branchIds)
           .eq('coaching_month', targetMonth)
           .eq('coaching_year', targetYear);
+
+        if (monthErr) throw monthErr;
 
         const monthScores = monthData?.filter(c => c.overall_score !== null).map(c => c.overall_score!) || [];
         const monthAvg = monthScores.length > 0

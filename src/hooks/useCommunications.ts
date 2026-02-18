@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
+import { toast } from 'sonner';
 
 interface Communication {
   id: string;
@@ -158,6 +159,7 @@ export function useMarkAsRead() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-communications'] });
     },
+    onError: (e: Error) => toast.error(`Error al marcar como leído: ${e.message}`),
   });
 }
 
@@ -180,6 +182,7 @@ export function useConfirmCommunication() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-communications'] });
     },
+    onError: (e: Error) => toast.error(`Error al confirmar comunicado: ${e.message}`),
   });
 }
 
@@ -209,7 +212,9 @@ export function useCreateCommunication() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['communications'] });
+      toast.success('Comunicado creado');
     },
+    onError: (e: Error) => toast.error(`Error al crear comunicado: ${e.message}`),
   });
 }
 
@@ -227,7 +232,9 @@ export function useDeleteCommunication() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['communications'] });
+      toast.success('Comunicado eliminado');
     },
+    onError: (e: Error) => toast.error(`Error al eliminar comunicado: ${e.message}`),
   });
 }
 

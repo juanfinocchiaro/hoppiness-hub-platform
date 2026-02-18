@@ -20,6 +20,8 @@ import {
   CalendarDays,
   DollarSign,
   User,
+  AlertTriangle,
+  BarChart3,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -35,15 +37,16 @@ export function CuentaSidebar() {
   // Check if user is staff (has any local role)
   const isStaff = branchRoles.length > 0;
   
-  // Check if user is only franquiciado (owner without operational work)
   const isOnlyFranquiciado = branchRoles.length > 0 && 
     branchRoles.every(r => r.local_role === 'franquiciado');
+  
+  const hasMultipleBranches = branchRoles.length >= 2;
   
   // Staff that work operationally (not just owners)
   const isOperationalStaff = isStaff && !isOnlyFranquiciado;
   
   // Check active section for auto-expand
-  const trabajoPaths = ['/cuenta/horario', '/cuenta/fichajes', '/cuenta/coachings', '/cuenta/reuniones'];
+  const trabajoPaths = ['/cuenta/horario', '/cuenta/fichajes', '/cuenta/coachings', '/cuenta/reuniones', '/cuenta/apercibimientos'];
   const isTrabajoActive = trabajoPaths.some(p => location.pathname.startsWith(p));
   
   const solicitudesPaths = ['/cuenta/solicitudes', '/cuenta/adelantos'];
@@ -73,6 +76,7 @@ export function CuentaSidebar() {
           <NavItemButton to="/cuenta/horario" icon={Calendar} label="Horario" />
           <NavItemButton to="/cuenta/fichajes" icon={Clock} label="Fichajes" />
           <NavItemButton to="/cuenta/coachings" icon={ClipboardList} label="Coachings" />
+          <NavItemButton to="/cuenta/apercibimientos" icon={AlertTriangle} label="Apercibimientos" />
           <NavItemButton to="/cuenta/reuniones" icon={Users} label="Reuniones" />
         </NavSectionGroup>
       )}
@@ -88,6 +92,15 @@ export function CuentaSidebar() {
           <NavItemButton to="/cuenta/solicitudes" icon={Calendar} label="Días Libres" />
           <NavItemButton to="/cuenta/adelantos" icon={DollarSign} label="Adelantos" />
         </NavSectionGroup>
+      )}
+      
+      {/* Comparativo - For multi-branch users (franquiciados) */}
+      {hasMultipleBranches && isOnlyFranquiciado && (
+        <NavDashboardLink
+          to="/cuenta/comparativo"
+          icon={BarChart3}
+          label="Comparativo"
+        />
       )}
       
       {/* Comunicados - For all staff */}

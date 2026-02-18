@@ -64,6 +64,9 @@ interface LocalSidebarProps {
     canViewVentasMensualesLocal: boolean;
     // Socios
     canViewSocios: boolean;
+    // Cierres de turno
+    canViewClosures: boolean;
+    canCloseShifts: boolean;
     // Comunicados
     canViewLocalCommunications: boolean;
     // Config
@@ -85,6 +88,7 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
     canViewLocalPnL, canViewSalaryAdvances, canViewPayroll,
     canViewGastos, canViewConsumos, canViewPeriodos, canViewVentasMensualesLocal,
     canViewSocios, canViewLocalCommunications,
+    canViewClosures, canCloseShifts,
     isFranquiciado, isContadorLocal,
   } = permissions;
 
@@ -229,6 +233,15 @@ export function LocalSidebar({ branchId, permissions }: LocalSidebarProps) {
           to={`${basePath}/equipo/comunicados`}
           icon={MessageSquare}
           label="Comunicados"
+        />
+      )}
+
+      {/* Ventas / Cierres - Visible para cajeros, encargados y franquiciados */}
+      {(canViewClosures || canCloseShifts) && (
+        <NavDashboardLink
+          to={`${basePath}/ventas/historial`}
+          icon={TrendingUp}
+          label="Ventas y Cierres"
         />
       )}
 

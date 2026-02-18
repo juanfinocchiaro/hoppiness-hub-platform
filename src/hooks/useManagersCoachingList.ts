@@ -52,47 +52,55 @@ export function useManagersCoachingList(options: UseManagersCoachingListOptions 
 
       // 2. Obtener perfiles
       const userIds = [...new Set(roles.map(r => r.user_id))];
-      const { data: profiles } = await supabase
+      const { data: profiles, error: profilesErr } = await supabase
         .from('profiles')
         .select('id, full_name, avatar_url')
         .in('id', userIds);
 
+      if (profilesErr) throw profilesErr;
       const profileMap = new Map(profiles?.map(p => [p.id, p]) ?? []);
 
       // 3. Obtener sucursales
       const branchIds = [...new Set(roles.map(r => r.branch_id))];
-      const { data: branches } = await supabase
+      const { data: branches, error: branchesErr } = await supabase
         .from('branches')
         .select('id, name')
         .in('id', branchIds);
 
+      if (branchesErr) throw branchesErr;
       const branchMap = new Map(branches?.map(b => [b.id, b]) ?? []);
 
       // 4. Obtener coachings de este mes para los encargados
-      const { data: thisMonthCoachings } = await supabase
+      const { data: thisMonthCoachings, error: thisMonthErr } = await supabase
         .from('coachings')
         .select('id, user_id, branch_id, coaching_date, overall_score, acknowledged_at, evaluated_by')
         .in('user_id', userIds)
         .eq('coaching_month', currentMonth)
         .eq('coaching_year', currentYear);
 
+      if (thisMonthErr) throw thisMonthErr;
+
       // 5. Obtener coachings del mes anterior para comparación
       const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
       const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
       
-      const { data: prevMonthCoachings } = await supabase
+      const { data: prevMonthCoachings, error: prevMonthErr } = await supabase
         .from('coachings')
         .select('user_id, branch_id, overall_score')
         .in('user_id', userIds)
         .eq('coaching_month', prevMonth)
         .eq('coaching_year', prevYear);
 
+      if (prevMonthErr) throw prevMonthErr;
+
       // 6. Obtener nombres de evaluadores
       const evaluatorIds = [...new Set(thisMonthCoachings?.map(c => c.evaluated_by) ?? [])];
-      const { data: evaluators } = await supabase
+      const { data: evaluators, error: evalErr } = await supabase
         .from('profiles')
         .select('id, full_name')
         .in('id', evaluatorIds);
+
+      if (evalErr) throw evalErr;
 
       const evaluatorMap = new Map(evaluators?.map(e => [e.id, e.full_name]) ?? []);
 

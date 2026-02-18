@@ -189,8 +189,8 @@ export default function MyCommunicationsCard({ showOnlyBrand = false }: MyCommun
       </Card>
 
       {/* Detail Dialog */}
-      <Dialog open={!!selectedComm} onOpenChange={(open) => !open && selectedComm?.is_read && setSelectedComm(null)}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col [&>button]:hidden">
+      <Dialog open={!!selectedComm} onOpenChange={(open) => !open && setSelectedComm(null)}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
           {selectedComm && (
             <>
               <DialogHeader className="flex-shrink-0">

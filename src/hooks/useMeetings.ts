@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useEffectiveUser } from './useEffectiveUser';
+import { toast } from 'sonner';
 import type { 
   Meeting, 
   MeetingWithDetails, 
@@ -373,7 +374,9 @@ export function useConveneMeeting() {
       queryClient.invalidateQueries({ queryKey: ['brand-meetings'] });
       queryClient.invalidateQueries({ queryKey: ['my-meetings'] });
       queryClient.invalidateQueries({ queryKey: ['brand-meetings-stats'] });
+      toast.success('Reunión convocada');
     },
+    onError: (e: Error) => toast.error(`Error al convocar reunión: ${e.message}`),
   });
 }
 
@@ -435,7 +438,9 @@ export function useUpdateConvokedMeeting() {
       queryClient.invalidateQueries({ queryKey: ['branch-meetings'] });
       queryClient.invalidateQueries({ queryKey: ['brand-meetings'] });
       queryClient.invalidateQueries({ queryKey: ['my-meetings'] });
+      toast.success('Reunión actualizada');
     },
+    onError: (e: Error) => toast.error(`Error al actualizar reunión: ${e.message}`),
   });
 }
 
@@ -462,7 +467,9 @@ export function useCancelMeeting() {
       queryClient.invalidateQueries({ queryKey: ['brand-meetings'] });
       queryClient.invalidateQueries({ queryKey: ['my-meetings'] });
       queryClient.invalidateQueries({ queryKey: ['brand-meetings-stats'] });
+      toast.success('Reunión cancelada');
     },
+    onError: (e: Error) => toast.error(`Error al cancelar reunión: ${e.message}`),
   });
 }
 
@@ -472,10 +479,13 @@ export function useCancelMeeting() {
 
 // Iniciar reunión (pasar de CONVOCADA a EN_CURSO)
 export function useStartMeeting() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (meetingId: string) => {
+      if (!user?.id) throw new Error('No authenticated user');
+
       const { data, error } = await supabase
         .from('meetings')
         .update({
@@ -484,6 +494,7 @@ export function useStartMeeting() {
         })
         .eq('id', meetingId)
         .eq('status', 'convocada')
+        .eq('created_by', user.id)
         .select()
         .single();
       
@@ -495,7 +506,9 @@ export function useStartMeeting() {
       queryClient.invalidateQueries({ queryKey: ['branch-meetings'] });
       queryClient.invalidateQueries({ queryKey: ['brand-meetings'] });
       queryClient.invalidateQueries({ queryKey: ['brand-meetings-stats'] });
+      toast.success('Reunión iniciada');
     },
+    onError: (e: Error) => toast.error(`Error al iniciar reunión: ${e.message}`),
   });
 }
 
@@ -528,6 +541,7 @@ export function useUpdateAttendance() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meeting-detail'] });
     },
+    onError: (e: Error) => toast.error(`Error al guardar asistencia: ${e.message}`),
   });
 }
 
@@ -547,6 +561,7 @@ export function useSaveMeetingNotes() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meeting-detail'] });
     },
+    onError: (e: Error) => toast.error(`Error al guardar notas: ${e.message}`),
   });
 }
 
@@ -598,6 +613,7 @@ export function useAddAgreement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meeting-detail'] });
     },
+    onError: (e: Error) => toast.error(`Error al agregar acuerdo: ${e.message}`),
   });
 }
 
@@ -624,6 +640,7 @@ export function useDeleteAgreement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meeting-detail'] });
     },
+    onError: (e: Error) => toast.error(`Error al eliminar acuerdo: ${e.message}`),
   });
 }
 
@@ -712,7 +729,9 @@ export function useCloseMeeting() {
       queryClient.invalidateQueries({ queryKey: ['brand-meetings'] });
       queryClient.invalidateQueries({ queryKey: ['my-meetings'] });
       queryClient.invalidateQueries({ queryKey: ['brand-meetings-stats'] });
+      toast.success('Reunión cerrada');
     },
+    onError: (e: Error) => toast.error(`Error al cerrar reunión: ${e.message}`),
   });
 }
 
@@ -744,6 +763,7 @@ export function useMarkMeetingAsRead() {
       queryClient.invalidateQueries({ queryKey: ['branch-meetings'] });
       queryClient.invalidateQueries({ queryKey: ['brand-meetings'] });
     },
+    onError: (e: Error) => toast.error(`Error al marcar como leída: ${e.message}`),
   });
 }
 
@@ -841,7 +861,9 @@ export function useCreateMeeting() {
       queryClient.invalidateQueries({ queryKey: ['unread-meetings-count'] });
       queryClient.invalidateQueries({ queryKey: ['brand-meetings'] });
       queryClient.invalidateQueries({ queryKey: ['brand-meetings-stats'] });
+      toast.success('Reunión creada');
     },
+    onError: (e: Error) => toast.error(`Error al crear reunión: ${e.message}`),
   });
 }
 

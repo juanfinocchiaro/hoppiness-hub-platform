@@ -45,6 +45,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import { useUserCommunications, useMarkAsRead } from '@/hooks/useCommunications';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 const TYPES = [
   { value: 'info', label: 'Información', icon: Info, color: 'bg-blue-500/10 text-blue-600' },
@@ -59,6 +60,7 @@ export default function LocalCommunicationsPage() {
   const { local } = useDynamicPermissions(branchId);
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     body: '',
@@ -367,7 +369,7 @@ export default function LocalCommunicationsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => deleteMutation.mutate(comm.id)}
+                            onClick={() => setDeleteId(comm.id)}
                           >
                             <Trash2 className="w-4 h-4 text-destructive" />
                           </Button>
@@ -439,6 +441,19 @@ export default function LocalCommunicationsPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      <ConfirmDialog
+        open={!!deleteId}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title="Eliminar comunicado"
+        description="¿Estás seguro de que querés eliminar este comunicado? Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        variant="destructive"
+        onConfirm={() => {
+          if (deleteId) deleteMutation.mutate(deleteId);
+          setDeleteId(null);
+        }}
+      />
     </div>
   );
 }

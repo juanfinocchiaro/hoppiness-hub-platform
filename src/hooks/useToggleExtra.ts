@@ -3,12 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 async function getExtrasCategoryId(): Promise<string | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('menu_categorias' as any)
     .select('id')
     .ilike('nombre', '%extras%')
     .limit(1)
     .maybeSingle();
+  if (error) throw error;
   return (data as any)?.id || null;
 }
 
@@ -25,22 +26,24 @@ async function findExistingExtra(
   const field = tipo === 'preparacion'
     ? 'composicion_ref_preparacion_id'
     : 'composicion_ref_insumo_id';
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('items_carta')
     .select('id, activo, deleted_at')
     .eq('tipo', 'extra')
     .eq(field, refId)
     .maybeSingle();
+  if (error) throw error;
   if (!data) return null;
 
   // If extra references a deleted preparation, treat as non-existent
   if (tipo === 'preparacion') {
-    const { data: prep } = await supabase
+    const { data: prep, error: prepErr } = await supabase
       .from('preparaciones')
       .select('id')
       .eq('id', refId)
       .is('deleted_at', null)
       .maybeSingle();
+    if (prepErr) throw prepErr;
     if (!prep) return null;
   }
 
@@ -121,7 +124,8 @@ export function useToggleExtra() {
         if (compError) throw compError;
 
         // Recalculate cost via RPC (now uses standard path with composition)
-        await supabase.rpc('recalcular_costo_item_carta', { _item_id: extraId });
+        const { error: rpcErr } = await supabase.rpc('recalcular_costo_item_carta', { _item_id: extraId });
+        if (rpcErr) throw rpcErr;
 
         // 3. Create assignment
         const { error: asigError } = await supabase

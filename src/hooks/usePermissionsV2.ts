@@ -57,6 +57,7 @@ export interface PermissionsV2 {
   // Helpers de rol
   isSuperadmin: boolean;
   isCoordinador: boolean;
+  isCommunityManager: boolean;
   isInformes: boolean;
   isContadorMarca: boolean;
   isFranquiciado: boolean;
@@ -219,6 +220,7 @@ export interface PermissionsV2 {
 export const BRAND_ROLE_LABELS: Record<string, string> = {
   superadmin: 'Superadmin',
   coordinador: 'Coordinador',
+  community_manager: 'Community Manager',
   informes: 'Informes',
   contador_marca: 'Contador Marca',
 };
@@ -346,6 +348,7 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
   const isCoordinador = brandRole === 'coordinador';
   const isInformes = brandRole === 'informes';
   const isContadorMarca = brandRole === 'contador_marca';
+  const isCommunityManager = brandRole === 'community_manager';
   
   // Helpers de rol local (para la sucursal actual)
   const isFranquiciado = localRole === 'franquiciado';
@@ -383,7 +386,7 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     canEditProducts: isSuperadmin || isCoordinador,
     canManageModifiers: isSuperadmin || isCoordinador,
     canManageIngredients: isSuperadmin || isCoordinador,
-    canEditPrices: isSuperadmin || isCoordinador,
+    canEditPrices: isSuperadmin,
     canManagePromotions: isSuperadmin || isCoordinador,
     
     // Catálogos Marca
@@ -410,9 +413,9 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     canAssignRoles: isSuperadmin,
     
     // Comunicación
-    canManageMessages: isSuperadmin || isCoordinador,
-    canViewContactMessages: isSuperadmin || isCoordinador,
-    canManageContactMessages: isSuperadmin || isCoordinador,
+    canManageMessages: isSuperadmin || isCoordinador || isCommunityManager,
+    canViewContactMessages: isSuperadmin || isCoordinador || isCommunityManager,
+    canManageContactMessages: isSuperadmin || isCoordinador || isCommunityManager,
     
     // Coaching
     canCoachManagers: isSuperadmin || isCoordinador,
@@ -424,7 +427,7 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     
     // Configuración
     canEditBrandConfig: isSuperadmin,
-    canManageChannels: isSuperadmin || isCoordinador,
+    canManageChannels: isSuperadmin || isCoordinador || isCommunityManager,
     canManageIntegrations: isSuperadmin,
   };
   
@@ -462,7 +465,7 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     // Acciones operativas
     canCreateSalaryAdvance: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
     canCancelSalaryAdvance: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
-    canCreateWarning: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
+    canCreateWarning: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
     canUploadSignature: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
     canDoCoaching: hasCurrentBranchAccess && (isSuperadmin || isEncargado),
     canViewCoaching: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),
@@ -525,6 +528,7 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     // Helpers de rol
     isSuperadmin,
     isCoordinador,
+    isCommunityManager,
     isInformes,
     isContadorMarca,
     isFranquiciado,

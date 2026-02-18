@@ -30,7 +30,7 @@ import {
   Building2, MessageSquare, FileText, Shield, ClipboardList,
   BarChart3, Wallet, Package, Truck, Landmark, TrendingUp,
   CalendarDays, Calendar, Eye, Calculator, BookOpen, ChefHat,
-  Beef, Network, Boxes, Briefcase, GripVertical,
+  Beef, Network, Boxes, Briefcase, GripVertical, History,
 } from 'lucide-react';
 import {
   WorkSidebarNav, NavSectionGroup, NavItemButton,
@@ -96,15 +96,15 @@ export function BrandSidebar() {
   const isMenuEngActive = p.includes('/mimarca/finanzas/insumos') || p.includes('/mimarca/finanzas/proveedores') || p.includes('/mimarca/recetas') || p.includes('/mimarca/carta') || p === '/mimarca/centro-costos';
   const isGestionRedActive = p.includes('/mimarca/supervisiones') || p.includes('/mimarca/coaching') || p.includes('/mimarca/comunicados') || p.includes('/mimarca/reuniones');
   const isModeloOpActive = p.includes('/mimarca/finanzas/conceptos-servicio') || p.includes('/mimarca/configuracion/calendario') || p.includes('/mimarca/reglamentos') || p.includes('/mimarca/configuracion/cierres');
-  const isFinanzasActive = p.includes('/mimarca/finanzas/ventas-mensuales') || p.includes('/mimarca/finanzas/canon');
-  const isAdminActive = p.includes('/mimarca/mensajes') || p.includes('/mimarca/equipo-central') || p.includes('/mimarca/usuarios') || p.includes('/mimarca/configuracion/permisos');
+  const isFinanzasActive = p.includes('/mimarca/finanzas/ventas-mensuales') || p.includes('/mimarca/finanzas/canon') || p.includes('/mimarca/informes');
+  const isAdminActive = p.includes('/mimarca/mensajes') || p.includes('/mimarca/equipo-central') || p.includes('/mimarca/usuarios') || p.includes('/mimarca/configuracion/permisos') || p.includes('/mimarca/auditoria');
 
   // Section visibility
   const canSeeLocales = bp.canViewLocales;
   const canSeeMenuEng = bp.canViewInsumos || bp.canViewProveedoresMarca;
   const canSeeGestionRed = bp.canCoachManagers || bp.canViewCoaching || bp.canManageMessages || bp.canViewMeetings;
   const canSeeModeloOp = bp.canEditBrandConfig || bp.canViewConceptosServicio || isSuperadmin;
-  const canSeeFinanzas = bp.canViewVentasMensuales || bp.canViewCanon;
+  const canSeeFinanzas = bp.canViewVentasMensuales || bp.canViewCanon || bp.canViewPnL;
   const canSeeAdmin = bp.canViewContactMessages || bp.canViewCentralTeam || bp.canSearchUsers || isSuperadmin;
 
   // Build section map
@@ -151,6 +151,7 @@ export function BrandSidebar() {
 
     finanzas: canSeeFinanzas ? (
       <NavSectionGroup id="finanzas" label="Finanzas Marca" icon={Wallet} forceOpen={isFinanzasActive}>
+        {bp.canViewPnL && <NavItemButton to="/mimarca/informes" icon={BarChart3} label="Reportes" />}
         {bp.canViewVentasMensuales && <NavItemButton to="/mimarca/finanzas/ventas-mensuales" icon={TrendingUp} label="Ventas Mensuales" />}
         {bp.canViewCanon && <NavItemButton to="/mimarca/finanzas/canon" icon={Landmark} label="Canon" />}
       </NavSectionGroup>
@@ -164,6 +165,7 @@ export function BrandSidebar() {
         {bp.canViewCentralTeam && <NavItemButton to="/mimarca/equipo-central" icon={Building2} label="Equipo Central" />}
         {bp.canSearchUsers && <NavItemButton to="/mimarca/usuarios" icon={Users} label="Usuarios y Permisos" />}
         {isSuperadmin && <NavItemButton to="/mimarca/configuracion/permisos" icon={Shield} label="Config. Permisos" />}
+        {isSuperadmin && <NavItemButton to="/mimarca/auditoria" icon={History} label="Auditoría" />}
       </NavSectionGroup>
     ) : null,
   // eslint-disable-next-line react-hooks/exhaustive-deps

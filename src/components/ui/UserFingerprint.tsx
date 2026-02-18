@@ -30,11 +30,10 @@ export function UserFingerprint() {
   
   return (
     <div 
-      className="fixed bottom-2 right-2 z-50 
-                 px-2 py-1 rounded-full text-xs
+      className="px-2 py-1 rounded-full text-xs
                  bg-muted/80 backdrop-blur-sm border
                  text-muted-foreground
-                 select-none pointer-events-none
+                 select-none
                  print:hidden"
     >
       <span className={isImpersonated ? 'text-amber-600 font-medium' : ''}>

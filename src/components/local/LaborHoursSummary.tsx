@@ -19,12 +19,10 @@ import {
   CalendarDays,
   CheckCircle,
   XCircle,
-  Star,
   Scale,
   Info,
   ChevronDown,
-  ChevronUp,
-  ExternalLink
+  ChevronUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -246,16 +244,9 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
         <Scale className="h-4 w-4 text-blue-600" />
         <AlertTitle className="text-blue-800">Cálculos según convenio sindical</AlertTitle>
         <AlertDescription className="text-blue-700 text-sm">
-          Los cálculos de horas extras, feriados y presentismo siguen los lineamientos del{' '}
-          <strong>CCT Gastronómicos / Pasteleros</strong> y la Ley de Contrato de Trabajo.
-          <a 
-            href="https://www.argentina.gob.ar/trabajo" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 ml-1 underline hover:no-underline"
-          >
-            Más info <ExternalLink className="h-3 w-3" />
-          </a>
+          Según <strong>CCT 329/00 – Servicios Rápidos</strong> y art. 201 LCT:{' '}
+          límite diario 9 hs, límite mensual 190 hs, recargo +50 % en todas las extras.{' '}
+          Horas en franco o feriado trabajado se computan siempre como extra.
         </AlertDescription>
       </Alert>
       
@@ -327,7 +318,7 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
                 <Info className="h-3 w-3" /> HS Extras Día Hábil
               </TooltipTrigger>
               <TooltipContent>
-                <p className="max-w-xs">Horas que exceden las 190 mensuales, trabajadas en días hábiles (50% adicional)</p>
+                <p className="max-w-xs">Horas hábiles que exceden las 190 mensuales (+50 %)</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -338,7 +329,7 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
                 <Info className="h-3 w-3" /> HS Extras Franco/Feriado
               </TooltipTrigger>
               <TooltipContent>
-                <p className="max-w-xs">Horas trabajadas en días francos o feriados (100% adicional)</p>
+                <p className="max-w-xs">Horas trabajadas en franco o feriado — siempre extra (+50 %)</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

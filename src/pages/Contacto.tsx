@@ -21,7 +21,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -43,6 +43,7 @@ import { cn } from '@/lib/utils';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 
 type SubjectType = 'consulta' | 'franquicia' | 'empleo' | 'pedidos' | 'proveedor';
+type BranchPublicStatus = 'active' | 'coming_soon' | 'hidden';
 
 interface FormData {
   name: string;
@@ -134,7 +135,7 @@ export default function Contacto() {
   const [submitted, setSubmitted] = useState(false);
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [openAccordion, setOpenAccordion] = useState<string | undefined>(undefined);
-  const { toast } = useToast();
+  
 
   // Fetch branches for dropdowns
   const { data: branches } = useQuery({
@@ -142,10 +143,10 @@ export default function Contacto() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('branches_public')
-        .select('id, name')
+        .select('id, name, public_status')
         .order('name');
       if (error) throw error;
-      return data;
+      return data as { id: string; name: string; public_status: BranchPublicStatus }[];
     }
   });
 
@@ -223,11 +224,11 @@ export default function Contacto() {
     if (file) {
       const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
       if (!validTypes.includes(file.type)) {
-        toast({ title: 'Formato no válido', description: 'Solo se permiten archivos PDF, DOC o DOCX', variant: 'destructive' });
+        toast.error('Formato no válido — Solo se permiten archivos PDF, DOC o DOCX');
         return;
       }
       if (file.size > 5 * 1024 * 1024) {
-        toast({ title: 'Archivo muy grande', description: 'El archivo no puede superar 5MB', variant: 'destructive' });
+        toast.error('Archivo muy grande — El archivo no puede superar 5MB');
         return;
       }
       setCvFile(file);
@@ -247,7 +248,7 @@ export default function Contacto() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.subject) {
-      toast({ title: 'Seleccioná un tipo de consulta', variant: 'destructive' });
+      toast.error('Seleccioná un tipo de consulta');
       return;
     }
     
@@ -334,19 +335,12 @@ ${formData.message || 'Sin mensaje adicional'}
       }
 
       const successMsg = getSuccessMessage(formData.subject);
-      toast({
-        title: successMsg.title,
-        description: successMsg.description,
-      });
+      toast.success(successMsg.title, { description: successMsg.description });
       
       setSubmitted(true);
     } catch (error) {
       if (import.meta.env.DEV) console.error('Error sending message:', error);
-      toast({
-        title: 'Error al enviar',
-        description: 'Hubo un problema. Por favor intentá de nuevo.',
-        variant: 'destructive'
-      });
+      toast.error('Error al enviar — Hubo un problema. Por favor intentá de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -489,6 +483,7 @@ ${formData.message || 'Sin mensaje adicional'}
                   {branches?.map((branch) => (
                     <SelectItem key={branch.id} value={branch.id}>
                       Hoppiness {branch.name}
+                      {branch.public_status === 'coming_soon' ? ' (PRÓXIMAMENTE)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -580,6 +575,7 @@ ${formData.message || 'Sin mensaje adicional'}
                   {branches?.map((branch) => (
                     <SelectItem key={branch.id} value={branch.id}>
                       Hoppiness {branch.name}
+                      {branch.public_status === 'coming_soon' ? ' (PRÓXIMAMENTE)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -1482,6 +1482,7 @@ export type Database = {
           internal_notes: Json | null
           monthly_hours_target: number | null
           personal_address: string | null
+          registered_hours: number | null
           updated_at: string | null
           user_id: string
         }
@@ -1502,6 +1503,7 @@ export type Database = {
           internal_notes?: Json | null
           monthly_hours_target?: number | null
           personal_address?: string | null
+          registered_hours?: number | null
           updated_at?: string | null
           user_id: string
         }
@@ -1522,6 +1524,7 @@ export type Database = {
           internal_notes?: Json | null
           monthly_hours_target?: number | null
           personal_address?: string | null
+          registered_hours?: number | null
           updated_at?: string | null
           user_id?: string
         }
@@ -4100,6 +4103,30 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          endpoint: string
+          keys: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          endpoint: string
+          keys: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          endpoint?: string
+          keys?: Json
+          created_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           accepted_terms_at: string | null
@@ -5768,6 +5795,7 @@ export type Database = {
       brand_role_type:
         | "superadmin"
         | "coordinador"
+        | "community_manager"
         | "informes"
         | "contador_marca"
       communication_type: "info" | "warning" | "urgent" | "celebration"
@@ -5937,6 +5965,7 @@ export const Constants = {
       brand_role_type: [
         "superadmin",
         "coordinador",
+        "community_manager",
         "informes",
         "contador_marca",
       ],

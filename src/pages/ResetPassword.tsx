@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ export default function ResetPassword() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isValidSession, setIsValidSession] = useState<boolean | null>(null);
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     // IMPORTANT: Set up listener BEFORE checking session
@@ -98,7 +99,10 @@ export default function ResetPassword() {
 
     checkSession();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(redirectTimerRef.current);
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,7 +137,7 @@ export default function ResetPassword() {
         toast.success('Contraseña actualizada correctamente');
         
         // Sign out and redirect to login after 2 seconds
-        setTimeout(async () => {
+        redirectTimerRef.current = setTimeout(async () => {
           await supabase.auth.signOut();
           navigate('/ingresar');
         }, 2000);

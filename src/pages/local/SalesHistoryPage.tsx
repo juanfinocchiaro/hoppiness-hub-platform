@@ -10,7 +10,8 @@ import { useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { format, subDays, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { AlertCircle, CheckCircle, DollarSign, Pencil } from 'lucide-react';
+import { AlertCircle, CheckCircle, DollarSign, Pencil, Download } from 'lucide-react';
+import { exportToExcel } from '@/lib/exportExcel';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -120,6 +121,7 @@ export default function SalesHistoryPage() {
       />
 
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="flex gap-2 items-center">
         <Select value={daysBack} onValueChange={setDaysBack}>
           <SelectTrigger className="w-48">
             <SelectValue />
@@ -132,6 +134,22 @@ export default function SalesHistoryPage() {
             ))}
           </SelectContent>
         </Select>
+        {closures && closures.length > 0 && (
+          <Button variant="outline" size="sm" onClick={() => exportToExcel(
+            closures.map((c: any) => ({
+              fecha: c.closure_date || '-',
+              turno: getShiftLabel(c.shift_type),
+              hamburguesas: c.total_hamburguesas || 0,
+              vendido: c.total_vendido || 0,
+              estado: c.has_alerts ? 'Con alertas' : 'OK',
+            })),
+            { fecha: 'Fecha', turno: 'Turno', hamburguesas: 'Hamburguesas', vendido: 'Vendido', estado: 'Estado' },
+            { filename: 'ventas-historial' }
+          )}>
+            <Download className="w-4 h-4 mr-1" /> Excel
+          </Button>
+        )}
+        </div>
 
         {!isLoading && closures && (
           <div className="flex gap-4 text-sm">

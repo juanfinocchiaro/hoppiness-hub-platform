@@ -17,8 +17,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { toast } from '@/hooks/use-toast';
-import { Plus, Trash2, GripVertical, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { Plus, Trash2, Loader2 } from 'lucide-react';
 import type { ClosureConfigItem, ConfigTipo } from '@/types/shiftClosure';
 
 interface ConfigGroup {
@@ -60,10 +60,10 @@ function ClosureConfigPageContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['brand-closure-config'] });
-      toast({ title: 'Configuración actualizada' });
+      toast.success('Configuración actualizada');
     },
     onError: (err: Error) => {
-      toast({ variant: 'destructive', title: 'Error', description: err.message });
+      toast.error(`Error: ${err.message}`);
     },
   });
 
@@ -89,10 +89,10 @@ function ClosureConfigPageContent() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['brand-closure-config'] });
       setNewItemLabel(prev => ({ ...prev, [variables.tipo]: '' }));
-      toast({ title: 'Elemento agregado' });
+      toast.success('Elemento agregado');
     },
     onError: (err: Error) => {
-      toast({ variant: 'destructive', title: 'Error', description: err.message });
+      toast.error(`Error: ${err.message}`);
     },
   });
 
@@ -108,10 +108,10 @@ function ClosureConfigPageContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['brand-closure-config'] });
-      toast({ title: 'Elemento eliminado' });
+      toast.success('Elemento eliminado');
     },
     onError: (err: Error) => {
-      toast({ variant: 'destructive', title: 'Error', description: err.message });
+      toast.error(`Error: ${err.message}`);
     },
   });
 
@@ -175,7 +175,6 @@ function ClosureConfigPageContent() {
                   className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                 >
                   <div className="flex items-center gap-3">
-                    <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
                     <div>
                       <span className="font-medium">{item.etiqueta}</span>
                       {item.categoria_padre && (

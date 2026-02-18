@@ -10,8 +10,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Building2, Phone, Mail, CreditCard, AlertTriangle,
   TrendingUp, Calendar, ArrowLeft, Pencil, Trash2, Plus,
-  Clock, Receipt, ShieldCheck, BadgeDollarSign
+  Clock, Receipt, ShieldCheck, BadgeDollarSign, Download
 } from 'lucide-react';
+import { exportToExcel } from '@/lib/exportExcel';
 import { useResumenProveedor, useMovimientosProveedor } from '@/hooks/useCuentaCorrienteProveedor';
 import { useProveedores } from '@/hooks/useProveedores';
 import { usePagoProveedorMutations, useFacturaById } from '@/hooks/useCompras';
@@ -51,10 +52,10 @@ export default function CuentaCorrienteProveedorPage() {
 
   const saldoAFavor = resumen ? (resumen.saldo_a_favor_facturas > 0 ? resumen.saldo_a_favor_facturas : (resumen.saldo_actual < 0 ? Math.abs(resumen.saldo_actual) : 0)) : 0;
 
-  const payingFactura = payingFacturaId && facturaData ? {
+  const payingFactura = payingFacturaId && facturaData && proveedorId && branchId ? {
     ...facturaData,
-    proveedor_id: proveedorId!,
-    branch_id: branchId!,
+    proveedor_id: proveedorId,
+    branch_id: branchId,
   } : null;
 
   return (
@@ -64,6 +65,21 @@ export default function CuentaCorrienteProveedorPage() {
         subtitle={proveedor?.cuit ? `CUIT: ${proveedor.cuit}` : undefined}
         actions={
           <div className="flex gap-2">
+            {movimientos && movimientos.length > 0 && (
+              <Button variant="outline" size="sm" onClick={() => exportToExcel(
+                movimientos.map((m: any) => ({
+                  fecha: m.fecha ? formatLocalDate(m.fecha) : '-',
+                  tipo: m.tipo || '-',
+                  detalle: m.detalle || '-',
+                  importe: m.importe || 0,
+                  saldo: m.saldo_acumulado ?? '-',
+                })),
+                { fecha: 'Fecha', tipo: 'Tipo', detalle: 'Detalle', importe: 'Importe', saldo: 'Saldo' },
+                { filename: `cc-${proveedor?.razon_social || 'proveedor'}` }
+              )}>
+                <Download className="w-4 h-4 mr-1" /> Excel
+              </Button>
+            )}
             <Button variant="default" size="sm" onClick={() => setPayingAccountLevel(true)}>
               <Plus className="w-4 h-4 mr-1" /> Registrar Pago
             </Button>

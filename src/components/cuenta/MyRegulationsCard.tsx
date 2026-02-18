@@ -103,9 +103,24 @@ export default function MyRegulationsCard() {
     }
   };
 
-  // Don't show regulations card for franchisees or if no regulation exists
-  if (!latestRegulation || isOnlyFranquiciado) {
-    return null;
+  if (isOnlyFranquiciado) return null;
+
+  if (!latestRegulation) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center gap-2">
+            <FileText className="w-5 h-5 text-primary" />
+            <CardTitle className="text-base">Reglamento Interno</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground text-center py-4">
+            No hay reglamento publicado actualmente
+          </p>
+        </CardContent>
+      </Card>
+    );
   }
 
   const isSigned = !!mySignature;

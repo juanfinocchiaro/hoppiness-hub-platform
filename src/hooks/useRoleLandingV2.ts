@@ -103,11 +103,12 @@ export function useRoleLandingV2() {
     }
 
     if (isContadorLocal) {
+      const firstBranch = accessibleBranches[0]?.id;
       return {
         type: 'contador_local',
         label: 'Contador Local',
-        landingPath: '/cuenta',
-        description: 'Mi Cuenta',
+        landingPath: firstBranch ? `/milocal/${firstBranch}` : '/cuenta',
+        description: 'Finanzas del local',
       };
     }
 

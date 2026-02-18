@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export type MessageType = 'all' | 'franquicia' | 'empleo' | 'proveedor' | 'pedidos' | 'consulta' | 'otro';
 
@@ -73,6 +74,7 @@ export function useContactMessages(options: UseContactMessagesOptions = {}) {
       queryClient.invalidateQueries({ queryKey: ['contact-messages'] });
       queryClient.invalidateQueries({ queryKey: ['unread-messages-count'] });
     },
+    onError: (e: Error) => toast.error(`Error: ${e.message}`),
   });
 
   const archiveMutation = useMutation({
@@ -86,7 +88,9 @@ export function useContactMessages(options: UseContactMessagesOptions = {}) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contact-messages'] });
       queryClient.invalidateQueries({ queryKey: ['unread-messages-count'] });
+      toast.success('Mensaje archivado');
     },
+    onError: (e: Error) => toast.error(`Error al archivar: ${e.message}`),
   });
 
   return {

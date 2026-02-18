@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import type { Json } from '@/integrations/supabase/types';
 import { getOperationalDate } from '@/lib/operationalDate';
 import type {
@@ -245,15 +245,6 @@ export function useSaveShiftClosure() {
       const ventasAppsJson = input.ventas_apps as unknown as Json;
       const arqueoCajaJson = input.arqueo_caja as unknown as Json;
       
-      // Check if exists
-      const { data: existing } = await supabase
-        .from('shift_closures')
-        .select('id')
-        .eq('branch_id', input.branch_id)
-        .eq('fecha', input.fecha)
-        .eq('turno', input.turno)
-        .maybeSingle();
-      
       const closureData = {
         hamburguesas: hamburguesasJson,
         ventas_local: ventasLocalJson,
@@ -275,53 +266,35 @@ export function useSaveShiftClosure() {
         notas: input.notas || null,
       };
       
-      if (existing) {
-        // Update
-        const { data, error } = await supabase
-          .from('shift_closures')
-          .update({
-            ...closureData,
-            updated_by: user.id,
-          })
-          .eq('id', existing.id)
-          .select()
-          .single();
-        
-        if (error) throw error;
-        return parseShiftClosure(data);
-      } else {
-        // Insert
-        const { data, error } = await supabase
-          .from('shift_closures')
-          .insert([{
+      // Atomic upsert: avoids race condition where two users
+      // could create duplicate closures for the same branch+date+shift.
+      const { data, error } = await supabase
+        .from('shift_closures')
+        .upsert(
+          {
             branch_id: input.branch_id,
             fecha: input.fecha,
             turno: input.turno,
             ...closureData,
             cerrado_por: user.id,
-          }])
-          .select()
-          .single();
-        
-        if (error) throw error;
-        return parseShiftClosure(data);
-      }
+            updated_by: user.id,
+          },
+          { onConflict: 'branch_id,fecha,turno' }
+        )
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return parseShiftClosure(data);
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['shift-closures'] });
       queryClient.invalidateQueries({ queryKey: ['shift-closure'] });
       queryClient.invalidateQueries({ queryKey: ['brand-closures-summary'] });
-      toast({
-        title: 'Cierre guardado',
-        description: `Turno ${data.turno} guardado correctamente`,
-      });
+      toast.success(`Cierre guardado — Turno ${data.turno}`);
     },
     onError: (error: Error) => {
-      toast({
-        variant: 'destructive',
-        title: 'Error al guardar',
-        description: error.message,
-      });
+      toast.error(`Error al guardar: ${error.message}`);
     },
   });
 }

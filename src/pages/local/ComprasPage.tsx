@@ -6,8 +6,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Trash2, ShoppingCart, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, ShoppingCart, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { exportToExcel } from '@/lib/exportExcel';
 import { useFacturas, useFacturaMutations } from '@/hooks/useCompras';
+import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { CompraFormModal } from '@/components/finanzas/CompraFormModal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/states';
@@ -24,14 +26,19 @@ export default function ComprasPage() {
   const { data: facturas, isLoading } = useFacturas(branchId!);
   const { softDelete } = useFacturaMutations();
   const [search, setSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [deleting, setDeleting] = useState<FacturaProveedor | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const filtered = facturas?.filter((f: any) =>
-    f.proveedores?.razon_social?.toLowerCase().includes(search.toLowerCase()) ||
-    f.factura_numero?.includes(search)
-  );
+  const filtered = facturas?.filter((f: any) => {
+    const matchesSearch = f.proveedores?.razon_social?.toLowerCase().includes(search.toLowerCase()) ||
+      f.factura_numero?.includes(search);
+    const matchesFrom = !dateFrom || (f.fecha_factura && f.fecha_factura >= dateFrom);
+    const matchesTo = !dateTo || (f.fecha_factura && f.fecha_factura <= dateTo);
+    return matchesSearch && matchesFrom && matchesTo;
+  });
 
   const estadoBadge = (estado: string | null) => {
     if (estado === 'pagado') return <Badge variant="default">Pagado</Badge>;
@@ -45,13 +52,36 @@ export default function ComprasPage() {
         title="Compras"
         subtitle="Registrá compras con o sin comprobante"
         actions={
-          <Button onClick={() => setModalOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" /> Nueva Compra
-          </Button>
+          <div className="flex gap-2">
+            {filtered && filtered.length > 0 && (
+              <Button variant="outline" onClick={() => exportToExcel(
+                filtered.map((f: any) => ({
+                  fecha: f.fecha_factura ? formatLocalDate(f.fecha_factura) : '-',
+                  proveedor: f.proveedores?.razon_social || '-',
+                  numero: f.factura_numero || '-',
+                  total: f.total || 0,
+                  estado: f.estado || '-',
+                  vencimiento: f.fecha_vencimiento ? formatLocalDate(f.fecha_vencimiento) : '-',
+                })),
+                { fecha: 'Fecha', proveedor: 'Proveedor', numero: 'Nº Factura', total: 'Total', estado: 'Estado', vencimiento: 'Vencimiento' },
+                { filename: 'compras' }
+              )}>
+                <Download className="w-4 h-4 mr-2" /> Excel
+              </Button>
+            )}
+            <Button onClick={() => setModalOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" /> Nueva Compra
+            </Button>
+          </div>
         }
       />
 
-      <DataToolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="Buscar por proveedor o nº factura..." />
+      <DataToolbar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar por proveedor o nº factura..."
+        filters={<DateRangeFilter from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />}
+      />
 
       <div className="rounded-md border">
         <Table>

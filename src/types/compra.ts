@@ -76,14 +76,16 @@ export const IVA_OPTIONS = [
 ] as const;
 
 export interface PagoProveedorFormData {
-  factura_id?: string;
   proveedor_id: string;
   branch_id: string;
   monto: number;
   fecha_pago: string;
   medio_pago: string;
   referencia?: string;
+  fecha_vencimiento_pago?: string;
   observaciones?: string;
+  /** IDs de facturas a las que se aplica este pago, con montos parciales */
+  aplicaciones?: { factura_id: string; monto_aplicado: number }[];
 }
 
 export interface GastoFormData {
@@ -110,10 +112,10 @@ export const CONDICION_PAGO_OPTIONS = [
 ] as const;
 
 export const MEDIO_PAGO_OPTIONS = [
-  { value: 'efectivo', label: 'Efectivo' },
   { value: 'transferencia', label: 'Transferencia' },
-  { value: 'cheque', label: 'Cheque' },
-  { value: 'cuenta_corriente', label: 'Cuenta Corriente' },
+  { value: 'efectivo', label: 'Efectivo' },
+  { value: 'cheque_plazo', label: 'Cheque con plazo' },
+  { value: 'echeq_plazo', label: 'Echeq con plazo' },
 ] as const;
 
 export const MEDIO_PAGO_OPTIONS_WITH_IMPUTACION = [

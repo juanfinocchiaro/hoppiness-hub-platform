@@ -6,6 +6,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 import { format, startOfMonth, endOfMonth, addMonths } from 'date-fns';
 
 export interface Holiday {
@@ -100,10 +101,11 @@ export function useCreateHoliday() {
       return data as Holiday;
     },
     onSuccess: () => {
-      // Invalidate all holiday queries
       queryClient.invalidateQueries({ queryKey: ['holidays'] });
       queryClient.invalidateQueries({ queryKey: ['holidays-range'] });
+      toast.success('Feriado creado');
     },
+    onError: (e: Error) => toast.error(`Error al crear feriado: ${e.message}`),
   });
 }
 
@@ -126,7 +128,9 @@ export function useDeleteHoliday() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['holidays'] });
       queryClient.invalidateQueries({ queryKey: ['holidays-range'] });
+      toast.success('Feriado eliminado');
     },
+    onError: (e: Error) => toast.error(`Error al eliminar feriado: ${e.message}`),
   });
 }
 
@@ -174,10 +178,12 @@ export function useCreateHolidaysBulk() {
       if (error) throw error;
       return data as Holiday[];
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['holidays'] });
       queryClient.invalidateQueries({ queryKey: ['holidays-range'] });
+      toast.success(`${data?.length || 0} feriados importados`);
     },
+    onError: (e: Error) => toast.error(`Error al importar feriados: ${e.message}`),
   });
 }
 

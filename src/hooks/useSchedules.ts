@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO } from 'date-fns';
+import { toast } from 'sonner';
 import type { WorkPositionType } from '@/types/workPosition';
 
 export interface ScheduleEntry {
@@ -173,14 +174,18 @@ export function useSaveMonthlySchedule() {
         schedule_date: day.date,
         schedule_month: input.month,
         schedule_year: input.year,
-        start_time: day.is_day_off ? '00:00:00' : day.start_time,
-        end_time: day.is_day_off ? '00:00:00' : day.end_time,
+        start_time: day.is_day_off ? null : day.start_time,
+        end_time: day.is_day_off ? null : day.end_time,
         is_day_off: day.is_day_off,
         work_position: day.work_position || null,
         published_at: now,
         published_by: user.id,
         shift_number: 1, // Default shift
-        day_of_week: new Date(day.date).getDay(),
+        // Parse as local date (Argentina UTC-3) to get correct day of week
+        day_of_week: (() => {
+          const [y, m, d] = day.date.split('-').map(Number);
+          return new Date(y, m - 1, d).getDay();
+        })(),
         employee_id: input.user_id, // Legacy compatibility
       }));
       
@@ -188,12 +193,14 @@ export function useSaveMonthlySchedule() {
       const startDate = format(new Date(input.year, input.month - 1, 1), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(new Date(input.year, input.month - 1, 1)), 'yyyy-MM-dd');
       
-      await supabase
+      const { error: deleteError } = await supabase
         .from('employee_schedules')
         .delete()
         .eq('user_id', input.user_id)
         .gte('schedule_date', startDate)
         .lte('schedule_date', endDate);
+      
+      if (deleteError) throw deleteError;
       
       // Insert new entries
       const { data, error } = await supabase
@@ -223,7 +230,9 @@ export function useSaveMonthlySchedule() {
       queryClient.invalidateQueries({ queryKey: ['monthly-schedules', variables.branch_id] });
       queryClient.invalidateQueries({ queryKey: ['employee-schedule', variables.user_id] });
       queryClient.invalidateQueries({ queryKey: ['has-published-schedule', variables.user_id] });
+      toast.success('Horario guardado');
     },
+    onError: (e: Error) => toast.error(`Error al guardar horario: ${e.message}`),
   });
 }
 
@@ -270,9 +279,9 @@ export function useModifySchedule() {
       if (input.notify_email || input.notify_communication) {
         await sendScheduleNotification({
           user_id: existing.user_id,
-          branch_id: existing.branch_id!,
-          month: existing.schedule_month!,
-          year: existing.schedule_year!,
+          branch_id: existing.branch_id ?? '',
+          month: existing.schedule_month ?? 0,
+          year: existing.schedule_year ?? 0,
           is_modification: true,
           modification_reason: input.modification_reason,
           modified_date: existing.schedule_date,
@@ -287,7 +296,9 @@ export function useModifySchedule() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['monthly-schedules', data.branch_id] });
       queryClient.invalidateQueries({ queryKey: ['employee-schedule', data.user_id] });
+      toast.success('Horario modificado');
     },
+    onError: (e: Error) => toast.error(`Error al modificar horario: ${e.message}`),
   });
 }
 
@@ -322,8 +333,10 @@ export function useDeleteMonthSchedule() {
       queryClient.invalidateQueries({ queryKey: ['employee-schedule', variables.userId] });
       queryClient.invalidateQueries({ queryKey: ['has-published-schedule', variables.userId] });
       queryClient.invalidateQueries({ queryKey: ['my-schedules-v2', variables.userId] });
-      queryClient.invalidateQueries({ queryKey: ['my-schedules-v2'] }); // Invalidate all
+      queryClient.invalidateQueries({ queryKey: ['my-schedules-v2'] });
+      toast.success('Horario eliminado');
     },
+    onError: (e: Error) => toast.error(`Error al eliminar horario: ${e.message}`),
   });
 }
 
@@ -448,7 +461,9 @@ export function useApproveScheduleRequest() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['employee-schedule-requests'] });
       queryClient.invalidateQueries({ queryKey: ['pending-schedule-requests'] });
+      toast.success('Solicitud aprobada');
     },
+    onError: (e: Error) => toast.error(`Error al aprobar solicitud: ${e.message}`),
   });
 }
 
@@ -481,6 +496,8 @@ export function useRejectScheduleRequest() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employee-schedule-requests'] });
       queryClient.invalidateQueries({ queryKey: ['pending-schedule-requests'] });
+      toast.success('Solicitud rechazada');
     },
+    onError: (e: Error) => toast.error(`Error al rechazar solicitud: ${e.message}`),
   });
 }

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export function useItemRemovibles(itemId: string | undefined) {
   return useQuery({
@@ -56,6 +57,7 @@ export function useItemRemoviblesMutations() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['item-removibles', vars.item_carta_id] });
     },
+    onError: (e: Error) => toast.error(`Error: ${e.message}`),
   });
 
   const togglePreparacion = useMutation({
@@ -92,6 +94,7 @@ export function useItemRemoviblesMutations() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['item-removibles', vars.item_carta_id] });
     },
+    onError: (e: Error) => toast.error(`Error: ${e.message}`),
   });
 
   const updateNombreDisplay = useMutation({
@@ -105,6 +108,7 @@ export function useItemRemoviblesMutations() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['item-removibles'] });
     },
+    onError: (e: Error) => toast.error(`Error: ${e.message}`),
   });
 
   // Keep backward compat

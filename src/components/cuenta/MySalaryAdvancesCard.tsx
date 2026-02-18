@@ -1,10 +1,25 @@
+import { useState } from 'react';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useRequestAdvance } from '@/hooks/useSalaryAdvances';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, TrendingDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { DollarSign, TrendingDown, Plus, Clock } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,12 +37,18 @@ interface SalaryAdvance {
 export default function MySalaryAdvancesCard() {
   const { id: userId } = useEffectiveUser();
   const { branchRoles } = usePermissionsWithImpersonation();
+  const requestAdvance = useRequestAdvance();
   
-  // Franquiciados don't receive salary advances - hide if only has that role
+  const [showRequest, setShowRequest] = useState(false);
+  const [amount, setAmount] = useState('');
+  const [reason, setReason] = useState('');
+  
   const hasOnlyFranquiciado = branchRoles.length > 0 && 
     branchRoles.every(r => r.local_role === 'franquiciado');
+
+  const isOperationalStaff = branchRoles.length > 0 && !hasOnlyFranquiciado;
+  const firstBranchId = branchRoles.find(r => r.local_role !== 'franquiciado')?.branch_id;
   
-  // Query salary advances directly by user_id (V2 approach)
   const { data: advances, isLoading } = useQuery({
     queryKey: ['my-salary-advances-v2', userId],
     queryFn: async () => {
@@ -38,7 +59,7 @@ export default function MySalaryAdvancesCard() {
         .select('id, amount, status, payment_method, reason, paid_at, created_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(20);
       
       if (error) {
         console.warn('Could not fetch salary advances:', error.message);
@@ -49,7 +70,6 @@ export default function MySalaryAdvancesCard() {
     enabled: !!userId,
   });
 
-  // Calculate totals
   const now = new Date();
   const monthStart = startOfMonth(now);
   const monthEnd = endOfMonth(now);
@@ -59,26 +79,23 @@ export default function MySalaryAdvancesCard() {
     return date >= monthStart && date <= monthEnd;
   }) || [];
 
-  const pendingTotal = advances?.reduce((acc, a) => 
-    a.status === 'pending_transfer' ? acc + Number(a.amount) : acc, 0) || 0;
+  const pendingRequests = advances?.filter(a => a.status === 'pending') || [];
   
-  const thisMonthTotal = thisMonthAdvances.reduce((acc, a) => 
-    acc + Number(a.amount), 0);
+  const thisMonthTotal = thisMonthAdvances
+    .filter(a => a.status !== 'cancelled' && a.status !== 'pending')
+    .reduce((acc, a) => acc + Number(a.amount), 0);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
+  const formatCurrency = (n: number) =>
+    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'paid':
         return <Badge variant="default">Pagado</Badge>;
+      case 'pending':
+        return <Badge variant="outline" className="gap-1 border-amber-300 text-amber-700 bg-amber-50"><Clock className="w-3 h-3" />Pendiente</Badge>;
       case 'pending_transfer':
-        return <Badge variant="outline">Pendiente</Badge>;
+        return <Badge variant="outline">Pend. transferencia</Badge>;
       case 'transferred':
         return <Badge variant="secondary">Transferido</Badge>;
       case 'cancelled':
@@ -88,55 +105,158 @@ export default function MySalaryAdvancesCard() {
     }
   };
 
+  const handleRequest = async () => {
+    if (!amount || parseFloat(amount) <= 0 || !firstBranchId) return;
+    
+    try {
+      await requestAdvance.mutateAsync({
+        branchId: firstBranchId,
+        amount: parseFloat(amount),
+        reason: reason || undefined,
+      });
+      setShowRequest(false);
+      setAmount('');
+      setReason('');
+    } catch {
+      // Error handled by hook
+    }
+  };
+
   if (isLoading) {
     return (
       <Card>
+        <CardHeader className="pb-2"><Skeleton className="h-5 w-32" /></CardHeader>
+        <CardContent><Skeleton className="h-20 w-full" /></CardContent>
+      </Card>
+    );
+  }
+
+  if (hasOnlyFranquiciado) return null;
+
+  if (!advances || advances.length === 0) {
+    return (
+      <Card>
         <CardHeader className="pb-2">
-          <Skeleton className="h-5 w-32" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-primary" />
+              <CardTitle className="text-lg">Mis Adelantos</CardTitle>
+            </div>
+            {isOperationalStaff && firstBranchId && (
+              <Dialog open={showRequest} onOpenChange={setShowRequest}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline">
+                    <Plus className="w-4 h-4 mr-1" />
+                    Solicitar
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Solicitar Adelanto</DialogTitle>
+                    <DialogDescription>Tu encargado recibirá la solicitud y podrá aprobarla o rechazarla.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Monto *</Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input type="number" placeholder="0" value={amount} onChange={e => setAmount(e.target.value)} className="pl-10" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Motivo (opcional)</Label>
+                      <Textarea placeholder="¿Para qué necesitás el adelanto?" value={reason} onChange={e => setReason(e.target.value)} rows={2} />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowRequest(false)}>Cancelar</Button>
+                    <Button onClick={handleRequest} disabled={!amount || parseFloat(amount) <= 0 || requestAdvance.isPending}>
+                      Enviar solicitud
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-20 w-full" />
+          <p className="text-sm text-muted-foreground text-center py-4">
+            No tenés adelantos registrados
+          </p>
         </CardContent>
       </Card>
     );
   }
 
-  // Don't show card for franchisees or if no advances ever
-  if (hasOnlyFranquiciado || !advances || advances.length === 0) {
-    return null;
-  }
-
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex items-center gap-2">
-          <DollarSign className="w-5 h-5 text-primary" />
-          <CardTitle className="text-lg">Mis Adelantos</CardTitle>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-primary" />
+            <CardTitle className="text-lg">Mis Adelantos</CardTitle>
+          </div>
+          {isOperationalStaff && firstBranchId && (
+            <Dialog open={showRequest} onOpenChange={setShowRequest}>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <Plus className="w-4 h-4 mr-1" />
+                  Solicitar
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Solicitar Adelanto</DialogTitle>
+                  <DialogDescription>Tu encargado recibirá la solicitud y podrá aprobarla o rechazarla.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Monto *</Label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input type="number" placeholder="0" value={amount} onChange={e => setAmount(e.target.value)} className="pl-10" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Motivo (opcional)</Label>
+                    <Textarea placeholder="¿Para qué necesitás el adelanto?" value={reason} onChange={e => setReason(e.target.value)} rows={2} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowRequest(false)}>Cancelar</Button>
+                  <Button onClick={handleRequest} disabled={!amount || parseFloat(amount) <= 0 || requestAdvance.isPending}>
+                    Enviar solicitud
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Summary cards */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 bg-muted rounded-lg">
-            <p className="text-xs text-muted-foreground">Este mes</p>
-            <p className="text-lg font-bold">{formatCurrency(thisMonthTotal)}</p>
+        {/* Pending requests alert */}
+        {pendingRequests.length > 0 && (
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-sm font-medium text-amber-800">
+              Tenés {pendingRequests.length} solicitud{pendingRequests.length > 1 ? 'es' : ''} pendiente{pendingRequests.length > 1 ? 's' : ''} de aprobación
+            </p>
           </div>
-          {pendingTotal > 0 && (
-            <div className="p-3 bg-accent/10 border border-accent/30 rounded-lg">
-              <p className="text-xs text-muted-foreground">Pend. transferencia</p>
-              <p className="text-lg font-bold">{formatCurrency(pendingTotal)}</p>
-            </div>
-          )}
+        )}
+
+        {/* Summary */}
+        <div className="p-3 bg-muted rounded-lg">
+          <p className="text-xs text-muted-foreground">Total recibido este mes</p>
+          <p className="text-lg font-bold">{formatCurrency(thisMonthTotal)}</p>
         </div>
 
-        {/* Recent advances */}
+        {/* History */}
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-1">
             <TrendingDown className="w-4 h-4" />
-            Historial de adelantos
+            Historial
           </h4>
           <div className="space-y-1">
-            {advances.slice(0, 5).map((advance) => (
+            {advances.slice(0, 10).map((advance) => (
               <div 
                 key={advance.id} 
                 className="flex items-center justify-between text-sm p-2 rounded hover:bg-muted/50"

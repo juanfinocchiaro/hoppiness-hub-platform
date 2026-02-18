@@ -279,6 +279,8 @@ export default function BranchLayout() {
                 canViewVentasMensualesLocal: lp.canViewVentasMensualesLocal,
                 canViewSocios: lp.canViewSocios,
                 canViewLocalCommunications: lp.canViewLocalCommunications,
+                canViewClosures: lp.canViewClosures,
+                canCloseShifts: lp.canCloseShifts,
                 isFranquiciado: permissions.isFranquiciado,
                 isContadorLocal: permissions.isContadorLocal,
             }}

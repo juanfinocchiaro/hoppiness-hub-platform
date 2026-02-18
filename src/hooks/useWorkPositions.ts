@@ -6,6 +6,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export interface WorkPosition {
   id: string;
@@ -90,7 +91,9 @@ export function useCreateWorkPosition() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['work-positions'] });
+      toast.success('Posición creada');
     },
+    onError: (e: Error) => toast.error(`Error al crear posición: ${e.message}`),
   });
 }
 
@@ -114,7 +117,9 @@ export function useUpdateWorkPosition() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['work-positions'] });
+      toast.success('Posición actualizada');
     },
+    onError: (e: Error) => toast.error(`Error al actualizar posición: ${e.message}`),
   });
 }
 
@@ -135,6 +140,8 @@ export function useDeleteWorkPosition() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['work-positions'] });
+      toast.success('Posición eliminada');
     },
+    onError: (e: Error) => toast.error(`Error al eliminar posición: ${e.message}`),
   });
 }

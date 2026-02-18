@@ -19,21 +19,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Use onAuthStateChange as the single source of truth.
+    // getSession() is only needed to trigger the INITIAL_SESSION event
+    // when no auth event has fired yet.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // Trigger initial session check — the result is handled by the
+    // listener above (fires INITIAL_SESSION event), avoiding double state updates.
+    supabase.auth.getSession();
 
     return () => subscription.unsubscribe();
   }, []);
@@ -63,7 +62,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Even if signOut fails (e.g. offline), clear local state
+      // so the user can always leave the session
+    } finally {
+      setSession(null);
+      setUser(null);
+    }
   };
 
   return (

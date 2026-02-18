@@ -1,17 +1,16 @@
 /**
- * FichajeEmpleado - Página de fichaje con validación GPS y reglamento
+ * FichajeEmpleado - Página de fichaje con validación de reglamento
  * 
  * URL: /fichaje/:branchCode
  * 
  * Flujo:
  * 1. Empleado escanea QR estático del local
- * 2. Ingresa su PIN de 4 dígitos
+ * 2. Ingresa su PIN de 4 dígitos (auto-submit al completar)
  * 3. Sistema valida PIN y verifica reglamento pendiente
  * 4. Si hay reglamento pendiente > 5 días → bloquea
  * 5. Captura selfie (solo validación, no se almacena)
- * 6. Valida GPS (200m radio, permite con advertencia si falla)
- * 7. Elige ENTRADA o SALIDA manualmente
- * 8. Se registra el fichaje
+ * 6. Elige ENTRADA o SALIDA manualmente
+ * 7. Se registra el fichaje
  */
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
@@ -31,7 +30,6 @@ import {
   LogOut, 
   AlertCircle, 
   Loader2,
-  MapPin,
   AlertTriangle,
   FileWarning
 } from 'lucide-react';
@@ -52,27 +50,12 @@ interface BranchData {
   id: string;
   name: string;
   clock_code: string;
-  latitude: number | null;
-  longitude: number | null;
 }
 
 interface RegulationStatus {
   hasPending: boolean;
   daysSinceUpload: number;
   isBlocked: boolean;
-}
-
-// Calculate distance between two coordinates in meters
-function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371000; // Earth's radius in meters
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
 }
 
 export default function FichajeEmpleado() {
@@ -82,8 +65,6 @@ export default function FichajeEmpleado() {
   const [validatedUser, setValidatedUser] = useState<ValidatedUser | null>(null);
   const [entryType, setEntryType] = useState<'clock_in' | 'clock_out' | null>(null);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
-  const [gpsStatus, setGpsStatus] = useState<'checking' | 'valid' | 'warning' | 'error'>('checking');
-  const [gpsMessage, setGpsMessage] = useState('');
   const [regulationStatus, setRegulationStatus] = useState<RegulationStatus | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -93,7 +74,6 @@ export default function FichajeEmpleado() {
   const { data: branch, isLoading: loadingBranch, error: branchError } = useQuery({
     queryKey: ['branch-by-code', branchCode],
     queryFn: async () => {
-      // Use secure RPC function instead of direct table access
       const { data, error } = await supabase
         .rpc('get_branch_for_clock', { _clock_code: branchCode });
       
@@ -104,7 +84,6 @@ export default function FichajeEmpleado() {
     enabled: !!branchCode,
   });
 
-  // Cleanup camera on unmount
   useEffect(() => {
     return () => {
       if (stream) {
@@ -113,7 +92,6 @@ export default function FichajeEmpleado() {
     };
   }, [stream]);
 
-  // Start camera
   const startCamera = useCallback(async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -129,7 +107,6 @@ export default function FichajeEmpleado() {
     }
   }, []);
 
-  // Stop camera
   const stopCamera = useCallback(() => {
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
@@ -137,7 +114,6 @@ export default function FichajeEmpleado() {
     }
   }, [stream]);
 
-  // Capture photo from video stream (not from gallery)
   const capturePhoto = useCallback(() => {
     if (videoRef.current && canvasRef.current) {
       const context = canvasRef.current.getContext('2d');
@@ -152,53 +128,8 @@ export default function FichajeEmpleado() {
     }
   }, [stopCamera]);
 
-  // Validate GPS
-  const validateGPS = useCallback(async () => {
-    if (!branch?.latitude || !branch?.longitude) {
-      setGpsStatus('warning');
-      setGpsMessage('El local no tiene ubicación configurada');
-      return true; // Allow clock-in with warning
-    }
-
-    setGpsStatus('checking');
-    
-    try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        });
-      });
-
-      const distance = calculateDistance(
-        position.coords.latitude,
-        position.coords.longitude,
-        branch.latitude,
-        branch.longitude
-      );
-
-      if (distance <= 200) {
-        setGpsStatus('valid');
-        setGpsMessage(`Ubicación validada (${Math.round(distance)}m)`);
-        return true;
-      } else {
-        setGpsStatus('warning');
-        setGpsMessage(`Estás a ${Math.round(distance)}m del local (máx. 200m)`);
-        return true; // Allow with warning as per requirement
-      }
-    } catch (err) {
-      if (import.meta.env.DEV) console.error('GPS error:', err);
-      setGpsStatus('warning');
-      setGpsMessage('No se pudo obtener ubicación');
-      return true; // Allow with warning as per requirement
-    }
-  }, [branch]);
-
-  // Check regulation status using Supabase client
   const checkRegulationStatus = useCallback(async (userId: string): Promise<RegulationStatus> => {
     try {
-      // Get latest regulation
       const { data: regulations, error: regError } = await supabase
         .from('regulations')
         .select('id, version, created_at')
@@ -211,7 +142,6 @@ export default function FichajeEmpleado() {
 
       const regulation = regulations[0];
 
-      // Check if user has signed the latest version
       const { data: signatures, error: sigError } = await supabase
         .from('regulation_signatures')
         .select('id')
@@ -222,7 +152,6 @@ export default function FichajeEmpleado() {
         return { hasPending: false, daysSinceUpload: 0, isBlocked: false };
       }
 
-      // Calculate days since regulation was uploaded
       const daysSinceUpload = differenceInDays(new Date(), new Date(regulation.created_at));
       const isBlocked = daysSinceUpload > 5;
 
@@ -233,7 +162,6 @@ export default function FichajeEmpleado() {
     }
   }, []);
 
-  // Validate PIN mutation (using v2 function with branch-specific PINs)
   const validatePinMutation = useMutation({
     mutationFn: async (pinValue: string) => {
       const { data, error } = await supabase.rpc('validate_clock_pin_v2', {
@@ -251,7 +179,6 @@ export default function FichajeEmpleado() {
     onSuccess: async (userData) => {
       setValidatedUser(userData);
       
-      // Check regulation status
       const regStatus = await checkRegulationStatus(userData.user_id);
       setRegulationStatus(regStatus);
       
@@ -262,7 +189,6 @@ export default function FichajeEmpleado() {
       } else {
         setStep('camera');
         startCamera();
-        validateGPS();
       }
     },
     onError: (error: Error) => {
@@ -271,7 +197,6 @@ export default function FichajeEmpleado() {
     },
   });
 
-  // Register clock entry mutation - now uses Edge Function instead of direct insert
   const clockMutation = useMutation({
     mutationFn: async ({ type }: { type: 'clock_in' | 'clock_out' }) => {
       if (!validatedUser) throw new Error('Usuario no validado');
@@ -287,13 +212,9 @@ export default function FichajeEmpleado() {
         },
         body: JSON.stringify({
           branch_code: branchCode,
-          pin: pin, // We already validated the PIN, but the edge function will re-validate for security
+          pin: pin,
           entry_type: type,
           user_agent: navigator.userAgent,
-          gps_lat: null, // GPS coords could be added here if needed
-          gps_lng: null,
-          gps_status: gpsStatus,
-          gps_message: gpsMessage,
         }),
       });
       
@@ -326,7 +247,6 @@ export default function FichajeEmpleado() {
   const handleContinueFromWarning = () => {
     setStep('camera');
     startCamera();
-    validateGPS();
   };
 
   const handleClock = async (type: 'clock_in' | 'clock_out') => {
@@ -337,7 +257,6 @@ export default function FichajeEmpleado() {
     clockMutation.mutate({ type });
   };
 
-  // Loading state
   if (loadingBranch) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -346,7 +265,6 @@ export default function FichajeEmpleado() {
     );
   }
 
-  // Branch not found
   if (!branch || branchError) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -395,7 +313,13 @@ export default function FichajeEmpleado() {
                   pattern="[0-9]*"
                   maxLength={4}
                   value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    setPin(value);
+                    if (value.length === 4) {
+                      validatePinMutation.mutate(value);
+                    }
+                  }}
                   placeholder="••••"
                   className="text-center text-2xl tracking-widest"
                   autoFocus
@@ -458,26 +382,12 @@ export default function FichajeEmpleado() {
             </div>
           )}
 
-          {/* Step 2: Camera + GPS + Clock buttons */}
+          {/* Step 2: Camera + Clock buttons */}
           {step === 'camera' && validatedUser && (
             <div className="space-y-4">
               <div className="text-center">
                 <p className="text-lg font-medium">¡Hola {validatedUser.full_name.split(' ')[0]}!</p>
                 <p className="text-muted-foreground text-sm">Sacate una selfie para fichar</p>
-              </div>
-
-              {/* GPS Status */}
-              <div className={`flex items-center justify-center gap-2 text-sm p-2 rounded-lg ${
-                gpsStatus === 'valid' ? 'bg-green-500/10 text-green-700' :
-                gpsStatus === 'warning' ? 'bg-amber-500/10 text-amber-700' :
-                gpsStatus === 'error' ? 'bg-red-500/10 text-red-700' :
-                'bg-muted'
-              }`}>
-                <MapPin className="w-4 h-4" />
-                <span>
-                  {gpsStatus === 'checking' ? 'Verificando ubicación...' : gpsMessage}
-                </span>
-                {gpsStatus === 'checking' && <Loader2 className="w-4 h-4 animate-spin" />}
               </div>
 
               {/* Camera View */}
@@ -524,7 +434,7 @@ export default function FichajeEmpleado() {
 
               <canvas ref={canvasRef} className="hidden" />
 
-              {/* Clock buttons - only show after photo captured */}
+              {/* Clock buttons */}
               {capturedPhoto && (
                 <div className="grid grid-cols-2 gap-3">
                   <Button
@@ -577,28 +487,18 @@ export default function FichajeEmpleado() {
                 </p>
               </div>
 
-              {/* GPS Warning in success */}
-              {gpsStatus === 'warning' && (
-                <Alert className="border-amber-500/50 bg-amber-500/10 text-left">
-                  <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  <AlertDescription className="text-amber-700">
-                    {gpsMessage}
-                  </AlertDescription>
-                </Alert>
-              )}
-
               {entryType === 'clock_in' ? (
                 <div className="space-y-2">
                   <p className="text-primary font-medium">¡Buen turno!</p>
                   <p className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
-                    📵 Recordá que está prohibido el uso de teléfono a partir de este momento.
+                    Recordá que está prohibido el uso de teléfono a partir de este momento.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   <p className="text-primary font-medium">¡Gracias por tu trabajo hoy!</p>
                   <p className="text-sm text-muted-foreground">
-                    🌟 Descansá bien, nos vemos pronto.
+                    Descansá bien, nos vemos pronto.
                   </p>
                 </div>
               )}

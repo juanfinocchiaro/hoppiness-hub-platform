@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Pencil, Trash2, Package } from 'lucide-react';
 import { useConsumosManuales, useConsumoManualMutations, CATEGORIA_PL_OPTIONS, TIPO_CONSUMO_OPTIONS } from '@/hooks/useConsumosManuales';
+import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { ConsumoManualFormModal } from '@/components/finanzas/ConsumoManualFormModal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/states';
@@ -20,14 +21,19 @@ export default function ConsumosPage() {
   const { data: consumos, isLoading } = useConsumosManuales(branchId!);
   const { softDelete } = useConsumoManualMutations();
   const [search, setSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ConsumoManual | null>(null);
   const [deleting, setDeleting] = useState<ConsumoManual | null>(null);
 
-  const filtered = consumos?.filter((c) =>
-    c.categoria_pl.toLowerCase().includes(search.toLowerCase()) ||
-    (c.observaciones || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = consumos?.filter((c) => {
+    const matchesSearch = c.categoria_pl.toLowerCase().includes(search.toLowerCase()) ||
+      (c.observaciones || '').toLowerCase().includes(search.toLowerCase());
+    const matchesFrom = !dateFrom || (c.fecha && c.fecha >= dateFrom);
+    const matchesTo = !dateTo || (c.fecha && c.fecha <= dateTo);
+    return matchesSearch && matchesFrom && matchesTo;
+  });
 
   const getCatLabel = (key: string) => CATEGORIA_PL_OPTIONS.find(c => c.value === key)?.label || key;
   const getTipoLabel = (key: string | null) => TIPO_CONSUMO_OPTIONS.find(c => c.value === key)?.label || key || 'Manual';
@@ -44,7 +50,12 @@ export default function ConsumosPage() {
         }
       />
 
-      <DataToolbar searchValue={search} onSearchChange={setSearch} searchPlaceholder="Buscar por categoría..." />
+      <DataToolbar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar por categoría..."
+        filters={<DateRangeFilter from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />}
+      />
 
       <div className="rounded-md border">
         <Table>

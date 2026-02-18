@@ -3,7 +3,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import type { ClosureConfigItem, BranchClosureConfig, ConfigTipo } from '@/types/shiftClosure';
 
 // Helper to cast DB row to typed item
@@ -154,16 +154,10 @@ export function useUpdateBranchClosureConfig() {
       queryClient.invalidateQueries({ 
         queryKey: ['branch-closure-config', variables.branchId] 
       });
-      toast({
-        title: 'Configuración actualizada',
-      });
+      toast.success('Configuración actualizada');
     },
     onError: (error: Error) => {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.message,
-      });
+      toast.error(`Error: ${error.message}`);
     },
   });
 }

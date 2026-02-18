@@ -370,8 +370,8 @@ function CoachingNetworkPageContent() {
 export default function CoachingNetworkPage() {
   return (
     <RequireBrandPermission
-      permission="canEditBrandConfig"
-      noAccessMessage="Solo el Superadmin puede ver el dashboard de coaching de red."
+      permission="canViewCoaching"
+      noAccessMessage="No tenés permisos para ver el dashboard de coaching de red."
     >
       <CoachingNetworkPageContent />
     </RequireBrandPermission>

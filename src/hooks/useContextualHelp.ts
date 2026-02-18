@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { toast } from 'sonner';
 import { getHelpConfig, type HelpConfig } from '@/lib/helpConfig';
 
 interface UseContextualHelpResult {
@@ -61,6 +62,7 @@ export function useContextualHelp(pageId: string): UseContextualHelpResult {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile-help-prefs'] });
     },
+    onError: (e: Error) => toast.error(`Error: ${e.message}`),
   });
 
   // Mutation to toggle floating help
@@ -80,6 +82,7 @@ export function useContextualHelp(pageId: string): UseContextualHelpResult {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile-help-prefs'] });
     },
+    onError: (e: Error) => toast.error(`Error: ${e.message}`),
   });
 
   return {

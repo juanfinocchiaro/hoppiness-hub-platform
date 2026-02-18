@@ -1,19 +1,28 @@
 /**
  * useLaborHours Hook
  * 
- * Calcula horas trabajadas según el convenio colectivo del
- * Sindicato de Trabajadores de Servicios Rápidos (PASTELEROS - CCT 301/75 y afines)
+ * Calcula horas trabajadas según CCT 329/00 – Servicios Rápidos
+ * y art. 201 LCT, con las siguientes reglas de negocio:
  * 
- * Fórmulas:
- * - horas_turno = hora_fin - hora_inicio (horas decimales)
- * - hs_trabajadas_mes = SUM(horas_turno del mes)
- * - feriados_hs = SUM(horas_turno donde fecha es feriado)
- * - hs_franco_feriado = SUM(horas_turno donde fecha es feriado O es franco del empleado)
- * - extra_dia_alerta = max(0, horas_del_dia - 9)
- * - extra_mes = max(0, hs_trabajadas_mes - 190)
- * - hs_extras_dia_habil = max(0, extra_mes - hs_franco_feriado)
- * - hs_extras_franco_feriado = hs_franco_feriado (se pagan al 100%)
- * - presentismo = "SI" si faltas_injustificadas_mes == 0
+ * CONSTANTES (hardcodeadas por convenio):
+ *   - Límite diario: 9 hs (aplica a todos los roles por igual)
+ *   - Límite mensual: 190 hs (aplica a todos los roles por igual)
+ *   - Recargo hora extra: +50 % (siempre, tanto hábil como franco/feriado)
+ * 
+ * REGLAS DE CÁLCULO:
+ *   1) Horas en FRANCO TRABAJADO → SIEMPRE son extras (+50 %), sin importar
+ *      si el empleado llegó o no a las 190 hs mensuales.
+ *   2) Horas en FERIADO trabajado → SIEMPRE son extras (+50 %), misma lógica.
+ *   3) Horas en DÍA HÁBIL → solo se consideran extras si el total de horas
+ *      hábiles del mes supera las 190 hs. El excedente son extras (+50 %).
+ *   4) Alerta diaria: si un día supera 9 hs, se marca como alerta informativa.
+ *   5) Presentismo: "SI" si faltas injustificadas del mes == 0.
+ * 
+ * Fórmulas resultantes:
+ *   - hsExtrasFrancoFeriado = hsFrancoFeriado (siempre extra)
+ *   - hsHabiles = hsTrabajadasMes - hsFrancoFeriado
+ *   - hsExtrasDiaHabil = max(0, hsHabiles - 190)
+ *   - totalExtras = hsExtrasFrancoFeriado + hsExtrasDiaHabil
  */
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -54,7 +63,8 @@ export interface EmployeeLaborSummary {
   localRole: LocalRole;
   cuil: string | null;
   hireDate: string | null;
-  contractType: string; // '0% BLANCO', '60hs blanco', etc.
+  contractType: string; // 'No definido', '60 hs/mes', '190 hs/mes', etc.
+  registeredHours: number | null; // Raw value from employee_data
   
   // Horas básicas
   hsTrabajadasMes: number; // Total horas trabajadas
@@ -64,10 +74,11 @@ export interface EmployeeLaborSummary {
   feriadosHs: number; // Horas trabajadas en feriados
   hsFrancoFeriado: number; // Horas en feriados + francos trabajados
   
-  // Extras (ley)
-  extraMes: number; // max(0, hs_trabajadas - 190)
-  hsExtrasDiaHabil: number; // Extras en días hábiles
-  hsExtrasFrancoFeriado: number; // Extras en feriados/francos (100%)
+  // Extras (CCT 329/00 – recargo siempre +50 %)
+  hsHabiles: number; // Horas en días hábiles (sin francos ni feriados)
+  hsExtrasDiaHabil: number; // max(0, hsHabiles - 190) → extras por exceder límite mensual
+  hsExtrasFrancoFeriado: number; // = hsFrancoFeriado (siempre extras)
+  totalExtras: number; // hsExtrasDiaHabil + hsExtrasFrancoFeriado
   
   // Alertas diarias (días > 9hs)
   diasConExceso: number;
@@ -276,7 +287,7 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
       // Obtener datos de empleado
       const { data: employeeData, error: empError } = await supabase
         .from('employee_data')
-        .select('user_id, cuil, hire_date')
+        .select('user_id, cuil, hire_date, registered_hours')
         .eq('branch_id', branchId)
         .in('user_id', userIds);
       
@@ -290,6 +301,7 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
           local_role: role?.local_role as LocalRole || null,
           cuil: empData?.cuil || null,
           hire_date: empData?.hire_date || null,
+          registered_hours: empData?.registered_hours ?? null,
         };
       });
     },
@@ -345,10 +357,14 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
         horasExtra: hours - HORAS_DIARIAS_LIMITE,
       }));
     
-    // Extras mensuales según convenio
-    const extraMes = Math.max(0, hsTrabajadasMes - HORAS_MENSUALES_LIMITE);
+    // Extras mensuales según CCT 329/00 + reglas de negocio:
+    // Franco/feriado trabajado → SIEMPRE extra (+50 %)
     const hsExtrasFrancoFeriado = hsFrancoFeriado;
-    const hsExtrasDiaHabil = Math.max(0, extraMes - hsFrancoFeriado);
+    // Horas hábiles = total - francos/feriados
+    const hsHabiles = Math.max(0, hsTrabajadasMes - hsFrancoFeriado);
+    // Solo el excedente hábil sobre 190 hs es extra
+    const hsExtrasDiaHabil = Math.max(0, hsHabiles - HORAS_MENSUALES_LIMITE);
+    const totalExtras = hsExtrasFrancoFeriado + hsExtrasDiaHabil;
     
     // Presentismo (faltas injustificadas)
     const userAbsences = absences.filter(a => a.user_id === userId);
@@ -369,7 +385,10 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
       localRole: userData?.local_role || null,
       cuil: userData?.cuil || null,
       hireDate: userData?.hire_date || null,
-      contractType: '0% BLANCO', // TODO: obtener de employee_data cuando exista
+      contractType: userData?.registered_hours
+        ? `${userData.registered_hours} hs/mes en blanco`
+        : 'No definido',
+      registeredHours: userData?.registered_hours ?? null,
       
       hsTrabajadasMes: Number(hsTrabajadasMes.toFixed(2)),
       diasTrabajados: uniqueDays,
@@ -377,9 +396,10 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
       feriadosHs: Number(feriadosHs.toFixed(2)),
       hsFrancoFeriado: Number(hsFrancoFeriado.toFixed(2)),
       
-      extraMes: Number(extraMes.toFixed(2)),
+      hsHabiles: Number(hsHabiles.toFixed(2)),
       hsExtrasDiaHabil: Number(hsExtrasDiaHabil.toFixed(2)),
       hsExtrasFrancoFeriado: Number(hsExtrasFrancoFeriado.toFixed(2)),
+      totalExtras: Number(totalExtras.toFixed(2)),
       
       diasConExceso: alertasDiarias.length,
       alertasDiarias,
@@ -400,7 +420,7 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
   const stats: LaborStats = {
     totalEmpleados: summaries.length,
     totalHsEquipo: summaries.reduce((sum, s) => sum + s.hsTrabajadasMes, 0),
-    totalExtrasMes: summaries.reduce((sum, s) => sum + s.extraMes, 0),
+    totalExtrasMes: summaries.reduce((sum, s) => sum + s.totalExtras, 0),
     empleadosConPresentismo: summaries.filter(s => s.presentismo).length,
     empleadosSinPresentismo: summaries.filter(s => !s.presentismo).length,
   };

@@ -40,6 +40,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import ReadersModal from '@/components/communications/ReadersModal';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 const TAGS = [
   { value: 'general', label: 'General' },
@@ -67,6 +68,7 @@ function CommunicationsPageContent() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [readersModal, setReadersModal] = useState<{ open: boolean; id: string | null; title: string; requiresConfirmation: boolean }>({
     open: false,
     id: null,
@@ -395,7 +397,7 @@ function CommunicationsPageContent() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => deleteMutation.mutate(comm.id)}
+                      onClick={() => setDeleteId(comm.id)}
                     >
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
@@ -420,6 +422,19 @@ function CommunicationsPageContent() {
         communicationId={readersModal.id}
         communicationTitle={readersModal.title}
         requiresConfirmation={readersModal.requiresConfirmation}
+      />
+
+      <ConfirmDialog
+        open={!!deleteId}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title="Eliminar comunicado"
+        description="¿Estás seguro de que querés eliminar este comunicado? Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        variant="destructive"
+        onConfirm={() => {
+          if (deleteId) deleteMutation.mutate(deleteId);
+          setDeleteId(null);
+        }}
       />
     </div>
   );

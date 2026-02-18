@@ -1,10 +1,12 @@
+import { useState } from 'react';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Calendar, Timer, LogIn, LogOut } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Clock, Calendar, Timer, LogIn, LogOut, ChevronDown, ChevronUp } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, differenceInMinutes } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -122,7 +124,8 @@ export default function MyClockInsCard() {
 
   const totalTime = calculateTotalHours();
   const isCurrentlyWorking = shifts.length > 0 && shifts[0].clockIn && !shifts[0].clockOut;
-  const recentShifts = shifts.slice(0, 5);
+  const [showAll, setShowAll] = useState(false);
+  const recentShifts = showAll ? shifts : shifts.slice(0, 5);
 
   if (!isOperationalEmployee) return null;
 
@@ -212,6 +215,20 @@ export default function MyClockInsCard() {
                 );
               })}
             </div>
+            {shifts.length > 5 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full mt-2"
+                onClick={() => setShowAll(!showAll)}
+              >
+                {showAll ? (
+                  <><ChevronUp className="w-4 h-4 mr-1" /> Ver menos</>
+                ) : (
+                  <><ChevronDown className="w-4 h-4 mr-1" /> Ver todos ({shifts.length})</>
+                )}
+              </Button>
+            )}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground text-center py-4">

@@ -64,6 +64,40 @@ This project is built with:
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
 
+## App version badge (global)
+
+The app includes a global badge (bottom-right) rendered from `src/App.tsx` that shows:
+
+- `Version: <value>` from `import.meta.env.VITE_APP_VERSION`
+- Fallback to `package.json` version when `VITE_APP_VERSION` is not defined
+- Optional date from `import.meta.env.VITE_APP_BUILD_DATE`
+
+### Deploy configuration
+
+Set these environment variables in your deploy/build pipeline:
+
+- `VITE_APP_VERSION` (recommended: git short hash)
+- `VITE_APP_BUILD_DATE` (optional)
+
+Example in CI/CD (Linux runner):
+
+```sh
+export VITE_APP_VERSION="$(git rev-parse --short HEAD)"
+export VITE_APP_BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+npm ci
+npm run build
+```
+
+Example in GitHub Actions:
+
+```yaml
+- name: Build
+  run: npm run build
+  env:
+    VITE_APP_VERSION: ${{ github.sha }}
+    VITE_APP_BUILD_DATE: ${{ github.run_started_at }}
+```
+
 ## Can I connect a custom domain to my Lovable project?
 
 Yes, you can!

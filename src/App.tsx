@@ -1,4 +1,3 @@
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -7,6 +6,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
 import { AdminRoute, LocalRoute, RequireQRAccess, RequireAuth } from "@/components/guards";
 import UserFingerprint from "@/components/ui/UserFingerprint";
+import VersionBadge from "@/components/ui/VersionBadge";
 
 // Páginas públicas
 import Index from "./pages/Index";
@@ -42,7 +42,6 @@ import CuentaCorrienteProveedorPage from "./pages/local/CuentaCorrienteProveedor
 import InsumosLocalPage from "./pages/local/InsumosLocalPage";
 import ComprasPage from "./pages/local/ComprasPage";
 import GastosPage from "./pages/local/GastosPage";
-import VentasMensualesPage from "./pages/local/VentasMensualesPage"; // kept for potential read-only use
 import ConsumosPage from "./pages/local/ConsumosPage";
 import SociosPage from "./pages/local/SociosPage";
 import PeriodosPage from "./pages/local/PeriodosPage";
@@ -73,6 +72,8 @@ import ProveedoresPage from "./pages/admin/ProveedoresPage";
 import InsumosPage from "./pages/admin/InsumosPage";
 import CanonPage from "./pages/admin/CanonPage";
 import VentasMensualesMarcaPage from "./pages/admin/VentasMensualesMarcaPage";
+import ReportsPage from "./pages/admin/ReportsPage";
+import AuditLogPage from "./pages/admin/AuditLogPage";
 import ConceptosServicioPage from "./pages/admin/ConceptosServicioPage";
 import MenuCartaPage from "./pages/admin/MenuCartaPage";
 import CentroCostosPage from "./pages/admin/CentroCostosPage";
@@ -94,6 +95,8 @@ import MisSolicitudesPage from "./pages/cuenta/MisSolicitudesPage";
 import MisAdelantosPage from "./pages/cuenta/MisAdelantosPage";
 import MisComunicadosPage from "./pages/cuenta/MisComunicadosPage";
 import MiReglamentoPage from "./pages/cuenta/MiReglamentoPage";
+import MisApercibimientosPage from "./pages/cuenta/MisApercibimientosPage";
+import BranchComparisonPage from "./pages/cuenta/BranchComparisonPage";
 
 import NotFound from "./pages/NotFound";
 
@@ -113,9 +116,11 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <ImpersonationProvider>
-          <Toaster />
           <Sonner />
-          <UserFingerprint />
+          <div className="pointer-events-none fixed bottom-2 right-2 z-[60] flex flex-col items-end gap-1">
+            <VersionBadge />
+            <UserFingerprint />
+          </div>
           <BrowserRouter>
             <Routes>
             {/* Rutas Públicas */}
@@ -140,6 +145,8 @@ const App = () => (
               <Route path="reuniones" element={<MisReunionesPage />} />
               <Route path="solicitudes" element={<MisSolicitudesPage />} />
               <Route path="adelantos" element={<MisAdelantosPage />} />
+              <Route path="apercibimientos" element={<MisApercibimientosPage />} />
+              <Route path="comparativo" element={<BranchComparisonPage />} />
               <Route path="comunicados" element={<MisComunicadosPage />} />
               <Route path="reglamento" element={<MiReglamentoPage />} />
             </Route>
@@ -155,7 +162,7 @@ const App = () => (
             
             {/* Mi Local - /milocal */}
             <Route path="/milocal" element={<LocalRoute><BranchLayout /></LocalRoute>}>
-              <Route index element={<div />} />
+              <Route index element={null} />
             </Route>
             <Route path="/milocal/:branchId" element={<LocalRoute><BranchLayout /></LocalRoute>}>
               <Route index element={null} />
@@ -234,6 +241,8 @@ const App = () => (
               <Route path="finanzas/conceptos-servicio" element={<ConceptosServicioPage />} />
               <Route path="finanzas/canon" element={<CanonPage />} />
               <Route path="finanzas/ventas-mensuales" element={<VentasMensualesMarcaPage />} />
+              <Route path="informes" element={<ReportsPage />} />
+              <Route path="auditoria" element={<AuditLogPage />} />
               
               {/* Recetas */}
               <Route path="recetas" element={<PreparacionesPage />} />

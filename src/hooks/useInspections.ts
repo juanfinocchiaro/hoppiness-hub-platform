@@ -178,50 +178,21 @@ export function useCreateInspection() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No autenticado');
 
-      // 1. Create inspection
-      const { data: inspection, error: inspError } = await supabase
-        .from('branch_inspections')
-        .insert({
-          branch_id: input.branch_id,
-          inspection_type: input.inspection_type,
-          inspector_id: user.id,
-          present_manager_id: input.present_manager_id || null,
-          status: 'en_curso',
-        })
-        .select()
-        .single();
+      // Atomic RPC: creates inspection + items from templates in a single transaction.
+      // If items fail, the inspection is rolled back too.
+      const { data: inspectionId, error } = await supabase.rpc(
+        'create_inspection_with_items',
+        {
+          p_branch_id: input.branch_id,
+          p_inspection_type: input.inspection_type,
+          p_inspector_id: user.id,
+          p_present_manager_id: input.present_manager_id || null,
+        }
+      );
 
-      if (inspError) throw inspError;
+      if (error) throw error;
 
-      // 2. Get templates for this type
-      const { data: templates, error: templatesError } = await supabase
-        .from('inspection_templates')
-        .select('*')
-        .eq('inspection_type', input.inspection_type)
-        .eq('is_active', true)
-        .order('sort_order');
-
-      if (templatesError) throw templatesError;
-
-      // 3. Create inspection items from templates
-      const items = templates.map(t => ({
-        inspection_id: inspection.id,
-        category: t.category,
-        item_key: t.item_key,
-        item_label: t.item_label,
-        sort_order: t.sort_order,
-        complies: null,
-        observations: null,
-        photo_urls: [],
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('inspection_items')
-        .insert(items);
-
-      if (itemsError) throw itemsError;
-
-      return inspection;
+      return { id: inspectionId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inspections'] });

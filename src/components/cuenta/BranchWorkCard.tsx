@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,17 +26,31 @@ export function BranchWorkCard({
 }: BranchWorkCardProps) {
   const [showPin, setShowPin] = useState(false);
   const [pinModalOpen, setPinModalOpen] = useState(false);
+  const pinTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   const hasPin = !!clockPin;
   
   // Franquiciados don't need PIN (they don't clock in)
   const isFranquiciado = localRole === 'franquiciado';
 
+  // Reset state when branchId changes
+  useEffect(() => {
+    setShowPin(false);
+    setPinModalOpen(false);
+    clearTimeout(pinTimerRef.current);
+  }, [branchId]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => clearTimeout(pinTimerRef.current);
+  }, []);
+
   // Auto-hide PIN after 3 seconds
-  const handleShowPin = () => {
+  const handleShowPin = useCallback(() => {
     setShowPin(true);
-    setTimeout(() => setShowPin(false), 3000);
-  };
+    clearTimeout(pinTimerRef.current);
+    pinTimerRef.current = setTimeout(() => setShowPin(false), 3000);
+  }, []);
 
   return (
     <>

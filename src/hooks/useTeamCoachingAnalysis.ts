@@ -88,11 +88,12 @@ export function useTeamCoachingAnalysis(branchId: string | null) {
       const userIds = [...new Set(coachings.map(c => c.user_id))];
 
       // Get profiles
-      const { data: profiles } = await supabase
+      const { data: profiles, error: profilesErr } = await supabase
         .from('profiles')
         .select('id, full_name, avatar_url')
         .in('id', userIds);
 
+      if (profilesErr) throw profilesErr;
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
       // 2. Calculate ranking by average score
@@ -144,7 +145,7 @@ export function useTeamCoachingAnalysis(branchId: string | null) {
         : null;
 
       // 4. Get station scores for champions
-      const { data: stationScores } = await supabase
+      const { data: stationScores, error: stationScoresErr } = await supabase
         .from('coaching_station_scores')
         .select(`
           station_id,
@@ -153,12 +154,15 @@ export function useTeamCoachingAnalysis(branchId: string | null) {
         `)
         .eq('coaching.branch_id', branchId);
 
+      if (stationScoresErr) throw stationScoresErr;
+
       // Get stations
-      const { data: stations } = await supabase
+      const { data: stations, error: stationsErr } = await supabase
         .from('work_stations')
         .select('id, name, key')
         .eq('is_active', true);
 
+      if (stationsErr) throw stationsErr;
       const stationMap = new Map(stations?.map(s => [s.id, s]) || []);
 
       // Calculate champions per station
@@ -224,7 +228,7 @@ export function useTeamCoachingAnalysis(branchId: string | null) {
       });
 
       // 6. Get competency analysis (general competencies)
-      const { data: competencyScores } = await supabase
+      const { data: competencyScores, error: compScoresErr } = await supabase
         .from('coaching_competency_scores')
         .select(`
           competency_id,
@@ -235,11 +239,14 @@ export function useTeamCoachingAnalysis(branchId: string | null) {
         .eq('coaching.branch_id', branchId)
         .eq('competency_type', 'general');
 
-      const { data: competencies } = await supabase
+      if (compScoresErr) throw compScoresErr;
+
+      const { data: competencies, error: compErr } = await supabase
         .from('general_competencies')
         .select('id, name, key')
         .eq('is_active', true);
 
+      if (compErr) throw compErr;
       const compMap = new Map(competencies?.map(c => [c.id, c]) || []);
 
       const competencyUserScores = new Map<string, { scores: number[]; users: Map<string, number> }>();

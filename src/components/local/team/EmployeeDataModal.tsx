@@ -56,21 +56,21 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
   const [selectedRole, setSelectedRole] = useState<LocalRole>(currentRole);
   const [hireDate, setHireDate] = useState('');
   const [defaultPosition, setDefaultPosition] = useState<string>(currentDefaultPosition || '');
+  const [registeredHours, setRegisteredHours] = useState<string>('');
   
   useEffect(() => {
-    if (existingData) {
-      setDni(existingData.dni || '');
-      setBirthDate(existingData.birth_date || '');
-      setPersonalAddress(existingData.personal_address || '');
-      setEmergencyContact(existingData.emergency_contact || '');
-      setEmergencyPhone(existingData.emergency_phone || '');
-      setBankName(existingData.bank_name || '');
-      setCbu(existingData.cbu || '');
-      setAlias(existingData.alias || '');
-      setCuil(existingData.cuil || '');
-      setHireDate(existingData.hire_date || '');
-    }
-  }, [existingData]);
+    setDni(existingData?.dni || '');
+    setBirthDate(existingData?.birth_date || '');
+    setPersonalAddress(existingData?.personal_address || '');
+    setEmergencyContact(existingData?.emergency_contact || '');
+    setEmergencyPhone(existingData?.emergency_phone || '');
+    setBankName(existingData?.bank_name || '');
+    setCbu(existingData?.cbu || '');
+    setAlias(existingData?.alias || '');
+    setCuil(existingData?.cuil || '');
+    setHireDate(existingData?.hire_date || '');
+    setRegisteredHours(existingData?.registered_hours != null ? String(existingData.registered_hours) : '');
+  }, [existingData, userId, branchId]);
 
   useEffect(() => {
     setSelectedRole(currentRole);
@@ -92,6 +92,7 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
         alias: alias || null,
         cuil: cuil || null,
         hire_date: hireDate || null,
+        registered_hours: registeredHours ? parseInt(registeredHours, 10) : null,
       };
 
       // Save employee data
@@ -315,6 +316,32 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
                 Fecha real en que el colaborador comenzó a trabajar en la empresa.
                 <br />
                 <span className="text-primary">Puede ser anterior al registro en el sistema</span> (para empleados antiguos).
+              </p>
+            </div>
+
+            <Separator />
+
+            {/* Registered Hours (horas en blanco) */}
+            <div className="space-y-2">
+              <Label>Horas registradas (en blanco)</Label>
+              <Select
+                value={registeredHours || 'not_set'}
+                onValueChange={(v) => setRegisteredHours(v === 'not_set' ? '' : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="not_set">No definido</SelectItem>
+                  <SelectItem value="60">60 hs/mes (mínimo legal)</SelectItem>
+                  <SelectItem value="96">96 hs/mes</SelectItem>
+                  <SelectItem value="120">120 hs/mes</SelectItem>
+                  <SelectItem value="150">150 hs/mes</SelectItem>
+                  <SelectItem value="190">190 hs/mes (jornada completa)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Cantidad de horas mensuales declaradas formalmente. Dato informativo para liquidación.
               </p>
             </div>
 

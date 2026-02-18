@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface OnlineStatus {
   isOnline: boolean;
@@ -15,14 +15,14 @@ export function useOnlineStatus(): OnlineStatus {
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
   const [wasOffline, setWasOffline] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      // Si volvemos online después de estar offline, marcar wasOffline
       setWasOffline(true);
-      // Resetear wasOffline después de 5 segundos
-      setTimeout(() => setWasOffline(false), 5000);
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setWasOffline(false), 5000);
     };
 
     const handleOffline = () => {
@@ -35,6 +35,7 @@ export function useOnlineStatus(): OnlineStatus {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      clearTimeout(timerRef.current);
     };
   }, []);
 

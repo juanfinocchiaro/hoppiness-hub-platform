@@ -37,6 +37,7 @@ import { MeetingStatusBadge } from './MeetingStatusBadge';
 import { MeetingExecutionForm } from './MeetingExecutionForm';
 import { useMarkMeetingAsRead, useStartMeeting, useCancelMeeting } from '@/hooks/useMeetings';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { generateGoogleCalendarLink } from '@/lib/calendarLinks';
 
@@ -48,6 +49,7 @@ interface MeetingDetailProps {
 }
 
 export function MeetingDetail({ meeting, onBack, canTrackReads = false, canManage = false }: MeetingDetailProps) {
+  const { user } = useAuth();
   const effectiveUser = useEffectiveUser();
   const markAsRead = useMarkMeetingAsRead();
   const startMeeting = useStartMeeting();
@@ -61,6 +63,7 @@ export function MeetingDetail({ meeting, onBack, canTrackReads = false, canManag
   // Find current user's participation
   const myParticipation = meeting.participants.find(p => p.user_id === effectiveUser.id);
   const isUnread = myParticipation && !myParticipation.read_at && meeting.status === 'cerrada';
+  const isMeetingConvener = user?.id === meeting.created_by;
   
   const handleMarkAsRead = async () => {
     try {
@@ -72,6 +75,11 @@ export function MeetingDetail({ meeting, onBack, canTrackReads = false, canManag
   };
 
   const handleStartMeeting = async () => {
+    if (!isMeetingConvener) {
+      toast.error('Solo quien convocó la reunión puede iniciarla');
+      return;
+    }
+
     try {
       await startMeeting.mutateAsync(meeting.id);
       toast.success('Reunión iniciada');
@@ -132,10 +140,16 @@ export function MeetingDetail({ meeting, onBack, canTrackReads = false, canManag
                   <Trash2 className="w-4 h-4 mr-1" />
                   Cancelar
                 </Button>
-                <Button size="sm" onClick={handleStartMeeting} disabled={startMeeting.isPending}>
-                  <Play className="w-4 h-4 mr-1" />
-                  {startMeeting.isPending ? 'Iniciando...' : 'Iniciar Reunión'}
-                </Button>
+                {isMeetingConvener ? (
+                  <Button size="sm" onClick={handleStartMeeting} disabled={startMeeting.isPending}>
+                    <Play className="w-4 h-4 mr-1" />
+                    {startMeeting.isPending ? 'Iniciando...' : 'Iniciar Reunión'}
+                  </Button>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    Solo la persona convocante puede iniciar
+                  </span>
+                )}
               </>
             )}
             

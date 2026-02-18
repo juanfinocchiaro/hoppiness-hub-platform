@@ -12,8 +12,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { User, ArrowRight, Building2, AlertTriangle } from 'lucide-react';
 import { BranchWorkCard } from '@/components/cuenta/BranchWorkCard';
+import { PendingItemsPanel } from '@/components/cuenta/PendingItemsPanel';
+import { ProfileCompletenessCard } from '@/components/cuenta/ProfileCompletenessCard';
 import { PageHelp } from '@/components/ui/PageHelp';
 import { PageHeader } from '@/components/ui/page-header';
+import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
+import { PushNotificationPrompt } from '@/components/notifications/PushNotificationPrompt';
 
 export default function CuentaHome() {
   const effectiveUser = useEffectiveUser();
@@ -104,6 +108,7 @@ export default function CuentaHome() {
 
   return (
     <div className="space-y-6">
+      <OnboardingWizard />
       <PageHelp pageId={helpPageId} />
       
       <PageHeader 
@@ -125,6 +130,12 @@ export default function CuentaHome() {
         </Alert>
       )}
 
+      {/* Push notifications prompt */}
+      <PushNotificationPrompt />
+
+      {/* Pending Items */}
+      {effectiveUserId && <PendingItemsPanel userId={effectiveUserId} />}
+
       {/* Mi Marca Access Card */}
       {hasBrandAccess && (
         <Link to="/mimarca">
@@ -144,6 +155,9 @@ export default function CuentaHome() {
           </Card>
         </Link>
       )}
+
+      {/* Profile completeness */}
+      {effectiveUserId && !isOnlyFranquiciado && <ProfileCompletenessCard userId={effectiveUserId} />}
 
       {/* No Role Message */}
       {hasNoRole && (

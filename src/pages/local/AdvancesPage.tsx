@@ -6,7 +6,8 @@ import { useState } from 'react';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useSalaryAdvances, useCreateAdvance, useCancelAdvance } from '@/hooks/useSalaryAdvances';
+import { useSalaryAdvances, useCreateAdvance, useCancelAdvance, useApproveAdvance, useRejectAdvance } from '@/hooks/useSalaryAdvances';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 
@@ -19,7 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { format, addMonths, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -32,7 +33,10 @@ import {
   XCircle,
   ChevronLeft,
   ChevronRight,
-  User
+  User,
+  Clock,
+  Check,
+  X
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -50,10 +54,13 @@ export default function AdvancesPage() {
   const [reason, setReason] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer'>('cash');
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [cancelId, setCancelId] = useState<string | null>(null);
 
   const { data: advances, isLoading } = useSalaryAdvances(branchId, selectedMonth);
   const createAdvance = useCreateAdvance();
   const cancelAdvance = useCancelAdvance();
+  const approveAdvance = useApproveAdvance();
+  const rejectAdvance = useRejectAdvance();
 
   // Fetch team members using user_branch_roles + profiles
   const { data: teamMembers } = useQuery({
@@ -115,8 +122,11 @@ export default function AdvancesPage() {
     setPaymentMethod('cash');
   };
 
+  const pendingAdvances = advances?.filter(a => a.status === 'pending') || [];
+
   const getStatusBadge = (status: string) => {
     const config: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ElementType }> = {
+      pending: { label: 'Pendiente', variant: 'outline', icon: Clock },
       paid: { label: 'Efectivo', variant: 'default', icon: Banknote },
       transferred: { label: 'Transferencia', variant: 'default', icon: CreditCard },
       deducted: { label: 'Descontado', variant: 'secondary', icon: DollarSign },
@@ -144,7 +154,18 @@ export default function AdvancesPage() {
   const goToNextMonth = () => setSelectedMonth(addMonths(selectedMonth, 1));
 
   if (isLoading) {
-    return <HoppinessLoader fullScreen size="md" text="Cargando adelantos" />;
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-56" />
+        <Skeleton className="h-16 w-full" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Skeleton className="h-20" />
+          <Skeleton className="h-20" />
+          <Skeleton className="h-20" />
+        </div>
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
   }
 
   return (
@@ -300,6 +321,68 @@ export default function AdvancesPage() {
         </Card>
       </div>
 
+      {/* Pending Requests */}
+      {pendingAdvances.length > 0 && (
+        <Card className="border-amber-300 bg-amber-50/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Clock className="h-4 w-4 text-amber-600" />
+              Solicitudes Pendientes ({pendingAdvances.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {pendingAdvances.map(adv => (
+              <div key={adv.id} className="flex items-center justify-between p-3 rounded-lg border bg-background">
+                <div className="flex items-center gap-4">
+                  <div>
+                    <p className="font-medium">{adv.user_name || 'N/A'}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(adv.created_at), "dd/MM/yy HH:mm", { locale: es })}
+                      {adv.reason && ` · ${adv.reason}`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="font-bold text-lg">{formatCurrency(adv.amount)}</span>
+                  {local.canCreateSalaryAdvance && (
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-green-600 border-green-300 hover:bg-green-50"
+                        onClick={() => approveAdvance.mutate({ advanceId: adv.id, paymentMethod: 'cash' })}
+                        disabled={approveAdvance.isPending}
+                      >
+                        <Banknote className="h-4 w-4 mr-1" />
+                        Efectivo
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                        onClick={() => approveAdvance.mutate({ advanceId: adv.id, paymentMethod: 'transfer' })}
+                        disabled={approveAdvance.isPending}
+                      >
+                        <CreditCard className="h-4 w-4 mr-1" />
+                        Transferir
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => rejectAdvance.mutate(adv.id)}
+                        disabled={rejectAdvance.isPending}
+                      >
+                        <X className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Advances List */}
       <Card>
         <Table>
@@ -339,7 +422,7 @@ export default function AdvancesPage() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => cancelAdvance.mutate(advance.id)}
+                        onClick={() => setCancelId(advance.id)}
                       >
                         <XCircle className="h-4 w-4" />
                       </Button>
@@ -351,6 +434,19 @@ export default function AdvancesPage() {
           </TableBody>
         </Table>
       </Card>
+
+      <ConfirmDialog
+        open={!!cancelId}
+        onOpenChange={(open) => !open && setCancelId(null)}
+        title="Cancelar adelanto"
+        description="¿Estás seguro de que querés cancelar este adelanto? Esta acción no se puede deshacer."
+        confirmLabel="Cancelar adelanto"
+        variant="destructive"
+        onConfirm={() => {
+          if (cancelId) cancelAdvance.mutate(cancelId);
+          setCancelId(null);
+        }}
+      />
     </div>
   );
 }

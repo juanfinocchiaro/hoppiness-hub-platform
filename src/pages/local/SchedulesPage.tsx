@@ -12,6 +12,7 @@
 import { useParams } from 'react-router-dom';
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import InlineScheduleEditor from '@/components/hr/InlineScheduleEditor';
 import { PageHelp } from '@/components/ui/PageHelp';
 import { Eye } from 'lucide-react';
@@ -20,8 +21,15 @@ export default function SchedulesPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const { isFranquiciado, local, loading } = usePermissionsWithImpersonation(branchId);
   
-  // Wait for permissions to load to avoid flash
-  if (loading) return null;
+  if (loading) return (
+    <div className="space-y-6">
+      <div>
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-4 w-64 mt-2" />
+      </div>
+      <Skeleton className="h-[400px] w-full" />
+    </div>
+  );
   
   const canManageSchedules = local.canEditSchedules;
   const isReadOnly = isFranquiciado || !canManageSchedules;

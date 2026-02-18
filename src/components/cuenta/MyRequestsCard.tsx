@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
@@ -5,7 +6,9 @@ import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImper
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarClock, CheckCircle2, XCircle, Clock, CalendarOff, RefreshCw, HelpCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { CalendarClock, CheckCircle2, XCircle, Clock, CalendarOff, RefreshCw, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import RequestDayOffModal from './RequestDayOffModal';
@@ -37,7 +40,7 @@ export default function MyRequestsCard() {
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(20);
       
       if (error) throw error;
       return data as ScheduleRequest[];
@@ -109,6 +112,8 @@ export default function MyRequestsCard() {
   }
 
   const pendingCount = requests?.filter(r => r.status === 'pending').length || 0;
+  const [showAll, setShowAll] = useState(false);
+  const displayedRequests = showAll ? requests : requests?.slice(0, 5);
 
   return (
     <Card>
@@ -125,9 +130,9 @@ export default function MyRequestsCard() {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {requests && requests.length > 0 ? (
+        {displayedRequests && displayedRequests.length > 0 ? (
           <>
-            {requests.map((request) => {
+            {displayedRequests.map((request) => {
               const TypeIcon = getTypeIcon(request.request_type);
               
               return (
@@ -149,14 +154,28 @@ export default function MyRequestsCard() {
                         </span>
                       </div>
                       {request.reason && (
-                        <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                          {request.reason}
-                        </p>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <p className="text-xs text-muted-foreground truncate max-w-[200px] cursor-help">
+                              {request.reason}
+                            </p>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="max-w-xs">
+                            <p>{request.reason}</p>
+                          </TooltipContent>
+                        </Tooltip>
                       )}
                       {request.response_note && request.status === 'rejected' && (
-                        <p className="text-xs text-destructive mt-1">
-                          Motivo: {request.response_note}
-                        </p>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <p className="text-xs text-destructive mt-1 truncate max-w-[200px] cursor-help">
+                              Motivo: {request.response_note}
+                            </p>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="max-w-xs">
+                            <p>{request.response_note}</p>
+                          </TooltipContent>
+                        </Tooltip>
                       )}
                     </div>
                   </div>
@@ -165,6 +184,20 @@ export default function MyRequestsCard() {
                 </div>
               );
             })}
+            {requests && requests.length > 5 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full mt-2"
+                onClick={() => setShowAll(!showAll)}
+              >
+                {showAll ? (
+                  <><ChevronUp className="w-4 h-4 mr-1" /> Ver menos</>
+                ) : (
+                  <><ChevronDown className="w-4 h-4 mr-1" /> Ver todas ({requests.length})</>
+                )}
+              </Button>
+            )}
           </>
         ) : (
           <div className="text-center py-6 text-muted-foreground">

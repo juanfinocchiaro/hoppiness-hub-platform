@@ -63,7 +63,21 @@ export function MyMeetingsCard() {
   }
 
   if (pendingMeetings.length === 0) {
-    return null; // Don't show if no pending meetings
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Calendar className="w-4 h-4" />
+            Reuniones
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground text-center py-4">
+            No tenés reuniones pendientes
+          </p>
+        </CardContent>
+      </Card>
+    );
   }
 
   // Get badge and icon for meeting status
