@@ -78,6 +78,11 @@ export default function POSPage() {
     });
   }, []);
 
+  const cancelOrder = useCallback(() => {
+    setCart([]);
+    setOrderConfig(DEFAULT_ORDER_CONFIG);
+  }, []);
+
   const validateOrderConfig = (): string | null => {
     if (orderConfig.canalVenta === 'mostrador') {
       if (orderConfig.tipoServicio === 'comer_aca' && !orderConfig.numeroLlamador) {
@@ -199,6 +204,7 @@ export default function POSPage() {
             onUpdateQty={updateQty}
             onRemove={removeItem}
             onUpdateNotes={updateNotes}
+            onCancelOrder={cancelOrder}
             onCobrar={handleCobrar}
             disabled={createPedido.isPending || !shiftStatus.hasCashOpen}
           />
