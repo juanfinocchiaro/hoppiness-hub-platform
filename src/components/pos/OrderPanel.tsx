@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Minus, Plus, Trash2, CreditCard, ShoppingBag, MessageSquare, X } from 'lucide-react';
 import type { CartItem } from './ProductGrid';
 
@@ -27,10 +28,28 @@ export function OrderPanel({ items, onUpdateQty, onRemove, onUpdateNotes, onCobr
       <div className="p-3 border-b font-medium flex items-center justify-between">
         <span>Pedido actual</span>
         {items.length > 0 && onCancelOrder && (
-          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-7 text-xs" onClick={onCancelOrder}>
-            <X className="h-3.5 w-3.5 mr-1" />
-            Cancelar
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-7 text-xs">
+                <X className="h-3.5 w-3.5 mr-1" />
+                Cancelar
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Cancelar pedido?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Se eliminarán todos los productos cargados. Esta acción no se puede deshacer.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Volver</AlertDialogCancel>
+                <AlertDialogAction onClick={onCancelOrder} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Sí, cancelar pedido
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
       </div>
       <ScrollArea className="flex-1 min-h-0 p-2">
