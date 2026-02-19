@@ -59,6 +59,30 @@ Deno.serve(async (req) => {
       );
     }
 
+    // 0. Validar que el pedido no esté ya facturado (protección contra doble facturación)
+    if (pedido_id) {
+      const { data: existingInvoice } = await supabase
+        .from("facturas_emitidas")
+        .select("id, cae, tipo_comprobante, numero_comprobante")
+        .eq("pedido_id", pedido_id)
+        .maybeSingle();
+
+      if (existingInvoice) {
+        return new Response(
+          JSON.stringify({
+            error: "Este pedido ya fue facturado",
+            factura_existente: {
+              id: existingInvoice.id,
+              tipo: existingInvoice.tipo_comprobante,
+              numero: existingInvoice.numero_comprobante,
+              cae: existingInvoice.cae,
+            },
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // 1. Leer config ARCA del local
     const { data: config, error: configError } = await supabase
       .from("afip_config")
@@ -88,15 +112,27 @@ Deno.serve(async (req) => {
       clavePrivada = config.clave_privada_enc;
     }
 
-    // 3. Determinar número de comprobante y tipo
+    // 3. Determinar número de comprobante y tipo (atómico para concurrencia)
     const tipoMap: Record<string, number> = { A: 1, B: 6, C: 11 };
     const cbteTipo = tipoMap[tipo_factura] || 11;
 
-    const ultimoNroField = `ultimo_nro_factura_${tipo_factura.toLowerCase()}` as
-      | "ultimo_nro_factura_a"
-      | "ultimo_nro_factura_b"
-      | "ultimo_nro_factura_c";
-    const nuevoNumero = (config[ultimoNroField] || 0) + 1;
+    // Usar RPC atómico para obtener el próximo número (evita colisiones entre PCs)
+    const adminSupabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: nuevoNumero, error: rpcError } = await adminSupabase.rpc(
+      "obtener_proximo_numero_factura",
+      { _branch_id: branch_id, _tipo: tipo_factura }
+    );
+
+    if (rpcError || nuevoNumero == null) {
+      return new Response(
+        JSON.stringify({ error: "Error al obtener número de factura", details: rpcError?.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // 4. Calcular montos según tipo
     const esProduccion = !!config.es_produccion;
@@ -265,11 +301,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 8. Actualizar último número
-    await supabase
-      .from("afip_config")
-      .update({ [ultimoNroField]: nuevoNumero })
-      .eq("branch_id", branch_id);
+    // 8. Número ya actualizado por RPC atómico (obtener_proximo_numero_factura)
 
     // 9. Actualizar pedido con datos fiscales (si aplica)
     if (pedido_id) {

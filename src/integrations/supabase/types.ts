@@ -7547,6 +7547,10 @@ export type Database = {
       is_staff_member: { Args: { _user_id: string }; Returns: boolean }
       is_superadmin: { Args: { _user_id: string }; Returns: boolean }
       liberar_llamador: { Args: { p_pedido_id: string }; Returns: undefined }
+      obtener_proximo_numero_factura: {
+        Args: { _branch_id: string; _tipo: string }
+        Returns: number
+      }
       recalcular_costo_item_carta: {
         Args: { _item_id: string }
         Returns: undefined
