@@ -20,7 +20,7 @@ function generateTRA(service: string): string {
   const now = new Date();
   const genTime = new Date(now.getTime() - 10 * 60 * 1000);
   const expTime = new Date(now.getTime() + 10 * 60 * 1000);
-  const fmt = (d: Date) => d.toISOString().replace(/\.\d{3}Z$/, "-03:00");
+  const fmt = (d: Date) => d.toISOString().replace(/\.\d{3}Z$/, "Z");
   return `<?xml version="1.0" encoding="UTF-8"?>
 <loginTicketRequest version="1.0">
   <header>
