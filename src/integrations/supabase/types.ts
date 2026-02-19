@@ -3038,6 +3038,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "item_carta_composicion_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "webapp_menu_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "item_carta_composicion_preparacion_id_fkey"
             columns: ["preparacion_id"]
             isOneToOne: false
@@ -3087,6 +3094,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "item_carta_extras_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "webapp_menu_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "item_carta_extras_preparacion_id_fkey"
             columns: ["preparacion_id"]
             isOneToOne: false
@@ -3129,6 +3143,13 @@ export type Database = {
             columns: ["item_carta_id"]
             isOneToOne: false
             referencedRelation: "items_carta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_carta_grupo_opcional_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "webapp_menu_items"
             referencedColumns: ["id"]
           },
         ]
@@ -3221,6 +3242,13 @@ export type Database = {
             referencedRelation: "items_carta"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "item_carta_precios_historial_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "webapp_menu_items"
+            referencedColumns: ["id"]
+          },
         ]
       }
       item_extra_asignaciones: {
@@ -3251,10 +3279,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "item_extra_asignaciones_extra_id_fkey"
+            columns: ["extra_id"]
+            isOneToOne: false
+            referencedRelation: "webapp_menu_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "item_extra_asignaciones_item_carta_id_fkey"
             columns: ["item_carta_id"]
             isOneToOne: false
             referencedRelation: "items_carta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_extra_asignaciones_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "webapp_menu_items"
             referencedColumns: ["id"]
           },
         ]
@@ -3378,6 +3420,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "item_modificadores_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "webapp_menu_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "item_modificadores_receta_extra_id_fkey"
             columns: ["receta_extra_id"]
             isOneToOne: false
@@ -3437,6 +3486,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "item_removibles_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "webapp_menu_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "item_removibles_preparacion_id_fkey"
             columns: ["preparacion_id"]
             isOneToOne: false
@@ -3457,6 +3513,7 @@ export type Database = {
           deleted_at: string | null
           descripcion: string | null
           disponible_delivery: boolean | null
+          disponible_webapp: boolean | null
           fc_actual: number | null
           fc_objetivo: number | null
           id: string
@@ -3482,6 +3539,7 @@ export type Database = {
           deleted_at?: string | null
           descripcion?: string | null
           disponible_delivery?: boolean | null
+          disponible_webapp?: boolean | null
           fc_actual?: number | null
           fc_objetivo?: number | null
           id?: string
@@ -3507,6 +3565,7 @@ export type Database = {
           deleted_at?: string | null
           descripcion?: string | null
           disponible_delivery?: boolean | null
+          disponible_webapp?: boolean | null
           fc_actual?: number | null
           fc_objetivo?: number | null
           id?: string
@@ -4750,6 +4809,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pedido_items_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "webapp_menu_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pedido_items_pedido_id_fkey"
             columns: ["pedido_id"]
             isOneToOne: false
@@ -4856,6 +4922,7 @@ export type Database = {
           canal_app: string | null
           canal_venta: string | null
           cliente_direccion: string | null
+          cliente_email: string | null
           cliente_nombre: string | null
           cliente_notas: string | null
           cliente_telefono: string | null
@@ -4874,6 +4941,9 @@ export type Database = {
           id: string
           numero_llamador: number | null
           numero_pedido: number
+          origen: string | null
+          pago_estado: string | null
+          pago_online_id: string | null
           propina: number
           requiere_factura: boolean | null
           subtotal: number
@@ -4885,6 +4955,7 @@ export type Database = {
           tipo_factura: string | null
           tipo_servicio: string | null
           total: number
+          webapp_tracking_code: string | null
         }
         Insert: {
           branch_id: string
@@ -4892,6 +4963,7 @@ export type Database = {
           canal_app?: string | null
           canal_venta?: string | null
           cliente_direccion?: string | null
+          cliente_email?: string | null
           cliente_nombre?: string | null
           cliente_notas?: string | null
           cliente_telefono?: string | null
@@ -4910,6 +4982,9 @@ export type Database = {
           id?: string
           numero_llamador?: number | null
           numero_pedido: number
+          origen?: string | null
+          pago_estado?: string | null
+          pago_online_id?: string | null
           propina?: number
           requiere_factura?: boolean | null
           subtotal: number
@@ -4921,6 +4996,7 @@ export type Database = {
           tipo_factura?: string | null
           tipo_servicio?: string | null
           total: number
+          webapp_tracking_code?: string | null
         }
         Update: {
           branch_id?: string
@@ -4928,6 +5004,7 @@ export type Database = {
           canal_app?: string | null
           canal_venta?: string | null
           cliente_direccion?: string | null
+          cliente_email?: string | null
           cliente_nombre?: string | null
           cliente_notas?: string | null
           cliente_telefono?: string | null
@@ -4946,6 +5023,9 @@ export type Database = {
           id?: string
           numero_llamador?: number | null
           numero_pedido?: number
+          origen?: string | null
+          pago_estado?: string | null
+          pago_online_id?: string | null
           propina?: number
           requiere_factura?: boolean | null
           subtotal?: number
@@ -4957,6 +5037,7 @@ export type Database = {
           tipo_factura?: string | null
           tipo_servicio?: string | null
           total?: number
+          webapp_tracking_code?: string | null
         }
         Relationships: [
           {
@@ -7103,6 +7184,111 @@ export type Database = {
           },
         ]
       }
+      webapp_config: {
+        Row: {
+          branch_id: string
+          comer_aca_habilitado: boolean
+          created_at: string
+          delivery_costo: number | null
+          delivery_habilitado: boolean
+          delivery_pedido_minimo: number | null
+          delivery_radio_km: number | null
+          estado: string
+          horarios: Json | null
+          id: string
+          mensaje_pausa: string | null
+          recepcion_modo: string
+          retiro_habilitado: boolean
+          tiempo_estimado_delivery_min: number | null
+          tiempo_estimado_retiro_min: number | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          comer_aca_habilitado?: boolean
+          created_at?: string
+          delivery_costo?: number | null
+          delivery_habilitado?: boolean
+          delivery_pedido_minimo?: number | null
+          delivery_radio_km?: number | null
+          estado?: string
+          horarios?: Json | null
+          id?: string
+          mensaje_pausa?: string | null
+          recepcion_modo?: string
+          retiro_habilitado?: boolean
+          tiempo_estimado_delivery_min?: number | null
+          tiempo_estimado_retiro_min?: number | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          comer_aca_habilitado?: boolean
+          created_at?: string
+          delivery_costo?: number | null
+          delivery_habilitado?: boolean
+          delivery_pedido_minimo?: number | null
+          delivery_radio_km?: number | null
+          estado?: string
+          horarios?: Json | null
+          id?: string
+          mensaje_pausa?: string | null
+          recepcion_modo?: string
+          retiro_habilitado?: boolean
+          tiempo_estimado_delivery_min?: number | null
+          tiempo_estimado_retiro_min?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webapp_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webapp_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webapp_customers: {
+        Row: {
+          created_at: string
+          direcciones: Json | null
+          email: string | null
+          id: string
+          nombre: string | null
+          telefono: string
+          ultimo_pedido_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          direcciones?: Json | null
+          email?: string | null
+          id?: string
+          nombre?: string | null
+          telefono: string
+          ultimo_pedido_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          direcciones?: Json | null
+          email?: string | null
+          id?: string
+          nombre?: string | null
+          telefono?: string
+          ultimo_pedido_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       work_positions: {
         Row: {
           created_at: string | null
@@ -7382,6 +7568,32 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "rdo_categories"
             referencedColumns: ["code"]
+          },
+        ]
+      }
+      webapp_menu_items: {
+        Row: {
+          categoria_carta_id: string | null
+          categoria_nombre: string | null
+          categoria_orden: number | null
+          descripcion: string | null
+          disponible_delivery: boolean | null
+          disponible_webapp: boolean | null
+          id: string | null
+          imagen_url: string | null
+          nombre: string | null
+          nombre_corto: string | null
+          orden: number | null
+          precio_base: number | null
+          tipo: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "items_carta_categoria_carta_id_fkey"
+            columns: ["categoria_carta_id"]
+            isOneToOne: false
+            referencedRelation: "menu_categorias"
+            referencedColumns: ["id"]
           },
         ]
       }
