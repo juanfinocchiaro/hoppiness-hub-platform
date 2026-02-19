@@ -151,8 +151,8 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
     onOpenChange(false);
   };
 
-  // Don't render dialog if auto-adding (no content)
-  if (!hasContent && !isLoading) return null;
+  // Don't render dialog while loading or if no content (auto-add handles it)
+  if (!hasContent) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
