@@ -2,7 +2,7 @@
  * POSPage - Punto de venta
  * Layout lineal: config arriba (siempre compact), carrito + menú abajo.
  */
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/page-header';
 import { ProductGrid, type CartItem } from '@/components/pos/ProductGrid';
@@ -10,20 +10,106 @@ import { OrderPanel } from '@/components/pos/OrderPanel';
 import { OrderConfigPanel } from '@/components/pos/OrderConfigPanel';
 import { PaymentModal, type PaymentPayload } from '@/components/pos/PaymentModal';
 import { ModifiersModal } from '@/components/pos/ModifiersModal';
-import { RegisterOpenModal } from '@/components/pos/RegisterOpenModal';
 import { useCreatePedido } from '@/hooks/pos/useOrders';
 import { useShiftStatus } from '@/hooks/useShiftStatus';
+import { useCashRegisters, useOpenShift } from '@/hooks/useCashRegister';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { DEFAULT_ORDER_CONFIG } from '@/types/pos';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { CreditCard } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CreditCard, Banknote } from 'lucide-react';
+
+/* Inline cash open form - shown when no register is open */
+function InlineCashOpen({ branchId, onOpened }: { branchId: string; onOpened: () => void }) {
+  const { user } = useAuth();
+  const { data: registersData } = useCashRegisters(branchId);
+  const openShift = useOpenShift(branchId);
+  const [selectedRegister, setSelectedRegister] = useState('');
+  const [openingAmount, setOpeningAmount] = useState('');
+  const [isOpening, setIsOpening] = useState(false);
+  const registers = registersData?.active ?? [];
+
+  useEffect(() => {
+    if (registers.length > 0 && !selectedRegister) {
+      setSelectedRegister(registers[0].id);
+    }
+  }, [registers, selectedRegister]);
+
+  const handleOpen = async () => {
+    if (!user || !selectedRegister) return;
+    setIsOpening(true);
+    try {
+      await openShift.mutateAsync({
+        registerId: selectedRegister,
+        userId: user.id,
+        openingAmount: parseFloat(openingAmount) || 0,
+      });
+      setOpeningAmount('');
+      onOpened();
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Error al abrir caja');
+    } finally {
+      setIsOpening(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center text-center gap-6">
+      <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+        <Banknote className="h-8 w-8 text-muted-foreground" />
+      </div>
+      <div>
+        <h2 className="text-xl font-semibold">Caja cerrada</h2>
+        <p className="text-sm text-muted-foreground mt-1">Abrí la caja para empezar a tomar pedidos</p>
+      </div>
+      {registers.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No hay cajas configuradas para esta sucursal.</p>
+      ) : (
+        <div className="w-full space-y-4 text-left">
+          {registers.length > 1 && (
+            <div className="space-y-2">
+              <Label>Caja</Label>
+              <Select value={selectedRegister} onValueChange={setSelectedRegister}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar caja" /></SelectTrigger>
+                <SelectContent>
+                  {registers.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label>Efectivo inicial</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+              <Input
+                type="number"
+                placeholder="0"
+                value={openingAmount}
+                onChange={(e) => setOpeningAmount(e.target.value)}
+                className="pl-7"
+              />
+            </div>
+          </div>
+          <Button className="w-full" size="lg" onClick={handleOpen} disabled={isOpening || !selectedRegister}>
+            <Banknote className="h-4 w-4 mr-2" />
+            {isOpening ? 'Abriendo...' : 'Abrir Caja'}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function POSPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showPayment, setShowPayment] = useState(false);
-  const [showOpenCash, setShowOpenCash] = useState(false);
+  
   const [orderConfig, setOrderConfig] = useState(DEFAULT_ORDER_CONFIG);
   const [modifiersItem, setModifiersItem] = useState<any | null>(null);
   const configRef = useRef<HTMLDivElement>(null);
@@ -107,11 +193,6 @@ export default function POSPage() {
   };
 
   const handleCobrar = () => {
-    if (!shiftStatus.hasCashOpen) {
-      toast.error('Abrí la caja para poder cobrar');
-      setShowOpenCash(true);
-      return;
-    }
     const err = validateOrderConfig();
     if (err) {
       toast.error(err);
@@ -164,22 +245,23 @@ export default function POSPage() {
 
   const subtotal = cart.reduce((s, i) => s + i.subtotal, 0);
 
+  // Show full-page "Abrir Caja" when cash register is closed
+  if (!shiftStatus.loading && !shiftStatus.hasCashOpen) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-6rem)]">
+        <PageHeader title="Punto de Venta" subtitle="Tomar pedidos y cobrar" />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-full max-w-sm">
+            <InlineCashOpen branchId={branchId!} onOpened={() => shiftStatus.refetch()} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] pb-16 lg:pb-0">
       <PageHeader title="Punto de Venta" subtitle="Tomar pedidos y cobrar" />
-
-      {!shiftStatus.loading && !shiftStatus.hasCashOpen && (
-        <Alert variant="destructive" className="mb-2">
-          <AlertDescription className="flex items-center justify-between gap-2 flex-wrap">
-            <span>Caja cerrada. Abrí la caja para poder cobrar.</span>
-            <button type="button" onClick={() => setShowOpenCash(true)} className="underline font-medium whitespace-nowrap">
-              Abrir caja
-            </button>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <RegisterOpenModal open={showOpenCash} onOpenChange={setShowOpenCash} branchId={branchId!} onOpened={() => shiftStatus.refetch()} />
 
       {/* Config panel - always compact */}
       <div ref={configRef} className="mb-3">
@@ -206,7 +288,7 @@ export default function POSPage() {
             onUpdateNotes={updateNotes}
             onCancelOrder={cancelOrder}
             onCobrar={handleCobrar}
-            disabled={createPedido.isPending || !shiftStatus.hasCashOpen}
+            disabled={createPedido.isPending}
           />
         </div>
       </div>
@@ -221,7 +303,7 @@ export default function POSPage() {
           <Button
             size="lg"
             onClick={handleCobrar}
-            disabled={createPedido.isPending || !shiftStatus.hasCashOpen}
+            disabled={createPedido.isPending}
             className="shrink-0"
           >
             <CreditCard className="h-4 w-4 mr-2" />
