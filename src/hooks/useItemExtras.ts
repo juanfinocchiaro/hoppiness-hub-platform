@@ -18,6 +18,37 @@ export function useItemExtras(itemId: string | undefined) {
     queryKey: ['item-carta-extras', itemId],
     queryFn: async () => {
       if (!itemId) return [];
+
+      // Primary source: item_extra_asignaciones (new system)
+      const { data: asignaciones, error: errAsig } = await supabase
+        .from('item_extra_asignaciones' as any)
+        .select('extra_id')
+        .eq('item_carta_id', itemId);
+
+      if (errAsig) throw errAsig;
+
+      if (asignaciones && asignaciones.length > 0) {
+        const extraIds = (asignaciones as any[]).map((a: any) => a.extra_id);
+        const { data: extras, error: errExtras } = await supabase
+          .from('items_carta')
+          .select('id, nombre, precio_base, activo')
+          .in('id', extraIds)
+          .eq('activo', true)
+          .is('deleted_at', null);
+        if (errExtras) throw errExtras;
+        // Map to ItemExtra-compatible shape for ModifiersModal
+        return (extras || []).map((e: any, i: number) => ({
+          id: e.id,
+          item_carta_id: itemId,
+          preparacion_id: null,
+          insumo_id: null,
+          orden: i,
+          preparaciones: { id: e.id, nombre: e.nombre, costo_calculado: 0, precio_extra: e.precio_base, puede_ser_extra: true },
+          insumos: null,
+        })) as ItemExtra[];
+      }
+
+      // Fallback: old item_carta_extras table
       const { data, error } = await supabase
         .from('item_carta_extras')
         .select(`
