@@ -6243,7 +6243,9 @@ export type Database = {
           id: string
           insumo_id: string
           stock_critico: number | null
+          stock_critico_local: number | null
           stock_minimo: number | null
+          stock_minimo_local: number | null
           unidad: string
           updated_at: string | null
         }
@@ -6253,7 +6255,9 @@ export type Database = {
           id?: string
           insumo_id: string
           stock_critico?: number | null
+          stock_critico_local?: number | null
           stock_minimo?: number | null
+          stock_minimo_local?: number | null
           unidad: string
           updated_at?: string | null
         }
@@ -6263,7 +6267,9 @@ export type Database = {
           id?: string
           insumo_id?: string
           stock_critico?: number | null
+          stock_critico_local?: number | null
           stock_minimo?: number | null
+          stock_minimo_local?: number | null
           unidad?: string
           updated_at?: string | null
         }
@@ -6358,6 +6364,108 @@ export type Database = {
           },
         ]
       }
+      stock_conteo_items: {
+        Row: {
+          conteo_id: string
+          costo_unitario: number
+          diferencia: number | null
+          id: string
+          insumo_id: string
+          stock_real: number | null
+          stock_teorico: number
+          valor_diferencia: number | null
+        }
+        Insert: {
+          conteo_id: string
+          costo_unitario?: number
+          diferencia?: number | null
+          id?: string
+          insumo_id: string
+          stock_real?: number | null
+          stock_teorico?: number
+          valor_diferencia?: number | null
+        }
+        Update: {
+          conteo_id?: string
+          costo_unitario?: number
+          diferencia?: number | null
+          id?: string
+          insumo_id?: string
+          stock_real?: number | null
+          stock_teorico?: number
+          valor_diferencia?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_conteo_items_conteo_id_fkey"
+            columns: ["conteo_id"]
+            isOneToOne: false
+            referencedRelation: "stock_conteos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_conteo_items_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_conteos: {
+        Row: {
+          branch_id: string
+          confirmed_at: string | null
+          created_at: string
+          created_by: string | null
+          fecha: string
+          id: string
+          nota_general: string | null
+          periodo: string | null
+          resumen: Json | null
+          status: string
+        }
+        Insert: {
+          branch_id: string
+          confirmed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          fecha: string
+          id?: string
+          nota_general?: string | null
+          periodo?: string | null
+          resumen?: Json | null
+          status?: string
+        }
+        Update: {
+          branch_id?: string
+          confirmed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          fecha?: string
+          id?: string
+          nota_general?: string | null
+          periodo?: string | null
+          resumen?: Json | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_conteos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_conteos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_movimientos: {
         Row: {
           branch_id: string
@@ -6370,6 +6478,7 @@ export type Database = {
           id: string
           insumo_id: string
           motivo: string | null
+          nota: string | null
           pedido_id: string | null
           tipo: string
         }
@@ -6384,6 +6493,7 @@ export type Database = {
           id?: string
           insumo_id: string
           motivo?: string | null
+          nota?: string | null
           pedido_id?: string | null
           tipo: string
         }
@@ -6398,6 +6508,7 @@ export type Database = {
           id?: string
           insumo_id?: string
           motivo?: string | null
+          nota?: string | null
           pedido_id?: string | null
           tipo?: string
         }

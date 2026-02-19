@@ -1,148 +1,191 @@
 /**
- * StockPage - Stock en tiempo real con alertas, carga inicial y ajuste
+ * StockPage - Pantalla de Stock con 3 estados:
+ * 1. Carga inicial (sin stock)
+ * 2. Operación diaria (tabla con ajuste inline)
+ * 3. Conteo físico (comparativo)
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { Package, AlertTriangle, PlusCircle, Edit3, CalendarCheck } from 'lucide-react';
+import { Package, Search, ClipboardList, Download } from 'lucide-react';
 import { PageHeader } from '@/components/ui/page-header';
-import { useStock } from '@/hooks/pos/useStock';
+import { useStockCompleto, useStockResumen } from '@/hooks/pos/useStock';
 import { Button } from '@/components/ui/button';
-import { CierreStockModal } from '@/components/pos/CierreStockModal';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { StockInicialModal } from '@/components/pos/StockInicialModal';
-import { AjusteStockModal } from '@/components/pos/AjusteStockModal';
+import { StockResumenBar } from '@/components/stock/StockResumenBar';
+import { StockTable } from '@/components/stock/StockTable';
+import { StockInicialInline } from '@/components/stock/StockInicialInline';
+import { ConteoFisico } from '@/components/stock/ConteoFisico';
+import * as XLSX from 'xlsx';
+
+type PageState = 'inicial' | 'operacion' | 'conteo';
 
 export default function StockPage() {
   const { branchId } = useParams<{ branchId: string }>();
-  const { data: stock, isLoading, error } = useStock(branchId!);
-  const [stockInicialOpen, setStockInicialOpen] = useState(false);
-  const [ajusteOpen, setAjusteOpen] = useState(false);
-  const [cierreOpen, setCierreOpen] = useState(false);
+  const { data: items, isLoading, error } = useStockCompleto(branchId!);
+  const resumen = useStockResumen(branchId!);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('todos');
+  const [filtroCategoria, setFiltroCategoria] = useState('todas');
+  const [forceConteo, setForceConteo] = useState(false);
+
+  // Detect state
+  const pageState: PageState = useMemo(() => {
+    if (forceConteo) return 'conteo';
+    if (!items) return 'operacion';
+    const hasStock = items.some(i => i.tiene_stock_actual && i.cantidad > 0);
+    return hasStock ? 'operacion' : 'inicial';
+  }, [items, forceConteo]);
+
+  // Unique categories
+  const categorias = useMemo(() => {
+    if (!items) return [];
+    const set = new Set(items.map(i => i.categoria).filter(Boolean));
+    return Array.from(set).sort() as string[];
+  }, [items]);
+
+  const handleExportExcel = () => {
+    if (!items) return;
+    const rows = items.map(it => ({
+      Insumo: it.nombre,
+      Unidad: it.unidad,
+      Stock: it.cantidad,
+      Mínimo: it.stock_minimo_local ?? it.stock_minimo ?? '-',
+      Crítico: it.stock_critico_local ?? it.stock_critico ?? '-',
+      Estado: it.estado,
+      Categoría: it.categoria ?? '-',
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Stock');
+    XLSX.writeFile(wb, `stock_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
 
   if (error) {
     return (
       <div className="space-y-6">
         <PageHeader title="Stock" subtitle="Stock en tiempo real" icon={<Package className="w-5 h-5" />} />
         <Alert variant="destructive">
+          <AlertDescription>No se pudo cargar el stock.</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Stock" subtitle="Stock en tiempo real" icon={<Package className="w-5 h-5" />} />
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  if (!items || items.length === 0) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Stock" subtitle="Stock en tiempo real" icon={<Package className="w-5 h-5" />} />
+        <Alert>
           <AlertDescription>
-            No se pudo cargar el stock. Ejecutá RUN_POS_MIGRATIONS_PART2.sql si aún no lo hiciste.
+            No hay insumos configurados en la marca. Agregá insumos desde la sección de Insumos para comenzar a trackear stock.
           </AlertDescription>
         </Alert>
       </div>
     );
   }
 
+  // Estado 3: Conteo físico
+  if (pageState === 'conteo') {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Conteo Físico" subtitle="Comparar stock teórico vs real" icon={<ClipboardList className="w-5 h-5" />} />
+        <ConteoFisico branchId={branchId!} items={items} onClose={() => setForceConteo(false)} />
+      </div>
+    );
+  }
+
+  // Estado 1: Carga inicial
+  if (pageState === 'inicial') {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Stock" subtitle="Carga inicial" icon={<Package className="w-5 h-5" />} />
+        <StockInicialInline branchId={branchId!} items={items} />
+      </div>
+    );
+  }
+
+  // Estado 2: Operación diaria
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         title="Stock"
         subtitle="Stock en tiempo real"
         icon={<Package className="w-5 h-5" />}
         actions={
-          branchId ? (
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setStockInicialOpen(true)}>
-                <PlusCircle className="h-4 w-4 mr-1" />
-                Cargar stock inicial
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setAjusteOpen(true)}>
-                <Edit3 className="h-4 w-4 mr-1" />
-                Ajustar stock
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setCierreOpen(true)}>
-                <CalendarCheck className="h-4 w-4 mr-1" />
-                Cierre mensual
-              </Button>
-            </div>
-          ) : undefined
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleExportExcel}>
+              <Download className="h-4 w-4 mr-1" /> Excel
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setForceConteo(true)}>
+              <ClipboardList className="h-4 w-4 mr-1" /> Conteo físico
+            </Button>
+          </div>
         }
       />
 
-      {isLoading ? (
-        <Skeleton className="h-64 w-full" />
-      ) : !stock || stock.length === 0 ? (
-        <Alert>
-          <AlertDescription>
-            Sin registros de stock. Los movimientos se crean automáticamente desde compras y ventas POS.
-          </AlertDescription>
-        </Alert>
-      ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Insumo</TableHead>
-                <TableHead className="text-right">Cantidad</TableHead>
-                <TableHead>Unidad</TableHead>
-                <TableHead className="text-right">Mínimo</TableHead>
-                <TableHead className="text-right">Crítico</TableHead>
-                <TableHead className="w-20">Estado</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {stock.map((row: any) => {
-                const insumo = row.insumos;
-                const nombre = insumo?.nombre ?? row.insumo_id;
-                const cantidad = Number(row.cantidad ?? 0);
-                const minimo = row.stock_minimo != null ? Number(row.stock_minimo) : null;
-                const critico = row.stock_critico != null ? Number(row.stock_critico) : null;
-                const bajo = minimo != null && cantidad <= minimo;
-                const criticoAlerta = critico != null && cantidad <= critico;
-
-                return (
-                  <TableRow key={row.id}>
-                    <TableCell className="font-medium">{nombre}</TableCell>
-                    <TableCell className="text-right tabular-nums">{cantidad}</TableCell>
-                    <TableCell>{row.unidad}</TableCell>
-                    <TableCell className="text-right tabular-nums">{minimo ?? '-'}</TableCell>
-                    <TableCell className="text-right tabular-nums">{critico ?? '-'}</TableCell>
-                    <TableCell>
-                      {criticoAlerta && (
-                        <Badge variant="destructive" className="gap-1">
-                          <AlertTriangle className="h-3 w-3" /> Crítico
-                        </Badge>
-                      )}
-                      {!criticoAlerta && bajo && (
-                        <Badge variant="secondary">Bajo</Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar insumo..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
         </div>
-      )}
+        <Select value={filtroEstado} onValueChange={setFiltroEstado}>
+          <SelectTrigger className="w-36">
+            <SelectValue placeholder="Estado" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos</SelectItem>
+            <SelectItem value="critico">Crítico</SelectItem>
+            <SelectItem value="bajo">Bajo</SelectItem>
+            <SelectItem value="ok">OK</SelectItem>
+            <SelectItem value="sin_stock">Sin stock</SelectItem>
+          </SelectContent>
+        </Select>
+        {categorias.length > 0 && (
+          <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="Categoría" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas</SelectItem>
+              {categorias.map(c => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
 
-      {branchId && (
-        <>
-          <StockInicialModal
-            open={stockInicialOpen}
-            onOpenChange={setStockInicialOpen}
-            branchId={branchId}
-          />
-          <AjusteStockModal
-            open={ajusteOpen}
-            onOpenChange={setAjusteOpen}
-            branchId={branchId}
-          />
-          <CierreStockModal
-            open={cierreOpen}
-            onOpenChange={setCierreOpen}
-            branchId={branchId}
-          />
-        </>
-      )}
+      {/* Resumen bar */}
+      <StockResumenBar resumen={resumen} />
+
+      {/* Table */}
+      <StockTable
+        items={items}
+        branchId={branchId!}
+        searchQuery={searchQuery}
+        filtroEstado={filtroEstado}
+        filtroCategoria={filtroCategoria}
+      />
     </div>
   );
 }
