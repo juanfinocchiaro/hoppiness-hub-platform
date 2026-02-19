@@ -7,6 +7,7 @@ export type TipoServicioWebapp = 'retiro' | 'delivery' | 'comer_aca';
 export interface WebappConfig {
   id: string;
   branch_id: string;
+  webapp_activa: boolean;
   estado: 'abierto' | 'pausado' | 'cerrado';
   delivery_habilitado: boolean;
   delivery_radio_km: number;

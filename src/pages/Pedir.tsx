@@ -1,113 +1,152 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, ExternalLink, ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Loader2, MapPin, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
+import { SEO } from '@/components/SEO';
 
 const MAS_DELIVERY_URL = 'https://pedidos.masdelivery.com/hoppiness';
-const IFRAME_TIMEOUT_MS = 4000;
 
-type LoadState = 'loading' | 'success' | 'fallback';
+interface BranchWithWebapp {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  slug: string | null;
+  public_status: string | null;
+  webapp_activa: boolean;
+}
 
-function IframeView() {
-  const [state, setState] = useState<LoadState>('loading');
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+function useBranchesForPedir() {
+  return useQuery({
+    queryKey: ['branches-pedir'],
+    queryFn: async () => {
+      // Get active branches
+      const { data: branches, error: bErr } = await supabase
+        .from('branches_public')
+        .select('id, name, address, city, slug, public_status')
+        .in('public_status', ['active', 'coming_soon'])
+        .order('name');
+      if (bErr) throw bErr;
 
-  const handleLoad = useCallback(() => {
-    clearTimeout(timerRef.current);
-    setState('success');
-  }, []);
+      // Get webapp_config for all branches
+      const branchIds = (branches || []).map((b: any) => b.id);
+      let configMap: Record<string, boolean> = {};
+      if (branchIds.length > 0) {
+        const { data: configs } = await supabase
+          .from('webapp_config' as any)
+          .select('branch_id, webapp_activa')
+          .in('branch_id', branchIds);
+        if (configs) {
+          (configs as any[]).forEach((c) => {
+            configMap[c.branch_id] = c.webapp_activa === true;
+          });
+        }
+      }
 
-  useEffect(() => {
-    timerRef.current = setTimeout(() => {
-      setState(prev => (prev === 'loading' ? 'fallback' : prev));
-    }, IFRAME_TIMEOUT_MS);
-    return () => clearTimeout(timerRef.current);
-  }, []);
+      return (branches || [])
+        .filter((b: any) => b.public_status === 'active' && b.name !== 'Muy Pronto')
+        .map((b: any): BranchWithWebapp => ({
+          ...b,
+          webapp_activa: configMap[b.id] || false,
+        }));
+    },
+  });
+}
 
-  if (state === 'fallback') {
-    return <Fallback />;
-  }
+export default function Pedir() {
+  const { data: branches, isLoading } = useBranchesForPedir();
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Minimal header */}
-      <header className="bg-primary text-primary-foreground px-4 py-2 flex items-center justify-between shrink-0">
+    <div className="min-h-screen bg-background flex flex-col">
+      <SEO
+        title="Pedí Online | Hoppiness Club"
+        description="Hacé tu pedido de hamburguesas smash en tu Hoppiness más cercano."
+        path="/pedir"
+      />
+
+      {/* Header */}
+      <header className="bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between shrink-0">
         <Link to="/" className="flex items-center gap-2">
           <img src={logoHoppiness} alt="Hoppiness Club" className="w-8 h-8 rounded-full" />
           <span className="font-bold font-brand text-sm hidden sm:inline">HOPPINESS CLUB</span>
         </Link>
-        <div className="flex items-center gap-2">
-          <Link to="/">
-            <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10">
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Volver
-            </Button>
-          </Link>
-          <a href={MAS_DELIVERY_URL} target="_blank" rel="noopener noreferrer">
-            <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-              <ExternalLink className="w-3 h-3 mr-1" />
-              Abrir en nueva pestaña
-            </Button>
-          </a>
-        </div>
-      </header>
-
-      {/* Loading overlay */}
-      {state === 'loading' && (
-        <div className="flex-1 bg-background flex items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
-            <p className="text-muted-foreground">Cargando tienda...</p>
-          </div>
-        </div>
-      )}
-
-      {/* Iframe */}
-      <iframe
-        ref={iframeRef}
-        src={MAS_DELIVERY_URL}
-        onLoad={handleLoad}
-        title="Hoppiness - Pedí Online"
-        className={`flex-1 w-full border-0 ${state === 'loading' ? 'h-0 overflow-hidden' : ''}`}
-        allow="payment; geolocation"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-      />
-    </div>
-  );
-}
-
-function Fallback() {
-  return (
-    <div className="min-h-screen bg-primary flex items-center justify-center px-4">
-      <div className="text-center text-white max-w-md">
-        <img src={logoHoppiness} alt="Hoppiness Club" className="w-20 h-20 mx-auto mb-6 rounded-full" />
-        <ShoppingBag className="w-12 h-12 mx-auto mb-4 text-accent" />
-        <h1 className="text-2xl font-black font-brand mb-2">PEDÍ TU HAMBURGUESA</h1>
-        <p className="text-white/80 mb-6">
-          Hacé tu pedido en nuestra tienda de Mas Delivery
-        </p>
-        <a href={MAS_DELIVERY_URL} target="_blank" rel="noopener noreferrer">
-          <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-            Ir a Mas Delivery
-            <ExternalLink className="w-4 h-4 ml-2" />
-          </Button>
-        </a>
-        <Link to="/" className="block mt-6">
-          <Button variant="ghost" className="text-white/70 hover:text-white hover:bg-white/10">
+        <Link to="/">
+          <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10">
             <ArrowLeft className="w-4 h-4 mr-1" />
-            Volver al inicio
+            Volver
           </Button>
         </Link>
-        <p className="text-white/50 text-xs mt-6">
-          Pronto vas a poder pedir directamente desde nuestra app.
-        </p>
-      </div>
+      </header>
+
+      {/* Content */}
+      <main className="flex-1 px-4 py-8 max-w-3xl mx-auto w-full">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl sm:text-3xl font-black font-brand text-foreground mb-2">
+            ¿DÓNDE QUERÉS PEDIR?
+          </h1>
+          <p className="text-muted-foreground">
+            Elegí tu local más cercano para hacer tu pedido
+          </p>
+        </div>
+
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {branches?.map((branch) => (
+              <BranchCard key={branch.id} branch={branch} />
+            ))}
+          </div>
+        )}
+      </main>
     </div>
   );
 }
 
-export default function Pedir() {
-  return <IframeView />;
+function BranchCard({ branch }: { branch: BranchWithWebapp }) {
+  const isWebapp = branch.webapp_activa && branch.slug;
+
+  return (
+    <div className="border border-border rounded-xl p-5 bg-card flex flex-col gap-3 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h2 className="font-bold text-foreground text-lg leading-tight">{branch.name}</h2>
+          <p className="text-muted-foreground text-sm flex items-center gap-1 mt-1">
+            <MapPin className="w-3.5 h-3.5 shrink-0" />
+            {branch.address}, {branch.city}
+          </p>
+        </div>
+        {isWebapp ? (
+          <Badge className="bg-accent text-accent-foreground shrink-0 text-[10px]">
+            <Sparkles className="w-3 h-3 mr-1" />
+            Nuevo
+          </Badge>
+        ) : (
+          <Badge variant="secondary" className="shrink-0 text-[10px]">
+            MasDelivery
+          </Badge>
+        )}
+      </div>
+
+      {isWebapp ? (
+        <Link to={`/pedir/${branch.slug}`} className="mt-auto">
+          <Button className="w-full">
+            Pedir acá
+          </Button>
+        </Link>
+      ) : (
+        <a href={MAS_DELIVERY_URL} target="_blank" rel="noopener noreferrer" className="mt-auto">
+          <Button variant="outline" className="w-full">
+            Ir a MasDelivery
+            <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
+          </Button>
+        </a>
+      )}
+    </div>
+  );
 }
