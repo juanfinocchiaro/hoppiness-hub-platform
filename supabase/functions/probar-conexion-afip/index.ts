@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const esProduccion = config.es_produccion || Deno.env.get("AFIP_PRODUCTION") === "true";
+    const esProduccion = !!config.es_produccion;
 
     if (!esProduccion) {
       // Simulación en homologación: siempre "conectado"

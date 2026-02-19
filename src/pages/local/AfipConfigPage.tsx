@@ -227,6 +227,46 @@ export default function AfipConfigPage() {
         </CardContent>
       </Card>
 
+      {/* Modo de operación */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wifi className="h-5 w-5" />
+            Modo de Operación
+          </CardTitle>
+          <CardDescription>
+            Homologación es para pruebas, Producción es para facturar en serio con AFIP
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <p className="text-sm font-medium">
+                {config?.es_produccion ? 'Producción' : 'Homologación (testing)'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {config?.es_produccion
+                  ? 'Las facturas se emiten contra AFIP real'
+                  : 'Las facturas se simulan, no se envían a AFIP'}
+              </p>
+            </div>
+            <Button
+              variant={config?.es_produccion ? 'destructive' : 'outline'}
+              size="sm"
+              onClick={() => {
+                if (!branchId) return;
+                save.mutate({
+                  branch_id: branchId,
+                  es_produccion: !config?.es_produccion,
+                } as any);
+              }}
+            >
+              {config?.es_produccion ? 'Cambiar a Homologación' : 'Activar Producción'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Últimos números */}
       {config && (
         <Card>
