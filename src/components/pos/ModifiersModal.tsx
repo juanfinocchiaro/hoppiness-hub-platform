@@ -5,11 +5,11 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { POSDialogContent } from './POSDialog';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Minus, Plus } from 'lucide-react';
@@ -160,7 +160,7 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <POSDialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span className="truncate">{nombre}</span>
@@ -241,7 +241,7 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
             Agregar al pedido — $ {totalPrice.toLocaleString('es-AR')}
           </Button>
         </DialogFooter>
-      </DialogContent>
+      </POSDialogContent>
     </Dialog>
   );
 }

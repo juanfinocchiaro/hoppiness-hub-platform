@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { POSAlertDialogContent } from './POSDialog';
 import { Minus, Plus, Trash2, ShoppingBag, MessageSquare, X, Banknote, CreditCard, QrCode, ArrowRightLeft, ChefHat, PlusCircle, Pencil, ChevronRight, Store, Bike } from 'lucide-react';
 import type { CartItem } from './ProductGrid';
 import type { LocalPayment, MetodoPago, OrderConfig } from '@/types/pos';
@@ -177,7 +178,7 @@ export function AccountPanel({
                 Cancelar
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent>
+            <POSAlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>¿Cancelar pedido?</AlertDialogTitle>
                 <AlertDialogDescription>
@@ -190,7 +191,7 @@ export function AccountPanel({
                   Sí, cancelar pedido
                 </AlertDialogAction>
               </AlertDialogFooter>
-            </AlertDialogContent>
+            </POSAlertDialogContent>
           </AlertDialog>
         )}
       </div>
@@ -292,7 +293,7 @@ export function AccountPanel({
             </Button>
           </AlertDialogTrigger>
           {canSend && (
-            <AlertDialogContent>
+            <POSAlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>¿Enviar pedido a cocina?</AlertDialogTitle>
                 <AlertDialogDescription>
@@ -307,7 +308,7 @@ export function AccountPanel({
                   Sí, enviar a cocina
                 </AlertDialogAction>
               </AlertDialogFooter>
-            </AlertDialogContent>
+            </POSAlertDialogContent>
           )}
         </AlertDialog>
       </div>

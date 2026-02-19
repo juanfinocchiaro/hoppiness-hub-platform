@@ -5,11 +5,11 @@
 import { useState, useEffect } from 'react';
 import {
   Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { POSDialogContent } from './POSDialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -93,7 +93,7 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <POSDialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Registrar pago</DialogTitle>
         </DialogHeader>
@@ -198,7 +198,7 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
             Registrar · $ {montoNum.toLocaleString('es-AR')}
           </Button>
         </DialogFooter>
-      </DialogContent>
+      </POSDialogContent>
     </Dialog>
   );
 }

@@ -9,6 +9,7 @@ import { AccountPanel } from '@/components/pos/AccountPanel';
 import { ConfigForm } from '@/components/pos/OrderConfigPanel';
 import { RegisterPaymentPanel } from '@/components/pos/RegisterPaymentPanel';
 import { ModifiersModal } from '@/components/pos/ModifiersModal';
+import { POSPortalProvider } from '@/components/pos/POSPortalContext';
 import { useCreatePedido } from '@/hooks/pos/useOrders';
 import { useShiftStatus } from '@/hooks/useShiftStatus';
 import { useCashRegisters, useOpenShift } from '@/hooks/useCashRegister';
@@ -265,17 +266,20 @@ export default function POSPage() {
   // Show full-page "Abrir Caja" when cash register is closed
   if (!shiftStatus.loading && !shiftStatus.hasCashOpen) {
     return (
-      <div className="flex flex-col h-[calc(100vh-6rem)]">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-full max-w-sm">
-            <InlineCashOpen branchId={branchId!} onOpened={() => shiftStatus.refetch()} />
+      <POSPortalProvider>
+        <div className="flex flex-col h-[calc(100vh-6rem)]">
+          <div className="flex-1 flex items-center justify-center">
+            <div className="w-full max-w-sm">
+              <InlineCashOpen branchId={branchId!} onOpened={() => shiftStatus.refetch()} />
+            </div>
           </div>
         </div>
-      </div>
+      </POSPortalProvider>
     );
   }
 
   return (
+    <POSPortalProvider>
     <div className="flex flex-col h-[calc(100vh-6rem)] pb-16 lg:pb-0">
       {/* Main grid: menu + account */}
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_minmax(380px,1.1fr)] flex-1 min-h-0">
@@ -387,5 +391,6 @@ export default function POSPage() {
         onConfirm={handleModifierConfirm}
       />
     </div>
+    </POSPortalProvider>
   );
 }
