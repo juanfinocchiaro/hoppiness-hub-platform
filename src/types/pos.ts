@@ -50,3 +50,12 @@ export type MetodoPago =
   | 'tarjeta_credito'
   | 'mercadopago_qr'
   | 'transferencia';
+
+/** Pago registrado localmente antes de enviar a cocina */
+export interface LocalPayment {
+  id: string;
+  method: MetodoPago;
+  amount: number;
+  montoRecibido?: number;
+  vuelto?: number;
+}

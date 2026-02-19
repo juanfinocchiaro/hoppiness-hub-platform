@@ -138,7 +138,7 @@ function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: {
           </div>
         )}
 
-        <OrderHistoryTable orders={orders} isLoading={isLoading} />
+        <OrderHistoryTable orders={orders} isLoading={isLoading} branchId={branchId} hasOpenShift />
       </TabsContent>
 
       <TabsContent value="heatmap" className="space-y-4">

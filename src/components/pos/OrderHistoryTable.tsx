@@ -1,19 +1,24 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { PaymentEditModal } from '@/components/pos/PaymentEditModal';
 import type { PosOrder } from '@/hooks/pos/usePosOrderHistory';
 
 interface Props {
   orders: PosOrder[];
   isLoading: boolean;
+  branchId?: string;
+  /** Whether there's an open cash register shift (enables edit) */
+  hasOpenShift?: boolean;
 }
 
 const METODO_LABELS: Record<string, string> = {
@@ -52,8 +57,9 @@ function paymentSummary(pagos: PosOrder['pedido_pagos']) {
   return 'Dividido';
 }
 
-export function OrderHistoryTable({ orders, isLoading }: Props) {
+export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingOrder, setEditingOrder] = useState<PosOrder | null>(null);
   const isMobile = useIsMobile();
 
   if (isLoading) {
@@ -130,7 +136,11 @@ export function OrderHistoryTable({ orders, isLoading }: Props) {
                   {isExpanded && (
                     <TableRow key={`${order.id}-detail`}>
                       <TableCell colSpan={isMobile ? 5 : 10} className="bg-muted/30 p-4">
-                        <OrderDetail order={order} />
+                        <OrderDetail
+                          order={order}
+                          canEdit={!!hasOpenShift && !!branchId}
+                          onEdit={() => setEditingOrder(order)}
+                        />
                       </TableCell>
                     </TableRow>
                   )}
@@ -139,12 +149,24 @@ export function OrderHistoryTable({ orders, isLoading }: Props) {
             })}
           </TableBody>
         </Table>
+
+        {/* Payment edit modal */}
+        {editingOrder && branchId && (
+          <PaymentEditModal
+            open={!!editingOrder}
+            onOpenChange={(v) => { if (!v) setEditingOrder(null); }}
+            pedidoId={editingOrder.id}
+            pedidoTotal={editingOrder.total}
+            branchId={branchId}
+            currentPayments={editingOrder.pedido_pagos}
+          />
+        )}
       </CardContent>
     </Card>
   );
 }
 
-function OrderDetail({ order }: { order: PosOrder }) {
+function OrderDetail({ order, canEdit, onEdit }: { order: PosOrder; canEdit?: boolean; onEdit?: () => void }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
       {/* Items */}
@@ -172,7 +194,15 @@ function OrderDetail({ order }: { order: PosOrder }) {
 
       {/* Payments */}
       <div>
-        <p className="font-medium mb-1">Pagos</p>
+        <div className="flex items-center justify-between mb-1">
+          <p className="font-medium">Pagos</p>
+          {canEdit && onEdit && (
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onEdit}>
+              <Pencil className="h-3 w-3 mr-1" />
+              Editar pago
+            </Button>
+          )}
+        </div>
         <ul className="space-y-0.5">
           {order.pedido_pagos?.map(pago => (
             <li key={pago.id} className="flex justify-between">
@@ -194,6 +224,5 @@ function OrderDetail({ order }: { order: PosOrder }) {
 }
 
 function isMobileInfo(order: PosOrder) {
-  // Show extra info in detail for mobile
   return typeof window !== 'undefined' && window.innerWidth < 768;
 }
