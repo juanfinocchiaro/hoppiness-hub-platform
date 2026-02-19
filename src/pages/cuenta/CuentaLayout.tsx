@@ -47,16 +47,11 @@ export default function CuentaLayout() {
   // Get first accessible branch ID for PanelSwitcher
   const firstBranchId = accessibleBranches[0]?.id;
 
-  // Footer content
+  // Footer: bloques Contexto (Ver como), Cambiar a, Acciones
   const footer = (
     <>
-      {/* Panel Switcher */}
-      <PanelSwitcher currentPanel="cuenta" localBranchId={firstBranchId} />
-      
-      {/* Fixed Actions */}
-      <div className="space-y-1 pt-2 border-t">
-        {/* Impersonation button - Only for superadmins */}
-        {canImpersonate && (
+      {canImpersonate && (
+        <div className="space-y-2">
           <Button
             variant={isImpersonating ? 'secondary' : 'ghost'}
             className={`w-full justify-start ${isImpersonating ? 'bg-amber-100 text-amber-900 hover:bg-amber-200' : ''}`}
@@ -65,16 +60,21 @@ export default function CuentaLayout() {
             <Eye className="w-4 h-4 mr-3" />
             Ver como...
           </Button>
-        )}
+        </div>
+      )}
+
+      <PanelSwitcher currentPanel="cuenta" localBranchId={firstBranchId} />
+
+      <div className="pt-4 border-t space-y-1">
         <ExternalLink to="/">
-          <Button variant="ghost" className="w-full justify-start">
+          <Button variant="ghost" className="w-full justify-start text-muted-foreground">
             <Home className="w-4 h-4 mr-3" />
             Volver al Inicio
           </Button>
         </ExternalLink>
-        <Button 
-          variant="ghost" 
-          className="w-full justify-start text-muted-foreground" 
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-muted-foreground"
           onClick={signOut}
         >
           <LogOut className="w-4 h-4 mr-3" />

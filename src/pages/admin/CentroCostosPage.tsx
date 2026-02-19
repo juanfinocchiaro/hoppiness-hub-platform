@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/page-header';
 import { supabase } from '@/integrations/supabase/client';
 import { DataToolbar } from '@/components/ui/data-table-pro';
@@ -16,7 +17,7 @@ import { FormRow, FormSection, StickyActions } from '@/components/ui/forms-pro';
 import { EmptyState } from '@/components/ui/states';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
-  AlertTriangle, CheckCircle, Plus, Trash2, Package, Save, DollarSign, Tag,
+  AlertTriangle, CheckCircle, Plus, Trash2, Package, Save, DollarSign, Tag, BookOpen,
   Layers, Settings2, BarChart3, Calculator, ArrowRight, ChevronDown, ChevronRight,
   Target, RefreshCw,
 } from 'lucide-react';
@@ -159,7 +160,12 @@ export default function CentroCostosPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <PageHeader title="Control de Costos" subtitle="Análisis de márgenes, simulación y ajuste de precios" />
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <Link to="/mimarca/carta">
+            <Button variant="outline" size="sm">
+              <BookOpen className="w-4 h-4 mr-2" /> Ir a Carta
+            </Button>
+          </Link>
           <Button variant="outline" size="sm" onClick={handleRecalculate} disabled={recalculating || isFetching}>
             <RefreshCw className={`w-4 h-4 mr-2 ${recalculating || isFetching ? 'animate-spin' : ''}`} /> {recalculating ? 'Recalculando...' : 'Actualizar Costos'}
           </Button>

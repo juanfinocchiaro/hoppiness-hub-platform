@@ -7,7 +7,7 @@
  * - Pendientes (solicitudes, comunicados, firmas reglamento)
  */
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,6 +40,7 @@ type Branch = Tables<'branches'>;
 
 interface ManagerDashboardProps {
   branch: Branch;
+  posEnabled?: boolean;
 }
 
 // Hook to get currently clocked-in team members using clock_entries
@@ -145,7 +146,7 @@ function usePendingItems(branchId: string) {
   });
 }
 
-export function ManagerDashboard({ branch }: ManagerDashboardProps) {
+export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboardProps) {
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [selectedShift, setSelectedShift] = useState<string>('mediodía');
 
@@ -177,7 +178,13 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
     return `${hours}h ${mins}m`;
   };
 
+  const navigate = useNavigate();
+
   const handleOpenEntry = (shift?: string) => {
+    if (posEnabled) {
+      navigate(`/milocal/${branch.id}/ventas/historial`);
+      return;
+    }
     if (shift) setSelectedShift(shift);
     setShowEntryModal(true);
   };
@@ -204,8 +211,8 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
             )}
           </p>
         </div>
-        {/* Solo mostrar botón Cargar si puede cargar ventas */}
-        {local.canEnterSales && (
+        {/* Solo mostrar botón Cargar si puede cargar ventas y no está usando POS */}
+        {local.canEnterSales && !posEnabled && (
           <Button size="sm" onClick={() => handleOpenEntry()}>
             <Plus className="w-4 h-4 mr-1" />
             Cargar
@@ -213,8 +220,8 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
         )}
       </div>
 
-      {/* VENTAS DE HOY */}
-      <Card>
+      {/* VENTAS DE HOY - Card principal con acento de marca */}
+      <Card className="border-l-4 border-l-primary">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <DollarSign className="w-4 h-4" />
@@ -223,12 +230,12 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
         </CardHeader>
         <CardContent className="space-y-3">
           {isLoading ? (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               {[1, 2].map(i => <Skeleton key={i} className="h-16" />)}
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 {shifts.map(shiftDef => {
                   const closure = todayClosures?.find(c => c.turno === shiftDef.value);
                   const isLoaded = !!closure;
@@ -266,7 +273,7 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
                 })}
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t">
+              <div className="flex items-center justify-between pt-3 border-t">
                 <span className="font-medium">Total del día</span>
                 <span className="text-xl font-bold text-primary">
                   {formatCurrency(todayTotal)}
@@ -366,7 +373,7 @@ export function ManagerDashboard({ branch }: ManagerDashboardProps) {
                 {[1, 2, 3].map(i => <Skeleton key={i} className="h-10" />)}
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Link to={`/milocal/${branch.id}/equipo/horarios`}>
                   <div className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
                     <div className="flex items-center gap-3">

@@ -1,0 +1,140 @@
+/**
+ * DeliveryPage - Asignación de cadetes y pedidos para entrega
+ */
+import { useParams } from 'react-router-dom';
+import { Truck } from 'lucide-react';
+import { PageHeader } from '@/components/ui/page-header';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
+
+export default function DeliveryPage() {
+  const { branchId } = useParams<{ branchId: string }>();
+  const qc = useQueryClient();
+
+  const { data: pedidos, isLoading } = useQuery({
+    queryKey: ['pos-delivery', branchId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('pedidos')
+        .select('*, pedido_items(nombre, cantidad)')
+        .eq('branch_id', branchId!)
+        .eq('tipo', 'delivery')
+        .in('estado', ['listo', 'en_camino'])
+        .order('created_at', { ascending: true });
+      return data ?? [];
+    },
+    enabled: !!branchId,
+  });
+
+  const { data: cadetes } = useQuery({
+    queryKey: ['pos-cadetes', branchId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('cadetes')
+        .select('*')
+        .eq('branch_id', branchId!)
+        .eq('activo', true);
+      return data ?? [];
+    },
+    enabled: !!branchId,
+  });
+
+  const asignarCadete = useMutation({
+    mutationFn: async ({ pedidoId, cadeteId }: { pedidoId: string; cadeteId: string }) => {
+      const { error } = await supabase
+        .from('pedidos')
+        .update({ cadete_id: cadeteId, estado: 'en_camino' })
+        .eq('id', pedidoId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['pos-delivery', branchId] });
+      toast.success('Cadete asignado');
+    },
+  });
+
+  if (isLoading) return <Skeleton className="h-64 w-full" />;
+
+  const list = pedidos ?? [];
+  const listos = list.filter((p: any) => p.estado === 'listo');
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Entrega" subtitle="Pedidos para delivery" icon={Truck} />
+
+      {listos.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">Listos para asignar</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {listos.map((p: any) => (
+              <Card key={p.id}>
+                <CardContent className="pt-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="font-bold">#{p.numero_pedido}</span>
+                    <Badge>{p.estado}</Badge>
+                  </div>
+                  {p.cliente_direccion && (
+                    <p className="text-sm text-muted-foreground mb-2">{p.cliente_direccion}</p>
+                  )}
+                  <ul className="text-sm mb-3">
+                    {(p.pedido_items ?? []).map((it: any, i: number) => (
+                      <li key={i}>
+                        {it.cantidad}× {it.nombre}
+                      </li>
+                    ))}
+                  </ul>
+                  {(cadetes ?? []).filter((c: any) => c.user_id).length > 0 ? (
+                    <div className="flex gap-2 flex-wrap">
+                      {(cadetes ?? [])
+                        .filter((c: any) => c.user_id)
+                        .map((c: any) => (
+                          <Badge
+                            key={c.id}
+                            variant="outline"
+                            className="cursor-pointer"
+                            onClick={() => asignarCadete.mutate({ pedidoId: p.id, cadeteId: c.user_id })}
+                          >
+                            {c.nombre}
+                          </Badge>
+                        ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Sin cadetes configurados</p>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {list.filter((p: any) => p.estado === 'en_camino').length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">En camino</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {list
+              .filter((p: any) => p.estado === 'en_camino')
+              .map((p: any) => (
+                <Card key={p.id}>
+                  <CardContent className="pt-4">
+                    <span className="font-bold">#{p.numero_pedido}</span>
+                    <Badge variant="secondary" className="ml-2">
+                      En camino
+                    </Badge>
+                  </CardContent>
+                </Card>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {list.length === 0 && (
+        <p className="text-center text-muted-foreground py-12">Sin pedidos para entrega</p>
+      )}
+    </div>
+  );
+}

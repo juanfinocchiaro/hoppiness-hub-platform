@@ -48,7 +48,16 @@ import PeriodosPage from "./pages/local/PeriodosPage";
 import PLDashboardPage from "./pages/local/PLDashboardPage";
 import RdoLoaderPage from "./pages/local/RdoLoaderPage";
 import InversionesPage from "./pages/local/InversionesPage";
+import VentasMensualesLocalPage from "./pages/local/VentasMensualesLocalPage";
 import InspectionsLocalPage from "./pages/local/InspectionsLocalPage";
+
+// POS
+import POSPage from "./pages/pos/POSPage";
+import KitchenPage from "./pages/pos/KitchenPage";
+import DeliveryPage from "./pages/pos/DeliveryPage";
+import StockPage from "./pages/pos/StockPage";
+import RegisterPage from "./pages/pos/RegisterPage";
+import CierreTurnoPage from "./pages/local/CierreTurnoPage";
 
 // Mi Marca
 import BrandLayout from "./pages/admin/BrandLayout";
@@ -182,8 +191,14 @@ const App = () => (
               <Route path="tiempo/liquidacion" element={<LiquidacionPage />} />
               <Route path="tiempo/solicitudes" element={<RequestsPage />} />
               
-              {/* Ventas */}
+              {/* Ventas y POS */}
               <Route path="ventas/historial" element={<SalesHistoryPage />} />
+              <Route path="ventas/cierre-turno" element={<CierreTurnoPage />} />
+              <Route path="ventas/pos" element={<POSPage />} />
+              <Route path="ventas/cocina" element={<KitchenPage />} />
+              <Route path="ventas/entrega" element={<DeliveryPage />} />
+              <Route path="ventas/stock" element={<StockPage />} />
+              <Route path="ventas/caja" element={<RegisterPage />} />
               
               {/* Finanzas */}
               <Route path="finanzas/proveedores" element={<ProveedoresLocalPage />} />
@@ -191,7 +206,7 @@ const App = () => (
               <Route path="finanzas/insumos" element={<InsumosLocalPage />} />
               <Route path="finanzas/compras" element={<ComprasPage />} />
               <Route path="finanzas/gastos" element={<GastosPage />} />
-              {/* Ventas Mensuales removed from local - now in Mi Marca */}
+              <Route path="finanzas/ventas-mensuales" element={<VentasMensualesLocalPage />} />
               <Route path="finanzas/consumos" element={<ConsumosPage />} />
               <Route path="finanzas/socios" element={<SociosPage />} />
               <Route path="finanzas/periodos" element={<PeriodosPage />} />
@@ -249,6 +264,7 @@ const App = () => (
               
               {/* Carta */}
               <Route path="carta" element={<MenuCartaPage />} />
+              <Route path="categorias-carta" element={<CategoriasCartaPage />} />
               
               {/* Centro de Costos */}
               <Route path="centro-costos" element={<CentroCostosPage />} />

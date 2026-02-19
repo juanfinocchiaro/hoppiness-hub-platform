@@ -87,6 +87,7 @@ Los usuarios pueden tener **un rol de marca** (global) y/o **un rol de local** (
 | `/milocal/:branchId/finanzas/insumos` | `InsumosLocalPage` | Insumos local |
 | `/milocal/:branchId/finanzas/compras` | `ComprasPage` | Facturas compra |
 | `/milocal/:branchId/finanzas/gastos` | `GastosPage` | Caja chica |
+| `/milocal/:branchId/finanzas/ventas-mensuales` | `VentasMensualesLocalPage` | Ventas mensuales del local |
 | `/milocal/:branchId/finanzas/consumos` | `ConsumosPage` | Consumos manuales |
 | `/milocal/:branchId/finanzas/socios` | `SociosPage` | Socios / Partners |
 | `/milocal/:branchId/finanzas/periodos` | `PeriodosPage` | Períodos contables |
@@ -118,6 +119,7 @@ Los usuarios pueden tener **un rol de marca** (global) y/o **un rol de local** (
 | `/mimarca/finanzas/canon` | `CanonPage` | Liquidaciones canon |
 | `/mimarca/finanzas/ventas-mensuales` | `VentasMensualesMarcaPage` | Ventas consolidadas |
 | `/mimarca/recetas` | `PreparacionesPage` | Recetas |
+| `/mimarca/categorias-carta` | `CategoriasCartaPage` | Categorías de la carta |
 | `/mimarca/carta` | `MenuCartaPage` | Carta / Menú |
 | `/mimarca/centro-costos` | `CentroCostosPage` | Centro de costos |
 | `/mimarca/reglamentos` | `BrandRegulationsPage` | Reglamentos marca |

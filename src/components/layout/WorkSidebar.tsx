@@ -25,7 +25,7 @@ interface WorkSidebarNavProps {
 }
 
 export function WorkSidebarNav({ children, className }: WorkSidebarNavProps) {
-  return <nav className={cn('space-y-1', className)}>{children}</nav>;
+  return <nav className={cn('space-y-3', className)}>{children}</nav>;
 }
 
 // ===== NavSectionGroup =====
@@ -61,11 +61,11 @@ export function NavSectionGroup({
         <Button
           variant="ghost"
           className={cn(
-            'w-full justify-start',
+            'w-full justify-start font-semibold text-base text-foreground',
             forceOpen && 'bg-primary/5 text-primary'
           )}
         >
-          <Icon className="w-4 h-4 mr-3" />
+          <Icon className="w-4 h-4 mr-3 shrink-0" />
           {label}
           {isOpen ? (
             <ChevronDown className="w-4 h-4 ml-auto" />
@@ -74,7 +74,7 @@ export function NavSectionGroup({
           )}
         </Button>
       </CollapsibleTrigger>
-      <CollapsibleContent className="pl-4 space-y-0.5 mt-1">
+      <CollapsibleContent className="pl-4 space-y-1 mt-2">
         {children}
       </CollapsibleContent>
     </Collapsible>

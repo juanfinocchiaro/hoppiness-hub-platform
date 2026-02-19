@@ -1,13 +1,15 @@
-import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Save, Loader2, MapPin, X, CheckCircle2, Globe, Eye, EyeOff, CalendarClock } from 'lucide-react';
+import { Save, Loader2, MapPin, X, CheckCircle2, Globe, Eye, EyeOff, CalendarClock, ShoppingCart } from 'lucide-react';
+import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import type { Tables } from '@/integrations/supabase/types';
 import BranchLocationMap from '@/components/maps/BranchLocationMap';
 import PublicHoursEditor, { PublicHours } from './PublicHoursEditor';
@@ -23,8 +25,33 @@ interface BranchEditPanelProps {
 
 export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEditPanelProps) {
   const queryClient = useQueryClient();
+  const { isSuperadmin } = useDynamicPermissions();
   const [saving, setSaving] = useState(false);
-  
+
+  const { data: posConfig } = useQuery({
+    queryKey: ['pos-config', branch.id],
+    queryFn: async () => {
+      try {
+        const { data } = await supabase
+          .from('pos_config')
+          .select('pos_enabled')
+          .eq('branch_id', branch.id)
+          .maybeSingle();
+        return data;
+      } catch {
+        return null;
+      }
+    },
+  });
+
+  const [posEnabled, setPosEnabled] = useState(posConfig?.pos_enabled ?? false);
+
+  useEffect(() => {
+    if (posConfig !== undefined && posConfig !== null) {
+      setPosEnabled(posConfig.pos_enabled ?? false);
+    }
+  }, [posConfig?.pos_enabled, posConfig]);
+
   // Datos básicos
   const [name, setName] = useState(branch.name || '');
   const [address, setAddress] = useState(branch.address || '');
@@ -69,17 +96,38 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
 
       if (error) throw error;
 
+      // Actualizar pos_config (solo superadmin)
+      if (isSuperadmin) {
+        try {
+          const { error: posError } = await supabase.from('pos_config').upsert(
+            { branch_id: branch.id, pos_enabled: posEnabled, updated_at: new Date().toISOString() },
+            { onConflict: 'branch_id' }
+          );
+          if (posError) throw posError;
+        } catch (posErr: any) {
+          const msg = posErr?.message || posErr?.error_description || String(posErr);
+          const needsMigration = /does not exist|relation|relation "pos_config"/i.test(msg);
+          const hint = needsMigration
+            ? ' Ejecutá supabase db push para aplicar las migraciones de POS.'
+            : '';
+          throw new Error(`POS: ${msg}${hint}`);
+        }
+      }
+
       // Invalidar TODAS las queries de branches para sincronizar cache
       queryClient.invalidateQueries({ queryKey: ['admin-sidebar-branches'] });
       queryClient.invalidateQueries({ queryKey: ['accessible-branches-v2'] });
       queryClient.invalidateQueries({ queryKey: ['branch-detail'] });
       queryClient.invalidateQueries({ queryKey: ['public-branches-landing'] });
+      queryClient.invalidateQueries({ queryKey: ['pos-config', branch.id] });
+      queryClient.invalidateQueries({ queryKey: ['pos-config'] });
 
       toast.success('Sucursal actualizada');
       onSaved();
-    } catch (error) {
+    } catch (error: any) {
       if (import.meta.env.DEV) console.error('Error saving branch:', error);
-      toast.error('Error al guardar los cambios');
+      const message = error?.message || 'Error al guardar los cambios';
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -246,6 +294,31 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
             </div>
           </RadioGroup>
         </div>
+
+        {/* Punto de Venta (POS) - Solo superadmin */}
+        {isSuperadmin && (
+          <div className="space-y-4 pt-4 border-t">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                Punto de Venta (POS)
+              </div>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="pos-enabled" className="text-sm text-muted-foreground">
+                  {posEnabled ? 'Habilitado' : 'Deshabilitado'}
+                </Label>
+                <Switch
+                  id="pos-enabled"
+                  checked={posEnabled}
+                  onCheckedChange={setPosEnabled}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Si está habilitado, esta sucursal usará el POS integrado. Se ocultan Ventas Mensuales y Cargador RDO (carga manual).
+            </p>
+          </div>
+        )}
 
         {/* Acciones */}
         <div className="flex justify-end gap-2 pt-4 border-t">

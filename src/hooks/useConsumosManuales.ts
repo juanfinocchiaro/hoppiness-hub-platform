@@ -25,6 +25,7 @@ export const TIPO_CONSUMO_OPTIONS = [
   { value: 'manual', label: 'Manual' },
   { value: 'ajuste', label: 'Ajuste' },
   { value: 'merma', label: 'Merma' },
+  { value: 'calculado', label: 'Desde stock (cierre)' },
 ] as const;
 
 export function useConsumosManuales(branchId: string, periodo?: string) {

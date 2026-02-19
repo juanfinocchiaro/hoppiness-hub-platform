@@ -33,37 +33,36 @@ export function PanelSwitcher({ currentPanel, localBranchId }: PanelSwitcherProp
   }
 
   return (
-    <div className="space-y-1">
-      <div className="text-xs uppercase text-muted-foreground font-medium px-3 py-2">
+    <div className="space-y-2">
+      <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-1">
         Cambiar a
       </div>
-      
-      {showCuenta && (
-        <Link to="/cuenta">
-          <Button variant="ghost" className="w-full justify-start">
-            <User className="w-4 h-4 mr-3" />
-            Mi Cuenta
-          </Button>
-        </Link>
-      )}
-      
-      {showLocal && (
-        <Link to={`/milocal/${targetBranchId}`}>
-          <Button variant="ghost" className="w-full justify-start">
-            <Store className="w-4 h-4 mr-3" />
-            Mi Local
-          </Button>
-        </Link>
-      )}
-      
-      {showMarca && (
-        <Link to="/mimarca">
-          <Button variant="ghost" className="w-full justify-start">
-            <Building2 className="w-4 h-4 mr-3" />
-            Mi Marca
-          </Button>
-        </Link>
-      )}
+      <div className="rounded-md bg-muted/30 p-2 space-y-0.5">
+        {showCuenta && (
+          <Link to="/cuenta">
+            <Button variant="ghost" className="w-full justify-start" size="sm">
+              <User className="w-4 h-4 mr-3" />
+              Mi Cuenta
+            </Button>
+          </Link>
+        )}
+        {showLocal && (
+          <Link to={`/milocal/${targetBranchId}`}>
+            <Button variant="ghost" className="w-full justify-start" size="sm">
+              <Store className="w-4 h-4 mr-3" />
+              Mi Local
+            </Button>
+          </Link>
+        )}
+        {showMarca && (
+          <Link to="/mimarca">
+            <Button variant="ghost" className="w-full justify-start" size="sm">
+              <Building2 className="w-4 h-4 mr-3" />
+              Mi Marca
+            </Button>
+          </Link>
+        )}
+      </div>
     </div>
   );
 }

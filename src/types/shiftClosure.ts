@@ -82,6 +82,7 @@ export interface ShiftClosure {
   branch_id: string;
   fecha: string; // DATE as string 'YYYY-MM-DD'
   turno: ShiftType;
+  fuente?: 'pos' | 'manual'; // pos = generado desde POS, manual = carga manual
   
   hamburguesas: HamburguesasData;
   ventas_local: VentasLocalData;

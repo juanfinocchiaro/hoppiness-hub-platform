@@ -8,7 +8,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/states';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { BookOpen, ChevronDown, Plus, GripVertical, Pencil, Trash2, Check, X, Eye, EyeOff } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { BookOpen, ChevronDown, Plus, GripVertical, Pencil, Trash2, Check, X, Eye, EyeOff, Calculator } from 'lucide-react';
 import { ProductPreviewPanel } from '@/components/menu/ProductPreviewPanel';
 import { useItemsCarta } from '@/hooks/useItemsCarta';
 import { useMenuCategorias, useMenuCategoriaMutations } from '@/hooks/useMenu';
@@ -261,9 +262,16 @@ export default function MenuCartaPage() {
         title="Items de Venta"
         subtitle="Lo que ve y compra el cliente · Para editar, usá el Centro de Costos"
         actions={
-          <Button onClick={() => setShowNew(true)} size="sm">
-            <Plus className="w-4 h-4 mr-1.5" /> Nueva Categoría
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link to="/mimarca/centro-costos">
+              <Button variant="outline" size="sm">
+                <Calculator className="w-4 h-4 mr-1.5" /> Ir a Control de Costos
+              </Button>
+            </Link>
+            <Button onClick={() => setShowNew(true)} size="sm">
+              <Plus className="w-4 h-4 mr-1.5" /> Nueva Categoría
+            </Button>
+          </div>
         }
       />
 

@@ -113,7 +113,7 @@ export function WorkShell({
 
           {/* Footer */}
           {footer && (
-            <div className="p-4 border-t space-y-3 shrink-0">{footer}</div>
+            <div className="p-4 border-t space-y-4 shrink-0">{footer}</div>
           )}
         </aside>
 

@@ -230,8 +230,8 @@ export function useSaveShiftClosure() {
       const tieneAlertaFacturacion = facturacionEsperada > 0 && 
         Math.abs(facturacionDiferencia) > facturacionEsperada * 0.1;
       
-      // Posnet comparison
-      const posnetDiff = closureCalcs.calcularDiferenciaPosnet(input.ventas_local);
+      // Posnet comparison (incl. cobrado_posnet from Más Delivery)
+      const posnetDiff = closureCalcs.calcularDiferenciaPosnet(input.ventas_local, input.ventas_apps);
       
       // Apps comparison
       const appsDiff = closureCalcs.calcularDiferenciasApps(input.ventas_apps);

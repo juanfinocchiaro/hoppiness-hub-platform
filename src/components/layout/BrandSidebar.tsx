@@ -30,7 +30,7 @@ import {
   Building2, MessageSquare, FileText, Shield, ClipboardList,
   BarChart3, Wallet, Package, Truck, Landmark, TrendingUp,
   CalendarDays, Calendar, Eye, Calculator, BookOpen, ChefHat,
-  Beef, Network, Boxes, Briefcase, GripVertical, History,
+  Beef, Network, Boxes, Briefcase, GripVertical, History, Tag,
 } from 'lucide-react';
 import {
   WorkSidebarNav, NavSectionGroup, NavItemButton,
@@ -93,7 +93,7 @@ export function BrandSidebar() {
 
   // Active section detection
   const isLocalesActive = p.includes('/mimarca/locales');
-  const isMenuEngActive = p.includes('/mimarca/finanzas/insumos') || p.includes('/mimarca/finanzas/proveedores') || p.includes('/mimarca/recetas') || p.includes('/mimarca/carta') || p === '/mimarca/centro-costos';
+  const isMenuEngActive = p.includes('/mimarca/finanzas/insumos') || p.includes('/mimarca/finanzas/proveedores') || p.includes('/mimarca/recetas') || p.includes('/mimarca/carta') || p.includes('/mimarca/categorias-carta') || p === '/mimarca/centro-costos';
   const isGestionRedActive = p.includes('/mimarca/supervisiones') || p.includes('/mimarca/coaching') || p.includes('/mimarca/comunicados') || p.includes('/mimarca/reuniones');
   const isModeloOpActive = p.includes('/mimarca/finanzas/conceptos-servicio') || p.includes('/mimarca/configuracion/calendario') || p.includes('/mimarca/reglamentos') || p.includes('/mimarca/configuracion/cierres');
   const isFinanzasActive = p.includes('/mimarca/finanzas/ventas-mensuales') || p.includes('/mimarca/finanzas/canon') || p.includes('/mimarca/informes');
@@ -121,17 +121,18 @@ export function BrandSidebar() {
     ) : null,
 
     'menu-eng': canSeeMenuEng ? (
-      <NavSectionGroup id="menu-eng" label="Ingeniería de Menú" icon={Beef} forceOpen={isMenuEngActive}>
+      <NavSectionGroup id="menu-eng" label="Producto y Menú" icon={Beef} forceOpen={isMenuEngActive}>
+        {bp.canViewInsumos && <NavItemButton to="/mimarca/carta" icon={BookOpen} label="Carta" />}
+        {bp.canViewInsumos && isSuperadmin && <NavItemButton to="/mimarca/categorias-carta" icon={Tag} label="Categorías Carta" />}
+        {bp.canViewInsumos && isSuperadmin && <NavItemButton to="/mimarca/recetas" icon={ChefHat} label="Recetas" />}
         {bp.canViewInsumos && <NavItemButton to="/mimarca/finanzas/insumos" icon={Package} label="Catálogo de Compras" />}
         {bp.canViewProveedoresMarca && <NavItemButton to="/mimarca/finanzas/proveedores" icon={Truck} label="Proveedores" />}
-        {bp.canViewInsumos && isSuperadmin && <NavItemButton to="/mimarca/recetas" icon={ChefHat} label="Recetas" />}
-        {bp.canViewInsumos && <NavItemButton to="/mimarca/carta" icon={BookOpen} label="Carta" />}
         {bp.canViewInsumos && isSuperadmin && <NavItemButton to="/mimarca/centro-costos" icon={Calculator} label="Control de Costos" />}
       </NavSectionGroup>
     ) : null,
 
     'gestion-red': canSeeGestionRed ? (
-      <NavSectionGroup id="gestion-red" label="Gestión de Red" icon={Network} forceOpen={isGestionRedActive}>
+      <NavSectionGroup id="gestion-red" label="Supervisión de Red" icon={Network} forceOpen={isGestionRedActive}>
         <NavItemButton to="/mimarca/supervisiones" icon={Eye} label="Supervisión" />
         {(bp.canCoachManagers || bp.canViewCoaching) && <NavItemButton to="/mimarca/coaching/encargados" icon={ClipboardList} label="Coaching Encargados" />}
         {bp.canViewCoaching && <NavItemButton to="/mimarca/coaching/red" icon={BarChart3} label="Coaching Red" />}

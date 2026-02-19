@@ -1,0 +1,12 @@
+export { SumateSection } from './SumateSection';
+export { FranquiciasModal } from './FranquiciasModal';
+export { EmpleoModal } from './EmpleoModal';
+export { ProveedoresModal } from './ProveedoresModal';
+export { AwardsSection } from './AwardsSection';
+export { MediaSection } from './MediaSection';
+export { FranchiseHero } from './FranchiseHero';
+export { WhyHoppinessSection } from './WhyHoppinessSection';
+export { TimelineSection } from './TimelineSection';
+export { FranchiseFormSection } from './FranchiseFormSection';
+export { LocationsSection } from './LocationsSection';
+export { ReviewsSection } from './ReviewsSection';

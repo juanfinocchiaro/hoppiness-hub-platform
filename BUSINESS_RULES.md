@@ -18,9 +18,8 @@
 
 - **Hoppiness** es una franquicia de hamburgueserías smash en Córdoba, Argentina
 - Actualmente tiene **6 locales** operativos
-- El sistema de ventas/POS es **Núcleo Check** (externo, no es esta app)
-- Esta app gestiona: RRHH, finanzas internas, comunicación, supervisión
-- Los datos de ventas se cargan manualmente desde Núcleo Check
+- **Ventas/POS:** En algunas sucursales se usa **Núcleo Check** (externo; los datos de ventas se cargan manualmente). En otras se está integrando el **POS del Hub** (interno a esta app), de forma gradual. La app soporta ambos: por sucursal se define si el POS está habilitado o no.
+- Esta app gestiona: RRHH, finanzas internas, comunicación, supervisión, y —donde corresponda— punto de venta (POS) integrado
 
 ---
 
@@ -274,7 +273,25 @@
 
 ---
 
-## 💵 CIERRES DE TURNO Este modulo no servirá mas una vez que tengamos le POS
+## 🖥️ POS (PUNTO DE VENTA)
+
+### Contexto
+- El Hub puede operar como **POS integrado** en algunas sucursales. La integración es **gradual**: no todos los locales lo tienen activo a la vez.
+- Por sucursal se configura si el POS está **habilitado** (`pos_config.pos_enabled`). Donde no está habilitado, el local sigue usando **Núcleo Check** y cargando ventas/cierres de forma manual.
+
+### Reglas
+- **Habilitación:** Solo la marca/admin puede activar o desactivar el POS por sucursal.
+- **Convivencia:** Locales con POS habilitado usan el flujo integrado (pedidos, caja, cierre desde el Hub). Locales sin POS siguen con Núcleo Check y carga manual.
+- **Pedidos:** Tipos soportados: mostrador, delivery, webapp. Canales: mostrador (takeaway, comer acá, delivery) o apps (Rappi, PedidosYa, MercadoPago Delivery).
+- **Pagos:** Efectivo, tarjeta débito, tarjeta crédito, MercadoPago QR, transferencia. Se soporta pago split.
+- **Caja:** Apertura y cierre de caja por turno; el cierre del POS se integra con el módulo de cierres de turno del local cuando el POS está habilitado.
+
+### Qué no cambia
+- Las reglas de RRHH, fichajes, horarios, carta, proveedores, etc. aplican igual para todos los locales, tengan o no POS del Hub.
+
+---
+
+## 💵 CIERRES DE TURNO
 
 ### Qué se carga
 - **Ventas por canal:** Efectivo, Tarjeta débito, Tarjeta crédito, MercadoPago QR, Transferencia
@@ -286,7 +303,7 @@
 ### Reglas
 - El cajero no puede irse sin cerrar el turno
 - Si hay diferencia de caja, debe explicar el motivo
-- Los datos vienen de **Núcleo Check** y se cargan manualmente
+- **Origen de los datos:** En sucursales **con POS del Hub habilitado**, los datos de ventas y cierre pueden provenir del POS integrado. En el resto, los datos vienen de **Núcleo Check** y se cargan manualmente.
 - El encargado puede ver todos los cierres y detectar patrones
 
 ### Diferencias

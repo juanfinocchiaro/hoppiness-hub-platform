@@ -184,6 +184,13 @@ export interface PermissionsV2 {
     // Cierres de turno
     canViewClosures: boolean;
     canCloseShifts: boolean;
+
+    // POS
+    canAccessPOS: boolean;
+    canViewKitchen: boolean;
+    canAssignDelivery: boolean;
+    canOpenRegister: boolean;
+    canCloseRegister: boolean;
     
     // Finanzas / Reportes
     canViewSalesReports: boolean;
@@ -480,6 +487,13 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     // Cierres de turno
     canViewClosures: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero),
     canCloseShifts: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
+
+    // POS
+    canAccessPOS: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
+    canViewKitchen: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
+    canAssignDelivery: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
+    canOpenRegister: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
+    canCloseRegister: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
     
     // Finanzas / Reportes
     canViewSalesReports: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),

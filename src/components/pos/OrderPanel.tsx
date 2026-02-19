@@ -1,0 +1,93 @@
+/**
+ * OrderPanel - Carrito actual del pedido
+ */
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Minus, Plus, Trash2, CreditCard, ShoppingBag } from 'lucide-react';
+import type { CartItem } from './ProductGrid';
+
+interface OrderPanelProps {
+  items: CartItem[];
+  onUpdateQty: (index: number, delta: number) => void;
+  onRemove: (index: number) => void;
+  onCobrar: () => void;
+  disabled?: boolean;
+}
+
+export function OrderPanel({ items, onUpdateQty, onRemove, onCobrar, disabled }: OrderPanelProps) {
+  const subtotal = items.reduce((s, i) => s + i.subtotal, 0);
+
+  return (
+    <div className="flex flex-col h-full border rounded-lg">
+      <div className="p-3 border-b font-medium">Pedido actual</div>
+      <ScrollArea className="flex-1 min-h-0 p-2">
+        {items.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+            <ShoppingBag className="h-12 w-12 text-muted-foreground/60 mb-3" />
+            <p className="text-sm font-medium text-muted-foreground">Agregá productos para empezar</p>
+            <p className="text-xs text-muted-foreground mt-1">Elegí items del menú y sumalos al pedido</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {items.map((it, idx) => (
+              <div
+                key={`${it.item_carta_id}-${idx}`}
+                className="flex items-center justify-between gap-2 p-2 rounded-lg bg-muted/50"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{it.nombre}</p>
+                  <p className="text-xs text-muted-foreground">
+                    $ {it.precio_unitario.toLocaleString('es-AR')} × {it.cantidad}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => onUpdateQty(idx, -1)}
+                    disabled={it.cantidad <= 1}
+                  >
+                    <Minus className="h-3.5 w-3.5" />
+                  </Button>
+                  <span className="text-sm font-medium w-6 text-center">{it.cantidad}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => onUpdateQty(idx, 1)}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive"
+                    onClick={() => onRemove(idx)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </ScrollArea>
+      <div className="p-3 border-t space-y-2">
+        <div className="flex justify-between text-lg font-semibold">
+          <span>Total</span>
+          <span>$ {subtotal.toLocaleString('es-AR')}</span>
+        </div>
+        <Button
+          className="w-full"
+          size="lg"
+          onClick={onCobrar}
+          disabled={items.length === 0 || disabled}
+        >
+          <CreditCard className="h-4 w-4 mr-2" />
+          Cobrar
+        </Button>
+      </div>
+    </div>
+  );
+}

@@ -263,6 +263,7 @@ export function ShiftClosureModal({
               data={ventasLocal}
               onChange={setVentasLocal}
               subtotal={totals.subtotalLocal}
+              ventasApps={ventasApps}
             />
             
             {/* 3. Comparación Posnet */}

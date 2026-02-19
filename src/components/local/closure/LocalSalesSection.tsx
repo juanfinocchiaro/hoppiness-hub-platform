@@ -8,13 +8,15 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { ChevronDown, Store, HelpCircle, CreditCard } from 'lucide-react';
-import type { VentasLocalData, ChannelPayments } from '@/types/shiftClosure';
+import type { VentasLocalData, VentasAppsData, ChannelPayments } from '@/types/shiftClosure';
 import { calcularTotalTarjetasNucleo } from '@/types/shiftClosure';
 
 interface LocalSalesSectionProps {
   data: VentasLocalData;
   onChange: (data: VentasLocalData) => void;
   subtotal: number;
+  /** Optional: when provided, Total Tarjetas includes cobrado_posnet (Más Delivery) for Posnet comparison */
+  ventasApps?: VentasAppsData;
 }
 
 const CHANNELS = [
@@ -31,8 +33,8 @@ const PAYMENT_METHODS = [
   { key: 'transferencia', label: 'Transf.', short: 'Transf.' },
 ] as const;
 
-export function LocalSalesSection({ data, onChange, subtotal }: LocalSalesSectionProps) {
-  const totalTarjetas = calcularTotalTarjetasNucleo(data);
+export function LocalSalesSection({ data, onChange, subtotal, ventasApps }: LocalSalesSectionProps) {
+  const totalTarjetas = calcularTotalTarjetasNucleo(data, ventasApps);
   
   const handleChange = (channel: keyof Omit<VentasLocalData, 'comparacion_posnet'>, method: keyof ChannelPayments, value: number) => {
     onChange({

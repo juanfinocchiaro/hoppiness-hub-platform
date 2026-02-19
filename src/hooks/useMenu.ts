@@ -2,6 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+// NOTA: v_menu_costos y menu_productos están deprecados.
+// El sistema activo de costos usa items_carta + CentroCostosPage (useItemsCarta).
+
 // Categorías del menú
 export function useMenuCategorias() {
   return useQuery({
@@ -255,29 +258,6 @@ export function useFichaTecnicaMutations() {
   });
 
   return { save };
-}
-
-// Hook para centro de costos (usa la vista v_menu_costos)
-export function useCentroCostos() {
-  const query = useQuery({
-    queryKey: ['centro-costos'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('v_menu_costos' as any)
-        .select('*');
-      if (error) throw error;
-      return data as any[];
-    },
-  });
-
-  const stats = query.data ? {
-    fcPromedio: query.data.filter((p: any) => p.fc_actual).reduce((sum: number, p: any) => sum + (p.fc_actual || 0), 0) / (query.data.filter((p: any) => p.fc_actual).length || 1),
-    productosOk: query.data.filter((p: any) => p.fc_actual && p.fc_actual <= 32).length,
-    productosWarning: query.data.filter((p: any) => p.fc_actual && p.fc_actual > 32 && p.fc_actual <= 40).length,
-    productosDanger: query.data.filter((p: any) => p.fc_actual && p.fc_actual > 40).length,
-  } : null;
-
-  return { ...query, stats };
 }
 
 // Historial de precios

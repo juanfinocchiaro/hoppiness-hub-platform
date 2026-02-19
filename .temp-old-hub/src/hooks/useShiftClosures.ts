@@ -1,0 +1,364 @@
+/**
+ * useShiftClosures - CRUD hooks for shift closures
+ */
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { format } from 'date-fns';
+import { toast } from '@/hooks/use-toast';
+import type { Json } from '@/integrations/supabase/types';
+import type {
+  ShiftClosure,
+  ShiftClosureInput,
+  HamburguesasData,
+  VentasLocalData,
+  VentasAppsData,
+  ArqueoCaja,
+  ShiftType,
+} from '@/types/shiftClosure';
+import * as closureCalcs from '@/types/shiftClosure';
+
+// Helper to parse JSONB fields from DB
+function parseShiftClosure(row: any): ShiftClosure {
+  return {
+    ...row,
+    hamburguesas: row.hamburguesas as HamburguesasData,
+    ventas_local: row.ventas_local as VentasLocalData,
+    ventas_apps: row.ventas_apps as VentasAppsData,
+    arqueo_caja: row.arqueo_caja as ArqueoCaja || { diferencia_caja: 0 },
+  };
+}
+
+/**
+ * Get closures for a specific branch on a specific date
+ */
+export function useDateClosures(branchId: string, date: Date) {
+  const dateStr = format(date, 'yyyy-MM-dd');
+  
+  return useQuery({
+    queryKey: ['shift-closures', branchId, dateStr],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('shift_closures')
+        .select('*')
+        .eq('branch_id', branchId)
+        .eq('fecha', dateStr)
+        .order('turno');
+      
+      if (error) throw error;
+      return (data || []).map(parseShiftClosure);
+    },
+    enabled: !!branchId,
+  });
+}
+
+/**
+ * Get closures for today
+ */
+export function useTodayClosures(branchId: string) {
+  return useDateClosures(branchId, new Date());
+}
+
+/**
+ * Get closures for a date range
+ */
+export function useClosuresByDateRange(branchId: string, from: Date, to: Date) {
+  const fromStr = format(from, 'yyyy-MM-dd');
+  const toStr = format(to, 'yyyy-MM-dd');
+  
+  return useQuery({
+    queryKey: ['shift-closures-range', branchId, fromStr, toStr],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('shift_closures')
+        .select('*')
+        .eq('branch_id', branchId)
+        .gte('fecha', fromStr)
+        .lte('fecha', toStr)
+        .order('fecha', { ascending: false })
+        .order('turno');
+      
+      if (error) throw error;
+      return (data || []).map(parseShiftClosure);
+    },
+    enabled: !!branchId,
+  });
+}
+
+/**
+ * Get a specific closure
+ */
+export function useShiftClosure(branchId: string, fecha: string, turno: ShiftType) {
+  return useQuery({
+    queryKey: ['shift-closure', branchId, fecha, turno],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('shift_closures')
+        .select('*')
+        .eq('branch_id', branchId)
+        .eq('fecha', fecha)
+        .eq('turno', turno)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data ? parseShiftClosure(data) : null;
+    },
+    enabled: !!branchId && !!fecha && !!turno,
+  });
+}
+
+/**
+ * Get brand-wide summary for a date range (for Mi Marca dashboard)
+ */
+export function useBrandClosuresSummary(from: Date, to: Date) {
+  const fromStr = format(from, 'yyyy-MM-dd');
+  const toStr = format(to, 'yyyy-MM-dd');
+  
+  return useQuery({
+    queryKey: ['brand-closures-summary', fromStr, toStr],
+    queryFn: async () => {
+      // Get all closures in range
+      const { data: closures, error: closuresError } = await supabase
+        .from('shift_closures')
+        .select('*')
+        .gte('fecha', fromStr)
+        .lte('fecha', toStr);
+      
+      if (closuresError) throw closuresError;
+      
+      // Get all branches
+      const { data: branches, error: branchesError } = await supabase
+        .from('branches')
+        .select('id, name, slug')
+        .order('name');
+      
+      if (branchesError) throw branchesError;
+      
+      // Get active shifts per branch
+      const { data: branchShifts, error: shiftsError } = await supabase
+        .from('branch_shifts')
+        .select('branch_id, name')
+        .eq('is_active', true);
+      
+      if (shiftsError) throw shiftsError;
+      
+      // Build summary per branch
+      const summary = (branches || []).map(branch => {
+        const branchClosures = (closures || [])
+          .filter(c => c.branch_id === branch.id)
+          .map(parseShiftClosure);
+        
+        const activeShifts = (branchShifts || [])
+          .filter(s => s.branch_id === branch.id)
+          .map(s => s.name.toLowerCase());
+        
+        // Aggregate totals
+        const totals = branchClosures.reduce((acc, c) => ({
+          vendido: acc.vendido + Number(c.total_vendido || 0),
+          efectivo: acc.efectivo + Number(c.total_efectivo || 0),
+          digital: acc.digital + Number(c.total_digital || 0),
+          hamburguesas: acc.hamburguesas + Number(c.total_hamburguesas || 0),
+          clasicas: acc.clasicas + (c.hamburguesas?.clasicas || 0),
+          originales: acc.originales + (c.hamburguesas?.originales || 0),
+          mas_sabor: acc.mas_sabor + (c.hamburguesas?.mas_sabor || 0),
+          veggies: acc.veggies + ((c.hamburguesas?.veggies?.not_american || 0) + (c.hamburguesas?.veggies?.not_claudio || 0)),
+          ultrasmash: acc.ultrasmash + ((c.hamburguesas?.ultrasmash?.ultra_cheese || 0) + (c.hamburguesas?.ultrasmash?.ultra_bacon || 0)),
+          extras: acc.extras + ((c.hamburguesas?.extras?.extra_carne || 0) + (c.hamburguesas?.extras?.extra_not_burger || 0) + (c.hamburguesas?.extras?.extra_not_chicken || 0)),
+          alertas: acc.alertas + (c.tiene_alerta_facturacion ? 1 : 0) + (c.tiene_alerta_posnet ? 1 : 0) + (c.tiene_alerta_apps ? 1 : 0) + (c.tiene_alerta_caja ? 1 : 0),
+        }), {
+          vendido: 0,
+          efectivo: 0,
+          digital: 0,
+          hamburguesas: 0,
+          clasicas: 0,
+          originales: 0,
+          mas_sabor: 0,
+          veggies: 0,
+          ultrasmash: 0,
+          extras: 0,
+          alertas: 0,
+        });
+        
+        // Map closures by shift for status display
+        const closuresByShift = new Map<string, ShiftClosure>();
+        branchClosures.forEach(c => {
+          closuresByShift.set(c.turno, c);
+        });
+        
+        return {
+          branch,
+          totals,
+          closures: branchClosures,
+          closuresByShift,
+          activeShifts,
+        };
+      });
+      
+      return summary;
+    },
+  });
+}
+
+/**
+ * Save (upsert) a shift closure
+ */
+export function useSaveShiftClosure() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  
+  return useMutation({
+    mutationFn: async (input: ShiftClosureInput) => {
+      if (!user?.id) throw new Error('Usuario no autenticado');
+      
+      // Calculate all totals
+      const totalHamburguesas = closureCalcs.calcularTotalesHamburguesas(input.hamburguesas);
+      const totalesLocal = closureCalcs.calcularTotalesVentasLocal(input.ventas_local);
+      const totalesApps = closureCalcs.calcularTotalesVentasApps(input.ventas_apps);
+      
+      const totalVendido = totalesLocal.total + totalesApps.total;
+      const totalEfectivo = totalesLocal.efectivo + totalesApps.efectivo;
+      const totalDigital = totalesLocal.digital + totalesApps.digital;
+      
+      // Invoicing calculations
+      const facturacionEsperada = closureCalcs.calcularFacturacionEsperada(
+        input.ventas_local,
+        input.ventas_apps
+      );
+      const facturacionDiferencia = input.total_facturado - facturacionEsperada;
+      const tieneAlertaFacturacion = facturacionEsperada > 0 && 
+        Math.abs(facturacionDiferencia) > facturacionEsperada * 0.1;
+      
+      // Posnet comparison
+      const posnetDiff = closureCalcs.calcularDiferenciaPosnet(input.ventas_local);
+      
+      // Apps comparison
+      const appsDiff = closureCalcs.calcularDiferenciasApps(input.ventas_apps);
+      
+      // Cash count
+      const tieneAlertaCaja = input.arqueo_caja.diferencia_caja !== 0;
+      
+      // Cast JSONB data to Json for Supabase
+      const hamburguesasJson = input.hamburguesas as unknown as Json;
+      const ventasLocalJson = input.ventas_local as unknown as Json;
+      const ventasAppsJson = input.ventas_apps as unknown as Json;
+      const arqueoCajaJson = input.arqueo_caja as unknown as Json;
+      
+      // Check if exists
+      const { data: existing } = await supabase
+        .from('shift_closures')
+        .select('id')
+        .eq('branch_id', input.branch_id)
+        .eq('fecha', input.fecha)
+        .eq('turno', input.turno)
+        .maybeSingle();
+      
+      const closureData = {
+        hamburguesas: hamburguesasJson,
+        ventas_local: ventasLocalJson,
+        ventas_apps: ventasAppsJson,
+        arqueo_caja: arqueoCajaJson,
+        total_facturado: input.total_facturado,
+        total_hamburguesas: totalHamburguesas,
+        total_vendido: totalVendido,
+        total_efectivo: totalEfectivo,
+        total_digital: totalDigital,
+        facturacion_esperada: facturacionEsperada,
+        facturacion_diferencia: facturacionDiferencia,
+        tiene_alerta_facturacion: tieneAlertaFacturacion,
+        diferencia_posnet: posnetDiff.diferencia,
+        diferencia_apps: appsDiff.diferencia,
+        tiene_alerta_posnet: posnetDiff.tieneAlerta,
+        tiene_alerta_apps: appsDiff.tieneAlerta,
+        tiene_alerta_caja: tieneAlertaCaja,
+        notas: input.notas || null,
+      };
+      
+      if (existing) {
+        // Update
+        const { data, error } = await supabase
+          .from('shift_closures')
+          .update({
+            ...closureData,
+            updated_by: user.id,
+          })
+          .eq('id', existing.id)
+          .select()
+          .single();
+        
+        if (error) throw error;
+        return parseShiftClosure(data);
+      } else {
+        // Insert
+        const { data, error } = await supabase
+          .from('shift_closures')
+          .insert([{
+            branch_id: input.branch_id,
+            fecha: input.fecha,
+            turno: input.turno,
+            ...closureData,
+            cerrado_por: user.id,
+          }])
+          .select()
+          .single();
+        
+        if (error) throw error;
+        return parseShiftClosure(data);
+      }
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['shift-closures'] });
+      queryClient.invalidateQueries({ queryKey: ['shift-closure'] });
+      queryClient.invalidateQueries({ queryKey: ['brand-closures-summary'] });
+      toast({
+        title: 'Cierre guardado',
+        description: `Turno ${data.turno} guardado correctamente`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Error al guardar',
+        description: error.message,
+      });
+    },
+  });
+}
+
+// Shift label helpers
+export const SHIFT_LABELS: Record<ShiftType, string> = {
+  'mañana': 'Mañana',
+  'mediodía': 'Mediodía',
+  'noche': 'Noche',
+  'trasnoche': 'Trasnoche',
+};
+
+export function getShiftLabel(shift: string): string {
+  return SHIFT_LABELS[shift as ShiftType] || shift;
+}
+
+// Get enabled shifts from branch_shifts table
+export function useEnabledShifts(branchId: string) {
+  return useQuery({
+    queryKey: ['branch-shifts-enabled', branchId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('branch_shifts')
+        .select('id, name, start_time, end_time, is_active, sort_order')
+        .eq('branch_id', branchId)
+        .eq('is_active', true)
+        .order('sort_order');
+      
+      if (error) throw error;
+      
+      // Map to shift types
+      return (data || []).map(s => ({
+        id: s.id,
+        value: s.name.toLowerCase() as ShiftType,
+        label: s.name,
+        startTime: s.start_time,
+        endTime: s.end_time,
+      }));
+    },
+    enabled: !!branchId,
+  });
+}

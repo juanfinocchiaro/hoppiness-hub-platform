@@ -1,0 +1,221 @@
+/**
+ * useStockCierre - Cierre mensual de stock: cálculo esperado y guardado
+ */
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+function periodToRange(periodo: string) {
+  const [y, m] = periodo.split('-').map(Number);
+  const start = new Date(Date.UTC(y, m - 1, 1));
+  const end = new Date(Date.UTC(y, m, 1));
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
+export type CierreInsumoRow = {
+  insumo_id: string;
+  insumo_nombre: string;
+  unidad: string;
+  stock_apertura: number;
+  compras: number;
+  consumo_ventas: number;
+  stock_esperado: number;
+  stock_cierre_fisico?: number;
+  merma?: number;
+};
+
+/** Obtiene por insumo: apertura (cierre anterior), compras y ventas del mes, y stock esperado */
+export function useStockCierrePeriod(branchId: string, periodo: string | null) {
+  return useQuery({
+    queryKey: ['pos-stock-cierre', branchId, periodo],
+    queryFn: async (): Promise<CierreInsumoRow[]> => {
+      if (!branchId || !periodo) return [];
+      const { start, end } = periodToRange(periodo);
+      const [y, m] = periodo.split('-').map(Number);
+
+      const { data: movimientos } = await supabase
+        .from('stock_movimientos')
+        .select('insumo_id, tipo, cantidad, created_at')
+        .eq('branch_id', branchId)
+        .gte('created_at', start)
+        .lt('created_at', end);
+
+      const { data: cierreAnterior } = await supabase
+        .from('stock_cierre_mensual')
+        .select('insumo_id, stock_cierre_fisico')
+        .eq('branch_id', branchId)
+        .eq('periodo', new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 10));
+
+      const prevMap = new Map(
+        (cierreAnterior ?? []).map((r) => [r.insumo_id, Number(r.stock_cierre_fisico)])
+      );
+      const insumoIds = new Set<string>((movimientos ?? []).map((m) => m.insumo_id));
+      prevMap.forEach((_, id) => insumoIds.add(id));
+
+      const comprasByInsumo = new Map<string, number>();
+      const ventasByInsumo = new Map<string, number>();
+      for (const m of movimientos ?? []) {
+        const id = m.insumo_id;
+        const q = Number(m.cantidad ?? 0);
+        if (m.tipo === 'compra') comprasByInsumo.set(id, (comprasByInsumo.get(id) ?? 0) + q);
+        if (m.tipo === 'venta') ventasByInsumo.set(id, (ventasByInsumo.get(id) ?? 0) + q);
+      }
+
+      if (insumoIds.size === 0) {
+        const { data: stockActual } = await supabase
+          .from('stock_actual')
+          .select('insumo_id, cantidad, unidad, insumos(nombre)')
+          .eq('branch_id', branchId);
+        return (stockActual ?? []).map((r: { insumo_id: string; cantidad: number; unidad: string; insumos?: { nombre?: string } }) => ({
+          insumo_id: r.insumo_id,
+          insumo_nombre: (r.insumos as { nombre?: string })?.nombre ?? r.insumo_id,
+          unidad: r.unidad,
+          stock_apertura: 0,
+          compras: 0,
+          consumo_ventas: 0,
+          stock_esperado: Number(r.cantidad ?? 0),
+        }));
+      }
+
+      const { data: insumos } = await supabase
+        .from('insumos')
+        .select('id, nombre, unidad_base')
+        .in('id', Array.from(insumoIds));
+
+      const insumoInfo = new Map(
+        (insumos ?? []).map((i: { id: string; nombre?: string; unidad_base?: string }) => [
+          i.id,
+          { nombre: i.nombre ?? i.id, unidad: i.unidad_base ?? 'un' },
+        ])
+      );
+
+      return Array.from(insumoIds).map((id) => {
+        const apertura = prevMap.get(id) ?? 0;
+        const compras = comprasByInsumo.get(id) ?? 0;
+        const consumo_ventas = ventasByInsumo.get(id) ?? 0;
+        const stock_esperado = apertura + compras - consumo_ventas;
+        const info = insumoInfo.get(id) ?? { nombre: id, unidad: 'un' };
+        return {
+          insumo_id: id,
+          insumo_nombre: info.nombre,
+          unidad: info.unidad,
+          stock_apertura: apertura,
+          compras,
+          consumo_ventas,
+          stock_esperado,
+        };
+      });
+    },
+    enabled: !!branchId && !!periodo,
+  });
+}
+
+export function useSaveCierreMensual(branchId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: {
+      periodo: string;
+      items: { insumo_id: string; stock_cierre_fisico: number }[];
+    }) => {
+      const [y, m] = p.periodo.split('-').map(Number);
+      const periodDate = new Date(Date.UTC(y, m - 1, 1)).toISOString().slice(0, 10);
+      const periodEnd = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
+      const prevMonthDate = new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 10);
+      for (const it of p.items) {
+        const { data: prevCierre } = await supabase
+          .from('stock_cierre_mensual')
+          .select('stock_cierre_fisico')
+          .eq('branch_id', branchId)
+          .eq('insumo_id', it.insumo_id)
+          .eq('periodo', prevMonthDate)
+          .maybeSingle();
+        const stock_apertura = Number(prevCierre?.stock_cierre_fisico ?? 0);
+        const { data: movs } = await supabase
+          .from('stock_movimientos')
+          .select('tipo, cantidad')
+          .eq('branch_id', branchId)
+          .eq('insumo_id', it.insumo_id)
+          .gte('created_at', periodDate)
+          .lt('created_at', periodEnd);
+        let compras = 0;
+        let consumo_ventas = 0;
+        for (const mov of movs ?? []) {
+          if (mov.tipo === 'compra') compras += Number(mov.cantidad);
+          if (mov.tipo === 'venta') consumo_ventas += Number(mov.cantidad);
+        }
+        const stock_esperado = stock_apertura + compras - consumo_ventas;
+        const merma = Math.max(0, stock_esperado - it.stock_cierre_fisico);
+        const { error: errCierre } = await supabase.from('stock_cierre_mensual').upsert(
+          {
+            branch_id: branchId,
+            insumo_id: it.insumo_id,
+            periodo: periodDate,
+            stock_apertura,
+            compras,
+            consumo_ventas,
+            stock_esperado,
+            stock_cierre_fisico: it.stock_cierre_fisico,
+            merma,
+          },
+          { onConflict: 'branch_id,insumo_id,periodo' }
+        );
+        if (errCierre) throw errCierre;
+        const { data: actualRow } = await supabase
+          .from('stock_actual')
+          .select('cantidad, unidad')
+          .eq('branch_id', branchId)
+          .eq('insumo_id', it.insumo_id)
+          .maybeSingle();
+        const cantidadAnterior = Number(actualRow?.cantidad ?? 0);
+        const { error: errStock } = await supabase.from('stock_actual').upsert(
+          {
+            branch_id: branchId,
+            insumo_id: it.insumo_id,
+            cantidad: it.stock_cierre_fisico,
+            unidad: actualRow?.unidad ?? 'un',
+          },
+          { onConflict: 'branch_id,insumo_id' }
+        );
+        if (errStock) throw errStock;
+        if (merma > 0) {
+          await supabase.from('stock_movimientos').insert({
+            branch_id: branchId,
+            insumo_id: it.insumo_id,
+            tipo: 'merma',
+            cantidad: merma,
+            cantidad_anterior: cantidadAnterior,
+            cantidad_nueva: it.stock_cierre_fisico,
+            motivo: `Cierre mensual ${p.periodo}`,
+          });
+          const { data: insumo } = await supabase
+            .from('insumos')
+            .select('categoria_pl, costo_por_unidad_base, nombre')
+            .eq('id', it.insumo_id)
+            .single();
+          const costo = Number(insumo?.costo_por_unidad_base ?? 0);
+          const montoConsumo = merma * costo;
+          const catPl = insumo?.categoria_pl && ['materia_prima','descartables','limpieza','mantenimiento','marketing','varios'].includes(insumo.categoria_pl)
+            ? insumo.categoria_pl
+            : 'materia_prima';
+          if (montoConsumo > 0) {
+            await supabase.from('consumos_manuales').insert({
+              branch_id: branchId,
+              periodo: p.periodo,
+              categoria_pl: catPl,
+              monto_consumido: Math.round(montoConsumo * 100) / 100,
+              tipo: 'calculado',
+              observaciones: `Cierre stock ${p.periodo}: ${insumo?.nombre ?? it.insumo_id}`,
+            });
+          }
+        }
+      }
+    },
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ['pos-stock-cierre', branchId, variables.periodo] });
+      qc.invalidateQueries({ queryKey: ['pos-stock', branchId] });
+      qc.invalidateQueries({ queryKey: ['consumos_manuales'] });
+      toast.success('Cierre de stock guardado');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}

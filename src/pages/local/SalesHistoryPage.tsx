@@ -1,10 +1,13 @@
 /**
  * SalesHistoryPage - Historial de cierres de turno
- * 
+ *
  * Muestra los cierres de ventas de los últimos días con:
  * - Selector de rango de fechas
  * - Tabla con fecha, turno, hamburguesas, vendido, alertas
  * - Edición de cierres para encargados+
+ *
+ * Integración POS: cuando el local tiene POS habilitado, los cierres con fuente='pos'
+ * se generan desde pedidos. El flujo de cierre desde POS se realiza en RegisterCloseModal.
  */
 import { useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
@@ -214,9 +217,14 @@ export default function SalesHistoryPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">
-                            {getShiftLabel(closure.turno)}
-                          </Badge>
+                          <div className="flex items-center gap-1">
+                            <Badge variant="outline">
+                              {getShiftLabel(closure.turno)}
+                            </Badge>
+                            {closure.fuente === 'pos' && (
+                              <Badge variant="secondary" className="text-xs">POS</Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
                           {closure.total_hamburguesas}

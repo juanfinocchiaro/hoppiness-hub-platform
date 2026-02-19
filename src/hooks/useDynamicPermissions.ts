@@ -151,6 +151,13 @@ export function useDynamicPermissions(currentBranchId?: string): DynamicPermissi
       // Cierres
       canViewClosures: getPermission('local.viewClosures', localRole, permissions.local.canViewClosures),
       canCloseShifts: getPermission('local.closeShifts', localRole, permissions.local.canCloseShifts),
+
+      // POS
+      canAccessPOS: permissions.local.canAccessPOS,
+      canViewKitchen: permissions.local.canViewKitchen,
+      canAssignDelivery: permissions.local.canAssignDelivery,
+      canOpenRegister: permissions.local.canOpenRegister,
+      canCloseRegister: permissions.local.canCloseRegister,
       
       // Finanzas
       canViewSalesReports: permissions.local.canViewSalesReports,

@@ -3,6 +3,7 @@
  */
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
@@ -50,6 +51,24 @@ export default function BranchLayout() {
   const [showImpersonationSelector, setShowImpersonationSelector] = useState(false);
 
   const { accessibleBranches, loading: permLoading, local: lp } = permissions;
+
+  const { data: posConfig } = useQuery({
+    queryKey: ['pos-config', branchId],
+    queryFn: async () => {
+      try {
+        const { data } = await supabase
+          .from('pos_config')
+          .select('pos_enabled')
+          .eq('branch_id', branchId!)
+          .maybeSingle();
+        return data;
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!branchId,
+  });
+  const posEnabled = posConfig?.pos_enabled ?? false;
 
   // Redirect if not authenticated or no access
   useEffect(() => {
@@ -188,55 +207,55 @@ export default function BranchLayout() {
 
     const isDashboard = location.pathname === `/milocal/${branchId}`;
     if (isDashboard) {
-      return <ManagerDashboard branch={selectedBranch} />;
+      return <ManagerDashboard branch={selectedBranch} posEnabled={posEnabled} />;
     }
 
     return <Outlet context={{ branch: selectedBranch, permissions: lp }} />;
   };
 
-  // Footer con selector de sucursal y acciones
+  // Footer: bloques Contexto (sucursal + Ver como), Cambiar a, Acciones
   const footer = (
     <>
-      {/* ZONA 1: Selector de Sucursal */}
-      <Select 
-        value={branchId} 
-        onValueChange={handleBranchChange}
-        disabled={accessibleBranches.length <= 1}
-      >
-        <SelectTrigger className="w-full">
-          <div className="flex items-center gap-2">
-            <Store className="w-4 h-4 text-primary" />
-            <SelectValue placeholder="Seleccionar local" />
-          </div>
-        </SelectTrigger>
-        <SelectContent>
-          {accessibleBranches.map(branch => (
-            <SelectItem key={branch.id} value={branch.id}>
-              {branch.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {/* ZONA 2: Ver como (solo superadmin) */}
-      {canImpersonate && (
-        <Button
-          variant={isImpersonating ? 'secondary' : 'ghost'}
-          className={`w-full justify-start ${isImpersonating ? 'bg-amber-100 text-amber-900 hover:bg-amber-200' : ''}`}
-          onClick={() => setShowImpersonationSelector(true)}
+      {/* Bloque Contexto: Sucursal + Ver como */}
+      <div className="space-y-2">
+        <Select 
+          value={branchId} 
+          onValueChange={handleBranchChange}
+          disabled={accessibleBranches.length <= 1}
         >
-          <Eye className="w-4 h-4 mr-3" />
-          Ver como...
-        </Button>
-      )}
+          <SelectTrigger className="w-full">
+            <div className="flex items-center gap-2">
+              <Store className="w-4 h-4 text-primary" />
+              <SelectValue placeholder="Seleccionar local" />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            {accessibleBranches.map(branch => (
+              <SelectItem key={branch.id} value={branch.id}>
+                {branch.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {canImpersonate && (
+          <Button
+            variant={isImpersonating ? 'secondary' : 'ghost'}
+            className={`w-full justify-start ${isImpersonating ? 'bg-amber-100 text-amber-900 hover:bg-amber-200' : ''}`}
+            onClick={() => setShowImpersonationSelector(true)}
+          >
+            <Eye className="w-4 h-4 mr-3" />
+            Ver como...
+          </Button>
+        )}
+      </div>
 
-      {/* ZONA 3: Cambio de Panel (usando PanelSwitcher) */}
+      {/* Bloque Cambiar a */}
       <PanelSwitcher currentPanel="local" localBranchId={branchId} />
 
-      {/* ZONA 4: Acciones Fijas */}
-      <div className="space-y-1 pt-2 border-t">
+      {/* Bloque Acciones: Volver al Inicio, Salir */}
+      <div className="pt-4 border-t space-y-1">
         <ExternalLink to="/">
-          <Button variant="ghost" className="w-full justify-start">
+          <Button variant="ghost" className="w-full justify-start text-muted-foreground">
             <Home className="w-4 h-4 mr-3" />
             Volver al Inicio
           </Button>
@@ -258,6 +277,7 @@ export default function BranchLayout() {
         branchId ? (
             <LocalSidebar
               branchId={branchId}
+              posEnabled={posEnabled}
               permissions={{
                 canViewDashboard: lp.canViewDashboard,
                 canViewTeam: lp.canViewTeam,
@@ -281,6 +301,7 @@ export default function BranchLayout() {
                 canViewLocalCommunications: lp.canViewLocalCommunications,
                 canViewClosures: lp.canViewClosures,
                 canCloseShifts: lp.canCloseShifts,
+                canViewStock: lp.canViewStock,
                 isFranquiciado: permissions.isFranquiciado,
                 isContadorLocal: permissions.isContadorLocal,
             }}
