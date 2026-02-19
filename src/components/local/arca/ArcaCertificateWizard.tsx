@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { LoadingButton } from '@/components/ui/loading-button';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { DangerConfirmDialog } from '@/components/ui/danger-confirm-dialog';
 import { Shield, Download, Upload, ExternalLink, CheckCircle, AlertCircle, RefreshCw, Info } from 'lucide-react';
 import { generateArcaCertificate, downloadCSR } from '@/lib/arca-cert-generator';
 import type { AfipConfig } from '@/hooks/useAfipConfig';
@@ -275,15 +275,20 @@ export function ArcaCertificateWizard({
         </CardContent>
       </Card>
 
-      <ConfirmDialog
+      <DangerConfirmDialog
         open={showRegenerateConfirm}
         onOpenChange={setShowRegenerateConfirm}
         title="¿Regenerar certificado?"
-        description="Esto eliminará la clave privada y el certificado actual. Vas a tener que volver a subir el archivo .csr a ARCA y obtener un nuevo .crt. La facturación no funcionará hasta que completes el proceso."
-        confirmLabel="Sí, regenerar"
-        cancelLabel="Cancelar"
+        description="Solo hacé esto si ARCA rechaza el certificado actual o si te lo pide tu contador."
+        consequences={[
+          'Invalida el certificado actual',
+          'Requiere volver a subir el .csr a ARCA',
+          'Requiere autorizar el servicio de nuevo en ARCA',
+          'Las facturas NO se van a poder emitir hasta completar el proceso',
+        ]}
+        confirmWord="REGENERAR"
+        confirmLabel="Regenerar certificado"
         onConfirm={confirmRegenerate}
-        variant="destructive"
       />
     </>
   );

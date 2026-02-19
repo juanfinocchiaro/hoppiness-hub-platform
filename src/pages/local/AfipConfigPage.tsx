@@ -9,11 +9,21 @@ import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { FormLayout } from '@/components/ui/forms-pro/FormLayout';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { DangerConfirmDialog } from '@/components/ui/danger-confirm-dialog';
 import { ArcaCertificateWizard } from '@/components/local/arca/ArcaCertificateWizard';
 import { CopyArcaConfigDialog } from '@/components/local/arca/CopyArcaConfigDialog';
-import { Wifi, Shield, FileText, Copy, RotateCcw, ShieldAlert, Pencil, X } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { getArcaErrorMessage } from '@/lib/arca-error-messages';
+import {
+  Wifi, Shield, FileText, Copy, RotateCcw, ShieldAlert,
+  Pencil, X, RefreshCw, CheckCircle, AlertCircle, AlertTriangle,
+  ChevronDown, Lock, Info,
+} from 'lucide-react';
 import { toast } from 'sonner';
+
+function formatComprobante(n: number | null | undefined): string {
+  return `#${String(n || 0).padStart(8, '0')}`;
+}
 
 export default function AfipConfigPage() {
   const { branchId } = useParams<{ branchId: string }>();
@@ -30,10 +40,12 @@ export default function AfipConfigPage() {
     punto_venta: '',
   });
 
-  const [showProductionConfirm, setShowProductionConfirm] = useState(false);
+  const [showHomologacionConfirm, setShowHomologacionConfirm] = useState(false);
+  const [showProduccionConfirm, setShowProduccionConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showCopyDialog, setShowCopyDialog] = useState(false);
   const [isEditingFiscal, setIsEditingFiscal] = useState(false);
+  const [restrictedOpen, setRestrictedOpen] = useState(false);
 
   useEffect(() => {
     if (config) {
@@ -72,22 +84,19 @@ export default function AfipConfigPage() {
     });
   };
 
-  const handleToggleProduction = () => {
-    if (!config?.es_produccion) {
-      setShowProductionConfirm(true);
-    } else {
-      if (!branchId) return;
-      save.mutate({ branch_id: branchId, es_produccion: false } as any);
-    }
+  const handleSwitchToHomologacion = () => {
+    if (!branchId) return;
+    save.mutate({ branch_id: branchId, es_produccion: false } as any);
+    setShowHomologacionConfirm(false);
   };
 
-  const confirmProduction = () => {
+  const handleSwitchToProduccion = () => {
     if (!branchId) return;
     save.mutate({ branch_id: branchId, es_produccion: true } as any);
-    setShowProductionConfirm(false);
+    setShowProduccionConfirm(false);
   };
 
-  const handleReset = async () => {
+  const handleReset = () => {
     if (!branchId) return;
     save.mutate({
       branch_id: branchId,
@@ -100,7 +109,7 @@ export default function AfipConfigPage() {
       es_produccion: false,
     } as any);
     setShowResetConfirm(false);
-    toast.success('Configuración ARCA reseteada. Los datos fiscales se mantienen.');
+    toast.success('Configuración ARCA reseteada.');
   };
 
   if (isLoading || permLoading) return <HoppinessLoader fullScreen size="lg" />;
@@ -126,6 +135,7 @@ export default function AfipConfigPage() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Facturación ARCA</h1>
@@ -138,20 +148,162 @@ export default function AfipConfigPage() {
         </div>
       </div>
 
-      {config?.estado_conexion === 'error' && config?.ultimo_error && (
-        <Card className="border-destructive/50 bg-destructive/5">
-          <CardContent className="pt-4">
-            <p className="text-sm text-destructive">{config.ultimo_error}</p>
-            {config.ultima_verificacion && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Última verificación: {new Date(config.ultima_verificacion).toLocaleString('es-AR')}
+      {/* Banner Homologación */}
+      {config && !config.es_produccion && config.estado_certificado !== 'sin_configurar' && (
+        <div className="flex items-center justify-between gap-4 rounded-lg border border-orange-300 bg-orange-50 p-4 dark:border-orange-800 dark:bg-orange-950/30">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-orange-800 dark:text-orange-300">
+                MODO HOMOLOGACIÓN ACTIVO
               </p>
-            )}
-          </CardContent>
-        </Card>
+              <p className="text-sm text-orange-700 dark:text-orange-400">
+                Las facturas emitidas en este modo NO son válidas fiscalmente. Si ya terminaste de probar, cambiá a Producción.
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="shrink-0 border-orange-400 text-orange-700 hover:bg-orange-100 dark:border-orange-700 dark:text-orange-300 dark:hover:bg-orange-900/50"
+            onClick={() => setShowProduccionConfirm(true)}
+          >
+            Cambiar a Producción
+          </Button>
+        </div>
       )}
 
-      {/* Datos fiscales */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* ZONA 1: Estado Operativo                               */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wifi className="h-5 w-5" />
+            Estado Operativo
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {/* Cards de Modo y Conexión */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Modo */}
+            <div className="rounded-lg border p-4 space-y-1">
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Modo</p>
+              <div className="flex items-center gap-2">
+                {config?.es_produccion ? (
+                  <>
+                    <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
+                    <span className="text-sm font-semibold">PRODUCCIÓN</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="h-2.5 w-2.5 rounded-full bg-orange-500" />
+                    <span className="text-sm font-semibold">HOMOLOGACIÓN</span>
+                  </>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {config?.es_produccion
+                  ? 'Facturas válidas ante ARCA'
+                  : 'Las facturas NO son válidas fiscalmente'}
+              </p>
+            </div>
+
+            {/* Conexión */}
+            <div className="rounded-lg border p-4 space-y-1">
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Conexión</p>
+              <div className="flex items-center gap-2">
+                {isConnected ? (
+                  <>
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-semibold text-green-700 dark:text-green-400">Verificada</span>
+                  </>
+                ) : hasError ? (
+                  <>
+                    <AlertCircle className="h-4 w-4 text-destructive" />
+                    <span className="text-sm font-semibold text-destructive">Error</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground" />
+                    <span className="text-sm font-semibold text-muted-foreground">Sin configurar</span>
+                  </>
+                )}
+              </div>
+              {hasError && config?.ultimo_error && (
+                <p className="text-xs text-destructive/80">
+                  {getArcaErrorMessage(config.ultimo_error)}
+                </p>
+              )}
+              {config?.ultima_verificacion && (
+                <p className="text-xs text-muted-foreground">
+                  Última: {new Date(config.ultima_verificacion).toLocaleString('es-AR')}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Referencia rápida */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div className="space-y-0.5">
+              <p className="text-xs text-muted-foreground">Punto de Venta</p>
+              <p className="text-sm font-semibold">{config?.punto_venta ?? '—'}</p>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-xs text-muted-foreground">CUIT</p>
+              <p className="text-sm font-semibold">{config?.cuit ?? '—'}</p>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-xs text-muted-foreground">Razón Social</p>
+              <p className="text-sm font-semibold">{config?.razon_social ?? '—'}</p>
+            </div>
+          </div>
+
+          {/* Últimos comprobantes */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium">Últimos Comprobantes Emitidos</h4>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Factura A</p>
+                <p className="text-lg font-bold font-mono">{formatComprobante(config?.ultimo_nro_factura_a)}</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Factura B</p>
+                <p className="text-lg font-bold font-mono">{formatComprobante(config?.ultimo_nro_factura_b)}</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Factura C</p>
+                <p className="text-lg font-bold font-mono">{formatComprobante(config?.ultimo_nro_factura_c)}</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2 text-xs text-muted-foreground">
+              <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <p>Se sincronizan con ARCA al emitir facturas y al verificar la conexión. Si recién configuraste, es normal que estén en 0.</p>
+            </div>
+          </div>
+
+          {/* Verificar conexión */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => testConnection.mutate()}
+            disabled={testConnection.isPending}
+          >
+            {testConnection.isPending ? 'Verificando...' : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Verificar conexión ahora
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* ZONA 2: Configuración                                   */}
+      {/* ═══════════════════════════════════════════════════════ */}
+
+      {/* Datos Fiscales */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -171,9 +323,9 @@ export default function AfipConfigPage() {
                 onClick={() => setIsEditingFiscal(!isEditingFiscal)}
               >
                 {isEditingFiscal ? (
-                  <><X className="mr-1.5 h-4 w-4" /> Cancelar edición</>
+                  <><X className="mr-1.5 h-4 w-4" /> Cancelar</>
                 ) : (
-                  <><Pencil className="mr-1.5 h-4 w-4" /> Editar datos</>
+                  <><Pencil className="mr-1.5 h-4 w-4" /> Editar</>
                 )}
               </Button>
             )}
@@ -204,60 +356,65 @@ export default function AfipConfigPage() {
               </div>
             </div>
           ) : (
-            <FormLayout columns={2}>
-              <div className="space-y-2">
-                <Label htmlFor="cuit">CUIT</Label>
-                <Input
-                  id="cuit"
-                  placeholder="20-12345678-9"
-                  value={form.cuit}
-                  onChange={(e) => handleChange('cuit', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="razon_social">Razón Social</Label>
-                <Input
-                  id="razon_social"
-                  placeholder="Empresa S.R.L."
-                  value={form.razon_social}
-                  onChange={(e) => handleChange('razon_social', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="direccion_fiscal">Dirección Fiscal</Label>
-                <Input
-                  id="direccion_fiscal"
-                  placeholder="Av. Siempre Viva 742, Córdoba"
-                  value={form.direccion_fiscal}
-                  onChange={(e) => handleChange('direccion_fiscal', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="inicio_actividades">Inicio de Actividades</Label>
-                <Input
-                  id="inicio_actividades"
-                  type="date"
-                  value={form.inicio_actividades}
-                  onChange={(e) => handleChange('inicio_actividades', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="punto_venta">Punto de Venta (N°)</Label>
-                <Input
-                  id="punto_venta"
-                  type="number"
-                  min={1}
-                  placeholder="1"
-                  value={form.punto_venta}
-                  onChange={(e) => handleChange('punto_venta', e.target.value)}
-                />
-              </div>
-            </FormLayout>
+            <div className="space-y-4">
+              <FormLayout columns={2}>
+                <div className="space-y-2">
+                  <Label htmlFor="cuit">CUIT</Label>
+                  <Input
+                    id="cuit"
+                    placeholder="20-12345678-9"
+                    value={form.cuit}
+                    onChange={(e) => handleChange('cuit', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="razon_social">Razón Social</Label>
+                  <Input
+                    id="razon_social"
+                    placeholder="Empresa S.R.L."
+                    value={form.razon_social}
+                    onChange={(e) => handleChange('razon_social', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="direccion_fiscal">Dirección Fiscal</Label>
+                  <Input
+                    id="direccion_fiscal"
+                    placeholder="Av. Siempre Viva 742, Córdoba"
+                    value={form.direccion_fiscal}
+                    onChange={(e) => handleChange('direccion_fiscal', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="inicio_actividades">Inicio de Actividades</Label>
+                  <Input
+                    id="inicio_actividades"
+                    type="date"
+                    value={form.inicio_actividades}
+                    onChange={(e) => handleChange('inicio_actividades', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="punto_venta">Punto de Venta (N°)</Label>
+                  <Input
+                    id="punto_venta"
+                    type="number"
+                    min={1}
+                    placeholder="1"
+                    value={form.punto_venta}
+                    onChange={(e) => handleChange('punto_venta', e.target.value)}
+                  />
+                </div>
+              </FormLayout>
+              <Button onClick={handleSave} disabled={save.isPending}>
+                {save.isPending ? 'Guardando...' : 'Guardar Datos Fiscales'}
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Asistente de certificados ARCA */}
+      {/* Certificado ARCA */}
       {branchId && (
         <ArcaCertificateWizard
           config={config ?? null}
@@ -287,121 +444,169 @@ export default function AfipConfigPage() {
         />
       )}
 
-      {/* Modo de operación */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Wifi className="h-5 w-5" />
-            Modo de Operación
-          </CardTitle>
-          <CardDescription>
-            Homologación es para pruebas, Producción es para facturar en serio con ARCA
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <p className="text-sm font-medium">
-                {config?.es_produccion ? 'Producción' : 'Homologación (testing)'}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {config?.es_produccion
-                  ? 'Las facturas se emiten contra ARCA real'
-                  : 'Las facturas se simulan, no se envían a ARCA'}
-              </p>
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* ZONA 3: Zona Restringida                                */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      <Card className="border-destructive/20">
+        <Collapsible open={restrictedOpen} onOpenChange={setRestrictedOpen}>
+          <CollapsibleTrigger asChild>
+            <button className="flex w-full items-center justify-between p-5 text-left hover:bg-muted/30 transition-colors rounded-[inherit]">
+              <div className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-destructive" />
+                <span className="text-sm font-semibold">Zona restringida</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Acciones que pueden afectar la facturación</span>
+                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${restrictedOpen ? 'rotate-180' : ''}`} />
+              </div>
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="border-t px-5 pb-5 pt-4 space-y-5">
+              {/* Cambiar modo */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Cambiar modo de operación</p>
+                    <p className="text-xs text-muted-foreground">
+                      Modo actual: {config?.es_produccion ? '🟢 Producción' : '🟡 Homologación'}
+                    </p>
+                  </div>
+                </div>
+                {config?.es_produccion ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">
+                      Cambiar a homologación significa que las facturas emitidas NO serán válidas fiscalmente. Solo usá homologación para probar la configuración inicial.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive border-destructive/30 hover:bg-destructive/5"
+                      onClick={() => setShowHomologacionConfirm(true)}
+                    >
+                      Cambiar a Homologación...
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">
+                      Activar producción para que las facturas se emitan contra ARCA de forma real. Asegurate de haber probado en homologación primero.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowProduccionConfirm(true)}
+                    >
+                      Activar Producción...
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t" />
+
+              {/* Resetear */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Resetear configuración</p>
+                <p className="text-xs text-muted-foreground">
+                  Borra TODA la configuración de ARCA de esta sucursal: certificados y conexión. Los datos fiscales se mantienen. Las facturas no se podrán emitir hasta reconfigurar todo.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive border-destructive/30 hover:bg-destructive/5"
+                  onClick={() => setShowResetConfirm(true)}
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Resetear todo...
+                </Button>
+              </div>
+
+              {/* Copiar datos fiscales (solo superadmin) */}
+              {isSuperadmin && (
+                <>
+                  <div className="border-t" />
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Copiar datos fiscales de otra sucursal</p>
+                    <p className="text-xs text-muted-foreground">
+                      Copia CUIT, razón social, dirección e inicio de actividades de otra sucursal. No copia certificados ni punto de venta.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowCopyDialog(true)}
+                    >
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copiar datos fiscales...
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
-            <Button
-              variant={config?.es_produccion ? 'destructive' : 'outline'}
-              size="sm"
-              onClick={handleToggleProduction}
-            >
-              {config?.es_produccion ? 'Cambiar a Homologación' : 'Activar Producción'}
-            </Button>
-          </div>
-        </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
       </Card>
 
-      {/* Últimos números */}
-      {config && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Últimos Comprobantes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="rounded-lg border p-4">
-                <p className="text-xs text-muted-foreground">Factura A</p>
-                <p className="text-2xl font-bold">{config.ultimo_nro_factura_a || 0}</p>
-              </div>
-              <div className="rounded-lg border p-4">
-                <p className="text-xs text-muted-foreground">Factura B</p>
-                <p className="text-2xl font-bold">{config.ultimo_nro_factura_b || 0}</p>
-              </div>
-              <div className="rounded-lg border p-4">
-                <p className="text-xs text-muted-foreground">Factura C</p>
-                <p className="text-2xl font-bold">{config.ultimo_nro_factura_c || 0}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* Diálogos de confirmación                                */}
+      {/* ═══════════════════════════════════════════════════════ */}
 
-      {/* Acciones */}
-      <div className="flex items-center gap-3 flex-wrap">
-        {(isEditingFiscal || !hasFiscalData) && (
-          <Button onClick={handleSave} disabled={save.isPending}>
-            {save.isPending ? 'Guardando...' : 'Guardar Datos Fiscales'}
-          </Button>
-        )}
-
-        {isSuperadmin && (
-          <>
-            <Button variant="outline" onClick={() => setShowCopyDialog(true)}>
-              <Copy className="mr-2 h-4 w-4" />
-              Copiar de otra sucursal
-            </Button>
-            <Button variant="ghost" className="text-destructive" onClick={() => setShowResetConfirm(true)}>
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Resetear configuración
-            </Button>
-          </>
-        )}
-      </div>
-
-      {/* Dialogs */}
-      <ConfirmDialog
-        open={showProductionConfirm}
-        onOpenChange={setShowProductionConfirm}
-        title="¿Activar modo Producción?"
-        description="Las facturas se emitirán contra ARCA de forma real. Asegurate de que el certificado esté correctamente configurado y que hayas probado en homologación primero."
-        confirmLabel="Sí, activar producción"
-        cancelLabel="Cancelar"
-        onConfirm={confirmProduction}
-        variant="destructive"
+      {/* Cambiar a Homologación */}
+      <DangerConfirmDialog
+        open={showHomologacionConfirm}
+        onOpenChange={setShowHomologacionConfirm}
+        title="¿Cambiar a modo Homologación?"
+        description="Solo usá homologación para probar la configuración por primera vez."
+        consequences={[
+          'Las facturas emitidas NO serán válidas ante ARCA',
+          'Los clientes NO podrán usar las facturas como comprobante fiscal',
+          'Podés tener problemas con ARCA si facturás en modo prueba',
+        ]}
+        confirmWord="HOMOLOGACION"
+        confirmLabel="Cambiar a Homologación"
+        onConfirm={handleSwitchToHomologacion}
       />
 
-      <ConfirmDialog
+      {/* Activar Producción */}
+      <DangerConfirmDialog
+        open={showProduccionConfirm}
+        onOpenChange={setShowProduccionConfirm}
+        title="¿Activar modo Producción?"
+        description="Las facturas se emitirán contra ARCA de forma real. Asegurate de que el certificado esté correctamente configurado."
+        consequences={[
+          'Las facturas emitidas serán válidas fiscalmente',
+          'Los comprobantes se registran en ARCA y no se pueden anular fácilmente',
+        ]}
+        confirmWord="PRODUCCION"
+        confirmLabel="Activar Producción"
+        onConfirm={handleSwitchToProduccion}
+      />
+
+      {/* Resetear ARCA */}
+      <DangerConfirmDialog
         open={showResetConfirm}
         onOpenChange={setShowResetConfirm}
-        title="¿Resetear configuración ARCA?"
-        description="Esto eliminará el certificado, la clave privada y el estado de conexión. Los datos fiscales (CUIT, razón social, dirección) se mantendrán. Vas a tener que volver a generar el certificado y subirlo a ARCA."
-        confirmLabel="Sí, resetear"
-        cancelLabel="Cancelar"
+        title="🚨 ¿Resetear TODA la configuración de ARCA?"
+        description="Vas a tener que reconfigurar TODO desde cero. Las facturas no se van a poder emitir. Esta acción es IRREVERSIBLE."
+        consequences={[
+          'Certificado digital eliminado',
+          'Clave privada eliminada',
+          'Conexión con ARCA eliminada',
+          'Se vuelve a modo Homologación',
+        ]}
+        confirmWord="RESETEAR ARCA"
+        confirmLabel="Resetear todo"
         onConfirm={handleReset}
-        variant="destructive"
       />
 
+      {/* Copiar datos fiscales */}
       {branchId && (
         <CopyArcaConfigDialog
           open={showCopyDialog}
           onOpenChange={setShowCopyDialog}
           targetBranchId={branchId}
           onCopied={() => {
-            toast.success('Configuración copiada. Probando conexión...');
-            setTimeout(() => testConnection.mutate(), 500);
+            toast.success('Datos fiscales copiados correctamente.');
           }}
         />
       )}
