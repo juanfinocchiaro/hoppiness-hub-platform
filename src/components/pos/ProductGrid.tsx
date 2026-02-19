@@ -4,11 +4,14 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { useItemsCarta } from '@/hooks/useItemsCarta';
 import { useFrequentItems } from '@/hooks/pos/useFrequentItems';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Search, X, Star } from 'lucide-react';
+import { toast } from 'sonner';
 
 export interface CartItemExtra {
   id: string;
@@ -38,6 +41,7 @@ interface ProductGridProps {
   onSelectItem?: (item: any) => void;
   cart?: CartItem[];
   branchId?: string;
+  disabled?: boolean;
 }
 
 function getInitials(name: string) {
@@ -49,7 +53,7 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId }: ProductGridProps) {
+export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disabled }: ProductGridProps) {
   const { data: items, isLoading } = useItemsCarta();
   const { data: frequentIds } = useFrequentItems(branchId);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -150,7 +154,65 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId }: Pr
     }
   }, []);
 
+  // Prefetch extras/removibles on hover
+  const queryClient = useQueryClient();
+  const prefetchedRef = useRef(new Set<string>());
+
+  const handlePrefetch = useCallback((itemId: string) => {
+    if (prefetchedRef.current.has(itemId) || disabled) return;
+    prefetchedRef.current.add(itemId);
+
+    queryClient.prefetchQuery({
+      queryKey: ['item-carta-extras', itemId],
+      queryFn: async () => {
+        const { data: asignaciones } = await supabase
+          .from('item_extra_asignaciones' as any)
+          .select('extra_id')
+          .eq('item_carta_id', itemId);
+        if (asignaciones && asignaciones.length > 0) {
+          const extraIds = (asignaciones as any[]).map((a: any) => a.extra_id);
+          const { data: extras } = await supabase
+            .from('items_carta')
+            .select('id, nombre, precio_base, activo')
+            .in('id', extraIds)
+            .eq('activo', true)
+            .is('deleted_at', null);
+          return (extras || []).map((e: any, i: number) => ({
+            id: e.id, item_carta_id: itemId, preparacion_id: null, insumo_id: null, orden: i,
+            preparaciones: { id: e.id, nombre: e.nombre, costo_calculado: 0, precio_extra: e.precio_base, puede_ser_extra: true },
+            insumos: null,
+          }));
+        }
+        const { data } = await supabase
+          .from('item_carta_extras')
+          .select('*, preparaciones(id, nombre, costo_calculado, precio_extra, puede_ser_extra), insumos(id, nombre, costo_por_unidad_base, precio_extra, puede_ser_extra)')
+          .eq('item_carta_id', itemId)
+          .order('orden');
+        return data ?? [];
+      },
+      staleTime: 5 * 60 * 1000,
+    });
+
+    queryClient.prefetchQuery({
+      queryKey: ['item-removibles', itemId],
+      queryFn: async () => {
+        const { data } = await supabase
+          .from('item_removibles' as any)
+          .select('*, insumos(id, nombre), preparaciones(id, nombre)')
+          .eq('item_carta_id', itemId)
+          .eq('activo', true);
+        return data ?? [];
+      },
+      staleTime: 5 * 60 * 1000,
+    });
+  }, [queryClient, disabled]);
+
   const handleProductClick = (item: any) => {
+    if (disabled) {
+      toast('Iniciá la venta primero', { description: 'Configurá el canal y servicio antes de agregar productos' });
+      return;
+    }
+
     const precio = item.precio_base ?? 0;
     const nombre = item.nombre_corto ?? item.nombre;
 
@@ -253,6 +315,7 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId }: Pr
                     item={item}
                     qty={cartQtyMap.get(item.id) || 0}
                     onClick={handleProductClick}
+                    onHover={handlePrefetch}
                   />
                 ))}
               </div>
@@ -274,12 +337,13 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId }: Pr
                   </h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {catItems.map((item: any) => (
-                      <ProductCard
-                        key={item.id}
-                        item={item}
-                        qty={cartQtyMap.get(item.id) || 0}
-                        onClick={handleProductClick}
-                      />
+                    <ProductCard
+                    key={item.id}
+                    item={item}
+                    qty={cartQtyMap.get(item.id) || 0}
+                    onClick={handleProductClick}
+                    onHover={handlePrefetch}
+                  />
                     ))}
                   </div>
                 </div>
@@ -293,7 +357,7 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId }: Pr
 }
 
 /* Extracted product card with badge */
-function ProductCard({ item, qty, onClick }: { item: any; qty: number; onClick: (item: any) => void }) {
+function ProductCard({ item, qty, onClick, onHover }: { item: any; qty: number; onClick: (item: any) => void; onHover?: (id: string) => void }) {
   const precio = item.precio_base ?? 0;
   const nombre = item.nombre_corto ?? item.nombre;
   const imagenUrl = item.imagen_url;
@@ -302,6 +366,7 @@ function ProductCard({ item, qty, onClick }: { item: any; qty: number; onClick: 
   return (
     <button
       onClick={() => onClick(item)}
+      onMouseEnter={() => onHover?.(item.id)}
       className={cn(
         'group relative flex flex-col rounded-lg border bg-card overflow-hidden text-left transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30',
         inCart
