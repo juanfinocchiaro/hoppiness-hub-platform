@@ -165,14 +165,14 @@ export function ConfigForm({
                 <Hash className="w-3.5 h-3.5" />
                 Número de llamador
               </Label>
-              <div className="grid grid-cols-6 gap-2 max-h-44 overflow-y-auto p-1">
+              <div className="grid grid-cols-6 sm:grid-cols-10 gap-1.5">
                 {CALLER_NUMBERS.map((num) => (
                   <Button
                     key={num}
                     type="button"
                     variant={config.numeroLlamador === String(num) ? 'default' : 'outline'}
                     size="sm"
-                    className="h-10 font-medium"
+                    className="h-8 text-xs font-medium"
                     onClick={() => {
                       const updates: Partial<OrderConfig> = { numeroLlamador: String(num) };
                       if (!config.clienteNombre || config.clienteNombre.startsWith('Llamador #')) {

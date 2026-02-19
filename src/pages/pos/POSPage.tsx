@@ -4,10 +4,9 @@
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { PageHeader } from '@/components/ui/page-header';
 import { ProductGrid, type CartItem } from '@/components/pos/ProductGrid';
 import { AccountPanel } from '@/components/pos/AccountPanel';
-import { OrderConfigPanel, ConfigForm } from '@/components/pos/OrderConfigPanel';
+import { ConfigForm } from '@/components/pos/OrderConfigPanel';
 import { RegisterPaymentPanel } from '@/components/pos/RegisterPaymentPanel';
 import { ModifiersModal } from '@/components/pos/ModifiersModal';
 import { useCreatePedido } from '@/hooks/pos/useOrders';
@@ -21,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Banknote, ChefHat, PlusCircle } from 'lucide-react';
+import { Banknote, ChefHat, PlusCircle, ShoppingBag } from 'lucide-react';
 
 /* Inline cash open form - shown when no register is open */
 function InlineCashOpen({ branchId, onOpened }: { branchId: string; onOpened: () => void }) {
@@ -253,6 +252,11 @@ export default function POSPage() {
     }
   };
 
+  // Reopen config editing
+  const handleEditConfig = useCallback(() => {
+    setConfigConfirmed(false);
+  }, []);
+
   const subtotal = cart.reduce((s, i) => s + i.subtotal, 0);
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
   const saldo = subtotal - totalPaid;
@@ -262,7 +266,6 @@ export default function POSPage() {
   if (!shiftStatus.loading && !shiftStatus.hasCashOpen) {
     return (
       <div className="flex flex-col h-[calc(100vh-6rem)]">
-        <PageHeader title="Punto de Venta" subtitle="Tomar pedidos y cobrar" />
         <div className="flex-1 flex items-center justify-center">
           <div className="w-full max-w-sm">
             <InlineCashOpen branchId={branchId!} onOpened={() => shiftStatus.refetch()} />
@@ -274,58 +277,64 @@ export default function POSPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] pb-16 lg:pb-0">
-      <PageHeader title="Punto de Venta" subtitle="Tomar pedidos y cobrar" />
-
-      {/* Modal obligatorio de configuración */}
-      {!configConfirmed && (
-        <div className="fixed inset-0 lg:left-72 z-40 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/60" />
-          <div className="relative z-50 w-full max-w-md mx-4 bg-background border rounded-lg shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-semibold">Nueva venta</h2>
-            <ConfigForm
-              config={orderConfig}
-              onChange={setOrderConfig}
-              onConfirm={() => {
-                const err = validateOrderConfig();
-                if (err) {
-                  toast.error(err);
-                  return;
-                }
-                setConfigConfirmed(true);
-              }}
-            />
-          </div>
-        </div>
-      )}
-
       {/* Main grid: menu + account */}
-      <div className="grid grid-cols-1 lg:grid-cols-[2fr_minmax(380px,1.1fr)] gap-4 flex-1 min-h-0">
-        {/* Menu column */}
-        <div className="min-h-[200px] lg:min-h-0 flex flex-col flex-1 overflow-hidden">
-          <ProductGrid onAddItem={addItem} onSelectItem={handleSelectItem} cart={cart} branchId={branchId} disabled={!configConfirmed} />
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_minmax(380px,1.1fr)] flex-1 min-h-0">
+        {/* Menu column - Zona B */}
+        <div className="min-h-[200px] lg:min-h-0 flex flex-col flex-1 overflow-hidden bg-slate-50 p-4">
+          {!configConfirmed ? (
+            /* Empty state while config not confirmed */
+            <div className="flex-1 flex flex-col items-center justify-center text-center gap-4">
+              <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                <ShoppingBag className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Configurá el pedido</h3>
+                <p className="text-sm text-muted-foreground mt-1">Elegí canal y servicio para ver el menú</p>
+              </div>
+            </div>
+          ) : (
+            <ProductGrid onAddItem={addItem} onSelectItem={handleSelectItem} cart={cart} branchId={branchId} disabled={!configConfirmed} />
+          )}
         </div>
 
-        {/* Account column */}
-        <div className="min-h-[200px] lg:min-h-0 flex flex-col gap-3">
-          <div ref={configRef}>
-            <OrderConfigPanel
-              config={orderConfig}
-              onChange={setOrderConfig}
-              compact
-            />
-          </div>
-          <AccountPanel
-            items={cart}
-            payments={payments}
-            onUpdateQty={updateQty}
-            onRemove={removeItem}
-            onUpdateNotes={updateNotes}
-            onCancelOrder={cancelOrder}
-            onRegisterPayment={handleOpenPayment}
-            onRemovePayment={removePayment}
-            onSendToKitchen={handleSendToKitchen}
-            disabled={createPedido.isPending}
-          />
+        {/* Account column - Zona C */}
+        <div className="min-h-[200px] lg:min-h-0 flex flex-col bg-background border-l">
+          {!configConfirmed ? (
+            /* Config form inline in Zona C */
+            <div ref={configRef} className="flex-1 overflow-y-auto p-4">
+              <h2 className="text-lg font-semibold mb-4">Nueva venta</h2>
+              <ConfigForm
+                config={orderConfig}
+                onChange={setOrderConfig}
+                onConfirm={() => {
+                  const err = validateOrderConfig();
+                  if (err) {
+                    toast.error(err);
+                    return;
+                  }
+                  setConfigConfirmed(true);
+                }}
+              />
+            </div>
+          ) : (
+            /* Account panel with order config header */
+            <>
+              <AccountPanel
+                items={cart}
+                payments={payments}
+                onUpdateQty={updateQty}
+                onRemove={removeItem}
+                onUpdateNotes={updateNotes}
+                onCancelOrder={cancelOrder}
+                onRegisterPayment={handleOpenPayment}
+                onRemovePayment={removePayment}
+                onSendToKitchen={handleSendToKitchen}
+                disabled={createPedido.isPending}
+                orderConfig={orderConfig}
+                onEditConfig={handleEditConfig}
+              />
+            </>
+          )}
         </div>
       </div>
 
@@ -344,7 +353,7 @@ export default function POSPage() {
               size="lg"
               onClick={handleSendToKitchen}
               disabled={createPedido.isPending}
-              className="shrink-0 bg-green-600 hover:bg-green-700 text-white"
+              className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white"
             >
               <ChefHat className="h-4 w-4 mr-2" />
               Enviar

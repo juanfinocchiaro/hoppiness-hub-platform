@@ -9,9 +9,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Minus, Plus, Trash2, ShoppingBag, MessageSquare, X, Banknote, CreditCard, QrCode, ArrowRightLeft, ChefHat, PlusCircle } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, MessageSquare, X, Banknote, CreditCard, QrCode, ArrowRightLeft, ChefHat, PlusCircle, Pencil, ChevronRight, Store, Bike } from 'lucide-react';
 import type { CartItem } from './ProductGrid';
-import type { LocalPayment, MetodoPago } from '@/types/pos';
+import type { LocalPayment, MetodoPago, OrderConfig } from '@/types/pos';
 import { cn } from '@/lib/utils';
 
 const METODO_ICONS: Record<MetodoPago, React.ComponentType<{ className?: string }>> = {
@@ -30,6 +30,22 @@ const METODO_LABELS: Record<MetodoPago, string> = {
   transferencia: 'Transf.',
 };
 
+const PAYMENT_STYLES: Record<MetodoPago, string> = {
+  efectivo: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700',
+  tarjeta_debito: 'bg-blue-500/10 border-blue-500/20 text-blue-700',
+  tarjeta_credito: 'bg-violet-500/10 border-violet-500/20 text-violet-700',
+  mercadopago_qr: 'bg-sky-500/10 border-sky-500/20 text-sky-700',
+  transferencia: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-700',
+};
+
+const PAYMENT_ICON_STYLES: Record<MetodoPago, string> = {
+  efectivo: 'text-emerald-600',
+  tarjeta_debito: 'text-blue-600',
+  tarjeta_credito: 'text-violet-600',
+  mercadopago_qr: 'text-sky-600',
+  transferencia: 'text-indigo-600',
+};
+
 type TimelineEntry =
   | { type: 'item'; index: number; item: CartItem; ts: number }
   | { type: 'payment'; payment: LocalPayment; ts: number };
@@ -45,6 +61,55 @@ interface AccountPanelProps {
   onRemovePayment: (paymentId: string) => void;
   onSendToKitchen: () => void;
   disabled?: boolean;
+  orderConfig?: OrderConfig;
+  onEditConfig?: () => void;
+}
+
+/* ── Config Summary Header ─────────────────────────── */
+function ConfigHeader({ config, onEdit }: { config: OrderConfig; onEdit?: () => void }) {
+  const parts: string[] = [];
+  if (config.canalVenta === 'mostrador') {
+    parts.push('Mostrador');
+    if (config.tipoServicio === 'takeaway') parts.push('Para llevar');
+    else if (config.tipoServicio === 'comer_aca') parts.push('Comer acá');
+    else if (config.tipoServicio === 'delivery') parts.push('Delivery');
+  } else {
+    parts.push('Apps');
+    if (config.canalApp === 'rappi') parts.push('Rappi');
+    else if (config.canalApp === 'pedidos_ya') parts.push('PedidosYa');
+    else if (config.canalApp === 'mp_delivery') parts.push('MP Delivery');
+  }
+
+  const detail = config.numeroLlamador
+    ? `#${config.numeroLlamador}`
+    : config.clienteNombre || '';
+
+  const Icon = config.canalVenta === 'mostrador' ? Store : Bike;
+
+  return (
+    <div className="px-3 py-2 border-b bg-slate-50 flex items-center justify-between gap-2">
+      <div className="flex items-center gap-2 min-w-0">
+        <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+        <span className="flex items-center gap-1 text-sm font-medium truncate">
+          {parts.map((p, i) => (
+            <span key={i} className="flex items-center gap-1">
+              {i > 0 && <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />}
+              <span>{p}</span>
+            </span>
+          ))}
+        </span>
+        {detail && (
+          <span className="text-xs text-muted-foreground truncate ml-1">· {detail}</span>
+        )}
+      </div>
+      {onEdit && (
+        <Button variant="ghost" size="sm" className="shrink-0 h-7 text-xs gap-1" onClick={onEdit}>
+          <Pencil className="h-3 w-3" />
+          Editar
+        </Button>
+      )}
+    </div>
+  );
 }
 
 export function AccountPanel({
@@ -58,6 +123,8 @@ export function AccountPanel({
   onRemovePayment,
   onSendToKitchen,
   disabled,
+  orderConfig,
+  onEditConfig,
 }: AccountPanelProps) {
   const totalItems = items.reduce((s, i) => s + i.subtotal, 0);
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
@@ -80,6 +147,7 @@ export function AccountPanel({
   }, [items, payments]);
 
   // Determine send button state
+  const totalQty = items.reduce((s, i) => s + i.cantidad, 0);
   let sendLabel = 'Agrega productos';
   let sendDisabled = true;
   if (items.length > 0 && payments.length === 0) {
@@ -89,15 +157,18 @@ export function AccountPanel({
     sendLabel = `Faltan $ ${saldo.toLocaleString('es-AR')} por cobrar`;
     sendDisabled = true;
   } else if (canSend) {
-    sendLabel = `Enviar a cocina · $ ${totalItems.toLocaleString('es-AR')}`;
+    sendLabel = `Enviar a cocina`;
     sendDisabled = false;
   }
 
   return (
-    <div className="flex flex-col h-full border rounded-lg">
+    <div className="flex flex-col h-full">
+      {/* Config summary header */}
+      {orderConfig && <ConfigHeader config={orderConfig} onEdit={onEditConfig} />}
+
       {/* Header */}
-      <div className="p-3 border-b font-medium flex items-center justify-between">
-        <span>Cuenta</span>
+      <div className="px-3 py-2.5 border-b font-medium flex items-center justify-between">
+        <span className="text-sm">Cuenta</span>
         {(items.length > 0 || payments.length > 0) && onCancelOrder && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -164,24 +235,32 @@ export function AccountPanel({
       {/* Footer: summary + actions */}
       <div className="p-3 border-t space-y-2">
         {items.length > 0 && (
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Total pedido</span>
-              <span className="font-medium tabular-nums">$ {totalItems.toLocaleString('es-AR')}</span>
-            </div>
-            {payments.length > 0 && (
-              <>
-                <div className="flex justify-between text-green-600">
+          <>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total pedido</span>
+                <span className="font-medium tabular-nums">$ {totalItems.toLocaleString('es-AR')}</span>
+              </div>
+              {payments.length > 0 && (
+                <div className="flex justify-between text-emerald-600">
                   <span>Pagado</span>
                   <span className="font-medium tabular-nums">- $ {totalPaid.toLocaleString('es-AR')}</span>
                 </div>
-                <div className={cn('flex justify-between text-base font-bold', saldo > 0 ? 'text-destructive' : 'text-green-600')}>
-                  <span>Saldo</span>
-                  <span className="tabular-nums">$ {saldo.toLocaleString('es-AR')}</span>
-                </div>
-              </>
+              )}
+            </div>
+            {/* Saldo area with contextual background */}
+            {payments.length > 0 && (
+              <div className={cn(
+                'rounded-lg px-3 py-2 flex justify-between items-center text-sm font-bold',
+                saldo > 0
+                  ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                  : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+              )}>
+                <span>{saldo > 0 ? 'Falta cobrar' : 'Cobrado'}</span>
+                <span className="tabular-nums">$ {saldo.toLocaleString('es-AR')}</span>
+              </div>
             )}
-          </div>
+          </>
         )}
 
         {items.length > 0 && saldo > 0 && (
@@ -194,12 +273,22 @@ export function AccountPanel({
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
-              className={cn('w-full hidden lg:flex', canSend && 'bg-green-600 hover:bg-green-700 text-white')}
+              className={cn(
+                'w-full hidden lg:flex h-14 text-base',
+                canSend
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  : ''
+              )}
               size="lg"
               disabled={sendDisabled || disabled}
             >
-              <ChefHat className="h-4 w-4 mr-2" />
-              {sendLabel}
+              <ChefHat className="h-5 w-5 mr-2" />
+              <div className="flex flex-col items-start leading-tight">
+                <span>{sendLabel}</span>
+                {canSend && (
+                  <span className="text-xs font-normal opacity-80">{totalQty} items · $ {totalItems.toLocaleString('es-AR')}</span>
+                )}
+              </div>
             </Button>
           </AlertDialogTrigger>
           {canSend && (
@@ -207,14 +296,14 @@ export function AccountPanel({
               <AlertDialogHeader>
                 <AlertDialogTitle>¿Enviar pedido a cocina?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  {items.reduce((s, i) => s + i.cantidad, 0)} items · $ {totalItems.toLocaleString('es-AR')}
+                  {totalQty} items · $ {totalItems.toLocaleString('es-AR')}
                   <br />
                   Una vez enviado no se podrán agregar más items.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Volver</AlertDialogCancel>
-                <AlertDialogAction onClick={onSendToKitchen} className="bg-green-600 hover:bg-green-700">
+                <AlertDialogAction onClick={onSendToKitchen} className="bg-emerald-600 hover:bg-emerald-700">
                   Sí, enviar a cocina
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -304,10 +393,12 @@ function ItemRow({
 
 function PaymentRow({ payment, onRemovePayment }: { payment: LocalPayment; onRemovePayment: (id: string) => void }) {
   const Icon = METODO_ICONS[payment.method];
+  const style = PAYMENT_STYLES[payment.method];
+  const iconStyle = PAYMENT_ICON_STYLES[payment.method];
   return (
-    <div className="flex items-center justify-between p-2 rounded-lg bg-green-500/10 border border-green-500/20">
+    <div className={cn('flex items-center justify-between p-2 rounded-lg border', style)}>
       <div className="flex items-center gap-2">
-        <Icon className="h-4 w-4 text-green-600" />
+        <Icon className={cn('h-4 w-4', iconStyle)} />
         <span className="text-sm font-medium">{METODO_LABELS[payment.method]}</span>
       </div>
       <div className="flex items-center gap-2">
