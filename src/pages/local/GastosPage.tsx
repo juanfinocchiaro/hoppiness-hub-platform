@@ -58,7 +58,7 @@ export default function GastosPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="space-y-6">
       <PageHeader
         title="Caja Chica"
         subtitle="Desembolsos pequeños sin factura: propinas, viáticos, imprevistos"

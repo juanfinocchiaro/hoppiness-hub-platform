@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { PageHeader } from '@/components/ui/page-header';
 import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { UsersFilters, UsersTable, useUsersData, userHasRole } from '@/components/admin/users';
@@ -61,11 +62,8 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="p-6 space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold">Usuarios</h1>
-        <p className="text-muted-foreground">Gestión de accesos y roles</p>
-      </div>
+    <div className="space-y-4">
+      <PageHeader title="Usuarios" subtitle="Gestión de accesos y roles" />
 
       <UsersFilters
         search={search}

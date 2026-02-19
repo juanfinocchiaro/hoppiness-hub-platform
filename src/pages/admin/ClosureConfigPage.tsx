@@ -8,6 +8,7 @@
  * - Apps de delivery
  */
 import { useState } from 'react';
+import { PageHeader } from '@/components/ui/page-header';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -153,12 +154,7 @@ function ClosureConfigPageContent() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Configuración de Cierre de Turno</h1>
-        <p className="text-muted-foreground">
-          Define las categorías de hamburguesas, extras y apps de delivery que aparecen en el formulario de cierre.
-        </p>
-      </div>
+      <PageHeader title="Configuración de Cierre de Turno" subtitle="Define las categorías de hamburguesas, extras y apps de delivery que aparecen en el formulario de cierre." />
 
       {groups.map((group) => (
         <Card key={group.tipo}>

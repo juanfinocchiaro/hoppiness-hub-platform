@@ -5,7 +5,7 @@ export default function PLDashboardPage() {
   const { branchId } = useParams<{ branchId: string }>();
 
   return (
-    <div className="p-6">
+    <div>
       <RdoDashboard branchId={branchId!} />
     </div>
   );

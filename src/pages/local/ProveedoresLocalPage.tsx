@@ -66,7 +66,7 @@ export default function ProveedoresLocalPage() {
   const totalVencido = filtered?.reduce((sum, p) => sum + (saldos?.[p.id]?.vencido ?? 0), 0) ?? 0;
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="space-y-4">
       <PageHeader title="Proveedores" subtitle="Proveedores disponibles para tu local" />
 
       {/* Summary cards */}

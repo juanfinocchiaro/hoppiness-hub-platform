@@ -59,7 +59,7 @@ export default function CuentaCorrienteProveedorPage() {
   } : null;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title={proveedor?.razon_social || 'Proveedor'}
         subtitle={proveedor?.cuit ? `CUIT: ${proveedor.cuit}` : undefined}

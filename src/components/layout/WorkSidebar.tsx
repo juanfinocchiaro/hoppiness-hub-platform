@@ -25,7 +25,7 @@ interface WorkSidebarNavProps {
 }
 
 export function WorkSidebarNav({ children, className }: WorkSidebarNavProps) {
-  return <nav className={cn('space-y-3', className)}>{children}</nav>;
+  return <nav className={cn('space-y-1', className)}>{children}</nav>;
 }
 
 // ===== NavSectionGroup =====
@@ -61,11 +61,11 @@ export function NavSectionGroup({
         <Button
           variant="ghost"
           className={cn(
-            'w-full justify-start font-semibold text-base text-foreground',
-            forceOpen && 'bg-primary/5 text-primary'
+            'w-full justify-start font-semibold text-sm uppercase tracking-wider text-muted-foreground',
+            forceOpen && 'text-primary'
           )}
         >
-          <Icon className="w-4 h-4 mr-3 shrink-0" />
+          <Icon className="w-[18px] h-[18px] mr-3 shrink-0" />
           {label}
           {isOpen ? (
             <ChevronDown className="w-4 h-4 ml-auto" />
@@ -74,7 +74,7 @@ export function NavSectionGroup({
           )}
         </Button>
       </CollapsibleTrigger>
-      <CollapsibleContent className="pl-4 space-y-1 mt-2">
+      <CollapsibleContent className="pl-4 space-y-0.5 mt-1">
         {children}
       </CollapsibleContent>
     </Collapsible>
@@ -115,13 +115,12 @@ export function NavItemButton({
     <Link to={to}>
       <Button
         variant={isActive ? 'secondary' : 'ghost'}
-        size="sm"
         className={cn(
-          'w-full justify-start',
+          'w-full justify-start h-9',
           isActive && 'bg-primary/10 text-primary border-l-2 border-primary rounded-l-none'
         )}
       >
-        <Icon className="w-4 h-4 mr-3" />
+        <Icon className="w-[18px] h-[18px] mr-3" />
         {label}
         {badge !== undefined && badge !== 0 && (
           <Badge className={cn('ml-auto text-xs px-1.5 py-0.5', badgeClasses[badgeVariant])}>
@@ -183,7 +182,7 @@ export function NavDashboardLink({ to, icon: Icon, label }: NavDashboardLinkProp
           isActive && 'bg-primary/10 text-primary'
         )}
       >
-        <Icon className="w-4 h-4 mr-3" />
+        <Icon className="w-[18px] h-[18px] mr-3" />
         {label}
       </Button>
     </Link>

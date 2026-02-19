@@ -39,7 +39,7 @@ export default function ConsumosPage() {
   const getTipoLabel = (key: string | null) => TIPO_CONSUMO_OPTIONS.find(c => c.value === key)?.label || key || 'Manual';
 
   return (
-    <div className="p-6">
+    <div className="space-y-6">
       <PageHeader
         title="Consumos Manuales"
         subtitle="Consumos internos por categoría P&L"

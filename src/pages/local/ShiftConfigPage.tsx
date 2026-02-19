@@ -1,5 +1,6 @@
 import { useParams } from 'react-router-dom';
 import { ShiftConfigCard } from '@/components/local/ShiftConfigCard';
+import { PageHeader } from '@/components/ui/page-header';
 
 export default function ShiftConfigPage() {
   const { branchId } = useParams<{ branchId: string }>();
@@ -8,11 +9,7 @@ export default function ShiftConfigPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Configuración de Turnos</h1>
-        <p className="text-muted-foreground">Habilita o deshabilita turnos para la carga de ventas</p>
-      </div>
-
+      <PageHeader title="Configuración de Turnos" subtitle="Habilita o deshabilita turnos para la carga de ventas" />
       <ShiftConfigCard branchId={branchId} />
     </div>
   );

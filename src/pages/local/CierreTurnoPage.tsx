@@ -3,6 +3,7 @@
  * Adaptado para usar pedidos, pedido_pagos y cash_register_shifts
  */
 import { useState, useRef, useEffect } from 'react';
+import { PageHeader } from '@/components/ui/page-header';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -214,18 +215,16 @@ export default function CierreTurnoPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Cierre de Turno</h1>
-          <p className="text-muted-foreground">{branch?.name}</p>
-        </div>
-        <div className="flex gap-2">
+      <PageHeader
+        title="Cierre de Turno"
+        subtitle={branch?.name}
+        actions={
           <Button variant="outline" size="sm" onClick={handleExportPDF} disabled={isExporting}>
             <FileText className="w-4 h-4 mr-2" />
             Exportar PDF
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="flex flex-wrap gap-4">
         <Popover>

@@ -26,7 +26,7 @@ export default function InsumosLocalPage() {
   );
 
   return (
-    <div className="p-6">
+    <div className="space-y-6">
       <PageHeader title="Insumos" subtitle="Catálogo de insumos disponibles para tu local" />
 
       <div className="flex items-center justify-between mb-4">

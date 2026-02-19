@@ -27,7 +27,7 @@ export default function ProveedoresPage() {
   );
 
   return (
-    <div className="p-6">
+    <div className="space-y-6">
       <PageHeader
         title="Proveedores"
         subtitle="Proveedores asignados a items obligatorios de la marca"

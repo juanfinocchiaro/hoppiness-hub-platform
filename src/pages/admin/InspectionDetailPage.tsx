@@ -186,7 +186,7 @@ export default function InspectionDetailPage() {
   const titleContent = `Visita ${TYPE_SHORT_LABELS[inspection.inspection_type]} - ${inspection.branch?.name || 'Sucursal'}`;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title={titleContent}
         subtitle={format(new Date(inspection.started_at), "d 'de' MMMM yyyy, HH:mm", { locale: es })}

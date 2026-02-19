@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PageHeader } from '@/components/ui/page-header';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -250,7 +251,7 @@ export default function CoachingPage() {
 
   if (loadingTeam) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="space-y-6">
         <PageHelp pageId="local-coaching" />
         <Skeleton className="h-8 w-48" />
         <div className="grid gap-4 md:grid-cols-3">
@@ -263,22 +264,11 @@ export default function CoachingPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <ClipboardList className="h-6 w-6" />
-            Coaching del Equipo
-          </h1>
-          <p className="text-muted-foreground capitalize">
-            Evaluaciones de {currentMonth}
-          </p>
-        </div>
-        {branchId && branchData?.name && (
-          <CoachingExportButton branchId={branchId} branchName={branchData.name} />
-        )}
-      </div>
+      <PageHeader title="Coaching del Equipo" subtitle={`Evaluaciones de ${currentMonth}`} actions={
+        branchId && branchData?.name ? <CoachingExportButton branchId={branchId} branchName={branchData.name} /> : undefined
+      } />
 
       {/* Stats Cards - Solo del staff */}
       {stats && stats.totalEmployees > 0 && (

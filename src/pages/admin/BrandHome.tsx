@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Store, Clock, DollarSign, Utensils, BarChart3, MapPin } from 'lucide-react';
 import { BrandDailySalesTable } from '@/components/admin/BrandDailySalesTable';
 import { PageHelp } from '@/components/ui/PageHelp';
+import { PageHeader } from '@/components/ui/page-header';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
@@ -108,10 +109,7 @@ export default function BrandHome() {
     <div className="space-y-6">
       <PageHelp pageId="brand-dashboard" />
       
-      <div>
-        <h1 className="text-3xl font-bold">Panel Mi Marca</h1>
-        <p className="text-muted-foreground">Gestión centralizada de todas las sucursales</p>
-      </div>
+      <PageHeader title="Panel Mi Marca" subtitle="Gestión centralizada de todas las sucursales" />
 
       {/* Daily Sales Table */}
       <BrandDailySalesTable />

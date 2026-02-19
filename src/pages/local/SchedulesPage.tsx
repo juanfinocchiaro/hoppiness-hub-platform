@@ -15,6 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import InlineScheduleEditor from '@/components/hr/InlineScheduleEditor';
 import { PageHelp } from '@/components/ui/PageHelp';
+import { PageHeader } from '@/components/ui/page-header';
 import { Eye } from 'lucide-react';
 
 export default function SchedulesPage() {
@@ -40,13 +41,7 @@ export default function SchedulesPage() {
     <div className="space-y-6">
       <PageHelp pageId="local-schedules" />
       
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">Horarios</h1>
-        <p className="text-muted-foreground">
-          Planificación de turnos del equipo
-        </p>
-      </div>
+      <PageHeader title="Horarios" subtitle="Planificación de turnos del equipo" />
 
       {/* Read-only banner for Franquiciado */}
       {isReadOnly && (

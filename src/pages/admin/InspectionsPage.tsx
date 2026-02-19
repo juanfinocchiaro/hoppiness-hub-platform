@@ -50,7 +50,7 @@ export default function InspectionsPage() {
   });
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Supervisiones"
         subtitle="Historial de visitas BOH, FOH y Ultra Smash a sucursales"

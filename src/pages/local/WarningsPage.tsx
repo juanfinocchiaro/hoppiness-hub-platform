@@ -4,6 +4,7 @@
  * V2: Con tabs Todos / Por Empleado / Informes
  */
 import { useState, useRef } from 'react';
+import { PageHeader } from '@/components/ui/page-header';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -293,13 +294,8 @@ export default function WarningsPage() {
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Apercibimientos</h1>
-          <p className="text-muted-foreground">{branch?.name}</p>
-        </div>
-        
-        {local.canCreateWarning && (
+      <PageHeader title="Apercibimientos" subtitle={branch?.name} actions={
+        local.canCreateWarning ? (
           <Dialog open={showNewWarning} onOpenChange={setShowNewWarning}>
             <DialogTrigger asChild>
               <Button>
@@ -384,8 +380,8 @@ export default function WarningsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        )}
-      </div>
+        ) : undefined
+      } />
 
       {/* Tabs */}
       <Tabs defaultValue="all" className="w-full">

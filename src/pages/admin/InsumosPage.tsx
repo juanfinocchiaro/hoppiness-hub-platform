@@ -231,7 +231,7 @@ export default function InsumosPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="space-y-6">
       <PageHeader title="Catálogo de Compras" subtitle="Ingredientes, insumos y productos de la marca" />
 
       <Tabs value={tab} onValueChange={setTab}>

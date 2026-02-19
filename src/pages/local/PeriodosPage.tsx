@@ -42,7 +42,7 @@ export default function PeriodosPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="space-y-6">
       <PageHeader
         title="Períodos"
         subtitle="Gestión de períodos contables mensuales"
