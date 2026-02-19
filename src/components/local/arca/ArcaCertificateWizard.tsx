@@ -219,8 +219,8 @@ export function ArcaCertificateWizard({
   }
 
   // Estado: conectado o error → Completado
-  const isConnected = estado === 'conectado' || config?.estado_conexion === 'conectado';
-  const hasError = estado === 'error' || config?.estado_conexion === 'error';
+  const hasError = config?.estado_conexion === 'error' || !!config?.ultimo_error;
+  const isConnected = (config?.estado_conexion === 'conectado') && !hasError;
 
   return (
     <>
@@ -229,8 +229,9 @@ export function ArcaCertificateWizard({
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
             Certificado ARCA
+            {hasError && <StatusBadge variant="blocked">Error</StatusBadge>}
             {isConnected && <StatusBadge variant="active">Conectado</StatusBadge>}
-            {hasError && !isConnected && <StatusBadge variant="blocked">Error</StatusBadge>}
+            {!hasError && !isConnected && <StatusBadge variant="pending">Pendiente</StatusBadge>}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -241,7 +242,7 @@ export function ArcaCertificateWizard({
             </div>
           )}
 
-          {hasError && !isConnected && (
+          {hasError && (
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-destructive">
                 <AlertCircle className="h-5 w-5" />
