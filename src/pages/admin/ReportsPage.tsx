@@ -121,7 +121,7 @@ export default function ReportsPage() {
         Gastos: r.gastos,
         Margen: r.margin,
         'Margen %': `${r.marginPct.toFixed(1)}%`,
-      })), `PnL_${month}`);
+      })), { Sucursal: 'Sucursal', Venta: 'Venta', Gastos: 'Gastos', Margen: 'Margen', 'Margen %': 'Margen %' }, { filename: `PnL_${month}` });
     } else if (tab === 'ventas') {
       exportToExcel(rows.map(r => ({
         Sucursal: r.branch,
@@ -131,13 +131,13 @@ export default function ReportsPage() {
         Hamburguesas: r.hamburguesas,
         'Ticket Prom.': r.ticketPromedio,
         Alertas: r.alertas,
-      })), `Ventas_${month}`);
+      })), { Sucursal: 'Sucursal', 'Venta Total': 'Venta Total', Efectivo: 'Efectivo', Digital: 'Digital', Hamburguesas: 'Hamburguesas', 'Ticket Prom.': 'Ticket Prom.', Alertas: 'Alertas' }, { filename: `Ventas_${month}` });
     } else {
       exportToExcel(rows.map(r => ({
         Sucursal: r.branch,
         Fichajes: r.clockIns,
         Venta: r.vendido,
-      })), `Horas_${month}`);
+      })), { Sucursal: 'Sucursal', Fichajes: 'Fichajes', Venta: 'Venta' }, { filename: `Horas_${month}` });
     }
   };
 

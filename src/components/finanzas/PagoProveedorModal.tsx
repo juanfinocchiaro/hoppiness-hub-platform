@@ -129,7 +129,7 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
       for (const line of validLines) {
         const isImputacion = line.medio_pago === 'imputacion_saldo';
         await create.mutateAsync({
-          factura_id: factura?.id || undefined,
+          aplicaciones: factura?.id ? [{ factura_id: factura.id, monto_aplicado: parseFloat(line.monto) }] : undefined,
           proveedor_id: effectiveProveedorId,
           branch_id: effectiveBranchId,
           monto: parseFloat(line.monto),

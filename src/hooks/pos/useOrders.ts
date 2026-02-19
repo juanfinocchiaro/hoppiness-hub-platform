@@ -105,7 +105,7 @@ export function useCreatePedido(branchId: string) {
 
       const { data: pedido, error: errPedido } = await supabase
         .from('pedidos')
-        .insert(insertPayload)
+        .insert(insertPayload as any)
         .select('id')
         .single();
 

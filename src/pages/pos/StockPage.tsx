@@ -32,7 +32,7 @@ export default function StockPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Stock" subtitle="Stock en tiempo real" icon={Package} />
+        <PageHeader title="Stock" subtitle="Stock en tiempo real" icon={<Package className="w-5 h-5" />} />
         <Alert variant="destructive">
           <AlertDescription>
             No se pudo cargar el stock. Ejecutá RUN_POS_MIGRATIONS_PART2.sql si aún no lo hiciste.
@@ -47,7 +47,7 @@ export default function StockPage() {
       <PageHeader
         title="Stock"
         subtitle="Stock en tiempo real"
-        icon={Package}
+        icon={<Package className="w-5 h-5" />}
         actions={
           branchId ? (
             <div className="flex gap-2">

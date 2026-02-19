@@ -64,7 +64,7 @@ export default function DeliveryPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Entrega" subtitle="Pedidos para delivery" icon={Truck} />
+      <PageHeader title="Entrega" subtitle="Pedidos para delivery" icon={<Truck className="w-5 h-5" />} />
 
       {listos.length > 0 && (
         <div>
