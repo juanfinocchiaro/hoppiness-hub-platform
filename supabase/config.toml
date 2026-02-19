@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.register-clock-entry]
 verify_jwt = false
+
+[functions.print-to-network]
+verify_jwt = false

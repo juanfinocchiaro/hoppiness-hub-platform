@@ -6,31 +6,11 @@
  */
 import { useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  Users,
-  Clock,
-  DollarSign,
-  FileText,
-  MessageSquare,
-  ClipboardList,
-  ClipboardCheck,
-  ShoppingCart,
-  Receipt,
-  Settings,
-  AlertTriangle,
-  UserCheck,
-  Calendar,
-  Wallet,
-  Truck,
-  Package,
-  TrendingUp,
-  BarChart3,
-  CalendarDays,
-  Handshake,
-  Calculator,
-  FileInput,
-  Building2,
-  ChefHat,
+  LayoutDashboard, Users, Clock, DollarSign, FileText, MessageSquare,
+  ClipboardList, ClipboardCheck, ShoppingCart, Receipt, Settings,
+  AlertTriangle, UserCheck, Calendar, Wallet, Truck, Package,
+  TrendingUp, BarChart3, CalendarDays, Handshake, Calculator,
+  FileInput, Building2, ChefHat, Printer, Flame, SlidersHorizontal,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -342,6 +322,9 @@ export function LocalSidebar({ branchId, posEnabled = false, permissions }: Loca
           forceOpen={isConfigActive}
         >
           <NavItemButton to={`${basePath}/config/turnos`} icon={Clock} label="Turnos" />
+          <NavItemButton to={`${basePath}/config/impresoras`} icon={Printer} label="Impresoras" />
+          <NavItemButton to={`${basePath}/config/estaciones`} icon={Flame} label="Estaciones Cocina" />
+          <NavItemButton to={`${basePath}/config/impresion`} icon={SlidersHorizontal} label="Config Impresión" />
         </NavSectionGroup>
       )}
     </WorkSidebarNav>

@@ -58,6 +58,9 @@ import DeliveryPage from "./pages/pos/DeliveryPage";
 import StockPage from "./pages/pos/StockPage";
 import RegisterPage from "./pages/pos/RegisterPage";
 import CierreTurnoPage from "./pages/local/CierreTurnoPage";
+import PrintersConfigPage from "./pages/local/PrintersConfigPage";
+import KitchenStationsConfigPage from "./pages/local/KitchenStationsConfigPage";
+import PrintConfigPage from "./pages/local/PrintConfigPage";
 
 // Mi Marca
 import BrandLayout from "./pages/admin/BrandLayout";
@@ -219,6 +222,9 @@ const App = () => (
               
               {/* Configuración */}
               <Route path="config/turnos" element={<ShiftConfigPage />} />
+              <Route path="config/impresoras" element={<PrintersConfigPage />} />
+              <Route path="config/estaciones" element={<KitchenStationsConfigPage />} />
+              <Route path="config/impresion" element={<PrintConfigPage />} />
             </Route>
             
             {/* Mi Marca - /mimarca */}
