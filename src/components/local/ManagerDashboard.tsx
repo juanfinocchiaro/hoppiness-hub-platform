@@ -34,6 +34,7 @@ import { ShiftClosureModal } from '@/components/local/closure/ShiftClosureModal'
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { CoachingPendingCard } from '@/components/coaching';
 import { MeetingPendingCard } from '@/components/meetings/MeetingPendingCard';
+import { StockAlertCard } from '@/components/stock/StockAlertCard';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
@@ -419,6 +420,9 @@ export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboar
    {(isEncargado || isSuperadmin) && (
      <MeetingPendingCard branchId={branch.id} />
    )}
+
+   {/* STOCK ALERTS */}
+   <StockAlertCard branchId={branch.id} />
 
    {/* COACHING DEL MES - Solo para quienes pueden hacer coaching */}
    {local.canDoCoaching && (
