@@ -1,0 +1,120 @@
+/**
+ * usePosOrderHistory - Fetch POS orders with items & payments, with client-side filtering
+ */
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { subDays, startOfDay, format } from 'date-fns';
+
+export type OrderFilterCanalVenta = 'todos' | 'mostrador' | 'apps';
+export type OrderFilterTipoServicio = 'todos' | 'takeaway' | 'comer_aca' | 'delivery';
+export type OrderFilterMetodoPago = 'todos' | 'efectivo' | 'tarjeta_debito' | 'tarjeta_credito' | 'mercadopago_qr' | 'transferencia';
+export type OrderFilterEstado = 'todos' | 'entregado' | 'listo' | 'cancelado';
+
+export interface OrderFilters {
+  canalVenta: OrderFilterCanalVenta;
+  tipoServicio: OrderFilterTipoServicio;
+  metodoPago: OrderFilterMetodoPago;
+  estado: OrderFilterEstado;
+  searchQuery: string;
+}
+
+export const DEFAULT_FILTERS: OrderFilters = {
+  canalVenta: 'todos',
+  tipoServicio: 'todos',
+  metodoPago: 'todos',
+  estado: 'todos',
+  searchQuery: '',
+};
+
+interface PedidoItem {
+  id: string;
+  nombre: string;
+  cantidad: number;
+  precio_unitario: number;
+  subtotal: number;
+  notas: string | null;
+}
+
+interface PedidoPago {
+  id: string;
+  metodo: string;
+  monto: number;
+}
+
+export interface PosOrder {
+  id: string;
+  numero_pedido: number;
+  created_at: string;
+  canal_venta: string | null;
+  tipo_servicio: string | null;
+  canal_app: string | null;
+  cliente_nombre: string | null;
+  estado: string;
+  subtotal: number;
+  descuento: number | null;
+  total: number;
+  pedido_items: PedidoItem[];
+  pedido_pagos: PedidoPago[];
+}
+
+export function usePosOrderHistory(
+  branchId: string | undefined,
+  daysBack: number,
+  filters: OrderFilters,
+) {
+  const fromDate = format(subDays(startOfDay(new Date()), daysBack), 'yyyy-MM-dd');
+
+  const { data: rawOrders, isLoading } = useQuery({
+    queryKey: ['pos-order-history', branchId, daysBack],
+    queryFn: async () => {
+      if (!branchId) return [];
+      const { data, error } = await supabase
+        .from('pedidos')
+        .select('id, numero_pedido, created_at, canal_venta, tipo_servicio, canal_app, cliente_nombre, estado, subtotal, descuento, total, pedido_items(id, nombre, cantidad, precio_unitario, subtotal, notas), pedido_pagos(id, metodo, monto)')
+        .eq('branch_id', branchId)
+        .gte('created_at', fromDate)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as PosOrder[];
+    },
+    enabled: !!branchId,
+  });
+
+  const orders = useMemo(() => {
+    if (!rawOrders) return [];
+    return rawOrders.filter(order => {
+      // Canal
+      if (filters.canalVenta !== 'todos' && order.canal_venta !== filters.canalVenta) return false;
+      // Tipo servicio
+      if (filters.tipoServicio !== 'todos' && order.tipo_servicio !== filters.tipoServicio) return false;
+      // Estado
+      if (filters.estado !== 'todos' && order.estado !== filters.estado) return false;
+      // Metodo de pago (client-side: order has at least one payment with that method)
+      if (filters.metodoPago !== 'todos') {
+        const hasMethod = order.pedido_pagos?.some(p => p.metodo === filters.metodoPago);
+        if (!hasMethod) return false;
+      }
+      // Search
+      if (filters.searchQuery) {
+        const q = filters.searchQuery.toLowerCase();
+        const matchNum = String(order.numero_pedido).includes(q);
+        const matchName = order.cliente_nombre?.toLowerCase().includes(q);
+        if (!matchNum && !matchName) return false;
+      }
+      return true;
+    });
+  }, [rawOrders, filters]);
+
+  const totals = useMemo(() => {
+    const totalVendido = orders.reduce((s, o) => s + (o.total || 0), 0);
+    const cantidad = orders.length;
+    return {
+      totalVendido,
+      cantidad,
+      ticketPromedio: cantidad > 0 ? totalVendido / cantidad : 0,
+    };
+  }, [orders]);
+
+  return { orders, totals, isLoading };
+}
