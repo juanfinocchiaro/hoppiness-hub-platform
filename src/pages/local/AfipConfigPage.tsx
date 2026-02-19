@@ -8,12 +8,13 @@ import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { FormLayout } from '@/components/ui/forms-pro/FormLayout';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
-import { Wifi, Upload, Shield, FileText } from 'lucide-react';
+import { ArcaCertificateWizard } from '@/components/local/arca/ArcaCertificateWizard';
+import { Wifi, Shield, FileText } from 'lucide-react';
 
 export default function AfipConfigPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const { data: config, isLoading } = useAfipConfig(branchId);
-  const { save, testConnection } = useAfipConfigMutations(branchId);
+  const { save, saveKeyAndCSR, saveCertificate, testConnection } = useAfipConfigMutations(branchId);
 
   const [form, setForm] = useState({
     cuit: '',
@@ -21,8 +22,6 @@ export default function AfipConfigPage() {
     direccion_fiscal: '',
     inicio_actividades: '',
     punto_venta: '',
-    certificado_crt: '',
-    clave_privada_enc: '',
   });
 
   useEffect(() => {
@@ -33,23 +32,12 @@ export default function AfipConfigPage() {
         direccion_fiscal: config.direccion_fiscal || '',
         inicio_actividades: config.inicio_actividades || '',
         punto_venta: config.punto_venta?.toString() || '',
-        certificado_crt: config.certificado_crt || '',
-        clave_privada_enc: '',
       });
     }
   }, [config]);
 
   const handleChange = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleFileUpload = async (field: 'certificado_crt' | 'clave_privada_enc', file: File) => {
-    const text = await file.text();
-    if (field === 'clave_privada_enc') {
-      setForm((prev) => ({ ...prev, [field]: btoa(text) }));
-    } else {
-      setForm((prev) => ({ ...prev, [field]: text }));
-    }
   };
 
   const handleSave = () => {
@@ -61,11 +49,7 @@ export default function AfipConfigPage() {
       direccion_fiscal: form.direccion_fiscal || null,
       inicio_actividades: form.inicio_actividades || null,
       punto_venta: form.punto_venta ? parseInt(form.punto_venta) : null,
-      certificado_crt: form.certificado_crt || null,
     };
-    if (form.clave_privada_enc) {
-      payload.clave_privada_enc = form.clave_privada_enc;
-    }
     save.mutate(payload as any);
   };
 
@@ -171,57 +155,25 @@ export default function AfipConfigPage() {
         </CardContent>
       </Card>
 
-      {/* Certificados */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            Certificados ARCA
-          </CardTitle>
-          <CardDescription>
-            Subí el certificado (.crt) y la clave privada (.key) generados desde ARCA
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="cert-file">Certificado (.crt)</Label>
-            <div className="flex items-center gap-3">
-              <Input
-                id="cert-file"
-                type="file"
-                accept=".crt,.pem,.cer"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleFileUpload('certificado_crt', file);
-                }}
-              />
-              {form.certificado_crt && (
-                <StatusBadge variant="active">Cargado</StatusBadge>
-              )}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="key-file">Clave Privada (.key)</Label>
-            <div className="flex items-center gap-3">
-              <Input
-                id="key-file"
-                type="file"
-                accept=".key,.pem"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleFileUpload('clave_privada_enc', file);
-                }}
-              />
-              {config?.clave_privada_enc && !form.clave_privada_enc && (
-                <StatusBadge variant="active">Configurada</StatusBadge>
-              )}
-              {form.clave_privada_enc && (
-                <StatusBadge variant="info">Nueva cargada</StatusBadge>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Asistente de certificados ARCA */}
+      {branchId && (
+        <ArcaCertificateWizard
+          config={config ?? null}
+          branchId={branchId}
+          cuit={form.cuit}
+          razonSocial={form.razon_social}
+          onSaveKeyAndCSR={async (data) => {
+            await saveKeyAndCSR.mutateAsync(data);
+          }}
+          onSaveCertificate={async (data) => {
+            await saveCertificate.mutateAsync(data);
+          }}
+          onTestConnection={() => testConnection.mutate()}
+          isSavingKey={saveKeyAndCSR.isPending}
+          isSavingCert={saveCertificate.isPending}
+          isTestingConnection={testConnection.isPending}
+        />
+      )}
 
       {/* Modo de operación */}
       <Card>
@@ -295,20 +247,6 @@ export default function AfipConfigPage() {
       <div className="flex items-center gap-3">
         <Button onClick={handleSave} disabled={save.isPending}>
           {save.isPending ? 'Guardando...' : 'Guardar Configuración'}
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => testConnection.mutate()}
-          disabled={testConnection.isPending}
-        >
-          {testConnection.isPending ? (
-            'Probando...'
-          ) : (
-            <>
-              <Wifi className="mr-2 h-4 w-4" />
-              Probar Conexión
-            </>
-          )}
         </Button>
       </div>
     </div>

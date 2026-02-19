@@ -20,9 +20,11 @@ export type Database = {
           certificado_crt: string | null
           clave_privada_enc: string | null
           created_at: string
+          csr_pem: string | null
           cuit: string | null
           direccion_fiscal: string | null
           es_produccion: boolean
+          estado_certificado: string
           estado_conexion: string
           id: string
           inicio_actividades: string | null
@@ -40,9 +42,11 @@ export type Database = {
           certificado_crt?: string | null
           clave_privada_enc?: string | null
           created_at?: string
+          csr_pem?: string | null
           cuit?: string | null
           direccion_fiscal?: string | null
           es_produccion?: boolean
+          estado_certificado?: string
           estado_conexion?: string
           id?: string
           inicio_actividades?: string | null
@@ -60,9 +64,11 @@ export type Database = {
           certificado_crt?: string | null
           clave_privada_enc?: string | null
           created_at?: string
+          csr_pem?: string | null
           cuit?: string | null
           direccion_fiscal?: string | null
           es_produccion?: boolean
+          estado_certificado?: string
           estado_conexion?: string
           id?: string
           inicio_actividades?: string | null
