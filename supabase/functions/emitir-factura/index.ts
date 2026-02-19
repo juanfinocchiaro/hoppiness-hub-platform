@@ -79,17 +79,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Desencriptar clave privada
-    const encryptionKey = Deno.env.get("AFIP_ENCRYPTION_KEY");
-    if (!encryptionKey) {
-      return new Response(
-        JSON.stringify({ error: "AFIP_ENCRYPTION_KEY no configurada" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // En producción se usaría AES para desencriptar. Por ahora en homologación
-    // la clave se almacena en base64 simple (se reemplazará con crypto real).
+    // 2. Decodificar clave privada (almacenada en base64)
     let clavePrivada: string;
     try {
       clavePrivada = atob(config.clave_privada_enc);
@@ -108,7 +98,7 @@ Deno.serve(async (req) => {
     const nuevoNumero = (config[ultimoNroField] || 0) + 1;
 
     // 4. Calcular montos según tipo
-    const esProduccion = config.es_produccion || Deno.env.get("AFIP_PRODUCTION") === "true";
+    const esProduccion = !!config.es_produccion;
     let neto = total;
     let iva = 0;
 
