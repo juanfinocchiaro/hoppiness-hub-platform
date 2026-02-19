@@ -86,7 +86,7 @@ function ConfigSummaryLine({ config }: { config: OrderConfig }) {
   );
 }
 
-function ConfigForm({
+export function ConfigForm({
   config,
   onChange,
   onConfirm,
