@@ -221,7 +221,7 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground"><DollarSign className="w-4 h-4" /> Ventas</div>
                 <div className="text-2xl font-bold font-mono mt-1">$ {totalVentas.toLocaleString('es-AR')}</div>
-                {ventas && ventas.fc > 0 && (
+{ventas && ventas.total > 0 && (
                   <div className="text-xs text-muted-foreground mt-1">FC: ${ventas.fc.toLocaleString('es-AR')} | FT: ${ventas.ft.toLocaleString('es-AR')}</div>
                 )}
               </CardContent>
@@ -273,7 +273,7 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
                     expanded={ventasExpanded}
                     onToggle={() => setVentasExpanded(e => !e)}
                   >
-                    {ventas && ventas.fc > 0 && (
+                    {ventas && ventas.total > 0 && (
                       <>
                         <RdoLine label="Facturación Contable (FC)" value={ventas.fc} indent={1} />
                         <RdoLine label="Facturación Total (FT)" value={ventas.ft} indent={1} />
@@ -310,7 +310,7 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
                     </div>
                   </div>
                 </>
-              ) : ventas && ventas.fc > 0 ? (
+              ) : ventas && ventas.total > 0 ? (
                 <CollapsibleRow
                   label="Ventas Totales"
                   value={totalVentas}
