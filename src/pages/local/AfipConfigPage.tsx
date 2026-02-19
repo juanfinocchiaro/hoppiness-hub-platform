@@ -163,6 +163,17 @@ export default function AfipConfigPage() {
           cuit={form.cuit}
           razonSocial={form.razon_social}
           onSaveKeyAndCSR={async (data) => {
+            // First save fiscal data so they don't get lost
+            if (form.cuit || form.razon_social || form.direccion_fiscal || form.inicio_actividades || form.punto_venta) {
+              await save.mutateAsync({
+                branch_id: branchId,
+                cuit: form.cuit || null,
+                razon_social: form.razon_social || null,
+                direccion_fiscal: form.direccion_fiscal || null,
+                inicio_actividades: form.inicio_actividades || null,
+                punto_venta: form.punto_venta ? parseInt(form.punto_venta) : null,
+              } as any);
+            }
             await saveKeyAndCSR.mutateAsync(data);
           }}
           onSaveCertificate={async (data) => {
