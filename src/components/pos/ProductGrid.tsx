@@ -34,6 +34,7 @@ export interface CartItem {
   notas?: string;
   extras?: CartItemExtra[];
   removibles?: CartItemRemovible[];
+  precio_referencia?: number;
 }
 
 interface ProductGridProps {
@@ -215,6 +216,7 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
 
     const precio = item.precio_base ?? 0;
     const nombre = item.nombre_corto ?? item.nombre;
+    const precioRef = item.precio_referencia ? Number(item.precio_referencia) : undefined;
 
     if (onSelectItem) {
       onSelectItem(item);
@@ -225,6 +227,7 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
         cantidad: 1,
         precio_unitario: precio,
         subtotal: precio,
+        precio_referencia: precioRef && precioRef > precio ? precioRef : undefined,
       });
     }
   };
@@ -356,9 +359,12 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
   );
 }
 
-/* Extracted product card with badge */
+/* Extracted product card with badge + promo support */
 function ProductCard({ item, qty, onClick, onHover }: { item: any; qty: number; onClick: (item: any) => void; onHover?: (id: string) => void }) {
   const precio = item.precio_base ?? 0;
+  const precioRef = item.precio_referencia ? Number(item.precio_referencia) : null;
+  const hasDiscount = precioRef != null && precioRef > precio;
+  const discountPct = hasDiscount ? Math.round(((precioRef! - precio) / precioRef!) * 100) : 0;
   const nombre = item.nombre_corto ?? item.nombre;
   const imagenUrl = item.imagen_url;
   const inCart = qty > 0;
@@ -380,6 +386,12 @@ function ProductCard({ item, qty, onClick, onHover }: { item: any; qty: number; 
           {qty}
         </span>
       )}
+      {/* Discount badge */}
+      {hasDiscount && !inCart && (
+        <span className="absolute top-1.5 right-1.5 z-20 px-1.5 py-0.5 rounded-md bg-destructive text-destructive-foreground text-[10px] font-bold shadow-sm">
+          -{discountPct}%
+        </span>
+      )}
       {/* Image or initials */}
       <div className="relative w-full aspect-[4/3] bg-muted flex items-center justify-center overflow-hidden">
         {imagenUrl ? (
@@ -398,9 +410,20 @@ function ProductCard({ item, qty, onClick, onHover }: { item: any; qty: number; 
       {/* Info */}
       <div className="p-2.5 flex flex-col gap-0.5">
         <span className="text-sm font-medium line-clamp-2 leading-tight">{nombre}</span>
-        <span className="text-xs text-primary font-semibold">
-          $ {precio.toLocaleString('es-AR')}
-        </span>
+        {hasDiscount ? (
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-muted-foreground line-through">
+              $ {precioRef!.toLocaleString('es-AR')}
+            </span>
+            <span className="text-xs text-destructive font-bold">
+              $ {precio.toLocaleString('es-AR')}
+            </span>
+          </div>
+        ) : (
+          <span className="text-xs text-primary font-semibold">
+            $ {precio.toLocaleString('es-AR')}
+          </span>
+        )}
       </div>
     </button>
   );

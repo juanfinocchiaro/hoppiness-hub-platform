@@ -12,8 +12,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
-import { Loader2, Split, Banknote, CreditCard, QrCode, ArrowRightLeft, ChevronDown } from 'lucide-react';
+import { Loader2, Split, Banknote, CreditCard, QrCode, ArrowRightLeft, ChevronDown, AlertTriangle } from 'lucide-react';
 import type { MetodoPago } from '@/types/pos';
 import type { CartItem } from '@/components/pos/ProductGrid';
 import { SplitPayment, type PaymentLine } from '@/components/pos/SplitPayment';
@@ -71,6 +72,21 @@ export function PaymentModal({
   const montoNum = parseFloat(montoRecibido) || 0;
   const vuelto = esEfectivo ? Math.max(0, montoNum - totalToPay) : 0;
 
+  // Promo discount calculation
+  const promoDiscount = useMemo(() => {
+    return cartItems.reduce((sum, item) => {
+      if (item.precio_referencia && item.precio_referencia > item.precio_unitario) {
+        return sum + (item.precio_referencia - item.precio_unitario) * item.cantidad;
+      }
+      return sum;
+    }, 0);
+  }, [cartItems]);
+  const hasPromoItems = promoDiscount > 0;
+  const subtotalReferencia = hasPromoItems ? total + promoDiscount : total;
+
+  // Warning: promo items with non-cash payment
+  const showPromoWarning = hasPromoItems && !esEfectivo;
+
   const totalItems = cartItems.reduce((s, i) => s + i.cantidad, 0);
   const summaryPreview = cartItems.length > 0
     ? cartItems.slice(0, 3).map((i) => i.nombre).join(', ') + (cartItems.length > 3 ? '...' : '')
@@ -124,6 +140,20 @@ export function PaymentModal({
                   </div>
                 </CollapsibleContent>
               </Collapsible>
+            )}
+
+            {/* Promo discount desglose */}
+            {hasPromoItems && (
+              <div className="text-sm space-y-1 border rounded-lg p-3 bg-muted/30">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Subtotal (precio ref.):</span>
+                  <span>$ {subtotalReferencia.toLocaleString('es-AR')}</span>
+                </div>
+                <div className="flex justify-between text-destructive">
+                  <span>Desc. promo:</span>
+                  <span>-$ {promoDiscount.toLocaleString('es-AR')}</span>
+                </div>
+              </div>
             )}
 
             <div className="text-2xl font-bold text-primary">
@@ -191,6 +221,16 @@ export function PaymentModal({
                   </div>
                 )}
               </>
+            )}
+
+            {/* Promo cash-only warning */}
+            {showPromoWarning && (
+              <Alert variant="destructive" className="border-destructive/50 bg-destructive/5">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  Hay productos de <strong>promo efectivo</strong> en el pedido. ¿Continuar con {METODOS.find(m => m.value === metodo)?.label}?
+                </AlertDescription>
+              </Alert>
             )}
           </div>
           <DialogFooter>

@@ -3166,6 +3166,7 @@ export type Database = {
           nombre_corto: string | null
           orden: number | null
           precio_base: number
+          precio_referencia: number | null
           rdo_category_code: string | null
           tipo: string
           updated_at: string | null
@@ -3189,6 +3190,7 @@ export type Database = {
           nombre_corto?: string | null
           orden?: number | null
           precio_base?: number
+          precio_referencia?: number | null
           rdo_category_code?: string | null
           tipo?: string
           updated_at?: string | null
@@ -3212,6 +3214,7 @@ export type Database = {
           nombre_corto?: string | null
           orden?: number | null
           precio_base?: number
+          precio_referencia?: number | null
           rdo_category_code?: string | null
           tipo?: string
           updated_at?: string | null
@@ -4333,6 +4336,7 @@ export type Database = {
           nombre: string
           notas: string | null
           pedido_id: string
+          precio_referencia: number | null
           precio_unitario: number
           subtotal: number
         }
@@ -4346,6 +4350,7 @@ export type Database = {
           nombre: string
           notas?: string | null
           pedido_id: string
+          precio_referencia?: number | null
           precio_unitario: number
           subtotal: number
         }
@@ -4359,6 +4364,7 @@ export type Database = {
           nombre?: string
           notas?: string | null
           pedido_id?: string
+          precio_referencia?: number | null
           precio_unitario?: number
           subtotal?: number
         }

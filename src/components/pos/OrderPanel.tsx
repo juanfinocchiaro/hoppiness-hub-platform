@@ -48,7 +48,15 @@ export function OrderPanel({ items, onUpdateQty, onRemove, onUpdateNotes, onCobr
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{it.nombre}</p>
                     <p className="text-xs text-muted-foreground">
-                      $ {it.precio_unitario.toLocaleString('es-AR')} × {it.cantidad}
+                      {it.precio_referencia && it.precio_referencia > it.precio_unitario ? (
+                        <>
+                          <span className="line-through mr-1">$ {it.precio_referencia.toLocaleString('es-AR')}</span>
+                          <span className="text-destructive font-semibold">$ {it.precio_unitario.toLocaleString('es-AR')}</span>
+                          <span className="ml-1"> × {it.cantidad}</span>
+                        </>
+                      ) : (
+                        <>$ {it.precio_unitario.toLocaleString('es-AR')} × {it.cantidad}</>
+                      )}
                     </p>
                     {/* Show existing notes (from modifiers or manual) */}
                     {it.notas && editingNoteIdx !== idx && (

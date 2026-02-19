@@ -13,6 +13,7 @@ export interface PedidoItemInput {
   subtotal: number;
   notas?: string;
   estacion?: string;
+  precio_referencia?: number;
 }
 
 /** Una línea de pago (pago dividido) */
@@ -122,7 +123,8 @@ export function useCreatePedido(branchId: string) {
           subtotal: it.subtotal,
           notas: it.notas ?? null,
           estacion: it.estacion ?? 'armado',
-        });
+          precio_referencia: it.precio_referencia ?? null,
+        } as any);
         if (errItem) throw errItem;
       }
 

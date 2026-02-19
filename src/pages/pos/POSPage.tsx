@@ -215,6 +215,7 @@ export default function POSPage() {
         subtotal: c.subtotal,
         notas: c.notas,
         estacion: 'armado' as const,
+        precio_referencia: c.precio_referencia,
       }));
       if (payload.type === 'single') {
         await createPedido.mutateAsync({
