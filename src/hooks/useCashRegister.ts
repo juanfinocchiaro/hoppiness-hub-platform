@@ -291,6 +291,59 @@ export function useAddMovement(branchId: string) {
   });
 }
 
+/** Specialized mutation for expense movements with accounting metadata */
+export function useAddExpenseMovement(branchId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      shiftId,
+      amount,
+      concept,
+      paymentMethod,
+      userId,
+      categoriaGasto,
+      rdoCategoryCode,
+      observaciones,
+      estadoAprobacion,
+    }: {
+      shiftId: string;
+      amount: number;
+      concept: string;
+      paymentMethod: string;
+      userId: string;
+      categoriaGasto?: string;
+      rdoCategoryCode?: string;
+      observaciones?: string;
+      estadoAprobacion?: string;
+    }) => {
+      const { data, error } = await supabase
+        .from('cash_register_movements')
+        .insert({
+          shift_id: shiftId,
+          branch_id: branchId,
+          type: 'expense',
+          payment_method: paymentMethod,
+          amount,
+          concept,
+          recorded_by: userId,
+          categoria_gasto: categoriaGasto || null,
+          rdo_category_code: rdoCategoryCode || null,
+          observaciones: observaciones || null,
+          estado_aprobacion: estadoAprobacion || 'aprobado',
+        } as any)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as CashRegisterMovement;
+    },
+    onSuccess: (_, v) => {
+      queryClient.invalidateQueries({ queryKey: cashRegisterKeys.movements(v.shiftId) });
+      queryClient.invalidateQueries({ queryKey: [...cashRegisterKeys.all, 'all-movements'] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
 export function calculateExpectedCash(
   shift: CashRegisterShift | null | undefined,
   movements: CashRegisterMovement[]

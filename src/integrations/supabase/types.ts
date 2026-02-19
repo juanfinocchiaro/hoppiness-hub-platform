@@ -599,11 +599,15 @@ export type Database = {
         Row: {
           amount: number
           branch_id: string
+          categoria_gasto: string | null
           concept: string
           created_at: string | null
+          estado_aprobacion: string | null
           id: string
+          observaciones: string | null
           order_id: string | null
           payment_method: string
+          rdo_category_code: string | null
           recorded_by: string | null
           shift_id: string
           source_register_id: string | null
@@ -612,11 +616,15 @@ export type Database = {
         Insert: {
           amount: number
           branch_id: string
+          categoria_gasto?: string | null
           concept: string
           created_at?: string | null
+          estado_aprobacion?: string | null
           id?: string
+          observaciones?: string | null
           order_id?: string | null
           payment_method?: string
+          rdo_category_code?: string | null
           recorded_by?: string | null
           shift_id: string
           source_register_id?: string | null
@@ -625,11 +633,15 @@ export type Database = {
         Update: {
           amount?: number
           branch_id?: string
+          categoria_gasto?: string | null
           concept?: string
           created_at?: string | null
+          estado_aprobacion?: string | null
           id?: string
+          observaciones?: string | null
           order_id?: string | null
           payment_method?: string
+          rdo_category_code?: string | null
           recorded_by?: string | null
           shift_id?: string
           source_register_id?: string | null

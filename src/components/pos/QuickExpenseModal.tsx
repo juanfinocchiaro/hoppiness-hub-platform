@@ -1,5 +1,5 @@
 /**
- * QuickExpenseModal - Egresos rápidos con verificación PIN (Fase 5)
+ * QuickExpenseModal - Egresos con categoría, RDO y verificación PIN
  */
 import { useState, useEffect } from 'react';
 import {
@@ -14,11 +14,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Loader2, Receipt, Banknote, CreditCard } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useAddMovement } from '@/hooks/useCashRegister';
+import { useAddExpenseMovement } from '@/hooks/useCashRegister';
 import { SupervisorPinDialog } from '@/components/pos/SupervisorPinDialog';
+import { RdoCategorySelector } from '@/components/rdo/RdoCategorySelector';
+import { CATEGORIA_GASTO_OPTIONS } from '@/types/compra';
 import { type OperatorInfo } from '@/hooks/useOperatorVerification';
 import { toast } from 'sonner';
 
@@ -28,6 +37,7 @@ interface QuickExpenseModalProps {
   branchId: string;
   shiftId?: string;
   pinThreshold?: number;
+  registerLabel?: string;
 }
 
 export function QuickExpenseModal({
@@ -36,16 +46,19 @@ export function QuickExpenseModal({
   branchId,
   shiftId,
   pinThreshold = 50000,
+  registerLabel,
 }: QuickExpenseModalProps) {
   const { user } = useAuth();
   const [concept, setConcept] = useState('');
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer'>('cash');
+  const [categoriaGasto, setCategoriaGasto] = useState('');
+  const [rdoCategoryCode, setRdoCategoryCode] = useState('');
   const [notes, setNotes] = useState('');
   const [showPinDialog, setShowPinDialog] = useState(false);
   const [isSupervisor, setIsSupervisor] = useState(false);
 
-  const addMovement = useAddMovement(branchId);
+  const addExpense = useAddExpenseMovement(branchId);
 
   useEffect(() => {
     async function checkRole() {
@@ -70,16 +83,16 @@ export function QuickExpenseModal({
       setConcept('');
       setAmount('');
       setPaymentMethod('cash');
+      setCategoriaGasto('');
+      setRdoCategoryCode('');
       setNotes('');
     }
   }, [open]);
 
   const handleSubmit = () => {
     if (!concept || !amount) return;
-
     const amountNum = parseFloat(amount);
     const needsPin = !isSupervisor && amountNum >= pinThreshold;
-
     if (needsPin) {
       setShowPinDialog(true);
     } else {
@@ -89,19 +102,21 @@ export function QuickExpenseModal({
 
   const createExpense = async (authorizedBy?: string) => {
     if (!user || !shiftId) return;
-
     const amountNum = parseFloat(amount);
     const isCash = paymentMethod === 'cash';
 
     if (isCash) {
       try {
-        await addMovement.mutateAsync({
+        await addExpense.mutateAsync({
           shiftId,
-          type: 'expense',
           amount: amountNum,
-          concept: concept + (notes ? ` - ${notes}` : ''),
+          concept: concept,
           paymentMethod: 'efectivo',
           userId: user.id,
+          categoriaGasto: categoriaGasto || undefined,
+          rdoCategoryCode: rdoCategoryCode || undefined,
+          observaciones: notes || undefined,
+          estadoAprobacion: (!isSupervisor && amountNum >= pinThreshold) ? 'pendiente_aprobacion' : 'aprobado',
         });
         toast.success('Gasto registrado correctamente');
         onOpenChange(false);
@@ -135,16 +150,18 @@ export function QuickExpenseModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Receipt className="h-5 w-5" />
               Registrar Gasto
             </DialogTitle>
             <DialogDescription>
-              {paymentMethod === 'cash'
-                ? 'Se descontará del efectivo de caja'
-                : 'Quedará pendiente de transferencia'}
+              {registerLabel
+                ? `Se descontará de ${registerLabel}`
+                : paymentMethod === 'cash'
+                  ? 'Se descontará del efectivo de caja'
+                  : 'Quedará pendiente de transferencia'}
             </DialogDescription>
           </DialogHeader>
 
@@ -162,9 +179,7 @@ export function QuickExpenseModal({
             <div className="space-y-2">
               <Label htmlFor="amount">Monto</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  $
-                </span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                 <Input
                   id="amount"
                   type="number"
@@ -175,6 +190,29 @@ export function QuickExpenseModal({
                 />
               </div>
               {amount && <p className="text-sm text-muted-foreground">{formatCurrency(amount)}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Categoría</Label>
+              <Select value={categoriaGasto} onValueChange={setCategoriaGasto}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar categoría..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIA_GASTO_OPTIONS.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Categoría RDO (opcional)</Label>
+              <p className="text-xs text-muted-foreground">Para el Estado de Resultados</p>
+              <RdoCategorySelector
+                value={rdoCategoryCode}
+                onChange={setRdoCategoryCode}
+              />
             </div>
 
             <div className="space-y-2">
@@ -208,7 +246,7 @@ export function QuickExpenseModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notas (opcional)</Label>
+              <Label htmlFor="notes">Observaciones (opcional)</Label>
               <Textarea
                 id="notes"
                 placeholder="Detalles adicionales..."
@@ -226,11 +264,11 @@ export function QuickExpenseModal({
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={addMovement.isPending}>
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={addExpense.isPending}>
               Cancelar
             </Button>
-            <Button onClick={handleSubmit} disabled={!concept || !amount || addMovement.isPending}>
-              {addMovement.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            <Button onClick={handleSubmit} disabled={!concept || !amount || addExpense.isPending}>
+              {addExpense.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {needsPin ? 'Solicitar Autorización' : 'Registrar Gasto'}
             </Button>
           </div>
