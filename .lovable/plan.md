@@ -1,87 +1,55 @@
 
 
-# Rediseno del Flujo "Nueva Venta" en POS
+# Fix: Sidebar Auto-Collapse + Layout Consistency
 
-## Problema actual
+## Issue 1: Sidebar sections don't collapse when navigating away
 
-La pantalla de Punto de Venta muestra DOS placeholders identicos ("Nueva Venta") que ocupan toda la pantalla con bordes punteados. El flujo requiere 3 pasos innecesarios:
+**Root cause**: In `WorkSidebar.tsx`, `NavSectionGroup` has a `useEffect` that only handles `forceOpen === true`. When you navigate to a different section, `forceOpen` becomes `false` but nothing collapses the old section.
 
-1. Click en placeholder izquierdo o derecho
-2. Se muestra formulario de canal/cliente SOLO en la columna izquierda (la derecha sigue con placeholder)
-3. Click en "Comenzar venta" para desbloquear el menu
+**Fix**: Replace the current useEffect with one that syncs `isOpen` to `forceOpen` in both directions -- open when entering, close when leaving.
 
-Esto es confuso, feo y lento.
+```
+// Current (broken):
+useEffect(() => {
+  if (forceOpen && !isOpen) setIsOpen(true);
+}, [forceOpen, isOpen]);
 
-## Propuesta: Flujo simplificado en 1 paso
-
-Eliminar los placeholders gigantes. En su lugar:
-
-- **Estado inicial**: Mostrar el formulario de canal/cliente directamente en una Card compacta en la parte superior, con el menu de productos YA VISIBLE debajo (pero deshabilitado visualmente hasta confirmar config)
-- **Al confirmar**: La Card de config se colapsa a una linea resumen editable, y el menu + carrito se activan
-
-```text
-ANTES (actual)                         DESPUES (propuesto)
-+------------------+------------------+ +------------------------------------------+
-| [  Nueva Venta ] | [  Nueva Venta ] | | Punto de Venta                           |
-| (placeholder     | (placeholder     | +------------------------------------------+
-|  dashed border   |  dashed border   | | [Card: Canal y Cliente]                  |
-|  gigante)        |  gigante)        | | Mostrador | Apps     Para llevar | ...    |
-|                  |                  | | Llamador: [grid numeros]                 |
-|                  |                  | |                    [Comenzar Venta >>]    |
-|                  |                  | +------------------------------------------+
-|                  |                  | |  Carrito (izq)  |  Menu productos (der)  |
-|                  |                  | |  (vacio)        |  (visible, disabled)   |
-+------------------+------------------+ +------------------------------------------+
-
-DESPUES de "Comenzar Venta":
-+------------------------------------------+
-| Punto de Venta                           |
-+------------------------------------------+
-| Mostrador > Para llevar > #5  [Editar]   |
-+------------------------------------------+
-|  Carrito (izq)  |  Menu productos (der)  |
-|  (activo)       |  (activo, clickeable)  |
-+------------------------------------------+
+// Fixed:
+useEffect(() => {
+  setIsOpen(forceOpen);
+}, [forceOpen]);
 ```
 
-## Cambios tecnicos
+This means: when a section has an active child, it opens. When the user navigates away, it closes automatically. Users can still manually toggle sections open/closed, but navigation will always sync.
 
-### Archivo: `src/pages/pos/POSPage.tsx`
+**File**: `src/components/layout/WorkSidebar.tsx` (1 file, ~3 lines changed)
 
-**Eliminar:**
-- Los dos bloques `<button>` con placeholders dashed (lineas 191-199 y 225-233)
-- El estado `showConfigForm` (ya no necesario)
-- La funcion `handleStartSale` (ya no necesaria)
+---
 
-**Nuevo layout:**
-- Arriba: `OrderConfigPanel` siempre visible. En modo `compact` muestra resumen de 1 linea con boton "Editar". En modo expandido muestra el formulario completo con boton "Comenzar venta"
-- Abajo: Grid de 2 columnas (carrito izq + menu der), siempre renderizadas
-- El `ProductGrid` se renderiza siempre pero con `pointer-events-none opacity-50` cuando `!saleStarted`, y un overlay sutil que dice "Configura canal y cliente para empezar"
-- Al hacer click en el overlay o en cualquier producto deshabilitado, scroll al config panel
+## Issue 2: Layout/title positioning inconsistency
 
-### Archivo: `src/components/pos/OrderConfigPanel.tsx`
+Several pages still have redundant padding and/or manual headers that were missed in the previous audit pass. These cause:
+- Double padding (the page adds `p-4 md:p-6` or `p-6` on top of WorkShell's `p-6`)
+- Different title sizes and icon placement vs the `PageHeader` standard
 
-**Modificar modo `compact`:**
-- Actualmente en modo compact muestra el formulario completo pero mas chico
-- Nuevo comportamiento: en compact muestra una sola linea resumen:
-  `Mostrador > Para llevar > Llamador #5` con un boton "Editar" que expande
-- Usar un Collapsible o estado interno para toggle
+**Pages to fix** (remove redundant padding wrapper, migrate to `PageHeader`):
 
-### Archivos sin cambios:
-- `OrderPanel.tsx` - Se mantiene igual
-- `ProductGrid.tsx` - Se mantiene igual (solo se le aplica CSS condicional desde el padre)
-- `PaymentModal.tsx` - Sin cambios
-- `RegisterOpenModal.tsx` - Sin cambios
-
-## Resumen de archivos
-
-| Archivo | Cambio |
+| Page | Current Issues |
 |---|---|
-| `src/pages/pos/POSPage.tsx` | Eliminar placeholders, nuevo layout lineal, ProductGrid siempre visible |
-| `src/components/pos/OrderConfigPanel.tsx` | Modo compact = resumen de 1 linea con toggle |
+| `RequestsPage.tsx` | Manual `h1` with icon; should use `PageHeader` |
+| `LiquidacionPage.tsx` | Has `p-4 md:p-6` (double padding) + manual `h1` |
 
-## Notas
+**File changes**: 2 files, replacing manual headers with `PageHeader` and removing redundant padding divs.
 
-- No se modifica logica de negocio, validaciones, ni APIs
-- El flujo sigue siendo: configurar canal/cliente, luego agregar productos, luego cobrar
-- Solo cambia la presentacion: todo visible desde el inicio, sin pantallas vacias
+---
+
+## Summary
+
+| File | Change |
+|---|---|
+| `src/components/layout/WorkSidebar.tsx` | Fix useEffect to sync `isOpen` with `forceOpen` (collapse on navigate away) |
+| `src/pages/local/RequestsPage.tsx` | Replace manual `h1` + icon with `PageHeader` |
+| `src/pages/local/LiquidacionPage.tsx` | Remove redundant `p-4 md:p-6`, replace manual `h1` with `PageHeader` |
+
+No business logic, APIs, or state management changes. Strictly UI behavior and layout consistency.
+
