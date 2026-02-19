@@ -47,6 +47,7 @@ import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { PageHelp } from '@/components/ui/PageHelp';
+import { PageHeader } from '@/components/ui/page-header';
 
 type RequestType = 'day_off' | 'shift_change' | 'absence_justification' | 'other';
 type AbsenceType = 'medical' | 'personal' | 'emergency' | 'other';
@@ -231,16 +232,10 @@ export default function RequestsPage() {
     <div className="space-y-6">
       <PageHelp pageId="local-requests" />
       
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <ClipboardList className="h-6 w-6" />
-          Solicitudes
-        </h1>
-        <p className="text-muted-foreground">
-          Solicitudes de días libres, cambios de turno y justificativos
-        </p>
-      </div>
+      <PageHeader
+        title="Solicitudes"
+        subtitle="Solicitudes de días libres, cambios de turno y justificativos"
+      />
 
       {/* Read-only banner for Franquiciado */}
       {isFranquiciado && (
