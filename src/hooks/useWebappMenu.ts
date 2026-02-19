@@ -18,7 +18,7 @@ export function useWebappConfig(branchSlug: string | undefined) {
       // Get webapp config
       const { data: config, error: configErr } = await supabase
         .from('webapp_config' as any)
-        .select('*')
+        .select('*, webapp_activa')
         .eq('branch_id', branch.id)
         .single();
       if (configErr) throw configErr;

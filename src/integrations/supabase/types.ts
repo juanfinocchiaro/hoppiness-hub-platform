@@ -7202,6 +7202,7 @@ export type Database = {
           tiempo_estimado_delivery_min: number | null
           tiempo_estimado_retiro_min: number | null
           updated_at: string
+          webapp_activa: boolean
         }
         Insert: {
           branch_id: string
@@ -7220,6 +7221,7 @@ export type Database = {
           tiempo_estimado_delivery_min?: number | null
           tiempo_estimado_retiro_min?: number | null
           updated_at?: string
+          webapp_activa?: boolean
         }
         Update: {
           branch_id?: string
@@ -7238,6 +7240,7 @@ export type Database = {
           tiempo_estimado_delivery_min?: number | null
           tiempo_estimado_retiro_min?: number | null
           updated_at?: string
+          webapp_activa?: boolean
         }
         Relationships: [
           {

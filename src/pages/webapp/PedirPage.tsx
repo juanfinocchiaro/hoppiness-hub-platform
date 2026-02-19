@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useWebappConfig, useWebappMenuItems } from '@/hooks/useWebappMenu';
 import { useWebappCart } from '@/hooks/useWebappCart';
 import { BranchLanding } from '@/components/webapp/BranchLanding';
@@ -35,6 +37,32 @@ export default function PedirPage() {
         <div className="text-center space-y-4">
           <h1 className="text-2xl font-bold text-foreground">Local no encontrado</h1>
           <p className="text-muted-foreground">Verificá el link y volvé a intentar.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback: si el local no tiene webapp activa, redirigir a MasDelivery
+  if (!data.config.webapp_activa) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-primary p-6">
+        <div className="text-center text-white max-w-sm space-y-4">
+          <h1 className="text-2xl font-black font-brand">{data.branch.name}</h1>
+          <p className="text-white/80">
+            Este local todavía no tiene pedidos online directos. Podés pedir por MasDelivery.
+          </p>
+          <a href="https://pedidos.masdelivery.com/hoppiness" target="_blank" rel="noopener noreferrer">
+            <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+              Ir a MasDelivery
+              <ExternalLink className="w-4 h-4 ml-2" />
+            </Button>
+          </a>
+          <Link to="/pedir" className="block mt-4">
+            <Button variant="ghost" className="text-white/70 hover:text-white hover:bg-white/10">
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              Ver otros locales
+            </Button>
+          </Link>
         </div>
       </div>
     );
