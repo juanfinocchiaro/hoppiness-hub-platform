@@ -1,102 +1,52 @@
 
 
-# Plan: Rediseno POS Inspirado en Patrones Rappi
+# Plan: Bloquear productos sin venta iniciada + Acelerar modal de modificadores
 
-## Contexto
+## Problema 1: Se pueden agregar productos sin iniciar la venta
 
-El analisis compara la UX de Rappi con el POS actual de Hoppiness y propone mejoras priorizadas. Muchas cosas **ya estan implementadas** (barra sticky mobile, botones grandes de pago, botones rapidos de efectivo, canal colapsado, auto-add de productos simples). El plan se enfoca en lo que **falta**.
+Actualmente, al hacer click en un producto de la grilla, se abre el modal de modificadores (o se agrega directo al carrito) sin importar si el cajero ya confirmo el canal de venta. Esto no deberia pasar.
 
----
+**Solucion:** Pasar `configConfirmed` (o un flag `disabled`) a `ProductGrid`. Si la venta no esta iniciada, al hacer click en un producto se muestra un toast de advertencia y no se abre el modal.
 
-## Estado Actual vs Propuesto
+**Archivo:** `src/pages/pos/POSPage.tsx` y `src/components/pos/ProductGrid.tsx`
 
-| Caracteristica | Estado actual | Accion |
-|---|---|---|
-| Barra sticky mobile con items + total + Cobrar | Ya existe | Ninguna |
-| Metodos de pago como botones grandes | Ya existe | Ninguna |
-| Botones de monto rapido (efectivo) | Ya existe | Ninguna |
-| Canal colapsado en header | Ya existe (Collapsible) | Ninguna |
-| Auto-add productos sin modificadores | Ya existe | Ninguna |
-| Cancelar pedido / Vaciar | Ya existe | Ninguna |
-| Modificadores en secciones (Extras / Sin ingrediente) | Ya existe | Ninguna |
-| Busqueda de productos | NO existe | **Fase 1** |
-| Scroll spy en tabs de categorias | NO existe | **Fase 1** |
-| Badge de cantidad en productos del carrito | NO existe | **Fase 1** |
-| Montos calculados en botones de propina | NO existe | **Fase 1** |
-| Tab "Frecuentes" | NO existe | **Fase 2** |
-| Resumen colapsable en modal de cobro | NO existe | **Fase 2** |
+- Agregar prop `disabled?: boolean` a ProductGrid
+- Cuando `disabled` es true, el click en ProductCard muestra un toast "Iniciá la venta primero" y no llama a `onSelectItem`
+- Pasar `disabled={!configConfirmed}` desde POSPage
+- Visualmente: aplicar `opacity-60 pointer-events-none` a la grilla cuando esta deshabilitada (o solo bloquear el click sin cambiar visual, para que el cajero vea los productos)
 
----
+## Problema 2: El modal de modificadores carga raro/lento
 
-## Fase 1 - Implementar YA (4 cambios puntuales)
+El problema es que `useItemExtras` y `useItemRemovibles` se ejecutan solo cuando se selecciona un item (queries habilitadas con `enabled: !!itemId`). Como los datos no estan en cache, hay un delay visible mientras se carga.
 
-### 1. Busqueda de productos
-**Archivo:** `src/components/pos/ProductGrid.tsx`
+Ademas, la linea `if (!hasContent) return null` hace que el Dialog no se renderice hasta que lleguen los datos, generando un "pop-in" visual.
 
-- Agregar un `Input` de busqueda arriba de las tabs de categorias con icono de lupa
-- Filtro en tiempo real: al tipear se filtran los items por nombre (`nombre` y `nombre_corto`)
-- Al limpiar la busqueda, se restaura la vista de categorias
-- Shortcut: si hay un solo resultado y se presiona Enter, se agrega directo al carrito
+**Solucion en dos partes:**
 
-### 2. Scroll Spy en tabs de categorias
-**Archivo:** `src/components/pos/ProductGrid.tsx`
+### 2a. Mostrar el Dialog inmediatamente con skeleton
+- Eliminar el `if (!hasContent) return null` al inicio del render
+- Siempre renderizar el `<Dialog>` cuando `open && item` es truthy
+- Si `isLoading` es true, mostrar skeletons dentro del Dialog (ya existe el codigo para esto, pero no se ejecuta porque el return null lo previene)
+- Si no hay extras ni removibles (producto simple), el `useEffect` de auto-add sigue funcionando igual
 
-- Usar `IntersectionObserver` para detectar que seccion de categoria esta visible en el viewport del ScrollArea
-- Actualizar `activeCategory` automaticamente al scrollear
-- La tab activa se resalta visualmente (ya existe el estilo, solo falta la logica de deteccion)
+### 2b. Prefetch de extras/removibles
+- Precachear los datos de extras/removibles de todos los items al cargar la grilla, para que cuando el usuario haga click el dato ya este en cache
+- Agregar un hook `usePrefetchModifiers` que al montarse la grilla haga queries de extras y removibles para todos los items visibles
+- Alternativa mas simple: en `ProductGrid`, cuando se hace hover sobre un producto, disparar un prefetch de sus extras/removibles. Esto es mas liviano que cargar todo de golpe
 
-### 3. Badge de cantidad en productos del carrito
-**Archivos:** `src/components/pos/ProductGrid.tsx`, `src/pages/pos/POSPage.tsx`
+**Enfoque elegido: Prefetch on hover** (equilibrio entre rendimiento y simplicidad)
 
-- Pasar `cart` como prop a `ProductGrid`
-- Calcular cantidad total por `item_carta_id` en el carrito
-- Si cantidad > 0, mostrar un badge numerico (circulito con numero) sobre la esquina superior derecha de la card del producto
-- Cambiar el borde de la card a `border-primary` cuando esta en el carrito
-
-### 4. Montos calculados en botones de propina
-**Archivo:** `src/components/pos/TipInput.tsx`
-
-- Cambiar el label de los botones de `10%` a `10% - $X.XXX` mostrando el monto calculado
-- Reducir texto si es necesario para que entre bien
+**Archivos a modificar:**
+- `src/components/pos/ProductGrid.tsx` - Agregar prefetch on hover de extras/removibles por item
+- `src/components/pos/ModifiersModal.tsx` - Eliminar el `return null` temprano, siempre renderizar Dialog con loading state
 
 ---
 
-## Fase 2 - Implementar Pronto (2 mejoras)
+## Resumen de cambios
 
-### 5. Tab "Frecuentes"
-**Archivos:** `src/components/pos/ProductGrid.tsx`, nuevo hook `src/hooks/pos/useFrequentItems.ts`
-
-- Crear hook que consulte los items mas vendidos del local (basado en tabla de pedidos/ordenes)
-- Agregar una primera tab con icono estrella que muestre los 6-8 productos mas vendidos
-- Si no hay datos suficientes, no mostrar la tab
-
-### 6. Resumen colapsable en modal de cobro
-**Archivo:** `src/components/pos/PaymentModal.tsx`
-
-- Agregar un `Collapsible` arriba del total que muestre un resumen del pedido
-- Cerrado por defecto: "3 items - Victoria Burger, Cheese Burger..."
-- Expandido: lista detallada con cantidades y precios
-- Boton de cobro con el total incluido: "Confirmar cobro - $24.500"
-
----
-
-## Detalles Tecnicos
-
-### Scroll Spy (punto 2)
-Se usara `IntersectionObserver` con `threshold: 0.3` observando cada seccion de categoria. El observer actualizara el `activeCategory` cuando una seccion entre en el viewport. Se necesita obtener la referencia del viewport del `ScrollArea` (el div con `overflow`).
-
-### Badge de cantidad (punto 3)
-Se recibira `cart: CartItem[]` como prop en `ProductGrid`. Se calculara un `Map<item_carta_id, number>` con `useMemo` para busqueda O(1). El badge sera un `<span>` posicionado absolute sobre la card.
-
-### Busqueda (punto 1)
-Filtro local sobre los items ya cargados en memoria (no requiere query adicional). Se usa `useState` para el termino de busqueda y `useMemo` para filtrar `byCategory`. Cuando hay texto de busqueda, se ignora la agrupacion por categorias y se muestra una grilla plana de resultados.
-
----
-
-## Lo que NO se implementa (y por que)
-
-- **Cross-sell ("Agregás papas?")**: El cajero sugiere verbalmente, no la interfaz
-- **Modificadores como side panel en desktop**: El Dialog actual funciona bien y es mas rapido para el cajero. Cambiar a side panel agrega complejidad sin beneficio claro en el flujo POS
-- **Sonido/vibracion**: Mejora menor, se puede agregar despues
-- **Temas visuales POS vs gestion**: No es prioritario
+| Archivo | Cambio |
+|---|---|
+| `src/components/pos/ProductGrid.tsx` | Agregar prop `disabled`, bloquear clicks sin venta. Prefetch de modificadores on hover |
+| `src/components/pos/ModifiersModal.tsx` | Eliminar `if (!hasContent) return null`. Siempre mostrar Dialog con skeleton si loading |
+| `src/pages/pos/POSPage.tsx` | Pasar `disabled={!configConfirmed}` a ProductGrid |
 
