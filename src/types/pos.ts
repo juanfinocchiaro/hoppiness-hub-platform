@@ -58,4 +58,5 @@ export interface LocalPayment {
   amount: number;
   montoRecibido?: number;
   vuelto?: number;
+  createdAt: number;
 }
