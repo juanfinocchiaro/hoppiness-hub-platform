@@ -12,7 +12,7 @@ import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ArcaCertificateWizard } from '@/components/local/arca/ArcaCertificateWizard';
 import { CopyArcaConfigDialog } from '@/components/local/arca/CopyArcaConfigDialog';
-import { Wifi, Shield, FileText, Copy, RotateCcw, ShieldAlert } from 'lucide-react';
+import { Wifi, Shield, FileText, Copy, RotateCcw, ShieldAlert, Pencil, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AfipConfigPage() {
@@ -33,6 +33,7 @@ export default function AfipConfigPage() {
   const [showProductionConfirm, setShowProductionConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showCopyDialog, setShowCopyDialog] = useState(false);
+  const [isEditingFiscal, setIsEditingFiscal] = useState(false);
 
   useEffect(() => {
     if (config) {
@@ -47,8 +48,10 @@ export default function AfipConfigPage() {
   }, [config]);
 
   const canAccess = isSuperadmin || localRole === 'franquiciado';
-  const isConnected = config?.estado_conexion === 'conectado';
-  const fieldsLocked = isConnected;
+  const hasError = config?.estado_conexion === 'error' || !!config?.ultimo_error;
+  const isConnected = config?.estado_conexion === 'conectado' && !hasError;
+  const hasFiscalData = !!(config?.cuit || config?.razon_social);
+  const fiscalReadOnly = !isEditingFiscal && hasFiscalData;
 
   const handleChange = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -64,7 +67,9 @@ export default function AfipConfigPage() {
       inicio_actividades: form.inicio_actividades || null,
       punto_venta: form.punto_venta ? parseInt(form.punto_venta) : null,
     };
-    save.mutate(payload as any);
+    save.mutate(payload as any, {
+      onSuccess: () => setIsEditingFiscal(false),
+    });
   };
 
   const handleToggleProduction = () => {
@@ -114,14 +119,9 @@ export default function AfipConfigPage() {
   }
 
   const estadoBadge = () => {
-    switch (config?.estado_conexion) {
-      case 'conectado':
-        return <StatusBadge variant="active">Conectado</StatusBadge>;
-      case 'error':
-        return <StatusBadge variant="blocked">Error</StatusBadge>;
-      default:
-        return <StatusBadge variant="inactive">Sin configurar</StatusBadge>;
-    }
+    if (hasError) return <StatusBadge variant="blocked">Error</StatusBadge>;
+    if (isConnected) return <StatusBadge variant="active">Conectado</StatusBadge>;
+    return <StatusBadge variant="inactive">Sin configurar</StatusBadge>;
   };
 
   return (
@@ -154,73 +154,106 @@ export default function AfipConfigPage() {
       {/* Datos fiscales */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Datos Fiscales
-          </CardTitle>
-          <CardDescription>
-            Información fiscal de la sucursal para emitir comprobantes
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Datos Fiscales
+              </CardTitle>
+              <CardDescription>
+                Información fiscal de la sucursal para emitir comprobantes
+              </CardDescription>
+            </div>
+            {hasFiscalData && (
+              <Button
+                variant={isEditingFiscal ? 'ghost' : 'outline'}
+                size="sm"
+                onClick={() => setIsEditingFiscal(!isEditingFiscal)}
+              >
+                {isEditingFiscal ? (
+                  <><X className="mr-1.5 h-4 w-4" /> Cancelar edición</>
+                ) : (
+                  <><Pencil className="mr-1.5 h-4 w-4" /> Editar datos</>
+                )}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          <FormLayout columns={2}>
-            <div className="space-y-2">
-              <Label htmlFor="cuit">CUIT</Label>
-              <Input
-                id="cuit"
-                placeholder="20-12345678-9"
-                value={form.cuit}
-                onChange={(e) => handleChange('cuit', e.target.value)}
-                disabled={fieldsLocked}
-              />
-              {fieldsLocked && (
-                <p className="text-xs text-muted-foreground">Bloqueado mientras hay conexión activa</p>
-              )}
+          {fiscalReadOnly ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">CUIT</Label>
+                <p className="text-sm font-medium">{form.cuit || '—'}</p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Razón Social</Label>
+                <p className="text-sm font-medium">{form.razon_social || '—'}</p>
+              </div>
+              <div className="space-y-1 md:col-span-2">
+                <Label className="text-xs text-muted-foreground">Dirección Fiscal</Label>
+                <p className="text-sm font-medium">{form.direccion_fiscal || '—'}</p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Inicio de Actividades</Label>
+                <p className="text-sm font-medium">{form.inicio_actividades || '—'}</p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Punto de Venta (N°)</Label>
+                <p className="text-sm font-medium">{form.punto_venta || '—'}</p>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="razon_social">Razón Social</Label>
-              <Input
-                id="razon_social"
-                placeholder="Empresa S.R.L."
-                value={form.razon_social}
-                onChange={(e) => handleChange('razon_social', e.target.value)}
-                disabled={fieldsLocked}
-              />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="direccion_fiscal">Dirección Fiscal</Label>
-              <Input
-                id="direccion_fiscal"
-                placeholder="Av. Siempre Viva 742, Córdoba"
-                value={form.direccion_fiscal}
-                onChange={(e) => handleChange('direccion_fiscal', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="inicio_actividades">Inicio de Actividades</Label>
-              <Input
-                id="inicio_actividades"
-                type="date"
-                value={form.inicio_actividades}
-                onChange={(e) => handleChange('inicio_actividades', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="punto_venta">Punto de Venta (N°)</Label>
-              <Input
-                id="punto_venta"
-                type="number"
-                min={1}
-                placeholder="1"
-                value={form.punto_venta}
-                onChange={(e) => handleChange('punto_venta', e.target.value)}
-                disabled={fieldsLocked}
-              />
-              {fieldsLocked && (
-                <p className="text-xs text-muted-foreground">Bloqueado mientras hay conexión activa</p>
-              )}
-            </div>
-          </FormLayout>
+          ) : (
+            <FormLayout columns={2}>
+              <div className="space-y-2">
+                <Label htmlFor="cuit">CUIT</Label>
+                <Input
+                  id="cuit"
+                  placeholder="20-12345678-9"
+                  value={form.cuit}
+                  onChange={(e) => handleChange('cuit', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="razon_social">Razón Social</Label>
+                <Input
+                  id="razon_social"
+                  placeholder="Empresa S.R.L."
+                  value={form.razon_social}
+                  onChange={(e) => handleChange('razon_social', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="direccion_fiscal">Dirección Fiscal</Label>
+                <Input
+                  id="direccion_fiscal"
+                  placeholder="Av. Siempre Viva 742, Córdoba"
+                  value={form.direccion_fiscal}
+                  onChange={(e) => handleChange('direccion_fiscal', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="inicio_actividades">Inicio de Actividades</Label>
+                <Input
+                  id="inicio_actividades"
+                  type="date"
+                  value={form.inicio_actividades}
+                  onChange={(e) => handleChange('inicio_actividades', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="punto_venta">Punto de Venta (N°)</Label>
+                <Input
+                  id="punto_venta"
+                  type="number"
+                  min={1}
+                  placeholder="1"
+                  value={form.punto_venta}
+                  onChange={(e) => handleChange('punto_venta', e.target.value)}
+                />
+              </div>
+            </FormLayout>
+          )}
         </CardContent>
       </Card>
 
@@ -318,9 +351,11 @@ export default function AfipConfigPage() {
 
       {/* Acciones */}
       <div className="flex items-center gap-3 flex-wrap">
-        <Button onClick={handleSave} disabled={save.isPending}>
-          {save.isPending ? 'Guardando...' : 'Guardar Configuración'}
-        </Button>
+        {(isEditingFiscal || !hasFiscalData) && (
+          <Button onClick={handleSave} disabled={save.isPending}>
+            {save.isPending ? 'Guardando...' : 'Guardar Datos Fiscales'}
+          </Button>
+        )}
 
         {isSuperadmin && (
           <>
