@@ -9,7 +9,7 @@ import { ProductGrid, type CartItem } from '@/components/pos/ProductGrid';
 import { OrderPanel } from '@/components/pos/OrderPanel';
 import { OrderConfigPanel, ConfigForm } from '@/components/pos/OrderConfigPanel';
 import { PaymentModal, type PaymentPayload } from '@/components/pos/PaymentModal';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
 import { ModifiersModal } from '@/components/pos/ModifiersModal';
 import { useCreatePedido } from '@/hooks/pos/useOrders';
 import { useShiftStatus } from '@/hooks/useShiftStatus';
@@ -266,24 +266,20 @@ export default function POSPage() {
     <div className="flex flex-col h-[calc(100vh-6rem)] pb-16 lg:pb-0">
       <PageHeader title="Punto de Venta" subtitle="Tomar pedidos y cobrar" />
 
-      {/* Modal obligatorio de configuración */}
-      <Dialog open={!configConfirmed}>
-        <DialogContent
-          className="sm:max-w-md [&>button.absolute]:hidden"
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-          onInteractOutside={(e) => e.preventDefault()}
-        >
-          <DialogHeader>
-            <DialogTitle>Nueva venta</DialogTitle>
-          </DialogHeader>
-          <ConfigForm
-            config={orderConfig}
-            onChange={setOrderConfig}
-            onConfirm={() => setConfigConfirmed(true)}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* Modal obligatorio de configuración - scoped to main content area */}
+      {!configConfirmed && (
+        <div className="fixed inset-0 lg:left-72 z-40 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" />
+          <div className="relative z-50 w-full max-w-md mx-4 bg-background border rounded-lg shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-semibold">Nueva venta</h2>
+            <ConfigForm
+              config={orderConfig}
+              onChange={setOrderConfig}
+              onConfirm={() => setConfigConfirmed(true)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Main grid: menu + cart */}
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_minmax(380px,1.1fr)] gap-4 flex-1 min-h-0">
