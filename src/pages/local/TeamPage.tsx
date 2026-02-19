@@ -9,6 +9,7 @@ import { InviteStaffDialog } from '@/components/hr/InviteStaffDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import { PageHelp } from '@/components/ui/PageHelp';
+import { PageHeader } from '@/components/ui/page-header';
 import type { Tables } from '@/integrations/supabase/types';
 
 interface OutletContext {
@@ -44,27 +45,23 @@ export default function TeamPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
+    <div className="space-y-4">
       <PageHelp pageId="local-team" />
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold">Mi Equipo</h1>
-          <p className="text-sm text-muted-foreground">
-            {employees.length} empleado{employees.length !== 1 ? 's' : ''}
-            {franchisees.length > 0 && ` · ${franchisees.length} propietario${franchisees.length !== 1 ? 's' : ''}`}
-          </p>
-        </div>
-        {local.canInviteEmployees && (
-          <Button 
-            onClick={() => setShowInviteDialog(true)}
-            className="w-full sm:w-auto min-h-[44px]"
-          >
-            <UserPlus className="h-4 w-4 mr-2" />
-            Invitar empleado
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Mi Equipo"
+        subtitle={`${employees.length} empleado${employees.length !== 1 ? 's' : ''}${franchisees.length > 0 ? ` · ${franchisees.length} propietario${franchisees.length !== 1 ? 's' : ''}` : ''}`}
+        actions={
+          local.canInviteEmployees ? (
+            <Button 
+              onClick={() => setShowInviteDialog(true)}
+              className="w-full sm:w-auto min-h-[44px]"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Invitar empleado
+            </Button>
+          ) : undefined
+        }
+      />
 
       {/* Search */}
       <div className="relative">

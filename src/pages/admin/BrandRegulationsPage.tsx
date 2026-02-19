@@ -1,15 +1,11 @@
 import RegulationsManager from '@/components/admin/RegulationsManager';
 import { RequireBrandPermission } from '@/components/guards';
+import { PageHeader } from '@/components/ui/page-header';
 
 function BrandRegulationsPageContent() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Reglamento Interno</h1>
-        <p className="text-muted-foreground">
-          Gestión del reglamento de la marca
-        </p>
-      </div>
+      <PageHeader title="Reglamento Interno" subtitle="Gestión del reglamento de la marca" />
       <RegulationsManager />
     </div>
   );

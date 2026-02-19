@@ -1,6 +1,7 @@
 import { useOutletContext } from 'react-router-dom';
 import type { Tables } from '@/integrations/supabase/types';
 import RegulationSignaturesPanel from '@/components/local/RegulationSignaturesPanel';
+import { PageHeader } from '@/components/ui/page-header';
 
 interface OutletContext {
   branch: Tables<'branches'>;
@@ -12,14 +13,8 @@ export default function RegulationsPage() {
   if (!branch?.id) return null;
 
   return (
-    <div className="p-6 space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold">Firmas de Reglamento</h1>
-        <p className="text-muted-foreground">
-          Gestión de firmas del reglamento interno para el equipo
-        </p>
-      </div>
-
+    <div className="space-y-4">
+      <PageHeader title="Firmas de Reglamento" subtitle="Gestión de firmas del reglamento interno para el equipo" />
       <RegulationSignaturesPanel branchId={branch.id} />
     </div>
   );

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PageHeader } from '@/components/ui/page-header';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -200,12 +201,7 @@ export default function CentralTeam() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Equipo Central</h1>
-        <p className="text-muted-foreground">
-          Usuarios con acceso a la administración de la marca
-        </p>
-      </div>
+      <PageHeader title="Equipo Central" subtitle="Usuarios con acceso a la administración de la marca" />
 
       <Card>
         <CardHeader>

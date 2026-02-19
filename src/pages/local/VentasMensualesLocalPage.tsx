@@ -55,7 +55,7 @@ export default function VentasMensualesLocalPage() {
   const posEnabled = usePosEnabled(branchId || undefined);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Ventas Mensuales"
         subtitle={branch ? `Venta total y efectivo por período — ${branch.name}` : 'Venta total y efectivo por período'}

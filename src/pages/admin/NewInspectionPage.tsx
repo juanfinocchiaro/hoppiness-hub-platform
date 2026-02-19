@@ -57,7 +57,7 @@ export default function NewInspectionPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Nueva Visita de Supervisión"
         subtitle="Selecciona la sucursal y el tipo de visita"

@@ -7,6 +7,7 @@
  * - Historial con filtros
  */
 import { useState } from 'react';
+import { PageHeader } from '@/components/ui/page-header';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -283,10 +284,7 @@ export default function ClockInsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Fichajes</h1>
-        <p className="text-muted-foreground">Control de asistencia del personal</p>
-      </div>
+      <PageHeader title="Fichajes" subtitle="Control de asistencia del personal" />
 
       {/* Link de fichaje */}
       {canManageStaff && (

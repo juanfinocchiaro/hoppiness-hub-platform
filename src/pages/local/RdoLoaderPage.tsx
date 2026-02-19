@@ -11,7 +11,7 @@ export default function RdoLoaderPage() {
 
   if (posEnabled) {
     return (
-      <div className="p-6 space-y-4">
+      <div className="space-y-4">
         <Alert>
           <AlertDescription>
             Con POS habilitado, el Cargador RDO está deshabilitado. Los consumos y costos se gestionan desde el módulo de Stock y Compras.
@@ -22,7 +22,7 @@ export default function RdoLoaderPage() {
   }
 
   return (
-    <div className="p-6">
+    <div>
       <CargadorRdoUnificado branchId={branchId!} branchName={context?.branch?.name} />
     </div>
   );

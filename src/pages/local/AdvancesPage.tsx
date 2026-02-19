@@ -3,6 +3,7 @@
  * V2: Sin pending_transfer, con filtro mensual
  */
 import { useState } from 'react';
+import { PageHeader } from '@/components/ui/page-header';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -171,13 +172,8 @@ export default function AdvancesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Adelantos de Sueldo</h1>
-          <p className="text-muted-foreground">{branch?.name}</p>
-        </div>
-        
-        {local.canCreateSalaryAdvance && (
+      <PageHeader title="Adelantos de Sueldo" subtitle={branch?.name} actions={
+        local.canCreateSalaryAdvance ? (
           <Dialog open={showNewAdvance} onOpenChange={setShowNewAdvance}>
           <DialogTrigger asChild>
             <Button>
@@ -275,8 +271,8 @@ export default function AdvancesPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        )}
-      </div>
+        ) : undefined
+      } />
 
       {/* Month Navigator */}
       <Card>

@@ -47,7 +47,7 @@ export default function ComprasPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="space-y-6">
       <PageHeader
         title="Compras"
         subtitle="Registrá compras con o sin comprobante"

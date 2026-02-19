@@ -5,7 +5,7 @@ export default function InversionesPage() {
   const { branchId } = useParams<{ branchId: string }>();
 
   return (
-    <div className="p-6">
+    <div>
       <GestorInversiones branchId={branchId!} />
     </div>
   );
