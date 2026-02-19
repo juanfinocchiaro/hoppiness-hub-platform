@@ -8,13 +8,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Pencil, Trash2, TrendingUp } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Plus, Pencil, Trash2, TrendingUp, Monitor, DollarSign } from 'lucide-react';
 import { useVentasMensuales, useVentaMensualMutations } from '@/hooks/useVentasMensuales';
 import { VentaMensualFormModal } from '@/components/finanzas/VentaMensualFormModal';
 import { EmptyState } from '@/components/ui/states';
 import { getCurrentPeriodo } from '@/types/compra';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePosEnabled } from '@/hooks/usePosEnabled';
+import { usePosVentasAgregadas } from '@/hooks/usePosVentasAgregadas';
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
@@ -53,6 +55,8 @@ export default function VentasMensualesLocalPage() {
 
   const periodoForNew = editingVenta ? editingVenta.periodo : getCurrentPeriodo();
   const posEnabled = usePosEnabled(branchId || undefined);
+  const currentPeriodo = getCurrentPeriodo();
+  const { data: posVentas, isLoading: loadingPos } = usePosVentasAgregadas(branchId!, currentPeriodo, posEnabled);
 
   return (
     <div className="space-y-6">
@@ -63,10 +67,40 @@ export default function VentasMensualesLocalPage() {
 
       {posEnabled && (
         <Alert>
+          <Monitor className="w-4 h-4" />
           <AlertDescription>
             Con POS habilitado, las ventas se registran automáticamente desde el Punto de Venta. La carga manual está deshabilitada.
           </AlertDescription>
         </Alert>
+      )}
+
+      {posEnabled && (
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+              <DollarSign className="w-4 h-4" />
+              Ventas POS — {currentPeriodo} (tiempo real)
+            </div>
+            {loadingPos ? (
+              <Skeleton className="h-16 w-full" />
+            ) : (
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <div className="text-xs text-muted-foreground">Venta Total</div>
+                  <div className="text-xl font-bold font-mono">$ {(posVentas?.total ?? 0).toLocaleString('es-AR')}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Efectivo</div>
+                  <div className="text-xl font-bold font-mono">$ {(posVentas?.ft ?? 0).toLocaleString('es-AR')}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Digital</div>
+                  <div className="text-xl font-bold font-mono">$ {(posVentas?.fc ?? 0).toLocaleString('es-AR')}</div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       <div className="flex justify-end">

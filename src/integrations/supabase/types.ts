@@ -6316,6 +6316,7 @@ export type Database = {
           fc_total: number
           fecha_carga: string | null
           ft_total: number
+          fuente: string
           id: string
           observaciones: string | null
           periodo: string
@@ -6332,6 +6333,7 @@ export type Database = {
           fc_total: number
           fecha_carga?: string | null
           ft_total: number
+          fuente?: string
           id?: string
           observaciones?: string | null
           periodo: string
@@ -6348,6 +6350,7 @@ export type Database = {
           fc_total?: number
           fecha_carga?: string | null
           ft_total?: number
+          fuente?: string
           id?: string
           observaciones?: string | null
           periodo?: string
