@@ -186,7 +186,7 @@ export default function BranchLayout() {
             {accessibleBranches.map(branch => (
               <div
                 key={branch.id}
-                className="bg-card border rounded-lg p-6 cursor-pointer hover:shadow-lg transition-shadow hover:border-primary"
+                className="bg-card border rounded-lg p-6 cursor-pointer hover:border-primary/50 transition-colors"
                 onClick={() => navigate(`/milocal/${branch.id}`)}
               >
                 <div className="flex items-center gap-3 mb-2">

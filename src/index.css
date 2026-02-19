@@ -31,26 +31,26 @@ html, body {
 @layer base {
   :root {
     /* Core brand colors - Hoppiness Official */
-    --background: 0 0% 100%;
-    --foreground: 234 100% 17%;
+    --background: 220 14% 98%;
+    --foreground: 224 71% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 234 100% 15%;
+    --card-foreground: 224 71% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 234 100% 15%;
+    --popover-foreground: 224 71% 12%;
 
     /* Primary - Hoppiness Blue (#00139b) */
     --primary: 234 100% 30%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary - Light gray */
-    --secondary: 234 20% 96%;
-    --secondary-foreground: 234 100% 15%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 224 71% 12%;
 
     /* Muted */
-    --muted: 234 15% 94%;
-    --muted-foreground: 234 10% 40%;
+    --muted: 220 14% 92%;
+    --muted-foreground: 220 9% 46%;
 
     /* Accent - Hoppiness Orange (#ff521d) */
     --accent: 17 100% 56%;
@@ -72,11 +72,11 @@ html, body {
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 234 20% 90%;
-    --input: 234 20% 90%;
+    --border: 220 13% 89%;
+    --input: 220 13% 89%;
     --ring: 234 100% 30%;
 
-    --radius: 0.75rem;
+    --radius: 0.625rem;
 
     /* Sidebar - Dark blue */
     --sidebar-background: 234 100% 10%;
@@ -94,9 +94,9 @@ html, body {
     --gradient-accent: linear-gradient(135deg, hsl(17, 100%, 56%) 0%, hsl(48, 100%, 56%) 100%);
     
     /* Shadows */
-    --shadow-soft: 0 4px 20px -4px rgba(0, 0, 0, 0.1);
-    --shadow-card: 0 8px 30px -8px rgba(0, 0, 0, 0.12);
-    --shadow-elevated: 0 20px 60px -15px rgba(0, 0, 0, 0.2);
+    --shadow-soft: 0 2px 8px -2px rgba(0, 0, 0, 0.06);
+    --shadow-card: 0 4px 12px -4px rgba(0, 0, 0, 0.08);
+    --shadow-elevated: 0 12px 40px -10px rgba(0, 0, 0, 0.15);
   }
 
   .dark {

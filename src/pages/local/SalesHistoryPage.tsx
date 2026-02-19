@@ -113,7 +113,7 @@ export default function SalesHistoryPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
+    <div className="space-y-6">
       <PageHeader
         title="Historial de Ventas"
         subtitle="Cierres de turno registrados"
