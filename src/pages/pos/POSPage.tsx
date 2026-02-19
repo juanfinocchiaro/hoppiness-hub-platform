@@ -9,6 +9,7 @@ import { ProductGrid, type CartItem } from '@/components/pos/ProductGrid';
 import { OrderPanel } from '@/components/pos/OrderPanel';
 import { OrderConfigPanel } from '@/components/pos/OrderConfigPanel';
 import { PaymentModal, type PaymentPayload } from '@/components/pos/PaymentModal';
+import { ModifiersModal } from '@/components/pos/ModifiersModal';
 import { RegisterOpenModal } from '@/components/pos/RegisterOpenModal';
 import { useCreatePedido } from '@/hooks/pos/useOrders';
 import { useShiftStatus } from '@/hooks/useShiftStatus';
@@ -24,6 +25,7 @@ export default function POSPage() {
   const [showOpenCash, setShowOpenCash] = useState(false);
   const [orderConfig, setOrderConfig] = useState(DEFAULT_ORDER_CONFIG);
   const [saleStarted, setSaleStarted] = useState(false);
+  const [modifiersItem, setModifiersItem] = useState<any | null>(null);
   const configRef = useRef<HTMLDivElement>(null);
 
   const shiftStatus = useShiftStatus(branchId);
@@ -31,17 +33,30 @@ export default function POSPage() {
 
   const addItem = useCallback((item: CartItem) => {
     setCart((prev) => {
-      const idx = prev.findIndex(
-        (i) => i.item_carta_id === item.item_carta_id && !i.notas && !item.notas
-      );
-      if (idx >= 0) {
-        const copy = [...prev];
-        const n = copy[idx].cantidad + 1;
-        copy[idx] = { ...copy[idx], cantidad: n, subtotal: copy[idx].precio_unitario * n };
-        return copy;
+      // Only merge items without modifiers
+      if (!item.notas && !item.extras && !item.removibles) {
+        const idx = prev.findIndex(
+          (i) => i.item_carta_id === item.item_carta_id && !i.notas && !i.extras && !i.removibles
+        );
+        if (idx >= 0) {
+          const copy = [...prev];
+          const n = copy[idx].cantidad + 1;
+          copy[idx] = { ...copy[idx], cantidad: n, subtotal: copy[idx].precio_unitario * n };
+          return copy;
+        }
       }
       return [...prev, { ...item }];
     });
+  }, []);
+
+  const handleSelectItem = useCallback((item: any) => {
+    // Open modifiers modal for all products — it will show extras/removibles if available
+    setModifiersItem(item);
+  }, []);
+
+  const handleModifierConfirm = useCallback((cartItem: CartItem) => {
+    setCart((prev) => [...prev, cartItem]);
+    setModifiersItem(null);
   }, []);
 
   const updateQty = useCallback((index: number, delta: number) => {
@@ -164,7 +179,7 @@ export default function POSPage() {
 
       <RegisterOpenModal open={showOpenCash} onOpenChange={setShowOpenCash} branchId={branchId!} onOpened={() => shiftStatus.refetch()} />
 
-      {/* Config panel — always visible */}
+      {/* Config panel */}
       <div ref={configRef} className="mb-3">
         <OrderConfigPanel
           config={orderConfig}
@@ -175,7 +190,7 @@ export default function POSPage() {
         />
       </div>
 
-      {/* Main grid: cart left + menu right — always rendered */}
+      {/* Main grid: menu + cart */}
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_minmax(380px,1.1fr)] gap-4 flex-1 min-h-0">
         {/* Menu column */}
         <div className="min-h-[200px] lg:min-h-0 flex flex-col flex-1 overflow-hidden relative">
@@ -188,7 +203,7 @@ export default function POSPage() {
             </div>
           )}
           <div className={!saleStarted ? 'opacity-40 pointer-events-none flex-1 min-h-0 overflow-hidden' : 'flex-1 min-h-0 overflow-hidden'}>
-            <ProductGrid onAddItem={addItem} />
+            <ProductGrid onAddItem={addItem} onSelectItem={handleSelectItem} />
           </div>
         </div>
 
@@ -217,6 +232,13 @@ export default function POSPage() {
         total={subtotal}
         onConfirm={handleConfirmPayment}
         loading={createPedido.isPending}
+      />
+
+      <ModifiersModal
+        open={!!modifiersItem}
+        onOpenChange={(open) => { if (!open) setModifiersItem(null); }}
+        item={modifiersItem}
+        onConfirm={handleModifierConfirm}
       />
     </div>
   );

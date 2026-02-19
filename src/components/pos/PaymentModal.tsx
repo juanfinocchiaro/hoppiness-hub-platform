@@ -1,5 +1,5 @@
 /**
- * PaymentModal - Modal de cobro con propina y pago dividido (Fase 4)
+ * PaymentModal - Modal de cobro con métodos de pago visuales
  */
 import { useState } from 'react';
 import {
@@ -12,24 +12,18 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Loader2, Split } from 'lucide-react';
+import { Loader2, Split, Banknote, CreditCard, QrCode, ArrowRightLeft, Smartphone } from 'lucide-react';
 import type { MetodoPago } from '@/types/pos';
 import { TipInput } from '@/components/pos/TipInput';
 import { SplitPayment, type PaymentLine } from '@/components/pos/SplitPayment';
+import { cn } from '@/lib/utils';
 
-const METODOS: { value: MetodoPago; label: string }[] = [
-  { value: 'efectivo', label: 'Efectivo' },
-  { value: 'tarjeta_debito', label: 'Tarjeta Débito' },
-  { value: 'tarjeta_credito', label: 'Tarjeta Crédito' },
-  { value: 'mercadopago_qr', label: 'Mercado Pago QR' },
-  { value: 'transferencia', label: 'Transferencia' },
+const METODOS: { value: MetodoPago; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { value: 'efectivo', label: 'Efectivo', icon: Banknote },
+  { value: 'tarjeta_debito', label: 'Débito', icon: CreditCard },
+  { value: 'tarjeta_credito', label: 'Crédito', icon: CreditCard },
+  { value: 'mercadopago_qr', label: 'QR MP', icon: QrCode },
+  { value: 'transferencia', label: 'Transferencia', icon: ArrowRightLeft },
 ];
 
 export type PaymentPayload =
@@ -39,7 +33,6 @@ export type PaymentPayload =
 interface PaymentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Total del pedido (subtotal - descuento) */
   total: number;
   onConfirm: (payload: PaymentPayload) => void;
   loading?: boolean;
@@ -100,21 +93,33 @@ export function PaymentModal({
 
             <TipInput value={tip} onChange={setTip} orderTotal={total} disabled={loading} />
 
+            {/* Payment method buttons */}
             <div>
-              <Label>Método de pago</Label>
-              <Select value={metodo} onValueChange={(v) => setMetodo(v as MetodoPago)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {METODOS.map((m) => (
-                    <SelectItem key={m.value} value={m.value}>
-                      {m.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="mb-2 block">Método de pago</Label>
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                {METODOS.map((m) => {
+                  const Icon = m.icon;
+                  const isSelected = metodo === m.value;
+                  return (
+                    <button
+                      key={m.value}
+                      type="button"
+                      onClick={() => setMetodo(m.value)}
+                      className={cn(
+                        'flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg border text-sm font-medium transition-colors min-h-[72px]',
+                        isSelected
+                          ? 'border-primary bg-primary/5 text-primary'
+                          : 'border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                      )}
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span className="text-xs leading-tight text-center">{m.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+
             {esEfectivo && (
               <>
                 <div>
