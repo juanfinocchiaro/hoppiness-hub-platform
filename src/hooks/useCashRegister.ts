@@ -5,12 +5,47 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+export type RegisterType = 'ventas' | 'alivio' | 'fuerte';
+
 export interface CashRegister {
   id: string;
   branch_id: string;
   name: string;
   display_order: number;
   is_active: boolean;
+  register_type: RegisterType;
+}
+
+/* ── Visibility helpers ── */
+export function canViewBalance(registerType: RegisterType, localRole: string | null, isSuperadmin: boolean): boolean {
+  if (isSuperadmin) return true;
+  if (registerType === 'ventas') return true;
+  return ['franquiciado', 'contador_local'].includes(localRole ?? '');
+}
+
+export function canViewMovements(registerType: RegisterType, localRole: string | null, isSuperadmin: boolean): boolean {
+  if (isSuperadmin) return true;
+  if (registerType === 'ventas') return true;
+  return ['franquiciado', 'contador_local'].includes(localRole ?? '');
+}
+
+export function canViewSection(registerType: RegisterType, localRole: string | null, isSuperadmin: boolean): boolean {
+  if (isSuperadmin) return true;
+  if (registerType === 'ventas') return true;
+  if (registerType === 'alivio') return true; // visible but restricted
+  return ['franquiciado', 'contador_local'].includes(localRole ?? '');
+}
+
+/* ── Hook to get registers by type ── */
+export function useCashRegistersByType(branchId: string | undefined) {
+  const { data, isLoading } = useCashRegisters(branchId);
+  const all = data?.all ?? [];
+  return {
+    ventas: all.find(r => r.register_type === 'ventas') ?? null,
+    alivio: all.find(r => r.register_type === 'alivio') ?? null,
+    fuerte: all.find(r => r.register_type === 'fuerte') ?? null,
+    isLoading,
+  };
 }
 
 export interface CashRegisterShift {

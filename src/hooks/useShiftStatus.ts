@@ -27,14 +27,27 @@ export function useShiftStatus(branchId: string | undefined): ShiftStatus {
       return;
     }
     try {
-      const { data } = await supabase
-        .from('cash_register_shifts')
-        .select('*')
+      // Only look for open shifts on 'ventas' type registers
+      const { data: ventasRegisters } = await supabase
+        .from('cash_registers')
+        .select('id')
         .eq('branch_id', branchId)
-        .eq('status', 'open')
-        .order('opened_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .eq('register_type', 'ventas');
+      const ventasIds = (ventasRegisters ?? []).map(r => r.id);
+      
+      let data = null;
+      if (ventasIds.length > 0) {
+        const { data: shiftData } = await supabase
+          .from('cash_register_shifts')
+          .select('*')
+          .eq('branch_id', branchId)
+          .eq('status', 'open')
+          .in('cash_register_id', ventasIds)
+          .order('opened_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        data = shiftData;
+      }
       setActiveCashShift(data as CashRegisterShift | null);
     } catch (e) {
       console.error('useShiftStatus:', e);

@@ -606,6 +606,7 @@ export type Database = {
           payment_method: string
           recorded_by: string | null
           shift_id: string
+          source_register_id: string | null
           type: string
         }
         Insert: {
@@ -618,6 +619,7 @@ export type Database = {
           payment_method?: string
           recorded_by?: string | null
           shift_id: string
+          source_register_id?: string | null
           type: string
         }
         Update: {
@@ -630,6 +632,7 @@ export type Database = {
           payment_method?: string
           recorded_by?: string | null
           shift_id?: string
+          source_register_id?: string | null
           type?: string
         }
         Relationships: [
@@ -659,6 +662,13 @@ export type Database = {
             columns: ["shift_id"]
             isOneToOne: false
             referencedRelation: "cash_register_shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_movements_source_register_id_fkey"
+            columns: ["source_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
             referencedColumns: ["id"]
           },
         ]
@@ -741,6 +751,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          register_type: string | null
         }
         Insert: {
           branch_id: string
@@ -749,6 +760,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          register_type?: string | null
         }
         Update: {
           branch_id?: string
@@ -757,6 +769,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          register_type?: string | null
         }
         Relationships: [
           {
