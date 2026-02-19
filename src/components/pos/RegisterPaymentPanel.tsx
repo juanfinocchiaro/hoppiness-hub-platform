@@ -17,12 +17,12 @@ import { Banknote, CreditCard, QrCode, ArrowRightLeft } from 'lucide-react';
 import type { MetodoPago, LocalPayment } from '@/types/pos';
 import { cn } from '@/lib/utils';
 
-const METODOS: { value: MetodoPago; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { value: 'efectivo', label: 'Efectivo', icon: Banknote },
-  { value: 'tarjeta_debito', label: 'Débito', icon: CreditCard },
-  { value: 'tarjeta_credito', label: 'Crédito', icon: CreditCard },
-  { value: 'mercadopago_qr', label: 'QR MP', icon: QrCode },
-  { value: 'transferencia', label: 'Transferencia', icon: ArrowRightLeft },
+const METODOS: { value: MetodoPago; label: string; icon: React.ComponentType<{ className?: string }>; selectedStyle: string }[] = [
+  { value: 'efectivo', label: 'Efectivo', icon: Banknote, selectedStyle: 'border-emerald-500 bg-emerald-500/10 text-emerald-700' },
+  { value: 'tarjeta_debito', label: 'Débito', icon: CreditCard, selectedStyle: 'border-blue-500 bg-blue-500/10 text-blue-700' },
+  { value: 'tarjeta_credito', label: 'Crédito', icon: CreditCard, selectedStyle: 'border-violet-500 bg-violet-500/10 text-violet-700' },
+  { value: 'mercadopago_qr', label: 'QR MP', icon: QrCode, selectedStyle: 'border-sky-500 bg-sky-500/10 text-sky-700' },
+  { value: 'transferencia', label: 'Transferencia', icon: ArrowRightLeft, selectedStyle: 'border-indigo-500 bg-indigo-500/10 text-indigo-700' },
 ];
 
 function getQuickAmounts(total: number): number[] {
@@ -111,7 +111,7 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
                     className={cn(
                       'flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg border text-sm font-medium transition-colors min-h-[72px]',
                       isSelected
-                        ? 'border-primary bg-primary/5 text-primary'
+                        ? m.selectedStyle
                         : 'border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground'
                     )}
                   >

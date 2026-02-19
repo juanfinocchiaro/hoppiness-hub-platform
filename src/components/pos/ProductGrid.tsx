@@ -286,20 +286,32 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
       {/* Category tabs */}
       {!searchTerm.trim() && (
         <div className="flex flex-wrap gap-1.5 shrink-0">
-          {cats.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => handleCategoryClick(cat)}
-              className={cn(
-                'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border',
-                activeCategory === cat
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-card text-muted-foreground border-border hover:border-primary/50 hover:text-foreground'
-              )}
-            >
-              {cat}
-            </button>
-          ))}
+          {cats.map((cat) => {
+            // Check if this category has items in cart
+            const isFrecuentes = cat === FRECUENTES_KEY;
+            const catItems = isFrecuentes ? frequentItems : (byCategory[cat]?.items ?? []);
+            const hasCartItems = catItems.some((item: any) => cartQtyMap.has(item.id));
+            return (
+              <button
+                key={cat}
+                onClick={() => handleCategoryClick(cat)}
+                className={cn(
+                  'relative px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border',
+                  activeCategory === cat
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-card text-muted-foreground border-border hover:border-primary/50 hover:text-foreground'
+                )}
+              >
+                {cat}
+                {hasCartItems && (
+                  <span className={cn(
+                    'absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full',
+                    activeCategory === cat ? 'bg-primary-foreground' : 'bg-primary'
+                  )} />
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -335,7 +347,7 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
                   ref={(el) => { sectionRefs.current[cat] = el; }}
                   data-category={cat}
                 >
-                  <h3 className="sticky top-0 z-10 bg-background py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <h3 className="sticky top-0 z-10 bg-slate-50 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
                     {isFrecuentes && <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />}
                     {isFrecuentes ? 'Frecuentes' : cat}
                   </h3>
@@ -394,7 +406,7 @@ function ProductCard({ item, qty, onClick, onHover }: { item: any; qty: number; 
         </span>
       )}
       {/* Image or initials */}
-      <div className="relative w-full aspect-[4/3] bg-muted flex items-center justify-center overflow-hidden">
+      <div className="relative w-full aspect-[4/3] bg-slate-100 flex items-center justify-center overflow-hidden">
         {imagenUrl ? (
           <img
             src={imagenUrl}
@@ -421,7 +433,7 @@ function ProductCard({ item, qty, onClick, onHover }: { item: any; qty: number; 
             </span>
           </div>
         ) : (
-          <span className="text-xs text-primary font-semibold">
+          <span className="text-base text-primary font-bold">
             $ {precio.toLocaleString('es-AR')}
           </span>
         )}
