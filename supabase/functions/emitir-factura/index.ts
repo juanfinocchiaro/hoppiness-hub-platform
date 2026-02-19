@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 1. Leer config AFIP del local
+    // 1. Leer config ARCA del local
     const { data: config, error: configError } = await supabase
       .from("afip_config")
       .select("*")
@@ -67,14 +67,14 @@ Deno.serve(async (req) => {
 
     if (configError || !config) {
       return new Response(
-        JSON.stringify({ error: "No hay configuración AFIP para esta sucursal" }),
+        JSON.stringify({ error: "No hay configuración ARCA para esta sucursal" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (!config.certificado_crt || !config.clave_privada_enc || !config.punto_venta) {
       return new Response(
-        JSON.stringify({ error: "Configuración AFIP incompleta. Falta certificado o punto de venta." }),
+        JSON.stringify({ error: "Configuración ARCA incompleta. Falta certificado o punto de venta." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
     }
     // B y C: IVA incluido en total, neto = total, iva informativo = 0
 
-    // 5. Armar request AFIP (estructura WSFEV1)
+    // 5. Armar request ARCA (estructura WSFEV1)
     const afipRequest = {
       CbteTipo: cbteTipo,
       PtoVta: config.punto_venta,
@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
         : {}),
     };
 
-    // 6. En homologación simulamos respuesta AFIP
+    // 6. En homologación simulamos respuesta ARCA
     let afipResponse: Record<string, unknown>;
     let cae: string;
     let caeVencimiento: string;
@@ -153,11 +153,11 @@ Deno.serve(async (req) => {
         Resultado: "A",
       };
     } else {
-      // TODO: Integrar con @afipsdk/afip.js cuando haya certificados reales
+      // TODO: Integrar con SDK ARCA cuando haya certificados reales
       // Por ahora devolvemos error si intentan producción
       return new Response(
         JSON.stringify({
-          error: "Modo producción aún no implementado. Se requiere integración con @afipsdk/afip.js",
+          error: "Modo producción aún no implementado. Se requiere integración con SDK ARCA.",
         }),
         { status: 501, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

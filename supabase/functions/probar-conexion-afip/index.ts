@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
 
     if (configError || !config) {
       return new Response(
-        JSON.stringify({ error: "No hay configuración AFIP para esta sucursal" }),
+        JSON.stringify({ error: "No hay configuración ARCA para esta sucursal" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
           success: true,
           estado: "conectado",
           modo: "homologacion",
-          mensaje: "Conexión simulada OK (modo homologación). Cuando cargues certificados de producción, se verificará contra AFIP.",
+          mensaje: "Conexión simulada OK (modo homologación). Cuando cargues certificados de producción, se verificará contra ARCA.",
           ultimos_numeros: {
             factura_a: config.ultimo_nro_factura_a || 0,
             factura_b: config.ultimo_nro_factura_b || 0,
@@ -108,8 +108,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // TODO: Producción - conectar con @afipsdk/afip.js
-    // 1. Desencriptar clave privada
+    // TODO: Producción - conectar con SDK ARCA
+    // 1. Decodificar clave privada
     // 2. Inicializar SDK con cert + key
     // 3. Llamar a FECompUltimoAutorizado para cada tipo
     // 4. Actualizar últimos números en afip_config
@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: false,
         estado: "error",
-        mensaje: "Modo producción aún no implementado. Se requiere integración con @afipsdk/afip.js",
+        mensaje: "Modo producción aún no implementado. Se requiere integración con SDK ARCA.",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

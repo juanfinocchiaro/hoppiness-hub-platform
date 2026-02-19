@@ -78,7 +78,7 @@ export function useAfipConfigMutations(branchId: string | undefined) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['afip-config', branchId] });
-      toast.success('Configuración AFIP guardada');
+      toast.success('Configuración ARCA guardada');
     },
     onError: (err: Error) => {
       toast.error(`Error al guardar: ${err.message}`);
