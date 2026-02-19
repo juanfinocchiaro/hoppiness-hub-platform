@@ -176,9 +176,24 @@ export default function POSPage() {
       </div>
 
       {/* Main grid: cart left + menu right — always rendered */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(380px,1.1fr)_2fr] gap-4 flex-1 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_minmax(380px,1.1fr)] gap-4 flex-1 min-h-0">
+        {/* Menu column */}
+        <div className="min-h-[200px] lg:min-h-0 flex flex-col flex-1 overflow-hidden relative">
+          {!saleStarted && (
+            <div
+              className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[1px] rounded-xl cursor-pointer"
+              onClick={() => configRef.current?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              <p className="text-sm text-muted-foreground font-medium">Configurá canal y cliente para empezar</p>
+            </div>
+          )}
+          <div className={!saleStarted ? 'opacity-40 pointer-events-none flex-1 min-h-0 overflow-hidden' : 'flex-1 min-h-0 overflow-hidden'}>
+            <ProductGrid onAddItem={addItem} />
+          </div>
+        </div>
+
         {/* Cart column */}
-        <div className="min-h-[200px] lg:min-h-0 flex flex-col gap-3 order-2 lg:order-1">
+        <div className="min-h-[200px] lg:min-h-0 flex flex-col gap-3">
           {saleStarted ? (
             <OrderPanel
               items={cart}
@@ -193,21 +208,6 @@ export default function POSPage() {
               <p className="text-sm">El carrito aparecerá acá</p>
             </div>
           )}
-        </div>
-
-        {/* Menu column */}
-        <div className="min-h-[200px] lg:min-h-0 flex flex-col flex-1 overflow-hidden order-1 lg:order-2 relative">
-          {!saleStarted && (
-            <div
-              className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[1px] rounded-xl cursor-pointer"
-              onClick={() => configRef.current?.scrollIntoView({ behavior: 'smooth' })}
-            >
-              <p className="text-sm text-muted-foreground font-medium">Configurá canal y cliente para empezar</p>
-            </div>
-          )}
-          <div className={!saleStarted ? 'opacity-40 pointer-events-none flex-1 min-h-0 overflow-hidden' : 'flex-1 min-h-0 overflow-hidden'}>
-            <ProductGrid onAddItem={addItem} />
-          </div>
         </div>
       </div>
 
