@@ -4588,6 +4588,44 @@ export type Database = {
           },
         ]
       }
+      pedido_payment_edits: {
+        Row: {
+          created_at: string
+          editado_por: string
+          id: string
+          motivo: string
+          pagos_antes: Json
+          pagos_despues: Json
+          pedido_id: string
+        }
+        Insert: {
+          created_at?: string
+          editado_por: string
+          id?: string
+          motivo: string
+          pagos_antes: Json
+          pagos_despues: Json
+          pedido_id: string
+        }
+        Update: {
+          created_at?: string
+          editado_por?: string
+          id?: string
+          motivo?: string
+          pagos_antes?: Json
+          pagos_despues?: Json
+          pedido_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedido_payment_edits_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pedidos: {
         Row: {
           branch_id: string

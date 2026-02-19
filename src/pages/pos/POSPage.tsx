@@ -1,15 +1,14 @@
 /**
- * POSPage - Punto de venta
- * Layout lineal: config arriba (siempre compact), carrito + menú abajo.
+ * POSPage - Punto de venta con modelo de cuenta progresiva
+ * Items y pagos se mantienen en estado local hasta "Enviar a cocina".
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/page-header';
 import { ProductGrid, type CartItem } from '@/components/pos/ProductGrid';
-import { OrderPanel } from '@/components/pos/OrderPanel';
+import { AccountPanel } from '@/components/pos/AccountPanel';
 import { OrderConfigPanel, ConfigForm } from '@/components/pos/OrderConfigPanel';
-import { PaymentModal, type PaymentPayload } from '@/components/pos/PaymentModal';
-
+import { RegisterPaymentPanel } from '@/components/pos/RegisterPaymentPanel';
 import { ModifiersModal } from '@/components/pos/ModifiersModal';
 import { useCreatePedido } from '@/hooks/pos/useOrders';
 import { useShiftStatus } from '@/hooks/useShiftStatus';
@@ -17,11 +16,12 @@ import { useCashRegisters, useOpenShift } from '@/hooks/useCashRegister';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { DEFAULT_ORDER_CONFIG } from '@/types/pos';
+import type { LocalPayment } from '@/types/pos';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CreditCard, Banknote } from 'lucide-react';
+import { Banknote, ChefHat, PlusCircle } from 'lucide-react';
 
 /* Inline cash open form - shown when no register is open */
 function InlineCashOpen({ branchId, onOpened }: { branchId: string; onOpened: () => void }) {
@@ -109,9 +109,9 @@ function InlineCashOpen({ branchId, onOpened }: { branchId: string; onOpened: ()
 export default function POSPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [showPayment, setShowPayment] = useState(false);
+  const [payments, setPayments] = useState<LocalPayment[]>([]);
+  const [showPaymentPanel, setShowPaymentPanel] = useState(false);
   const [configConfirmed, setConfigConfirmed] = useState(false);
-  
   const [orderConfig, setOrderConfig] = useState(DEFAULT_ORDER_CONFIG);
   const [modifiersItem, setModifiersItem] = useState<any | null>(null);
   const configRef = useRef<HTMLDivElement>(null);
@@ -119,6 +119,7 @@ export default function POSPage() {
   const shiftStatus = useShiftStatus(branchId);
   const createPedido = useCreatePedido(branchId!);
 
+  // Cart management
   const addItem = useCallback((item: CartItem) => {
     setCart((prev) => {
       if (!item.notas && !item.extras && !item.removibles) {
@@ -166,12 +167,24 @@ export default function POSPage() {
     });
   }, []);
 
+  // Payment management
+  const registerPayment = useCallback((payment: LocalPayment) => {
+    setPayments((prev) => [...prev, payment]);
+  }, []);
+
+  const removePayment = useCallback((paymentId: string) => {
+    setPayments((prev) => prev.filter((p) => p.id !== paymentId));
+  }, []);
+
+  // Cancel = reset everything
   const cancelOrder = useCallback(() => {
     setCart([]);
+    setPayments([]);
     setOrderConfig(DEFAULT_ORDER_CONFIG);
     setConfigConfirmed(false);
   }, []);
 
+  // Validate config before allowing payment registration
   const validateOrderConfig = (): string | null => {
     if (orderConfig.canalVenta === 'mostrador') {
       if (orderConfig.tipoServicio === 'comer_aca' && !orderConfig.numeroLlamador) {
@@ -195,17 +208,18 @@ export default function POSPage() {
     return null;
   };
 
-  const handleCobrar = () => {
+  const handleOpenPayment = () => {
     const err = validateOrderConfig();
     if (err) {
       toast.error(err);
       configRef.current?.scrollIntoView({ behavior: 'smooth' });
       return;
     }
-    setShowPayment(true);
+    setShowPaymentPanel(true);
   };
 
-  const handleConfirmPayment = async (payload: PaymentPayload) => {
+  // Send to kitchen = persist everything to DB
+  const handleSendToKitchen = async () => {
     if (!branchId || cart.length === 0) return;
     try {
       const items = cart.map((c) => ({
@@ -218,35 +232,31 @@ export default function POSPage() {
         estacion: 'armado' as const,
         precio_referencia: c.precio_referencia,
       }));
-      if (payload.type === 'single') {
-        await createPedido.mutateAsync({
-          items,
-          metodoPago: payload.metodo,
-          montoRecibido: payload.montoRecibido,
-          orderConfig,
-        });
-      } else {
-        await createPedido.mutateAsync({
-          items,
-          payments: payload.payments.map((p) => ({
-            method: p.method,
-            amount: p.amount,
-            montoRecibido: p.method === 'efectivo' ? p.montoRecibido : undefined,
-          })),
-          orderConfig,
-        });
-      }
-      toast.success('Pedido registrado');
+
+      await createPedido.mutateAsync({
+        items,
+        payments: payments.map((p) => ({
+          method: p.method,
+          amount: p.amount,
+          montoRecibido: p.method === 'efectivo' ? p.montoRecibido : undefined,
+        })),
+        orderConfig,
+      });
+
+      toast.success('Pedido enviado a cocina');
       setCart([]);
+      setPayments([]);
       setOrderConfig(DEFAULT_ORDER_CONFIG);
       setConfigConfirmed(false);
-      setShowPayment(false);
     } catch (e: any) {
       toast.error(e?.message ?? 'Error al registrar pedido');
     }
   };
 
   const subtotal = cart.reduce((s, i) => s + i.subtotal, 0);
+  const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+  const saldo = subtotal - totalPaid;
+  const canSend = saldo === 0 && cart.length > 0;
 
   // Show full-page "Abrir Caja" when cash register is closed
   if (!shiftStatus.loading && !shiftStatus.hasCashOpen) {
@@ -266,7 +276,7 @@ export default function POSPage() {
     <div className="flex flex-col h-[calc(100vh-6rem)] pb-16 lg:pb-0">
       <PageHeader title="Punto de Venta" subtitle="Tomar pedidos y cobrar" />
 
-      {/* Modal obligatorio de configuración - scoped to main content area */}
+      {/* Modal obligatorio de configuración */}
       {!configConfirmed && (
         <div className="fixed inset-0 lg:left-72 z-40 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60" />
@@ -281,14 +291,14 @@ export default function POSPage() {
         </div>
       )}
 
-      {/* Main grid: menu + cart */}
+      {/* Main grid: menu + account */}
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_minmax(380px,1.1fr)] gap-4 flex-1 min-h-0">
         {/* Menu column */}
         <div className="min-h-[200px] lg:min-h-0 flex flex-col flex-1 overflow-hidden">
           <ProductGrid onAddItem={addItem} onSelectItem={handleSelectItem} cart={cart} branchId={branchId} disabled={!configConfirmed} />
         </div>
 
-        {/* Cart column */}
+        {/* Account column */}
         <div className="min-h-[200px] lg:min-h-0 flex flex-col gap-3">
           <div ref={configRef}>
             <OrderConfigPanel
@@ -297,13 +307,16 @@ export default function POSPage() {
               compact
             />
           </div>
-          <OrderPanel
+          <AccountPanel
             items={cart}
+            payments={payments}
             onUpdateQty={updateQty}
             onRemove={removeItem}
             onUpdateNotes={updateNotes}
             onCancelOrder={cancelOrder}
-            onCobrar={handleCobrar}
+            onRegisterPayment={handleOpenPayment}
+            onRemovePayment={removePayment}
+            onSendToKitchen={handleSendToKitchen}
             disabled={createPedido.isPending}
           />
         </div>
@@ -315,26 +328,40 @@ export default function POSPage() {
           <div className="text-sm">
             <span className="text-muted-foreground">{cart.reduce((s, i) => s + i.cantidad, 0)} items</span>
             <span className="ml-2 font-semibold text-foreground">$ {subtotal.toLocaleString('es-AR')}</span>
+            {totalPaid > 0 && (
+              <span className="ml-2 text-xs text-green-600">pagado $ {totalPaid.toLocaleString('es-AR')}</span>
+            )}
           </div>
-          <Button
-            size="lg"
-            onClick={handleCobrar}
-            disabled={createPedido.isPending}
-            className="shrink-0"
-          >
-            <CreditCard className="h-4 w-4 mr-2" />
-            Cobrar
-          </Button>
+          {canSend ? (
+            <Button
+              size="lg"
+              onClick={handleSendToKitchen}
+              disabled={createPedido.isPending}
+              className="shrink-0 bg-green-600 hover:bg-green-700 text-white"
+            >
+              <ChefHat className="h-4 w-4 mr-2" />
+              Enviar
+            </Button>
+          ) : (
+            <Button
+              size="lg"
+              onClick={handleOpenPayment}
+              disabled={createPedido.isPending || saldo <= 0}
+              className="shrink-0"
+            >
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Pagar
+            </Button>
+          )}
         </div>
       )}
 
-      <PaymentModal
-        open={showPayment}
-        onOpenChange={setShowPayment}
-        total={subtotal}
-        onConfirm={handleConfirmPayment}
-        loading={createPedido.isPending}
-        cartItems={cart}
+      {/* Register payment modal */}
+      <RegisterPaymentPanel
+        open={showPaymentPanel}
+        onOpenChange={setShowPaymentPanel}
+        saldoPendiente={saldo}
+        onRegister={registerPayment}
       />
 
       <ModifiersModal
