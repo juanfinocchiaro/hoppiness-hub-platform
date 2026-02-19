@@ -1,52 +1,104 @@
 
+# Plan: Sincronizacion automatica de ventas POS al RDO
 
-# Plan: Bloquear productos sin venta iniciada + Acelerar modal de modificadores
+## Contexto del problema
 
-## Problema 1: Se pueden agregar productos sin iniciar la venta
+El RDO obtiene las ventas del periodo desde la tabla `ventas_mensuales_local`, que se carga manualmente. Los locales con POS registran ventas en `pedidos` + `pedido_pagos`, pero esos datos nunca llegan a `ventas_mensuales_local` ni al RDO.
 
-Actualmente, al hacer click en un producto de la grilla, se abre el modal de modificadores (o se agrega directo al carrito) sin importar si el cajero ya confirmo el canal de venta. Esto no deberia pasar.
+## Estrategia
 
-**Solucion:** Pasar `configConfirmed` (o un flag `disabled`) a `ProductGrid`. Si la venta no esta iniciada, al hacer click en un producto se muestra un toast de advertencia y no se abre el modal.
+Agregar un campo `fuente` a `ventas_mensuales_local` para saber si el registro es manual o viene del POS. Luego, en el frontend, cuando un local tiene POS habilitado, calcular las ventas en tiempo real desde `pedidos`/`pedido_pagos` y mostrarlas en el RDO sin depender de la carga manual. Los periodos historicos (cargados antes de tener POS) se mantienen intactos.
 
-**Archivo:** `src/pages/pos/POSPage.tsx` y `src/components/pos/ProductGrid.tsx`
+## Cambios
 
-- Agregar prop `disabled?: boolean` a ProductGrid
-- Cuando `disabled` es true, el click en ProductCard muestra un toast "Iniciá la venta primero" y no llama a `onSelectItem`
-- Pasar `disabled={!configConfirmed}` desde POSPage
-- Visualmente: aplicar `opacity-60 pointer-events-none` a la grilla cuando esta deshabilitada (o solo bloquear el click sin cambiar visual, para que el cajero vea los productos)
+### 1. Base de datos: Agregar campo `fuente` a `ventas_mensuales_local`
 
-## Problema 2: El modal de modificadores carga raro/lento
+```sql
+ALTER TABLE ventas_mensuales_local 
+  ADD COLUMN fuente text NOT NULL DEFAULT 'manual';
+-- Valores posibles: 'manual', 'pos'
+```
 
-El problema es que `useItemExtras` y `useItemRemovibles` se ejecutan solo cuando se selecciona un item (queries habilitadas con `enabled: !!itemId`). Como los datos no estan en cache, hay un delay visible mientras se carga.
+Esto permite que convivan registros manuales historicos con futuros registros del POS en la misma tabla.
 
-Ademas, la linea `if (!hasContent) return null` hace que el Dialog no se renderice hasta que lleguen los datos, generando un "pop-in" visual.
+### 2. Nuevo hook: `usePosVentasAgregadas`
 
-**Solucion en dos partes:**
+Archivo: `src/hooks/usePosVentasAgregadas.ts`
 
-### 2a. Mostrar el Dialog inmediatamente con skeleton
-- Eliminar el `if (!hasContent) return null` al inicio del render
-- Siempre renderizar el `<Dialog>` cuando `open && item` es truthy
-- Si `isLoading` es true, mostrar skeletons dentro del Dialog (ya existe el codigo para esto, pero no se ejecuta porque el return null lo previene)
-- Si no hay extras ni removibles (producto simple), el `useEffect` de auto-add sigue funcionando igual
+Agrega las ventas desde `pedidos` + `pedido_pagos` para un branch y periodo:
 
-### 2b. Prefetch de extras/removibles
-- Precachear los datos de extras/removibles de todos los items al cargar la grilla, para que cuando el usuario haga click el dato ya este en cache
-- Agregar un hook `usePrefetchModifiers` que al montarse la grilla haga queries de extras y removibles para todos los items visibles
-- Alternativa mas simple: en `ProductGrid`, cuando se hace hover sobre un producto, disparar un prefetch de sus extras/removibles. Esto es mas liviano que cargar todo de golpe
+- Consulta todos los `pedidos` del periodo (estado completado/entregado) con sus `pedido_pagos`
+- Calcula:
+  - `venta_total`: suma de `pedidos.total`
+  - `efectivo`: suma de `pedido_pagos` donde `metodo = 'efectivo'`
+  - `fc_total` (online): venta_total - efectivo
+  - `ft_total` (efectivo): efectivo
+- Solo se activa cuando `posEnabled = true`
 
-**Enfoque elegido: Prefetch on hover** (equilibrio entre rendimiento y simplicidad)
+### 3. Modificar `useVentasData` en `RdoDashboard.tsx`
 
-**Archivos a modificar:**
-- `src/components/pos/ProductGrid.tsx` - Agregar prefetch on hover de extras/removibles por item
-- `src/components/pos/ModifiersModal.tsx` - Eliminar el `return null` temprano, siempre renderizar Dialog con loading state
+Cambiar el hook interno `useVentasData` para que sea inteligente:
+
+- Recibe `posEnabled` como parametro
+- Si `posEnabled = true`: usa `usePosVentasAgregadas` para obtener los datos en tiempo real
+- Si `posEnabled = false`: lee de `ventas_mensuales_local` como hasta ahora
+- En ambos casos, devuelve la misma estructura `{ fc, ft, total }`
+
+### 4. Modificar `get_rdo_report` (funcion DB)
+
+La funcion SQL `get_rdo_report` tambien lee de `ventas_mensuales_local` para calcular porcentajes. Hay dos opciones:
+
+**Opcion elegida**: No modificar la funcion SQL. En cambio, pasar las ventas como contexto en el frontend. Los porcentajes ya se calculan en el frontend con `totalVentas`, asi que el unico uso de ventas en la funcion es para el campo `percentage` de cada linea. Si `ventas_mensuales_local` esta vacio, `percentage` sera 0 y el frontend recalcula con el total correcto.
+
+Esto funciona porque el RdoDashboard ya usa `totalVentas` (del hook) para todos los calculos visuales, no los `percentage` de la funcion.
+
+### 5. Modificar `RdoDashboard.tsx`
+
+- Importar `usePosEnabled`
+- Pasar `posEnabled` al hook de ventas
+- Mostrar un badge/indicador que diga "Fuente: POS" o "Fuente: Carga manual" para que el usuario sepa de donde vienen los datos
+- Si POS esta habilitado pero no hay ventas del periodo, mostrar el total en $0 sin pedir carga manual
+
+### 6. Modificar pagina `VentasMensualesLocalPage.tsx`
+
+- Si POS esta habilitado, mostrar los datos agregados del POS como solo lectura (ya tiene el `Alert` de "POS habilitado")
+- Mantener visible el historial de periodos anteriores (que pueden ser manuales)
+
+### 7. Actualizar `CargadorRdoUnificado`
+
+Ya tiene bloqueo cuando POS esta habilitado, no requiere cambios.
 
 ---
 
-## Resumen de cambios
+## Archivos a crear
+
+| Archivo | Descripcion |
+|---|---|
+| `src/hooks/usePosVentasAgregadas.ts` | Hook que agrega ventas del POS por periodo |
+
+## Archivos a modificar
 
 | Archivo | Cambio |
 |---|---|
-| `src/components/pos/ProductGrid.tsx` | Agregar prop `disabled`, bloquear clicks sin venta. Prefetch de modificadores on hover |
-| `src/components/pos/ModifiersModal.tsx` | Eliminar `if (!hasContent) return null`. Siempre mostrar Dialog con skeleton si loading |
-| `src/pages/pos/POSPage.tsx` | Pasar `disabled={!configConfirmed}` a ProductGrid |
+| `src/components/rdo/RdoDashboard.tsx` | Usar datos POS cuando esta habilitado, badge de fuente |
+| `src/pages/local/VentasMensualesLocalPage.tsx` | Mostrar datos POS como solo lectura si esta habilitado |
 
+## Migracion SQL
+
+| Cambio | SQL |
+|---|---|
+| Campo fuente | `ALTER TABLE ventas_mensuales_local ADD COLUMN fuente text NOT NULL DEFAULT 'manual'` |
+
+## Flujo resultante
+
+```text
+Local CON POS habilitado:
+  pedidos + pedido_pagos --> usePosVentasAgregadas --> RdoDashboard (tiempo real)
+  
+Local SIN POS:
+  ventas_mensuales_local (carga manual) --> useVentasData --> RdoDashboard
+
+Historico mixto:
+  Periodos antes del POS: datos manuales en ventas_mensuales_local (fuente='manual')
+  Periodos con POS: datos calculados en tiempo real desde pedidos
+```
