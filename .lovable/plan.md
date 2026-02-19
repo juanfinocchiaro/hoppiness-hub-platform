@@ -1,207 +1,123 @@
 
 
-# Sistema de Cuenta y Cobro del POS - Implementacion Completa
+# Rediseno Visual del POS - Plan de Implementacion
 
 ## Resumen
 
-Transformar el POS de un flujo "cobrar y enviar en un paso" a un modelo de **cuenta con saldo** donde los pagos se registran progresivamente antes de enviar a cocina. Incluye tambien correccion post-venta de medios de pago.
+Aplicar la guia de rediseno visual al POS existente. Esto es un cambio puramente visual y de layout — no agrega funcionalidad nueva. Los cambios principales son: zonas diferenciadas con fondos distintos, modal de Nueva Venta reemplazado por panel lateral en Zona C, grilla de llamadores mejorada, cards de productos consistentes, colores por medio de pago, header compacto de cuenta, y boton "Enviar a cocina" con estados visuales claros.
+
+**Lo que NO se implementa ahora** (requiere funcionalidad nueva que no existe):
+- Sidebar minimo / tab bar superior (requiere layout propio del POS, hoy vive dentro de BranchLayout)
+- Barra inferior de pedidos activos (requiere soporte de multiples pedidos simultaneos)
+- Llamadores con estado "ocupado" (requiere query de pedidos activos por llamador)
+- Preseleccion inteligente basada en frecuencia de canal
+- Micro-animaciones de vuelo de badge "+1" (complejidad alta, bajo impacto)
+- Badge de stock bajo en cards (no hay modulo de stock conectado)
 
 ---
 
-## Fase 1: Modelo de Cuenta en el POS (Cambio principal)
+## Cambios a Implementar
 
-### Concepto
-El pedido se convierte en una "cuenta" con dos lados: items (lo que pidio) y pagos (lo que pago). El saldo = total items - total pagos. Solo cuando saldo = $0 se habilita "Enviar a cocina". Una vez enviado, es irrevocable: no se puede agregar nada mas.
+### 1. Layout de Zonas Diferenciadas
 
-### Cambios en la UI del OrderPanel
+Reemplazar el fondo uniforme por zonas con identidad visual:
 
-El panel derecho (carrito) se transforma en una **cuenta** con estas secciones:
+- **Zona B (catalogo/grilla):** Fondo `slate-100` (`bg-slate-100`) para que las cards blancas resalten
+- **Zona C (cuenta):** Fondo blanco, es el "papel" del pedido
+- **Zona A (header):** Se elimina el PageHeader y se usa un header compacto inline con el nombre de la sucursal
 
-1. **Items del pedido** (como ahora, con +/- y eliminar)
-2. **Seccion de pagos registrados** (lista de pagos con boton eliminar cada uno)
-3. **Resumen**: Total pedido | Total pagado | Saldo
-4. **Boton "+ Registrar pago"** (reemplaza el boton "Cobrar")
-5. **Boton "Enviar a cocina"** (condicionado a saldo = $0)
+**Archivo:** `src/pages/pos/POSPage.tsx`
+- Quitar `<PageHeader>` del POS
+- Aplicar `bg-slate-50` o `bg-slate-100` a la columna izquierda (grilla)
+- La columna derecha mantiene fondo blanco
 
-### Estados del boton "Enviar a cocina"
+### 2. Modal de Nueva Venta reemplazado por Panel en Zona C
 
-| Estado | Visual |
+Actualmente hay un modal centrado con overlay oscuro (`fixed inset-0 bg-black/60`). La guia pide que la configuracion de nueva venta viva en el panel derecho (Zona C), y la grilla muestre un estado vacio.
+
+**Archivo:** `src/pages/pos/POSPage.tsx`
+- Eliminar el div `fixed inset-0` del modal de configuracion
+- Cuando `!configConfirmed`: mostrar el `ConfigForm` dentro de la columna derecha (donde va la cuenta), y en la columna izquierda mostrar un estado vacio con icono y texto "Configura el pedido para ver el menu"
+- Cuando `configConfirmed`: mostrar ProductGrid + AccountPanel como ahora
+
+### 3. Grilla de Llamadores Mejorada
+
+Actualmente los 30 llamadores estan en una grilla `grid-cols-6` con `max-h-44 overflow-y-auto` (requiere scroll). La guia pide que se vean todos sin scroll.
+
+**Archivo:** `src/components/pos/OrderConfigPanel.tsx`
+- Cambiar la grilla de llamadores a `grid-cols-10` (o `grid-cols-6 sm:grid-cols-10`) sin `max-h` ni `overflow-y-auto`
+- Reducir el tamanio de cada boton para que quepan todos (`h-8` en vez de `h-10`)
+- Los estados visuales (disponible, seleccionado) ya existen. Los estados "ocupado" se dejan para cuando haya query de pedidos activos.
+
+### 4. Cards de Productos: Consistencia Visual
+
+**Archivo:** `src/components/pos/ProductGrid.tsx`
+- Fondo uniforme para zona de imagen: `bg-slate-100` en vez de `bg-muted`
+- Precio mas grande y prominente: `text-base font-bold` en vez de `text-xs font-semibold`
+- Nombre: `text-sm font-semibold` (ya esta similar)
+- Badge de cantidad: ya existe, mantener
+
+### 5. Tabs de Categoria con Indicador de Items en Pedido
+
+**Archivo:** `src/components/pos/ProductGrid.tsx`
+- Agregar un punto indicador (dot) en las tabs de categorias que tienen items en el carrito
+- Calcular `categoriesWithItems` a partir del `cart` + `items` (mapear item_carta_id a categoria)
+- Mostrar un circulito junto al nombre de la categoria activa
+
+### 6. Panel de Cuenta: Header Compacto + Colores de Pago
+
+**Archivo:** `src/components/pos/AccountPanel.tsx`
+
+Header de cuenta:
+- Agregar props `orderConfig` al AccountPanel
+- Mostrar resumen compacto: canal + servicio + llamador/nombre
+- Boton "Editar" que llame a un callback para reabrir la config
+
+Colores por medio de pago:
+- Efectivo: verde (`bg-emerald-500/10 border-emerald-500/20`)
+- Debito: azul (`bg-blue-500/10 border-blue-500/20`)
+- Credito: violeta (`bg-violet-500/10 border-violet-500/20`)
+- QR MP: celeste (`bg-sky-500/10 border-sky-500/20`)
+- Transferencia: indigo (`bg-indigo-500/10 border-indigo-500/20`)
+
+Area de saldo con fondo contextual:
+- Falta cobrar: `bg-amber-50 text-amber-800`
+- Cobrado ($0): `bg-emerald-50 text-emerald-800`
+
+Boton "Enviar a cocina":
+- Deshabilitado: gris con texto contextual (ya implementado)
+- Habilitado: `bg-emerald-500 hover:bg-emerald-600`, mas alto (`h-14`), con icono y detalle de items + total
+
+### 7. RegisterPaymentPanel: Colores por Metodo
+
+**Archivo:** `src/components/pos/RegisterPaymentPanel.tsx`
+- Aplicar colores distintos a cada boton de metodo de pago cuando esta seleccionado (verde para efectivo, azul para debito, etc.)
+
+---
+
+## Archivos a Modificar
+
+| Archivo | Cambio Principal |
 |---|---|
-| Sin items | Gris, deshabilitado. "Agrega productos" |
-| Con items, sin pagos | Gris. "Cobra $X para enviar" |
-| Pago parcial | Gris. "Faltan $X por cobrar" |
-| Saldo = $0 | Verde, grande. "Enviar a cocina - $X" |
+| `src/pages/pos/POSPage.tsx` | Layout de zonas, reemplazar modal por panel lateral, quitar PageHeader |
+| `src/components/pos/ProductGrid.tsx` | Fondo de cards, precio mas grande, dots en tabs de categoria |
+| `src/components/pos/AccountPanel.tsx` | Header con config, colores por metodo de pago, area de saldo con fondo, boton enviar mejorado |
+| `src/components/pos/OrderConfigPanel.tsx` | Grilla de llamadores sin scroll (grid-cols-10, sin max-h) |
+| `src/components/pos/RegisterPaymentPanel.tsx` | Colores por metodo de pago |
 
-### Flujo de "Registrar pago"
+## Archivos que NO se tocan
 
-En vez de abrir el PaymentModal actual (que cobra todo de golpe), se muestra un panel/modal simplificado:
-- Medio de pago (5 botones visuales como ahora)
-- Monto (pre-llenado con saldo pendiente, editable para pago parcial)
-- Si es efectivo: campo "Recibido" + calculo de vuelto
-- Boton "Registrar"
-
-Al registrar, el pago se agrega a la lista local y el saldo se recalcula. El cajero puede registrar multiples pagos (split natural).
-
-### Eliminar un pago (antes de enviar)
-
-Cada pago tiene un boton de eliminar con confirmacion. Al eliminar, el saldo se recalcula. Si el saldo vuelve a ser > $0, "Enviar a cocina" se deshabilita.
-
-### Agregar items despues de pagar (antes de enviar)
-
-Si ya hay pagos registrados pero no se envio a cocina, el cajero puede seguir agregando items desde la grilla. El total se recalcula, el saldo sube, y hay que cobrar la diferencia.
-
-### Enviar a cocina (confirmacion)
-
-Al tocar "Enviar a cocina":
-1. AlertDialog de confirmacion: "Enviar pedido a cocina? X items - $Y"
-2. Al confirmar: se crea el pedido en la DB (pedidos + pedido_items + pedido_pagos) como hoy
-3. Se cambia estado a 'pendiente' (para cocina)
-4. Se resetea todo y aparece el modal de nueva venta
-
-### Persistencia
-
-Los items y pagos se mantienen en estado local (React state) hasta que se confirma "Enviar a cocina". Recien ahi se graban en la base de datos. Esto simplifica enormemente la implementacion: no hay pedidos "borrador" en la DB.
+- Logica de pagos, caja, pedidos (sin cambios funcionales)
+- BranchLayout / sidebar (el cambio a sidebar minimo o tab bar es un proyecto aparte)
+- Base de datos (no hay migraciones)
 
 ---
 
-## Fase 2: Correccion Post-Venta de Medios de Pago
+## Orden de Implementacion
 
-### Donde
-
-En el historial de ventas (OrderHistoryTable), cada pedido del turno abierto tendra un boton "Editar forma de pago".
-
-### Quien puede
-
-Cualquier cajero con acceso al POS. No requiere PIN.
-
-### Restriccion temporal
-
-Solo pedidos del turno abierto actual. Si la caja se cerro, el boton se deshabilita.
-
-### Pantalla de edicion
-
-Modal con:
-- Lista de pagos actuales (editables: cambiar medio, cambiar monto)
-- Agregar pago / Eliminar pago
-- Validacion: el total pagado DEBE seguir siendo igual al total del pedido
-- Campo "Motivo del cambio" (obligatorio)
-- Al guardar: se actualizan los registros en pedido_pagos y se crea un registro de auditoria
-
-### Tabla de auditoria (nueva)
-
-```sql
-CREATE TABLE pedido_payment_edits (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  pedido_id UUID NOT NULL REFERENCES pedidos(id),
-  pagos_antes JSONB NOT NULL,
-  pagos_despues JSONB NOT NULL,
-  motivo TEXT NOT NULL,
-  editado_por UUID NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-```
-
-Con RLS: solo usuarios con acceso a la sucursal del pedido.
-
-### Impacto en caja
-
-Cuando se edita un pago, si cambia el monto de efectivo, se debe crear un movimiento de ajuste en `cash_register_movements` para que el cierre de caja refleje la correccion.
-
-### Notificaciones
-
-Por ahora, el registro de auditoria queda en la tabla. Las notificaciones push/email al encargado y franquiciado se pueden agregar en una iteracion posterior (requiere edge function + canal de notificacion).
-
----
-
-## Detalle Tecnico de Archivos
-
-### Archivos a crear
-
-| Archivo | Descripcion |
-|---|---|
-| `src/components/pos/AccountPanel.tsx` | Reemplaza OrderPanel. Muestra items + pagos + saldo + botones |
-| `src/components/pos/RegisterPaymentPanel.tsx` | Panel/modal para registrar un pago individual |
-| `src/components/pos/PaymentEditModal.tsx` | Modal de correccion post-venta de medios de pago |
-
-### Archivos a modificar
-
-| Archivo | Cambio |
-|---|---|
-| `src/pages/pos/POSPage.tsx` | Reemplazar OrderPanel por AccountPanel. Manejar estado de pagos local. Cambiar flujo de confirmacion: "Enviar a cocina" en vez de "Cobrar". Eliminar PaymentModal. |
-| `src/components/pos/OrderHistoryTable.tsx` | Agregar boton "Editar forma de pago" por pedido (solo turno abierto) |
-| `src/hooks/pos/useOrders.ts` | Ajustar useCreatePedido para recibir pagos pre-registrados (ya funciona con `payments[]`) |
-| `src/types/pos.ts` | Agregar tipo `LocalPayment` para pagos en estado local |
-
-### Archivos que se dejan de usar
-
-| Archivo | Motivo |
-|---|---|
-| `src/components/pos/PaymentModal.tsx` | Reemplazado por RegisterPaymentPanel (pagos uno a uno) |
-| `src/components/pos/SplitPayment.tsx` | El split es ahora el comportamiento natural (multiples pagos) |
-| `src/components/pos/TipInput.tsx` | Sin propinas |
-
-### Migracion de base de datos
-
-```sql
--- Tabla de auditoria de ediciones de pago
-CREATE TABLE pedido_payment_edits (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  pedido_id UUID NOT NULL REFERENCES pedidos(id),
-  pagos_antes JSONB NOT NULL,
-  pagos_despues JSONB NOT NULL,
-  motivo TEXT NOT NULL,
-  editado_por UUID NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- RLS
-ALTER TABLE pedido_payment_edits ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view payment edits for their branches"
-  ON pedido_payment_edits FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM pedidos p
-      WHERE p.id = pedido_payment_edits.pedido_id
-      AND has_branch_access_v2(auth.uid(), p.branch_id)
-    )
-  );
-
-CREATE POLICY "Users can create payment edits for their branches"
-  ON pedido_payment_edits FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM pedidos p
-      WHERE p.id = pedido_payment_edits.pedido_id
-      AND has_branch_access_v2(auth.uid(), p.branch_id)
-    )
-  );
-```
-
----
-
-## Flujo completo resumido
-
-```text
-1. Cajero abre POS
-2. Modal de configuracion (canal, servicio, llamador)
-3. Cajero carga items en la grilla
-4. Panel derecho muestra: items + saldo pendiente
-5. Cajero toca "+ Registrar pago"
-6. Elige medio, monto, confirma
-7. Pago aparece en la lista, saldo se reduce
-8. Puede agregar mas items o mas pagos
-9. Cuando saldo = $0, se habilita "Enviar a cocina"
-10. Confirma envio -> se graba todo en DB -> reset -> modal nueva venta
-```
-
----
-
-## Consideraciones
-
-- **Sin propinas** (confirmado)
-- **Sin agregar items post-envio** (confirmado: envio es irrevocable)
-- Los pagos son locales (React state) hasta el envio. No hay pedidos "borrador" en la DB.
-- El mobile sticky footer mostrara "Registrar pago" en vez de "Cobrar", y "Enviar a cocina" cuando saldo = $0
-- La correccion post-venta solo permite cambiar la distribucion de medios, nunca el monto total
+1. `POSPage.tsx` - Layout de zonas + panel lateral en vez de modal
+2. `OrderConfigPanel.tsx` - Grilla de llamadores mejorada
+3. `ProductGrid.tsx` - Cards consistentes + dots en tabs
+4. `AccountPanel.tsx` - Header, colores, area de saldo, boton mejorado
+5. `RegisterPaymentPanel.tsx` - Colores por metodo
 
