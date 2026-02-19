@@ -1,78 +1,94 @@
 
 
-# Mejoras al POS inspiradas en Nucleo
+# Mejoras POS - Plan de Implementacion
 
-## Alcance
-
-Tres mejoras concretas que aprovechan datos y componentes que ya existen en la app, priorizadas por impacto:
+Basado en el analisis, filtro lo que tiene impacto real considerando que ya resolvimos ModifiersModal, ProductGrid con fotos, y PaymentModal con botones. Quedan 4 cambios de alto impacto y una limpieza.
 
 ---
 
-## Mejora 1: Grilla de productos con fotos + tabs de categorias
+## Cambio 1: Desbloquear la grilla (eliminar "Comenzar venta")
 
-**Problema actual**: `ProductGrid.tsx` muestra botones de texto plano con nombre y precio. Las fotos de producto ya estan en la DB (`imagen_url` en `items_carta`) pero no se muestran.
+El analisis tiene razon: obligar al cajero a hacer clic en "Comenzar venta" cuando los defaults ya son correctos (Mostrador + Takeaway) es friccion innecesaria. El 80% de las ventas no necesita cambiar la config.
 
-**Cambio**: Reemplazar los botones planos por cards con imagen. Si el producto tiene `imagen_url`, mostrar la foto; si no, mostrar un placeholder con las iniciales del producto. Ademas, cambiar los headers de categoria verticales por tabs horizontales scrolleables (como Nucleo) para navegar rapido entre rubros.
+**Cambio en `POSPage.tsx`**:
+- Eliminar el estado `saleStarted` y toda la logica asociada
+- Eliminar el overlay con blur que bloquea la grilla
+- Eliminar el placeholder "El carrito aparecera aca"
+- La grilla y el carrito estan siempre visibles y funcionales
+- `OrderConfigPanel` arranca en modo compacto mostrando "Mostrador > Para llevar" con boton "Editar"
+- La validacion de config se hace solo al momento de "Cobrar" (como ya lo hace `handleCobrar`)
 
-```text
-ANTES:                          DESPUES:
-+------------------+            +------------------+
-| Cheese Burger    |            | [  FOTO       ]  |
-| $ 10.600         |            | Cheese Burger    |
-+------------------+            | $ 10.600         |
-                                +------------------+
-```
-
-**Archivo**: `src/components/pos/ProductGrid.tsx`
-- Agregar `imagen_url` al query (ya viene en el select `*`)
-- Renderizar `<img>` con fallback a placeholder
-- Agregar barra de tabs de categorias arriba de la grilla
-- Al clickear una tab, hacer scroll a esa seccion (o filtrar)
+**Cambio en `OrderConfigPanel.tsx`**:
+- Eliminar el boton "Comenzar venta" (`onConfirm` ya no se necesita en modo inicial)
+- Siempre renderizar en modo `compact` con summary line + boton editar
+- Quitar la prop `onConfirm` del uso principal
 
 ---
 
-## Mejora 2: Modal de extras y removibles (ModifiersModal)
+## Cambio 2: Notas por item en el carrito
 
-**Problema actual**: `ModifiersModal.tsx` existe pero retorna `null`. Cuando el usuario agrega un producto, no puede elegir extras (ej: "Extra carne con queso" +$1.900) ni quitar ingredientes (ej: "Sin lechuga" $0). Nucleo tiene esto resuelto con un modal que muestra ambos grupos.
+El campo `notas` ya existe en `CartItem` pero no hay UI. Agregar un input inline.
 
-**Datos disponibles**: 
-- `item_carta_extras` vincula productos con sus extras disponibles (via `preparacion_id`)
-- `item_removibles` tiene los ingredientes que se pueden quitar por producto
-- Los extras son `items_carta` con `tipo = 'extra'` y tienen precio
+**Cambio en `OrderPanel.tsx`**:
+- Agregar un icono de "nota" (MessageSquare) en cada item del carrito
+- Al clickear, se abre un input inline debajo del item para escribir la nota
+- Si el item ya tiene notas (de ModifiersModal), mostrarlas en texto chico debajo del nombre
+- Agregar prop `onUpdateNotes: (index: number, notes: string) => void` al componente
 
-**Cambio**: Implementar `ModifiersModal` que se abre al clickear un producto en la grilla:
-1. Muestra el nombre del producto y precio base
-2. Seccion "Extras": lista de extras disponibles con botones +/- y precio (max 10 unidades como en Nucleo)
-3. Seccion "Sin ingrediente": toggles binarios sin costo para cada removible
-4. Boton "Agregar al pedido ($X.XXX)" que suma precio base + extras seleccionados
-
-**Archivos**:
-- `src/components/pos/ModifiersModal.tsx` - Implementar el modal completo
-- `src/components/pos/ProductGrid.tsx` - En vez de agregar directo al carrito, abrir ModifiersModal si el producto tiene extras/removibles
-- `src/pages/pos/POSPage.tsx` - Agregar estado para el modal y manejar el item seleccionado
-- `src/types/pos.ts` - Extender `CartItem` para incluir extras y removibles seleccionados
-
-**Flujo**:
-- Si el producto NO tiene extras ni removibles: agregar directo al carrito (como ahora)
-- Si el producto SI tiene: abrir ModifiersModal, y al confirmar agregar con las personalizaciones
+**Cambio en `POSPage.tsx`**:
+- Agregar handler `updateNotes` que modifica las notas de un item en el carrito
 
 ---
 
-## Mejora 3: Metodos de pago como botones visuales
+## Cambio 3: Montos rapidos en cobro efectivo
 
-**Problema actual**: `PaymentModal.tsx` usa un `<Select>` dropdown para elegir el metodo de pago. Es funcional pero lento para uso tactil.
+Cuando se paga en efectivo, agregar botones de acceso rapido con billetes comunes.
 
-**Cambio**: Reemplazar el Select por una grilla de botones grandes con icono (estilo Nucleo pero con el design system Hoppiness). Cada metodo de pago se muestra como un boton con icono + label, el seleccionado se destaca con borde primario.
+**Cambio en `PaymentModal.tsx`**:
+- Cuando `metodo === 'efectivo'`, debajo del input "Monto recibido" agregar una fila de botones:
+  - "Exacto" (pone el total exacto)
+  - Billetes redondeados: el sistema calcula los 3-4 billetes mas probables que el cliente entregaria (ej: si el total es $8.500, muestra $9.000, $10.000, $15.000, $20.000)
+- Al tocar un boton, se llena el input automaticamente y se muestra el vuelto
 
-```text
-ANTES:                          DESPUES:
-[v Efectivo       ]             [$ Efectivo] [Debito] [Credito]
-                                [QR MP    ] [Transf ]
-```
+---
 
-**Archivo**: `src/components/pos/PaymentModal.tsx`
-- Reemplazar el `Select` por una grilla de `Button`s con iconos
-- Mantener toda la logica de calculo de vuelto, propina y pago dividido sin cambios
+## Cambio 4: Barra sticky mobile con total + Cobrar
+
+En mobile, el boton "Cobrar" queda enterrado al fondo del scroll. Necesita estar siempre visible.
+
+**Cambio en `POSPage.tsx`**:
+- Agregar una barra fija al fondo de la pantalla visible solo en mobile (`lg:hidden`)
+- Muestra: "Items: X | Total: $X.XXX" + boton "Cobrar" grande
+- Solo aparece cuando hay items en el carrito
+- En desktop no cambia nada (el OrderPanel ya tiene el boton visible)
+
+---
+
+## Cambio 5: Limpieza de stubs muertos
+
+Eliminar componentes que retornan `null` y no tienen uso real. Mantiene el codigo limpio.
+
+**Archivos a eliminar**:
+- `src/components/pos/DeliveryCard.tsx` (no usado en DeliveryPage)
+- `src/components/pos/KitchenCard.tsx` (no usado en KitchenPage)
+- `src/components/pos/RegisterCloseModal.tsx` (cierre se hace inline en RegisterPage)
+- `src/components/pos/StockAlert.tsx` (nunca implementado)
+- `src/components/pos/DiscountModal.tsx` (stub vacio, se implementara cuando se defina la logica de descuentos)
+
+**Verificacion**: buscar imports de estos componentes y eliminarlos tambien.
+
+---
+
+## Que NO hago (y por que)
+
+| Sugerencia del analisis | Razon para postergar |
+|---|---|
+| Busqueda en ProductGrid | Las tabs de categoria ya resuelven la navegacion. Si el menu crece a 50+ items se agrega |
+| Seccion "Frecuentes" | Requiere datos de ventas historicas que aun no se generan en volumen |
+| DiscountModal completo | Necesita definicion de reglas de negocio (% fijo, monto, promos, cortesias) antes de implementar |
+| Reorganizar RegisterPage con tabs | Es un cambio grande que no impacta el flujo de venta diario |
+| KitchenPage con urgencia/sonidos | Valido pero es un modulo separado, no afecta al POS del cajero |
+| Bottom sheet para carrito mobile | La barra sticky es mas simple y resuelve el 90% del problema. El bottom sheet agrega complejidad de UI |
 
 ---
 
@@ -80,16 +96,9 @@ ANTES:                          DESPUES:
 
 | Archivo | Cambio |
 |---|---|
-| `src/components/pos/ProductGrid.tsx` | Agregar fotos de producto + tabs de categorias |
-| `src/components/pos/ModifiersModal.tsx` | Implementar modal de extras/removibles (actualmente vacio) |
-| `src/pages/pos/POSPage.tsx` | Estado para ModifiersModal, flujo condicional |
-| `src/types/pos.ts` | Extender CartItem con extras/removibles |
-| `src/components/pos/PaymentModal.tsx` | Metodos de pago como botones con icono |
-
-## Notas
-
-- No se cambia logica de negocio ni flujo de cobro
-- Los datos de extras, removibles e imagenes ya existen en la base de datos
-- Se mantiene la estetica Hoppiness Hub (no se copia el look de Nucleo)
-- El teclado numerico tactil se descarta por ahora (solo tiene sentido si usan tablets dedicadas)
+| `src/pages/pos/POSPage.tsx` | Eliminar saleStarted, config siempre compact, barra sticky mobile, handler notas |
+| `src/components/pos/OrderConfigPanel.tsx` | Eliminar boton "Comenzar venta", siempre compact |
+| `src/components/pos/OrderPanel.tsx` | UI de notas por item |
+| `src/components/pos/PaymentModal.tsx` | Botones de monto rapido en efectivo |
+| 5 archivos stub | Eliminar |
 
