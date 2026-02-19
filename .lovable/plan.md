@@ -1,131 +1,95 @@
 
 
-# Refinamiento Visual y UX - Hoppiness Hub Platform
+# Mejoras al POS inspiradas en Nucleo
 
-## Diagnostico Actual
+## Alcance
 
-La app tiene una base de design system solida (CSS variables, tokens de color, componentes UI estandarizados). Sin embargo, hay inconsistencias acumuladas que le quitan profesionalismo. El objetivo es llevarla a un look **limpio y moderno tipo Linear/Notion** sin perder la identidad de marca Hoppiness.
-
----
-
-## Propuesta de Paleta (para tu aprobacion)
-
-La paleta actual ya esta bien definida. La propuesta es **refinarla**, no cambiarla:
-
-| Token | Actual | Propuesta | Razon |
-|---|---|---|---|
-| `--background` | `0 0% 100%` (blanco puro) | `220 14% 98%` (gris casi-blanco) | Fondo gris ultra-sutil reduce fatiga visual, como Linear/Notion. Las cards en blanco puro "flotan" sobre el fondo |
-| `--muted` | `234 15% 94%` | `220 14% 92%` | Ligeramente mas visible para diferenciar zonas |
-| `--border` | `234 20% 90%` | `220 13% 89%` | Bordes mas neutros, menos azulados |
-| `--card` | `0 0% 100%` | `0 0% 100%` | **Sin cambio** - cards en blanco puro para contraste con fondo |
-| `--foreground` | `234 100% 17%` | `224 71% 12%` | Texto principal ligeramente menos saturado, mas legible |
-| `--muted-foreground` | `234 10% 40%` | `220 9% 46%` | Texto secundario un poco mas claro para mejor jerarquia |
-| `--primary` | `234 100% 30%` | **Sin cambio** | El azul Hoppiness se mantiene intacto |
-| `--accent` | `17 100% 56%` | **Sin cambio** | El naranja Hoppiness se mantiene intacto |
-| `--radius` | `0.75rem` (12px) | `0.625rem` (10px) | Mas sutil, mas moderno. Notion usa ~8px, Linear ~10px |
-
-**Cambios menores adicionales:**
-- Sombras: reducir intensidad de `--shadow-card` para un look mas plano
-- Sidebar: fondo `bg-card` (blanco) en vez de gris, border derecho sutil
-
-**Importante**: Los colores de marca (#00139b azul, #ff521d naranja, #ffd41f amarillo) no se tocan. Solo se ajustan los neutros de fondo/texto/bordes.
+Tres mejoras concretas que aprovechan datos y componentes que ya existen en la app, priorizadas por impacto:
 
 ---
 
-## Plan de Ejecucion por Etapas
+## Mejora 1: Grilla de productos con fotos + tabs de categorias
 
-### Etapa 1: Tokens base (`src/index.css`)
-Ajustar las CSS variables de `:root` segun la tabla de arriba. Esto propaga automaticamente a toda la app.
+**Problema actual**: `ProductGrid.tsx` muestra botones de texto plano con nombre y precio. Las fotos de producto ya estan en la DB (`imagen_url` en `items_carta`) pero no se muestran.
 
-**Archivos**: `src/index.css`
+**Cambio**: Reemplazar los botones planos por cards con imagen. Si el producto tiene `imagen_url`, mostrar la foto; si no, mostrar un placeholder con las iniciales del producto. Ademas, cambiar los headers de categoria verticales por tabs horizontales scrolleables (como Nucleo) para navegar rapido entre rubros.
 
----
+```text
+ANTES:                          DESPUES:
++------------------+            +------------------+
+| Cheese Burger    |            | [  FOTO       ]  |
+| $ 10.600         |            | Cheese Burger    |
++------------------+            | $ 10.600         |
+                                +------------------+
+```
 
-### Etapa 2: Cards y contenedores - Estilo unificado
-
-**Problema**: Mezcla de `shadow-sm`, `shadow-card`, `shadow-lg`, `hover:shadow-lg`, y cards sin sombra. Algunos usan `border-dashed`, otros `border-2`.
-
-**Regla unificada**: 
-- Cards normales: `border` + `shadow-none` (estilo Linear/Notion, bordes limpios sin sombra)
-- Cards interactivas (links): `border hover:border-primary/50 transition-colors` (sin cambio de sombra, cambio de borde)
-- Cards destacadas: `border-l-4 border-l-primary` (ya se usa en ManagerDashboard, mantener)
-
-**Archivos afectados**:
-- `src/pages/admin/BrandHome.tsx` - branch cards: quitar `hover:shadow-lg`
-- `src/pages/local/BranchLayout.tsx` - selector de branch: quitar `hover:shadow-lg`
-- `src/pages/cuenta/CuentaHome.tsx` - Mi Marca card: quitar `hover:shadow-md`
-- `src/components/landing/LocationsSection.tsx` - location cards: quitar `shadow-card hover:shadow-elevated`
+**Archivo**: `src/components/pos/ProductGrid.tsx`
+- Agregar `imagen_url` al query (ya viene en el select `*`)
+- Renderizar `<img>` con fallback a placeholder
+- Agregar barra de tabs de categorias arriba de la grilla
+- Al clickear una tab, hacer scroll a esa seccion (o filtrar)
 
 ---
 
-### Etapa 3: Espaciado y respiracion
+## Mejora 2: Modal de extras y removibles (ModifiersModal)
 
-**Problema**: Algunas paginas usan `space-y-4`, otras `space-y-6`. Los dashboards tienen cards muy pegadas.
+**Problema actual**: `ModifiersModal.tsx` existe pero retorna `null`. Cuando el usuario agrega un producto, no puede elegir extras (ej: "Extra carne con queso" +$1.900) ni quitar ingredientes (ej: "Sin lechuga" $0). Nucleo tiene esto resuelto con un modal que muestra ambos grupos.
 
-**Regla**: `space-y-6` como estandar para paginas, `gap-4` para grids de cards.
+**Datos disponibles**: 
+- `item_carta_extras` vincula productos con sus extras disponibles (via `preparacion_id`)
+- `item_removibles` tiene los ingredientes que se pueden quitar por producto
+- Los extras son `items_carta` con `tipo = 'extra'` y tienen precio
 
-**Archivos afectados** (los que usan `space-y-4`):
-- `src/components/local/ManagerDashboard.tsx` - cambiar `space-y-4` a `space-y-6`
-- Verificar paginas de Mi Local que usen `space-y-4`
+**Cambio**: Implementar `ModifiersModal` que se abre al clickear un producto en la grilla:
+1. Muestra el nombre del producto y precio base
+2. Seccion "Extras": lista de extras disponibles con botones +/- y precio (max 10 unidades como en Nucleo)
+3. Seccion "Sin ingrediente": toggles binarios sin costo para cada removible
+4. Boton "Agregar al pedido ($X.XXX)" que suma precio base + extras seleccionados
 
----
+**Archivos**:
+- `src/components/pos/ModifiersModal.tsx` - Implementar el modal completo
+- `src/components/pos/ProductGrid.tsx` - En vez de agregar directo al carrito, abrir ModifiersModal si el producto tiene extras/removibles
+- `src/pages/pos/POSPage.tsx` - Agregar estado para el modal y manejar el item seleccionado
+- `src/types/pos.ts` - Extender `CartItem` para incluir extras y removibles seleccionados
 
-### Etapa 4: Sidebar refinamiento
-
-**Problema**: El sidebar desktop tiene fondo `bg-card` (blanco) con `border-r`, pero la seccion de navegacion se siente densa.
-
-**Mejoras**:
-- Aumentar padding del nav area de `p-4` a `p-5`
-- Agregar `border-t border-border` entre secciones colapsables para separacion visual
-- NavSectionGroup labels: agregar `mb-1` despues del trigger para mas aire
-
-**Archivos**: `src/components/layout/WorkSidebar.tsx`, `src/components/layout/WorkShell.tsx`
-
----
-
-### Etapa 5: Botones - Tamanio tactil minimo
-
-**Problema**: Algunos botones son demasiado chicos en mobile. El `NavActionButton` todavia usa `size="sm"`.
-
-**Regla**: Todos los botones de accion principal deben tener `min-h-[44px]` en mobile (ya se hace en TeamPage, falta en otros).
-
-**Archivos afectados**:
-- `src/components/layout/WorkSidebar.tsx` - `NavActionButton` quitar `size="sm"`
-- Verificar botones de accion en pages
+**Flujo**:
+- Si el producto NO tiene extras ni removibles: agregar directo al carrito (como ahora)
+- Si el producto SI tiene: abrir ModifiersModal, y al confirmar agregar con las personalizaciones
 
 ---
 
-### Etapa 6: Productividad card en BrandHome
+## Mejora 3: Metodos de pago como botones visuales
 
-**Problema**: La card de "Productividad" en BrandHome usa `bg-accent/20 border-2 border-accent` (naranja fuerte) que rompe con el look limpio del resto.
+**Problema actual**: `PaymentModal.tsx` usa un `<Select>` dropdown para elegir el metodo de pago. Es funcional pero lento para uso tactil.
 
-**Correccion**: Usar el mismo estilo que las demas stat cards (`bg-muted/50 rounded-lg`) y solo colorear el valor numerico en accent si se quiere destacar.
+**Cambio**: Reemplazar el Select por una grilla de botones grandes con icono (estilo Nucleo pero con el design system Hoppiness). Cada metodo de pago se muestra como un boton con icono + label, el seleccionado se destaca con borde primario.
 
-**Archivos**: `src/pages/admin/BrandHome.tsx`
+```text
+ANTES:                          DESPUES:
+[v Efectivo       ]             [$ Efectivo] [Debito] [Credito]
+                                [QR MP    ] [Transf ]
+```
+
+**Archivo**: `src/components/pos/PaymentModal.tsx`
+- Reemplazar el `Select` por una grilla de `Button`s con iconos
+- Mantener toda la logica de calculo de vuelto, propina y pago dividido sin cambios
 
 ---
 
-### Etapa 7: SalesHistoryPage - padding redundante
+## Resumen de archivos
 
-**Problema**: `SalesHistoryPage.tsx` tiene `p-4 md:p-6` en su wrapper (doble padding, se nos paso en la auditoria anterior).
+| Archivo | Cambio |
+|---|---|
+| `src/components/pos/ProductGrid.tsx` | Agregar fotos de producto + tabs de categorias |
+| `src/components/pos/ModifiersModal.tsx` | Implementar modal de extras/removibles (actualmente vacio) |
+| `src/pages/pos/POSPage.tsx` | Estado para ModifiersModal, flujo condicional |
+| `src/types/pos.ts` | Extender CartItem con extras/removibles |
+| `src/components/pos/PaymentModal.tsx` | Metodos de pago como botones con icono |
 
-**Archivos**: `src/pages/local/SalesHistoryPage.tsx`
+## Notas
 
----
-
-## Resumen de Archivos
-
-| Etapa | Archivos | Tipo de cambio |
-|---|---|---|
-| 1 | `src/index.css` | Ajuste de CSS variables |
-| 2 | 4 archivos de paginas/componentes | Quitar sombras inconsistentes |
-| 3 | `ManagerDashboard.tsx` + otros | Estandarizar spacing |
-| 4 | `WorkSidebar.tsx`, `WorkShell.tsx` | Mejorar separacion visual |
-| 5 | `WorkSidebar.tsx` | Touch targets |
-| 6 | `BrandHome.tsx` | Unificar stat cards |
-| 7 | `SalesHistoryPage.tsx` | Quitar padding redundante |
-
-## Siguiente paso
-
-**Necesito tu OK en la propuesta de paleta** (Etapa 1) antes de implementar. Los cambios de neutros (fondo gris ultra-sutil, bordes menos azulados) son la base sobre la que se apoyan todas las demas mejoras. Si preferis mantener el blanco puro de fondo, se puede - el resto de las etapas funcionan igual.
+- No se cambia logica de negocio ni flujo de cobro
+- Los datos de extras, removibles e imagenes ya existen en la base de datos
+- Se mantiene la estetica Hoppiness Hub (no se copia el look de Nucleo)
+- El teclado numerico tactil se descarta por ahora (solo tiene sentido si usan tablets dedicadas)
 
