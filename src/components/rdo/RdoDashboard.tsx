@@ -4,11 +4,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { TrendingUp, TrendingDown, DollarSign, BarChart3, ArrowDown, ArrowUp, ChevronRight, ChevronDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, BarChart3, ArrowDown, ArrowUp, ChevronRight, ChevronDown, Tag, Percent } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useRdoReport } from '@/hooks/useRdoReport';
+import { usePromoDiscountData } from '@/hooks/usePromoDiscountData';
 import { getCurrentPeriodo } from '@/types/compra';
 import { RDO_SECTIONS } from '@/types/rdo';
 import type { RdoReportLine } from '@/types/rdo';
@@ -155,6 +156,7 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
   const [periodo, setPeriodo] = useState(getCurrentPeriodo());
   const { data: ventas, isLoading: loadingVentas } = useVentasData(branchId, periodo);
   const { data: rdoLines, isLoading: loadingRdo } = useRdoReport(branchId, periodo);
+  const { data: promoData } = usePromoDiscountData(branchId, periodo);
 
   const isLoading = loadingVentas || loadingRdo;
 
@@ -165,6 +167,8 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
   });
 
   const totalVentas = ventas?.total ?? 0;
+  const descuentoPromo = promoData?.descuentoTotal ?? 0;
+  const ventaTeorica = descuentoPromo > 0 ? totalVentas + descuentoPromo : totalVentas;
   const variables = (rdoLines || []).filter(l => l.rdo_section === 'costos_variables');
   const fijos = (rdoLines || []).filter(l => l.rdo_section === 'costos_fijos');
 
@@ -175,6 +179,7 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
   const margenOperativo = totalVentas > 0 ? (resultadoOperativo / totalVentas) * 100 : 0;
 
   const [ventasExpanded, setVentasExpanded] = useState(false);
+  const [promoExpanded, setPromoExpanded] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -248,7 +253,53 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
             </CardHeader>
             <CardContent className="space-y-1">
               {/* Ventas */}
-              {ventas && ventas.fc > 0 ? (
+              {descuentoPromo > 0 ? (
+                <>
+                  <CollapsibleRow
+                    label="Venta Teórica (a precio referencia)"
+                    value={ventaTeorica}
+                    bold
+                    expanded={ventasExpanded}
+                    onToggle={() => setVentasExpanded(e => !e)}
+                  >
+                    {ventas && ventas.fc > 0 && (
+                      <>
+                        <RdoLine label="Facturación Contable (FC)" value={ventas.fc} indent={1} />
+                        <RdoLine label="Facturación Total (FT)" value={ventas.ft} indent={1} />
+                      </>
+                    )}
+                  </CollapsibleRow>
+
+                  <CollapsibleRow
+                    label="Descuento Promo Efectivo"
+                    value={-descuentoPromo}
+                    pct={ventaTeorica > 0 ? -(descuentoPromo / ventaTeorica) * 100 : 0}
+                    expanded={promoExpanded}
+                    onToggle={() => setPromoExpanded(e => !e)}
+                  >
+                    <div className="pl-5 py-1.5 text-xs text-muted-foreground space-y-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <Tag className="w-3 h-3" />
+                        <span>{promoData?.pedidosConPromo ?? 0} pedidos con promo de {promoData?.pedidosTotales ?? 0} totales ({promoData && promoData.pedidosTotales > 0 ? ((promoData.pedidosConPromo / promoData.pedidosTotales) * 100).toFixed(0) : 0}%)</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Percent className="w-3 h-3" />
+                        <span>Desc. promedio por pedido promo: $ {(promoData?.descuentoPromedio ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 0 })}</span>
+                      </div>
+                    </div>
+                  </CollapsibleRow>
+
+                  <div className="flex justify-between items-center py-2 bg-muted/30 px-3 rounded-md">
+                    <span className="font-bold">Venta Neta (ingreso en caja)</span>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline">
+                        {ventaTeorica > 0 ? ((totalVentas / ventaTeorica) * 100).toFixed(1) : 100}%
+                      </Badge>
+                      <span className="font-mono font-bold">$ {totalVentas.toLocaleString('es-AR')}</span>
+                    </div>
+                  </div>
+                </>
+              ) : ventas && ventas.fc > 0 ? (
                 <CollapsibleRow
                   label="Ventas Totales"
                   value={totalVentas}
