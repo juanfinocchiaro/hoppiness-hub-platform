@@ -322,6 +322,7 @@ export function LocalSidebar({ branchId, posEnabled = false, permissions }: Loca
           <NavItemButton to={`${basePath}/config/impresoras`} icon={Printer} label="Impresoras" />
           <NavItemButton to={`${basePath}/config/estaciones`} icon={Flame} label="Estaciones Cocina" />
           <NavItemButton to={`${basePath}/config/impresion`} icon={SlidersHorizontal} label="Config Impresión" />
+          <NavItemButton to={`${basePath}/config/facturacion`} icon={Receipt} label="Facturación" />
         </NavSectionGroup>
       )}
     </WorkSidebarNav>

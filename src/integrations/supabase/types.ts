@@ -14,6 +14,132 @@ export type Database = {
   }
   public: {
     Tables: {
+      afip_config: {
+        Row: {
+          branch_id: string
+          certificado_crt: string | null
+          clave_privada_enc: string | null
+          created_at: string
+          cuit: string | null
+          direccion_fiscal: string | null
+          es_produccion: boolean
+          estado_conexion: string
+          id: string
+          inicio_actividades: string | null
+          punto_venta: number | null
+          razon_social: string | null
+          ultima_verificacion: string | null
+          ultimo_error: string | null
+          ultimo_nro_factura_a: number | null
+          ultimo_nro_factura_b: number | null
+          ultimo_nro_factura_c: number | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          certificado_crt?: string | null
+          clave_privada_enc?: string | null
+          created_at?: string
+          cuit?: string | null
+          direccion_fiscal?: string | null
+          es_produccion?: boolean
+          estado_conexion?: string
+          id?: string
+          inicio_actividades?: string | null
+          punto_venta?: number | null
+          razon_social?: string | null
+          ultima_verificacion?: string | null
+          ultimo_error?: string | null
+          ultimo_nro_factura_a?: number | null
+          ultimo_nro_factura_b?: number | null
+          ultimo_nro_factura_c?: number | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          certificado_crt?: string | null
+          clave_privada_enc?: string | null
+          created_at?: string
+          cuit?: string | null
+          direccion_fiscal?: string | null
+          es_produccion?: boolean
+          estado_conexion?: string
+          id?: string
+          inicio_actividades?: string | null
+          punto_venta?: number | null
+          razon_social?: string | null
+          ultima_verificacion?: string | null
+          ultimo_error?: string | null
+          ultimo_nro_factura_a?: number | null
+          ultimo_nro_factura_b?: number | null
+          ultimo_nro_factura_c?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "afip_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "afip_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      afip_errores_log: {
+        Row: {
+          branch_id: string
+          codigo_afip: string | null
+          created_at: string
+          id: string
+          mensaje: string | null
+          request_data: Json | null
+          response_data: Json | null
+          tipo_error: string
+        }
+        Insert: {
+          branch_id: string
+          codigo_afip?: string | null
+          created_at?: string
+          id?: string
+          mensaje?: string | null
+          request_data?: Json | null
+          response_data?: Json | null
+          tipo_error: string
+        }
+        Update: {
+          branch_id?: string
+          codigo_afip?: string | null
+          created_at?: string
+          id?: string
+          mensaje?: string | null
+          request_data?: Json | null
+          response_data?: Json | null
+          tipo_error?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "afip_errores_log_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "afip_errores_log_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -2018,6 +2144,97 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      facturas_emitidas: {
+        Row: {
+          afip_request: Json | null
+          afip_response: Json | null
+          branch_id: string
+          cae: string | null
+          cae_vencimiento: string | null
+          created_at: string
+          emitido_por: string | null
+          fecha_emision: string
+          id: string
+          iva: number
+          moneda: string
+          neto: number
+          numero_comprobante: number
+          pedido_id: string | null
+          punto_venta: number
+          receptor_condicion_iva: string | null
+          receptor_cuit: string | null
+          receptor_razon_social: string | null
+          tipo_comprobante: string
+          total: number
+        }
+        Insert: {
+          afip_request?: Json | null
+          afip_response?: Json | null
+          branch_id: string
+          cae?: string | null
+          cae_vencimiento?: string | null
+          created_at?: string
+          emitido_por?: string | null
+          fecha_emision?: string
+          id?: string
+          iva?: number
+          moneda?: string
+          neto?: number
+          numero_comprobante: number
+          pedido_id?: string | null
+          punto_venta: number
+          receptor_condicion_iva?: string | null
+          receptor_cuit?: string | null
+          receptor_razon_social?: string | null
+          tipo_comprobante: string
+          total?: number
+        }
+        Update: {
+          afip_request?: Json | null
+          afip_response?: Json | null
+          branch_id?: string
+          cae?: string | null
+          cae_vencimiento?: string | null
+          created_at?: string
+          emitido_por?: string | null
+          fecha_emision?: string
+          id?: string
+          iva?: number
+          moneda?: string
+          neto?: number
+          numero_comprobante?: number
+          pedido_id?: string | null
+          punto_venta?: number
+          receptor_condicion_iva?: string | null
+          receptor_cuit?: string | null
+          receptor_razon_social?: string | null
+          tipo_comprobante?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facturas_emitidas_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facturas_emitidas_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facturas_emitidas_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
             referencedColumns: ["id"]
           },
         ]
