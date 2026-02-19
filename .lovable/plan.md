@@ -1,146 +1,87 @@
 
-# Auditoria UI/UX - Hoppiness Hub Platform
 
-## Hallazgos Organizados por Categoria
+# Rediseno del Flujo "Nueva Venta" en POS
 
----
+## Problema actual
 
-### 1. COMPONENTES DUPLICADOS / HUERFANOS
+La pantalla de Punto de Venta muestra DOS placeholders identicos ("Nueva Venta") que ocupan toda la pantalla con bordes punteados. El flujo requiere 3 pasos innecesarios:
 
-| Archivo | Problema | Accion |
-|---|---|---|
-| `src/components/admin/AdminSidebar.tsx` (276 lineas) | Sidebar viejo de Mi Marca. No lo importa nadie. Fue reemplazado por `BrandSidebar.tsx` | **Eliminar** |
-| `src/components/cuenta/MyCoachingsCard.tsx` (237 lineas) | Version vieja de coaching. Solo se usa `MyCoachingsCardEnhanced.tsx` en `MisCoachingsPage.tsx` | **Eliminar** |
-| `src/App.css` (41 lineas) | CSS de template Vite default (`#root { max-width: 1280px }`, logo-spin, etc). No se importa en ningun lado. Potencialmente danino si algun bundler lo incluye | **Eliminar** |
-| `.temp-old-hub/` y `.temp-hub-main/` | Carpetas de backup/migracion completas. No las referencia nadie en `src/` | **Eliminar** (o al menos no afectan runtime, pero ensucian el repo) |
+1. Click en placeholder izquierdo o derecho
+2. Se muestra formulario de canal/cliente SOLO en la columna izquierda (la derecha sigue con placeholder)
+3. Click en "Comenzar venta" para desbloquear el menu
 
----
+Esto es confuso, feo y lento.
 
-### 2. DOBLE PADDING EN PAGINAS (WorkShell ya aplica `p-6`)
+## Propuesta: Flujo simplificado en 1 paso
 
-`WorkShell.tsx` linea 120: `<div className="p-6">{children}</div>`
+Eliminar los placeholders gigantes. En su lugar:
 
-Esto significa que toda pagina renderizada dentro de Mi Local, Mi Marca o Mi Cuenta ya tiene `p-6`. Pero **15+ paginas de Mi Local** agregan su propio `<div className="p-6">`, causando **doble padding** (48px en vez de 24px).
+- **Estado inicial**: Mostrar el formulario de canal/cliente directamente en una Card compacta en la parte superior, con el menu de productos YA VISIBLE debajo (pero deshabilitado visualmente hasta confirmar config)
+- **Al confirmar**: La Card de config se colapsa a una linea resumen editable, y el menu + carrito se activan
 
-**Paginas afectadas en `/pages/local/`:**
-- `ComprasPage.tsx` - `p-6`
-- `PLDashboardPage.tsx` - `p-6`
-- `GastosPage.tsx` - `p-6`
-- `SociosPage.tsx` - `p-6`
-- `RdoLoaderPage.tsx` - `p-6`
-- `RegulationsPage.tsx` - `p-6 space-y-4`
-- `ProveedoresLocalPage.tsx` - `p-6 space-y-4`
-- `PeriodosPage.tsx` - `p-6`
-- `ConsumosPage.tsx` - `p-6`
-- `VentasMensualesLocalPage.tsx` - `p-6 space-y-6`
-- `InversionesPage.tsx` - `p-6`
-- `CuentaCorrienteProveedorPage.tsx` - `p-6 space-y-6`
-- `InsumosLocalPage.tsx` - `p-6`
-- `CoachingPage.tsx` - `p-6 space-y-6`
-- `InspectionsLocalPage.tsx` - `p-6 space-y-6`
+```text
+ANTES (actual)                         DESPUES (propuesto)
++------------------+------------------+ +------------------------------------------+
+| [  Nueva Venta ] | [  Nueva Venta ] | | Punto de Venta                           |
+| (placeholder     | (placeholder     | +------------------------------------------+
+|  dashed border   |  dashed border   | | [Card: Canal y Cliente]                  |
+|  gigante)        |  gigante)        | | Mostrador | Apps     Para llevar | ...    |
+|                  |                  | | Llamador: [grid numeros]                 |
+|                  |                  | |                    [Comenzar Venta >>]    |
+|                  |                  | +------------------------------------------+
+|                  |                  | |  Carrito (izq)  |  Menu productos (der)  |
+|                  |                  | |  (vacio)        |  (visible, disabled)   |
++------------------+------------------+ +------------------------------------------+
 
-**Paginas afectadas en `/pages/admin/`:**
-- `UsersPage.tsx` - `p-6 space-y-4`
-- `BrandMeetingsPage.tsx` - `p-6 space-y-6`
-- `InspectionsPage.tsx` - `p-6 space-y-6`
-- `NewInspectionPage.tsx` - `p-6 space-y-6`
-- `InspectionDetailPage.tsx` - `p-6 space-y-6`
-- `InsumosPage.tsx` - `p-6`
-- `ConceptosServicioPage.tsx` - `p-6`
-- `ProveedoresPage.tsx` - `p-6`
+DESPUES de "Comenzar Venta":
++------------------------------------------+
+| Punto de Venta                           |
++------------------------------------------+
+| Mostrador > Para llevar > #5  [Editar]   |
++------------------------------------------+
+|  Carrito (izq)  |  Menu productos (der)  |
+|  (activo)       |  (activo, clickeable)  |
++------------------------------------------+
+```
 
-**Correccion:** En todas estas paginas, cambiar `<div className="p-6 ...">` a `<div className="space-y-6">` (o `space-y-4` segun corresponda), quitando el `p-6` redundante.
+## Cambios tecnicos
 
----
+### Archivo: `src/pages/pos/POSPage.tsx`
 
-### 3. INCONSISTENCIA EN HEADERS DE PAGINA
+**Eliminar:**
+- Los dos bloques `<button>` con placeholders dashed (lineas 191-199 y 225-233)
+- El estado `showConfigForm` (ya no necesario)
+- La funcion `handleStartSale` (ya no necesaria)
 
-Hay 3 patrones distintos usados para los titulos de pagina:
+**Nuevo layout:**
+- Arriba: `OrderConfigPanel` siempre visible. En modo `compact` muestra resumen de 1 linea con boton "Editar". En modo expandido muestra el formulario completo con boton "Comenzar venta"
+- Abajo: Grid de 2 columnas (carrito izq + menu der), siempre renderizadas
+- El `ProductGrid` se renderiza siempre pero con `pointer-events-none opacity-50` cuando `!saleStarted`, y un overlay sutil que dice "Configura canal y cliente para empezar"
+- Al hacer click en el overlay o en cualquier producto deshabilitado, scroll al config panel
 
-**Patron A - `<PageHeader>` componente (correcto):**
-~20 paginas lo usan consistentemente con `title` y `subtitle`.
+### Archivo: `src/components/pos/OrderConfigPanel.tsx`
 
-**Patron B - `<h1 className="text-3xl font-bold">` manual:**
-- `BrandHome.tsx` - "Panel Mi Marca" en `text-3xl`
-- `BrandRegulationsPage.tsx` - "Reglamento Interno" en `text-3xl`
-- `BranchDetail.tsx` - nombre del branch en `text-3xl`
-- `CentralTeam.tsx` - "Equipo Central" en `text-3xl`
+**Modificar modo `compact`:**
+- Actualmente en modo compact muestra el formulario completo pero mas chico
+- Nuevo comportamiento: en compact muestra una sola linea resumen:
+  `Mostrador > Para llevar > Llamador #5` con un boton "Editar" que expande
+- Usar un Collapsible o estado interno para toggle
 
-**Patron C - `<h1 className="text-2xl font-bold">` manual:**
-- `SchedulesPage.tsx` - "Horarios"
-- `ClockInsPage.tsx` - "Fichajes"
-- `ShiftConfigPage.tsx` - "Configuracion de Turnos"
-- `RegulationsPage.tsx` - "Firmas de Reglamento"
-- `CierreTurnoPage.tsx` - "Cierre de Turno"
-- `WarningsPage.tsx` - "Apercibimientos"
-- `AdvancesPage.tsx` - "Adelantos de Sueldo"
-- `ClosureConfigPage.tsx` - "Configuracion de Cierre de Turno"
-- `ContactMessagesPage.tsx` - "Mensajes de contacto"
-- `UsersPage.tsx` - "Usuarios"
+### Archivos sin cambios:
+- `OrderPanel.tsx` - Se mantiene igual
+- `ProductGrid.tsx` - Se mantiene igual (solo se le aplica CSS condicional desde el padre)
+- `PaymentModal.tsx` - Sin cambios
+- `RegisterOpenModal.tsx` - Sin cambios
 
-**Correccion:** Migrar todos los Patron B y C a usar `<PageHeader title="..." subtitle="..." />`. Esto unifica la jerarquia visual en `text-2xl` (estandar de `PageHeader` default variant).
+## Resumen de archivos
 
----
+| Archivo | Cambio |
+|---|---|
+| `src/pages/pos/POSPage.tsx` | Eliminar placeholders, nuevo layout lineal, ProductGrid siempre visible |
+| `src/components/pos/OrderConfigPanel.tsx` | Modo compact = resumen de 1 linea con toggle |
 
-### 4. SIDEBAR: LEGIBILIDAD Y DENSIDAD
+## Notas
 
-Problemas detectados en `WorkSidebar.tsx`:
-
-- `NavItemButton` usa `size="sm"` (32px de alto) — por debajo del minimo tactil de 44px
-- Iconos en `w-4 h-4` (16px) — pequenos para escaneo rapido
-- Sin separadores visuales entre secciones raiz
-- Labels de seccion (`NavSectionGroup`) y sus hijos tienen el mismo peso visual
-- `WorkSidebarNav` usa `space-y-3` para todo — no diferencia niveles
-
-**Correccion:**
-- Quitar `size="sm"` de `NavItemButton` (pasa a 40px, mas cercano a 44px)
-- Aumentar iconos a `w-[18px] h-[18px]`
-- Agregar separador visual (border-t) entre NavSectionGroups en el nivel raiz
-- Diferenciar label de seccion con `text-xs uppercase tracking-wider text-muted-foreground`
-
----
-
-### 5. INCONSISTENCIAS MENORES
-
-| Problema | Ubicacion | Correccion |
-|---|---|---|
-| `BrandHome.tsx` usa `text-3xl` para titulo, rompe con el estandar `text-2xl` del resto | `BrandHome.tsx` linea 112 | Usar `<PageHeader>` |
-| `LocalCommunicationsPage.tsx` usa `<h1>` manual con icono | linea 196 | Migrar a `<PageHeader>` |
-| `CoachingPage.tsx` usa `<h1>` manual | linea 269 | Migrar a `<PageHeader>` |
-| `TeamPage.tsx` — verificar si usa `<PageHeader>` o manual | Toda la pagina | Unificar |
-
----
-
-## Plan de Ejecucion (Orden de Prioridad)
-
-### Paso 1: Eliminar archivos huerfanos
-- Eliminar `src/components/admin/AdminSidebar.tsx`
-- Eliminar `src/components/cuenta/MyCoachingsCard.tsx`
-- Eliminar `src/App.css`
-
-### Paso 2: Corregir doble padding
-- En las ~23 paginas listadas, quitar `p-6` del wrapper div (mantener solo `space-y-X`)
-
-### Paso 3: Unificar headers a PageHeader
-- Migrar las ~14 paginas con `<h1>` manual a usar `<PageHeader title="..." subtitle="..." />`
-
-### Paso 4: Mejorar legibilidad del sidebar
-- Modificar `WorkSidebar.tsx`: quitar `size="sm"`, aumentar iconos, agregar separadores
-- Modificar `WorkShell.tsx`: aumentar padding de sidebar a `p-5`
-
-### Paso 5: Verificacion visual
-- Recorrer las pantallas principales para confirmar que no haya regresiones
-
----
-
-## Archivos a Modificar (resumen)
-
-| Accion | Archivos | Cantidad |
-|---|---|---|
-| Eliminar | AdminSidebar, MyCoachingsCard, App.css | 3 |
-| Quitar `p-6` redundante | Paginas local + admin | ~23 |
-| Migrar a `<PageHeader>` | Paginas con `<h1>` manual | ~14 |
-| Mejorar sidebar | WorkSidebar.tsx, WorkShell.tsx | 2 |
-| **Total** | | **~42 archivos** |
-
-Ningun cambio afecta logica de negocio, APIs, estados ni funcionalidades. Solo layout, estructura visual y limpieza de componentes.
+- No se modifica logica de negocio, validaciones, ni APIs
+- El flujo sigue siendo: configurar canal/cliente, luego agregar productos, luego cobrar
+- Solo cambia la presentacion: todo visible desde el inicio, sin pantallas vacias
