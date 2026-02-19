@@ -87,6 +87,7 @@ Deno.serve(async (req) => {
         .from("afip_config")
         .update({
           estado_conexion: "conectado",
+          estado_certificado: "conectado",
           ultimo_error: null,
           ultima_verificacion: new Date().toISOString(),
         })
