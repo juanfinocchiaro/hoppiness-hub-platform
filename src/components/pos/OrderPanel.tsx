@@ -14,16 +14,25 @@ interface OrderPanelProps {
   onRemove: (index: number) => void;
   onUpdateNotes?: (index: number, notes: string) => void;
   onCobrar: () => void;
+  onCancelOrder?: () => void;
   disabled?: boolean;
 }
 
-export function OrderPanel({ items, onUpdateQty, onRemove, onUpdateNotes, onCobrar, disabled }: OrderPanelProps) {
+export function OrderPanel({ items, onUpdateQty, onRemove, onUpdateNotes, onCobrar, onCancelOrder, disabled }: OrderPanelProps) {
   const subtotal = items.reduce((s, i) => s + i.subtotal, 0);
   const [editingNoteIdx, setEditingNoteIdx] = useState<number | null>(null);
 
   return (
     <div className="flex flex-col h-full border rounded-lg">
-      <div className="p-3 border-b font-medium">Pedido actual</div>
+      <div className="p-3 border-b font-medium flex items-center justify-between">
+        <span>Pedido actual</span>
+        {items.length > 0 && onCancelOrder && (
+          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-7 text-xs" onClick={onCancelOrder}>
+            <X className="h-3.5 w-3.5 mr-1" />
+            Cancelar
+          </Button>
+        )}
+      </div>
       <ScrollArea className="flex-1 min-h-0 p-2">
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
