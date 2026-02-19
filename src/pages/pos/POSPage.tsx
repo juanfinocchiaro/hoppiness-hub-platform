@@ -221,7 +221,6 @@ export default function POSPage() {
           items,
           metodoPago: payload.metodo,
           montoRecibido: payload.montoRecibido,
-          propina: payload.tip,
           orderConfig,
         });
       } else {
@@ -232,7 +231,6 @@ export default function POSPage() {
             amount: p.amount,
             montoRecibido: p.method === 'efectivo' ? p.montoRecibido : undefined,
           })),
-          propina: payload.tip,
           orderConfig,
         });
       }

@@ -1,7 +1,7 @@
 /**
  * PaymentModal - Modal de cobro con métodos de pago visuales y resumen colapsable
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,6 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/component
 import { Loader2, Split, Banknote, CreditCard, QrCode, ArrowRightLeft, ChevronDown } from 'lucide-react';
 import type { MetodoPago } from '@/types/pos';
 import type { CartItem } from '@/components/pos/ProductGrid';
-import { TipInput } from '@/components/pos/TipInput';
 import { SplitPayment, type PaymentLine } from '@/components/pos/SplitPayment';
 import { cn } from '@/lib/utils';
 
@@ -42,8 +41,8 @@ const METODOS: { value: MetodoPago; label: string; icon: React.ComponentType<{ c
 ];
 
 export type PaymentPayload =
-  | { type: 'single'; metodo: MetodoPago; montoRecibido?: number; tip?: number }
-  | { type: 'split'; payments: PaymentLine[]; tip?: number };
+  | { type: 'single'; metodo: MetodoPago; montoRecibido?: number }
+  | { type: 'split'; payments: PaymentLine[] };
 
 interface PaymentModalProps {
   open: boolean;
@@ -64,11 +63,10 @@ export function PaymentModal({
 }: PaymentModalProps) {
   const [metodo, setMetodo] = useState<MetodoPago>('efectivo');
   const [montoRecibido, setMontoRecibido] = useState('');
-  const [tip, setTip] = useState(0);
   const [showSplit, setShowSplit] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
 
-  const totalToPay = total + tip;
+  const totalToPay = total;
   const esEfectivo = metodo === 'efectivo';
   const montoNum = parseFloat(montoRecibido) || 0;
   const vuelto = esEfectivo ? Math.max(0, montoNum - totalToPay) : 0;
@@ -83,7 +81,6 @@ export function PaymentModal({
       type: 'single',
       metodo,
       montoRecibido: esEfectivo ? montoNum : undefined,
-      tip: tip > 0 ? tip : undefined,
     });
   };
 
@@ -91,7 +88,6 @@ export function PaymentModal({
     onConfirm({
       type: 'split',
       payments,
-      tip: tip > 0 ? tip : undefined,
     });
   };
 
@@ -132,14 +128,7 @@ export function PaymentModal({
 
             <div className="text-2xl font-bold text-primary">
               Total: $ {totalToPay.toLocaleString('es-AR')}
-              {tip > 0 && (
-                <span className="text-sm font-normal text-muted-foreground ml-2">
-                  (pedido $ {total.toLocaleString('es-AR')} + propina $ {tip.toLocaleString('es-AR')})
-                </span>
-              )}
             </div>
-
-            <TipInput value={tip} onChange={setTip} orderTotal={total} disabled={loading} />
 
             {/* Payment method buttons */}
             <div>
