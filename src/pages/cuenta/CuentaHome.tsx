@@ -139,7 +139,7 @@ export default function CuentaHome() {
       {/* Mi Marca Access Card */}
       {hasBrandAccess && (
         <Link to="/mimarca">
-          <Card className="border-primary/50 bg-primary/5 hover:shadow-md transition-shadow cursor-pointer">
+          <Card className="border-primary/50 bg-primary/5 hover:border-primary transition-colors cursor-pointer">
             <CardContent className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Building2 className="h-8 w-8 text-primary" />

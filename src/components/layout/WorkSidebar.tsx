@@ -72,7 +72,7 @@ export function NavSectionGroup({
           )}
         </Button>
       </CollapsibleTrigger>
-      <CollapsibleContent className="pl-4 space-y-0.5 mt-1">
+      <CollapsibleContent className="pl-4 space-y-0.5 mt-1.5">
         {children}
       </CollapsibleContent>
     </Collapsible>

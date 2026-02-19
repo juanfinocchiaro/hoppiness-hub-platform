@@ -149,12 +149,12 @@ export default function BrandHome() {
                 {loading ? <Skeleton className="h-8 w-16 mx-auto" /> : `${stats.globalHours}h`}
               </div>
             </div>
-            <div className="text-center p-4 bg-accent/20 rounded-lg border-2 border-accent">
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
                 <BarChart3 className="w-4 h-4" />
                 Productividad
               </div>
-              <div className="text-2xl font-bold text-accent-foreground">
+              <div className="text-2xl font-bold text-accent">
                 {loading ? <Skeleton className="h-8 w-16 mx-auto" /> : stats.globalProductivity}
               </div>
               <p className="text-xs text-muted-foreground mt-1">hamburguesas/hora</p>
@@ -183,7 +183,7 @@ export default function BrandHome() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {branches.map(branch => (
                 <Link key={branch.id} to={`/mimarca/locales/${branch.slug}`}>
-                  <Card className="hover:shadow-lg transition-shadow cursor-pointer hover:border-primary">
+                  <Card className="hover:border-primary/50 transition-colors cursor-pointer">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div>

@@ -109,7 +109,7 @@ export function WorkShell({
           </div>
 
           {/* Navigation - scrollable */}
-          <div className="flex-1 overflow-y-auto p-4">{sidebar}</div>
+          <div className="flex-1 overflow-y-auto p-5">{sidebar}</div>
 
           {/* Footer */}
           {footer && (

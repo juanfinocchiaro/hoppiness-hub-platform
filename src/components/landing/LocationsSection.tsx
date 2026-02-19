@@ -143,7 +143,7 @@ export function LocationsSection() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {isLoading ? (
             Array.from({ length: 5 }).map((_, i) => (
-              <Card key={i} className="shadow-card">
+              <Card key={i}>
                 <CardContent className="p-6">
                   <Skeleton className="h-6 w-3/4 mb-3" />
                   <Skeleton className="h-4 w-1/2 mb-4" />
@@ -160,7 +160,7 @@ export function LocationsSection() {
             <>
               {/* Locales Activos */}
               {activeBranches.map((branch) => (
-                <Card key={branch.id} className="shadow-card hover:shadow-elevated transition-all group">
+                <Card key={branch.id} className="hover:border-primary/50 transition-colors group">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-3">
                       <h3 className="font-bold text-lg group-hover:text-primary transition-colors">
@@ -198,7 +198,7 @@ export function LocationsSection() {
 
               {/* Locales Próximamente */}
               {comingSoonBranches.map((branch) => (
-                <Card key={branch.id} className="shadow-card border-dashed border-2 border-accent/50 bg-accent/5 relative overflow-hidden">
+                <Card key={branch.id} className="border-dashed border-accent/50 bg-accent/5 relative overflow-hidden">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-3">
                       <h3 className="font-bold text-lg">
