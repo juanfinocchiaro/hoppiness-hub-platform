@@ -1,104 +1,102 @@
 
 
-# Mejoras POS - Plan de Implementacion
+# Plan: Rediseno POS Inspirado en Patrones Rappi
 
-Basado en el analisis, filtro lo que tiene impacto real considerando que ya resolvimos ModifiersModal, ProductGrid con fotos, y PaymentModal con botones. Quedan 4 cambios de alto impacto y una limpieza.
+## Contexto
 
----
-
-## Cambio 1: Desbloquear la grilla (eliminar "Comenzar venta")
-
-El analisis tiene razon: obligar al cajero a hacer clic en "Comenzar venta" cuando los defaults ya son correctos (Mostrador + Takeaway) es friccion innecesaria. El 80% de las ventas no necesita cambiar la config.
-
-**Cambio en `POSPage.tsx`**:
-- Eliminar el estado `saleStarted` y toda la logica asociada
-- Eliminar el overlay con blur que bloquea la grilla
-- Eliminar el placeholder "El carrito aparecera aca"
-- La grilla y el carrito estan siempre visibles y funcionales
-- `OrderConfigPanel` arranca en modo compacto mostrando "Mostrador > Para llevar" con boton "Editar"
-- La validacion de config se hace solo al momento de "Cobrar" (como ya lo hace `handleCobrar`)
-
-**Cambio en `OrderConfigPanel.tsx`**:
-- Eliminar el boton "Comenzar venta" (`onConfirm` ya no se necesita en modo inicial)
-- Siempre renderizar en modo `compact` con summary line + boton editar
-- Quitar la prop `onConfirm` del uso principal
+El analisis compara la UX de Rappi con el POS actual de Hoppiness y propone mejoras priorizadas. Muchas cosas **ya estan implementadas** (barra sticky mobile, botones grandes de pago, botones rapidos de efectivo, canal colapsado, auto-add de productos simples). El plan se enfoca en lo que **falta**.
 
 ---
 
-## Cambio 2: Notas por item en el carrito
+## Estado Actual vs Propuesto
 
-El campo `notas` ya existe en `CartItem` pero no hay UI. Agregar un input inline.
-
-**Cambio en `OrderPanel.tsx`**:
-- Agregar un icono de "nota" (MessageSquare) en cada item del carrito
-- Al clickear, se abre un input inline debajo del item para escribir la nota
-- Si el item ya tiene notas (de ModifiersModal), mostrarlas en texto chico debajo del nombre
-- Agregar prop `onUpdateNotes: (index: number, notes: string) => void` al componente
-
-**Cambio en `POSPage.tsx`**:
-- Agregar handler `updateNotes` que modifica las notas de un item en el carrito
-
----
-
-## Cambio 3: Montos rapidos en cobro efectivo
-
-Cuando se paga en efectivo, agregar botones de acceso rapido con billetes comunes.
-
-**Cambio en `PaymentModal.tsx`**:
-- Cuando `metodo === 'efectivo'`, debajo del input "Monto recibido" agregar una fila de botones:
-  - "Exacto" (pone el total exacto)
-  - Billetes redondeados: el sistema calcula los 3-4 billetes mas probables que el cliente entregaria (ej: si el total es $8.500, muestra $9.000, $10.000, $15.000, $20.000)
-- Al tocar un boton, se llena el input automaticamente y se muestra el vuelto
+| Caracteristica | Estado actual | Accion |
+|---|---|---|
+| Barra sticky mobile con items + total + Cobrar | Ya existe | Ninguna |
+| Metodos de pago como botones grandes | Ya existe | Ninguna |
+| Botones de monto rapido (efectivo) | Ya existe | Ninguna |
+| Canal colapsado en header | Ya existe (Collapsible) | Ninguna |
+| Auto-add productos sin modificadores | Ya existe | Ninguna |
+| Cancelar pedido / Vaciar | Ya existe | Ninguna |
+| Modificadores en secciones (Extras / Sin ingrediente) | Ya existe | Ninguna |
+| Busqueda de productos | NO existe | **Fase 1** |
+| Scroll spy en tabs de categorias | NO existe | **Fase 1** |
+| Badge de cantidad en productos del carrito | NO existe | **Fase 1** |
+| Montos calculados en botones de propina | NO existe | **Fase 1** |
+| Tab "Frecuentes" | NO existe | **Fase 2** |
+| Resumen colapsable en modal de cobro | NO existe | **Fase 2** |
 
 ---
 
-## Cambio 4: Barra sticky mobile con total + Cobrar
+## Fase 1 - Implementar YA (4 cambios puntuales)
 
-En mobile, el boton "Cobrar" queda enterrado al fondo del scroll. Necesita estar siempre visible.
+### 1. Busqueda de productos
+**Archivo:** `src/components/pos/ProductGrid.tsx`
 
-**Cambio en `POSPage.tsx`**:
-- Agregar una barra fija al fondo de la pantalla visible solo en mobile (`lg:hidden`)
-- Muestra: "Items: X | Total: $X.XXX" + boton "Cobrar" grande
-- Solo aparece cuando hay items en el carrito
-- En desktop no cambia nada (el OrderPanel ya tiene el boton visible)
+- Agregar un `Input` de busqueda arriba de las tabs de categorias con icono de lupa
+- Filtro en tiempo real: al tipear se filtran los items por nombre (`nombre` y `nombre_corto`)
+- Al limpiar la busqueda, se restaura la vista de categorias
+- Shortcut: si hay un solo resultado y se presiona Enter, se agrega directo al carrito
 
----
+### 2. Scroll Spy en tabs de categorias
+**Archivo:** `src/components/pos/ProductGrid.tsx`
 
-## Cambio 5: Limpieza de stubs muertos
+- Usar `IntersectionObserver` para detectar que seccion de categoria esta visible en el viewport del ScrollArea
+- Actualizar `activeCategory` automaticamente al scrollear
+- La tab activa se resalta visualmente (ya existe el estilo, solo falta la logica de deteccion)
 
-Eliminar componentes que retornan `null` y no tienen uso real. Mantiene el codigo limpio.
+### 3. Badge de cantidad en productos del carrito
+**Archivos:** `src/components/pos/ProductGrid.tsx`, `src/pages/pos/POSPage.tsx`
 
-**Archivos a eliminar**:
-- `src/components/pos/DeliveryCard.tsx` (no usado en DeliveryPage)
-- `src/components/pos/KitchenCard.tsx` (no usado en KitchenPage)
-- `src/components/pos/RegisterCloseModal.tsx` (cierre se hace inline en RegisterPage)
-- `src/components/pos/StockAlert.tsx` (nunca implementado)
-- `src/components/pos/DiscountModal.tsx` (stub vacio, se implementara cuando se defina la logica de descuentos)
+- Pasar `cart` como prop a `ProductGrid`
+- Calcular cantidad total por `item_carta_id` en el carrito
+- Si cantidad > 0, mostrar un badge numerico (circulito con numero) sobre la esquina superior derecha de la card del producto
+- Cambiar el borde de la card a `border-primary` cuando esta en el carrito
 
-**Verificacion**: buscar imports de estos componentes y eliminarlos tambien.
+### 4. Montos calculados en botones de propina
+**Archivo:** `src/components/pos/TipInput.tsx`
 
----
-
-## Que NO hago (y por que)
-
-| Sugerencia del analisis | Razon para postergar |
-|---|---|
-| Busqueda en ProductGrid | Las tabs de categoria ya resuelven la navegacion. Si el menu crece a 50+ items se agrega |
-| Seccion "Frecuentes" | Requiere datos de ventas historicas que aun no se generan en volumen |
-| DiscountModal completo | Necesita definicion de reglas de negocio (% fijo, monto, promos, cortesias) antes de implementar |
-| Reorganizar RegisterPage con tabs | Es un cambio grande que no impacta el flujo de venta diario |
-| KitchenPage con urgencia/sonidos | Valido pero es un modulo separado, no afecta al POS del cajero |
-| Bottom sheet para carrito mobile | La barra sticky es mas simple y resuelve el 90% del problema. El bottom sheet agrega complejidad de UI |
+- Cambiar el label de los botones de `10%` a `10% - $X.XXX` mostrando el monto calculado
+- Reducir texto si es necesario para que entre bien
 
 ---
 
-## Resumen de archivos
+## Fase 2 - Implementar Pronto (2 mejoras)
 
-| Archivo | Cambio |
-|---|---|
-| `src/pages/pos/POSPage.tsx` | Eliminar saleStarted, config siempre compact, barra sticky mobile, handler notas |
-| `src/components/pos/OrderConfigPanel.tsx` | Eliminar boton "Comenzar venta", siempre compact |
-| `src/components/pos/OrderPanel.tsx` | UI de notas por item |
-| `src/components/pos/PaymentModal.tsx` | Botones de monto rapido en efectivo |
-| 5 archivos stub | Eliminar |
+### 5. Tab "Frecuentes"
+**Archivos:** `src/components/pos/ProductGrid.tsx`, nuevo hook `src/hooks/pos/useFrequentItems.ts`
+
+- Crear hook que consulte los items mas vendidos del local (basado en tabla de pedidos/ordenes)
+- Agregar una primera tab con icono estrella que muestre los 6-8 productos mas vendidos
+- Si no hay datos suficientes, no mostrar la tab
+
+### 6. Resumen colapsable en modal de cobro
+**Archivo:** `src/components/pos/PaymentModal.tsx`
+
+- Agregar un `Collapsible` arriba del total que muestre un resumen del pedido
+- Cerrado por defecto: "3 items - Victoria Burger, Cheese Burger..."
+- Expandido: lista detallada con cantidades y precios
+- Boton de cobro con el total incluido: "Confirmar cobro - $24.500"
+
+---
+
+## Detalles Tecnicos
+
+### Scroll Spy (punto 2)
+Se usara `IntersectionObserver` con `threshold: 0.3` observando cada seccion de categoria. El observer actualizara el `activeCategory` cuando una seccion entre en el viewport. Se necesita obtener la referencia del viewport del `ScrollArea` (el div con `overflow`).
+
+### Badge de cantidad (punto 3)
+Se recibira `cart: CartItem[]` como prop en `ProductGrid`. Se calculara un `Map<item_carta_id, number>` con `useMemo` para busqueda O(1). El badge sera un `<span>` posicionado absolute sobre la card.
+
+### Busqueda (punto 1)
+Filtro local sobre los items ya cargados en memoria (no requiere query adicional). Se usa `useState` para el termino de busqueda y `useMemo` para filtrar `byCategory`. Cuando hay texto de busqueda, se ignora la agrupacion por categorias y se muestra una grilla plana de resultados.
+
+---
+
+## Lo que NO se implementa (y por que)
+
+- **Cross-sell ("Agregás papas?")**: El cajero sugiere verbalmente, no la interfaz
+- **Modificadores como side panel en desktop**: El Dialog actual funciona bien y es mas rapido para el cajero. Cambiar a side panel agrega complejidad sin beneficio claro en el flujo POS
+- **Sonido/vibracion**: Mejora menor, se puede agregar despues
+- **Temas visuales POS vs gestion**: No es prioritario
 
