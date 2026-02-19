@@ -30,7 +30,7 @@ function InlineCashOpen({ branchId, onOpened }: { branchId: string; onOpened: ()
   const [selectedRegister, setSelectedRegister] = useState('');
   const [openingAmount, setOpeningAmount] = useState('');
   const [isOpening, setIsOpening] = useState(false);
-  const registers = registersData?.active ?? [];
+  const registers = (registersData?.active ?? []).filter(r => r.register_type === 'ventas');
 
   useEffect(() => {
     if (registers.length > 0 && !selectedRegister) {
