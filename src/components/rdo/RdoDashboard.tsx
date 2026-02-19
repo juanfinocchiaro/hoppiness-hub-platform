@@ -4,18 +4,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { TrendingUp, TrendingDown, DollarSign, BarChart3, ArrowDown, ArrowUp, ChevronRight, ChevronDown, Tag, Percent } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, BarChart3, ArrowDown, ArrowUp, ChevronRight, ChevronDown, Tag, Percent, Monitor, FileText } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useRdoReport } from '@/hooks/useRdoReport';
 import { usePromoDiscountData } from '@/hooks/usePromoDiscountData';
+import { usePosEnabled } from '@/hooks/usePosEnabled';
+import { usePosVentasAgregadas } from '@/hooks/usePosVentasAgregadas';
 import { getCurrentPeriodo } from '@/types/compra';
 import { RDO_SECTIONS } from '@/types/rdo';
 import type { RdoReportLine } from '@/types/rdo';
 import { CmvDrillDown } from './CmvDrillDown';
 
-function useVentasData(branchId: string, periodo: string) {
+function useVentasManual(branchId: string, periodo: string) {
   const { user } = useAuth();
   return useQuery({
     queryKey: ['rdo-ventas', branchId, periodo],
@@ -154,11 +156,16 @@ interface RdoDashboardProps {
 
 export function RdoDashboard({ branchId }: RdoDashboardProps) {
   const [periodo, setPeriodo] = useState(getCurrentPeriodo());
-  const { data: ventas, isLoading: loadingVentas } = useVentasData(branchId, periodo);
+  const posEnabled = usePosEnabled(branchId);
+  const { data: ventasManual, isLoading: loadingVentasManual } = useVentasManual(branchId, periodo);
+  const { data: ventasPos, isLoading: loadingVentasPos } = usePosVentasAgregadas(branchId, periodo, posEnabled);
   const { data: rdoLines, isLoading: loadingRdo } = useRdoReport(branchId, periodo);
   const { data: promoData } = usePromoDiscountData(branchId, periodo);
 
+  const ventas = posEnabled ? ventasPos : ventasManual;
+  const loadingVentas = posEnabled ? loadingVentasPos : loadingVentasManual;
   const isLoading = loadingVentas || loadingRdo;
+  const fuenteLabel = posEnabled ? 'POS' : 'Carga manual';
 
   const periodos = Array.from({ length: 12 }, (_, i) => {
     const d = new Date();
@@ -187,6 +194,10 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
         <div>
           <h2 className="text-2xl font-bold tracking-tight">RDO — Resultado de Operaciones</h2>
           <p className="text-sm text-muted-foreground">Estado de resultados mensual del local</p>
+          <Badge variant="outline" className="mt-1 gap-1 text-xs">
+            {posEnabled ? <Monitor className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
+            Fuente: {fuenteLabel}
+          </Badge>
         </div>
         <Select value={periodo} onValueChange={setPeriodo}>
           <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
