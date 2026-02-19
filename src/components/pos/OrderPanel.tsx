@@ -52,7 +52,14 @@ export function OrderPanel({ items, onUpdateQty, onRemove, onUpdateNotes, onCobr
                     </p>
                     {/* Show existing notes (from modifiers or manual) */}
                     {it.notas && editingNoteIdx !== idx && (
-                      <p className="text-xs text-primary mt-0.5 truncate">{it.notas}</p>
+                      <div className="mt-0.5 space-y-0">
+                        {it.notas.split(/[,|]/).map((note, ni) => {
+                          const trimmed = note.trim();
+                          return trimmed ? (
+                            <p key={ni} className="text-xs text-primary truncate">{trimmed}</p>
+                          ) : null;
+                        })}
+                      </div>
                     )}
                   </div>
                   <div className="flex items-center gap-1">
