@@ -50,6 +50,7 @@ import RdoLoaderPage from "./pages/local/RdoLoaderPage";
 import InversionesPage from "./pages/local/InversionesPage";
 import VentasMensualesLocalPage from "./pages/local/VentasMensualesLocalPage";
 import InspectionsLocalPage from "./pages/local/InspectionsLocalPage";
+import AfipConfigPage from "./pages/local/AfipConfigPage";
 
 // POS
 import POSPage from "./pages/pos/POSPage";
@@ -225,6 +226,7 @@ const App = () => (
               <Route path="config/impresoras" element={<PrintersConfigPage />} />
               <Route path="config/estaciones" element={<KitchenStationsConfigPage />} />
               <Route path="config/impresion" element={<PrintConfigPage />} />
+              <Route path="config/facturacion" element={<AfipConfigPage />} />
             </Route>
             
             {/* Mi Marca - /mimarca */}
