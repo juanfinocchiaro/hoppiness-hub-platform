@@ -161,10 +161,11 @@ function ConfigForm({
                     size="sm"
                     className="h-10 font-medium"
                     onClick={() => {
-                      set({ numeroLlamador: String(num) });
+                      const updates: Partial<OrderConfig> = { numeroLlamador: String(num) };
                       if (!config.clienteNombre || config.clienteNombre.startsWith('Llamador #')) {
-                        set({ clienteNombre: `Llamador #${num}` });
+                        updates.clienteNombre = `Llamador #${num}`;
                       }
+                      set(updates);
                     }}
                   >
                     {num}
