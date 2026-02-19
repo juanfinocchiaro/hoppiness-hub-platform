@@ -544,6 +544,257 @@ export type Database = {
           },
         ]
       }
+      cash_register_movements: {
+        Row: {
+          amount: number
+          branch_id: string
+          concept: string
+          created_at: string | null
+          id: string
+          order_id: string | null
+          payment_method: string
+          recorded_by: string | null
+          shift_id: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          branch_id: string
+          concept: string
+          created_at?: string | null
+          id?: string
+          order_id?: string | null
+          payment_method?: string
+          recorded_by?: string | null
+          shift_id: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          branch_id?: string
+          concept?: string
+          created_at?: string | null
+          id?: string
+          order_id?: string | null
+          payment_method?: string
+          recorded_by?: string | null
+          shift_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_register_movements_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_movements_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_movements_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_movements_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "cash_register_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_register_shifts: {
+        Row: {
+          branch_id: string
+          cash_register_id: string
+          closed_at: string | null
+          closed_by: string | null
+          closing_amount: number | null
+          difference: number | null
+          expected_amount: number | null
+          id: string
+          notes: string | null
+          opened_at: string
+          opened_by: string
+          opening_amount: number
+          status: string
+        }
+        Insert: {
+          branch_id: string
+          cash_register_id: string
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_amount?: number | null
+          difference?: number | null
+          expected_amount?: number | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by: string
+          opening_amount?: number
+          status?: string
+        }
+        Update: {
+          branch_id?: string
+          cash_register_id?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_amount?: number | null
+          difference?: number | null
+          expected_amount?: number | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string
+          opening_amount?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_register_shifts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_shifts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_shifts_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_registers: {
+        Row: {
+          branch_id: string
+          created_at: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_registers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_registers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cashier_discrepancy_history: {
+        Row: {
+          actual_amount: number
+          branch_id: string
+          cash_register_id: string | null
+          created_at: string | null
+          discrepancy: number
+          expected_amount: number
+          id: string
+          notes: string | null
+          shift_date: string
+          shift_id: string
+          user_id: string
+        }
+        Insert: {
+          actual_amount: number
+          branch_id: string
+          cash_register_id?: string | null
+          created_at?: string | null
+          discrepancy: number
+          expected_amount: number
+          id?: string
+          notes?: string | null
+          shift_date: string
+          shift_id: string
+          user_id: string
+        }
+        Update: {
+          actual_amount?: number
+          branch_id?: string
+          cash_register_id?: string | null
+          created_at?: string | null
+          discrepancy?: number
+          expected_amount?: number
+          id?: string
+          notes?: string | null
+          shift_date?: string
+          shift_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cashier_discrepancy_history_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashier_discrepancy_history_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashier_discrepancy_history_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashier_discrepancy_history_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "cash_register_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categorias_insumo: {
         Row: {
           activo: boolean | null
@@ -3763,6 +4014,51 @@ export type Database = {
           },
         ]
       }
+      operator_session_logs: {
+        Row: {
+          action_type: string
+          branch_id: string
+          created_at: string | null
+          current_user_id: string
+          id: string
+          previous_user_id: string | null
+          triggered_by: string | null
+        }
+        Insert: {
+          action_type: string
+          branch_id: string
+          created_at?: string | null
+          current_user_id: string
+          id?: string
+          previous_user_id?: string | null
+          triggered_by?: string | null
+        }
+        Update: {
+          action_type?: string
+          branch_id?: string
+          created_at?: string | null
+          current_user_id?: string
+          id?: string
+          previous_user_id?: string | null
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operator_session_logs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operator_session_logs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pago_factura: {
         Row: {
           factura_id: string
@@ -4140,6 +4436,8 @@ export type Database = {
         Row: {
           branch_id: string
           cadete_id: string | null
+          canal_app: string | null
+          canal_venta: string | null
           cliente_direccion: string | null
           cliente_nombre: string | null
           cliente_notas: string | null
@@ -4159,6 +4457,7 @@ export type Database = {
           id: string
           numero_llamador: number | null
           numero_pedido: number
+          propina: number
           requiere_factura: boolean | null
           subtotal: number
           tiempo_entregado: string | null
@@ -4166,11 +4465,14 @@ export type Database = {
           tiempo_prometido: string | null
           tipo: string
           tipo_factura: string | null
+          tipo_servicio: string | null
           total: number
         }
         Insert: {
           branch_id: string
           cadete_id?: string | null
+          canal_app?: string | null
+          canal_venta?: string | null
           cliente_direccion?: string | null
           cliente_nombre?: string | null
           cliente_notas?: string | null
@@ -4190,6 +4492,7 @@ export type Database = {
           id?: string
           numero_llamador?: number | null
           numero_pedido: number
+          propina?: number
           requiere_factura?: boolean | null
           subtotal: number
           tiempo_entregado?: string | null
@@ -4197,11 +4500,14 @@ export type Database = {
           tiempo_prometido?: string | null
           tipo: string
           tipo_factura?: string | null
+          tipo_servicio?: string | null
           total: number
         }
         Update: {
           branch_id?: string
           cadete_id?: string | null
+          canal_app?: string | null
+          canal_venta?: string | null
           cliente_direccion?: string | null
           cliente_nombre?: string | null
           cliente_notas?: string | null
@@ -4221,6 +4527,7 @@ export type Database = {
           id?: string
           numero_llamador?: number | null
           numero_pedido?: number
+          propina?: number
           requiere_factura?: boolean | null
           subtotal?: number
           tiempo_entregado?: string | null
@@ -4228,6 +4535,7 @@ export type Database = {
           tiempo_prometido?: string | null
           tipo?: string
           tipo_factura?: string | null
+          tipo_servicio?: string | null
           total?: number
         }
         Relationships: [
@@ -5678,6 +5986,73 @@ export type Database = {
           },
         ]
       }
+      stock_cierre_mensual: {
+        Row: {
+          branch_id: string
+          compras: number
+          consumo_ventas: number
+          created_at: string | null
+          created_by: string | null
+          id: string
+          insumo_id: string
+          merma: number
+          periodo: string
+          stock_apertura: number
+          stock_cierre_fisico: number
+          stock_esperado: number
+        }
+        Insert: {
+          branch_id: string
+          compras?: number
+          consumo_ventas?: number
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          insumo_id: string
+          merma?: number
+          periodo: string
+          stock_apertura?: number
+          stock_cierre_fisico: number
+          stock_esperado?: number
+        }
+        Update: {
+          branch_id?: string
+          compras?: number
+          consumo_ventas?: number
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          insumo_id?: string
+          merma?: number
+          periodo?: string
+          stock_apertura?: number
+          stock_cierre_fisico?: number
+          stock_esperado?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_cierre_mensual_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_cierre_mensual_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_cierre_mensual_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_movimientos: {
         Row: {
           branch_id: string
@@ -6389,6 +6764,18 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["brand_role_type"]
       }
+      get_cashier_discrepancy_stats: {
+        Args: { _branch_id?: string; _user_id: string }
+        Returns: {
+          discrepancy_this_month: number
+          discrepancy_total: number
+          last_discrepancy_amount: number
+          last_discrepancy_date: string
+          perfect_shifts: number
+          precision_pct: number
+          total_shifts: number
+        }[]
+      }
       get_iibb_alicuota: {
         Args: { _branch_id: string; _fecha?: string }
         Returns: number
@@ -6530,6 +6917,14 @@ export type Database = {
           id: string
           role: string
           status: string
+        }[]
+      }
+      validate_supervisor_pin: {
+        Args: { _branch_id: string; _pin: string }
+        Returns: {
+          full_name: string
+          role: string
+          user_id: string
         }[]
       }
     }
