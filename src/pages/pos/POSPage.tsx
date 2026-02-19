@@ -285,7 +285,14 @@ export default function POSPage() {
             <ConfigForm
               config={orderConfig}
               onChange={setOrderConfig}
-              onConfirm={() => setConfigConfirmed(true)}
+              onConfirm={() => {
+                const err = validateOrderConfig();
+                if (err) {
+                  toast.error(err);
+                  return;
+                }
+                setConfigConfirmed(true);
+              }}
             />
           </div>
         </div>
