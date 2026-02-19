@@ -18,6 +18,19 @@ import { TipInput } from '@/components/pos/TipInput';
 import { SplitPayment, type PaymentLine } from '@/components/pos/SplitPayment';
 import { cn } from '@/lib/utils';
 
+/** Calculate quick cash amounts based on common Argentine bills */
+function getQuickAmounts(total: number): number[] {
+  const bills = [1000, 2000, 5000, 10000, 20000];
+  const results: number[] = [];
+  for (const bill of bills) {
+    const rounded = Math.ceil(total / bill) * bill;
+    if (rounded > total && !results.includes(rounded)) {
+      results.push(rounded);
+    }
+  }
+  return results.slice(0, 4);
+}
+
 const METODOS: { value: MetodoPago; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { value: 'efectivo', label: 'Efectivo', icon: Banknote },
   { value: 'tarjeta_debito', label: 'Débito', icon: CreditCard },
@@ -130,6 +143,23 @@ export function PaymentModal({
                     value={montoRecibido}
                     onChange={(e) => setMontoRecibido(e.target.value)}
                   />
+                </div>
+                {/* Quick amount buttons */}
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: 'Exacto', value: totalToPay },
+                    ...getQuickAmounts(totalToPay).map((v) => ({ label: `$ ${v.toLocaleString('es-AR')}`, value: v })),
+                  ].map((btn) => (
+                    <Button
+                      key={btn.label}
+                      type="button"
+                      variant={montoNum === btn.value ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setMontoRecibido(String(btn.value))}
+                    >
+                      {btn.label}
+                    </Button>
+                  ))}
                 </div>
                 {montoNum > 0 && (
                   <div className="text-lg font-semibold">

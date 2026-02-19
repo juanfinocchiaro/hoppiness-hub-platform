@@ -1,21 +1,25 @@
 /**
  * OrderPanel - Carrito actual del pedido
  */
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Minus, Plus, Trash2, CreditCard, ShoppingBag } from 'lucide-react';
+import { Minus, Plus, Trash2, CreditCard, ShoppingBag, MessageSquare, X } from 'lucide-react';
 import type { CartItem } from './ProductGrid';
 
 interface OrderPanelProps {
   items: CartItem[];
   onUpdateQty: (index: number, delta: number) => void;
   onRemove: (index: number) => void;
+  onUpdateNotes?: (index: number, notes: string) => void;
   onCobrar: () => void;
   disabled?: boolean;
 }
 
-export function OrderPanel({ items, onUpdateQty, onRemove, onCobrar, disabled }: OrderPanelProps) {
+export function OrderPanel({ items, onUpdateQty, onRemove, onUpdateNotes, onCobrar, disabled }: OrderPanelProps) {
   const subtotal = items.reduce((s, i) => s + i.subtotal, 0);
+  const [editingNoteIdx, setEditingNoteIdx] = useState<number | null>(null);
 
   return (
     <div className="flex flex-col h-full border rounded-lg">
@@ -30,44 +34,57 @@ export function OrderPanel({ items, onUpdateQty, onRemove, onCobrar, disabled }:
         ) : (
           <div className="space-y-2">
             {items.map((it, idx) => (
-              <div
-                key={`${it.item_carta_id}-${idx}`}
-                className="flex items-center justify-between gap-2 p-2 rounded-lg bg-muted/50"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{it.nombre}</p>
-                  <p className="text-xs text-muted-foreground">
-                    $ {it.precio_unitario.toLocaleString('es-AR')} × {it.cantidad}
-                  </p>
+              <div key={`${it.item_carta_id}-${idx}`} className="p-2 rounded-lg bg-muted/50">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{it.nombre}</p>
+                    <p className="text-xs text-muted-foreground">
+                      $ {it.precio_unitario.toLocaleString('es-AR')} × {it.cantidad}
+                    </p>
+                    {/* Show existing notes (from modifiers or manual) */}
+                    {it.notas && editingNoteIdx !== idx && (
+                      <p className="text-xs text-primary mt-0.5 truncate">{it.notas}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onUpdateQty(idx, -1)} disabled={it.cantidad <= 1}>
+                      <Minus className="h-3.5 w-3.5" />
+                    </Button>
+                    <span className="text-sm font-medium w-6 text-center">{it.cantidad}</span>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onUpdateQty(idx, 1)}>
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                    {onUpdateNotes && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`h-8 w-8 ${it.notas ? 'text-primary' : 'text-muted-foreground'}`}
+                        onClick={() => setEditingNoteIdx(editingNoteIdx === idx ? null : idx)}
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onRemove(idx)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => onUpdateQty(idx, -1)}
-                    disabled={it.cantidad <= 1}
-                  >
-                    <Minus className="h-3.5 w-3.5" />
-                  </Button>
-                  <span className="text-sm font-medium w-6 text-center">{it.cantidad}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => onUpdateQty(idx, 1)}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive"
-                    onClick={() => onRemove(idx)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
+                {/* Inline note editor */}
+                {editingNoteIdx === idx && onUpdateNotes && (
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <Input
+                      placeholder="Ej: sin lechuga, bien cocida..."
+                      value={it.notas || ''}
+                      onChange={(e) => onUpdateNotes(idx, e.target.value)}
+                      className="h-8 text-xs flex-1"
+                      autoFocus
+                      onKeyDown={(e) => { if (e.key === 'Enter') setEditingNoteIdx(null); }}
+                    />
+                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setEditingNoteIdx(null)}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -78,12 +95,7 @@ export function OrderPanel({ items, onUpdateQty, onRemove, onCobrar, disabled }:
           <span>Total</span>
           <span>$ {subtotal.toLocaleString('es-AR')}</span>
         </div>
-        <Button
-          className="w-full"
-          size="lg"
-          onClick={onCobrar}
-          disabled={items.length === 0 || disabled}
-        >
+        <Button className="w-full hidden lg:flex" size="lg" onClick={onCobrar} disabled={items.length === 0 || disabled}>
           <CreditCard className="h-4 w-4 mr-2" />
           Cobrar
         </Button>
