@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ShieldCheck, Banknote } from 'lucide-react';
+import { ShieldCheck, Banknote, Receipt } from 'lucide-react';
 import { CashRegister, CashRegisterShift, CashRegisterMovement } from '@/hooks/useCashRegister';
 
 interface CajaFuerteCardProps {
@@ -15,9 +15,11 @@ interface CajaFuerteCardProps {
   localRole: string | null;
   isSuperadmin: boolean;
   onRetiroClick: () => void;
+  onExpenseClick?: () => void;
+  expensesList?: React.ReactNode;
 }
 
-export function CajaFuerteCard({ register, shift, movements, localRole, isSuperadmin, onRetiroClick }: CajaFuerteCardProps) {
+export function CajaFuerteCard({ register, shift, movements, localRole, isSuperadmin, onRetiroClick, onExpenseClick, expensesList }: CajaFuerteCardProps) {
   const canRetire = isSuperadmin || localRole === 'franquiciado';
 
   const balance = useMemo(() => {
@@ -47,10 +49,18 @@ export function CajaFuerteCard({ register, shift, movements, localRole, isSupera
           </div>
 
           {canRetire && balance > 0 && (
-            <Button variant="outline" className="w-full" onClick={onRetiroClick}>
-              <Banknote className="h-4 w-4 mr-2" />
-              Registrar Retiro
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={onRetiroClick}>
+                <Banknote className="h-4 w-4 mr-2" />
+                Registrar Retiro
+              </Button>
+              {onExpenseClick && (
+                <Button variant="outline" onClick={onExpenseClick}>
+                  <Receipt className="h-4 w-4 mr-2" />
+                  Egreso
+                </Button>
+              )}
+            </div>
           )}
 
           {movements.length > 0 && (
@@ -66,6 +76,7 @@ export function CajaFuerteCard({ register, shift, movements, localRole, isSupera
               </ul>
             </div>
           )}
+        {expensesList}
         </div>
       </CardContent>
     </Card>

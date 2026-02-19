@@ -208,7 +208,7 @@ const App = () => (
               <Route path="finanzas/proveedores/:proveedorId" element={<CuentaCorrienteProveedorPage />} />
               <Route path="finanzas/insumos" element={<InsumosLocalPage />} />
               <Route path="finanzas/compras" element={<ComprasPage />} />
-              <Route path="finanzas/gastos" element={<GastosPage />} />
+              {/* finanzas/gastos route removed - expenses now handled in RegisterPage cajas */}
               <Route path="finanzas/ventas-mensuales" element={<VentasMensualesLocalPage />} />
               <Route path="finanzas/consumos" element={<ConsumosPage />} />
               <Route path="finanzas/socios" element={<SociosPage />} />

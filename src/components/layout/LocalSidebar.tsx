@@ -109,7 +109,7 @@ export function LocalSidebar({ branchId, posEnabled = false, permissions }: Loca
   ]);
 
   const isFinanzasActive = isActive([
-    'finanzas/gastos',
+    'finanzas/consumos',
     'finanzas/consumos',
     'finanzas/pl',
     'finanzas/periodos',
@@ -247,9 +247,6 @@ export function LocalSidebar({ branchId, posEnabled = false, permissions }: Loca
           icon={Wallet}
           forceOpen={isFinanzasActive}
         >
-          {canViewGastos && (
-            <NavItemButton to={`${basePath}/finanzas/gastos`} icon={Receipt} label="Caja Chica" />
-          )}
           {canViewConsumos && (
             <NavItemButton to={`${basePath}/finanzas/consumos`} icon={Package} label="Consumos" />
           )}

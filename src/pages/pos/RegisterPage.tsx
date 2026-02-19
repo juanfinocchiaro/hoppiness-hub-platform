@@ -31,6 +31,7 @@ import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import { RegisterOpenModal } from '@/components/pos/RegisterOpenModal';
 import { ManualIncomeModal } from '@/components/pos/ManualIncomeModal';
 import { QuickExpenseModal } from '@/components/pos/QuickExpenseModal';
+import { CajaExpensesList } from '@/components/pos/CajaExpensesList';
 import { CashierDiscrepancyStats } from '@/components/pos/CashierDiscrepancyStats';
 import { CajaAlivioCard } from '@/components/pos/CajaAlivioCard';
 import { CajaFuerteCard } from '@/components/pos/CajaFuerteCard';
@@ -49,6 +50,8 @@ export default function RegisterPage() {
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showExpenseAlivioModal, setShowExpenseAlivioModal] = useState(false);
+  const [showExpenseFuerteModal, setShowExpenseFuerteModal] = useState(false);
   const [showAlivioModal, setShowAlivioModal] = useState(false);
   const [showRetiroAlivioModal, setShowRetiroAlivioModal] = useState(false);
   const [showRetiroFuerteModal, setShowRetiroFuerteModal] = useState(false);
@@ -56,6 +59,8 @@ export default function RegisterPage() {
   const [alivioNotes, setAlivioNotes] = useState('');
   const [closingAmount, setClosingAmount] = useState('');
   const [closingNotes, setClosingNotes] = useState('');
+
+  const canApproveExpenses = isSuperadmin || ['franquiciado', 'encargado'].includes(localRole ?? '');
 
   // Get the 3 registers
   const { ventas, alivio, fuerte, isLoading: loadingRegisters } = useCashRegistersByType(branchId);
@@ -172,7 +177,9 @@ export default function RegisterPage() {
       {/* ── Modals ── */}
       <RegisterOpenModal open={showOpenModal} onOpenChange={setShowOpenModal} branchId={branchId!} onOpened={() => shiftStatus.refetch()} />
       <ManualIncomeModal open={showIncomeModal} onOpenChange={setShowIncomeModal} branchId={branchId!} shiftId={activeShift?.id} />
-      <QuickExpenseModal open={showExpenseModal} onOpenChange={setShowExpenseModal} branchId={branchId!} shiftId={activeShift?.id} />
+      <QuickExpenseModal open={showExpenseModal} onOpenChange={setShowExpenseModal} branchId={branchId!} shiftId={activeShift?.id} registerLabel="Caja de Ventas" />
+      <QuickExpenseModal open={showExpenseAlivioModal} onOpenChange={setShowExpenseAlivioModal} branchId={branchId!} shiftId={alivioShift?.id} registerLabel="Caja de Alivio" />
+      <QuickExpenseModal open={showExpenseFuerteModal} onOpenChange={setShowExpenseFuerteModal} branchId={branchId!} shiftId={fuerteShift?.id} registerLabel="Caja Fuerte" />
 
       {/* Close modal */}
       <Dialog open={showCloseModal} onOpenChange={setShowCloseModal}>
@@ -318,6 +325,16 @@ export default function RegisterPage() {
         <CashierDiscrepancyStats userId={user.id} branchId={branchId} showCurrentDiscrepancy={false} />
       )}
 
+      {/* Expenses list for Ventas */}
+      {activeShift && (
+        <CajaExpensesList
+          shiftId={activeShift.id}
+          branchId={branchId!}
+          registerLabel="Caja de Ventas"
+          canApprove={canApproveExpenses}
+        />
+      )}
+
       {/* ═══ SECCIÓN 2: CAJA DE ALIVIO ═══ */}
       {showAlivioSection && alivio && (
         <CajaAlivioCard
@@ -327,6 +344,17 @@ export default function RegisterPage() {
           localRole={localRole}
           isSuperadmin={isSuperadmin}
           onRetiroClick={() => setShowRetiroAlivioModal(true)}
+          onExpenseClick={canApproveExpenses ? () => setShowExpenseAlivioModal(true) : undefined}
+          expensesList={
+            alivioShift && canApproveExpenses ? (
+              <CajaExpensesList
+                shiftId={alivioShift.id}
+                branchId={branchId!}
+                registerLabel="Caja de Alivio"
+                canApprove={canApproveExpenses}
+              />
+            ) : undefined
+          }
         />
       )}
 
@@ -339,6 +367,17 @@ export default function RegisterPage() {
           localRole={localRole}
           isSuperadmin={isSuperadmin}
           onRetiroClick={() => setShowRetiroFuerteModal(true)}
+          onExpenseClick={canApproveExpenses ? () => setShowExpenseFuerteModal(true) : undefined}
+          expensesList={
+            fuerteShift && canApproveExpenses ? (
+              <CajaExpensesList
+                shiftId={fuerteShift.id}
+                branchId={branchId!}
+                registerLabel="Caja Fuerte"
+                canApprove={canApproveExpenses}
+              />
+            ) : undefined
+          }
         />
       )}
     </div>

@@ -7,7 +7,7 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowDownToLine, Vault } from 'lucide-react';
+import { ArrowDownToLine, Vault, Receipt } from 'lucide-react';
 import { CashRegister, CashRegisterShift, CashRegisterMovement, canViewBalance, canViewMovements } from '@/hooks/useCashRegister';
 
 interface CajaAlivioCardProps {
@@ -17,9 +17,11 @@ interface CajaAlivioCardProps {
   localRole: string | null;
   isSuperadmin: boolean;
   onRetiroClick: () => void;
+  onExpenseClick?: () => void;
+  expensesList?: React.ReactNode;
 }
 
-export function CajaAlivioCard({ register, shift, movements, localRole, isSuperadmin, onRetiroClick }: CajaAlivioCardProps) {
+export function CajaAlivioCard({ register, shift, movements, localRole, isSuperadmin, onRetiroClick, onExpenseClick, expensesList }: CajaAlivioCardProps) {
   const showBalance = canViewBalance('alivio', localRole, isSuperadmin);
   const showMovements = canViewMovements('alivio', localRole, isSuperadmin);
   const canRetire = isSuperadmin || ['franquiciado', 'contador_local'].includes(localRole ?? '');
@@ -55,10 +57,18 @@ export function CajaAlivioCard({ register, shift, movements, localRole, isSupera
             </div>
             
             {canRetire && balance > 0 && (
-              <Button variant="outline" className="w-full" onClick={onRetiroClick}>
-                <Vault className="h-4 w-4 mr-2" />
-                Retirar a Caja Fuerte
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={onRetiroClick}>
+                  <Vault className="h-4 w-4 mr-2" />
+                  Retirar a Caja Fuerte
+                </Button>
+                {onExpenseClick && (
+                  <Button variant="outline" onClick={onExpenseClick}>
+                    <Receipt className="h-4 w-4 mr-2" />
+                    Egreso
+                  </Button>
+                )}
+              </div>
             )}
 
             {showMovements && movements.length > 0 && (
@@ -80,6 +90,7 @@ export function CajaAlivioCard({ register, shift, movements, localRole, isSupera
             <p className="text-sm text-muted-foreground mt-1">depósito{depositCount !== 1 ? 's' : ''} realizado{depositCount !== 1 ? 's' : ''}</p>
           </div>
         )}
+        {expensesList}
       </CardContent>
     </Card>
   );
