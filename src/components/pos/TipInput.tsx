@@ -24,18 +24,21 @@ export function TipInput({ value, onChange, orderTotal, disabled }: TipInputProp
     <div className="space-y-2">
       <Label>Propina (opcional)</Label>
       <div className="flex gap-2 flex-wrap">
-        {QUICK_PERCENT.map((p) => (
-          <Button
-            key={p}
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => handlePercent(p)}
-            disabled={disabled || orderTotal <= 0}
-          >
-            {p}%
-          </Button>
-        ))}
+        {QUICK_PERCENT.map((p) => {
+          const amount = Math.round((orderTotal * p) / 100);
+          return (
+            <Button
+              key={p}
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => handlePercent(p)}
+              disabled={disabled || orderTotal <= 0}
+            >
+              {p}% · ${amount.toLocaleString('es-AR')}
+            </Button>
+          );
+        })}
       </div>
       <Input
         type="number"
