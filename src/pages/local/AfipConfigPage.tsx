@@ -8,8 +8,7 @@ import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { FormLayout } from '@/components/ui/forms-pro/FormLayout';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
-import { Wifi, WifiOff, Upload, Shield, FileText } from 'lucide-react';
-import { Textarea } from '@/components/ui/textarea';
+import { Wifi, Upload, Shield, FileText } from 'lucide-react';
 
 export default function AfipConfigPage() {
   const { branchId } = useParams<{ branchId: string }>();
@@ -35,7 +34,7 @@ export default function AfipConfigPage() {
         inicio_actividades: config.inicio_actividades || '',
         punto_venta: config.punto_venta?.toString() || '',
         certificado_crt: config.certificado_crt || '',
-        clave_privada_enc: '', // Never show the encrypted key
+        clave_privada_enc: '',
       });
     }
   }, [config]);
@@ -47,7 +46,6 @@ export default function AfipConfigPage() {
   const handleFileUpload = async (field: 'certificado_crt' | 'clave_privada_enc', file: File) => {
     const text = await file.text();
     if (field === 'clave_privada_enc') {
-      // Encode in base64 for storage (real encryption will happen server-side)
       setForm((prev) => ({ ...prev, [field]: btoa(text) }));
     } else {
       setForm((prev) => ({ ...prev, [field]: text }));
@@ -65,7 +63,6 @@ export default function AfipConfigPage() {
       punto_venta: form.punto_venta ? parseInt(form.punto_venta) : null,
       certificado_crt: form.certificado_crt || null,
     };
-    // Only send key if user uploaded a new one
     if (form.clave_privada_enc) {
       payload.clave_privada_enc = form.clave_privada_enc;
     }
@@ -89,7 +86,7 @@ export default function AfipConfigPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Facturación AFIP</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Facturación ARCA</h1>
           <p className="text-muted-foreground">
             Configuración de facturación electrónica para esta sucursal
           </p>
@@ -97,7 +94,6 @@ export default function AfipConfigPage() {
         {estadoBadge()}
       </div>
 
-      {/* Estado de conexión */}
       {config?.estado_conexion === 'error' && config?.ultimo_error && (
         <Card className="border-destructive/50 bg-destructive/5">
           <CardContent className="pt-4">
@@ -180,10 +176,10 @@ export default function AfipConfigPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
-            Certificados AFIP
+            Certificados ARCA
           </CardTitle>
           <CardDescription>
-            Subí el certificado (.crt) y la clave privada (.key) generados desde AFIP
+            Subí el certificado (.crt) y la clave privada (.key) generados desde ARCA
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -235,7 +231,7 @@ export default function AfipConfigPage() {
             Modo de Operación
           </CardTitle>
           <CardDescription>
-            Homologación es para pruebas, Producción es para facturar en serio con AFIP
+            Homologación es para pruebas, Producción es para facturar en serio con ARCA
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -246,8 +242,8 @@ export default function AfipConfigPage() {
               </p>
               <p className="text-xs text-muted-foreground">
                 {config?.es_produccion
-                  ? 'Las facturas se emiten contra AFIP real'
-                  : 'Las facturas se simulan, no se envían a AFIP'}
+                  ? 'Las facturas se emiten contra ARCA real'
+                  : 'Las facturas se simulan, no se envían a ARCA'}
               </p>
             </div>
             <Button
