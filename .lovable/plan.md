@@ -1,89 +1,57 @@
 
-# Integracion AFIP - Facturacion Electronica
+# Asistente de Certificados ARCA
 
 ## Resumen
 
-Implementar el sistema completo de facturacion electronica con AFIP para cada sucursal. Incluye: tablas de configuracion y log de facturas, edge functions para emitir y probar conexion, pagina de configuracion por local, y hook para emitir facturas desde el POS.
-
-Como todavia no tienen certificados, todo se construye listo para usar pero en modo "homologacion" (testing de AFIP) por defecto. Cuando cada franquiciado tenga su certificado, solo carga los datos y funciona.
+Reemplazar la seccion manual de upload de .crt y .key por un asistente guiado de 3 pasos que genera la clave privada automaticamente en el navegador usando `node-forge`. El franquiciado nunca toca una terminal ni manipula el .key.
 
 ---
 
-## Fase 1: Base de Datos (3 tablas + RLS)
+## Flujo del asistente
 
-### Tabla `afip_config`
-Configuracion AFIP por sucursal: CUIT, razon social, direccion fiscal, punto de venta, certificados (.crt y .key encriptado), estado de conexion, contadores de ultimo numero por tipo de factura.
+```text
+Paso 1: Generar solicitud
+  - Valida que CUIT y Razon Social esten completos
+  - Genera keypair RSA 2048 + CSR en el navegador (node-forge)
+  - Guarda .key (PEM base64) en afip_config.clave_privada_enc
+  - Guarda .csr (PEM) en afip_config.csr_pem (nuevo campo)
+  - Descarga el .csr automaticamente
+  - Actualiza estado_certificado = 'csr_generado'
 
-- RLS: solo `is_superadmin` o franquiciado del local pueden leer/escribir
-- Usa los helpers existentes `is_superadmin()` y `can_access_branch()`
-- `UNIQUE` en `branch_id`
+Paso 2: Subir a ARCA
+  - Instrucciones paso a paso para subir el .csr en el portal de ARCA
+  - Link directo a https://auth.afip.gob.ar
+  - Boton para re-descargar el .csr si lo perdio
+  - Tip: "Si tu contador maneja la clave fiscal, mandale el .csr"
 
-### Tabla `facturas_emitidas`
-Log de cada factura emitida: tipo (A/B/C), numero, CAE, montos desglosados (neto, IVA, total), datos del receptor, request/response de AFIP para auditoria.
+Paso 3: Subir certificado (.crt)
+  - Upload del .crt que ARCA devuelve
+  - Al subir, guarda en DB y llama automaticamente a "Probar Conexion"
+  - Si funciona: estado = conectado, badge verde
+  - Si falla: muestra error, sugiere verificar que el .crt corresponda
 
-- RLS: lectura para cualquier rol con acceso al branch
-- `UNIQUE` en `(branch_id, tipo_comprobante, punto_venta, numero_comprobante)` para evitar duplicados
-- FK opcional a `pedidos(id)`
-
-### Tabla `afip_errores_log`
-Log de errores para diagnostico: tipo de error, codigo AFIP, request/response.
-
-- RLS: lectura para franquiciado/encargado del branch
-
----
-
-## Fase 2: Edge Functions (2 funciones)
-
-### `emitir-factura`
-Recibe: branch_id, pedido_id (opcional), tipo_factura (A/B/CF), datos del cliente, items, total.
-
-Flujo:
-1. Lee config AFIP del local
-2. Inicializa SDK `@afipsdk/afip.js`
-3. Consulta ultimo numero a AFIP
-4. Arma comprobante con montos (neto/IVA segun tipo)
-5. Envia a AFIP y obtiene CAE
-6. Guarda en `facturas_emitidas`
-7. Actualiza pedido con datos fiscales
-8. Retorna numero + CAE
-
-### `probar-conexion-afip`
-Recibe: branch_id. Intenta conectar con AFIP usando los certificados, obtiene ultimos numeros de cada tipo de comprobante, actualiza estado en `afip_config`.
-
-### Secrets necesarios
-- `AFIP_ENCRYPTION_KEY`: clave para encriptar/desencriptar las claves privadas almacenadas
-- `AFIP_PRODUCTION`: "false" para homologacion, "true" para produccion
+Estado completado:
+  - Badge "Conectado" + checks verdes
+  - Ultimos comprobantes
+  - Botones "Probar conexion" y "Regenerar certificado"
+```
 
 ---
 
-## Fase 3: Frontend - Configuracion
+## Migracion SQL
 
-### Pagina `AfipConfigPage`
-Ruta: `/milocal/:branchId/config/facturacion`
+Agregar 2 campos a `afip_config`:
 
-Formulario con:
-- Datos fiscales: CUIT, razon social, direccion fiscal, inicio actividades
-- Punto de venta (numero)
-- Upload de certificado (.crt) y clave privada (.key)
-- Boton "Probar Conexion" que llama a la edge function
-- Badge de estado (Conectado/Error/Sin configurar)
-- Ultimos numeros de factura A, B, C
+- `estado_certificado` (text, default 'sin_configurar'): maquina de estados del asistente
+- `csr_pem` (text, nullable): CSR guardado para poder re-descargarlo
 
-Solo visible para franquiciado del local y superadmin.
-
-### Sidebar
-Agregar link "Facturacion" en la seccion "Configuracion" del sidebar de Mi Local, con icono `Receipt`.
-
-### Hook `useAfipConfig`
-- `useAfipConfig(branchId)`: query de la config
-- `useAfipConfigMutations()`: save y testConnection
-- `useEmitirFactura()`: emision desde el POS
+Se usa un trigger de validacion (no CHECK constraint) para los valores permitidos: `sin_configurar`, `csr_generado`, `certificado_subido`, `conectado`, `error`.
 
 ---
 
-## Fase 4: Integracion con POS (posterior)
+## Dependencia nueva
 
-La integracion con el flujo de cobro del POS (modal para elegir tipo de factura antes de enviar a cocina) se deja para una segunda iteracion, una vez que al menos un local tenga certificados configurados y probados. Esta fase solo deja la infraestructura lista.
+- `node-forge` + `@types/node-forge` para generar RSA keypair y CSR en el navegador
 
 ---
 
@@ -91,30 +59,40 @@ La integracion con el flujo de cobro del POS (modal para elegir tipo de factura 
 
 | Archivo | Descripcion |
 |---|---|
-| `src/hooks/useAfipConfig.ts` | Hook con queries y mutations |
-| `src/pages/local/AfipConfigPage.tsx` | Pagina de configuracion AFIP |
-| `supabase/functions/emitir-factura/index.ts` | Edge function emision |
-| `supabase/functions/probar-conexion-afip/index.ts` | Edge function prueba conexion |
+| `src/lib/arca-cert-generator.ts` | Funciones `generateArcaCertificate()` y `downloadCSR()` usando node-forge |
 
 ## Archivos a modificar
 
 | Archivo | Cambio |
 |---|---|
-| `src/App.tsx` | Agregar ruta `config/facturacion` |
-| `src/components/layout/LocalSidebar.tsx` | Link "Facturacion" en seccion Config |
-| `supabase/config.toml` | NO se toca (auto-generado) |
-
-## Migracion SQL
-
-1 migracion con las 3 tablas + indices + RLS policies + trigger de updated_at para afip_config.
+| `src/pages/local/AfipConfigPage.tsx` | Reemplazar seccion "Certificados ARCA" (Card de upload manual) por componente asistente de 3 pasos basado en `estado_certificado` de la config |
+| `src/hooks/useAfipConfig.ts` | Agregar mutation `saveKeyAndCSR` para guardar clave + csr + actualizar estado. Agregar campo `csr_pem` y `estado_certificado` al tipo `AfipConfig` |
 
 ---
 
-## Orden de implementacion
+## Detalle tecnico
 
-1. Migracion SQL (tablas + RLS)
-2. Edge functions (emitir-factura + probar-conexion-afip)
-3. Hook useAfipConfig
-4. Pagina AfipConfigPage
-5. Ruta en App.tsx + link en sidebar
-6. Solicitar secrets (AFIP_ENCRYPTION_KEY, AFIP_PRODUCTION)
+### `src/lib/arca-cert-generator.ts`
+
+- `generateArcaCertificate({ cuit, razonSocial })`: genera keypair RSA 2048, crea CSR con subject (C=AR, O=razonSocial, CN=HoppinessHub, serialNumber=CUIT), firma con SHA-256, retorna `{ privateKeyPem, csrPem }`
+- `downloadCSR(csrPem, cuit)`: crea Blob y descarga como `solicitud_arca_XXXXXXXXXXX.csr`
+
+### Asistente en AfipConfigPage
+
+La seccion de certificados se convierte en un componente con logica condicional segun `config.estado_certificado`:
+
+- **sin_configurar**: muestra CUIT y razon social (readonly, tomados de los datos fiscales), boton "Generar solicitud de certificado" con spinner durante generacion (2-5 seg en mobile)
+- **csr_generado**: muestra instrucciones de ARCA numeradas, link externo, boton re-descargar .csr, boton "Ya tengo el .crt" que muestra upload
+- **conectado/error**: muestra estado con checks, ultimos comprobantes, botones probar conexion y regenerar
+
+### Hook mutations
+
+- `saveKeyAndCSR(branchId, privateKeyPem, csrPem)`: upsert en afip_config con clave_privada_enc (base64), csr_pem, estado_certificado='csr_generado'
+- Al subir .crt: guarda certificado_crt, cambia estado a 'certificado_subido', llama testConnection automaticamente
+
+### Lo que NO cambia
+
+- Edge functions (ya leen .key y .crt de la DB)
+- Seccion de datos fiscales (se mantiene igual)
+- Seccion modo de operacion (se mantiene igual)
+- RLS policies (ya cubren lectura/escritura por franquiciado y superadmin)
