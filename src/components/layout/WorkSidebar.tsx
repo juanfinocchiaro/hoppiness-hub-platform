@@ -48,12 +48,10 @@ export function NavSectionGroup({
 }: NavSectionGroupProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen || forceOpen);
 
-  // Auto-expand when there's an active item
+  // Sync open state with active item — collapse when navigating away
   useEffect(() => {
-    if (forceOpen && !isOpen) {
-      setIsOpen(true);
-    }
-  }, [forceOpen, isOpen]);
+    setIsOpen(forceOpen);
+  }, [forceOpen]);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
