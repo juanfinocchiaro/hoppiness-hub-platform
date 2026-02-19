@@ -15,6 +15,7 @@ import OlvidePassword from "./pages/OlvidePassword";
 import ResetPassword from "./pages/ResetPassword";
 import RegistroStaff from "./pages/RegistroStaff";
 import Pedir from "./pages/Pedir";
+import PedirPage from "./pages/webapp/PedirPage";
 import Franquicias from "./pages/Franquicias";
 import Nosotros from "./pages/Nosotros";
 import Contacto from "./pages/Contacto";
@@ -147,6 +148,7 @@ const App = () => (
             <Route path="/contacto" element={<Contacto />} />
             <Route path="/registro-staff" element={<RegistroStaff />} />
             <Route path="/fichaje/:branchCode" element={<FichajeEmpleado />} />
+            <Route path="/pedir/:branchSlug" element={<PedirPage />} />
             
             {/* Mi Cuenta - con CuentaLayout usando WorkShell */}
             <Route path="/cuenta" element={<RequireAuth><CuentaLayout /></RequireAuth>}>
