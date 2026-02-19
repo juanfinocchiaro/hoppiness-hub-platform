@@ -1,7 +1,8 @@
 /**
  * ModifiersModal - Extras y removibles al agregar un producto
+ * If item has no extras/removibles, auto-adds to cart without showing modal.
  */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,7 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
 
   const [selectedExtras, setSelectedExtras] = useState<Record<string, number>>({});
   const [selectedRemovibles, setSelectedRemovibles] = useState<Record<string, boolean>>({});
+  const autoAddedRef = useRef<string | null>(null);
 
   // Reset state when item changes
   const [lastItemId, setLastItemId] = useState<string | null>(null);
@@ -40,6 +42,7 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
     setLastItemId(itemId);
     setSelectedExtras({});
     setSelectedRemovibles({});
+    autoAddedRef.current = null;
   }
 
   const extrasList = useMemo(() => {
@@ -65,6 +68,24 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
 
   const precioBase = item?.precio_base ?? 0;
   const nombre = item?.nombre_corto ?? item?.nombre ?? '';
+
+  // Auto-add if no extras/removibles
+  const isLoading = loadingExtras || loadingRemovibles;
+  const hasContent = extrasList.length > 0 || removiblesList.length > 0;
+
+  useEffect(() => {
+    if (open && !isLoading && !hasContent && item && autoAddedRef.current !== itemId) {
+      autoAddedRef.current = itemId;
+      onConfirm({
+        item_carta_id: item.id,
+        nombre,
+        cantidad: 1,
+        precio_unitario: precioBase,
+        subtotal: precioBase,
+      });
+      onOpenChange(false);
+    }
+  }, [open, isLoading, hasContent, item, itemId, nombre, precioBase, onConfirm, onOpenChange]);
 
   const extrasTotal = useMemo(() => {
     return extrasList.reduce((sum, ex) => {
@@ -130,8 +151,8 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
     onOpenChange(false);
   };
 
-  const isLoading = loadingExtras || loadingRemovibles;
-  const hasContent = extrasList.length > 0 || removiblesList.length > 0;
+  // Don't render dialog if auto-adding (no content)
+  if (!hasContent && !isLoading) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -153,7 +174,6 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
           </div>
         ) : (
           <div className="space-y-5 py-2 max-h-[60vh] overflow-y-auto">
-            {/* Extras */}
             {extrasList.length > 0 && (
               <div>
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
@@ -176,23 +196,11 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
                           )}
                         </div>
                         <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleExtraQty(ex.id, -1)}
-                            disabled={qty <= 0}
-                          >
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleExtraQty(ex.id, -1)} disabled={qty <= 0}>
                             <Minus className="h-3.5 w-3.5" />
                           </Button>
                           <span className="text-sm font-medium w-6 text-center">{qty}</span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleExtraQty(ex.id, 1)}
-                            disabled={qty >= MAX_EXTRA_QTY}
-                          >
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleExtraQty(ex.id, 1)} disabled={qty >= MAX_EXTRA_QTY}>
                             <Plus className="h-3.5 w-3.5" />
                           </Button>
                         </div>
@@ -203,7 +211,6 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
               </div>
             )}
 
-            {/* Removibles */}
             {removiblesList.length > 0 && (
               <div>
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
@@ -211,15 +218,9 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
                 </h4>
                 <div className="space-y-2">
                   {removiblesList.map((r: any) => (
-                    <div
-                      key={r.id}
-                      className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-muted/50"
-                    >
+                    <div key={r.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-muted/50">
                       <span className="text-sm font-medium">{r.nombre}</span>
-                      <Switch
-                        checked={!!selectedRemovibles[r.id]}
-                        onCheckedChange={() => handleRemovibleToggle(r.id)}
-                      />
+                      <Switch checked={!!selectedRemovibles[r.id]} onCheckedChange={() => handleRemovibleToggle(r.id)} />
                     </div>
                   ))}
                 </div>

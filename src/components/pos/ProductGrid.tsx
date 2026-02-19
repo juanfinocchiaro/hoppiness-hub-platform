@@ -53,14 +53,15 @@ export function ProductGrid({ onAddItem, onSelectItem }: ProductGridProps) {
 
   const byCategory = (items ?? [])
     .filter((item: any) => item.tipo !== 'extra')
-    .reduce<Record<string, typeof items>>((acc, item) => {
+    .reduce<Record<string, { items: typeof items; orden: number }>>((acc, item) => {
       const cat = (item as any).menu_categorias?.nombre ?? 'Sin categoría';
-      if (!acc[cat]) acc[cat] = [];
-      acc[cat]!.push(item);
+      const orden = (item as any).menu_categorias?.orden ?? 999;
+      if (!acc[cat]) acc[cat] = { items: [], orden };
+      acc[cat].items.push(item);
       return acc;
     }, {});
 
-  const cats = Object.keys(byCategory).sort();
+  const cats = Object.keys(byCategory).sort((a, b) => byCategory[a].orden - byCategory[b].orden);
 
   const handleCategoryClick = useCallback((cat: string) => {
     setActiveCategory(cat);
@@ -136,7 +137,7 @@ export function ProductGrid({ onAddItem, onSelectItem }: ProductGridProps) {
                 {cat}
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {(byCategory[cat] ?? []).map((item: any) => {
+                {(byCategory[cat]?.items ?? []).map((item: any) => {
                   const precio = item.precio_base ?? 0;
                   const nombre = item.nombre_corto ?? item.nombre;
                   const imagenUrl = item.imagen_url;
