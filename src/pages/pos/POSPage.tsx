@@ -11,11 +11,11 @@ import { RegisterPaymentPanel } from '@/components/pos/RegisterPaymentPanel';
 import { ModifiersModal } from '@/components/pos/ModifiersModal';
 import { POSPortalProvider } from '@/components/pos/POSPortalContext';
 import { useCreatePedido } from '@/hooks/pos/useOrders';
+import { usePOSSessionState } from '@/hooks/pos/usePOSSessionState';
 import { useShiftStatus } from '@/hooks/useShiftStatus';
 import { useCashRegisters, useOpenShift } from '@/hooks/useCashRegister';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { DEFAULT_ORDER_CONFIG } from '@/types/pos';
 import type { LocalPayment } from '@/types/pos';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -108,11 +108,14 @@ function InlineCashOpen({ branchId, onOpened }: { branchId: string; onOpened: ()
 
 export default function POSPage() {
   const { branchId } = useParams<{ branchId: string }>();
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [payments, setPayments] = useState<LocalPayment[]>([]);
+  const {
+    cart, setCart,
+    payments, setPayments,
+    configConfirmed, setConfigConfirmed,
+    orderConfig, setOrderConfig,
+    resetAll,
+  } = usePOSSessionState(branchId);
   const [showPaymentPanel, setShowPaymentPanel] = useState(false);
-  const [configConfirmed, setConfigConfirmed] = useState(false);
-  const [orderConfig, setOrderConfig] = useState(DEFAULT_ORDER_CONFIG);
   const [modifiersItem, setModifiersItem] = useState<any | null>(null);
   const configRef = useRef<HTMLDivElement>(null);
 
@@ -178,11 +181,8 @@ export default function POSPage() {
 
   // Cancel = reset everything
   const cancelOrder = useCallback(() => {
-    setCart([]);
-    setPayments([]);
-    setOrderConfig(DEFAULT_ORDER_CONFIG);
-    setConfigConfirmed(false);
-  }, []);
+    resetAll();
+  }, [resetAll]);
 
   // Validate config before allowing payment registration
   const validateOrderConfig = (): string | null => {
@@ -244,10 +244,7 @@ export default function POSPage() {
       });
 
       toast.success('Pedido enviado a cocina');
-      setCart([]);
-      setPayments([]);
-      setOrderConfig(DEFAULT_ORDER_CONFIG);
-      setConfigConfirmed(false);
+      resetAll();
     } catch (e: any) {
       toast.error(e?.message ?? 'Error al registrar pedido');
     }
