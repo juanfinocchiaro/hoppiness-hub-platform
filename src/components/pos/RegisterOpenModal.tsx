@@ -46,7 +46,7 @@ export function RegisterOpenModal({
   const [openingAmount, setOpeningAmount] = useState('');
   const [isOpening, setIsOpening] = useState(false);
 
-  const registers = (registersData?.active ?? []).filter(r => (r as any).register_type === 'ventas');
+  const registers = (registersData?.active ?? []).filter(r => r.register_type === 'ventas');
 
   useEffect(() => {
     if (open && registers.length > 0 && !selectedRegister) {
