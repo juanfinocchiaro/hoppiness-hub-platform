@@ -134,10 +134,7 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
       notasParts.push(cartExtras.map((e) => `+${e.cantidad} ${e.nombre}`).join(', '));
     }
     if (cartRemovibles.length > 0) {
-      notasParts.push(cartRemovibles.map((r) => {
-        const name = r.nombre.replace(/^sin\s+/i, '');
-        return `SIN ${name}`;
-      }).join(', '));
+      notasParts.push(cartRemovibles.map((r) => r.nombre).join(', '));
     }
 
     onConfirm({
