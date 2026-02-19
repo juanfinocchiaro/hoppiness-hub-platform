@@ -357,6 +357,57 @@ export type Database = {
         }
         Relationships: []
       }
+      cadetes: {
+        Row: {
+          activo: boolean | null
+          branch_id: string
+          created_at: string | null
+          disponible: boolean | null
+          id: string
+          nombre: string
+          pedidos_hoy: number | null
+          telefono: string | null
+          user_id: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          branch_id: string
+          created_at?: string | null
+          disponible?: boolean | null
+          id?: string
+          nombre: string
+          pedidos_hoy?: number | null
+          telefono?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          branch_id?: string
+          created_at?: string | null
+          disponible?: boolean | null
+          id?: string
+          nombre?: string
+          pedidos_hoy?: number | null
+          telefono?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cadetes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cadetes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       canales_venta: {
         Row: {
           activo: boolean | null
@@ -2848,6 +2899,7 @@ export type Database = {
         Row: {
           activo: boolean | null
           categoria_carta_id: string | null
+          closure_category: string | null
           composicion_ref_insumo_id: string | null
           composicion_ref_preparacion_id: string | null
           costo_total: number | null
@@ -2870,6 +2922,7 @@ export type Database = {
         Insert: {
           activo?: boolean | null
           categoria_carta_id?: string | null
+          closure_category?: string | null
           composicion_ref_insumo_id?: string | null
           composicion_ref_preparacion_id?: string | null
           costo_total?: number | null
@@ -2892,6 +2945,7 @@ export type Database = {
         Update: {
           activo?: boolean | null
           categoria_carta_id?: string | null
+          closure_category?: string | null
           composicion_ref_insumo_id?: string | null
           composicion_ref_preparacion_id?: string | null
           costo_total?: number | null
@@ -3047,6 +3101,55 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "rdo_categories"
             referencedColumns: ["code"]
+          },
+        ]
+      }
+      llamadores: {
+        Row: {
+          asignado_at: string | null
+          branch_id: string
+          en_uso: boolean | null
+          id: string
+          numero: number
+          pedido_id: string | null
+        }
+        Insert: {
+          asignado_at?: string | null
+          branch_id: string
+          en_uso?: boolean | null
+          id?: string
+          numero: number
+          pedido_id?: string | null
+        }
+        Update: {
+          asignado_at?: string | null
+          branch_id?: string
+          en_uso?: boolean | null
+          id?: string
+          numero?: number
+          pedido_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "llamadores_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "llamadores_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "llamadores_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3660,6 +3763,49 @@ export type Database = {
           },
         ]
       }
+      pago_factura: {
+        Row: {
+          factura_id: string
+          id: string
+          monto_aplicado: number
+          pago_id: string
+        }
+        Insert: {
+          factura_id: string
+          id?: string
+          monto_aplicado: number
+          pago_id: string
+        }
+        Update: {
+          factura_id?: string
+          id?: string
+          monto_aplicado?: number
+          pago_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pago_factura_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "cuenta_corriente_marca"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pago_factura_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "facturas_proveedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pago_factura_pago_id_fkey"
+            columns: ["pago_id"]
+            isOneToOne: false
+            referencedRelation: "pagos_proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pagos_canon: {
         Row: {
           branch_id: string
@@ -3746,8 +3892,9 @@ export type Database = {
           created_by: string | null
           datos_pago: Json | null
           deleted_at: string | null
-          factura_id: string
+          factura_id: string | null
           fecha_pago: string
+          fecha_vencimiento_pago: string | null
           id: string
           medio_pago: string
           monto: number
@@ -3765,8 +3912,9 @@ export type Database = {
           created_by?: string | null
           datos_pago?: Json | null
           deleted_at?: string | null
-          factura_id: string
+          factura_id?: string | null
           fecha_pago: string
+          fecha_vencimiento_pago?: string | null
           id?: string
           medio_pago: string
           monto: number
@@ -3784,8 +3932,9 @@ export type Database = {
           created_by?: string | null
           datos_pago?: Json | null
           deleted_at?: string | null
-          factura_id?: string
+          factura_id?: string | null
           fecha_pago?: string
+          fecha_vencimiento_pago?: string | null
           id?: string
           medio_pago?: string
           monto?: number
@@ -3838,6 +3987,262 @@ export type Database = {
             columns: ["proveedor_id"]
             isOneToOne: false
             referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pedido_item_modificadores: {
+        Row: {
+          created_at: string | null
+          descripcion: string
+          id: string
+          pedido_item_id: string
+          precio_extra: number | null
+          tipo: string
+        }
+        Insert: {
+          created_at?: string | null
+          descripcion: string
+          id?: string
+          pedido_item_id: string
+          precio_extra?: number | null
+          tipo: string
+        }
+        Update: {
+          created_at?: string | null
+          descripcion?: string
+          id?: string
+          pedido_item_id?: string
+          precio_extra?: number | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedido_item_modificadores_pedido_item_id_fkey"
+            columns: ["pedido_item_id"]
+            isOneToOne: false
+            referencedRelation: "pedido_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pedido_items: {
+        Row: {
+          cantidad: number
+          created_at: string | null
+          estacion: string
+          estado: string | null
+          id: string
+          item_carta_id: string
+          nombre: string
+          notas: string | null
+          pedido_id: string
+          precio_unitario: number
+          subtotal: number
+        }
+        Insert: {
+          cantidad?: number
+          created_at?: string | null
+          estacion: string
+          estado?: string | null
+          id?: string
+          item_carta_id: string
+          nombre: string
+          notas?: string | null
+          pedido_id: string
+          precio_unitario: number
+          subtotal: number
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string | null
+          estacion?: string
+          estado?: string | null
+          id?: string
+          item_carta_id?: string
+          nombre?: string
+          notas?: string | null
+          pedido_id?: string
+          precio_unitario?: number
+          subtotal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedido_items_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "items_carta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedido_items_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pedido_pagos: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          metodo: string
+          monto: number
+          monto_recibido: number | null
+          mp_payment_id: string | null
+          pedido_id: string
+          tarjeta_marca: string | null
+          tarjeta_ultimos_4: string | null
+          transferencia_referencia: string | null
+          vuelto: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          metodo: string
+          monto: number
+          monto_recibido?: number | null
+          mp_payment_id?: string | null
+          pedido_id: string
+          tarjeta_marca?: string | null
+          tarjeta_ultimos_4?: string | null
+          transferencia_referencia?: string | null
+          vuelto?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          metodo?: string
+          monto?: number
+          monto_recibido?: number | null
+          mp_payment_id?: string | null
+          pedido_id?: string
+          tarjeta_marca?: string | null
+          tarjeta_ultimos_4?: string | null
+          transferencia_referencia?: string | null
+          vuelto?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedido_pagos_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pedidos: {
+        Row: {
+          branch_id: string
+          cadete_id: string | null
+          cliente_direccion: string | null
+          cliente_nombre: string | null
+          cliente_notas: string | null
+          cliente_telefono: string | null
+          costo_delivery: number | null
+          created_at: string | null
+          created_by: string | null
+          descuento: number | null
+          descuento_motivo: string | null
+          direccion_entrega: string | null
+          estado: string
+          factura_cae: string | null
+          factura_cuit: string | null
+          factura_numero: string | null
+          factura_razon_social: string | null
+          factura_vencimiento_cae: string | null
+          id: string
+          numero_llamador: number | null
+          numero_pedido: number
+          requiere_factura: boolean | null
+          subtotal: number
+          tiempo_entregado: string | null
+          tiempo_listo: string | null
+          tiempo_prometido: string | null
+          tipo: string
+          tipo_factura: string | null
+          total: number
+        }
+        Insert: {
+          branch_id: string
+          cadete_id?: string | null
+          cliente_direccion?: string | null
+          cliente_nombre?: string | null
+          cliente_notas?: string | null
+          cliente_telefono?: string | null
+          costo_delivery?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          descuento?: number | null
+          descuento_motivo?: string | null
+          direccion_entrega?: string | null
+          estado?: string
+          factura_cae?: string | null
+          factura_cuit?: string | null
+          factura_numero?: string | null
+          factura_razon_social?: string | null
+          factura_vencimiento_cae?: string | null
+          id?: string
+          numero_llamador?: number | null
+          numero_pedido: number
+          requiere_factura?: boolean | null
+          subtotal: number
+          tiempo_entregado?: string | null
+          tiempo_listo?: string | null
+          tiempo_prometido?: string | null
+          tipo: string
+          tipo_factura?: string | null
+          total: number
+        }
+        Update: {
+          branch_id?: string
+          cadete_id?: string | null
+          cliente_direccion?: string | null
+          cliente_nombre?: string | null
+          cliente_notas?: string | null
+          cliente_telefono?: string | null
+          costo_delivery?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          descuento?: number | null
+          descuento_motivo?: string | null
+          direccion_entrega?: string | null
+          estado?: string
+          factura_cae?: string | null
+          factura_cuit?: string | null
+          factura_numero?: string | null
+          factura_razon_social?: string | null
+          factura_vencimiento_cae?: string | null
+          id?: string
+          numero_llamador?: number | null
+          numero_pedido?: number
+          requiere_factura?: boolean | null
+          subtotal?: number
+          tiempo_entregado?: string | null
+          tiempo_listo?: string | null
+          tiempo_prometido?: string | null
+          tipo?: string
+          tipo_factura?: string | null
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
             referencedColumns: ["id"]
           },
         ]
@@ -3943,6 +4348,99 @@ export type Database = {
           scope?: string
         }
         Relationships: []
+      }
+      pos_config: {
+        Row: {
+          acepta_credito: boolean | null
+          acepta_debito: boolean | null
+          acepta_efectivo: boolean | null
+          acepta_mercadopago: boolean | null
+          acepta_transferencia: boolean | null
+          afip_cuit: string | null
+          afip_punto_venta: number | null
+          alertar_stock_critico: boolean | null
+          alertar_stock_minimo: boolean | null
+          branch_id: string
+          costo_delivery_default: number | null
+          delivery_habilitado: boolean | null
+          facturacion_habilitada: boolean | null
+          id: string
+          impresora_caja_ip: string | null
+          impresora_cocina_ip: string | null
+          llamador_max: number | null
+          llamador_min: number | null
+          llamadores_habilitados: boolean | null
+          pos_enabled: boolean | null
+          radio_delivery_km: number | null
+          tiempo_preparacion_default: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          acepta_credito?: boolean | null
+          acepta_debito?: boolean | null
+          acepta_efectivo?: boolean | null
+          acepta_mercadopago?: boolean | null
+          acepta_transferencia?: boolean | null
+          afip_cuit?: string | null
+          afip_punto_venta?: number | null
+          alertar_stock_critico?: boolean | null
+          alertar_stock_minimo?: boolean | null
+          branch_id: string
+          costo_delivery_default?: number | null
+          delivery_habilitado?: boolean | null
+          facturacion_habilitada?: boolean | null
+          id?: string
+          impresora_caja_ip?: string | null
+          impresora_cocina_ip?: string | null
+          llamador_max?: number | null
+          llamador_min?: number | null
+          llamadores_habilitados?: boolean | null
+          pos_enabled?: boolean | null
+          radio_delivery_km?: number | null
+          tiempo_preparacion_default?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          acepta_credito?: boolean | null
+          acepta_debito?: boolean | null
+          acepta_efectivo?: boolean | null
+          acepta_mercadopago?: boolean | null
+          acepta_transferencia?: boolean | null
+          afip_cuit?: string | null
+          afip_punto_venta?: number | null
+          alertar_stock_critico?: boolean | null
+          alertar_stock_minimo?: boolean | null
+          branch_id?: string
+          costo_delivery_default?: number | null
+          delivery_habilitado?: boolean | null
+          facturacion_habilitada?: boolean | null
+          id?: string
+          impresora_caja_ip?: string | null
+          impresora_cocina_ip?: string | null
+          llamador_max?: number | null
+          llamador_min?: number | null
+          llamadores_habilitados?: boolean | null
+          pos_enabled?: boolean | null
+          radio_delivery_km?: number | null
+          tiempo_preparacion_default?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       preparacion_ingredientes: {
         Row: {
@@ -4102,30 +4600,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      push_subscriptions: {
-        Row: {
-          id: string
-          user_id: string
-          endpoint: string
-          keys: Json
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          endpoint: string
-          keys: Json
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          endpoint?: string
-          keys?: Json
-          created_at?: string
-        }
-        Relationships: []
       }
       profiles: {
         Row: {
@@ -4425,6 +4899,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      push_subscriptions: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: string
+          keys: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: string
+          keys: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          keys?: Json
+          user_id?: string
+        }
+        Relationships: []
       }
       rdo_categories: {
         Row: {
@@ -4810,6 +5308,7 @@ export type Database = {
           facturacion_diferencia: number
           facturacion_esperada: number
           fecha: string
+          fuente: string | null
           hamburguesas: Json
           id: string
           notas: string | null
@@ -4838,6 +5337,7 @@ export type Database = {
           facturacion_diferencia?: number
           facturacion_esperada?: number
           fecha: string
+          fuente?: string | null
           hamburguesas?: Json
           id?: string
           notas?: string | null
@@ -4866,6 +5366,7 @@ export type Database = {
           facturacion_diferencia?: number
           facturacion_esperada?: number
           fecha?: string
+          fuente?: string | null
           hamburguesas?: Json
           id?: string
           notas?: string | null
@@ -5118,6 +5619,224 @@ export type Database = {
             columns: ["station_id"]
             isOneToOne: false
             referencedRelation: "work_stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_actual: {
+        Row: {
+          branch_id: string
+          cantidad: number
+          id: string
+          insumo_id: string
+          stock_critico: number | null
+          stock_minimo: number | null
+          unidad: string
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id: string
+          cantidad?: number
+          id?: string
+          insumo_id: string
+          stock_critico?: number | null
+          stock_minimo?: number | null
+          unidad: string
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: string
+          cantidad?: number
+          id?: string
+          insumo_id?: string
+          stock_critico?: number | null
+          stock_minimo?: number | null
+          unidad?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_actual_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_actual_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_actual_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_movimientos: {
+        Row: {
+          branch_id: string
+          cantidad: number
+          cantidad_anterior: number
+          cantidad_nueva: number
+          created_at: string | null
+          created_by: string | null
+          factura_proveedor_id: string | null
+          id: string
+          insumo_id: string
+          motivo: string | null
+          pedido_id: string | null
+          tipo: string
+        }
+        Insert: {
+          branch_id: string
+          cantidad: number
+          cantidad_anterior: number
+          cantidad_nueva: number
+          created_at?: string | null
+          created_by?: string | null
+          factura_proveedor_id?: string | null
+          id?: string
+          insumo_id: string
+          motivo?: string | null
+          pedido_id?: string | null
+          tipo: string
+        }
+        Update: {
+          branch_id?: string
+          cantidad?: number
+          cantidad_anterior?: number
+          cantidad_nueva?: number
+          created_at?: string | null
+          created_by?: string | null
+          factura_proveedor_id?: string | null
+          id?: string
+          insumo_id?: string
+          motivo?: string | null
+          pedido_id?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movimientos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movimientos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movimientos_factura_proveedor_id_fkey"
+            columns: ["factura_proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "cuenta_corriente_marca"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movimientos_factura_proveedor_id_fkey"
+            columns: ["factura_proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "facturas_proveedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movimientos_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movimientos_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      turnos_caja: {
+        Row: {
+          apertura_at: string
+          branch_id: string
+          cajero_id: string
+          cierre_at: string | null
+          diferencia: number | null
+          diferencia_motivo: string | null
+          efectivo_contado: number | null
+          estado: string | null
+          fondo_apertura: number
+          id: string
+          retiros_efectivo: number | null
+          total_efectivo: number | null
+          total_mercadopago: number | null
+          total_tarjeta_credito: number | null
+          total_tarjeta_debito: number | null
+          total_transferencia: number | null
+          total_ventas: number | null
+        }
+        Insert: {
+          apertura_at?: string
+          branch_id: string
+          cajero_id: string
+          cierre_at?: string | null
+          diferencia?: number | null
+          diferencia_motivo?: string | null
+          efectivo_contado?: number | null
+          estado?: string | null
+          fondo_apertura: number
+          id?: string
+          retiros_efectivo?: number | null
+          total_efectivo?: number | null
+          total_mercadopago?: number | null
+          total_tarjeta_credito?: number | null
+          total_tarjeta_debito?: number | null
+          total_transferencia?: number | null
+          total_ventas?: number | null
+        }
+        Update: {
+          apertura_at?: string
+          branch_id?: string
+          cajero_id?: string
+          cierre_at?: string | null
+          diferencia?: number | null
+          diferencia_motivo?: string | null
+          efectivo_contado?: number | null
+          estado?: string | null
+          fondo_apertura?: number
+          id?: string
+          retiros_efectivo?: number | null
+          total_efectivo?: number | null
+          total_mercadopago?: number | null
+          total_tarjeta_credito?: number | null
+          total_tarjeta_debito?: number | null
+          total_transferencia?: number | null
+          total_ventas?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turnos_caja_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turnos_caja_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
             referencedColumns: ["id"]
           },
         ]
@@ -5613,6 +6332,10 @@ export type Database = {
       }
     }
     Functions: {
+      asignar_llamador: {
+        Args: { p_branch_id: string; p_pedido_id: string }
+        Returns: number
+      }
       can_access_branch: {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
@@ -5628,6 +6351,20 @@ export type Database = {
       can_view_coaching: {
         Args: { _coaching_id: string; _user_id: string }
         Returns: boolean
+      }
+      create_inspection_with_items: {
+        Args: {
+          p_branch_id: string
+          p_inspection_type: string
+          p_inspector_id: string
+          p_present_manager_id?: string
+        }
+        Returns: string
+      }
+      generar_numero_pedido: { Args: { p_branch_id: string }; Returns: number }
+      generar_shift_closure_desde_pos: {
+        Args: { p_branch_id: string; p_fecha: string; p_turno: string }
+        Returns: string
       }
       get_branch_contact_info: {
         Args: { _branch_id: string }
@@ -5695,6 +6432,10 @@ export type Database = {
       }
       has_financial_access: { Args: { p_branch_id: string }; Returns: boolean }
       has_hr_access: { Args: { p_branch_id: string }; Returns: boolean }
+      insert_factura_completa: {
+        Args: { p_factura: Json; p_items: Json }
+        Returns: string
+      }
       is_branch_manager_v2: {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
@@ -5738,6 +6479,7 @@ export type Database = {
         | { Args: { _user_id: string }; Returns: boolean }
       is_staff_member: { Args: { _user_id: string }; Returns: boolean }
       is_superadmin: { Args: { _user_id: string }; Returns: boolean }
+      liberar_llamador: { Args: { p_pedido_id: string }; Returns: undefined }
       recalcular_costo_item_carta: {
         Args: { _item_id: string }
         Returns: undefined
@@ -5795,9 +6537,9 @@ export type Database = {
       brand_role_type:
         | "superadmin"
         | "coordinador"
-        | "community_manager"
         | "informes"
         | "contador_marca"
+        | "community_manager"
       communication_type: "info" | "warning" | "urgent" | "celebration"
       local_role_type:
         | "franquiciado"
@@ -5965,9 +6707,9 @@ export const Constants = {
       brand_role_type: [
         "superadmin",
         "coordinador",
-        "community_manager",
         "informes",
         "contador_marca",
+        "community_manager",
       ],
       communication_type: ["info", "warning", "urgent", "celebration"],
       local_role_type: [
