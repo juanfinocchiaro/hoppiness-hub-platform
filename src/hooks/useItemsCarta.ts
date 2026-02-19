@@ -12,7 +12,7 @@ export function useItemsCarta() {
         .from('items_carta')
         .select(`
           *,
-          menu_categorias:categoria_carta_id(id, nombre),
+          menu_categorias:categoria_carta_id(id, nombre, orden),
           rdo_categories:rdo_category_code(code, name)
         `)
         .eq('activo', true)
