@@ -2,7 +2,7 @@
  * RegisterPaymentPanel - Panel para registrar un pago individual
  * Reemplaza PaymentModal: permite pagos progresivos uno a uno.
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -56,6 +56,25 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
 
   const canConfirm = montoNum > 0 && montoNum <= saldoPendiente && (!esEfectivo || recibidoNum >= montoNum);
 
+  // Sync state when dialog opens or saldoPendiente changes
+  useEffect(() => {
+    if (open) {
+      setMetodo('efectivo');
+      setMonto(String(saldoPendiente));
+      setMontoRecibido(String(saldoPendiente));
+    }
+  }, [open, saldoPendiente]);
+
+  // When switching payment method, auto-fill or clear received amount
+  const handleMetodoChange = (m: MetodoPago) => {
+    setMetodo(m);
+    if (m === 'efectivo') {
+      setMontoRecibido(monto || String(saldoPendiente));
+    } else {
+      setMontoRecibido('');
+    }
+  };
+
   const handleConfirm = () => {
     if (!canConfirm) return;
     onRegister({
@@ -66,25 +85,14 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
       vuelto: esEfectivo ? vuelto : undefined,
       createdAt: Date.now(),
     });
-    // Reset
     setMetodo('efectivo');
     setMonto('');
     setMontoRecibido('');
     onOpenChange(false);
   };
 
-  // Pre-fill amount with pending balance when opening
-  const handleOpenChange = (v: boolean) => {
-    if (v) {
-      setMonto(String(saldoPendiente));
-      setMontoRecibido('');
-      setMetodo('efectivo');
-    }
-    onOpenChange(v);
-  };
-
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Registrar pago</DialogTitle>
@@ -107,7 +115,7 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
                   <button
                     key={m.value}
                     type="button"
-                    onClick={() => setMetodo(m.value)}
+                    onClick={() => handleMetodoChange(m.value)}
                     className={cn(
                       'flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg border text-sm font-medium transition-colors min-h-[72px]',
                       isSelected
