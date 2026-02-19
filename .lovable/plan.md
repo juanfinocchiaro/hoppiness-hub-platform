@@ -1,104 +1,118 @@
 
-# Plan: Sincronizacion automatica de ventas POS al RDO
+# Plan: Rediseno completo de Cocina (KDS - Kitchen Display System)
 
-## Contexto del problema
+## Problema actual
 
-El RDO obtiene las ventas del periodo desde la tabla `ventas_mensuales_local`, que se carga manualmente. Los locales con POS registran ventas en `pedidos` + `pedido_pagos`, pero esos datos nunca llegan a `ventas_mensuales_local` ni al RDO.
+La pantalla de Cocina es extremadamente basica:
+- Solo muestra numero de pedido y un badge de estado generico
+- Los items no muestran nombre del producto (algunos tienen el campo `nombre` vacio en la DB)
+- No hay informacion de contexto: tipo de servicio, llamador, tiempo de espera
+- La interaccion para cambiar estado es un badge de texto pequeno sin feedback visual
+- No hay realtime (solo polling manual)
+- No hay sonido/alerta para pedidos nuevos
+- El empty state es un texto plano sin personalidad
 
-## Estrategia
+## Solucion: KDS profesional estilo cocina real
 
-Agregar un campo `fuente` a `ventas_mensuales_local` para saber si el registro es manual o viene del POS. Luego, en el frontend, cuando un local tiene POS habilitado, calcular las ventas en tiempo real desde `pedidos`/`pedido_pagos` y mostrarlas en el RDO sin depender de la carga manual. Los periodos historicos (cargados antes de tener POS) se mantienen intactos.
+### Datos disponibles en la DB
 
-## Cambios
+De `pedidos`: `numero_pedido`, `tipo_servicio` (comer_aca/takeaway/delivery), `numero_llamador`, `canal_venta`, `cliente_nombre`, `created_at`, `estado`
 
-### 1. Base de datos: Agregar campo `fuente` a `ventas_mensuales_local`
+De `pedido_items`: `nombre`, `cantidad`, `notas`, `estacion`, `estado`
 
-```sql
-ALTER TABLE ventas_mensuales_local 
-  ADD COLUMN fuente text NOT NULL DEFAULT 'manual';
--- Valores posibles: 'manual', 'pos'
-```
+De `pedido_item_modificadores`: `descripcion`, `tipo`, `precio_extra`
 
-Esto permite que convivan registros manuales historicos con futuros registros del POS en la misma tabla.
+### Diseno visual
 
-### 2. Nuevo hook: `usePosVentasAgregadas`
+Cada pedido sera una tarjeta grande con:
 
-Archivo: `src/hooks/usePosVentasAgregadas.ts`
+1. **Header de la tarjeta**:
+   - Numero de pedido grande y bold (#1, #2...)
+   - Tipo de servicio con icono (tenedor = Comer aca, bolsa = Takeaway, moto = Delivery)
+   - Numero de llamador si existe ("Llamador #8")
+   - Timer con tiempo transcurrido desde `created_at` (ej: "3 min", "12 min")
+   - Color de fondo del header segun urgencia: verde (< 5 min), amarillo (5-10 min), rojo (> 10 min)
 
-Agrega las ventas desde `pedidos` + `pedido_pagos` para un branch y periodo:
+2. **Lista de items**:
+   - Cantidad en negrita grande + nombre del producto
+   - Modificadores debajo en texto mas chico y gris (ej: "+ Extra cheddar", "Sin cebolla")
+   - Notas del item si existen (fondo amarillo sutil)
+   - Checkbox/boton grande por item para marcar "listo" (toggle visual claro)
+   - Items listos aparecen tachados con fondo verde sutil
 
-- Consulta todos los `pedidos` del periodo (estado completado/entregado) con sus `pedido_pagos`
-- Calcula:
-  - `venta_total`: suma de `pedidos.total`
-  - `efectivo`: suma de `pedido_pagos` donde `metodo = 'efectivo'`
-  - `fc_total` (online): venta_total - efectivo
-  - `ft_total` (efectivo): efectivo
-- Solo se activa cuando `posEnabled = true`
+3. **Footer de la tarjeta**:
+   - Boton grande "PEDIDO LISTO" que aparece cuando todos los items estan listos
+   - Boton con color primario, ancho completo, texto grande
 
-### 3. Modificar `useVentasData` en `RdoDashboard.tsx`
+4. **Columnas por estado** (layout tipo Kanban):
+   - Columna izquierda: "Pendientes" (fondo rojo/naranja sutil)
+   - Columna centro: "En preparacion" (fondo amarillo sutil)
+   - Columna derecha: "Listos" (fondo verde sutil, auto-ocultar despues de 2 min)
 
-Cambiar el hook interno `useVentasData` para que sea inteligente:
+### Realtime
 
-- Recibe `posEnabled` como parametro
-- Si `posEnabled = true`: usa `usePosVentasAgregadas` para obtener los datos en tiempo real
-- Si `posEnabled = false`: lee de `ventas_mensuales_local` como hasta ahora
-- En ambos casos, devuelve la misma estructura `{ fc, ft, total }`
+- Suscripcion a cambios en tabla `pedidos` para la branch actual
+- Sonido de notificacion cuando entra un pedido nuevo (usar `/public/sounds/notification.mp3` que ya existe)
+- Animacion de entrada para pedidos nuevos
 
-### 4. Modificar `get_rdo_report` (funcion DB)
+### Funcionalidades de interaccion
 
-La funcion SQL `get_rdo_report` tambien lee de `ventas_mensuales_local` para calcular porcentajes. Hay dos opciones:
-
-**Opcion elegida**: No modificar la funcion SQL. En cambio, pasar las ventas como contexto en el frontend. Los porcentajes ya se calculan en el frontend con `totalVentas`, asi que el unico uso de ventas en la funcion es para el campo `percentage` de cada linea. Si `ventas_mensuales_local` esta vacio, `percentage` sera 0 y el frontend recalcula con el total correcto.
-
-Esto funciona porque el RdoDashboard ya usa `totalVentas` (del hook) para todos los calculos visuales, no los `percentage` de la funcion.
-
-### 5. Modificar `RdoDashboard.tsx`
-
-- Importar `usePosEnabled`
-- Pasar `posEnabled` al hook de ventas
-- Mostrar un badge/indicador que diga "Fuente: POS" o "Fuente: Carga manual" para que el usuario sepa de donde vienen los datos
-- Si POS esta habilitado pero no hay ventas del periodo, mostrar el total en $0 sin pedir carga manual
-
-### 6. Modificar pagina `VentasMensualesLocalPage.tsx`
-
-- Si POS esta habilitado, mostrar los datos agregados del POS como solo lectura (ya tiene el `Alert` de "POS habilitado")
-- Mantener visible el historial de periodos anteriores (que pueden ser manuales)
-
-### 7. Actualizar `CargadorRdoUnificado`
-
-Ya tiene bloqueo cuando POS esta habilitado, no requiere cambios.
+- Click en un item: cicla estado `pendiente` -> `en_preparacion` -> `listo` con animacion
+- Click en badge de estado del pedido: cambia estado global del pedido
+- Boton "LISTO" en el footer cuando todos los items completados
+- Auto-refresh via realtime (no solo polling)
+- Contador de pedidos activos en el header
 
 ---
 
-## Archivos a crear
+## Cambios tecnicos
 
-| Archivo | Descripcion |
-|---|---|
-| `src/hooks/usePosVentasAgregadas.ts` | Hook que agrega ventas del POS por periodo |
+### 1. Reescribir `src/hooks/pos/useKitchen.ts`
+
+- Agregar select de `pedido_item_modificadores` (join anidado)
+- Agregar suscripcion realtime a tabla `pedidos` (canal de Supabase)
+- Refetch automatico al recibir cambios
+- Query: `pedidos` con `pedido_items(*, pedido_item_modificadores(*))` 
+
+### 2. Reescribir `src/pages/pos/KitchenPage.tsx`
+
+Reemplazar la implementacion actual por un KDS completo:
+
+- Layout en 3 columnas (Kanban): Pendientes | En Preparacion | Listos
+- En mobile: tabs en vez de columnas
+- Componentes internos:
+  - `KitchenOrderCard`: tarjeta individual de pedido con header coloreado, items, footer
+  - `KitchenItemRow`: fila de item con checkbox, modificadores, notas
+  - `KitchenTimer`: componente que calcula y muestra tiempo transcurrido con color dinamico
+- Sonido al detectar pedido nuevo (comparar IDs previos vs actuales)
+- Contador en header: "X pedidos activos"
+- Empty state con icono de ChefHat y mensaje amigable
+
+### 3. Habilitar realtime en tabla `pedidos`
+
+- Migracion SQL: `ALTER PUBLICATION supabase_realtime ADD TABLE public.pedidos;`
+
+---
 
 ## Archivos a modificar
 
 | Archivo | Cambio |
 |---|---|
-| `src/components/rdo/RdoDashboard.tsx` | Usar datos POS cuando esta habilitado, badge de fuente |
-| `src/pages/local/VentasMensualesLocalPage.tsx` | Mostrar datos POS como solo lectura si esta habilitado |
+| `src/hooks/pos/useKitchen.ts` | Reescribir con join de modificadores + realtime |
+| `src/pages/pos/KitchenPage.tsx` | Reescribir completo con layout Kanban, cards ricas, timer, sonido |
 
 ## Migracion SQL
 
 | Cambio | SQL |
 |---|---|
-| Campo fuente | `ALTER TABLE ventas_mensuales_local ADD COLUMN fuente text NOT NULL DEFAULT 'manual'` |
+| Realtime | `ALTER PUBLICATION supabase_realtime ADD TABLE public.pedidos` |
 
-## Flujo resultante
+## Resultado esperado
 
-```text
-Local CON POS habilitado:
-  pedidos + pedido_pagos --> usePosVentasAgregadas --> RdoDashboard (tiempo real)
-  
-Local SIN POS:
-  ventas_mensuales_local (carga manual) --> useVentasData --> RdoDashboard
-
-Historico mixto:
-  Periodos antes del POS: datos manuales en ventas_mensuales_local (fuente='manual')
-  Periodos con POS: datos calculados en tiempo real desde pedidos
-```
+Una pantalla de cocina profesional donde:
+- Se ve claramente QUE preparar (items con modificadores)
+- Se ve PARA QUIEN (llamador, tipo de servicio)
+- Se ve HACE CUANTO espera (timer con colores de urgencia)
+- Se interactua facilmente (botones grandes, feedback visual claro)
+- Se actualiza en tiempo real (sin recargar pagina)
+- Suena una alerta cuando entra un pedido nuevo
