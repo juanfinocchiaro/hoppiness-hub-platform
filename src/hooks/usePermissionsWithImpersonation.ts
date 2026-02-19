@@ -79,6 +79,7 @@ export function usePermissionsWithImpersonation(currentBranchId?: string): Dynam
       isEmpleado,
       canAccessBrandPanel,
       canAccessLocalPanel,
+      isCommunityManager: brandRole === 'community_manager',
       hasAccessToBranch,
       getLocalRoleForBranch,
       canApproveWithPin,

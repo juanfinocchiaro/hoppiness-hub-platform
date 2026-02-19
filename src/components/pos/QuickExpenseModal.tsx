@@ -51,11 +51,11 @@ export function QuickExpenseModal({
     async function checkRole() {
       if (!user) return;
       const { data } = await supabase
-        .from('user_roles')
-        .select('role')
+        .from('user_roles_v2')
+        .select('brand_role, local_role')
         .eq('user_id', user.id)
         .eq('is_active', true);
-      const roles = data?.map((r) => r.role) || [];
+      const roles = data?.flatMap((r) => [r.brand_role, r.local_role].filter(Boolean)) || [];
       setIsSupervisor(
         roles.some((r) =>
           ['encargado', 'franquiciado', 'admin', 'coordinador'].includes(r as string)

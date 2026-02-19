@@ -34,7 +34,7 @@ export function usePushNotifications(): UsePushNotificationsResult {
     setPermission(Notification.permission as PushPermission);
 
     navigator.serviceWorker.ready.then(async (reg) => {
-      const sub = await reg.pushManager.getSubscription();
+      const sub = await (reg as any).pushManager.getSubscription();
       setIsSubscribed(!!sub);
     }).catch(() => {});
   }, []);
@@ -74,10 +74,10 @@ export function usePushNotifications(): UsePushNotificationsResult {
     }
 
     const reg = await navigator.serviceWorker.ready;
-    let subscription = await reg.pushManager.getSubscription();
+    let subscription = await (reg as any).pushManager.getSubscription();
 
     if (!subscription) {
-      subscription = await reg.pushManager.subscribe({
+      subscription = await (reg as any).pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: vapidKey,
       });

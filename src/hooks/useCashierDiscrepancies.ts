@@ -152,10 +152,10 @@ export function useBranchDiscrepancyReport(
 
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('user_id, full_name')
-        .in('user_id', userIds);
+        .select('id, full_name')
+        .in('id', userIds);
 
-      const nameMap = new Map(profiles?.map((p) => [p.user_id, p.full_name]) || []);
+      const nameMap = new Map(profiles?.map((p: any) => [p.id, p.full_name]) || []);
 
       const result: CashierReportEntry[] = [];
       for (const [userId, stats] of userMap.entries()) {

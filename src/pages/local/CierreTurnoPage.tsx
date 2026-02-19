@@ -310,7 +310,7 @@ export default function CierreTurnoPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {Object.entries(channelBreakdown)
+              {(Object.entries(channelBreakdown) as [string, number][])
                 .sort(([, a], [, b]) => b - a)
                 .map(([channel, amount]) => (
                   <div key={channel} className="space-y-2">
@@ -343,7 +343,7 @@ export default function CierreTurnoPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {Object.entries(paymentBreakdown)
+              {(Object.entries(paymentBreakdown) as [string, number][])
                 .sort(([, a], [, b]) => b - a)
                 .map(([method, amount]) => (
                   <div key={method} className="space-y-2">
@@ -394,7 +394,7 @@ export default function CierreTurnoPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {Object.entries(productBreakdown)
+                        {(Object.entries(productBreakdown) as [string, { quantity: number; total: number }][])
                           .sort(([, a], [, b]) => b.total - a.total)
                           .map(([name, data]) => (
                             <TableRow key={name}>

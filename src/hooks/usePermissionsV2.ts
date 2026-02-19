@@ -25,7 +25,7 @@ import type { Tables } from '@/integrations/supabase/types';
 type Branch = Tables<'branches'>;
 
 // Tipos de roles
-export type BrandRole = 'superadmin' | 'coordinador' | 'informes' | 'contador_marca' | null;
+export type BrandRole = 'superadmin' | 'coordinador' | 'informes' | 'contador_marca' | 'community_manager' | null;
 export type LocalRole = 'franquiciado' | 'encargado' | 'contador_local' | 'cajero' | 'empleado' | null;
 
 // Estructura de rol de marca

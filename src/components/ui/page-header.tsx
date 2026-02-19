@@ -11,6 +11,7 @@ interface BreadcrumbItem {
 interface PageHeaderProps {
   title: string;
   subtitle?: string;
+  icon?: ReactNode;
   breadcrumb?: BreadcrumbItem[];
   actions?: ReactNode;
   variant?: 'default' | 'compact';
@@ -23,6 +24,7 @@ interface PageHeaderProps {
 export function PageHeader({
   title,
   subtitle,
+  icon,
   breadcrumb,
   actions,
   variant = 'default',
@@ -58,10 +60,11 @@ export function PageHeader({
         <div>
           <h1
             className={cn(
-              'font-bold text-foreground',
+              'font-bold text-foreground flex items-center gap-2',
               isCompact ? 'text-xl' : 'text-2xl'
             )}
           >
+            {icon && <span className="shrink-0">{typeof icon === 'function' ? null : icon}</span>}
             {title}
           </h1>
           {subtitle && (

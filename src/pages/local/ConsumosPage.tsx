@@ -30,8 +30,8 @@ export default function ConsumosPage() {
   const filtered = consumos?.filter((c) => {
     const matchesSearch = c.categoria_pl.toLowerCase().includes(search.toLowerCase()) ||
       (c.observaciones || '').toLowerCase().includes(search.toLowerCase());
-    const matchesFrom = !dateFrom || (c.fecha && c.fecha >= dateFrom);
-    const matchesTo = !dateTo || (c.fecha && c.fecha <= dateTo);
+    const matchesFrom = !dateFrom || (c.created_at && c.created_at >= dateFrom);
+    const matchesTo = !dateTo || (c.created_at && c.created_at <= dateTo);
     return matchesSearch && matchesFrom && matchesTo;
   });
 

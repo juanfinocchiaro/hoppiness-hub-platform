@@ -90,22 +90,22 @@ export function useOperatorVerification(branchId: string | undefined) {
         // Verificar si el usuario actual tiene rol de supervisor
         if (!user) return null;
         const { data: roles } = await supabase
-          .from('user_roles')
-          .select('role')
+          .from('user_roles_v2')
+          .select('brand_role, local_role')
           .eq('user_id', user.id)
           .eq('is_active', true)
-          .in('role', ['encargado', 'franquiciado', 'admin', 'coordinador'])
           .limit(1);
-        if (roles && roles.length > 0) {
+        const matchedRole = roles?.[0]?.brand_role || roles?.[0]?.local_role;
+        if (roles && roles.length > 0 && ['encargado', 'franquiciado', 'superadmin', 'coordinador'].includes(matchedRole || '')) {
           const { data: profile } = await supabase
             .from('profiles')
             .select('full_name')
-            .eq('user_id', user.id)
+            .eq('id', user.id)
             .single();
           return {
             userId: user.id,
             fullName: profile?.full_name || user.email || 'Usuario',
-            role: roles[0].role,
+            role: matchedRole as string,
           };
         }
       }
@@ -137,7 +137,7 @@ export function useOperatorVerification(branchId: string | undefined) {
         const { data: newProfile } = await supabase
           .from('profiles')
           .select('full_name')
-          .eq('user_id', data.user.id)
+          .eq('id', data.user.id)
           .single();
 
         await logOperatorChange.mutateAsync({

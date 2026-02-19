@@ -38,7 +38,7 @@ export function PendingItemsPanel({ userId }: PendingItemsPanelProps) {
     a => a.status === 'pending'
   ).length || 0;
 
-  const items: PendingItem[] = [
+  const items = [
     {
       key: 'comms',
       label: 'Comunicados sin leer',
@@ -63,7 +63,7 @@ export function PendingItemsPanel({ userId }: PendingItemsPanelProps) {
       href: '/cuenta/adelantos',
       variant: 'secondary',
     },
-  ].filter(item => item.count > 0);
+  ].filter(item => item.count > 0) as PendingItem[];
 
   if (items.length === 0) return null;
 
