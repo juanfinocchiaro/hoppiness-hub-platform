@@ -1,6 +1,6 @@
 /**
  * POSPage - Punto de venta
- * Menú bloqueado hasta iniciar "Nueva Venta" (canal/cliente); luego espacio grande para pedido a la izquierda.
+ * Layout lineal: config arriba, carrito + menú abajo (siempre visibles).
  */
 import { useState, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
@@ -15,7 +15,6 @@ import { useShiftStatus } from '@/hooks/useShiftStatus';
 import { toast } from 'sonner';
 import { DEFAULT_ORDER_CONFIG } from '@/types/pos';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 import { ShoppingBag } from 'lucide-react';
 
 export default function POSPage() {
@@ -25,8 +24,7 @@ export default function POSPage() {
   const [showOpenCash, setShowOpenCash] = useState(false);
   const [orderConfig, setOrderConfig] = useState(DEFAULT_ORDER_CONFIG);
   const [saleStarted, setSaleStarted] = useState(false);
-  const [showConfigForm, setShowConfigForm] = useState(false);
-  const orderColumnRef = useRef<HTMLDivElement>(null);
+  const configRef = useRef<HTMLDivElement>(null);
 
   const shiftStatus = useShiftStatus(branchId);
   const createPedido = useCreatePedido(branchId!);
@@ -133,18 +131,12 @@ export default function POSPage() {
       setOrderConfig(DEFAULT_ORDER_CONFIG);
       setShowPayment(false);
       setSaleStarted(false);
-      setShowConfigForm(false);
     } catch (e: any) {
       toast.error(e?.message ?? 'Error al registrar pedido');
     }
   };
 
   const subtotal = cart.reduce((s, i) => s + i.subtotal, 0);
-
-  const handleStartSale = () => {
-    setShowConfigForm(true);
-    orderColumnRef.current?.scrollIntoView?.({ behavior: 'smooth' });
-  };
 
   const handleComenzarVenta = () => {
     const err = validateOrderConfig();
@@ -153,89 +145,69 @@ export default function POSPage() {
       return;
     }
     setSaleStarted(true);
-    setShowConfigForm(false);
   };
 
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)]">
-      <PageHeader
-        title="Punto de Venta"
-        subtitle="Tomar pedidos y cobrar"
-      />
+      <PageHeader title="Punto de Venta" subtitle="Tomar pedidos y cobrar" />
+
       {!shiftStatus.loading && !shiftStatus.hasCashOpen && (
         <Alert variant="destructive" className="mb-2">
           <AlertDescription className="flex items-center justify-between gap-2 flex-wrap">
             <span>Caja cerrada. Abrí la caja para poder cobrar.</span>
-            <button
-              type="button"
-              onClick={() => setShowOpenCash(true)}
-              className="underline font-medium whitespace-nowrap"
-            >
+            <button type="button" onClick={() => setShowOpenCash(true)} className="underline font-medium whitespace-nowrap">
               Abrir caja
             </button>
           </AlertDescription>
         </Alert>
       )}
-      <RegisterOpenModal
-        open={showOpenCash}
-        onOpenChange={setShowOpenCash}
-        branchId={branchId!}
-        onOpened={() => shiftStatus.refetch()}
-      />
+
+      <RegisterOpenModal open={showOpenCash} onOpenChange={setShowOpenCash} branchId={branchId!} onOpened={() => shiftStatus.refetch()} />
+
+      {/* Config panel — always visible */}
+      <div ref={configRef} className="mb-3">
+        <OrderConfigPanel
+          config={orderConfig}
+          onChange={setOrderConfig}
+          compact={saleStarted}
+          onConfirm={handleComenzarVenta}
+          deliveryDisabled={false}
+        />
+      </div>
+
+      {/* Main grid: cart left + menu right — always rendered */}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(380px,1.1fr)_2fr] gap-4 flex-1 min-h-0">
-        {/* Columna izquierda: pedido actual (más grande). Sin venta iniciada: "Nueva Venta" + formulario canal/cliente */}
-        <div ref={orderColumnRef} className="min-h-[320px] lg:min-h-0 flex flex-col gap-3 order-2 lg:order-1">
-          {!saleStarted ? (
-            <>
-              {!showConfigForm ? (
-                <button
-                  type="button"
-                  onClick={handleStartSale}
-                  className="flex flex-col items-center justify-center gap-4 flex-1 min-h-[280px] rounded-xl border-2 border-dashed border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors text-primary"
-                >
-                  <ShoppingBag className="h-16 w-16 opacity-80" />
-                  <span className="text-xl font-semibold">Nueva Venta</span>
-                  <span className="text-sm text-muted-foreground">Tocá para cargar canal, cliente y comenzar</span>
-                </button>
-              ) : (
-                <div className="flex flex-col gap-3 flex-1 min-h-0">
-                  <OrderConfigPanel config={orderConfig} onChange={setOrderConfig} compact={false} />
-                  <Button size="lg" className="w-full" onClick={handleComenzarVenta}>
-                    Comenzar venta
-                  </Button>
-                </div>
-              )}
-            </>
+        {/* Cart column */}
+        <div className="min-h-[200px] lg:min-h-0 flex flex-col gap-3 order-2 lg:order-1">
+          {saleStarted ? (
+            <OrderPanel
+              items={cart}
+              onUpdateQty={updateQty}
+              onRemove={removeItem}
+              onCobrar={handleCobrar}
+              disabled={createPedido.isPending || !shiftStatus.hasCashOpen}
+            />
           ) : (
-            <>
-              <OrderConfigPanel config={orderConfig} onChange={setOrderConfig} compact />
-              <OrderPanel
-                items={cart}
-                onUpdateQty={updateQty}
-                onRemove={removeItem}
-                onCobrar={handleCobrar}
-                disabled={createPedido.isPending || !shiftStatus.hasCashOpen}
-              />
-            </>
-          )}
-        </div>
-        {/* Columna derecha: menú. Bloqueado = solo mensaje; desbloqueado = ProductGrid */}
-        <div className="min-h-[200px] lg:min-h-0 flex flex-col flex-1 overflow-hidden order-1 lg:order-2">
-          {!saleStarted ? (
-            <button
-              type="button"
-              onClick={handleStartSale}
-              className="flex flex-1 min-h-[200px] flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-muted-foreground/30 bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground hover:border-muted-foreground/50 transition-colors w-full"
-            >
-              <ShoppingBag className="h-14 w-14 opacity-70" />
-              <span className="text-lg font-medium">Nueva Venta</span>
-              <span className="text-sm text-center px-4">Cargá canal y cliente para desbloquear el menú</span>
-            </button>
-          ) : (
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <ProductGrid onAddItem={addItem} />
+            <div className="flex flex-col items-center justify-center flex-1 rounded-xl border border-dashed border-muted-foreground/20 bg-muted/30 text-muted-foreground gap-2 p-6">
+              <ShoppingBag className="w-10 h-10 opacity-40" />
+              <p className="text-sm">El carrito aparecerá acá</p>
             </div>
           )}
+        </div>
+
+        {/* Menu column */}
+        <div className="min-h-[200px] lg:min-h-0 flex flex-col flex-1 overflow-hidden order-1 lg:order-2 relative">
+          {!saleStarted && (
+            <div
+              className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[1px] rounded-xl cursor-pointer"
+              onClick={() => configRef.current?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              <p className="text-sm text-muted-foreground font-medium">Configurá canal y cliente para empezar</p>
+            </div>
+          )}
+          <div className={!saleStarted ? 'opacity-40 pointer-events-none flex-1 min-h-0 overflow-hidden' : 'flex-1 min-h-0 overflow-hidden'}>
+            <ProductGrid onAddItem={addItem} />
+          </div>
         </div>
       </div>
 
