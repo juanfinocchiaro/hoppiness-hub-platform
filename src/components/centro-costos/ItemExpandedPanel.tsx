@@ -683,6 +683,7 @@ function EditarInline({ item, mutations, onSaved }: { item: any; mutations: any;
     descripcion: item.descripcion || '',
     categoria_carta_id: item.categoria_carta_id || '',
     precio_base: item.precio_base || 0,
+    precio_referencia: item.precio_referencia ? Number(item.precio_referencia) : '',
     fc_objetivo: item.fc_objetivo || 32,
     disponible_delivery: item.disponible_delivery ?? true,
   });
@@ -690,10 +691,18 @@ function EditarInline({ item, mutations, onSaved }: { item: any; mutations: any;
 
   const submit = async () => {
     if (!form.nombre || !form.precio_base) return;
-    const p = { ...form, categoria_carta_id: form.categoria_carta_id || null };
+    const p = {
+      ...form,
+      categoria_carta_id: form.categoria_carta_id || null,
+      precio_referencia: form.precio_referencia ? Number(form.precio_referencia) : null,
+    };
     await mutations.update.mutateAsync({ id: item.id, data: p });
     onSaved();
   };
+
+  const hasDiscount = form.precio_referencia && Number(form.precio_referencia) > form.precio_base;
+  const descuento = hasDiscount ? Number(form.precio_referencia) - form.precio_base : 0;
+  const descuentoPct = hasDiscount ? Math.round((descuento / Number(form.precio_referencia)) * 100) : 0;
 
   return (
     <div className="space-y-4 max-w-lg">
@@ -711,10 +720,21 @@ function EditarInline({ item, mutations, onSaved }: { item: any; mutations: any;
         </FormRow>
       </div>
       <FormRow label="Descripción"><Textarea value={form.descripcion} onChange={e => set('descripcion', e.target.value)} rows={2} /></FormRow>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <FormRow label="Precio carta (con IVA)" required><Input type="number" value={form.precio_base || ''} onChange={e => set('precio_base', Number(e.target.value))} /></FormRow>
+        <FormRow label="Precio referencia (sin promo)" hint="Opcional. Si es mayor al precio carta, el POS muestra descuento.">
+          <Input type="number" value={form.precio_referencia} onChange={e => set('precio_referencia', e.target.value ? Number(e.target.value) : '')} placeholder="Sin promo" />
+        </FormRow>
         <FormRow label="FC% Objetivo"><Input type="number" value={form.fc_objetivo || ''} onChange={e => set('fc_objetivo', Number(e.target.value))} /></FormRow>
       </div>
+      {hasDiscount && (
+        <div className="flex items-center gap-2 text-sm border rounded-lg px-3 py-2 bg-destructive/5 border-destructive/20">
+          <Tag className="w-4 h-4 text-destructive" />
+          <span className="text-destructive font-medium">
+            Descuento promo: -{fmt(descuento)} ({descuentoPct}%)
+          </span>
+        </div>
+      )}
       <div className="flex items-center gap-2">
         <Switch checked={form.disponible_delivery} onCheckedChange={v => set('disponible_delivery', v)} />
         <span className="text-sm text-muted-foreground">Disponible en delivery</span>

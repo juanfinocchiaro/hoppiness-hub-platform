@@ -67,6 +67,8 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
   }, [removibles]);
 
   const precioBase = item?.precio_base ?? 0;
+  const precioRef = item?.precio_referencia ? Number(item.precio_referencia) : undefined;
+  const hasDiscount = precioRef != null && precioRef > precioBase;
   const nombre = item?.nombre_corto ?? item?.nombre ?? '';
 
   // Auto-add if no extras/removibles
@@ -82,10 +84,11 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
         cantidad: 1,
         precio_unitario: precioBase,
         subtotal: precioBase,
+        precio_referencia: hasDiscount ? precioRef : undefined,
       });
       onOpenChange(false);
     }
-  }, [open, isLoading, hasContent, item, itemId, nombre, precioBase, onConfirm, onOpenChange]);
+  }, [open, isLoading, hasContent, item, itemId, nombre, precioBase, hasDiscount, precioRef, onConfirm, onOpenChange]);
 
   const extrasTotal = useMemo(() => {
     return extrasList.reduce((sum, ex) => {
@@ -146,6 +149,7 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
       notas: notasParts.length > 0 ? notasParts.join(' | ') : undefined,
       extras: cartExtras.length > 0 ? cartExtras : undefined,
       removibles: cartRemovibles.length > 0 ? cartRemovibles : undefined,
+      precio_referencia: hasDiscount ? precioRef : undefined,
     });
 
     onOpenChange(false);
