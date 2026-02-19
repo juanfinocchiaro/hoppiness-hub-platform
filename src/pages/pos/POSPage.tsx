@@ -109,6 +109,7 @@ export default function POSPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showPayment, setShowPayment] = useState(false);
+  const [configConfirmed, setConfigConfirmed] = useState(false);
   
   const [orderConfig, setOrderConfig] = useState(DEFAULT_ORDER_CONFIG);
   const [modifiersItem, setModifiersItem] = useState<any | null>(null);
@@ -167,6 +168,7 @@ export default function POSPage() {
   const cancelOrder = useCallback(() => {
     setCart([]);
     setOrderConfig(DEFAULT_ORDER_CONFIG);
+    setConfigConfirmed(false);
   }, []);
 
   const validateOrderConfig = (): string | null => {
@@ -237,6 +239,7 @@ export default function POSPage() {
       toast.success('Pedido registrado');
       setCart([]);
       setOrderConfig(DEFAULT_ORDER_CONFIG);
+      setConfigConfirmed(false);
       setShowPayment(false);
     } catch (e: any) {
       toast.error(e?.message ?? 'Error al registrar pedido');
@@ -263,15 +266,6 @@ export default function POSPage() {
     <div className="flex flex-col h-[calc(100vh-6rem)] pb-16 lg:pb-0">
       <PageHeader title="Punto de Venta" subtitle="Tomar pedidos y cobrar" />
 
-      {/* Config panel - always compact */}
-      <div ref={configRef} className="mb-3">
-        <OrderConfigPanel
-          config={orderConfig}
-          onChange={setOrderConfig}
-          compact
-        />
-      </div>
-
       {/* Main grid: menu + cart */}
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_minmax(380px,1.1fr)] gap-4 flex-1 min-h-0">
         {/* Menu column */}
@@ -281,20 +275,44 @@ export default function POSPage() {
 
         {/* Cart column */}
         <div className="min-h-[200px] lg:min-h-0 flex flex-col gap-3">
-          <OrderPanel
-            items={cart}
-            onUpdateQty={updateQty}
-            onRemove={removeItem}
-            onUpdateNotes={updateNotes}
-            onCancelOrder={cancelOrder}
-            onCobrar={handleCobrar}
-            disabled={createPedido.isPending}
-          />
+          {!configConfirmed ? (
+            /* Step 1: Show config form inside the cart area */
+            <div className="flex flex-col h-full border rounded-lg">
+              <div className="p-3 border-b font-medium">Nueva venta</div>
+              <div ref={configRef} className="flex-1 p-4 overflow-y-auto">
+                <OrderConfigPanel
+                  config={orderConfig}
+                  onChange={setOrderConfig}
+                  onConfirm={() => setConfigConfirmed(true)}
+                />
+              </div>
+            </div>
+          ) : (
+            /* Step 2: Compact config summary + cart */
+            <>
+              <div ref={configRef}>
+                <OrderConfigPanel
+                  config={orderConfig}
+                  onChange={setOrderConfig}
+                  compact
+                />
+              </div>
+              <OrderPanel
+                items={cart}
+                onUpdateQty={updateQty}
+                onRemove={removeItem}
+                onUpdateNotes={updateNotes}
+                onCancelOrder={cancelOrder}
+                onCobrar={handleCobrar}
+                disabled={createPedido.isPending}
+              />
+            </>
+          )}
         </div>
       </div>
 
       {/* Mobile sticky footer */}
-      {cart.length > 0 && (
+      {configConfirmed && cart.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden border-t bg-background px-4 py-3 flex items-center justify-between gap-3 shadow-lg">
           <div className="text-sm">
             <span className="text-muted-foreground">{cart.reduce((s, i) => s + i.cantidad, 0)} items</span>
