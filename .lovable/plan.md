@@ -1,79 +1,81 @@
 
 
-## Plan: Proteger la Configuracion ARCA y Corregir el Bug de Produccion
+## Plan: Rediseno Completo de la Pagina de Facturacion ARCA
 
-### Problema 1: Bug en la edge function (prioritario)
+Basado en la guia de rediseno que subiste, vamos a reestructurar completamente la pagina en 3 zonas claras, agregar protecciones serias contra acciones destructivas, y mejorar la guia integrada.
 
-El error `this.digestAlgorithm.toSchema is not a function` ocurre al construir el CMS SignedData con `asn1js`. La libreria tiene incompatibilidades con Deno en la forma en que se construyen los OIDs para el campo `digestAlgorithm` dentro del `SignerInfo`.
+### Cambios principales
 
-**Solucion**: Reescribir `wsaa.ts` usando la Web Crypto API nativa de Deno + construccion manual de ASN.1 en bytes (sin depender de `asn1js` para la firma). Alternativa mas robusta: usar `node-forge` (que ya esta en el proyecto para generar CSR en el frontend) via `npm:node-forge` en Deno.
+**1. Reestructurar en 3 zonas**
 
-### Problema 2: Proteccion de la pagina de facturacion
+La pagina actual mezcla todo. Se reorganiza asi:
 
-Actualmente cualquier usuario con acceso al local puede modificar datos criticos. Se necesitan protecciones:
+```text
+ZONA 1: Estado Operativo (lo que se mira dia a dia)
+  - Cards de Modo (Produccion/Homologacion) y Conexion lado a lado
+  - CUIT y Punto de Venta como referencia rapida
+  - Ultimos comprobantes con formato #00000000 y texto explicativo
+  - Boton "Verificar conexion ahora"
+  - Banner de alerta si esta en Homologacion
 
-**Cambios en la UI (`AfipConfigPage.tsx`):**
+ZONA 2: Configuracion (se toca una vez)
+  - Datos Fiscales en modo solo lectura, con boton "Editar" discreto
+  - Certificado ARCA (wizard existente, ya funciona bien)
 
-1. **Solo superadmin y franquiciado** pueden ver/editar esta pagina. Encargados, cajeros y empleados no deberian tener acceso.
-2. **Bloquear campos criticos cuando ya hay conexion activa:**
-   - CUIT: solo lectura una vez conectado
-   - Punto de venta: solo lectura una vez conectado  
-   - Boton "Regenerar certificado": requiere confirmacion con doble paso ("Esto eliminara la clave actual. Vas a tener que volver a subir el .csr a ARCA.")
-   - Boton "Activar Produccion": requiere confirmacion explicita
-3. **Agregar boton "Resetear configuracion"** visible solo para superadmin, con confirmacion. Esto limpia certificado + clave + estado pero mantiene datos fiscales.
+ZONA 3: Zona Restringida (colapsada, con friccion)
+  - Collapsible cerrado por defecto
+  - "Cambiar modo" con confirmacion por texto (escribir "HOMOLOGACION")
+  - "Resetear todo" con confirmacion por texto (escribir "RESETEAR ARCA")
+  - "Copiar datos fiscales" (solo superadmin, renombrado)
+```
 
-**Cambios en permisos:**
+**2. Confirmaciones con texto obligatorio**
 
-- Verificar `usePermissionsV2` en la pagina: si `localRole` no es `franquiciado` y `brandRole` no es `superadmin`, redirigir o mostrar acceso denegado.
+Reemplazar los ConfirmDialog simples por un nuevo componente `DangerConfirmDialog` que requiere escribir una palabra exacta para confirmar. Esto aplica a:
+- Cambiar a Homologacion: escribir "HOMOLOGACION"
+- Resetear configuracion: escribir "RESETEAR ARCA"  
+- Regenerar certificado: escribir "REGENERAR"
 
-### Problema 3: Reusar certificado entre sucursales
+**3. Banner permanente de Homologacion**
 
-Como todas las sucursales operan bajo el mismo CUIT, el certificado es el mismo. Lo que cambia es el punto de venta.
+Cuando `es_produccion = false`, mostrar un banner amarillo/naranja fijo arriba de todo:
+```text
+MODO HOMOLOGACION ACTIVO
+Las facturas emitidas NO son validas fiscalmente.
+[Cambiar a Produccion]
+```
 
-**Solucion**: Agregar un boton "Copiar configuracion de otra sucursal" que:
-1. Lista las sucursales que ya tienen ARCA configurado
-2. Copia: CUIT, razon social, direccion fiscal, certificado, clave privada
-3. Solo pide al usuario que ingrese el punto de venta nuevo
-4. Ejecuta test de conexion automatico
+**4. Mejoras en Estado Operativo**
 
-### Archivos a modificar
+- Numeros de comprobante formateados como `#00000000` en vez de solo `0`
+- Texto explicativo: "Se sincronizan con ARCA al emitir facturas. Si recien configuraste, es normal que esten en 0."
+- Card de conexion con error muestra mensaje amigable mapeado (no el error crudo de ARCA)
 
-| Archivo | Cambio |
+**5. Copiar config renombrado y limitado**
+
+- Renombrar a "Copiar datos fiscales de otra sucursal"
+- Solo copia: CUIT, razon social, direccion, inicio actividades
+- NO copia: certificado, clave privada, punto de venta
+- Punto de venta queda vacio para que el usuario lo complete
+
+### Archivos a crear/modificar
+
+| Archivo | Accion |
 |---|---|
-| `supabase/functions/_shared/wsaa.ts` | Reescribir firma CMS usando `node-forge` en vez de `asn1js` para evitar el bug |
-| `src/pages/local/AfipConfigPage.tsx` | Agregar proteccion de roles, bloqueo de campos criticos, confirmaciones, boton resetear |
-| `src/components/local/arca/ArcaCertificateWizard.tsx` | Agregar confirmacion al regenerar certificado |
-| `src/pages/local/AfipConfigPage.tsx` | Agregar boton "Copiar config de otra sucursal" (solo superadmin) |
+| `src/components/ui/danger-confirm-dialog.tsx` | Crear: dialogo con input de texto obligatorio |
+| `src/pages/local/AfipConfigPage.tsx` | Reescribir: 3 zonas, banner homologacion, zona restringida colapsada |
+| `src/components/local/arca/ArcaCertificateWizard.tsx` | Modificar: usar DangerConfirmDialog para regenerar |
+| `src/components/local/arca/CopyArcaConfigDialog.tsx` | Modificar: solo copiar datos fiscales, no certificado |
 
-### Detalle tecnico: Fix del CMS con node-forge
+### Detalle tecnico
 
-```text
-Antes (asn1js - falla en Deno):
-  import * as asn1js from "npm:asn1js@3.0.5"
-  // buildCMSSignedData manual con asn1js → "toSchema is not a function"
+**DangerConfirmDialog**: Componente reutilizable basado en AlertDialog que:
+- Recibe `confirmWord` (la palabra que hay que escribir)
+- El boton de confirmar esta deshabilitado hasta que el input coincida
+- Muestra las consecuencias en una lista con iconos de X roja
+- Se puede reusar en cualquier parte de la app para acciones destructivas
 
-Despues (node-forge - funciona en Deno):
-  import forge from "npm:node-forge@1.3.3"
-  // forge.pkcs7.createSignedData() → CMS nativo, probado, sin bugs
-  // forge maneja internamente ASN.1, DER, PEM
-```
+**Zona Restringida**: Usa el componente `Collapsible` de Radix (ya existe en el proyecto) envuelto en una Card con borde rojo sutil. Cerrado por defecto.
 
-La ventaja de `node-forge` es que ya se usa en el frontend para generar CSR, asi que sabemos que funciona. En Deno se importa como `npm:node-forge`.
-
-### Flujo protegido final
-
-```text
-Acceso a /milocal/:id/config/facturacion
-  |
-  +-- No es superadmin ni franquiciado? --> "Sin acceso"
-  |
-  +-- Sin configuracion? --> Formulario completo editable
-  |
-  +-- Con conexion activa?
-       +-- CUIT, Punto de Venta: solo lectura
-       +-- Certificado: "Regenerar" con confirmacion doble
-       +-- Modo: "Activar Produccion" con confirmacion
-       +-- "Resetear todo" solo superadmin con confirmacion
-       +-- "Copiar a otra sucursal" solo superadmin
-```
+**Mapeo de errores**: Se agrega un helper `getArcaErrorMessage(error: string)` que convierte errores tecnicos de ARCA en mensajes amigables con sugerencias de accion, segun la tabla de la guia.
 
