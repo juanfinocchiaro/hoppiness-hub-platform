@@ -108,13 +108,13 @@ export function ProductGrid({ onAddItem, onSelectItem }: ProductGridProps) {
   return (
     <div className="flex flex-col h-full gap-3">
       {/* Category tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide shrink-0">
+      <div className="flex flex-wrap gap-1.5 shrink-0">
         {cats.map((cat) => (
           <button
             key={cat}
             onClick={() => handleCategoryClick(cat)}
             className={cn(
-              'px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors border',
+              'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border',
               activeCategory === cat
                 ? 'bg-primary text-primary-foreground border-primary'
                 : 'bg-card text-muted-foreground border-border hover:border-primary/50 hover:text-foreground'
