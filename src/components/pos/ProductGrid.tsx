@@ -35,6 +35,7 @@ export interface CartItem {
   extras?: CartItemExtra[];
   removibles?: CartItemRemovible[];
   precio_referencia?: number;
+  createdAt?: number;
 }
 
 interface ProductGridProps {

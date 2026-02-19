@@ -133,7 +133,7 @@ export default function POSPage() {
           return copy;
         }
       }
-      return [...prev, { ...item }];
+      return [...prev, { ...item, createdAt: Date.now() }];
     });
   }, []);
 
@@ -142,7 +142,7 @@ export default function POSPage() {
   }, []);
 
   const handleModifierConfirm = useCallback((cartItem: CartItem) => {
-    setCart((prev) => [...prev, cartItem]);
+    setCart((prev) => [...prev, { ...cartItem, createdAt: Date.now() }]);
     setModifiersItem(null);
   }, []);
 

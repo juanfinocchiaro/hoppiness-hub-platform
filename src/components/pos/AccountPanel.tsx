@@ -1,8 +1,7 @@
 /**
- * AccountPanel - Panel de cuenta con items + pagos + saldo
- * Reemplaza OrderPanel para el modelo de cuenta progresiva.
+ * AccountPanel - Panel de cuenta con items + pagos ordenados cronológicamente + saldo
  */
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -30,6 +29,10 @@ const METODO_LABELS: Record<MetodoPago, string> = {
   mercadopago_qr: 'QR MP',
   transferencia: 'Transf.',
 };
+
+type TimelineEntry =
+  | { type: 'item'; index: number; item: CartItem; ts: number }
+  | { type: 'payment'; payment: LocalPayment; ts: number };
 
 interface AccountPanelProps {
   items: CartItem[];
@@ -62,6 +65,19 @@ export function AccountPanel({
   const canSend = saldo === 0 && items.length > 0;
 
   const [editingNoteIdx, setEditingNoteIdx] = useState<number | null>(null);
+
+  // Build chronological timeline
+  const timeline = useMemo<TimelineEntry[]>(() => {
+    const entries: TimelineEntry[] = [];
+    items.forEach((item, index) => {
+      entries.push({ type: 'item', index, item, ts: item.createdAt ?? 0 });
+    });
+    payments.forEach((payment) => {
+      entries.push({ type: 'payment', payment, ts: payment.createdAt });
+    });
+    entries.sort((a, b) => a.ts - b.ts);
+    return entries;
+  }, [items, payments]);
 
   // Determine send button state
   let sendLabel = 'Agrega productos';
@@ -108,128 +124,45 @@ export function AccountPanel({
         )}
       </div>
 
-      {/* Scrollable content: items + payments */}
+      {/* Scrollable content: chronological timeline */}
       <ScrollArea className="flex-1 min-h-0">
-        {items.length === 0 && payments.length === 0 ? (
+        {timeline.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
             <ShoppingBag className="h-12 w-12 text-muted-foreground/60 mb-3" />
             <p className="text-sm font-medium text-muted-foreground">Agregá productos para empezar</p>
             <p className="text-xs text-muted-foreground mt-1">Elegí items del menú y sumalos al pedido</p>
           </div>
         ) : (
-          <div className="p-2 space-y-1">
-            {/* Items section */}
-            {items.length > 0 && (
-              <>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide px-1 pt-1">
-                  Items ({items.reduce((s, i) => s + i.cantidad, 0)})
-                </p>
-                <div className="space-y-1.5">
-                  {items.map((it, idx) => (
-                    <div key={`${it.item_carta_id}-${idx}`} className="p-2 rounded-lg bg-muted/50">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{it.nombre}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {it.precio_referencia && it.precio_referencia > it.precio_unitario ? (
-                              <>
-                                <span className="line-through mr-1">$ {it.precio_referencia.toLocaleString('es-AR')}</span>
-                                <span className="text-destructive font-semibold">$ {it.precio_unitario.toLocaleString('es-AR')}</span>
-                                <span className="ml-1"> × {it.cantidad}</span>
-                              </>
-                            ) : (
-                              <>$ {it.precio_unitario.toLocaleString('es-AR')} × {it.cantidad}</>
-                            )}
-                          </p>
-                          {it.notas && editingNoteIdx !== idx && (
-                            <div className="mt-0.5 space-y-0">
-                              {it.notas.split(/[,|]/).map((note, ni) => {
-                                const trimmed = note.trim();
-                                return trimmed ? (
-                                  <p key={ni} className="text-xs text-primary truncate">{trimmed}</p>
-                                ) : null;
-                              })}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onUpdateQty(idx, -1)} disabled={it.cantidad <= 1}>
-                            <Minus className="h-3.5 w-3.5" />
-                          </Button>
-                          <span className="text-sm font-medium w-6 text-center">{it.cantidad}</span>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onUpdateQty(idx, 1)}>
-                            <Plus className="h-3.5 w-3.5" />
-                          </Button>
-                          {onUpdateNotes && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className={`h-8 w-8 ${it.notas ? 'text-primary' : 'text-muted-foreground'}`}
-                              onClick={() => setEditingNoteIdx(editingNoteIdx === idx ? null : idx)}
-                            >
-                              <MessageSquare className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onRemove(idx)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                      {editingNoteIdx === idx && onUpdateNotes && (
-                        <div className="flex items-center gap-1.5 mt-1.5">
-                          <Input
-                            placeholder="Ej: sin lechuga, bien cocida..."
-                            value={it.notas || ''}
-                            onChange={(e) => onUpdateNotes(idx, e.target.value)}
-                            className="h-8 text-xs flex-1"
-                            autoFocus
-                            onKeyDown={(e) => { if (e.key === 'Enter') setEditingNoteIdx(null); }}
-                          />
-                          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setEditingNoteIdx(null)}>
-                            <X className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* Payments section */}
-            {payments.length > 0 && (
-              <>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide px-1 pt-3">
-                  Pagos registrados ({payments.length})
-                </p>
-                <div className="space-y-1">
-                  {payments.map((p) => {
-                    const Icon = METODO_ICONS[p.method];
-                    return (
-                      <div key={p.id} className="flex items-center justify-between p-2 rounded-lg bg-green-500/10 border border-green-500/20">
-                        <div className="flex items-center gap-2">
-                          <Icon className="h-4 w-4 text-green-600" />
-                          <span className="text-sm font-medium">{METODO_LABELS[p.method]}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold tabular-nums">$ {p.amount.toLocaleString('es-AR')}</span>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => onRemovePayment(p.id)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
+          <div className="p-2 space-y-1.5">
+            {timeline.map((entry, i) => {
+              if (entry.type === 'item') {
+                return (
+                  <ItemRow
+                    key={`item-${entry.index}-${entry.item.item_carta_id}`}
+                    item={entry.item}
+                    index={entry.index}
+                    editingNoteIdx={editingNoteIdx}
+                    setEditingNoteIdx={setEditingNoteIdx}
+                    onUpdateQty={onUpdateQty}
+                    onRemove={onRemove}
+                    onUpdateNotes={onUpdateNotes}
+                  />
+                );
+              }
+              return (
+                <PaymentRow
+                  key={`pay-${entry.payment.id}`}
+                  payment={entry.payment}
+                  onRemovePayment={onRemovePayment}
+                />
+              );
+            })}
           </div>
         )}
       </ScrollArea>
 
       {/* Footer: summary + actions */}
       <div className="p-3 border-t space-y-2">
-        {/* Summary */}
         {items.length > 0 && (
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
@@ -251,20 +184,13 @@ export function AccountPanel({
           </div>
         )}
 
-        {/* Register payment button */}
         {items.length > 0 && saldo > 0 && (
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={onRegisterPayment}
-            disabled={disabled}
-          >
+          <Button variant="outline" className="w-full" onClick={onRegisterPayment} disabled={disabled}>
             <PlusCircle className="h-4 w-4 mr-2" />
             Registrar pago
           </Button>
         )}
 
-        {/* Send to kitchen button (desktop) */}
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
@@ -295,6 +221,100 @@ export function AccountPanel({
             </AlertDialogContent>
           )}
         </AlertDialog>
+      </div>
+    </div>
+  );
+}
+
+/* ── Sub-components ─────────────────────────────────── */
+
+function ItemRow({
+  item, index, editingNoteIdx, setEditingNoteIdx, onUpdateQty, onRemove, onUpdateNotes,
+}: {
+  item: CartItem; index: number;
+  editingNoteIdx: number | null; setEditingNoteIdx: (v: number | null) => void;
+  onUpdateQty: (i: number, d: number) => void; onRemove: (i: number) => void;
+  onUpdateNotes?: (i: number, n: string) => void;
+}) {
+  return (
+    <div className="p-2 rounded-lg bg-muted/50">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">{item.nombre}</p>
+          <p className="text-xs text-muted-foreground">
+            {item.precio_referencia && item.precio_referencia > item.precio_unitario ? (
+              <>
+                <span className="line-through mr-1">$ {item.precio_referencia.toLocaleString('es-AR')}</span>
+                <span className="text-destructive font-semibold">$ {item.precio_unitario.toLocaleString('es-AR')}</span>
+                <span className="ml-1"> × {item.cantidad}</span>
+              </>
+            ) : (
+              <>$ {item.precio_unitario.toLocaleString('es-AR')} × {item.cantidad}</>
+            )}
+          </p>
+          {item.notas && editingNoteIdx !== index && (
+            <div className="mt-0.5 space-y-0">
+              {item.notas.split(/[,|]/).map((note, ni) => {
+                const trimmed = note.trim();
+                return trimmed ? <p key={ni} className="text-xs text-primary truncate">{trimmed}</p> : null;
+              })}
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onUpdateQty(index, -1)} disabled={item.cantidad <= 1}>
+            <Minus className="h-3.5 w-3.5" />
+          </Button>
+          <span className="text-sm font-medium w-6 text-center">{item.cantidad}</span>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onUpdateQty(index, 1)}>
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+          {onUpdateNotes && (
+            <Button
+              variant="ghost" size="icon"
+              className={`h-8 w-8 ${item.notas ? 'text-primary' : 'text-muted-foreground'}`}
+              onClick={() => setEditingNoteIdx(editingNoteIdx === index ? null : index)}
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onRemove(index)}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+      {editingNoteIdx === index && onUpdateNotes && (
+        <div className="flex items-center gap-1.5 mt-1.5">
+          <Input
+            placeholder="Ej: sin lechuga, bien cocida..."
+            value={item.notas || ''}
+            onChange={(e) => onUpdateNotes(index, e.target.value)}
+            className="h-8 text-xs flex-1"
+            autoFocus
+            onKeyDown={(e) => { if (e.key === 'Enter') setEditingNoteIdx(null); }}
+          />
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setEditingNoteIdx(null)}>
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PaymentRow({ payment, onRemovePayment }: { payment: LocalPayment; onRemovePayment: (id: string) => void }) {
+  const Icon = METODO_ICONS[payment.method];
+  return (
+    <div className="flex items-center justify-between p-2 rounded-lg bg-green-500/10 border border-green-500/20">
+      <div className="flex items-center gap-2">
+        <Icon className="h-4 w-4 text-green-600" />
+        <span className="text-sm font-medium">{METODO_LABELS[payment.method]}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-semibold tabular-nums">$ {payment.amount.toLocaleString('es-AR')}</span>
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => onRemovePayment(payment.id)}>
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
       </div>
     </div>
   );

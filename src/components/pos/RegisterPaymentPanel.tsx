@@ -64,6 +64,7 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
       amount: montoNum,
       montoRecibido: esEfectivo ? recibidoNum : undefined,
       vuelto: esEfectivo ? vuelto : undefined,
+      createdAt: Date.now(),
     });
     // Reset
     setMetodo('efectivo');
