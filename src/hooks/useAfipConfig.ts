@@ -19,6 +19,8 @@ export interface AfipConfig {
   ultimo_nro_factura_b: number;
   ultimo_nro_factura_c: number;
   es_produccion: boolean;
+  estado_certificado: string;
+  csr_pem: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -49,6 +51,7 @@ interface SaveAfipConfigInput {
   punto_venta?: number;
   certificado_crt?: string;
   clave_privada_enc?: string;
+  es_produccion?: boolean;
 }
 
 export function useAfipConfigMutations(branchId: string | undefined) {
@@ -56,7 +59,6 @@ export function useAfipConfigMutations(branchId: string | undefined) {
 
   const save = useMutation({
     mutationFn: async (input: SaveAfipConfigInput) => {
-      // Upsert: si ya existe actualizar, si no crear
       const { data: existing } = await (supabase
         .from('afip_config' as any)
         .select('id')
@@ -85,6 +87,62 @@ export function useAfipConfigMutations(branchId: string | undefined) {
     },
   });
 
+  const saveKeyAndCSR = useMutation({
+    mutationFn: async (input: { branch_id: string; privateKeyPem: string; csrPem: string }) => {
+      const payload = {
+        branch_id: input.branch_id,
+        clave_privada_enc: btoa(input.privateKeyPem),
+        csr_pem: input.csrPem,
+        estado_certificado: 'csr_generado',
+      };
+
+      const { data: existing } = await (supabase
+        .from('afip_config' as any)
+        .select('id')
+        .eq('branch_id', input.branch_id)
+        .maybeSingle() as any);
+
+      if (existing) {
+        const { error } = await (supabase
+          .from('afip_config' as any)
+          .update(payload)
+          .eq('branch_id', input.branch_id) as any);
+        if (error) throw error;
+      } else {
+        const { error } = await (supabase
+          .from('afip_config' as any)
+          .insert(payload) as any);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['afip-config', branchId] });
+      toast.success('Clave privada y solicitud generadas correctamente');
+    },
+    onError: (err: Error) => {
+      toast.error(`Error al guardar certificado: ${err.message}`);
+    },
+  });
+
+  const saveCertificate = useMutation({
+    mutationFn: async (input: { branch_id: string; certificado_crt: string }) => {
+      const { error } = await (supabase
+        .from('afip_config' as any)
+        .update({
+          certificado_crt: input.certificado_crt,
+          estado_certificado: 'certificado_subido',
+        })
+        .eq('branch_id', input.branch_id) as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['afip-config', branchId] });
+    },
+    onError: (err: Error) => {
+      toast.error(`Error al guardar certificado: ${err.message}`);
+    },
+  });
+
   const testConnection = useMutation({
     mutationFn: async () => {
       if (!branchId) throw new Error('Branch ID requerido');
@@ -107,7 +165,7 @@ export function useAfipConfigMutations(branchId: string | undefined) {
     },
   });
 
-  return { save, testConnection };
+  return { save, saveKeyAndCSR, saveCertificate, testConnection };
 }
 
 interface EmitirFacturaInput {
