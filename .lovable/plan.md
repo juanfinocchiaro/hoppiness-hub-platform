@@ -1,98 +1,86 @@
 
-# Asistente de Certificados ARCA
 
-## Resumen
+## Plan: Robustez del Sistema de Facturacion ARCA para Produccion
 
-Reemplazar la seccion manual de upload de .crt y .key por un asistente guiado de 3 pasos que genera la clave privada automaticamente en el navegador usando `node-forge`. El franquiciado nunca toca una terminal ni manipula el .key.
+### Problemas detectados
 
----
+1. **Concurrencia**: Si dos cajeros emiten factura al mismo segundo, ambos leen el mismo `ultimo_nro_factura_X`, ambos intentan el mismo numero. ARCA rechaza el segundo pero no hay retry automatico.
+2. **Sin idempotencia por pedido**: No hay proteccion para evitar facturar dos veces el mismo pedido (doble click, error de red, etc.)
+3. **Falta sincronizacion de numeros**: Si alguien emite una factura desde el portal de ARCA directamente, el sistema local queda desincronizado.
 
-## Flujo del asistente
+### Solucion propuesta
+
+#### 1. Lock optimista con SELECT FOR UPDATE (Edge Function)
+
+Cambiar `emitir-factura` para que use una transaccion con lock en la fila de `afip_config`, evitando que dos requests lean el mismo numero:
 
 ```text
-Paso 1: Generar solicitud
-  - Valida que CUIT y Razon Social esten completos
-  - Genera keypair RSA 2048 + CSR en el navegador (node-forge)
-  - Guarda .key (PEM base64) en afip_config.clave_privada_enc
-  - Guarda .csr (PEM) en afip_config.csr_pem (nuevo campo)
-  - Descarga el .csr automaticamente
-  - Actualiza estado_certificado = 'csr_generado'
+Flujo actual (riesgoso):
+  Request A: lee ultimo_nro = 5 --> emite con 6
+  Request B: lee ultimo_nro = 5 --> emite con 6 --> ARCA rechaza
 
-Paso 2: Subir a ARCA
-  - Instrucciones paso a paso para subir el .csr en el portal de ARCA
-  - Link directo a https://auth.afip.gob.ar
-  - Boton para re-descargar el .csr si lo perdio
-  - Tip: "Si tu contador maneja la clave fiscal, mandale el .csr"
-
-Paso 3: Subir certificado (.crt)
-  - Upload del .crt que ARCA devuelve
-  - Al subir, guarda en DB y llama automaticamente a "Probar Conexion"
-  - Si funciona: estado = conectado, badge verde
-  - Si falla: muestra error, sugiere verificar que el .crt corresponda
-
-Estado completado:
-  - Badge "Conectado" + checks verdes
-  - Ultimos comprobantes
-  - Botones "Probar conexion" y "Regenerar certificado"
+Flujo nuevo (seguro):
+  Request A: lock fila --> lee 5 --> emite 6 --> update a 6 --> unlock
+  Request B: espera lock --> lee 6 --> emite 7 --> update a 7 --> unlock
 ```
 
----
+Implementacion: crear una funcion RPC en la DB que atomicamente incremente y devuelva el proximo numero:
 
-## Migracion SQL
+```sql
+CREATE FUNCTION obtener_proximo_numero_factura(
+  _branch_id UUID, _tipo TEXT
+) RETURNS INTEGER
+LANGUAGE plpgsql
+AS $$
+DECLARE v_campo TEXT; v_numero INTEGER;
+BEGIN
+  v_campo := 'ultimo_nro_factura_' || lower(_tipo);
+  
+  EXECUTE format(
+    'UPDATE afip_config SET %I = %I + 1 WHERE branch_id = $1 RETURNING %I',
+    v_campo, v_campo, v_campo
+  ) INTO v_numero USING _branch_id;
+  
+  RETURN v_numero;
+END;
+$$;
+```
 
-Agregar 2 campos a `afip_config`:
+Esto garantiza atomicidad incluso con multiples PCs.
 
-- `estado_certificado` (text, default 'sin_configurar'): maquina de estados del asistente
-- `csr_pem` (text, nullable): CSR guardado para poder re-descargarlo
+#### 2. Proteccion contra doble facturacion de pedido
 
-Se usa un trigger de validacion (no CHECK constraint) para los valores permitidos: `sin_configurar`, `csr_generado`, `certificado_subido`, `conectado`, `error`.
+Agregar validacion en `emitir-factura`: si viene `pedido_id`, verificar que no exista ya una factura emitida para ese pedido.
 
----
+```text
+IF pedido_id:
+  SELECT FROM facturas_emitidas WHERE pedido_id = pedido_id
+  IF exists --> return error "Este pedido ya fue facturado"
+```
 
-## Dependencia nueva
+#### 3. Sincronizacion de numeros al probar conexion
 
-- `node-forge` + `@types/node-forge` para generar RSA keypair y CSR en el navegador
+Esto ya esta implementado: cuando se ejecuta `probar-conexion-afip` en modo produccion, consulta `FECompUltimoAutorizado` y actualiza los numeros locales. Esto cubre el caso de facturas emitidas fuera del sistema.
 
----
+#### 4. Punto de venta: uno o dos?
 
-## Archivos a crear
+**Recomendacion: Un solo punto de venta por sucursal.** Razones:
+- ARCA permite emitir desde multiples dispositivos con el mismo punto de venta
+- Con el fix de concurrencia (punto 1), no hay riesgo de colision
+- Simplifica la operacion: un solo numerador, un solo certificado
+- Si en el futuro necesitan separar (ej: salon vs delivery), se puede agregar otro punto de venta en la config sin tocar codigo
 
-| Archivo | Descripcion |
-|---|---|
-| `src/lib/arca-cert-generator.ts` | Funciones `generateArcaCertificate()` y `downloadCSR()` usando node-forge |
-
-## Archivos a modificar
+### Archivos a modificar
 
 | Archivo | Cambio |
 |---|---|
-| `src/pages/local/AfipConfigPage.tsx` | Reemplazar seccion "Certificados ARCA" (Card de upload manual) por componente asistente de 3 pasos basado en `estado_certificado` de la config |
-| `src/hooks/useAfipConfig.ts` | Agregar mutation `saveKeyAndCSR` para guardar clave + csr + actualizar estado. Agregar campo `csr_pem` y `estado_certificado` al tipo `AfipConfig` |
+| Nueva migracion SQL | Crear funcion `obtener_proximo_numero_factura` |
+| `supabase/functions/emitir-factura/index.ts` | Usar RPC atomico para numeros + validar pedido no duplicado |
 
----
+### Resumen tecnico
 
-## Detalle tecnico
+- Se crea una funcion de base de datos que atomicamente incrementa el contador de facturas, eliminando la ventana de concurrencia
+- Se agrega validacion de pedido ya facturado para evitar duplicados
+- No se necesitan cambios en el frontend ni en la configuracion por sucursal
+- Un punto de venta por local es suficiente para multiples PCs
 
-### `src/lib/arca-cert-generator.ts`
-
-- `generateArcaCertificate({ cuit, razonSocial })`: genera keypair RSA 2048, crea CSR con subject (C=AR, O=razonSocial, CN=HoppinessHub, serialNumber=CUIT), firma con SHA-256, retorna `{ privateKeyPem, csrPem }`
-- `downloadCSR(csrPem, cuit)`: crea Blob y descarga como `solicitud_arca_XXXXXXXXXXX.csr`
-
-### Asistente en AfipConfigPage
-
-La seccion de certificados se convierte en un componente con logica condicional segun `config.estado_certificado`:
-
-- **sin_configurar**: muestra CUIT y razon social (readonly, tomados de los datos fiscales), boton "Generar solicitud de certificado" con spinner durante generacion (2-5 seg en mobile)
-- **csr_generado**: muestra instrucciones de ARCA numeradas, link externo, boton re-descargar .csr, boton "Ya tengo el .crt" que muestra upload
-- **conectado/error**: muestra estado con checks, ultimos comprobantes, botones probar conexion y regenerar
-
-### Hook mutations
-
-- `saveKeyAndCSR(branchId, privateKeyPem, csrPem)`: upsert en afip_config con clave_privada_enc (base64), csr_pem, estado_certificado='csr_generado'
-- Al subir .crt: guarda certificado_crt, cambia estado a 'certificado_subido', llama testConnection automaticamente
-
-### Lo que NO cambia
-
-- Edge functions (ya leen .key y .crt de la DB)
-- Seccion de datos fiscales (se mantiene igual)
-- Seccion modo de operacion (se mantiene igual)
-- RLS policies (ya cubren lectura/escritura por franquiciado y superadmin)
