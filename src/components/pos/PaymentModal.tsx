@@ -1,5 +1,5 @@
 /**
- * PaymentModal - Modal de cobro con métodos de pago visuales
+ * PaymentModal - Modal de cobro con métodos de pago visuales y resumen colapsable
  */
 import { useState } from 'react';
 import {
@@ -12,8 +12,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Loader2, Split, Banknote, CreditCard, QrCode, ArrowRightLeft, Smartphone } from 'lucide-react';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+import { Loader2, Split, Banknote, CreditCard, QrCode, ArrowRightLeft, ChevronDown } from 'lucide-react';
 import type { MetodoPago } from '@/types/pos';
+import type { CartItem } from '@/components/pos/ProductGrid';
 import { TipInput } from '@/components/pos/TipInput';
 import { SplitPayment, type PaymentLine } from '@/components/pos/SplitPayment';
 import { cn } from '@/lib/utils';
@@ -49,6 +51,7 @@ interface PaymentModalProps {
   total: number;
   onConfirm: (payload: PaymentPayload) => void;
   loading?: boolean;
+  cartItems?: CartItem[];
 }
 
 export function PaymentModal({
@@ -57,16 +60,23 @@ export function PaymentModal({
   total,
   onConfirm,
   loading = false,
+  cartItems = [],
 }: PaymentModalProps) {
   const [metodo, setMetodo] = useState<MetodoPago>('efectivo');
   const [montoRecibido, setMontoRecibido] = useState('');
   const [tip, setTip] = useState(0);
   const [showSplit, setShowSplit] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
 
   const totalToPay = total + tip;
   const esEfectivo = metodo === 'efectivo';
   const montoNum = parseFloat(montoRecibido) || 0;
   const vuelto = esEfectivo ? Math.max(0, montoNum - totalToPay) : 0;
+
+  const totalItems = cartItems.reduce((s, i) => s + i.cantidad, 0);
+  const summaryPreview = cartItems.length > 0
+    ? cartItems.slice(0, 3).map((i) => i.nombre).join(', ') + (cartItems.length > 3 ? '...' : '')
+    : '';
 
   const handleConfirmSingle = () => {
     onConfirm({
@@ -95,6 +105,31 @@ export function PaymentModal({
             <DialogTitle>Cobrar</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* Collapsible order summary */}
+            {cartItems.length > 0 && (
+              <Collapsible open={summaryOpen} onOpenChange={setSummaryOpen}>
+                <CollapsibleTrigger className="flex items-center justify-between w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-1">
+                  <span>{totalItems} item{totalItems !== 1 ? 's' : ''} · {summaryPreview}</span>
+                  <ChevronDown className={cn('h-4 w-4 transition-transform', summaryOpen && 'rotate-180')} />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="mt-2 space-y-1.5 border rounded-lg p-3 bg-muted/30">
+                    {cartItems.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-sm">
+                        <span className="text-foreground">
+                          {item.cantidad > 1 && <span className="text-muted-foreground mr-1">×{item.cantidad}</span>}
+                          {item.nombre}
+                        </span>
+                        <span className="text-muted-foreground font-medium">
+                          $ {item.subtotal.toLocaleString('es-AR')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
             <div className="text-2xl font-bold text-primary">
               Total: $ {totalToPay.toLocaleString('es-AR')}
               {tip > 0 && (
@@ -179,7 +214,7 @@ export function PaymentModal({
             </Button>
             <Button onClick={handleConfirmSingle} disabled={!canConfirmSingle || loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Confirmar cobro
+              Confirmar cobro · $ {totalToPay.toLocaleString('es-AR')}
             </Button>
           </DialogFooter>
         </DialogContent>

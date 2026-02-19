@@ -3,11 +3,12 @@
  */
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { useItemsCarta } from '@/hooks/useItemsCarta';
+import { useFrequentItems } from '@/hooks/pos/useFrequentItems';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Search, X } from 'lucide-react';
+import { Search, X, Star } from 'lucide-react';
 
 export interface CartItemExtra {
   id: string;
@@ -36,6 +37,7 @@ interface ProductGridProps {
   onAddItem: (item: CartItem) => void;
   onSelectItem?: (item: any) => void;
   cart?: CartItem[];
+  branchId?: string;
 }
 
 function getInitials(name: string) {
@@ -47,8 +49,9 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-export function ProductGrid({ onAddItem, onSelectItem, cart = [] }: ProductGridProps) {
+export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId }: ProductGridProps) {
   const { data: items, isLoading } = useItemsCarta();
+  const { data: frequentIds } = useFrequentItems(branchId);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -91,7 +94,21 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [] }: ProductGridP
     }, {});
   }, [allItems, filteredItems, searchTerm]);
 
-  const cats = Object.keys(byCategory).sort((a, b) => byCategory[a].orden - byCategory[b].orden);
+  // Frequent items
+  const frequentItems = useMemo(() => {
+    if (!frequentIds || frequentIds.length === 0) return [];
+    return frequentIds
+      .map((id) => allItems.find((item: any) => item.id === id))
+      .filter(Boolean);
+  }, [frequentIds, allItems]);
+
+  const FRECUENTES_KEY = '⭐ Frecuentes';
+  const hasFrequents = frequentItems.length >= 3;
+
+  const cats = useMemo(() => {
+    const sorted = Object.keys(byCategory).sort((a, b) => byCategory[a].orden - byCategory[b].orden);
+    return hasFrequents ? [FRECUENTES_KEY, ...sorted] : sorted;
+  }, [byCategory, hasFrequents]);
 
   // Scroll spy with IntersectionObserver
   useEffect(() => {
@@ -241,28 +258,33 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [] }: ProductGridP
               </div>
             </div>
           ) : (
-            // Grouped by category
-            cats.map((cat) => (
-              <div
-                key={cat}
-                ref={(el) => { sectionRefs.current[cat] = el; }}
-                data-category={cat}
-              >
-                <h3 className="sticky top-0 z-10 bg-background py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                  {cat}
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {(byCategory[cat]?.items ?? []).map((item: any) => (
-                    <ProductCard
-                      key={item.id}
-                      item={item}
-                      qty={cartQtyMap.get(item.id) || 0}
-                      onClick={handleProductClick}
-                    />
-                  ))}
+            // Grouped by category (with Frecuentes)
+            cats.map((cat) => {
+              const isFrecuentes = cat === FRECUENTES_KEY;
+              const catItems = isFrecuentes ? frequentItems : (byCategory[cat]?.items ?? []);
+              return (
+                <div
+                  key={cat}
+                  ref={(el) => { sectionRefs.current[cat] = el; }}
+                  data-category={cat}
+                >
+                  <h3 className="sticky top-0 z-10 bg-background py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    {isFrecuentes && <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />}
+                    {isFrecuentes ? 'Frecuentes' : cat}
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {catItems.map((item: any) => (
+                      <ProductCard
+                        key={item.id}
+                        item={item}
+                        qty={cartQtyMap.get(item.id) || 0}
+                        onClick={handleProductClick}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </ScrollArea>
