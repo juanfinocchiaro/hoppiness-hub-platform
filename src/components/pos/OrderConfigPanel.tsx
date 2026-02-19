@@ -55,21 +55,34 @@ function ConfigSummaryLine({ config }: { config: OrderConfig }) {
   if (config.canalVenta === 'apps' && config.canalApp) {
     parts.push(APP_LABELS[config.canalApp] || config.canalApp);
   }
-  if (config.clienteNombre) {
-    parts.push(config.clienteNombre);
-  } else if (config.numeroLlamador) {
-    parts.push(`#${config.numeroLlamador}`);
+
+  // Build detail chips
+  const details: string[] = [];
+  if (config.numeroLlamador) details.push(`#${config.numeroLlamador}`);
+  if (config.clienteNombre && !config.clienteNombre.startsWith('Llamador #')) {
+    details.push(config.clienteNombre);
+  } else if (config.clienteNombre) {
+    details.push(config.clienteNombre);
   }
+  if (config.clienteTelefono) details.push(config.clienteTelefono);
+  if (config.clienteDireccion) details.push(config.clienteDireccion);
 
   return (
-    <span className="flex items-center gap-1.5 text-sm font-medium truncate">
-      {parts.map((p, i) => (
-        <span key={i} className="flex items-center gap-1.5">
-          {i > 0 && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
-          <span>{p}</span>
+    <div className="flex flex-col gap-0.5 min-w-0">
+      <span className="flex items-center gap-1.5 text-sm font-medium truncate">
+        {parts.map((p, i) => (
+          <span key={i} className="flex items-center gap-1.5">
+            {i > 0 && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
+            <span>{p}</span>
+          </span>
+        ))}
+      </span>
+      {details.length > 0 && (
+        <span className="text-xs text-muted-foreground truncate">
+          {details.join(' · ')}
         </span>
-      ))}
-    </span>
+      )}
+    </div>
   );
 }
 
