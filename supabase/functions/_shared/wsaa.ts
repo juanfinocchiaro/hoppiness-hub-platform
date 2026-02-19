@@ -1,9 +1,8 @@
 /**
  * WSAA + WSFE - ARCA/AFIP Integration
- * Pure asn1js + node:crypto implementation for Deno Edge Functions
+ * node-forge implementation for Deno Edge Functions
  */
-import { createSign } from "node:crypto";
-import * as asn1js from "npm:asn1js@3.0.5";
+import forge from "npm:node-forge@1.3.3";
 
 const WSAA_URLS = {
   homologacion: "https://wsaahomo.afip.gov.ar/ws/services/LoginCms",
@@ -33,123 +32,45 @@ function generateTRA(service: string): string {
 </loginTicketRequest>`;
 }
 
-function base64ToBytes(b64: string): Uint8Array {
-  const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return bytes;
-}
-
-function pemToBytes(pem: string): Uint8Array {
-  const b64 = pem.split("\n").filter(l => !l.startsWith("-----") && l.trim().length > 0).join("");
-  return base64ToBytes(b64);
-}
-
 /**
- * Build CMS SignedData (PKCS#7) structure using raw ASN.1
- * This is what ARCA WSAA LoginCMS expects
+ * Sign the TRA XML using PKCS#7 (CMS SignedData) with node-forge.
+ * This is what ARCA WSAA LoginCMS expects.
  */
-function buildCMSSignedData(
-  traBytes: Uint8Array,
-  certDer: Uint8Array,
-  signatureBytes: Uint8Array,
-  certAsn1Result: asn1js.AsnType
-): ArrayBuffer {
-  // Parse cert to extract issuer and serialNumber
-  const certSeq = certAsn1Result as asn1js.Sequence;
-  const tbsCert = certSeq.valueBlock.value[0] as asn1js.Sequence;
-  
-  // TBS Certificate structure: version(optional), serialNumber, signature, issuer, ...
-  const tbsValues = tbsCert.valueBlock.value;
-  let idx = 0;
-  // Check if first element is [0] EXPLICIT (version)
-  if (tbsValues[idx].idBlock.tagClass === 3 && tbsValues[idx].idBlock.tagNumber === 0) {
-    idx++; // skip version
-  }
-  const serialNumber = tbsValues[idx]; // serialNumber
-  idx++; // skip signature algorithm
-  idx++;
-  const issuer = tbsValues[idx]; // issuer
-
-  // SHA-256 OID
-  const sha256Oid = new asn1js.Sequence({ value: [
-    new asn1js.ObjectIdentifier({ value: "2.16.840.1.101.3.4.2.1" }),
-    new asn1js.Null(),
-  ]});
-
-  // RSA OID  
-  const rsaOid = new asn1js.Sequence({ value: [
-    new asn1js.ObjectIdentifier({ value: "1.2.840.113549.1.1.1" }),
-    new asn1js.Null(),
-  ]});
-
-  // IssuerAndSerialNumber
-  const issuerAndSerial = new asn1js.Sequence({ value: [
-    issuer,
-    serialNumber,
-  ]});
-
-  // SignerInfo
-  const signerInfo = new asn1js.Sequence({ value: [
-    new asn1js.Integer({ value: 1 }), // version
-    issuerAndSerial,
-    sha256Oid, // digestAlgorithm
-    rsaOid, // signatureAlgorithm
-    new asn1js.OctetString({ valueHex: signatureBytes.buffer }),
-  ]});
-
-  // SignedData
-  const signedData = new asn1js.Sequence({ value: [
-    new asn1js.Integer({ value: 1 }), // version
-    new asn1js.Set({ value: [sha256Oid] }), // digestAlgorithms
-    new asn1js.Sequence({ value: [ // encapContentInfo
-      new asn1js.ObjectIdentifier({ value: "1.2.840.113549.1.7.1" }),
-      new asn1js.Constructed({
-        idBlock: { tagClass: 3, tagNumber: 0 },
-        value: [new asn1js.OctetString({ valueHex: traBytes.buffer })],
-      }),
-    ]}),
-    new asn1js.Constructed({ // certificates [0] IMPLICIT
-      idBlock: { tagClass: 3, tagNumber: 0 },
-      value: [certAsn1Result],
-    }),
-    new asn1js.Set({ value: [signerInfo] }), // signerInfos
-  ]});
-
-  // ContentInfo
-  const contentInfo = new asn1js.Sequence({ value: [
-    new asn1js.ObjectIdentifier({ value: "1.2.840.113549.1.7.2" }),
-    new asn1js.Constructed({
-      idBlock: { tagClass: 3, tagNumber: 0 },
-      value: [signedData],
-    }),
-  ]});
-
-  return contentInfo.toBER(false);
-}
-
 async function signTRA(traXml: string, certPem: string, keyPem: string): Promise<string> {
-  const traBytes = new TextEncoder().encode(traXml);
-  const certDer = pemToBytes(certPem);
-  
-  // Parse cert ASN.1
-  const certAsn1 = asn1js.fromBER(certDer.buffer);
-  if (certAsn1.offset === -1) throw new Error("Error al parsear certificado DER");
-
   // Normalize key PEM
   let normalizedKey = keyPem.trim();
   if (!normalizedKey.includes("-----BEGIN")) {
     normalizedKey = `-----BEGIN RSA PRIVATE KEY-----\n${normalizedKey}\n-----END RSA PRIVATE KEY-----`;
   }
 
-  // Sign with node:crypto
-  const signer = createSign("SHA256");
-  signer.update(traXml);
-  const signature = signer.sign(normalizedKey);
+  // Normalize cert PEM
+  let normalizedCert = certPem.trim();
+  if (!normalizedCert.includes("-----BEGIN")) {
+    normalizedCert = `-----BEGIN CERTIFICATE-----\n${normalizedCert}\n-----END CERTIFICATE-----`;
+  }
 
-  // Build CMS
-  const cmsBytes = buildCMSSignedData(traBytes, certDer, new Uint8Array(signature), certAsn1.result);
-  return btoa(String.fromCharCode(...new Uint8Array(cmsBytes)));
+  // Parse key and cert with forge
+  const privateKey = forge.pki.privateKeyFromPem(normalizedKey);
+  const certificate = forge.pki.certificateFromPem(normalizedCert);
+
+  // Create PKCS#7 signed data
+  const p7 = forge.pkcs7.createSignedData();
+  p7.content = forge.util.createBuffer(traXml, "utf8");
+  p7.addCertificate(certificate);
+  p7.addSigner({
+    key: privateKey,
+    certificate: certificate,
+    digestAlgorithm: forge.pki.oids.sha256,
+    authenticatedAttributes: [],
+  });
+
+  // Sign
+  p7.sign({ detached: false });
+
+  // Convert to DER then base64
+  const asn1 = p7.toAsn1();
+  const der = forge.asn1.toDer(asn1);
+  return forge.util.encode64(der.getBytes());
 }
 
 async function callWSAA(cmsBase64: string, esProduccion: boolean): Promise<WSAACredentials> {
@@ -183,7 +104,7 @@ export async function authenticateWSAA(certPem: string, keyPem: string, service:
   const tra = generateTRA(service);
   console.log("TRA generado para servicio:", service);
   const cms = await signTRA(tra, certPem, keyPem);
-  console.log("TRA firmado, CMS length:", cms.length);
+  console.log("TRA firmado con node-forge, CMS length:", cms.length);
   const creds = await callWSAA(cms, esProduccion);
   console.log("WSAA auth OK");
   return creds;

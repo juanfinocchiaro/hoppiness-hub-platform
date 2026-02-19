@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { LoadingButton } from '@/components/ui/loading-button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Shield, Download, Upload, ExternalLink, CheckCircle, AlertCircle, RefreshCw, Info } from 'lucide-react';
 import { generateArcaCertificate, downloadCSR } from '@/lib/arca-cert-generator';
 import type { AfipConfig } from '@/hooks/useAfipConfig';
@@ -37,6 +38,7 @@ export function ArcaCertificateWizard({
 }: ArcaCertificateWizardProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showCrtUpload, setShowCrtUpload] = useState(false);
+  const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
 
   const estado = config?.estado_certificado || 'sin_configurar';
 
@@ -48,13 +50,9 @@ export function ArcaCertificateWizard({
 
     setIsGenerating(true);
     try {
-      // node-forge puede tardar 2-5 seg en mobile
-      await new Promise((r) => setTimeout(r, 50)); // yield para que se muestre el spinner
+      await new Promise((r) => setTimeout(r, 50));
       const { privateKeyPem, csrPem } = generateArcaCertificate({ cuit, razonSocial });
-
       await onSaveKeyAndCSR({ branch_id: branchId, privateKeyPem, csrPem });
-
-      // Descargar CSR automáticamente
       downloadCSR(csrPem, cuit);
     } catch (err: any) {
       toast.error(`Error al generar: ${err.message}`);
@@ -74,12 +72,15 @@ export function ArcaCertificateWizard({
     const text = await file.text();
     await onSaveCertificate({ branch_id: branchId, certificado_crt: text });
     toast.success('Certificado subido, probando conexión...');
-    // Auto-test connection
     setTimeout(() => onTestConnection(), 500);
   };
 
   const handleRegenerate = () => {
-    // Reset para volver a paso 1
+    setShowRegenerateConfirm(true);
+  };
+
+  const confirmRegenerate = () => {
+    setShowRegenerateConfirm(false);
     handleGenerate();
   };
 
@@ -222,54 +223,67 @@ export function ArcaCertificateWizard({
   const hasError = estado === 'error' || config?.estado_conexion === 'error';
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Shield className="h-5 w-5" />
-          Certificado ARCA
-          {isConnected && <StatusBadge variant="active">Conectado</StatusBadge>}
-          {hasError && !isConnected && <StatusBadge variant="blocked">Error</StatusBadge>}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {isConnected && (
-          <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
-            <CheckCircle className="h-5 w-5" />
-            <p className="text-sm font-medium">Certificado configurado y conexión verificada</p>
-          </div>
-        )}
-
-        {hasError && !isConnected && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="h-5 w-5" />
-              <p className="text-sm font-medium">Error de conexión</p>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Certificado ARCA
+            {isConnected && <StatusBadge variant="active">Conectado</StatusBadge>}
+            {hasError && !isConnected && <StatusBadge variant="blocked">Error</StatusBadge>}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isConnected && (
+            <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+              <CheckCircle className="h-5 w-5" />
+              <p className="text-sm font-medium">Certificado configurado y conexión verificada</p>
             </div>
-            {config?.ultimo_error && (
-              <p className="text-sm text-muted-foreground">{config.ultimo_error}</p>
-            )}
-          </div>
-        )}
+          )}
 
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={onTestConnection} disabled={isTestingConnection}>
-            {isTestingConnection ? 'Probando...' : (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Probar conexión
-              </>
-            )}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleRegenerate}
-            disabled={isGenerating || isSavingKey}
-          >
-            Regenerar certificado
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+          {hasError && !isConnected && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertCircle className="h-5 w-5" />
+                <p className="text-sm font-medium">Error de conexión</p>
+              </div>
+              {config?.ultimo_error && (
+                <p className="text-sm text-muted-foreground">{config.ultimo_error}</p>
+              )}
+            </div>
+          )}
+
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" onClick={onTestConnection} disabled={isTestingConnection}>
+              {isTestingConnection ? 'Probando...' : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Probar conexión
+                </>
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRegenerate}
+              disabled={isGenerating || isSavingKey}
+            >
+              Regenerar certificado
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <ConfirmDialog
+        open={showRegenerateConfirm}
+        onOpenChange={setShowRegenerateConfirm}
+        title="¿Regenerar certificado?"
+        description="Esto eliminará la clave privada y el certificado actual. Vas a tener que volver a subir el archivo .csr a ARCA y obtener un nuevo .crt. La facturación no funcionará hasta que completes el proceso."
+        confirmLabel="Sí, regenerar"
+        cancelLabel="Cancelar"
+        onConfirm={confirmRegenerate}
+        variant="destructive"
+      />
+    </>
   );
 }
