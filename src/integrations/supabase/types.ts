@@ -159,6 +159,57 @@ export type Database = {
           },
         ]
       }
+      branch_printers: {
+        Row: {
+          branch_id: string
+          connection_type: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          is_active: boolean
+          name: string
+          paper_width: number
+          port: number
+        }
+        Insert: {
+          branch_id: string
+          connection_type?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean
+          name: string
+          paper_width?: number
+          port?: number
+        }
+        Update: {
+          branch_id?: string
+          connection_type?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean
+          name?: string
+          paper_width?: number
+          port?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_printers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_printers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branch_shifts: {
         Row: {
           branch_id: string
@@ -3162,6 +3213,7 @@ export type Database = {
           fc_objetivo: number | null
           id: string
           imagen_url: string | null
+          kitchen_station_id: string | null
           nombre: string
           nombre_corto: string | null
           orden: number | null
@@ -3186,6 +3238,7 @@ export type Database = {
           fc_objetivo?: number | null
           id?: string
           imagen_url?: string | null
+          kitchen_station_id?: string | null
           nombre: string
           nombre_corto?: string | null
           orden?: number | null
@@ -3210,6 +3263,7 @@ export type Database = {
           fc_objetivo?: number | null
           id?: string
           imagen_url?: string | null
+          kitchen_station_id?: string | null
           nombre?: string
           nombre_corto?: string | null
           orden?: number | null
@@ -3239,6 +3293,13 @@ export type Database = {
             columns: ["composicion_ref_preparacion_id"]
             isOneToOne: false
             referencedRelation: "preparaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_carta_kitchen_station_id_fkey"
+            columns: ["kitchen_station_id"]
+            isOneToOne: false
+            referencedRelation: "kitchen_stations"
             referencedColumns: ["id"]
           },
           {
@@ -3355,6 +3416,70 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "rdo_categories"
             referencedColumns: ["code"]
+          },
+        ]
+      }
+      kitchen_stations: {
+        Row: {
+          branch_id: string
+          created_at: string
+          icon: string
+          id: string
+          is_active: boolean
+          kds_enabled: boolean
+          name: string
+          print_copies: number
+          print_on: string
+          printer_id: string | null
+          sort_order: number
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          kds_enabled?: boolean
+          name: string
+          print_copies?: number
+          print_on?: string
+          printer_id?: string | null
+          sort_order?: number
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          kds_enabled?: boolean
+          name?: string
+          print_copies?: number
+          print_on?: string
+          printer_id?: string | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kitchen_stations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kitchen_stations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kitchen_stations_printer_id_fkey"
+            columns: ["printer_id"]
+            isOneToOne: false
+            referencedRelation: "branch_printers"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -4467,6 +4592,7 @@ export type Database = {
           requiere_factura: boolean | null
           subtotal: number
           tiempo_entregado: string | null
+          tiempo_inicio_prep: string | null
           tiempo_listo: string | null
           tiempo_prometido: string | null
           tipo: string
@@ -4502,6 +4628,7 @@ export type Database = {
           requiere_factura?: boolean | null
           subtotal: number
           tiempo_entregado?: string | null
+          tiempo_inicio_prep?: string | null
           tiempo_listo?: string | null
           tiempo_prometido?: string | null
           tipo: string
@@ -4537,6 +4664,7 @@ export type Database = {
           requiere_factura?: boolean | null
           subtotal?: number
           tiempo_entregado?: string | null
+          tiempo_inicio_prep?: string | null
           tiempo_listo?: string | null
           tiempo_prometido?: string | null
           tipo?: string
@@ -4911,6 +5039,152 @@ export type Database = {
             columns: ["categoria_preparacion_id"]
             isOneToOne: false
             referencedRelation: "categorias_preparacion"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      print_config: {
+        Row: {
+          backup_enabled: boolean
+          backup_printer_id: string | null
+          branch_id: string
+          delivery_enabled: boolean
+          delivery_printer_id: string | null
+          id: string
+          reprint_requires_pin: boolean
+          ticket_enabled: boolean
+          ticket_printer_id: string | null
+          ticket_trigger: string
+          updated_at: string
+        }
+        Insert: {
+          backup_enabled?: boolean
+          backup_printer_id?: string | null
+          branch_id: string
+          delivery_enabled?: boolean
+          delivery_printer_id?: string | null
+          id?: string
+          reprint_requires_pin?: boolean
+          ticket_enabled?: boolean
+          ticket_printer_id?: string | null
+          ticket_trigger?: string
+          updated_at?: string
+        }
+        Update: {
+          backup_enabled?: boolean
+          backup_printer_id?: string | null
+          branch_id?: string
+          delivery_enabled?: boolean
+          delivery_printer_id?: string | null
+          id?: string
+          reprint_requires_pin?: boolean
+          ticket_enabled?: boolean
+          ticket_printer_id?: string | null
+          ticket_trigger?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_config_backup_printer_id_fkey"
+            columns: ["backup_printer_id"]
+            isOneToOne: false
+            referencedRelation: "branch_printers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_config_delivery_printer_id_fkey"
+            columns: ["delivery_printer_id"]
+            isOneToOne: false
+            referencedRelation: "branch_printers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_config_ticket_printer_id_fkey"
+            columns: ["ticket_printer_id"]
+            isOneToOne: false
+            referencedRelation: "branch_printers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      print_jobs: {
+        Row: {
+          attempts: number
+          branch_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          job_type: string
+          payload: Json
+          pedido_id: string | null
+          printer_id: string
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          branch_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_type: string
+          payload?: Json
+          pedido_id?: string | null
+          printer_id: string
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          branch_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          payload?: Json
+          pedido_id?: string | null
+          printer_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_jobs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_jobs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_jobs_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_jobs_printer_id_fkey"
+            columns: ["printer_id"]
+            isOneToOne: false
+            referencedRelation: "branch_printers"
             referencedColumns: ["id"]
           },
         ]
