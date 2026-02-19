@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authenticateWSAA, requestCAE } from "../_shared/wsaa.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -87,7 +88,7 @@ Deno.serve(async (req) => {
       clavePrivada = config.clave_privada_enc;
     }
 
-    // 3. Determinar número de comprobante
+    // 3. Determinar número de comprobante y tipo
     const tipoMap: Record<string, number> = { A: 1, B: 6, C: 11 };
     const cbteTipo = tipoMap[tipo_factura] || 11;
 
@@ -106,18 +107,20 @@ Deno.serve(async (req) => {
       neto = Math.round((total / 1.21) * 100) / 100;
       iva = Math.round((total - neto) * 100) / 100;
     }
-    // B y C: IVA incluido en total, neto = total, iva informativo = 0
 
-    // 5. Armar request ARCA (estructura WSFEV1)
+    // 5. Fecha del comprobante
+    const cbteFch = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+
+    // 6. Armar request ARCA
     const afipRequest = {
       CbteTipo: cbteTipo,
       PtoVta: config.punto_venta,
-      Concepto: 1, // Productos
-      DocTipo: receptor_cuit ? 80 : 99, // CUIT o Consumidor Final
+      Concepto: 1,
+      DocTipo: receptor_cuit ? 80 : 99,
       DocNro: receptor_cuit ? parseInt(receptor_cuit.replace(/-/g, "")) : 0,
       CbteDesde: nuevoNumero,
       CbteHasta: nuevoNumero,
-      CbteFch: new Date().toISOString().slice(0, 10).replace(/-/g, ""),
+      CbteFch: cbteFch,
       ImpTotal: total,
       ImpTotConc: 0,
       ImpNeto: neto,
@@ -127,19 +130,16 @@ Deno.serve(async (req) => {
       MonId: "PES",
       MonCotiz: 1,
       ...(tipo_factura === "A"
-        ? {
-            Iva: [{ Id: 5, BaseImp: neto, Importe: iva }], // 21%
-          }
+        ? { Iva: [{ Id: 5, BaseImp: neto, Importe: iva }] }
         : {}),
     };
 
-    // 6. En homologación simulamos respuesta ARCA
-    let afipResponse: Record<string, unknown>;
     let cae: string;
     let caeVencimiento: string;
+    let afipResponse: Record<string, unknown>;
 
     if (!esProduccion) {
-      // Simulación homologación
+      // === HOMOLOGACIÓN: Simulación ===
       cae = `${Date.now()}`.slice(0, 14);
       caeVencimiento = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
         .toISOString()
@@ -153,14 +153,77 @@ Deno.serve(async (req) => {
         Resultado: "A",
       };
     } else {
-      // TODO: Integrar con SDK ARCA cuando haya certificados reales
-      // Por ahora devolvemos error si intentan producción
-      return new Response(
-        JSON.stringify({
-          error: "Modo producción aún no implementado. Se requiere integración con SDK ARCA.",
-        }),
-        { status: 501, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      // === PRODUCCIÓN: Conexión real con ARCA ===
+      console.log("Emitiendo factura en modo PRODUCCIÓN...");
+
+      try {
+        // Autenticar contra WSAA
+        const credentials = await authenticateWSAA(
+          config.certificado_crt,
+          clavePrivada,
+          "wsfe",
+          esProduccion
+        );
+
+        // Solicitar CAE
+        const result = await requestCAE(
+          credentials,
+          config.cuit,
+          {
+            puntoVenta: config.punto_venta,
+            cbteTipo,
+            concepto: 1,
+            docTipo: receptor_cuit ? 80 : 99,
+            docNro: receptor_cuit ? parseInt(receptor_cuit.replace(/-/g, "")) : 0,
+            cbteDesde: nuevoNumero,
+            cbteHasta: nuevoNumero,
+            cbteFch,
+            impTotal: total,
+            impTotConc: 0,
+            impNeto: neto,
+            impOpEx: 0,
+            impIVA: iva,
+            impTrib: 0,
+            monId: "PES",
+            monCotiz: 1,
+            iva: tipo_factura === "A"
+              ? [{ id: 5, baseImp: neto, importe: iva }]
+              : undefined,
+          },
+          esProduccion
+        );
+
+        cae = result.cae;
+        caeVencimiento = result.caeVto;
+        afipResponse = {
+          CAE: result.cae,
+          CAEFchVto: result.caeVto,
+          CbteDesde: result.cbteDesde,
+          CbteHasta: result.cbteHasta,
+          Resultado: result.resultado,
+          Observaciones: result.observaciones,
+        };
+
+        console.log(`Factura emitida: CAE=${cae}, Vto=${caeVencimiento}`);
+      } catch (arcaError) {
+        const errorMsg = arcaError instanceof Error ? arcaError.message : String(arcaError);
+        console.error("Error ARCA al emitir factura:", errorMsg);
+
+        // Loguear error
+        await supabase.from("afip_errores_log").insert({
+          branch_id,
+          tipo_error: "emision_factura",
+          mensaje: errorMsg.substring(0, 500),
+          request_data: afipRequest,
+        });
+
+        return new Response(
+          JSON.stringify({
+            error: `Error al emitir factura con ARCA: ${errorMsg}`,
+          }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // 7. Guardar factura emitida
@@ -188,7 +251,6 @@ Deno.serve(async (req) => {
       .single();
 
     if (insertError) {
-      // Loguear error
       await supabase.from("afip_errores_log").insert({
         branch_id,
         tipo_error: "insert_factura",
@@ -236,6 +298,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
+    console.error("Error interno:", err);
     return new Response(
       JSON.stringify({ error: "Error interno", details: String(err) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

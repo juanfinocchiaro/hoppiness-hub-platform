@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authenticateWSAA, getLastVoucher } from "../_shared/wsaa.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -59,7 +60,6 @@ Deno.serve(async (req) => {
     }
 
     if (!config.certificado_crt || !config.clave_privada_enc || !config.punto_venta) {
-      // Actualizar estado
       await supabase
         .from("afip_config")
         .update({
@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
           success: true,
           estado: "conectado",
           modo: "homologacion",
-          mensaje: "Conexión simulada OK (modo homologación). Cuando cargues certificados de producción, se verificará contra ARCA.",
+          mensaje: "Conexión simulada OK (modo homologación). Cuando cambies a producción, se verificará contra ARCA.",
           ultimos_numeros: {
             factura_a: config.ultimo_nro_factura_a || 0,
             factura_b: config.ultimo_nro_factura_b || 0,
@@ -109,30 +109,97 @@ Deno.serve(async (req) => {
       );
     }
 
-    // TODO: Producción - conectar con SDK ARCA
-    // 1. Decodificar clave privada
-    // 2. Inicializar SDK con cert + key
-    // 3. Llamar a FECompUltimoAutorizado para cada tipo
-    // 4. Actualizar últimos números en afip_config
+    // === MODO PRODUCCIÓN: Conexión real con ARCA ===
+    console.log("Probando conexión ARCA en modo PRODUCCIÓN...");
 
-    await supabase
-      .from("afip_config")
-      .update({
-        estado_conexion: "error",
-        ultimo_error: "Modo producción aún no implementado",
-        ultima_verificacion: new Date().toISOString(),
-      })
-      .eq("branch_id", branch_id);
+    // Decodificar clave privada (almacenada en base64)
+    let clavePrivada: string;
+    try {
+      clavePrivada = atob(config.clave_privada_enc);
+    } catch {
+      clavePrivada = config.clave_privada_enc;
+    }
 
-    return new Response(
-      JSON.stringify({
-        success: false,
-        estado: "error",
-        mensaje: "Modo producción aún no implementado. Se requiere integración con SDK ARCA.",
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    try {
+      // 1. Autenticar contra WSAA
+      console.log("Autenticando contra WSAA...");
+      const credentials = await authenticateWSAA(
+        config.certificado_crt,
+        clavePrivada,
+        "wsfe",
+        esProduccion
+      );
+      console.log("WSAA autenticación exitosa");
+
+      // 2. Consultar últimos comprobantes autorizados
+      console.log("Consultando últimos comprobantes...");
+      const [lastA, lastB, lastC] = await Promise.all([
+        getLastVoucher(credentials, config.cuit, config.punto_venta, 1, esProduccion),   // Factura A
+        getLastVoucher(credentials, config.cuit, config.punto_venta, 6, esProduccion),   // Factura B
+        getLastVoucher(credentials, config.cuit, config.punto_venta, 11, esProduccion),  // Factura C
+      ]);
+
+      console.log(`Últimos comprobantes: A=${lastA}, B=${lastB}, C=${lastC}`);
+
+      // 3. Actualizar config con datos reales
+      await supabase
+        .from("afip_config")
+        .update({
+          estado_conexion: "conectado",
+          estado_certificado: "conectado",
+          ultimo_error: null,
+          ultima_verificacion: new Date().toISOString(),
+          ultimo_nro_factura_a: lastA,
+          ultimo_nro_factura_b: lastB,
+          ultimo_nro_factura_c: lastC,
+        })
+        .eq("branch_id", branch_id);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          estado: "conectado",
+          modo: "produccion",
+          mensaje: `Conexión con ARCA verificada exitosamente. Punto de venta ${config.punto_venta} operativo.`,
+          ultimos_numeros: {
+            factura_a: lastA,
+            factura_b: lastB,
+            factura_c: lastC,
+          },
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } catch (arcaError) {
+      const errorMsg = arcaError instanceof Error ? arcaError.message : String(arcaError);
+      console.error("Error de conexión ARCA:", errorMsg);
+
+      await supabase
+        .from("afip_config")
+        .update({
+          estado_conexion: "error",
+          ultimo_error: errorMsg.substring(0, 500),
+          ultima_verificacion: new Date().toISOString(),
+        })
+        .eq("branch_id", branch_id);
+
+      // Loguear error
+      await supabase.from("afip_errores_log").insert({
+        branch_id,
+        tipo_error: "conexion_produccion",
+        mensaje: errorMsg.substring(0, 500),
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          estado: "error",
+          mensaje: `Error al conectar con ARCA: ${errorMsg}`,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
   } catch (err) {
+    console.error("Error interno:", err);
     return new Response(
       JSON.stringify({ error: "Error interno", details: String(err) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
