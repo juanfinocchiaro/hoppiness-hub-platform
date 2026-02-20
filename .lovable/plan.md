@@ -1,48 +1,66 @@
 
 
-## Fix: Impresora "No responde" y boton de Test siempre visible
+## Fix: Impresion directa por IP + eliminar popups de QZ Tray
 
-### Problema actual
+### Problema 1: "A printer must be specified before printing"
 
-1. El boton "Test" (imprimir pagina de prueba) solo aparece cuando el health check dice "Conectada". Si dice "No responde", no hay forma de intentar imprimir.
-2. El health check envia un comando ESC/POS minimo via QZ Tray al puerto 9100. Si QZ Tray tiene algun problema transitorio con esa conexion TCP, marca "No responde" aunque la impresora este fisicamente ok.
-3. No se muestra el error especifico del health check, lo que dificulta diagnosticar.
+El codigo actual hace:
+```text
+qz.configs.create(null, { host: "192.168.0.101", port: 9100 })
+                   ^^^^
+                   ERROR: QZ espera un nombre o un objeto, no null
+```
 
-### Solucion
+La API de QZ Tray dice que el primer parametro acepta:
+- Un **string** con el nombre de impresora del SO
+- Un **objeto** `{host, port}` para impresion raw por socket TCP
 
-**Mostrar el boton "Test" siempre**, independientemente del estado del health check. Si la impresora dice "No responde", el usuario igual puede intentar imprimir una pagina de prueba. Si la impresion funciona, queda claro que el health check tuvo un falso negativo.
+El fix es cambiar a:
+```text
+qz.configs.create({ host: "192.168.0.101", port: 9100 })
+```
 
-Ademas, mostrar el mensaje de error real del health check para ayudar a diagnosticar.
+Esto permite imprimir directamente por IP **sin instalar la impresora en Windows**.
+
+### Problema 2: Popup "Allow" cada vez que abris la pagina
+
+QZ Tray solo permite "Remember this decision" cuando recibe un **certificado digital valido**. El codigo actual envia un certificado vacio (`''`), por eso el checkbox no aparece.
+
+Solucion: generar un par de certificado + clave privada autofirmado usando `node-forge` (ya instalado en el proyecto), embeberlo en el codigo, y configurar QZ Tray una sola vez para que lo acepte.
 
 ### Cambios tecnicos
 
-**`src/pages/local/PrintersConfigPage.tsx`**
+**1. Nuevo archivo: `src/lib/qz-certificate.ts`**
+- Genera un certificado X.509 autofirmado + clave privada RSA 2048 usando node-forge
+- Los guarda en localStorage para reutilizar (se genera una sola vez)
+- Exporta funciones `getQZCertificate()` y `signQZData(dataToSign)`
 
-En el componente `PrinterCard`:
+**2. Modificar: `src/lib/qz-print.ts`**
 
-- Mover el boton "Test" fuera de las condiciones de estado. Siempre visible junto a "Editar" y "Eliminar".
-- El boton "Reintentar" sigue apareciendo solo cuando el estado es "unreachable".
-- En `HealthIndicator`, cuando el estado es "unreachable", mostrar el error tecnico en un tooltip o texto secundario (ej: "No responde - TIMEOUT" o "No responde - QZ_NOT_AVAILABLE").
+En `setupQZ()`:
+- Cambiar `setCertificatePromise` para retornar el certificado PEM autofirmado
+- Cambiar `setSignaturePromise` para firmar con la clave privada (SHA512)
+- Esto habilita "Remember this decision" en QZ Tray
 
-Cambio en la seccion de botones del PrinterCard (lineas 278-305):
+En `printRaw()`, `printRawBase64()`, `testPrinterConnection()`:
+- Cambiar `qz.configs.create(null as any, { host: ip, port })` por `qz.configs.create({ host: ip, port })`
+- Esto elimina el error "A printer must be specified"
 
-```text
-Antes:
-  - unreachable: solo Reintentar
-  - reachable: solo Test
-  - idle: solo Test
+**3. Configuracion unica en QZ Tray (accion del usuario)**
 
-Despues:
-  - unreachable: Reintentar + Test
-  - reachable: Test
-  - idle: Test
-  (Test siempre visible)
-```
-
-En `HealthIndicator` (lineas 225-231), agregar el error como texto secundario:
+Para que QZ Tray confie en nuestro certificado autofirmado, hay que agregar una linea al archivo de propiedades de QZ Tray:
 
 ```text
-Antes:  "No responde"
-Despues: "No responde" + tooltip/texto con health.error si existe
+Archivo: C:\Program Files\QZ Tray\qz-tray.properties
+Agregar: authcert.override=<ruta al certificado>
 ```
+
+Alternativa: en la primera conexion, QZ Tray va a mostrar el popup con el checkbox "Remember this decision" visible (porque ahora SI hay certificado). El usuario marca el checkbox y listo.
+
+### Impacto
+
+- NO se necesita instalar la impresora en Windows
+- NO se necesita extension de Chrome
+- El popup aparece UNA sola vez (con "Remember" habilitado)
+- La impresion va directo por TCP al puerto 9100 de la impresora
 
