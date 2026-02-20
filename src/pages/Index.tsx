@@ -31,10 +31,10 @@ export default function Index() {
       {/* Hero Section - Producto protagonista */}
       <section className="relative h-[70vh] min-h-[500px] flex items-center">
         <div 
-          className="absolute inset-0 bg-cover"
+          className="absolute inset-0 bg-cover saturate-[1.15] brightness-110"
           style={{ backgroundImage: `url(${fotoHero})`, backgroundPosition: '60% center' }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-black/10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
         
         <div className="relative container mx-auto px-4">
           <div className="max-w-xl">
