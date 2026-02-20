@@ -52,7 +52,8 @@ function MessageCard({ message, onMarkRead, onArchive, branches }: {
 
   const handleWhatsApp = () => {
     const cleanPhone = message.phone.replace(/\D/g, '');
-    window.open(`https://wa.me/54${cleanPhone}`, '_blank');
+    const fullPhone = cleanPhone.startsWith('54') ? cleanPhone : `54${cleanPhone}`;
+    window.open(`https://wa.me/${fullPhone}`, '_blank');
   };
 
   const handleMarkRead = () => {
