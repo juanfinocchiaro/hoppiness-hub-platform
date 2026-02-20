@@ -1,7 +1,7 @@
 @echo off
 net session >nul 2>&1
 if %errorlevel% neq 0 (
-    powershell -Command "Start-Process '%~f0' -Verb RunAs"
+    powershell -Command "Start-Process cmd.exe -ArgumentList '/c \"\"%~f0\" ^& pause\"' -Verb RunAs"
     exit /b
 )
 cd /d "%~dp0"
