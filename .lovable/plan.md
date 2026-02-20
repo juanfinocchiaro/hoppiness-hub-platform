@@ -1,58 +1,44 @@
 
 
-## Plan: Convivencia WebApp + MasDelivery
+## Mejora: Mostrar toda la informacion en los mensajes de contacto
 
-### Situacion actual
+### Problema
 
-- `/pedir` muestra un iframe de MasDelivery (igual para todos los locales)
-- `/pedir/:branchSlug` ya existe como ruta de la nueva WebApp
-- La tabla `webapp_config` existe con campo `estado` pero NO tiene `webapp_activa`
-- Todos los locales tienen `estado = 'cerrado'`
+La pagina de mensajes de contacto (`/mimarca/mensajes`) no muestra varios campos que los usuarios completan en los formularios. Los datos estan en la base de datos pero el componente no los renderiza.
 
-### Cambios a implementar
+### Campos faltantes por tipo
 
-**1. Migracion SQL: agregar columna `webapp_activa`**
+**Franquicias:**
+- `message` - Texto libre con motivacion/experiencia del postulante (ej: "soy del interior de Cordoba, tuve una franquicia...")
+- `investment_range` - Rango de inversion (campo adicional)
+- `phone` - Telefono visible como texto (no solo en boton WhatsApp)
 
-Agregar `webapp_activa BOOLEAN DEFAULT false` a `webapp_config`. Este flag controla si un local usa la WebApp propia o MasDelivery.
+**Empleo:**
+- `employment_branch_id` - Sucursal a la que postularon (resolver nombre desde branches)
+- `phone` - Telefono visible como texto
 
-**2. Reescribir `src/pages/Pedir.tsx`**
+**Todos los tipos:**
+- El telefono deberia mostrarse como dato de contacto en la card, no solo dentro del boton WhatsApp
 
-Reemplazar el iframe de MasDelivery por un selector de sucursales inteligente:
-- Query publica a `branches` + `webapp_config`
-- Grid de cards con cada sucursal activa (excluyendo "Muy Pronto")
-- Si `webapp_activa = true`: badge "Nuevo: Pedi directo" y boton que lleva a `/pedir/manantiales`
-- Si `webapp_activa = false`: badge "Via MasDelivery" y boton que abre link externo
-- Header con logo y boton "Volver"
+### Cambios
 
-**3. Actualizar `src/pages/webapp/PedirPage.tsx`**
+**1. `src/hooks/useContactMessages.ts`**
+- Agregar `investment_range` y `employment_branch_id` al tipo `ContactMessage`
 
-Agregar fallback: si el usuario entra a `/pedir/general-paz` pero ese local no tiene `webapp_activa = true`, mostrar pantalla amigable con boton a MasDelivery en vez del error generico actual.
+**2. `src/pages/admin/ContactMessagesPage.tsx`**
+- Mostrar `phone` como dato debajo del email en todas las cards
+- **Franquicias**: Agregar el `message` como parrafo debajo de los datos de zona/capital. Mostrar `investment_range` si existe
+- **Empleo**: Hacer join o query para mostrar el nombre de la sucursal a la que postularon
+- **Default/otros tipos**: Ya muestra `message`, esta bien
 
-**4. Actualizar `src/hooks/useWebappMenu.ts`**
+### Detalle tecnico
 
-Incluir `webapp_activa` en la query de `useWebappConfig` para que `PedirPage` pueda chequear el flag.
+El cambio principal es en el componente `MessageCard` dentro de `ContactMessagesPage.tsx`:
 
-**5. Actualizar tipo `WebappConfig` en `src/types/webapp.ts`**
+- En el header, agregar el telefono como linea de texto junto al email
+- En `renderSpecificFields()` para franquicia: agregar `message` como texto debajo de los datos estructurados
+- Para empleo: pasar las branches como prop o hacer query para resolver `employment_branch_id` a nombre
 
-Agregar `webapp_activa: boolean` al tipo.
+Archivo `useContactMessages.ts`: agregar los dos campos faltantes al tipo.
 
-### Activacion de Manantiales
-
-Una vez implementado, se hace un simple UPDATE en la base de datos:
-
-```text
-UPDATE webapp_config SET webapp_activa = true WHERE branch_id = '<id-manantiales>';
-```
-
-Eso es todo lo que se necesita para que Manantiales use la WebApp propia y el resto siga en MasDelivery.
-
-### Resumen de archivos
-
-| Archivo | Accion |
-|---|---|
-| Migracion SQL | Agregar `webapp_activa` a `webapp_config` |
-| `src/types/webapp.ts` | Agregar campo al tipo |
-| `src/hooks/useWebappMenu.ts` | Incluir campo en query |
-| `src/pages/Pedir.tsx` | Reescribir con selector de locales |
-| `src/pages/webapp/PedirPage.tsx` | Agregar fallback para locales sin WebApp |
-
+No se necesitan cambios de base de datos, solo de presentacion.
