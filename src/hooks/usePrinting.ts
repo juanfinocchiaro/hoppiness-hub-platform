@@ -15,8 +15,10 @@ import {
   generateComandaDelivery,
   generateTicketCliente,
   generateTestPage,
+  generateTicketFiscal,
   type PrintableOrder,
   type PrintableItem,
+  type FiscalTicketData,
 } from '@/lib/escpos';
 import type { BranchPrinter } from '@/hooks/useBranchPrinters';
 import type { PrintConfig } from '@/hooks/usePrintConfig';
@@ -169,6 +171,31 @@ export function usePrinting(branchId: string) {
     });
   };
 
+  const printFiscalTicket = async (fiscalData: FiscalTicketData, printer: BranchPrinter) => {
+    const data = generateTicketFiscal(fiscalData, printer.paper_width);
+    try {
+      await sendToPrinter(printer, data);
+      await supabase.from('print_jobs').insert({
+        branch_id: branchId,
+        printer_id: printer.id,
+        job_type: 'ticket_fiscal',
+        payload: { data_base64: data },
+        status: 'completed',
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      toast.error('Error al imprimir comprobante fiscal', { description: msg });
+      await supabase.from('print_jobs').insert({
+        branch_id: branchId,
+        printer_id: printer.id,
+        job_type: 'ticket_fiscal',
+        payload: { data_base64: data },
+        status: 'error',
+        error_message: msg,
+      });
+    }
+  };
+
   /**
    * Print order using the routing system (by category tipo_impresion)
    */
@@ -225,6 +252,7 @@ export function usePrinting(branchId: string) {
     printTicket,
     printDelivery,
     printTest,
+    printFiscalTicket,
     printOrder,
     isPrinting: printMutation.isPending,
     bridgeStatus,

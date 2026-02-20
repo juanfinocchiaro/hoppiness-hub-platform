@@ -4,7 +4,7 @@
  * - POS habilitado: Tabs con Pedidos (filtros avanzados) + Mapa de calor
  * - Sin POS: Vista de cierres de turno (legacy)
  */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { format, subDays, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -28,10 +28,15 @@ import { ShiftClosureModal } from '@/components/local/closure/ShiftClosureModal'
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { usePosEnabled } from '@/hooks/usePosEnabled';
-import { usePosOrderHistory, DEFAULT_FILTERS, type OrderFilters } from '@/hooks/pos/usePosOrderHistory';
+import { usePosOrderHistory, DEFAULT_FILTERS, type OrderFilters, type PosOrder } from '@/hooks/pos/usePosOrderHistory';
 import { OrderHistoryFilters } from '@/components/pos/OrderHistoryFilters';
 import { OrderHistoryTable } from '@/components/pos/OrderHistoryTable';
 import { OrderHeatmapChart } from '@/components/pos/OrderHeatmapChart';
+import { useAfipConfig } from '@/hooks/useAfipConfig';
+import { usePrinting } from '@/hooks/usePrinting';
+import { usePrintConfig } from '@/hooks/usePrintConfig';
+import { useBranchPrinters } from '@/hooks/useBranchPrinters';
+import { toast } from 'sonner';
 import type { ShiftType } from '@/types/shiftClosure';
 
 const RANGE_OPTIONS = [
@@ -83,6 +88,48 @@ function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: {
 }) {
   const [filters, setFilters] = useState<OrderFilters>(DEFAULT_FILTERS);
   const { orders, totals, isLoading } = usePosOrderHistory(branchId, parseInt(daysBack), filters);
+
+  // Printing & ARCA for reprint
+  const { data: afipConfig } = useAfipConfig(branchId);
+  const printing = usePrinting(branchId);
+  const { data: printConfig } = usePrintConfig(branchId);
+  const { data: printersData } = useBranchPrinters(branchId);
+  const allPrinters = printersData ?? [];
+
+  const handleReprintInvoice = useCallback(async (order: PosOrder) => {
+    const factura = order.facturas_emitidas?.[0];
+    if (!factura) {
+      toast.error('Este pedido no tiene factura asociada');
+      return;
+    }
+    if (printing.bridgeStatus !== 'connected') {
+      toast.error('Sistema de impresión no disponible');
+      return;
+    }
+    const ticketPrinter = printConfig?.ticket_printer_id
+      ? allPrinters.find(p => p.id === printConfig.ticket_printer_id && p.is_active)
+      : null;
+    if (!ticketPrinter) {
+      toast.error('No hay impresora de tickets configurada');
+      return;
+    }
+    await printing.printFiscalTicket({
+      razon_social: afipConfig?.razon_social || '',
+      cuit: afipConfig?.cuit || '',
+      direccion_fiscal: afipConfig?.direccion_fiscal || '',
+      punto_venta: factura.punto_venta,
+      tipo_comprobante: factura.tipo_comprobante,
+      numero_comprobante: factura.numero_comprobante,
+      cae: factura.cae || '',
+      cae_vencimiento: factura.cae_vencimiento || '',
+      fecha_emision: factura.fecha_emision.replace(/-/g, ''),
+      neto: factura.neto,
+      iva: factura.iva,
+      total: factura.total,
+      numero_pedido: order.numero_pedido,
+      branchName,
+    }, ticketPrinter);
+  }, [afipConfig, printing, printConfig, allPrinters, branchName]);
 
   const handleExport = () => {
     if (!orders.length) return;
@@ -138,7 +185,7 @@ function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: {
           </div>
         )}
 
-        <OrderHistoryTable orders={orders} isLoading={isLoading} branchId={branchId} hasOpenShift />
+        <OrderHistoryTable orders={orders} isLoading={isLoading} branchId={branchId} hasOpenShift onReprintInvoice={handleReprintInvoice} />
       </TabsContent>
 
       <TabsContent value="heatmap" className="space-y-4">

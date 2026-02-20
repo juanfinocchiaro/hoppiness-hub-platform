@@ -330,13 +330,39 @@ export default function POSPage() {
           const result = evaluateInvoicing(orderPayments, channel, afipConfig.reglas_facturacion);
 
           if (result.shouldInvoice && result.invoiceableAmount > 0) {
-            await emitirFactura.mutateAsync({
+            const invoiceResult = await emitirFactura.mutateAsync({
               branch_id: branchId!,
               pedido_id: pedido?.id,
               tipo_factura: 'C',
               items: [{ descripcion: 'Venta POS', cantidad: 1, precio_unitario: result.invoiceableAmount }],
               total: result.invoiceableAmount,
             });
+
+            // Print fiscal ticket if invoice was successful
+            if (invoiceResult && printing.bridgeStatus === 'connected') {
+              const ticketPrinter = printConfig?.ticket_printer_id
+                ? allPrinters.find(p => p.id === printConfig.ticket_printer_id && p.is_active)
+                : null;
+              if (ticketPrinter) {
+                await printing.printFiscalTicket({
+                  razon_social: afipConfig.razon_social || '',
+                  cuit: afipConfig.cuit || '',
+                  direccion_fiscal: afipConfig.direccion_fiscal || '',
+                  punto_venta: invoiceResult.punto_venta,
+                  tipo_comprobante: invoiceResult.tipo,
+                  numero_comprobante: invoiceResult.numero,
+                  cae: invoiceResult.cae,
+                  cae_vencimiento: invoiceResult.cae_vencimiento,
+                  fecha_emision: new Date().toISOString().slice(0, 10).replace(/-/g, ''),
+                  neto: result.invoiceableAmount / 1.21,
+                  iva: result.invoiceableAmount - result.invoiceableAmount / 1.21,
+                  total: result.invoiceableAmount,
+                  numero_pedido: pedido?.numero_pedido,
+                  items: [{ descripcion: 'Venta POS', cantidad: 1, precio_unitario: result.invoiceableAmount }],
+                  branchName: branchInfo?.name ?? 'Hoppiness',
+                }, ticketPrinter);
+              }
+            }
           }
         } catch (invoiceErr) {
           console.error('Invoice error (non-blocking):', invoiceErr);
