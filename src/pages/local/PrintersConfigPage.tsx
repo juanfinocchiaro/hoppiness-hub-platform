@@ -49,6 +49,8 @@ const DEFAULT_PRINTER = {
   is_active: true,
 };
 
+const BRIDGE_VERSION = '2026.02.20.2300';
+
 /* ─────────── Setup Screen (State 1) ─────────── */
 function SetupScreen({ state, onSkip }: { state: 'checking' | 'not_available'; onSkip: () => void }) {
   const handleDownload = async () => {
@@ -58,7 +60,7 @@ function SetupScreen({ state, onSkip }: { state: 'checking' | 'not_available'; o
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'instalar-impresoras.bat';
+      link.download = `instalar-impresoras-v${BRIDGE_VERSION}.bat`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -543,7 +545,7 @@ function ReadyScreen({
                     const url = URL.createObjectURL(blob);
                     const link = document.createElement('a');
                     link.href = url;
-                    link.download = 'instalar-impresoras.bat';
+                    link.download = `instalar-impresoras-v${BRIDGE_VERSION}.bat`;
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
