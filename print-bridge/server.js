@@ -4,7 +4,7 @@ const zlib = require('zlib');
 
 const PORT = 3001;
 const HOST = '127.0.0.1';
-const VERSION = '2.0.0';
+const VERSION = '2025.06.20.1800';
 
 // ─── PNG to ESC/POS raster converter ────────────────────────
 /**
