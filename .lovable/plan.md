@@ -1,25 +1,56 @@
 
 
-## Fix: Descarga del instalador falla por TLS y redirecciones de GitHub
+## Health Check de Impresoras y Deteccion de Red
 
-### Problema
-PowerShell's `Invoke-WebRequest` falla al descargar desde GitHub porque:
-1. No fuerza TLS 1.2 (GitHub lo requiere)
-2. Las URLs de releases de GitHub usan redirecciones (302) que pueden fallar sin configuracion extra
+Implementacion del sistema de verificacion automatica de conectividad de impresoras con deteccion de red, basado en el documento proporcionado.
 
-### Solucion
+---
 
-**Modificar: `public/instalar-impresoras.bat`**
+### Que se va a hacer
 
-Cambios:
-- Forzar TLS 1.2 antes de descargar: `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12`
-- Actualizar URL a v2.2.5 (version actual en qz.io)
-- Usar la URL directa de descarga de qz.io en lugar de GitHub releases, que tiene menos redirecciones: `https://github.com/qzind/tray/releases/download/v2.2.5/qz-tray-2.2.5+1.exe`
-- Alternativa: usar `Start-BitsTransfer` como fallback si `Invoke-WebRequest` falla
-- Agregar `-UseBasicParsing` para evitar dependencia de Internet Explorer engine
+1. **Verificacion de conectividad por impresora**: Al entrar a la pagina de configuracion, el sistema testea cada impresora enviando un comando ESC/POS minimo (init `0x1B 0x40`) via QZ Tray. Muestra estado verde/rojo/gris por impresora.
 
-El comando PowerShell queda:
+2. **Deteccion de red**: Guarda un fingerprint de la IP publica cuando se configura una impresora. Si el usuario entra desde otra red, muestra un banner de advertencia (solo si alguna impresora no responde).
+
+3. **Rediseno de la pagina de impresoras**: Las impresoras ya no se muestran en cards simples. Cada una muestra su estado de conectividad en tiempo real con acciones contextuales (Reintentar, Test de impresion).
+
+4. **Mejora del manejo de errores al imprimir**: Mensajes mas claros y accionables cuando una impresion falla.
+
+---
+
+### Cambios tecnicos
+
+#### Migracion de base de datos
+
+```sql
+ALTER TABLE branch_printers
+ADD COLUMN IF NOT EXISTS configured_from_network TEXT;
 ```
-powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://github.com/qzind/tray/releases/download/v2.2.5/qz-tray-2.2.5+1.exe' -OutFile '%INSTALLER%' -UseBasicParsing"
-```
+
+#### Archivos a modificar
+
+| Archivo | Cambio |
+|---------|--------|
+| `src/lib/qz-print.ts` | Agregar `testPrinterConnection(ip, port)` y `getNetworkFingerprint()` |
+| `src/hooks/useBranchPrinters.ts` | Guardar `configured_from_network` al crear/editar |
+| `src/pages/local/PrintersConfigPage.tsx` | Redisenar ReadyScreen: estado por impresora, banner de red, boton reintentar |
+| `src/hooks/usePrinting.ts` | Mejorar mensajes de error con toasts accionables |
+
+#### Nuevas funciones en `qz-print.ts`
+
+- `testPrinterConnection(ip, port, timeout)` -- Envia ESC init via QZ Tray, retorna `{ reachable, latencyMs, error }`
+- `getNetworkFingerprint()` -- Llama a `api.ipify.org` para obtener IP publica como identificador de red
+
+#### Logica de la pagina de impresoras (ReadyScreen)
+
+1. Al cargar: obtener fingerprint de red actual + cargar impresoras
+2. Para cada impresora con IP: ejecutar `testPrinterConnection` en paralelo
+3. Mostrar estado por impresora: verificando (gris+spinner), accesible (verde+latencia), no responde (rojo+mensaje)
+4. Si la red actual difiere de `configured_from_network` Y alguna impresora no responde: mostrar banner amarillo
+5. Boton "Reintentar" en impresoras rojas, "Test de impresion" en verdes
+
+#### Mejora de errores en `usePrinting.ts`
+
+- Error `QZ_NOT_AVAILABLE`: toast con descripcion y link a configuracion
+- Error de conexion: toast con nombre de impresora, IP, y sugerencia de verificar red
 
