@@ -49,10 +49,11 @@ set "PSFILE=%TEMP%\hoppiness-setup.ps1"
 >> "%PSFILE%" echo Write-Host 'Certificado copiado a QZ Tray'
 >> "%PSFILE%" echo if (Test-Path $props) {
 >> "%PSFILE%" echo   $lines = Get-Content $props
->> "%PSFILE%" echo   $clean = $lines ^| Where-Object { $_ -notmatch 'authcert.override' }
->> "%PSFILE%" echo   Set-Content -Path $props -Value $clean
+>> "%PSFILE%" echo   $c = Get-Content $props ^| Where-Object { $_ -notmatch 'authcert.override' -and $_ -notmatch 'security.data.enabled' }
+>> "%PSFILE%" echo   Set-Content $props -Value $c
 >> "%PSFILE%" echo }
 >> "%PSFILE%" echo Add-Content -Path $props -Value 'authcert.override=hoppiness-hub.crt'
+>> "%PSFILE%" echo Add-Content -Path $props -Value 'security.data.enabled=false'
 >> "%PSFILE%" echo Write-Host 'Configuracion actualizada'
 
 powershell -ExecutionPolicy Bypass -File "%PSFILE%"
