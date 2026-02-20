@@ -224,7 +224,8 @@ export function useSaveShiftClosure() {
       // Invoicing calculations
       const facturacionEsperada = closureCalcs.calcularFacturacionEsperada(
         input.ventas_local,
-        input.ventas_apps
+        input.ventas_apps,
+        input.reglas_facturacion
       );
       const facturacionDiferencia = input.total_facturado - facturacionEsperada;
       const tieneAlertaFacturacion = facturacionEsperada > 0 && 

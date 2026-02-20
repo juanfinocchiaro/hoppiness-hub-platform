@@ -35,6 +35,7 @@ import {
   useShiftClosure,
   useEnabledShifts,
 } from '@/hooks/useShiftClosures';
+import { useAfipConfig } from '@/hooks/useAfipConfig';
 import {
   getDefaultHamburguesas,
   getDefaultVentasLocal,
@@ -44,6 +45,7 @@ import {
   calcularTotalesVentasLocal,
   calcularTotalesVentasApps,
   calcularFacturacionEsperada,
+  calcularNoFacturado,
   calcularDiferenciaPosnet,
   calcularDiferenciasApps,
   migrateVentasApps,
@@ -115,6 +117,10 @@ export function ShiftClosureModal({
     }
   }, [existingClosure, fechaStr, turno]);
   
+  // Load AFIP config for invoicing rules
+  const { data: afipConfig } = useAfipConfig(branchId);
+  const reglasFacturacion = afipConfig?.reglas_facturacion ?? null;
+
   // Calculate totals
   const totals = useMemo(() => {
     const totalHamburguesas = calcularTotalesHamburguesas(hamburguesas);
@@ -125,11 +131,8 @@ export function ShiftClosureModal({
     const totalEfectivo = totalesLocal.efectivo + totalesApps.efectivo;
     const totalDigital = totalesLocal.digital + totalesApps.digital;
     
-    // For invoicing calculation
-    const efectivoLocal = totalesLocal.efectivo + ventasApps.pedidosya.efectivo;
-    const cobradoPosnet = ventasApps.mas_delivery.cobrado_posnet || 0;
-    const efectivoMasDelivery = ventasApps.mas_delivery.efectivo - cobradoPosnet;
-    const facturacionEsperada = calcularFacturacionEsperada(ventasLocal, ventasApps);
+    const facturacionEsperada = calcularFacturacionEsperada(ventasLocal, ventasApps, reglasFacturacion);
+    const noFacturado = calcularNoFacturado(ventasLocal, ventasApps, reglasFacturacion);
     
     return {
       totalHamburguesas,
@@ -138,11 +141,10 @@ export function ShiftClosureModal({
       totalVendido,
       totalEfectivo,
       totalDigital,
-      efectivoLocal,
-      efectivoMasDelivery,
+      noFacturado,
       facturacionEsperada,
     };
-  }, [hamburguesas, ventasLocal, ventasApps]);
+  }, [hamburguesas, ventasLocal, ventasApps, reglasFacturacion]);
   
   // Calculate alerts
   const alertas = useMemo(() => {
@@ -179,6 +181,7 @@ export function ShiftClosureModal({
       arqueo_caja: arqueoCaja,
       total_facturado: totalFacturado,
       notas: notas || undefined,
+      reglas_facturacion: reglasFacturacion,
     });
     onOpenChange(false);
   };
@@ -293,8 +296,7 @@ export function ShiftClosureModal({
               onTotalFacturadoChange={setTotalFacturado}
               facturacionEsperada={totals.facturacionEsperada}
               totalVendido={totals.totalVendido}
-              efectivoLocal={totals.efectivoLocal}
-              efectivoMasDelivery={totals.efectivoMasDelivery}
+              noFacturado={totals.noFacturado}
             />
             
             {/* 7. Resumen */}

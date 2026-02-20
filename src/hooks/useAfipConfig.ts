@@ -2,6 +2,40 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+export interface ReglasFacturacion {
+  canales_internos: {
+    efectivo: boolean;
+    debito: boolean;
+    credito: boolean;
+    qr: boolean;
+    transferencia: boolean;
+  };
+  canales_externos: {
+    rappi: boolean;
+    pedidosya: boolean;
+    mas_delivery_efectivo: boolean;
+    mas_delivery_digital: boolean;
+    mp_delivery: boolean;
+  };
+}
+
+export const DEFAULT_REGLAS_FACTURACION: ReglasFacturacion = {
+  canales_internos: {
+    efectivo: false,
+    debito: true,
+    credito: true,
+    qr: true,
+    transferencia: true,
+  },
+  canales_externos: {
+    rappi: true,
+    pedidosya: true,
+    mas_delivery_efectivo: false,
+    mas_delivery_digital: true,
+    mp_delivery: true,
+  },
+};
+
 export interface AfipConfig {
   id: string;
   branch_id: string;
@@ -21,6 +55,7 @@ export interface AfipConfig {
   es_produccion: boolean;
   estado_certificado: string;
   csr_pem: string | null;
+  reglas_facturacion: ReglasFacturacion;
   created_at: string;
   updated_at: string;
 }

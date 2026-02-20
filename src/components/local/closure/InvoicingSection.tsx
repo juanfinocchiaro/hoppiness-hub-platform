@@ -13,8 +13,8 @@ interface InvoicingSectionProps {
   onTotalFacturadoChange: (value: number) => void;
   facturacionEsperada: number;
   totalVendido: number;
-  efectivoLocal: number;
-  efectivoMasDelivery: number;
+  /** Monto total no facturado (calculado dinámicamente según reglas) */
+  noFacturado: number;
 }
 
 export function InvoicingSection({
@@ -22,8 +22,7 @@ export function InvoicingSection({
   onTotalFacturadoChange,
   facturacionEsperada,
   totalVendido,
-  efectivoLocal,
-  efectivoMasDelivery,
+  noFacturado,
 }: InvoicingSectionProps) {
   const diferencia = totalFacturado - facturacionEsperada;
   const porcentajeDiferencia = facturacionEsperada > 0 
@@ -80,20 +79,18 @@ export function InvoicingSection({
                 <span>Total vendido:</span>
                 <span>{formatCurrency(totalVendido)}</span>
               </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>- Efectivo mostrador:</span>
-                <span>- {formatCurrency(efectivoLocal)}</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>- Efectivo MásDelivery:</span>
-                <span>- {formatCurrency(efectivoMasDelivery)}</span>
-              </div>
+              {noFacturado > 0 && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>No facturado:</span>
+                  <span>- {formatCurrency(noFacturado)}</span>
+                </div>
+              )}
               <div className="flex justify-between font-medium pt-2 border-t">
                 <span>Esperado:</span>
                 <span>{formatCurrency(facturacionEsperada)}</span>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                El efectivo de MásDelivery tampoco se factura.
+                Según las reglas de facturación configuradas para este local.
               </p>
             </div>
             
