@@ -1,71 +1,54 @@
 
 
-## Plan: Reimpresion completa de tickets + Panel de pedidos pendientes en POS
+## Plan: Hacer que el Print Bridge soporte impresión de logo bitmap
 
-### Resumen
+### Problema raíz
 
-Se implementan dos funcionalidades principales:
-1. **Reimpresion de tickets desde el detalle del pedido**: Al expandir un pedido en el historial, se muestran botones individuales para reimprimir cada tipo de ticket que corresponda (Ticket cliente, Comanda cocina, Vale bebida, Ticket delivery, Factura electronica).
-2. **Panel de pedidos pendientes sobre el POS**: Los cajeros ven los pedidos activos (pendientes/en preparacion/listos) en la parte superior del POS, pudiendo cambiar su estado sin necesidad de KDS ni pantalla adicional.
+Las comandas ya tienen el nuevo diseño en el código (`escpos.ts`), pero el logo no se imprime porque el Print Bridge (el servidor Node.js local en `localhost:3001`) recibe los datos en base64, los convierte a bytes y los envía tal cual a la impresora. No tiene lógica para detectar el marcador `__BITMAP_B64:...:END__` que el frontend inyecta en el stream ESC/POS.
 
----
+Como resultado, el marcador se envía como texto ASCII a la impresora, que lo ignora o imprime caracteres basura. El resto del formato (negrita, doble tamaño, separadores) sí funciona porque son comandos ESC/POS estándar.
 
-### Parte 1: Reimpresion de tickets desde historial
+### Solución
 
-**Problema actual**: Solo existe un boton "Reimprimir" para la factura. No se puede reimprimir la comanda, el vale ni el ticket de delivery.
+Actualizar el Print Bridge para que intercepte los marcadores bitmap en el buffer de datos, convierta las imágenes PNG a formato raster ESC/POS (comando `GS v 0`), y reemplace el marcador por los bytes correctos antes de enviar a la impresora.
 
-**Solucion**: Reemplazar el boton unico por una seccion de acciones de impresion con botones individuales:
+### Cambios
 
-- **Ticket cliente** (siempre disponible): Reimprime el ticket con precios.
-- **Comanda cocina** (siempre disponible): Reimprime la comanda con items de tipo 'comanda'.
-- **Vale bebida** (solo si hay items tipo 'vale'): Reimprime vales individuales.
-- **Ticket delivery** (solo si `tipo_servicio === 'delivery'`): Reimprime el ticket con datos del cliente/direccion.
-- **Factura electronica** (solo si tiene factura emitida): Reimprime el comprobante fiscal.
+**1. Actualizar el Print Bridge (`public/instalar-impresoras.bat`)**
 
-**Cambios**:
+- Modificar el código del `print-bridge.js` embebido en base64 dentro del .bat
+- Agregar una función `processBuffer(buffer)` que:
+  1. Busca el patrón `__BITMAP_B64:...:END__` en el buffer
+  2. Decodifica el PNG base64 a píxeles monocromáticos
+  3. Convierte los píxeles a formato raster ESC/POS (`GS v 0`)
+  4. Reemplaza el marcador por los bytes ESC/POS del bitmap
+  5. Retorna el buffer procesado
+- La conversión PNG a raster se hace con un parser PNG mínimo en JavaScript puro (sin dependencias npm), ya que las impresoras térmicas solo necesitan datos 1-bit (blanco/negro)
 
-| Archivo | Cambio |
-|---------|--------|
-| `src/hooks/pos/usePosOrderHistory.ts` | Agregar `cliente_telefono`, `cliente_direccion`, `categoria_carta_id` a la query de pedidos e items |
-| `src/components/pos/OrderHistoryTable.tsx` | Reemplazar `onReprintInvoice` por `onReprint(order, type)` con botones por tipo de ticket |
-| `src/pages/local/SalesHistoryPage.tsx` | Actualizar la logica de reimpresion para soportar todos los tipos de ticket usando las funciones existentes de `escpos.ts` y `print-router.ts` |
+**2. Alternativa: Logo como texto estilizado (fallback)**
 
----
+- En `src/lib/escpos.ts`, modificar la función `printBrandHeader` para que use texto grande centrado como fallback principal
+- El logo bitmap queda como mejora opcional para bridges actualizados
+- Esto garantiza que las comandas se impriman correctamente incluso sin actualizar el bridge
 
-### Parte 2: Panel de pedidos pendientes en el POS
+### Enfoque recomendado
 
-**Problema actual**: Para ver y gestionar pedidos pendientes, el cajero necesita ir al KDS en otra pantalla. Algunos locales tienen una sola pantalla.
+Implementar ambos cambios:
+1. Actualizar el bridge con soporte de bitmap para nuevas instalaciones
+2. Agregar detección inteligente: si el bridge no soporta bitmaps (versión vieja), usar texto como fallback automático
 
-**Solucion**: Agregar una barra colapsable en la parte superior del POS que muestre pedidos activos (pendiente, en_preparacion, listo) con acciones rapidas.
+### Detalles técnicos
 
-**Diseno**:
-- Barra horizontal arriba del grid del POS
-- Chips/tarjetas compactas por pedido mostrando: numero, tiempo, estado, tipo servicio
-- Tap en el chip permite cambiar estado: pendiente -> en_preparacion -> listo -> entregado
-- Indicador con cantidad de pedidos pendientes
-- Se usa la misma query realtime que usa el KDS
+El formato raster ESC/POS (`GS v 0`) funciona así:
 
-**Cambios**:
+```text
+Comando: 1D 76 30 00 [xL xH yL yH] [datos...]
+- xL/xH: ancho en bytes (ancho_px / 8)
+- yL/yH: alto en líneas de píxeles
+- datos: 1 bit por píxel, MSB primero
+```
 
-| Archivo | Cambio |
-|---------|--------|
-| `src/components/pos/PendingOrdersBar.tsx` | **Nuevo** - Componente barra de pedidos activos con chips interactivos |
-| `src/pages/pos/POSPage.tsx` | Integrar `PendingOrdersBar` arriba del grid principal |
-| `src/hooks/pos/useKitchen.ts` | Reutilizar el hook existente (ya tiene query realtime de pedidos) |
+El parser PNG mínimo decodifica el IDAT chunk, aplica un umbral de luminosidad para convertir a 1-bit, y genera los bytes raster. Esto funciona sin librerías externas porque el logo es una imagen simple monocromática de 200x200px.
 
----
-
-### Detalles tecnicos
-
-**Reimpresion - flujo**:
-1. El `OrderDetail` muestra una seccion "Reimprimir" con iconos por tipo
-2. Al tocar un boton, se llama a `onReprint(order, 'comanda' | 'ticket' | 'vale' | 'delivery' | 'factura')`
-3. En `SalesHistoryPage`, se reconstruye el `PrintableOrder` desde los datos del pedido y se llama a la funcion correspondiente de `escpos.ts` (`generateComandaCompleta`, `generateTicketCliente`, `generateValeBebida`, `generateComandaDelivery`, `generateTicketFiscal`)
-4. El resultado base64 se envia al Print Bridge via `usePrinting`
-
-**Pendientes en POS - flujo**:
-1. Se usa `useKitchen(branchId)` para obtener pedidos activos en realtime
-2. La barra muestra pedidos agrupados por estado con badges de color
-3. Al tocar un pedido, un mini-modal o dropdown permite cambiar el estado
-4. La mutacion reutiliza la logica de `updatePedidoEstado` del KDS
+La nueva versión del bridge se embebe en base64 dentro del `.bat` igual que ahora, y los locales que ya tienen el bridge instalado deberán re-ejecutar el instalador para actualizar.
 
