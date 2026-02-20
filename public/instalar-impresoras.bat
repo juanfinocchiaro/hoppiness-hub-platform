@@ -1,7 +1,8 @@
 @echo off
+cd /d "%~dp0"
 net session >nul 2>&1
 if %errorlevel% neq 0 (
-    powershell -Command "Start-Process '%~f0' -Verb RunAs"
+    powershell -Command "Start-Process cmd -ArgumentList '/k \"%~f0\"' -Verb RunAs"
     exit /b
 )
 
@@ -88,5 +89,7 @@ echo   - Se inicia automaticamente con Windows
 echo   - Soporte de logo bitmap incluido
 echo   - No requiere configuracion adicional
 echo   ==========================================
+echo.
+echo   Si ves algun error arriba, hace captura de pantalla y enviala al soporte.
 echo.
 pause
