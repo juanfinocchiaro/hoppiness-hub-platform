@@ -1,10 +1,9 @@
 /**
  * qz-print.ts - Cliente HTTP para Print Bridge
  *
- * Se comunica con el microservicio Print Bridge (localhost:3001)
- * para enviar datos ESC/POS raw a impresoras térmicas vía TCP.
- *
- * Reemplaza la dependencia de QZ Tray por HTTP fetch() simple.
+ * Reemplaza QZ Tray. Se comunica con Print Bridge (localhost:3001)
+ * que reenvía datos ESC/POS por TCP a impresoras térmicas.
+ * Sin Java, sin certificados, sin popups.
  */
 
 const PRINT_BRIDGE_URL = 'http://127.0.0.1:3001';
@@ -12,10 +11,10 @@ const PRINT_BRIDGE_URL = 'http://127.0.0.1:3001';
 /**
  * Verifica si Print Bridge está corriendo.
  */
-export async function detectPrintBridge(): Promise<{
+export async function detectQZ(): Promise<{
   available: boolean;
   version?: string;
-  error?: 'not_running' | 'unknown';
+  error?: 'not_running' | 'blocked' | 'unknown';
 }> {
   try {
     const res = await fetch(`${PRINT_BRIDGE_URL}/status`, {
@@ -31,6 +30,24 @@ export async function detectPrintBridge(): Promise<{
   }
 }
 
+/** Alias para compatibilidad */
+export const detectPrintBridge = detectQZ;
+
+/**
+ * Conecta con Print Bridge (no-op, siempre true si está disponible).
+ */
+export async function connectQZ(): Promise<boolean> {
+  const result = await detectQZ();
+  return result.available;
+}
+
+/**
+ * Verifica si Print Bridge está conectado.
+ */
+export function isQZConnected(): boolean {
+  return true;
+}
+
 /**
  * Envía datos RAW (bytes ESC/POS) a una impresora por IP y puerto.
  */
@@ -41,18 +58,7 @@ export async function printRaw(
 ): Promise<void> {
   const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
   const base64 = btoa(String.fromCharCode(...bytes));
-
-  const res = await fetch(`${PRINT_BRIDGE_URL}/print`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ip, port, data: base64 }),
-    signal: AbortSignal.timeout(10000),
-  });
-
-  const result = await res.json();
-  if (!result.success) {
-    throw new Error(result.error || 'Error de impresión desconocido');
-  }
+  await printRawBase64(ip, port, base64);
 }
 
 /**
@@ -78,13 +84,18 @@ export async function printRawBase64(
 
 /**
  * Testea conectividad con una impresora.
- * Retorna si la impresora es alcanzable y la latencia.
  */
 export async function testPrinterConnection(
   ip: string,
-  port: number
+  port: number,
+  _timeoutMs = 5000
 ): Promise<{ reachable: boolean; latencyMs?: number; error?: string }> {
   try {
+    const bridge = await detectQZ();
+    if (!bridge.available) {
+      return { reachable: false, error: 'QZ_NOT_AVAILABLE' };
+    }
+
     const res = await fetch(`${PRINT_BRIDGE_URL}/test`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -110,4 +121,11 @@ export async function getNetworkFingerprint(): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Desconecta (no-op para Print Bridge).
+ */
+export async function disconnectQZ(): Promise<void> {
+  // Print Bridge es HTTP stateless, no hay conexión que cerrar
 }
