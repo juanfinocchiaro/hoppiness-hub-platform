@@ -39,11 +39,21 @@ const DEFAULT_PRINTER = {
 
 /* ─────────── Setup Screen (State 1) ─────────── */
 function SetupScreen({ state }: { state: 'checking' | 'not_available' | 'blocked' }) {
-  const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = '/instalar-impresoras.bat';
-    link.download = 'instalar-impresoras.bat';
-    link.click();
+  const handleDownload = async () => {
+    try {
+      const response = await fetch('/instalar-impresoras.bat');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'instalar-impresoras.bat';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open('/instalar-impresoras.bat', '_blank');
+    }
   };
 
   return (
