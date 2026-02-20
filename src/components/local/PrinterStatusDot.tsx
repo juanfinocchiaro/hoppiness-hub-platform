@@ -5,13 +5,13 @@
  * Solo verifica una vez al cargar (no polling continuo).
  */
 import { useEffect, useState } from 'react';
-import { detectQZ } from '@/lib/qz-print';
+import { detectPrintBridge } from '@/lib/qz-print';
 
 export function PrinterStatusDot() {
   const [ready, setReady] = useState<boolean | null>(null);
 
   useEffect(() => {
-    detectQZ().then((r) => setReady(r.available));
+    detectPrintBridge().then((r) => setReady(r.available));
   }, []);
 
   if (ready === null) return null;
