@@ -12,19 +12,19 @@ const categories = [
   {
     name: 'Clásicas',
     image: americanDoble,
-    products: ['American Simple', 'American Doble', 'Cheese Simple'],
+    products: ['Victoria', 'American Simple', 'American Doble'],
     description: 'Las de siempre. Smash puro.',
   },
   {
     name: 'Originales',
     image: royalDoble,
-    products: ['Royal', 'Cheese Bacon', 'Provoleta'],
+    products: ['Argenta', 'Royal', 'Provoleta'],
     description: 'Combinaciones únicas de autor.',
   },
   {
     name: 'Más Sabor',
     image: carolina,
-    products: ['Carolina', 'Django', 'Wesley'],
+    products: ['Baconator', 'Carolina', 'Django'],
     description: 'Triples. Para los que quieren más.',
   },
   {
@@ -64,7 +64,8 @@ export function MenuShowcaseSection() {
               <img
                 src={cat.image}
                 alt={cat.name}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-110"
+                style={{ objectPosition: '50% 40%' }}
                 loading="lazy"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
