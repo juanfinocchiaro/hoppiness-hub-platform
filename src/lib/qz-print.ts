@@ -91,11 +91,6 @@ export async function testPrinterConnection(
   _timeoutMs = 5000
 ): Promise<{ reachable: boolean; latencyMs?: number; error?: string }> {
   try {
-    const bridge = await detectQZ();
-    if (!bridge.available) {
-      return { reachable: false, error: 'QZ_NOT_AVAILABLE' };
-    }
-
     const res = await fetch(`${PRINT_BRIDGE_URL}/test`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
