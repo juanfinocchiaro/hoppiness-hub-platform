@@ -4,27 +4,22 @@ import {
   ShoppingBag, 
   Trophy,
   ArrowRight,
-  Music
+  Music,
+  Store
 } from 'lucide-react';
 import { SEO } from '@/components/SEO';
 import { PublicHeader, MobileOrderFAB } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 import { 
-  SumateSection, 
   AwardsSection, 
   MediaSection, 
-  FranchiseHero, 
-  WhyHoppinessSection,
-  TimelineSection,
   LocationsSection,
-  ReviewsSection
+  ReviewsSection,
+  MenuShowcaseSection
 } from '@/components/landing';
-import heroWall from '@/assets/hero-wall.webp';
+import resultado from '@/assets/resultado.jpg';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
-import burger43 from '@/assets/hoppiness-43.webp';
-import burger64 from '@/assets/hoppiness-64.webp';
-import process125 from '@/assets/hoppiness-125.webp';
 
 export default function Index() {
   return (
@@ -33,13 +28,13 @@ export default function Index() {
       <ImpersonationBanner />
       <PublicHeader />
 
-      {/* Hero Section - Producto primero */}
+      {/* Hero Section - Producto protagonista */}
       <section className="relative h-[90vh] min-h-[600px] flex items-center">
         <div 
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${heroWall})` }}
+          style={{ backgroundImage: `url(${resultado})` }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/80 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-transparent" />
         
         <div className="relative container mx-auto px-4">
           <div className="max-w-2xl">
@@ -54,12 +49,14 @@ export default function Index() {
             </div>
             
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-white mb-6 font-brand tracking-tight leading-tight">
-              LA HAMBURGUESA<br />
-              MÁS PREMIADA<br />
-              <span className="text-accent">DE CÓRDOBA</span>
+              CULTO<br />
+              AL SABOR
             </h1>
-            <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-lg">
-              Más de 15 creaciones de autor. Recetas propias. Culto al sabor desde 2018.
+            <p className="text-xl md:text-2xl text-white/90 mb-2 font-brand">
+              La hamburguesa más premiada de Córdoba
+            </p>
+            <p className="text-lg text-white/70 mb-8 max-w-lg">
+              +15 creaciones de autor. Recetas propias desde 2018.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link to="/pedir">
@@ -71,9 +68,9 @@ export default function Index() {
                   Pedí tu Hamburguesa
                 </Button>
               </Link>
-              <a href="#clubes">
+              <a href="#menu">
                 <Button size="lg" variant="outline" className="border-2 border-white/80 text-white bg-white/5 hover:bg-white/15 backdrop-blur-sm text-lg px-8">
-                  Conocé nuestros Clubes
+                  Ver Menú
                 </Button>
               </a>
             </div>
@@ -105,48 +102,14 @@ export default function Index() {
         </div>
       </section>
 
-      {/* Culto al Sabor */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-4xl font-black mb-6 font-brand text-primary">
-                CULTO AL SABOR
-              </h2>
-              <p className="text-lg text-muted-foreground mb-6">
-                Más de 15 hamburguesas de autor donde cada ingrediente está elegido a propósito. 
-                Combinaciones de sabores que cuentan una historia, con recetas propias que no vas a encontrar en otro lado.
-              </p>
-              <p className="text-lg text-muted-foreground mb-8">
-                Nuestros clubes están diseñados con mucha onda: un estilo descontracturado donde venís a pasarla bien, 
-                ya sea solo, con amigos o con la familia.
-              </p>
-              <Link to="/pedir">
-                <Button 
-                  size="lg" 
-                  className="group"
-                >
-                  <ShoppingBag className="w-5 h-5 mr-2" />
-                  Pedí Ahora
-                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-2 grid grid-rows-2 gap-4">
-                <div className="aspect-[16/10] overflow-hidden rounded-2xl shadow-elevated">
-                  <img src={burger64} alt="Hamburguesa Hoppiness" className="w-full h-full object-cover" />
-                </div>
-                <div className="aspect-[16/10] overflow-hidden rounded-2xl shadow-elevated">
-                  <img src={process125} alt="Proceso de elaboración" className="w-full h-full object-cover" />
-                </div>
-              </div>
-              <div className="overflow-hidden rounded-2xl shadow-elevated">
-                <img src={burger43} alt="Hamburguesa artesanal" className="w-full h-full object-cover" />
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Menu Showcase */}
+      <section id="menu">
+        <MenuShowcaseSection />
+      </section>
+
+      {/* Nuestros Clubes */}
+      <section id="clubes">
+        <LocationsSection />
       </section>
 
       {/* Premios */}
@@ -154,11 +117,6 @@ export default function Index() {
 
       {/* Medios */}
       <MediaSection />
-
-      {/* Nuestros Clubes */}
-      <section id="clubes">
-        <LocationsSection />
-      </section>
 
       {/* Spotify - Modo Hoppi */}
       <section className="py-16 px-4 bg-foreground text-background">
@@ -185,29 +143,24 @@ export default function Index() {
       {/* Reviews Section */}
       <ReviewsSection />
 
-      {/* Separador B2C → B2B */}
-      <section className="py-16 px-4 bg-primary text-primary-foreground text-center">
-        <div className="container mx-auto max-w-3xl">
+      {/* CTA Franquicias - Simple, 1 sección */}
+      <section className="py-16 px-4 bg-primary text-primary-foreground">
+        <div className="container mx-auto max-w-3xl text-center">
+          <Store className="w-10 h-10 mx-auto mb-4 text-accent" />
           <h2 className="text-3xl md:text-4xl font-black font-brand mb-4">
-            Crecé con Hoppiness
+            ¿Querés tu propio Hoppiness?
           </h2>
-          <p className="text-primary-foreground/80 text-lg">
-            Si te apasiona la gastronomía y querés ser parte de una marca premiada, conocé nuestro modelo de franquicias.
+          <p className="text-primary-foreground/80 text-lg mb-6">
+            Conocé nuestro modelo de franquicias. Recupero en 18-24 meses. Recetas y fábricas propias.
           </p>
+          <Link to="/franquicias">
+            <Button size="lg" className="bg-white text-primary hover:bg-white/90 text-lg px-8">
+              Más info sobre franquicias
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+          </Link>
         </div>
       </section>
-
-      {/* Sumate Section */}
-      <SumateSection />
-
-      {/* Propuesta de Franquicia */}
-      <FranchiseHero />
-
-      {/* Por qué Hoppiness */}
-      <WhyHoppinessSection />
-
-      {/* Timeline */}
-      <TimelineSection />
 
       <PublicFooter />
       <MobileOrderFAB />

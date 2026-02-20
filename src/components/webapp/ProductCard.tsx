@@ -22,7 +22,7 @@ export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecre
     >
       {/* Image */}
       {item.imagen_url ? (
-        <div className="w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-muted">
+        <div className="w-28 h-28 rounded-xl overflow-hidden shrink-0 bg-muted">
           <img
             src={item.imagen_url}
             alt={item.nombre}
@@ -31,8 +31,8 @@ export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecre
           />
         </div>
       ) : (
-        <div className="w-20 h-20 rounded-lg shrink-0 bg-muted flex items-center justify-center">
-          <span className="text-2xl">🍔</span>
+        <div className="w-28 h-28 rounded-xl shrink-0 bg-muted flex items-center justify-center">
+          <span className="text-3xl">🍔</span>
         </div>
       )}
 

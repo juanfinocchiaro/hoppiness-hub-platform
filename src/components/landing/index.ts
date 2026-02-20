@@ -7,3 +7,4 @@ export { TimelineSection } from './TimelineSection';
 export { FranchiseFormSection } from './FranchiseFormSection';
 export { LocationsSection } from './LocationsSection';
 export { ReviewsSection } from './ReviewsSection';
+export { MenuShowcaseSection } from './MenuShowcaseSection';
