@@ -226,7 +226,9 @@ function HealthIndicator({ health }: { health: PrinterHealth }) {
     return (
       <div className="flex items-center gap-1.5 text-destructive">
         <WifiOff className="w-3.5 h-3.5" />
-        <span className="text-xs font-medium">No responde</span>
+        <span className="text-xs font-medium">
+          No responde{health.error ? ` · ${health.error}` : ''}
+        </span>
       </div>
     );
   }
@@ -281,16 +283,9 @@ function PrinterCard({
               <RefreshCw className="w-3.5 h-3.5 mr-1" /> Reintentar
             </Button>
           )}
-          {health.status === 'reachable' && (
-            <Button variant="outline" size="sm" onClick={onTest}>
-              <TestTube className="w-3.5 h-3.5 mr-1" /> Test
-            </Button>
-          )}
-          {health.status === 'idle' && (
-            <Button variant="outline" size="sm" onClick={onTest}>
-              <TestTube className="w-3.5 h-3.5 mr-1" /> Test
-            </Button>
-          )}
+          <Button variant="outline" size="sm" onClick={onTest}>
+            <TestTube className="w-3.5 h-3.5 mr-1" /> Test
+          </Button>
           <Button variant="outline" size="sm" onClick={onEdit}>
             <Pencil className="w-3.5 h-3.5 mr-1" /> Editar
           </Button>
