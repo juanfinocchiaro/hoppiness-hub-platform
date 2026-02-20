@@ -32,7 +32,7 @@ export default function Index() {
       <section className="relative h-[70vh] min-h-[500px] flex items-center">
         <div 
           className="absolute inset-0 bg-cover saturate-[1.15] brightness-110"
-          style={{ backgroundImage: `url(${fotoHero})`, backgroundPosition: '60% center' }}
+          style={{ backgroundImage: `url(${fotoHero})`, backgroundPosition: '65% 35%' }}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
         
