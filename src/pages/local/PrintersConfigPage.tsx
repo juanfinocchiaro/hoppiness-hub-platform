@@ -49,7 +49,7 @@ const DEFAULT_PRINTER = {
   is_active: true,
 };
 
-const BRIDGE_VERSION = '2026.02.20.2300';
+const BRIDGE_VERSION = '2026.02.21.0030';
 
 /* ─────────── Setup Screen (State 1) ─────────── */
 function SetupScreen({ state, onSkip }: { state: 'checking' | 'not_available'; onSkip: () => void }) {
