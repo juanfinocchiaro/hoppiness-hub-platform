@@ -16,6 +16,10 @@ export interface PrintConfig {
   backup_printer_id: string | null;
   backup_enabled: boolean;
   reprint_requires_pin: boolean;
+  comanda_printer_id: string | null;
+  vale_printer_id: string | null;
+  salon_vales_enabled: boolean;
+  no_salon_todo_en_comanda: boolean;
   updated_at: string;
 }
 

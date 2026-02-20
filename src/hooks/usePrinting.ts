@@ -19,6 +19,8 @@ import {
   type PrintableItem,
 } from '@/lib/escpos';
 import type { BranchPrinter } from '@/hooks/useBranchPrinters';
+import type { PrintConfig } from '@/hooks/usePrintConfig';
+import { buildPrintJobs } from '@/lib/print-router';
 
 export type PrintBridgeStatus = 'checking' | 'connected' | 'not_available';
 
@@ -167,12 +169,63 @@ export function usePrinting(branchId: string) {
     });
   };
 
+  /**
+   * Print order using the routing system (by category tipo_impresion)
+   */
+  const printOrder = async (
+    order: PrintableOrder & { items: (PrintableItem & { categoria_carta_id?: string | null; precio_unitario?: number; subtotal?: number })[]; total?: number; descuento?: number },
+    config: PrintConfig,
+    allPrinters: BranchPrinter[],
+    categorias: { id: string; nombre: string; tipo_impresion: string }[],
+    branchName: string,
+    esSalon: boolean
+  ) => {
+    const jobs = buildPrintJobs(
+      order,
+      config,
+      allPrinters,
+      categorias as any,
+      branchName,
+      esSalon
+    );
+
+    for (const job of jobs) {
+      const printer = allPrinters.find(p => p.id === job.printerId);
+      if (printer) {
+        try {
+          await sendToPrinter(printer, job.dataBase64);
+          // Record in print_jobs
+          await supabase.from('print_jobs').insert({
+            branch_id: branchId,
+            printer_id: printer.id,
+            job_type: job.type,
+            payload: { data_base64: job.dataBase64 },
+            status: 'completed',
+          });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Error desconocido';
+          toast.error(`Error al imprimir ${job.label}`, { description: msg });
+          // Record failed job
+          await supabase.from('print_jobs').insert({
+            branch_id: branchId,
+            printer_id: printer.id,
+            job_type: job.type,
+            payload: { data_base64: job.dataBase64 },
+            status: 'error',
+            error_message: msg,
+          });
+        }
+      }
+    }
+  };
+
   return {
     printComandaCompleta,
     printComandaEstacion,
     printTicket,
     printDelivery,
     printTest,
+    printOrder,
     isPrinting: printMutation.isPending,
     bridgeStatus,
   };
