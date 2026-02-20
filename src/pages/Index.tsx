@@ -18,7 +18,7 @@ import {
   ReviewsSection,
   MenuShowcaseSection
 } from '@/components/landing';
-import resultado from '@/assets/resultado.jpg';
+import ultraCheese from '@/assets/ultra-cheese.jpg';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 
 export default function Index() {
@@ -32,7 +32,7 @@ export default function Index() {
       <section className="relative h-[90vh] min-h-[600px] flex items-center">
         <div 
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${resultado})` }}
+          style={{ backgroundImage: `url(${ultraCheese})` }}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-transparent" />
         
