@@ -1,27 +1,39 @@
 
 
-## Fix: Cambiar 127.0.0.1 por localhost en qz-print.ts
+## Fix: Health check de impresoras falla aunque Print Bridge funcione
 
 ### Problema
-El navegador bloquea las peticiones HTTP desde un sitio HTTPS (mixed content). Chrome tiene una excepcion especial para `http://localhost` pero NO para `http://127.0.0.1`. Por eso el fetch siempre falla con "Failed to fetch" aunque Print Bridge este corriendo.
+
+En `src/lib/qz-print.ts`, la funcion `testPrinterConnection` tiene este flujo:
+
+1. Llama a `detectQZ()` (fetch a `/status`)
+2. Si `/status` falla -> devuelve `{ reachable: false, error: 'QZ_NOT_AVAILABLE' }` SIN intentar el test
+3. Si `/status` funciona -> llama a `/test` con la IP de la impresora
+
+Pero `printRawBase64` (la que imprime de verdad) va directo a `/print` sin pre-verificar `/status`. Por eso:
+- **Test de impresion** (boton Test) -> funciona, porque usa `printRawBase64` -> `/print`
+- **Health check** (indicador de estado) -> falla, porque `testPrinterConnection` primero pasa por `detectQZ()` -> `/status` que puede fallar por timing o cache
 
 ### Solucion
 
-**Archivo: `src/lib/qz-print.ts`** - Linea 9
+**Archivo: `src/lib/qz-print.ts`** - Funcion `testPrinterConnection` (lineas ~88-107)
 
-Cambiar:
+Eliminar la pre-verificacion de `detectQZ()` y llamar directamente al endpoint `/test`. Si `/test` falla por network error, devolver `{ reachable: false }` con un mensaje util. Esto hace que el health check se comporte igual que la impresion real: ir directo al bridge sin gatekeeping.
+
+Cambiar de:
+```typescript
+const bridge = await detectQZ();
+if (!bridge.available) {
+  return { reachable: false, error: 'QZ_NOT_AVAILABLE' };
+}
+const res = await fetch(`${PRINT_BRIDGE_URL}/test`, ...);
 ```
-const PRINT_BRIDGE_URL = 'http://127.0.0.1:3001';
+
+A:
+```typescript
+const res = await fetch(`${PRINT_BRIDGE_URL}/test`, ...);
+return await res.json();
 ```
 
-Por:
-```
-const PRINT_BRIDGE_URL = 'http://localhost:3001';
-```
-
-Eso es todo. Un cambio de una linea. Print Bridge ya escucha en `127.0.0.1` que es lo mismo que `localhost`, pero el navegador los trata distinto para mixed content.
-
-### Tambien en el .bat
-
-El servidor en `print-bridge.js` (embebido en el .bat) escucha en `127.0.0.1:3001`. Esto esta bien, no hay que cambiarlo - `localhost` resuelve a `127.0.0.1` automaticamente. Solo hay que cambiar la URL del lado del frontend.
+El catch ya maneja el caso de que el bridge no este corriendo.
 
