@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
@@ -38,10 +40,11 @@ const typeConfig: Record<string, { icon: typeof MessageSquare; label: string; co
   otro: { icon: MessageSquare, label: 'Otro', color: 'bg-gray-500' },
 };
 
-function MessageCard({ message, onMarkRead, onArchive }: { 
+function MessageCard({ message, onMarkRead, onArchive, branches }: { 
   message: ContactMessage; 
   onMarkRead: (id: string) => void;
   onArchive: (id: string) => void;
+  branches: Record<string, string>;
 }) {
   const isUnread = !message.read_at;
   const config = typeConfig[message.subject] || typeConfig.otro;
@@ -66,21 +69,32 @@ function MessageCard({ message, onMarkRead, onArchive }: {
     switch (message.subject) {
       case 'franquicia':
         return (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
-            {message.franchise_has_zone && (
-              <div><span className="font-medium">Zona:</span> {message.franchise_has_zone}</div>
-            )}
-            {message.franchise_has_location && (
-              <div><span className="font-medium">Local:</span> {message.franchise_has_location}</div>
-            )}
-            {message.franchise_investment_capital && (
-              <div><span className="font-medium">Capital:</span> {message.franchise_investment_capital}</div>
+          <div className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
+              {message.franchise_has_zone && (
+                <div><span className="font-medium">Zona:</span> {message.franchise_has_zone}</div>
+              )}
+              {message.franchise_has_location && (
+                <div><span className="font-medium">Local:</span> {message.franchise_has_location}</div>
+              )}
+              {message.franchise_investment_capital && (
+                <div><span className="font-medium">Capital:</span> {message.franchise_investment_capital}</div>
+              )}
+              {message.investment_range && (
+                <div><span className="font-medium">Rango inversión:</span> {message.investment_range}</div>
+              )}
+            </div>
+            {message.message && (
+              <p className="text-sm text-muted-foreground italic border-l-2 border-muted pl-3">{message.message}</p>
             )}
           </div>
         );
       case 'empleo':
         return (
           <div className="space-y-1 text-sm text-muted-foreground">
+            {message.employment_branch_id && branches[message.employment_branch_id] && (
+              <div><span className="font-medium">Sucursal:</span> {branches[message.employment_branch_id]}</div>
+            )}
             {message.employment_position && (
               <div><span className="font-medium">Puesto:</span> {message.employment_position}</div>
             )}
@@ -148,6 +162,7 @@ function MessageCard({ message, onMarkRead, onArchive }: {
             <div>
               <h3 className="font-semibold">{message.name}</h3>
               <p className="text-sm text-muted-foreground">{message.email}</p>
+              <p className="text-sm text-muted-foreground">{message.phone}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -216,6 +231,18 @@ function ContactMessagesPageContent() {
   });
   
   const { data: counts } = useMessageCounts();
+
+  // Fetch branches for resolving employment_branch_id
+  const { data: branchesMap } = useQuery({
+    queryKey: ['branches-map'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('branches').select('id, name');
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      data?.forEach(b => { map[b.id] = b.name; });
+      return map;
+    },
+  });
 
   const handleExportCSV = () => {
     if (!messages.length) {
@@ -316,6 +343,7 @@ function ContactMessagesPageContent() {
               message={message} 
               onMarkRead={markAsRead}
               onArchive={archive}
+              branches={branchesMap ?? {}}
             />
           ))
         )}
