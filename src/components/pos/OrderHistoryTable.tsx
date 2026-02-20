@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ChevronDown, ChevronRight, Pencil, Printer, FileText } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, Printer, FileText, ChefHat, Truck, Wine } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,14 +13,14 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { PaymentEditModal } from '@/components/pos/PaymentEditModal';
 import type { PosOrder } from '@/hooks/pos/usePosOrderHistory';
 
+export type ReprintType = 'ticket' | 'comanda' | 'vale' | 'delivery' | 'factura';
+
 interface Props {
   orders: PosOrder[];
   isLoading: boolean;
   branchId?: string;
-  /** Whether there's an open cash register shift (enables edit) */
   hasOpenShift?: boolean;
-  /** Callback to reprint fiscal ticket */
-  onReprintInvoice?: (order: PosOrder) => void;
+  onReprint?: (order: PosOrder, type: ReprintType) => void;
 }
 
 const METODO_LABELS: Record<string, string> = {
@@ -59,7 +59,7 @@ function paymentSummary(pagos: PosOrder['pedido_pagos']) {
   return 'Dividido';
 }
 
-export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, onReprintInvoice }: Props) {
+export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, onReprint }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingOrder, setEditingOrder] = useState<PosOrder | null>(null);
   const isMobile = useIsMobile();
@@ -148,7 +148,7 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, o
                           order={order}
                           canEdit={!!hasOpenShift && !!branchId}
                           onEdit={() => setEditingOrder(order)}
-                          onReprintInvoice={onReprintInvoice}
+                          onReprint={onReprint}
                         />
                       </TableCell>
                     </TableRow>
@@ -159,7 +159,6 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, o
           </TableBody>
         </Table>
 
-        {/* Payment edit modal */}
         {editingOrder && branchId && (
           <PaymentEditModal
             open={!!editingOrder}
@@ -175,15 +174,19 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, o
   );
 }
 
-function OrderDetail({ order, canEdit, onEdit, onReprintInvoice }: {
+function OrderDetail({ order, canEdit, onEdit, onReprint }: {
   order: PosOrder;
   canEdit?: boolean;
   onEdit?: () => void;
-  onReprintInvoice?: (order: PosOrder) => void;
+  onReprint?: (order: PosOrder, type: ReprintType) => void;
 }) {
   const factura = order.facturas_emitidas?.[0];
   const pvStr = factura ? String(factura.punto_venta).padStart(5, '0') : '';
   const numStr = factura ? String(factura.numero_comprobante).padStart(8, '0') : '';
+  const isDelivery = order.tipo_servicio === 'delivery';
+
+  // Check if order has vale items (we check by looking for items - in absence of category info, show always)
+  const hasValeItems = true; // Will be filtered in the reprint handler based on categorias
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -210,7 +213,7 @@ function OrderDetail({ order, canEdit, onEdit, onReprintInvoice }: {
         </div>
       </div>
 
-      {/* Payments + Invoice */}
+      {/* Payments + Actions */}
       <div>
         <div className="flex items-center justify-between mb-1">
           <p className="font-medium">Pagos</p>
@@ -233,24 +236,10 @@ function OrderDetail({ order, canEdit, onEdit, onReprintInvoice }: {
         {/* Invoice info */}
         {factura && (
           <div className="mt-3 pt-2 border-t space-y-1">
-            <div className="flex items-center justify-between">
-              <p className="font-medium flex items-center gap-1">
-                <FileText className="h-3.5 w-3.5 text-primary" />
-                Factura {factura.tipo_comprobante}
-              </p>
-              {onReprintInvoice && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={(e) => { e.stopPropagation(); onReprintInvoice(order); }}
-                >
-                  <Printer className="h-3 w-3 mr-1" />
-                  Reimprimir
-                </Button>
-              )}
-            </div>
-            <p className="text-muted-foreground">N° {pvStr}-{numStr}</p>
+            <p className="font-medium flex items-center gap-1">
+              <FileText className="h-3.5 w-3.5 text-primary" />
+              Factura {factura.tipo_comprobante} — N° {pvStr}-{numStr}
+            </p>
             {factura.cae && <p className="text-muted-foreground text-xs">CAE: {factura.cae}</p>}
             <p className="font-medium">{fmt(factura.total)}</p>
           </div>
@@ -261,6 +250,56 @@ function OrderDetail({ order, canEdit, onEdit, onReprintInvoice }: {
             {order.canal_venta && <p>Canal: {CANAL_LABELS[order.canal_venta] || order.canal_venta}</p>}
             {order.tipo_servicio && <p>Servicio: {SERVICIO_LABELS[order.tipo_servicio] || order.tipo_servicio}</p>}
             {order.cliente_nombre && <p>Cliente: {order.cliente_nombre}</p>}
+          </div>
+        )}
+
+        {/* Reprint actions */}
+        {onReprint && (
+          <div className="mt-3 pt-2 border-t">
+            <p className="font-medium mb-2 flex items-center gap-1">
+              <Printer className="h-3.5 w-3.5" />
+              Reimprimir
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={(e) => { e.stopPropagation(); onReprint(order, factura ? 'factura' : 'ticket'); }}
+              >
+                <FileText className="h-3 w-3 mr-1" />
+                {factura ? 'Factura' : 'Ticket cliente'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={(e) => { e.stopPropagation(); onReprint(order, 'comanda'); }}
+              >
+                <ChefHat className="h-3 w-3 mr-1" />
+                Comanda
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={(e) => { e.stopPropagation(); onReprint(order, 'vale'); }}
+              >
+                <Wine className="h-3 w-3 mr-1" />
+                Vales
+              </Button>
+              {isDelivery && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={(e) => { e.stopPropagation(); onReprint(order, 'delivery'); }}
+                >
+                  <Truck className="h-3 w-3 mr-1" />
+                  Delivery
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </div>
