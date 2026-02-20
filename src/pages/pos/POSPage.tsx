@@ -13,6 +13,7 @@ import { RegisterPaymentPanel } from '@/components/pos/RegisterPaymentPanel';
 import { ModifiersModal } from '@/components/pos/ModifiersModal';
 import { POSPortalProvider } from '@/components/pos/POSPortalContext';
 import { useCreatePedido } from '@/hooks/pos/useOrders';
+import { useKitchen } from '@/hooks/pos/useKitchen';
 import { usePOSSessionState } from '@/hooks/pos/usePOSSessionState';
 import { useShiftStatus } from '@/hooks/useShiftStatus';
 import { useCashRegisters, useOpenShift } from '@/hooks/useCashRegister';
@@ -29,6 +30,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Banknote, ChefHat, PlusCircle, ShoppingBag } from 'lucide-react';
+import { PendingOrdersBar } from '@/components/pos/PendingOrdersBar';
 
 /* Inline cash open form - shown when no register is open */
 function InlineCashOpen({ branchId, onOpened }: { branchId: string; onOpened: () => void }) {
@@ -128,6 +130,7 @@ export default function POSPage() {
 
   const shiftStatus = useShiftStatus(branchId);
   const createPedido = useCreatePedido(branchId!);
+  const { data: kitchenPedidos } = useKitchen(branchId!);
 
   // ARCA invoicing
   const { data: afipConfig } = useAfipConfig(branchId);
@@ -405,6 +408,10 @@ export default function POSPage() {
   return (
     <POSPortalProvider>
     <div className="flex flex-col h-[calc(100vh-6rem)] pb-16 lg:pb-0">
+      {/* Pending orders bar */}
+      {configConfirmed && kitchenPedidos && kitchenPedidos.length > 0 && (
+        <PendingOrdersBar pedidos={kitchenPedidos} branchId={branchId!} />
+      )}
       {/* Main grid: menu + account */}
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_minmax(380px,1.1fr)] flex-1 min-h-0">
         {/* Menu column - Zona B */}

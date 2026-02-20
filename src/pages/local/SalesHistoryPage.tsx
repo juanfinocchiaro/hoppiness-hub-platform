@@ -30,12 +30,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { usePosEnabled } from '@/hooks/usePosEnabled';
 import { usePosOrderHistory, DEFAULT_FILTERS, type OrderFilters, type PosOrder } from '@/hooks/pos/usePosOrderHistory';
 import { OrderHistoryFilters } from '@/components/pos/OrderHistoryFilters';
-import { OrderHistoryTable } from '@/components/pos/OrderHistoryTable';
+import { OrderHistoryTable, type ReprintType } from '@/components/pos/OrderHistoryTable';
 import { OrderHeatmapChart } from '@/components/pos/OrderHeatmapChart';
 import { useAfipConfig } from '@/hooks/useAfipConfig';
 import { usePrinting } from '@/hooks/usePrinting';
 import { usePrintConfig } from '@/hooks/usePrintConfig';
 import { useBranchPrinters } from '@/hooks/useBranchPrinters';
+import { generateTicketCliente, generateComandaCompleta, generateValeBebida, generateComandaDelivery } from '@/lib/escpos';
 import { toast } from 'sonner';
 import type { ShiftType } from '@/types/shiftClosure';
 
@@ -96,12 +97,7 @@ function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: {
   const { data: printersData } = useBranchPrinters(branchId);
   const allPrinters = printersData ?? [];
 
-  const handleReprintInvoice = useCallback(async (order: PosOrder) => {
-    const factura = order.facturas_emitidas?.[0];
-    if (!factura) {
-      toast.error('Este pedido no tiene factura asociada');
-      return;
-    }
+  const handleReprint = useCallback(async (order: PosOrder, type: ReprintType) => {
     if (printing.bridgeStatus !== 'connected') {
       toast.error('Sistema de impresión no disponible');
       return;
@@ -113,22 +109,99 @@ function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: {
       toast.error('No hay impresora de tickets configurada');
       return;
     }
-    await printing.printFiscalTicket({
-      razon_social: afipConfig?.razon_social || '',
-      cuit: afipConfig?.cuit || '',
-      direccion_fiscal: afipConfig?.direccion_fiscal || '',
-      punto_venta: factura.punto_venta,
-      tipo_comprobante: factura.tipo_comprobante,
-      numero_comprobante: factura.numero_comprobante,
-      cae: factura.cae || '',
-      cae_vencimiento: factura.cae_vencimiento || '',
-      fecha_emision: factura.fecha_emision.replace(/-/g, ''),
-      neto: factura.neto,
-      iva: factura.iva,
-      total: factura.total,
+
+    const printableOrder = {
       numero_pedido: order.numero_pedido,
-      branchName,
-    }, ticketPrinter);
+      tipo_servicio: order.tipo_servicio,
+      numero_llamador: null,
+      canal_venta: order.canal_venta,
+      cliente_nombre: order.cliente_nombre,
+      created_at: order.created_at,
+      items: order.pedido_items.map(i => ({
+        nombre: i.nombre,
+        cantidad: i.cantidad,
+        notas: i.notas,
+        estacion: 'armado' as const,
+        precio_unitario: i.precio_unitario,
+        subtotal: i.subtotal,
+        categoria_carta_id: i.categoria_carta_id,
+      })),
+      total: order.total,
+      descuento: order.descuento || 0,
+      cliente_telefono: order.cliente_telefono,
+      cliente_direccion: order.cliente_direccion,
+    };
+
+    try {
+      switch (type) {
+        case 'ticket': {
+          const data = generateTicketCliente(printableOrder, branchName, ticketPrinter.paper_width);
+          const { printRawBase64 } = await import('@/lib/qz-print');
+          await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, data);
+          toast.success('Ticket impreso');
+          break;
+        }
+        case 'comanda': {
+          const data = generateComandaCompleta(printableOrder, ticketPrinter.paper_width);
+          const comandaPrinter = printConfig?.comanda_printer_id
+            ? allPrinters.find(p => p.id === printConfig.comanda_printer_id && p.is_active)
+            : ticketPrinter;
+          const { printRawBase64 } = await import('@/lib/qz-print');
+          await printRawBase64((comandaPrinter || ticketPrinter).ip_address!, (comandaPrinter || ticketPrinter).port, data);
+          toast.success('Comanda impresa');
+          break;
+        }
+        case 'vale': {
+          const valePrinter = printConfig?.vale_printer_id
+            ? allPrinters.find(p => p.id === printConfig.vale_printer_id && p.is_active)
+            : ticketPrinter;
+          const printer = valePrinter || ticketPrinter;
+          const { printRawBase64 } = await import('@/lib/qz-print');
+          for (const item of printableOrder.items) {
+            for (let i = 0; i < item.cantidad; i++) {
+              const data = generateValeBebida(printableOrder, item.nombre || 'Producto', printer.paper_width);
+              await printRawBase64(printer.ip_address!, printer.port, data);
+            }
+          }
+          toast.success('Vales impresos');
+          break;
+        }
+        case 'delivery': {
+          const data = generateComandaDelivery(printableOrder, ticketPrinter.paper_width);
+          const { printRawBase64 } = await import('@/lib/qz-print');
+          await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, data);
+          toast.success('Ticket delivery impreso');
+          break;
+        }
+        case 'factura': {
+          const factura = order.facturas_emitidas?.[0];
+          if (!factura) {
+            toast.error('Este pedido no tiene factura asociada');
+            return;
+          }
+          await printing.printFiscalTicket({
+            razon_social: afipConfig?.razon_social || '',
+            cuit: afipConfig?.cuit || '',
+            direccion_fiscal: afipConfig?.direccion_fiscal || '',
+            punto_venta: factura.punto_venta,
+            tipo_comprobante: factura.tipo_comprobante,
+            numero_comprobante: factura.numero_comprobante,
+            cae: factura.cae || '',
+            cae_vencimiento: factura.cae_vencimiento || '',
+            fecha_emision: factura.fecha_emision.replace(/-/g, ''),
+            neto: factura.neto,
+            iva: factura.iva,
+            total: factura.total,
+            numero_pedido: order.numero_pedido,
+            branchName,
+          }, ticketPrinter);
+          break;
+        }
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      toast.error('Error al reimprimir', { description: msg });
+    }
   }, [afipConfig, printing, printConfig, allPrinters, branchName]);
 
   const handleExport = () => {
@@ -185,7 +258,7 @@ function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: {
           </div>
         )}
 
-        <OrderHistoryTable orders={orders} isLoading={isLoading} branchId={branchId} hasOpenShift onReprintInvoice={handleReprintInvoice} />
+        <OrderHistoryTable orders={orders} isLoading={isLoading} branchId={branchId} hasOpenShift onReprint={handleReprint} />
       </TabsContent>
 
       <TabsContent value="heatmap" className="space-y-4">

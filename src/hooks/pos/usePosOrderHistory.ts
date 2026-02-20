@@ -34,6 +34,7 @@ interface PedidoItem {
   precio_unitario: number;
   subtotal: number;
   notas: string | null;
+  categoria_carta_id: string | null;
 }
 
 interface PedidoPago {
@@ -63,6 +64,8 @@ export interface PosOrder {
   tipo_servicio: string | null;
   canal_app: string | null;
   cliente_nombre: string | null;
+  cliente_telefono: string | null;
+  cliente_direccion: string | null;
   estado: string;
   subtotal: number;
   descuento: number | null;
@@ -85,7 +88,7 @@ export function usePosOrderHistory(
       if (!branchId) return [];
       const { data, error } = await supabase
         .from('pedidos')
-        .select('id, numero_pedido, created_at, canal_venta, tipo_servicio, canal_app, cliente_nombre, estado, subtotal, descuento, total, pedido_items(id, nombre, cantidad, precio_unitario, subtotal, notas), pedido_pagos(id, metodo, monto), facturas_emitidas(id, tipo_comprobante, punto_venta, numero_comprobante, cae, cae_vencimiento, neto, iva, total, fecha_emision)')
+        .select('id, numero_pedido, created_at, canal_venta, tipo_servicio, canal_app, cliente_nombre, cliente_telefono, cliente_direccion, estado, subtotal, descuento, total, pedido_items(id, nombre, cantidad, precio_unitario, subtotal, notas, categoria_carta_id), pedido_pagos(id, metodo, monto), facturas_emitidas(id, tipo_comprobante, punto_venta, numero_comprobante, cae, cae_vencimiento, neto, iva, total, fecha_emision)')
         .eq('branch_id', branchId)
         .gte('created_at', fromDate)
         .order('created_at', { ascending: false });
