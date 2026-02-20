@@ -1,66 +1,28 @@
 
 
-## Fix: Impresion directa por IP + eliminar popups de QZ Tray
+## Certificado QZ Tray estatico embebido en codigo
 
-### Problema 1: "A printer must be specified before printing"
+### Que se hace
 
-El codigo actual hace:
-```text
-qz.configs.create(null, { host: "192.168.0.101", port: 9100 })
-                   ^^^^
-                   ERROR: QZ espera un nombre o un objeto, no null
-```
+Reemplazar `src/lib/qz-certificate.ts` completamente. En vez de generar el certificado dinamicamente y guardarlo en localStorage, se embeben como constantes string un certificado X.509 y una clave privada RSA generados una unica vez.
 
-La API de QZ Tray dice que el primer parametro acepta:
-- Un **string** con el nombre de impresora del SO
-- Un **objeto** `{host, port}` para impresion raw por socket TCP
+### Cambios
 
-El fix es cambiar a:
-```text
-qz.configs.create({ host: "192.168.0.101", port: 9100 })
-```
+**Archivo: `src/lib/qz-certificate.ts`** (reescritura completa)
 
-Esto permite imprimir directamente por IP **sin instalar la impresora en Windows**.
+- Eliminar: imports de forge para generacion, `STORAGE_KEY`, `StoredCert`, `generateSelfSignedCert()`, `getOrCreateCert()`, toda referencia a localStorage
+- Agregar: constante `CERT_PEM` con certificado X.509 PEM hardcodeado
+- Agregar: constante `PRIVATE_KEY_PEM` con clave privada RSA PEM hardcodeada
+- Simplificar `getQZCertificate()`: retorna `CERT_PEM`
+- Simplificar `signQZData()`: usa `PRIVATE_KEY_PEM` directamente con forge para firmar
 
-### Problema 2: Popup "Allow" cada vez que abris la pagina
+El certificado y la clave se generan una sola vez durante la implementacion usando node-forge y se pegan como strings literales.
 
-QZ Tray solo permite "Remember this decision" cuando recibe un **certificado digital valido**. El codigo actual envia un certificado vacio (`''`), por eso el checkbox no aparece.
+**Sin cambios en `src/lib/qz-print.ts`** - ya importa las funciones correctamente.
 
-Solucion: generar un par de certificado + clave privada autofirmado usando `node-forge` (ya instalado en el proyecto), embeberlo en el codigo, y configurar QZ Tray una sola vez para que lo acepte.
+### Resultado
 
-### Cambios tecnicos
-
-**1. Nuevo archivo: `src/lib/qz-certificate.ts`**
-- Genera un certificado X.509 autofirmado + clave privada RSA 2048 usando node-forge
-- Los guarda en localStorage para reutilizar (se genera una sola vez)
-- Exporta funciones `getQZCertificate()` y `signQZData(dataToSign)`
-
-**2. Modificar: `src/lib/qz-print.ts`**
-
-En `setupQZ()`:
-- Cambiar `setCertificatePromise` para retornar el certificado PEM autofirmado
-- Cambiar `setSignaturePromise` para firmar con la clave privada (SHA512)
-- Esto habilita "Remember this decision" en QZ Tray
-
-En `printRaw()`, `printRawBase64()`, `testPrinterConnection()`:
-- Cambiar `qz.configs.create(null as any, { host: ip, port })` por `qz.configs.create({ host: ip, port })`
-- Esto elimina el error "A printer must be specified"
-
-**3. Configuracion unica en QZ Tray (accion del usuario)**
-
-Para que QZ Tray confie en nuestro certificado autofirmado, hay que agregar una linea al archivo de propiedades de QZ Tray:
-
-```text
-Archivo: C:\Program Files\QZ Tray\qz-tray.properties
-Agregar: authcert.override=<ruta al certificado>
-```
-
-Alternativa: en la primera conexion, QZ Tray va a mostrar el popup con el checkbox "Remember this decision" visible (porque ahora SI hay certificado). El usuario marca el checkbox y listo.
-
-### Impacto
-
-- NO se necesita instalar la impresora en Windows
-- NO se necesita extension de Chrome
-- El popup aparece UNA sola vez (con "Remember" habilitado)
-- La impresion va directo por TCP al puerto 9100 de la impresora
+- Certificado identico en todas las PCs, navegadores y sesiones
+- QZ Tray pide "Allow" una sola vez por PC (con "Remember this decision" habilitado)
+- Codigo pasa de ~80 lineas a ~40
 
