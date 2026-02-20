@@ -78,11 +78,24 @@ export function usePrinting(branchId: string) {
     onSuccess: () => {
       toast.success('Impreso correctamente');
     },
-    onError: (err) => {
-      toast.error(`Error de impresión`, {
-        description: err instanceof Error ? err.message : 'Error desconocido',
-        duration: 8000,
-      });
+    onError: (err, variables) => {
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      const printerName = variables?.printer?.name || 'Impresora';
+      const printerIp = variables?.printer?.ip_address || '';
+
+      if (msg === 'QZ_NOT_AVAILABLE' || msg.includes('Sistema de impresión')) {
+        toast.error('Sistema de impresión no detectado', {
+          description: 'Andá a Configuración > Impresoras para instalar QZ Tray.',
+          duration: 10000,
+        });
+      } else {
+        toast.error(`Error al imprimir en ${printerName}`, {
+          description: printerIp
+            ? `No se pudo conectar a ${printerIp}. Verificá que esté encendida y en la misma red.`
+            : msg,
+          duration: 8000,
+        });
+      }
     },
   });
 

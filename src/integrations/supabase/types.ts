@@ -294,6 +294,7 @@ export type Database = {
       branch_printers: {
         Row: {
           branch_id: string
+          configured_from_network: string | null
           connection_type: string
           created_at: string
           id: string
@@ -305,6 +306,7 @@ export type Database = {
         }
         Insert: {
           branch_id: string
+          configured_from_network?: string | null
           connection_type?: string
           created_at?: string
           id?: string
@@ -316,6 +318,7 @@ export type Database = {
         }
         Update: {
           branch_id?: string
+          configured_from_network?: string | null
           connection_type?: string
           created_at?: string
           id?: string
