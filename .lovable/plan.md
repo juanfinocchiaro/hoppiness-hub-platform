@@ -1,32 +1,22 @@
 
 
-## Agregar `security.data.enabled=false` al instalador
+## Actualizar instalar-impresoras.bat a v3
 
-### Que se hace
+### Que cambia
 
-Modificar 2 lineas y agregar 1 linea en `public/instalar-impresoras.bat`, en la seccion que escribe el script PowerShell temporal (lineas 50-56).
+Reemplazar el archivo `public/instalar-impresoras.bat` completo con la version v3 que el usuario subio. Los cambios clave respecto a la version actual:
 
-### Cambios puntuales
+1. **Fix de espacios trailing**: Usa `ForEach-Object { $_.Trim() }` y `[System.IO.File]::WriteAllText()` para escribir el certificado sin los espacios que CMD agrega al final de cada `echo`. Esto hace que el .crt sea identico byte a byte al certificado que envia el navegador.
 
-**Archivo: `public/instalar-impresoras.bat`**
+2. **Propiedad adicional**: Agrega `security.print.strict=false` ademas de `security.data.enabled=false` y `authcert.override`.
 
-1. **Linea 52** - Ampliar el filtro de Where-Object para que tambien limpie `security.data.enabled`:
-   - Antes: `$_ -notmatch 'authcert.override'`
-   - Despues: `$_ -notmatch 'authcert.override' -and $_ -notmatch 'security.data.enabled'`
+3. **Pre-autorizacion**: Crea el directorio `%APPDATA%\qz` y el archivo `allowed.dat` si no existen, preparando la estructura de permisos de QZ Tray.
 
-2. **Despues de linea 55** (la que agrega `authcert.override`) - Agregar una linea nueva:
-   ```
-   >> "%PSFILE%" echo Add-Content -Path $props -Value 'security.data.enabled=false'
-   ```
+4. **Filtro ampliado**: El `Where-Object` ahora limpia 3 propiedades antes de re-agregarlas: `authcert.override`, `security.data.enabled`, y `security.print.strict`.
 
-### Resultado en qz-tray.properties
+5. **Simplificacion**: Pasa de 3 pasos a 2 pasos en la UI del instalador (ya no separa el certificado como paso independiente).
 
-Despues de ejecutar el .bat, el archivo properties tendra:
+### Archivo
 
-```
-authcert.override=hoppiness-hub.crt
-security.data.enabled=false
-```
-
-Con esto QZ Tray confia en el certificado de Hoppiness Hub y no muestra ningun popup al imprimir.
+- `public/instalar-impresoras.bat` -- reemplazo completo con el .bat v3 subido por el usuario (92 lineas).
 
