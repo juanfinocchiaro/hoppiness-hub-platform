@@ -128,6 +128,11 @@ export interface PrintableItem {
   }>;
 }
 
+/** Formatea número de pedido mostrando solo los últimos 3 dígitos */
+function shortNum(n: number): string {
+  return String(n).slice(-3);
+}
+
 export interface PrintableOrder {
   numero_pedido: number;
   tipo_servicio: string | null;
@@ -151,7 +156,7 @@ export function generateComandaCompleta(order: PrintableOrder, paperWidth: numbe
     .alignCenter()
     .doubleSize()
     .boldOn()
-    .line(`#${order.numero_pedido}`)
+    .line(`#${shortNum(order.numero_pedido)}`)
     .normalSize()
     .boldOn()
     .line(serviceLabel(order.tipo_servicio))
@@ -214,7 +219,7 @@ export function generateComandaEstacion(
     .boldOn()
     .line(`--- ${stationName.toUpperCase()} ---`)
     .doubleSize()
-    .line(`#${order.numero_pedido}`)
+    .line(`#${shortNum(order.numero_pedido)}`)
     .normalSize()
     .line(serviceLabel(order.tipo_servicio))
     .boldOff();
@@ -283,7 +288,7 @@ export function generateTicketCliente(
     .line(branchName)
     .separator('-', cols)
     .alignLeft()
-    .columns(`Pedido #${order.numero_pedido}`, formatTime(order.created_at), cols)
+    .columns(`Pedido #${shortNum(order.numero_pedido)}`, formatTime(order.created_at), cols)
     .line(serviceLabel(order.tipo_servicio));
 
   if (order.numero_llamador) {
@@ -345,7 +350,7 @@ export function generateComandaDelivery(
     .doubleSize()
     .boldOn()
     .line('DELIVERY')
-    .line(`#${order.numero_pedido}`)
+    .line(`#${shortNum(order.numero_pedido)}`)
     .normalSize()
     .boldOff()
     .separator('=', cols)
@@ -419,7 +424,7 @@ export function generateValeBebida(
     .boldOff()
     .feed(1)
     .separator('-', cols)
-    .line(`Pedido #${order.numero_pedido}`)
+    .line(`Pedido #${shortNum(order.numero_pedido)}`)
     .line(formatTime(order.created_at))
     .separator('=', cols)
     .feed(1)
