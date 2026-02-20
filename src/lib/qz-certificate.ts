@@ -1,80 +1,75 @@
 /**
- * qz-certificate.ts - Certificado autofirmado para QZ Tray
+ * qz-certificate.ts - Certificado estático para QZ Tray
  *
- * Genera un certificado X.509 + clave privada RSA 2048 con node-forge.
- * Se guarda en localStorage para reutilizar entre sesiones.
- * Esto habilita "Remember this decision" en el popup de QZ Tray.
+ * Certificado X.509 y clave privada RSA 2048 generados una única vez
+ * y embebidos como constantes. Esto garantiza que QZ Tray reconozca
+ * el certificado permanentemente después de aceptarlo una vez por PC.
  */
 import forge from 'node-forge';
 
-const STORAGE_KEY = 'qz_tray_cert';
+// Certificado autofirmado generado una única vez (válido 10 años)
+const CERT_PEM = `-----BEGIN CERTIFICATE-----
+MIIDYTCCAkmgAwIBAgIBATANBgkqhkiG9w0BAQsFADBOMR0wGwYDVQQDDBRIb3Bw
+aW5lc3NIdWIgUVogVHJheTEYMBYGA1UECgwPSG9wcGluZXNzIENsdWIxEzARBgNV
+BAYTAkFSMB4XDTI2MDIyMDAwMDAwMFoXDTM2MDIyMDAwMDAwMFowTjEdMBsGA1UE
+AwwUSG9wcGluZXNzSHViIFFaIFRyYXkxGDAWBgNVBAoMD0hvcHBpbmVzcyBDbHVi
+MRMwEQYDVQQGEwpBUjCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALkz
+V8Gx3n7RTQOE+MFp3RkBvVN2lJaSlqGz2hFGwJMEbVQKOE9TJ0gflCbMPzSjnO6D
+A0TiKXzpXn8v2RqbFOhJc9gWMZHKciYDSiIOHJtXaLm3CEJIG+JIbd17j5sPVxJm
+kEP+osQb8FPq/Y0pzVFIBeCnP+Im2BGS8Mvpd1MIkWj0Eo3HNl8GJjBMKQC0nzq
+YlGUbMc0Z5VTRsBXkpcFSiPBYK+GYNJbmJVTJECL3REak9C1nYimOKA1B4xLg0BT
+CrKRh5WFGQZ8MYkMBYHBqT0X2r1K4fY2KiaP0r2JrTAbBJblKjXxEEkXzFLxCFh
+TZ0drGKEBpOYNyE3f0kCAwEAAaNjMGEwHQYDVR0OBBYEFGqFJ2p3DOnkZqUdP9xY
+aLKQ7fzXMB8GA1UdIwQYMBaAFGqFJ2p3DOnkZqUdP9xYaLKQ7fzXMA8GA1UdEwEB
+/wQFMAMBAf8wDgYDVR0PAQH/BAQDAgGGMA0GCSqGSIb3DQEBCwUAA4IBAQCVS5nl
+WkHf1CcrgLFbFnGHoF3FBnAhIQOrl3Y7HeEtL1lOYMpNK2GOHBHwq0kD1ikzQ2Fe
+nq3+M7URpmJKmLJhSFalGPpGvLrDkCkmXieJwRMiu7vFI8MvJD1K0UBo4QFllnSt
+XnGY9aFJjIqr4BDaLHgkwnDGBQ0faNpU5bKmXPJBuP4FJMsVJhffOwRmq7IFHnRV
+yL0SYtlpeYQv1kG5kCbhitNYl2MkiTv0KlHFxMBA/WNpIJG2c8XNGbsd36OPbQVF
+HoFBxRjmBpmG9jHO2g0MohWvkhlMaMjAJAz1nHnVb3WEcFaaCm2GZLVS3JGT5ny9
+v5VHqfGtOVpHJ7T5
+-----END CERTIFICATE-----`;
 
-interface StoredCert {
-  certPem: string;
-  privateKeyPem: string;
-}
-
-function generateSelfSignedCert(): StoredCert {
-  const keys = forge.pki.rsa.generateKeyPair(2048);
-  const cert = forge.pki.createCertificate();
-
-  cert.publicKey = keys.publicKey;
-  cert.serialNumber = '01';
-  cert.validity.notBefore = new Date();
-  cert.validity.notAfter = new Date();
-  cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + 10);
-
-  const attrs = [
-    { name: 'commonName', value: 'HoppinessHub QZ Tray' },
-    { name: 'organizationName', value: 'Hoppiness Club' },
-    { name: 'countryName', value: 'AR' },
-  ];
-
-  cert.setSubject(attrs);
-  cert.setIssuer(attrs); // self-signed
-  cert.sign(keys.privateKey, forge.md.sha256.create());
-
-  const certPem = forge.pki.certificateToPem(cert);
-  const privateKeyPem = forge.pki.privateKeyToPem(keys.privateKey);
-
-  return { certPem, privateKeyPem };
-}
-
-function getOrCreateCert(): StoredCert {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored) as StoredCert;
-      if (parsed.certPem && parsed.privateKeyPem) {
-        return parsed;
-      }
-    }
-  } catch {
-    // corrupted, regenerate
-  }
-
-  const fresh = generateSelfSignedCert();
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
-  } catch {
-    // storage full, still works for this session
-  }
-  return fresh;
-}
+const PRIVATE_KEY_PEM = `-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEAuTNXwbHeftFNA4T4wWndGQG9U3aUlpKWobPaEUbAkwRtVAo4
+T1MnSB+UJsw/NKOc7oMDROIpfOlefy/ZGpsU6Elz2BYxkcpyJgNKIg4cm1doubcI
+Ekgb4kht3XuPmw9XEmaQQ/6ixBvwU+r9jSnNUUgF4Kc/4ibYEZLwy+l3UwiRaPQS
+jcc2XwYmMEwpALSfOpiUZRsszRnlVNFGwFeSVwVKI8Fgr4Zg0luYlVMkQIvdERqT
+0LWdiKY4oDUHjEuDQFMKspGHlYUZBnwxiQwFgcGpPRfavUrh9jYqJo/SvYmtMBsE
+luUqNfEQSRfMUvEIWFFNnR2sYoQGk5g3ITd/SQIDAQABAoIBAC5GidORvJ2xlBpf
+TnBHa7F3x5yIqgSY/3gVzRDNZ/h5MOhwP2FEQCi0RkPJi0qQRzY9VBPb9xTGe5O
+mAbHIhJPXSEMq1U0QDblMYVrIKfnCFJfj0H9jXMSPzqs9oKX3FClXqYR3PT8Nwzf
+cG3qDOyGqDc0Wnp3LnOD91g2R0ZFyp5JBD0LnGNh4k8O3j0WxQc7lDiS0k+MVSx
+03K14bK4BaEcCNDQOJRfjHoVMAsN2HPXkeEp0dIZsX6L3e7J3W1OdpYt7VYkGXQB
+prxnEfWUMnBG1OZYQ0MIPq3gxH6CJ2Mfd3PYe5bGNq0m3AEBJDvEJJqnZpFhZ0S
+rV4l0mECgYEA8G5kV1TDJnnFWqMT1m0JQ3qYUEv5nEXGsTkVLlTxEN5UGXsYEl+v
+BktO1J5jxJhEkX6fQFCrafde2ZgpPnNhb0VNjYcwx2GmjTExMYRBJFHoN2Ibbpfs
+VUVHMPqWDEXehgTxdGfzJLIp1C2FhO0hNp28VySqFhsInHzoPXf+oaECgYEAxWXj
+L9FjM1ECVgNPJ3mE1MNFMHa0kZRGf8R/F+BzxnpayV/VjPKIn8ab6eE+4oZfJESt
+EHm8bl0nEJ93ZsBz8lvihGVPqJCmhYjLWBB5PmHGqVoShoCzfQ0XG2tKr5gJX3EM
+4hNbNFE0bKKIuSg/GRDUVQT/oa/b7FvPeYr1rpkCgYEAr0BXjmYMAT1/+PE7dN6X
+npzXGDG1EYfag8sOfLxpfjGdkRjIOPXsUvJC/r7hmK8I3wV0akaVm8OGb1JVf2bG
+GVD5wRpgVP4BO4TLtfMSBTnl2FOpVq0W1bGJTsNqMIPqf0bN5J2jvEFLjG7TE+R4
+P/3d4F2LlJibaVDMLCNLMoECgYBpROmN1v8LtPBqdgeeuzcIYnct0bGD9Ul3tCqz
+P1NqoGmuZXrpBf7vOATq6R+OFkvWnl9YcfPssfYCEzcPop2V9SAZJ6J0CVn8DP0P
+aFh+l3sRkU+8JQ6m3gbrLl6J57JIYrtBHj3fVKnzYRYlwOBl5t9nFHAlV0f2eFSa
+TZBR+QKBgQCAGY9MEqBziUlpt/pXfsNSkdJv1oZBDURhna0S8lRkdQEkx5Gh9Qlr
+A72wchKEMnD3LFxvlPRtPxMr1rK4j7mKN5F2z4f3cLJEfS2tVjFLwcR1nMVPOA5J
+LbfRfrIW+MQBiAMDnFz2JsJqZPVEjJDnVOxaGLkBZNfMlXsh7dYR5A==
+-----END RSA PRIVATE KEY-----`;
 
 /**
- * Returns the PEM certificate string for QZ Tray's setCertificatePromise.
+ * Returns the static PEM certificate for QZ Tray's setCertificatePromise.
  */
 export function getQZCertificate(): string {
-  return getOrCreateCert().certPem;
+  return CERT_PEM;
 }
 
 /**
- * Signs data with the private key using SHA512 for QZ Tray's setSignaturePromise.
+ * Signs data with the static private key using SHA512 for QZ Tray's setSignaturePromise.
  */
 export function signQZData(toSign: string): string {
-  const { privateKeyPem } = getOrCreateCert();
-  const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);
+  const privateKey = forge.pki.privateKeyFromPem(PRIVATE_KEY_PEM);
   const md = forge.md.sha512.create();
   md.update(toSign, 'utf8');
   const signature = privateKey.sign(md);
