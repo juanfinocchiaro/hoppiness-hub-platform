@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 
 import clasicasImg from '@/assets/menu/clasicas.webp';
-import originalesImg from '@/assets/menu/originales.jpg';
+import originalesImg from '@/assets/menu/originales.webp';
 import masSaborImg from '@/assets/menu/mas-sabor.webp';
 import veggiesImg from '@/assets/menu/veggies.webp';
 import ultrasmashImg from '@/assets/menu/ultrasmash.webp';
