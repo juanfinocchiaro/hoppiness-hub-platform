@@ -32,12 +32,12 @@ export default function Index() {
       <section className="relative h-[70vh] min-h-[500px] flex items-center">
         <div 
           className="absolute inset-0 bg-cover"
-          style={{ backgroundImage: `url(${fotoHero})`, backgroundPosition: '70% center' }}
+          style={{ backgroundImage: `url(${fotoHero})`, backgroundPosition: '85% center' }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/65 to-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/70 to-transparent" />
         
         <div className="relative container mx-auto px-4">
-          <div className="max-w-2xl">
+          <div className="max-w-xl">
             {/* Logo */}
             <div className="mb-8">
               <img src={logoHoppiness} alt="Hoppiness Club" className="w-28 h-28 object-contain rounded-full shadow-2xl" />
