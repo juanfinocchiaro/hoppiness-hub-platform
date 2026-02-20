@@ -285,7 +285,7 @@ export default function POSPage() {
       if (printConfig && menuCategorias && printing.bridgeStatus === 'connected') {
         const esSalon = orderConfig.tipoServicio === 'comer_aca';
         const printableOrder = {
-          numero_pedido: 0,
+          numero_pedido: pedido.numero_pedido ?? 0,
           tipo_servicio: orderConfig.tipoServicio ?? null,
           canal_venta: orderConfig.canalVenta ?? null,
           numero_llamador: orderConfig.numeroLlamador ? parseInt(orderConfig.numeroLlamador, 10) : null,

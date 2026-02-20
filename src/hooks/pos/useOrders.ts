@@ -108,7 +108,7 @@ export function useCreatePedido(branchId: string) {
       const { data: pedido, error: errPedido } = await supabase
         .from('pedidos')
         .insert(insertPayload as any)
-        .select('id')
+        .select('id, numero_pedido')
         .single();
 
       if (errPedido) throw errPedido;
