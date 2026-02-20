@@ -42,6 +42,19 @@ interface PedidoPago {
   monto: number;
 }
 
+export interface PosOrderFactura {
+  id: string;
+  tipo_comprobante: string;
+  punto_venta: number;
+  numero_comprobante: number;
+  cae: string | null;
+  cae_vencimiento: string | null;
+  neto: number;
+  iva: number;
+  total: number;
+  fecha_emision: string;
+}
+
 export interface PosOrder {
   id: string;
   numero_pedido: number;
@@ -56,6 +69,7 @@ export interface PosOrder {
   total: number;
   pedido_items: PedidoItem[];
   pedido_pagos: PedidoPago[];
+  facturas_emitidas: PosOrderFactura[];
 }
 
 export function usePosOrderHistory(
@@ -71,7 +85,7 @@ export function usePosOrderHistory(
       if (!branchId) return [];
       const { data, error } = await supabase
         .from('pedidos')
-        .select('id, numero_pedido, created_at, canal_venta, tipo_servicio, canal_app, cliente_nombre, estado, subtotal, descuento, total, pedido_items(id, nombre, cantidad, precio_unitario, subtotal, notas), pedido_pagos(id, metodo, monto)')
+        .select('id, numero_pedido, created_at, canal_venta, tipo_servicio, canal_app, cliente_nombre, estado, subtotal, descuento, total, pedido_items(id, nombre, cantidad, precio_unitario, subtotal, notas), pedido_pagos(id, metodo, monto), facturas_emitidas(id, tipo_comprobante, punto_venta, numero_comprobante, cae, cae_vencimiento, neto, iva, total, fecha_emision)')
         .eq('branch_id', branchId)
         .gte('created_at', fromDate)
         .order('created_at', { ascending: false });

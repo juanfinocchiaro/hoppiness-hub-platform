@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ChevronDown, ChevronRight, Pencil } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, Printer, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -19,6 +19,8 @@ interface Props {
   branchId?: string;
   /** Whether there's an open cash register shift (enables edit) */
   hasOpenShift?: boolean;
+  /** Callback to reprint fiscal ticket */
+  onReprintInvoice?: (order: PosOrder) => void;
 }
 
 const METODO_LABELS: Record<string, string> = {
@@ -57,7 +59,7 @@ function paymentSummary(pagos: PosOrder['pedido_pagos']) {
   return 'Dividido';
 }
 
-export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift }: Props) {
+export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, onReprintInvoice }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingOrder, setEditingOrder] = useState<PosOrder | null>(null);
   const isMobile = useIsMobile();
@@ -105,6 +107,7 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift }:
           <TableBody>
             {orders.map(order => {
               const isExpanded = expandedId === order.id;
+              const hasInvoice = order.facturas_emitidas?.length > 0;
               return (
                 <>
                   <TableRow
@@ -115,7 +118,12 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift }:
                     <TableCell className="px-2">
                       {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                     </TableCell>
-                    <TableCell className="font-medium tabular-nums">{order.numero_pedido}</TableCell>
+                    <TableCell className="font-medium tabular-nums">
+                      <span className="flex items-center gap-1">
+                        {order.numero_pedido}
+                        {hasInvoice && <FileText className="w-3.5 h-3.5 text-primary" />}
+                      </span>
+                    </TableCell>
                     <TableCell className="text-sm">
                       {order.created_at
                         ? format(new Date(order.created_at), isMobile ? 'd/M HH:mm' : 'EEE d MMM HH:mm', { locale: es })
@@ -140,6 +148,7 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift }:
                           order={order}
                           canEdit={!!hasOpenShift && !!branchId}
                           onEdit={() => setEditingOrder(order)}
+                          onReprintInvoice={onReprintInvoice}
                         />
                       </TableCell>
                     </TableRow>
@@ -166,7 +175,16 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift }:
   );
 }
 
-function OrderDetail({ order, canEdit, onEdit }: { order: PosOrder; canEdit?: boolean; onEdit?: () => void }) {
+function OrderDetail({ order, canEdit, onEdit, onReprintInvoice }: {
+  order: PosOrder;
+  canEdit?: boolean;
+  onEdit?: () => void;
+  onReprintInvoice?: (order: PosOrder) => void;
+}) {
+  const factura = order.facturas_emitidas?.[0];
+  const pvStr = factura ? String(factura.punto_venta).padStart(5, '0') : '';
+  const numStr = factura ? String(factura.numero_comprobante).padStart(8, '0') : '';
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
       {/* Items */}
@@ -192,7 +210,7 @@ function OrderDetail({ order, canEdit, onEdit }: { order: PosOrder; canEdit?: bo
         </div>
       </div>
 
-      {/* Payments */}
+      {/* Payments + Invoice */}
       <div>
         <div className="flex items-center justify-between mb-1">
           <p className="font-medium">Pagos</p>
@@ -211,6 +229,33 @@ function OrderDetail({ order, canEdit, onEdit }: { order: PosOrder; canEdit?: bo
             </li>
           ))}
         </ul>
+
+        {/* Invoice info */}
+        {factura && (
+          <div className="mt-3 pt-2 border-t space-y-1">
+            <div className="flex items-center justify-between">
+              <p className="font-medium flex items-center gap-1">
+                <FileText className="h-3.5 w-3.5 text-primary" />
+                Factura {factura.tipo_comprobante}
+              </p>
+              {onReprintInvoice && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={(e) => { e.stopPropagation(); onReprintInvoice(order); }}
+                >
+                  <Printer className="h-3 w-3 mr-1" />
+                  Reimprimir
+                </Button>
+              )}
+            </div>
+            <p className="text-muted-foreground">N° {pvStr}-{numStr}</p>
+            {factura.cae && <p className="text-muted-foreground text-xs">CAE: {factura.cae}</p>}
+            <p className="font-medium">{fmt(factura.total)}</p>
+          </div>
+        )}
+
         {isMobileInfo(order) && (
           <div className="mt-2 text-muted-foreground space-y-0.5">
             {order.canal_venta && <p>Canal: {CANAL_LABELS[order.canal_venta] || order.canal_venta}</p>}

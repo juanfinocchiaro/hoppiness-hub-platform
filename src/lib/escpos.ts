@@ -433,6 +433,122 @@ export function generateValeBebida(
   return b.toBase64();
 }
 
+// ─── Fiscal Ticket Types ─────────────────────────────────────
+export interface FiscalTicketData {
+  razon_social: string;
+  cuit: string;
+  direccion_fiscal: string;
+  punto_venta: number;
+  tipo_comprobante: string; // 'A' | 'B' | 'C'
+  numero_comprobante: number;
+  cae: string;
+  cae_vencimiento: string;
+  fecha_emision: string;
+  neto: number;
+  iva: number;
+  total: number;
+  // Order context
+  numero_pedido?: number;
+  items?: { descripcion: string; cantidad: number; precio_unitario: number }[];
+  branchName?: string;
+}
+
+/**
+ * Ticket fiscal / comprobante electrónico (no fiscal en sentido controlador,
+ * pero con todos los datos legales: CUIT, CAE, tipo comprobante, etc.)
+ */
+export function generateTicketFiscal(
+  data: FiscalTicketData,
+  paperWidth: number = 80
+): string {
+  const cols = paperWidth === 80 ? 42 : 32;
+  const b = new EscPosBuilder();
+
+  const pvStr = String(data.punto_venta).padStart(5, '0');
+  const numStr = String(data.numero_comprobante).padStart(8, '0');
+  const comprobante = `${pvStr}-${numStr}`;
+
+  // Format CAE vencimiento
+  const fmtDate = (d: string) => {
+    if (!d) return '';
+    // Handle YYYYMMDD or YYYY-MM-DD
+    const clean = d.replace(/-/g, '');
+    if (clean.length === 8) return `${clean.slice(6)}/${clean.slice(4,6)}/${clean.slice(0,4)}`;
+    return d;
+  };
+
+  b.init()
+    .alignCenter()
+    .doubleSize()
+    .boldOn()
+    .line('HOPPINESS')
+    .normalSize()
+    .boldOff();
+
+  if (data.branchName) {
+    b.line(data.branchName);
+  }
+
+  b.separator('-', cols)
+    .boldOn()
+    .line(`FACTURA ${data.tipo_comprobante}`)
+    .boldOff()
+    .line(`N° ${comprobante}`)
+    .separator('-', cols)
+    .alignLeft()
+    .line(`CUIT: ${data.cuit}`)
+    .line(data.razon_social)
+    .line(data.direccion_fiscal.length > cols
+      ? data.direccion_fiscal.substring(0, cols)
+      : data.direccion_fiscal);
+
+  if (data.direccion_fiscal.length > cols) {
+    b.line(data.direccion_fiscal.substring(cols));
+  }
+
+  b.line(`Fecha: ${fmtDate(data.fecha_emision)}`)
+    .separator('=', cols);
+
+  // Items
+  if (data.items?.length) {
+    for (const item of data.items) {
+      const price = `$${item.precio_unitario.toLocaleString()}`;
+      b.columns(
+        `${item.cantidad}x ${item.descripcion.substring(0, cols - price.length - 5)}`,
+        price,
+        cols
+      );
+    }
+    b.separator('-', cols);
+  }
+
+  // Totals
+  if (data.tipo_comprobante === 'A' && data.iva > 0) {
+    b.columns('Neto', `$${data.neto.toLocaleString()}`, cols)
+      .columns('IVA 21%', `$${data.iva.toLocaleString()}`, cols);
+  }
+
+  b.boldOn()
+    .doubleHeight()
+    .columns('TOTAL', `$${data.total.toLocaleString()}`, cols)
+    .normalSize()
+    .boldOff()
+    .separator('=', cols);
+
+  // CAE
+  b.alignCenter()
+    .boldOn()
+    .line(`CAE: ${data.cae}`)
+    .boldOff()
+    .line(`Vto CAE: ${fmtDate(data.cae_vencimiento)}`)
+    .separator('-', cols)
+    .line('Comprobante no valido como factura')
+    .feed(2)
+    .cut();
+
+  return b.toBase64();
+}
+
 /**
  * Test page for printer verification
  */
