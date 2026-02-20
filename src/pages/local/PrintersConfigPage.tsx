@@ -524,6 +524,36 @@ function ReadyScreen({
               <p className="font-medium text-foreground">Dice "No responde" pero la impresora está encendida</p>
               <p>Verificá que estás en la misma red WiFi/LAN que la impresora. Si la configuraste desde otra ubicación, actualizá la IP.</p>
             </div>
+
+            {/* Installer update section */}
+            <div className="border-t border-border pt-3 mt-3 space-y-2">
+              <p className="font-medium text-foreground">Actualizar sistema de impresión</p>
+              <p>
+                Si las impresoras piden permiso cada vez que abrís la página, descargá y ejecutá el instalador actualizado. Se puede ejecutar aunque ya esté instalado.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/instalar-impresoras.bat');
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'instalar-impresoras.bat';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                  } catch {
+                    window.open('/instalar-impresoras.bat', '_blank');
+                  }
+                }}
+              >
+                <Download className="w-4 h-4 mr-1" /> Descargar instalador
+              </Button>
+            </div>
           </div>
         </CollapsibleContent>
       </Collapsible>
