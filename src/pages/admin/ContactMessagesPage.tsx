@@ -40,11 +40,12 @@ const typeConfig: Record<string, { icon: typeof MessageSquare; label: string; co
   otro: { icon: MessageSquare, label: 'Otro', color: 'bg-gray-500' },
 };
 
-function MessageCard({ message, onMarkRead, onArchive, branches }: { 
+function MessageCard({ message, onMarkRead, onArchive, branches, resolveTemplate }: { 
   message: ContactMessage; 
   onMarkRead: (id: string) => void;
   onArchive: (id: string) => void;
   branches: Record<string, string>;
+  resolveTemplate: (subjectType: string, contact: { name: string; email: string; phone: string }) => string;
 }) {
   const isUnread = !message.read_at;
   const config = typeConfig[message.subject] || typeConfig.otro;
@@ -53,7 +54,11 @@ function MessageCard({ message, onMarkRead, onArchive, branches }: {
   const handleWhatsApp = () => {
     const cleanPhone = message.phone.replace(/\D/g, '');
     const fullPhone = cleanPhone.startsWith('54') ? cleanPhone : `54${cleanPhone}`;
-    window.open(`whatsapp://send?phone=${fullPhone}`, '_self');
+    const text = resolveTemplate(message.subject, { name: message.name, email: message.email, phone: message.phone });
+    const url = text
+      ? `whatsapp://send?phone=${fullPhone}&text=${encodeURIComponent(text)}`
+      : `whatsapp://send?phone=${fullPhone}`;
+    window.open(url, '_self');
   };
 
   const handleMarkRead = () => {
@@ -221,6 +226,8 @@ function MessageCard({ message, onMarkRead, onArchive, branches }: {
 }
 
 import { RequireBrandPermission } from '@/components/guards';
+import { useWhatsAppTemplates } from '@/hooks/useWhatsAppTemplates';
+import { WhatsAppTemplatesDialog } from '@/components/admin/WhatsAppTemplatesDialog';
 
 function ContactMessagesPageContent() {
   const [typeFilter, setTypeFilter] = useState<MessageType>('all');
@@ -232,6 +239,7 @@ function ContactMessagesPageContent() {
   });
   
   const { data: counts } = useMessageCounts();
+  const { resolveTemplate } = useWhatsAppTemplates();
 
   // Fetch branches for resolving employment_branch_id
   const { data: branchesMap } = useQuery({
@@ -284,10 +292,13 @@ function ContactMessagesPageContent() {
           <MessageSquare className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold">Mensajes de contacto</h1>
         </div>
-        <Button variant="outline" onClick={handleExportCSV} className="flex items-center gap-2">
-          <Download className="h-4 w-4" />
-          Exportar CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          <WhatsAppTemplatesDialog />
+          <Button variant="outline" onClick={handleExportCSV} className="flex items-center gap-2">
+            <Download className="h-4 w-4" />
+            Exportar CSV
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -345,6 +356,7 @@ function ContactMessagesPageContent() {
               onMarkRead={markAsRead}
               onArchive={archive}
               branches={branchesMap ?? {}}
+              resolveTemplate={resolveTemplate}
             />
           ))
         )}
