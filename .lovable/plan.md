@@ -1,28 +1,41 @@
 
 
-## Certificado QZ Tray estatico embebido en codigo
+## Fix: Clave privada RSA invalida - "Too few bytes to parse DER"
 
-### Que se hace
+### Problema
 
-Reemplazar `src/lib/qz-certificate.ts` completamente. En vez de generar el certificado dinamicamente y guardarlo en localStorage, se embeben como constantes string un certificado X.509 y una clave privada RSA generados una unica vez.
+El archivo `src/lib/qz-certificate.ts` contiene PEMs fabricados manualmente que no son datos RSA validos. Cuando node-forge intenta parsear la clave privada, falla con "Too few bytes to parse DER" porque los bytes base64 no forman una estructura ASN.1/DER real.
 
-### Cambios
+### Solucion en 2 pasos
 
-**Archivo: `src/lib/qz-certificate.ts`** (reescritura completa)
+**Paso 1 (inmediato):** Cambiar `qz-certificate.ts` para generar un par certificado + clave REAL usando node-forge al cargar el modulo. Se cachea en variables del modulo (no localStorage). Esto corrige el error inmediatamente.
 
-- Eliminar: imports de forge para generacion, `STORAGE_KEY`, `StoredCert`, `generateSelfSignedCert()`, `getOrCreateCert()`, toda referencia a localStorage
-- Agregar: constante `CERT_PEM` con certificado X.509 PEM hardcodeado
-- Agregar: constante `PRIVATE_KEY_PEM` con clave privada RSA PEM hardcodeada
-- Simplificar `getQZCertificate()`: retorna `CERT_PEM`
-- Simplificar `signQZData()`: usa `PRIVATE_KEY_PEM` directamente con forge para firmar
+Ademas, se loguea los PEMs generados a la consola del navegador con un mensaje claro para que puedas copiarlos.
 
-El certificado y la clave se generan una sola vez durante la implementacion usando node-forge y se pegan como strings literales.
+**Paso 2 (manual, despues):** Copiar los PEMs de la consola y pegarlos como constantes estaticas en el archivo, reemplazando la logica de generacion. Asi quedan fijos para siempre.
 
-**Sin cambios en `src/lib/qz-print.ts`** - ya importa las funciones correctamente.
+### Cambios tecnicos
+
+**Archivo: `src/lib/qz-certificate.ts`** (reescritura)
+
+- Eliminar las constantes `CERT_PEM` y `PRIVATE_KEY_PEM` con datos falsos
+- Agregar funcion `generateRealKeyPair()` que usa `forge.pki.rsa.generateKeyPair(2048)` y `forge.pki.createCertificate()` para generar un par real
+- Cachear en variables de modulo `_certPem` y `_keyPem` (se genera una sola vez por sesion de pagina)
+- Loguear a consola: `console.log("=== COPIAR ESTOS PEMs PARA HARDCODEAR ===", certPem, keyPem)`
+- `getQZCertificate()` retorna el certificado generado
+- `signQZData()` firma con la clave privada generada
+
+**Sin cambios en otros archivos** - `qz-print.ts` ya importa las funciones correctamente.
+
+### Limitacion temporal
+
+Hasta que copies los PEMs de la consola y los hardcodees, el certificado cambia cada vez que recargas la pagina. Esto significa que QZ Tray pedira "Allow" en cada recarga (aunque el checkbox "Remember" estara disponible, no servira porque el cert cambia).
+
+Una vez que pegues los PEMs reales como constantes, todo funciona como se planeo originalmente: un solo "Allow" por PC para siempre.
 
 ### Resultado
 
-- Certificado identico en todas las PCs, navegadores y sesiones
-- QZ Tray pide "Allow" una sola vez por PC (con "Remember this decision" habilitado)
-- Codigo pasa de ~80 lineas a ~40
+- El error "Too few bytes to parse DER" se elimina inmediatamente
+- La impresion por IP vuelve a funcionar
+- Los PEMs reales quedan disponibles en la consola para hardcodear
 
