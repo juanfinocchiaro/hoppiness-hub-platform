@@ -189,17 +189,25 @@ function printMods(b: EscPosBuilder, item: PrintableItem): void {
 }
 
 /**
- * Header de marca Hoppiness Club: logo + nombre del local espaciado.
+ * Header de marca Hoppiness Club: logo bitmap + texto fallback.
+ * 
+ * El bitmap se envía como marcador __BITMAP_B64:...:END__ que el Print Bridge v2+
+ * intercepta y convierte a raster ESC/POS. Si el bridge es v1 (sin soporte bitmap),
+ * el marcador se envía como ASCII basura pero el texto "HOPPINESS CLUB" que sigue
+ * actúa como fallback visible.
+ * 
+ * Para bridges v2+: se imprime el logo bitmap y el texto styled.
+ * Para bridges v1: el marcador se ignora/descarta, se imprime solo el texto.
  */
-function printBrandHeader(b: EscPosBuilder, branchName: string, printLogo: boolean = true): void {
+function printBrandHeader(b: EscPosBuilder, branchName: string): void {
   b.alignCenter();
   
-  if (printLogo) {
-    b.printBitmap(LOGO_THERMAL_B64);
-    b.feed(1);
-  } else {
-    b.doubleSize().boldOn().line('HOPPINESS CLUB').normalSize().boldOff();
-  }
+  // Bitmap marker — Bridge v2+ lo convierte a raster, v1 lo descarta
+  b.printBitmap(LOGO_THERMAL_B64);
+  b.feed(1);
+  
+  // Texto grande como identificación (siempre se imprime)
+  b.doubleSize().boldOn().line('HOPPINESS CLUB').normalSize().boldOff();
   
   const spaced = branchName.toUpperCase().split('').join(' ');
   b.line(spaced);
