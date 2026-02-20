@@ -12,7 +12,7 @@ echo.
 set "INSTALLER=%TEMP%\qz-tray-setup.exe"
 
 echo Descargando instalador...
-powershell -Command "Invoke-WebRequest -Uri 'https://github.com/qzind/tray/releases/download/v2.2.4/qz-tray-2.2.4.exe' -OutFile '%INSTALLER%'"
+powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://github.com/qzind/tray/releases/download/v2.2.5/qz-tray-2.2.5+1.exe' -OutFile '%INSTALLER%' -UseBasicParsing"
 
 if not exist "%INSTALLER%" (
     echo.
