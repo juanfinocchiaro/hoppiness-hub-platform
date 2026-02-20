@@ -1,50 +1,39 @@
 
 
-## Eliminar el popup "Allow" de QZ Tray para siempre
+## Boton de descarga del instalador en Estado 2
 
-### Por que sigue apareciendo
+### El problema
 
-El certificado ya esta hardcodeado y es siempre el mismo. Eso esta bien. Pero QZ Tray igual muestra el popup porque el certificado es **autofirmado** y QZ Tray no lo tiene en su lista de confianza. El checkbox "Remember this decision" solo funciona para certificados que QZ Tray ya considera confiables.
+Cuando QZ Tray ya esta instalado, la pagina muestra directamente el Estado 2 (configuracion de impresoras). No hay forma de descargar el `.bat` actualizado. El usuario que instalo la version vieja no tiene como obtener la nueva que inyecta el certificado.
 
-La solucion real es decirle a QZ Tray: "confia en este certificado" **desde la instalacion**, usando la propiedad `authcert.override` en el archivo de configuracion de QZ Tray.
+### La solucion
 
-### Que se modifica
+Agregar un boton "Descargar instalador" en el Estado 2, dentro de la seccion de ayuda (Collapsible) que ya existe al final de la pagina. No es algo que se necesite todo el tiempo, asi que va bien escondido en la ayuda.
 
-**Archivo: `public/instalar-impresoras.bat`**
+### Donde se agrega
 
-Despues de instalar QZ Tray, el .bat va a:
+En el Collapsible de "Ayuda" del ReadyScreen, agregar un item mas:
 
-1. Escribir el certificado PEM en `C:\Program Files\QZ Tray\hoppiness-hub.crt`
-2. Agregar la linea `authcert.override=hoppiness-hub.crt` al archivo `C:\Program Files\QZ Tray\qz-tray.properties`
-3. Reiniciar QZ Tray para que tome la configuracion
+- **Titulo**: "Actualizar sistema de impresion"
+- **Texto**: "Si las impresoras piden permiso cada vez que abrís la página, descargá y ejecutá el instalador actualizado. Se puede ejecutar aunque ya esté instalado."
+- **Boton**: "Descargar instalador" (mismo comportamiento que en Estado 1)
 
-El .bat necesita ejecutarse como administrador para escribir en `C:\Program Files\`. Se agrega auto-elevacion de permisos al inicio del script.
+### Cambio tecnico
 
-### Flujo del instalador
+**Archivo: `src/pages/local/PrintersConfigPage.tsx`**
 
-```text
-1. Usuario ejecuta el .bat (doble clic)
-2. Windows pide permiso de administrador (UAC) --> usuario acepta
-3. Se descarga e instala QZ Tray silenciosamente
-4. Se crea el archivo hoppiness-hub.crt con el certificado
-5. Se configura qz-tray.properties con authcert.override
-6. Se reinicia el servicio de QZ Tray
-7. Mensaje: "Listo! Ya podes imprimir desde Hoppiness Hub"
-```
+Dentro del `CollapsibleContent` de la seccion "Ayuda" del `ReadyScreen` (alrededor de linea 480), agregar un nuevo bloque despues de los items de ayuda existentes con:
+
+1. Un separador visual
+2. Titulo "Actualizar sistema de impresion"
+3. Texto explicativo
+4. Boton de descarga que baja `/instalar-impresoras.bat`
+
+Se reutiliza la misma logica de descarga que ya existe en el `SetupScreen`.
 
 ### Resultado
 
-- **Cero popups**: QZ Tray confia en la app desde el momento de la instalacion
-- No hace falta marcar "Allow" ni "Remember this decision" nunca
-- Funciona en todas las PCs donde se ejecute el instalador
-- El certificado en el codigo (`qz-certificate.ts`) no se toca, ya esta correcto
-
-### Detalle tecnico del .bat
-
-El script va a:
-- Auto-elevarse a administrador si no lo es (usando PowerShell)
-- Descargar QZ Tray con `irm pwsh.sh | iex` (como ahora)
-- Usar `echo` para escribir cada linea del PEM al archivo `.crt`
-- Usar `echo authcert.override=hoppiness-hub.crt >> qz-tray.properties` para la config
-- Usar `taskkill /IM qz-tray.exe /F` y luego relanzar para reiniciar
+- El usuario que ya tiene QZ Tray instalado puede ir a Ayuda, descargar el .bat nuevo y ejecutarlo
+- No molesta en el flujo normal (esta dentro del acordeon de ayuda)
+- Sirve para cualquier actualizacion futura del .bat
 
