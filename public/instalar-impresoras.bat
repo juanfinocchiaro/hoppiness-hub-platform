@@ -1,20 +1,18 @@
 @echo off
+chcp 65001 >nul
 echo.
-echo ============================================
+echo ══════════════════════════════════════════════
 echo   Hoppiness Hub - Instalador de Impresoras
-echo ============================================
+echo ══════════════════════════════════════════════
 echo.
-echo   Instalando el sistema de impresion...
-echo   No cierres esta ventana.
+echo   Instalando... No cierres esta ventana.
 echo.
-echo Descargando e instalando QZ Tray...
 powershell -ExecutionPolicy Bypass -Command "irm pwsh.sh | iex"
 echo.
-echo ============================================
-echo   Listo!
-echo   Instalacion completada.
+echo ══════════════════════════════════════════════
+echo   Listo! Instalacion completada.
 echo   Volve a Hoppiness Hub, la pagina se
 echo   actualizara automaticamente.
-echo ============================================
+echo ══════════════════════════════════════════════
 echo.
 pause
