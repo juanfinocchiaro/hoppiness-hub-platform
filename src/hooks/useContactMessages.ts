@@ -28,6 +28,9 @@ export interface ContactMessage {
   order_number: string | null;
   order_date: string | null;
   order_issue: string | null;
+  // Additional fields
+  investment_range: string | null;
+  employment_branch_id: string | null;
 }
 
 interface UseContactMessagesOptions {
