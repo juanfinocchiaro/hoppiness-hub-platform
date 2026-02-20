@@ -4063,6 +4063,7 @@ export type Database = {
           id: string
           nombre: string
           orden: number | null
+          tipo_impresion: string
           updated_at: string | null
           visible_en_carta: boolean
         }
@@ -4073,6 +4074,7 @@ export type Database = {
           id?: string
           nombre: string
           orden?: number | null
+          tipo_impresion?: string
           updated_at?: string | null
           visible_en_carta?: boolean
         }
@@ -4083,6 +4085,7 @@ export type Database = {
           id?: string
           nombre?: string
           orden?: number | null
+          tipo_impresion?: string
           updated_at?: string | null
           visible_en_carta?: boolean
         }
@@ -4763,6 +4766,7 @@ export type Database = {
       pedido_items: {
         Row: {
           cantidad: number
+          categoria_carta_id: string | null
           created_at: string | null
           estacion: string
           estado: string | null
@@ -4777,6 +4781,7 @@ export type Database = {
         }
         Insert: {
           cantidad?: number
+          categoria_carta_id?: string | null
           created_at?: string | null
           estacion: string
           estado?: string | null
@@ -4791,6 +4796,7 @@ export type Database = {
         }
         Update: {
           cantidad?: number
+          categoria_carta_id?: string | null
           created_at?: string | null
           estacion?: string
           estado?: string | null
@@ -4804,6 +4810,13 @@ export type Database = {
           subtotal?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "pedido_items_categoria_carta_id_fkey"
+            columns: ["categoria_carta_id"]
+            isOneToOne: false
+            referencedRelation: "menu_categorias"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pedido_items_item_carta_id_fkey"
             columns: ["item_carta_id"]
@@ -5418,40 +5431,52 @@ export type Database = {
           backup_enabled: boolean
           backup_printer_id: string | null
           branch_id: string
+          comanda_printer_id: string | null
           delivery_enabled: boolean
           delivery_printer_id: string | null
           id: string
+          no_salon_todo_en_comanda: boolean
           reprint_requires_pin: boolean
+          salon_vales_enabled: boolean
           ticket_enabled: boolean
           ticket_printer_id: string | null
           ticket_trigger: string
           updated_at: string
+          vale_printer_id: string | null
         }
         Insert: {
           backup_enabled?: boolean
           backup_printer_id?: string | null
           branch_id: string
+          comanda_printer_id?: string | null
           delivery_enabled?: boolean
           delivery_printer_id?: string | null
           id?: string
+          no_salon_todo_en_comanda?: boolean
           reprint_requires_pin?: boolean
+          salon_vales_enabled?: boolean
           ticket_enabled?: boolean
           ticket_printer_id?: string | null
           ticket_trigger?: string
           updated_at?: string
+          vale_printer_id?: string | null
         }
         Update: {
           backup_enabled?: boolean
           backup_printer_id?: string | null
           branch_id?: string
+          comanda_printer_id?: string | null
           delivery_enabled?: boolean
           delivery_printer_id?: string | null
           id?: string
+          no_salon_todo_en_comanda?: boolean
           reprint_requires_pin?: boolean
+          salon_vales_enabled?: boolean
           ticket_enabled?: boolean
           ticket_printer_id?: string | null
           ticket_trigger?: string
           updated_at?: string
+          vale_printer_id?: string | null
         }
         Relationships: [
           {
@@ -5476,6 +5501,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "print_config_comanda_printer_id_fkey"
+            columns: ["comanda_printer_id"]
+            isOneToOne: false
+            referencedRelation: "branch_printers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "print_config_delivery_printer_id_fkey"
             columns: ["delivery_printer_id"]
             isOneToOne: false
@@ -5485,6 +5517,13 @@ export type Database = {
           {
             foreignKeyName: "print_config_ticket_printer_id_fkey"
             columns: ["ticket_printer_id"]
+            isOneToOne: false
+            referencedRelation: "branch_printers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_config_vale_printer_id_fkey"
+            columns: ["vale_printer_id"]
             isOneToOne: false
             referencedRelation: "branch_printers"
             referencedColumns: ["id"]

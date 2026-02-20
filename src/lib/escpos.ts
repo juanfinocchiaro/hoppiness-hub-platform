@@ -394,6 +394,41 @@ export function generateComandaDelivery(
 }
 
 /**
+ * Vale individual de bebida/producto (1 por unidad)
+ */
+export function generateValeBebida(
+  order: { numero_pedido: number; created_at: string },
+  itemNombre: string,
+  paperWidth: number = 80
+): string {
+  const cols = paperWidth === 80 ? 42 : 32;
+  const b = new EscPosBuilder();
+
+  b.init()
+    .alignCenter()
+    .separator('=', cols)
+    .boldOn()
+    .line('VALE')
+    .boldOff()
+    .separator('=', cols)
+    .feed(1)
+    .doubleSize()
+    .boldOn()
+    .line(itemNombre)
+    .normalSize()
+    .boldOff()
+    .feed(1)
+    .separator('-', cols)
+    .line(`Pedido #${order.numero_pedido}`)
+    .line(formatTime(order.created_at))
+    .separator('=', cols)
+    .feed(1)
+    .cut();
+
+  return b.toBase64();
+}
+
+/**
  * Test page for printer verification
  */
 export function generateTestPage(printerName: string, paperWidth: number = 80): string {

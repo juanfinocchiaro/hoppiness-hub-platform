@@ -3,11 +3,12 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, GripVertical, Check, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, GripVertical, Check, X, ChefHat, Ticket, Ban } from 'lucide-react';
 import { useMenuCategorias, useMenuCategoriaMutations } from '@/hooks/useMenu';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/states';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   DndContext,
   closestCenter,
@@ -27,17 +28,39 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 
+type TipoImpresion = 'comanda' | 'vale' | 'no_imprimir';
+
+const TIPO_IMPRESION_OPTIONS: { value: TipoImpresion; label: string; icon: typeof ChefHat; color: string }[] = [
+  { value: 'comanda', label: 'Comanda', icon: ChefHat, color: 'text-orange-600 bg-orange-50' },
+  { value: 'vale', label: 'Vale', icon: Ticket, color: 'text-blue-600 bg-blue-50' },
+  { value: 'no_imprimir', label: 'No imprimir', icon: Ban, color: 'text-muted-foreground bg-muted' },
+];
+
+function TipoImpresionBadge({ tipo }: { tipo: TipoImpresion }) {
+  const opt = TIPO_IMPRESION_OPTIONS.find(o => o.value === tipo) || TIPO_IMPRESION_OPTIONS[0];
+  const Icon = opt.icon;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${opt.color}`}>
+      <Icon className="w-3 h-3" />
+      {opt.label}
+    </span>
+  );
+}
+
 interface SortableCategoryProps {
   cat: any;
   editingId: string | null;
   editingNombre: string;
+  editingTipoImpresion: TipoImpresion;
   setEditingNombre: (v: string) => void;
+  setEditingTipoImpresion: (v: TipoImpresion) => void;
   setEditingId: (v: string | null) => void;
   handleUpdate: () => void;
+  handleTipoChange: (id: string, tipo: TipoImpresion) => void;
   setDeleting: (v: any) => void;
 }
 
-function SortableCategory({ cat, editingId, editingNombre, setEditingNombre, setEditingId, handleUpdate, setDeleting }: SortableCategoryProps) {
+function SortableCategory({ cat, editingId, editingNombre, editingTipoImpresion, setEditingNombre, setEditingTipoImpresion, setEditingId, handleUpdate, handleTipoChange, setDeleting }: SortableCategoryProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id });
 
   const style = {
@@ -66,6 +89,24 @@ function SortableCategory({ cat, editingId, editingNombre, setEditingNombre, set
                   if (e.key === 'Escape') setEditingId(null);
                 }}
               />
+              <Select value={editingTipoImpresion} onValueChange={(v) => setEditingTipoImpresion(v as TipoImpresion)}>
+                <SelectTrigger className="w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIPO_IMPRESION_OPTIONS.map(opt => {
+                    const Icon = opt.icon;
+                    return (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        <span className="flex items-center gap-2">
+                          <Icon className="w-3.5 h-3.5" />
+                          {opt.label}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
               <Button size="sm" variant="ghost" onClick={handleUpdate}>
                 <Check className="w-4 h-4 text-green-600" />
               </Button>
@@ -74,12 +115,15 @@ function SortableCategory({ cat, editingId, editingNombre, setEditingNombre, set
               </Button>
             </div>
           ) : (
-            <span className="font-medium">{cat.nombre}</span>
+            <>
+              <span className="font-medium">{cat.nombre}</span>
+              <TipoImpresionBadge tipo={cat.tipo_impresion || 'comanda'} />
+            </>
           )}
         </div>
         {editingId !== cat.id && (
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" onClick={() => { setEditingId(cat.id); setEditingNombre(cat.nombre); }}>
+            <Button variant="ghost" size="sm" onClick={() => { setEditingId(cat.id); setEditingNombre(cat.nombre); setEditingTipoImpresion(cat.tipo_impresion || 'comanda'); }}>
               <Pencil className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setDeleting(cat)}>
@@ -98,7 +142,9 @@ export default function CategoriasCartaPage() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingNombre, setEditingNombre] = useState('');
+  const [editingTipoImpresion, setEditingTipoImpresion] = useState<TipoImpresion>('comanda');
   const [newNombre, setNewNombre] = useState('');
+  const [newTipoImpresion, setNewTipoImpresion] = useState<TipoImpresion>('comanda');
   const [showNew, setShowNew] = useState(false);
   const [deleting, setDeleting] = useState<any>(null);
 
@@ -109,15 +155,20 @@ export default function CategoriasCartaPage() {
 
   const handleCreate = async () => {
     if (!newNombre.trim()) return;
-    await create.mutateAsync({ nombre: newNombre.trim(), orden: (categorias?.length || 0) + 1 });
+    await create.mutateAsync({ nombre: newNombre.trim(), orden: (categorias?.length || 0) + 1, tipo_impresion: newTipoImpresion } as any);
     setNewNombre('');
+    setNewTipoImpresion('comanda');
     setShowNew(false);
   };
 
   const handleUpdate = async () => {
     if (!editingId || !editingNombre.trim()) return;
-    await update.mutateAsync({ id: editingId, data: { nombre: editingNombre.trim() } });
+    await update.mutateAsync({ id: editingId, data: { nombre: editingNombre.trim(), tipo_impresion: editingTipoImpresion } as any });
     setEditingId(null);
+  };
+
+  const handleTipoChange = async (id: string, tipo: TipoImpresion) => {
+    await update.mutateAsync({ id, data: { tipo_impresion: tipo } as any });
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -166,6 +217,24 @@ export default function CategoriasCartaPage() {
                 if (e.key === 'Escape') { setShowNew(false); setNewNombre(''); }
               }}
             />
+            <Select value={newTipoImpresion} onValueChange={(v) => setNewTipoImpresion(v as TipoImpresion)}>
+              <SelectTrigger className="w-36">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TIPO_IMPRESION_OPTIONS.map(opt => {
+                  const Icon = opt.icon;
+                  return (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      <span className="flex items-center gap-2">
+                        <Icon className="w-3.5 h-3.5" />
+                        {opt.label}
+                      </span>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
             <Button size="sm" onClick={handleCreate} disabled={!newNombre.trim() || create.isPending}>
               <Check className="w-4 h-4" />
             </Button>
@@ -192,9 +261,12 @@ export default function CategoriasCartaPage() {
                   cat={cat}
                   editingId={editingId}
                   editingNombre={editingNombre}
+                  editingTipoImpresion={editingTipoImpresion}
                   setEditingNombre={setEditingNombre}
+                  setEditingTipoImpresion={setEditingTipoImpresion}
                   setEditingId={setEditingId}
                   handleUpdate={handleUpdate}
+                  handleTipoChange={handleTipoChange}
                   setDeleting={setDeleting}
                 />
               ))}
