@@ -11,6 +11,10 @@ import qz from 'qz-tray';
 let connected = false;
 let connecting = false;
 
+// Cache de detección para evitar múltiples popups de QZ Tray
+let cachedDetection: { available: boolean; version?: string; timestamp: number } | null = null;
+const DETECTION_CACHE_TTL = 30_000; // 30 segundos
+
 /**
  * Configura QZ Tray sin certificado (uso interno en red local).
  */
@@ -71,13 +75,22 @@ export async function detectQZ(): Promise<{
   version?: string;
   error?: 'not_running' | 'blocked' | 'unknown';
 }> {
+  // Retornar cache si es reciente
+  if (cachedDetection && Date.now() - cachedDetection.timestamp < DETECTION_CACHE_TTL) {
+    return { available: cachedDetection.available, version: cachedDetection.version };
+  }
+
   try {
     const ok = await connectQZ();
     if (ok) {
-      return { available: true, version: (qz as any).version || undefined };
+      const result = { available: true, version: (qz as any).version || undefined };
+      cachedDetection = { ...result, timestamp: Date.now() };
+      return result;
     }
+    cachedDetection = { available: false, timestamp: Date.now() };
     return { available: false, error: 'not_running' };
   } catch (error: any) {
+    cachedDetection = { available: false, timestamp: Date.now() };
     const msg = error?.message || String(error);
     if (
       msg.includes('WebSocket') ||
