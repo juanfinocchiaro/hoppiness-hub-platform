@@ -30,6 +30,7 @@ export type Database = {
           inicio_actividades: string | null
           punto_venta: number | null
           razon_social: string | null
+          reglas_facturacion: Json
           ultima_verificacion: string | null
           ultimo_error: string | null
           ultimo_nro_factura_a: number | null
@@ -52,6 +53,7 @@ export type Database = {
           inicio_actividades?: string | null
           punto_venta?: number | null
           razon_social?: string | null
+          reglas_facturacion?: Json
           ultima_verificacion?: string | null
           ultimo_error?: string | null
           ultimo_nro_factura_a?: number | null
@@ -74,6 +76,7 @@ export type Database = {
           inicio_actividades?: string | null
           punto_venta?: number | null
           razon_social?: string | null
+          reglas_facturacion?: Json
           ultima_verificacion?: string | null
           ultimo_error?: string | null
           ultimo_nro_factura_a?: number | null

@@ -124,6 +124,7 @@ export interface ShiftClosureInput {
   arqueo_caja: ArqueoCaja;
   total_facturado: number;
   notas?: string;
+  reglas_facturacion?: ReglasFacturacion | null;
 }
 
 // Configuration types
@@ -299,24 +300,83 @@ export function calcularTotalesVentasApps(data: VentasAppsData): { total: number
   };
 }
 
+export interface ReglasFacturacion {
+  canales_internos: {
+    efectivo: boolean;
+    debito: boolean;
+    credito: boolean;
+    qr: boolean;
+    transferencia: boolean;
+  };
+  canales_externos: {
+    rappi: boolean;
+    pedidosya: boolean;
+    mas_delivery_efectivo: boolean;
+    mas_delivery_digital: boolean;
+    mp_delivery: boolean;
+  };
+}
+
+const DEFAULT_REGLAS: ReglasFacturacion = {
+  canales_internos: { efectivo: false, debito: true, credito: true, qr: true, transferencia: true },
+  canales_externos: { rappi: true, pedidosya: true, mas_delivery_efectivo: false, mas_delivery_digital: true, mp_delivery: true },
+};
+
 export function calcularFacturacionEsperada(
   ventasLocal: VentasLocalData,
-  ventasApps: VentasAppsData
+  ventasApps: VentasAppsData,
+  reglas?: ReglasFacturacion | null
+): number {
+  const r = reglas || DEFAULT_REGLAS;
+
+  // Canales internos: sumar solo los métodos habilitados
+  let totalLocal = 0;
+  const canalesLocales = [ventasLocal.salon, ventasLocal.takeaway, ventasLocal.delivery_manual];
+  for (const canal of canalesLocales) {
+    if (r.canales_internos.efectivo) totalLocal += canal.efectivo;
+    if (r.canales_internos.debito) totalLocal += canal.debito;
+    if (r.canales_internos.credito) totalLocal += canal.credito;
+    if (r.canales_internos.qr) totalLocal += canal.qr;
+    if (r.canales_internos.transferencia) totalLocal += canal.transferencia;
+  }
+
+  // Canales externos
+  let totalExterno = 0;
+
+  if (r.canales_externos.rappi) {
+    totalExterno += ventasApps.rappi.vales;
+  }
+
+  if (r.canales_externos.pedidosya) {
+    totalExterno += ventasApps.pedidosya.efectivo + ventasApps.pedidosya.vales;
+  }
+
+  const cobradoPosnet = ventasApps.mas_delivery.cobrado_posnet || 0;
+  if (r.canales_externos.mas_delivery_efectivo) {
+    totalExterno += ventasApps.mas_delivery.efectivo - cobradoPosnet;
+  }
+  if (r.canales_externos.mas_delivery_digital) {
+    totalExterno += ventasApps.mas_delivery.mercadopago + cobradoPosnet;
+  }
+
+  if (r.canales_externos.mp_delivery) {
+    totalExterno += ventasApps.mp_delivery?.vales || 0;
+  }
+
+  return totalLocal + totalExterno;
+}
+
+/** Calcula el total NO facturado según las reglas */
+export function calcularNoFacturado(
+  ventasLocal: VentasLocalData,
+  ventasApps: VentasAppsData,
+  reglas?: ReglasFacturacion | null
 ): number {
   const totalesLocal = calcularTotalesVentasLocal(ventasLocal);
   const totalesApps = calcularTotalesVentasApps(ventasApps);
-  
   const totalVendido = totalesLocal.total + totalesApps.total;
-  
-  // Efectivo mostrador = efectivo de salón + takeaway + delivery_manual + PeYa efectivo (va a caja)
-  const efectivoMostrador = totalesLocal.efectivo + ventasApps.pedidosya.efectivo;
-  
-  // Efectivo MásDelivery tampoco se factura (minus cobrado_posnet which is now card)
-  const cobradoPosnet = ventasApps.mas_delivery.cobrado_posnet || 0;
-  const efectivoMasDelivery = ventasApps.mas_delivery.efectivo - cobradoPosnet;
-  
-  // Esperado = Total vendido - Efectivo mostrador - Efectivo MásDelivery
-  return totalVendido - efectivoMostrador - efectivoMasDelivery;
+  const facturado = calcularFacturacionEsperada(ventasLocal, ventasApps, reglas);
+  return totalVendido - facturado;
 }
 
 // ==========================================
