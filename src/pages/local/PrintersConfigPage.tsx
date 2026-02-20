@@ -1,5 +1,5 @@
 /**
- * PrintersConfigPage - Configuración de impresoras con detección automática de QZ Tray
+ * PrintersConfigPage - Configuración de impresoras con detección automática de Print Bridge
  * y health check de conectividad por impresora.
  *
  * Estado 1: Sistema no detectado → muestra instalador
@@ -26,9 +26,9 @@ import { EmptyState } from '@/components/ui/states/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBranchPrinters, type BranchPrinter } from '@/hooks/useBranchPrinters';
 import { usePrinting } from '@/hooks/usePrinting';
-import { detectQZ, testPrinterConnection, getNetworkFingerprint } from '@/lib/qz-print';
+import { detectPrintBridge, testPrinterConnection, getNetworkFingerprint } from '@/lib/qz-print';
 
-type SystemState = 'checking' | 'not_available' | 'blocked' | 'just_detected' | 'ready';
+type SystemState = 'checking' | 'not_available' | 'ready';
 
 type PrinterHealthStatus = 'idle' | 'checking' | 'reachable' | 'unreachable';
 
@@ -48,7 +48,7 @@ const DEFAULT_PRINTER = {
 };
 
 /* ─────────── Setup Screen (State 1) ─────────── */
-function SetupScreen({ state }: { state: 'checking' | 'not_available' | 'blocked' }) {
+function SetupScreen({ state }: { state: 'checking' | 'not_available' }) {
   const handleDownload = async () => {
     try {
       const response = await fetch('/instalar-impresoras.bat');
@@ -119,21 +119,6 @@ function SetupScreen({ state }: { state: 'checking' | 'not_available' | 'blocked
                 Esperando instalación...
               </div>
             )}
-
-            {state === 'blocked' && (
-              <Card className="border-destructive/50 bg-destructive/5 max-w-md">
-                <CardContent className="p-4 space-y-2">
-                  <div className="flex items-center gap-2 text-destructive">
-                    <AlertCircle className="w-4 h-4" />
-                    <span className="font-medium text-sm">Se detectó el sistema, pero necesita tu permiso</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Buscá una ventana emergente en la barra de tareas y hacé clic en <strong>"Permitir"</strong> o <strong>"Allow"</strong>.
-                    Marcá la casilla "Recordar esta decisión" para no tener que hacerlo de nuevo.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
           </div>
         </CardContent>
       </Card>
@@ -156,11 +141,11 @@ function SetupScreen({ state }: { state: 'checking' | 'not_available' | 'blocked
             </div>
             <div>
               <p className="font-medium text-foreground">El antivirus lo bloquea</p>
-              <p>Agregá una excepción para "QZ Tray" en tu antivirus.</p>
+              <p>Agregá una excepción para "Hoppiness Print Bridge" en tu antivirus.</p>
             </div>
             <div>
               <p className="font-medium text-foreground">Ya lo instalé pero sigue sin detectar</p>
-              <p>Buscá "QZ Tray" en el menú inicio y abrilo manualmente.</p>
+              <p>Buscá "Hoppiness Print Bridge" en el menú inicio o ejecutá el instalador de nuevo.</p>
             </div>
           </div>
         </CollapsibleContent>
@@ -169,16 +154,6 @@ function SetupScreen({ state }: { state: 'checking' | 'not_available' | 'blocked
   );
 }
 
-/* ─────────── Just Detected Transition ─────────── */
-function JustDetectedScreen() {
-  return (
-    <div className="flex flex-col items-center justify-center py-20 animate-in fade-in duration-300">
-      <CheckCircle2 className="w-16 h-16 text-primary mb-4" />
-      <h2 className="text-xl font-semibold">¡Instalación detectada!</h2>
-      <p className="text-muted-foreground mt-1">Preparando configuración de impresoras...</p>
-    </div>
-  );
-}
 
 /* ─────────── Network Warning Banner ─────────── */
 function NetworkWarningBanner({ currentNetwork, printerNetwork }: { currentNetwork: string; printerNetwork: string }) {
@@ -634,17 +609,12 @@ export default function PrintersConfigPage() {
   const [systemState, setSystemState] = useState<SystemState>('checking');
 
   const checkSystem = useCallback(async () => {
-    const result = await detectQZ();
+    const result = await detectPrintBridge();
     if (result.available) {
-      if (systemState === 'not_available' || systemState === 'blocked') {
-        setSystemState('just_detected');
-        setTimeout(() => setSystemState('ready'), 1500);
-      } else if (systemState === 'checking') {
-        setSystemState('ready');
-      }
+      setSystemState('ready');
     } else {
-      if (systemState === 'checking' || systemState === 'not_available' || systemState === 'blocked') {
-        setSystemState(result.error === 'blocked' ? 'blocked' : 'not_available');
+      if (systemState === 'checking' || systemState === 'not_available') {
+        setSystemState('not_available');
       }
     }
   }, [systemState]);
@@ -653,7 +623,7 @@ export default function PrintersConfigPage() {
     checkSystem();
 
     const interval = setInterval(() => {
-      if (systemState !== 'ready' && systemState !== 'just_detected') {
+      if (systemState !== 'ready') {
         checkSystem();
       }
     }, 3000);
@@ -661,12 +631,8 @@ export default function PrintersConfigPage() {
     return () => clearInterval(interval);
   }, [systemState, checkSystem]);
 
-  if (systemState === 'checking' || systemState === 'not_available' || systemState === 'blocked') {
+  if (systemState === 'checking' || systemState === 'not_available') {
     return <SetupScreen state={systemState} />;
-  }
-
-  if (systemState === 'just_detected') {
-    return <JustDetectedScreen />;
   }
 
   return (

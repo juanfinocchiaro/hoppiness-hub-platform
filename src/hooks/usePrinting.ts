@@ -1,14 +1,14 @@
 /**
- * usePrinting - Hook de impresión directa via QZ Tray
+ * usePrinting - Hook de impresión directa via Print Bridge
  *
- * Envía datos ESC/POS a impresoras térmicas vía QZ Tray (WebSocket local).
- * QZ Tray abre conexión TCP directa a la impresora en la red local.
+ * Envía datos ESC/POS a impresoras térmicas vía Print Bridge (HTTP localhost:3001).
+ * Print Bridge abre conexión TCP directa a la impresora en la red local.
  */
 import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { printRawBase64, detectQZ } from '@/lib/qz-print';
+import { printRawBase64, detectPrintBridge } from '@/lib/qz-print';
 import {
   generateComandaCompleta,
   generateComandaEstacion,
@@ -20,7 +20,7 @@ import {
 } from '@/lib/escpos';
 import type { BranchPrinter } from '@/hooks/useBranchPrinters';
 
-export type QZStatus = 'checking' | 'connected' | 'not_available';
+export type PrintBridgeStatus = 'checking' | 'connected' | 'not_available';
 
 interface PrintJobInput {
   branchId: string;
@@ -39,21 +39,22 @@ async function sendToPrinter(printer: BranchPrinter, dataBase64: string): Promis
     await printRawBase64(printer.ip_address, printer.port, dataBase64);
     return true;
   } catch (error: any) {
-    if (error.message === 'QZ_NOT_AVAILABLE') {
+    const msg = error?.message || '';
+    if (msg.includes('Print Bridge no disponible') || msg.includes('Failed to fetch')) {
       throw new Error('Sistema de impresión no detectado. Andá a Configuración > Impresoras para instalarlo.');
     }
     throw new Error(
-      `No se pudo conectar a ${printer.ip_address}:${printer.port} — verificá que la impresora esté encendida y en la misma red.`
+      `No se pudo conectar a ${printer.ip_address}:${printer.port} — ${msg || 'verificá que la impresora esté encendida y en la misma red.'}`
     );
   }
 }
 
 export function usePrinting(branchId: string) {
-  const [qzStatus, setQzStatus] = useState<QZStatus>('checking');
+  const [bridgeStatus, setBridgeStatus] = useState<PrintBridgeStatus>('checking');
 
   useEffect(() => {
-    detectQZ().then((result) => {
-      setQzStatus(result.available ? 'connected' : 'not_available');
+    detectPrintBridge().then((result) => {
+      setBridgeStatus(result.available ? 'connected' : 'not_available');
     });
   }, []);
 
@@ -83,9 +84,9 @@ export function usePrinting(branchId: string) {
       const printerName = variables?.printer?.name || 'Impresora';
       const printerIp = variables?.printer?.ip_address || '';
 
-      if (msg === 'QZ_NOT_AVAILABLE' || msg.includes('Sistema de impresión')) {
+      if (msg.includes('Sistema de impresión')) {
         toast.error('Sistema de impresión no detectado', {
-          description: 'Andá a Configuración > Impresoras para instalar QZ Tray.',
+          description: 'Andá a Configuración > Impresoras para instalar el sistema de impresión.',
           duration: 10000,
         });
       } else {
@@ -173,6 +174,6 @@ export function usePrinting(branchId: string) {
     printDelivery,
     printTest,
     isPrinting: printMutation.isPending,
-    qzStatus,
+    bridgeStatus,
   };
 }

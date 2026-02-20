@@ -1,110 +1,33 @@
 /**
- * qz-print.ts - Módulo de comunicación con QZ Tray
+ * qz-print.ts - Cliente HTTP para Print Bridge
  *
- * Maneja la conexión WebSocket con QZ Tray (localhost:8182)
+ * Se comunica con el microservicio Print Bridge (localhost:3001)
  * para enviar datos ESC/POS raw a impresoras térmicas vía TCP.
  *
- * Configurado sin certificado digital (uso interno en red local).
+ * Reemplaza la dependencia de QZ Tray por HTTP fetch() simple.
  */
-import qz from 'qz-tray';
-import { getQZCertificate, signQZData } from './qz-certificate';
 
-let connected = false;
-let connecting = false;
-
-// Cache de detección para evitar múltiples popups de QZ Tray
-let cachedDetection: { available: boolean; version?: string; timestamp: number } | null = null;
-const DETECTION_CACHE_TTL = 30_000; // 30 segundos
+const PRINT_BRIDGE_URL = 'http://127.0.0.1:3001';
 
 /**
- * Configura QZ Tray sin certificado (uso interno en red local).
+ * Verifica si Print Bridge está corriendo.
  */
-let qzSetupDone = false;
-
-function setupQZ() {
-  if (qzSetupDone) return;
-  qz.security.setCertificatePromise((resolve: (value: string) => void) => {
-    resolve(getQZCertificate());
-  });
-  qz.security.setSignatureAlgorithm('SHA512');
-  qz.security.setSignaturePromise((toSign: string) => {
-    return (resolve: (value: string) => void) => {
-      resolve(signQZData(toSign));
-    };
-  });
-  qzSetupDone = true;
-}
-
-/**
- * Conecta con QZ Tray vía WebSocket.
- */
-export async function connectQZ(): Promise<boolean> {
-  if (connected && qz.websocket.isActive()) return true;
-  if (connecting) {
-    // Wait for ongoing connection attempt
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    return connected;
-  }
-
-  connecting = true;
-  try {
-    setupQZ();
-    if (!qz.websocket.isActive()) {
-      await qz.websocket.connect({ retries: 2, delay: 1 });
-    }
-    connected = true;
-    qz.websocket.setClosedCallbacks(() => {
-      connected = false;
-    });
-    return true;
-  } catch (_error) {
-    connected = false;
-    return false;
-  } finally {
-    connecting = false;
-  }
-}
-
-/**
- * Verifica si QZ Tray está conectado ahora mismo.
- */
-export function isQZConnected(): boolean {
-  return connected && qz.websocket.isActive();
-}
-
-/**
- * Intenta detectar si QZ Tray está instalado y corriendo.
- */
-export async function detectQZ(): Promise<{
+export async function detectPrintBridge(): Promise<{
   available: boolean;
   version?: string;
-  error?: 'not_running' | 'blocked' | 'unknown';
+  error?: 'not_running' | 'unknown';
 }> {
-  // Retornar cache si es reciente
-  if (cachedDetection && Date.now() - cachedDetection.timestamp < DETECTION_CACHE_TTL) {
-    return { available: cachedDetection.available, version: cachedDetection.version };
-  }
-
   try {
-    const ok = await connectQZ();
-    if (ok) {
-      const result = { available: true, version: (qz as any).version || undefined };
-      cachedDetection = { ...result, timestamp: Date.now() };
-      return result;
+    const res = await fetch(`${PRINT_BRIDGE_URL}/status`, {
+      signal: AbortSignal.timeout(2000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { available: true, version: data.version };
     }
-    cachedDetection = { available: false, timestamp: Date.now() };
     return { available: false, error: 'not_running' };
-  } catch (error: any) {
-    cachedDetection = { available: false, timestamp: Date.now() };
-    const msg = error?.message || String(error);
-    if (
-      msg.includes('WebSocket') ||
-      msg.includes('blocked') ||
-      msg.includes('refused')
-    ) {
-      return { available: false, error: 'blocked' };
-    }
-    return { available: false, error: 'unknown' };
+  } catch {
+    return { available: false, error: 'not_running' };
   }
 }
 
@@ -116,16 +39,20 @@ export async function printRaw(
   port: number,
   data: Uint8Array | number[]
 ): Promise<void> {
-  const ok = await connectQZ();
-  if (!ok) {
-    throw new Error('QZ_NOT_AVAILABLE');
-  }
-
-  const config = qz.configs.create({ host: ip, port: port } as any);
   const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
   const base64 = btoa(String.fromCharCode(...bytes));
 
-  await qz.print(config, [{ type: 'raw', format: 'base64', data: base64 }]);
+  const res = await fetch(`${PRINT_BRIDGE_URL}/print`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ip, port, data: base64 }),
+    signal: AbortSignal.timeout(10000),
+  });
+
+  const result = await res.json();
+  if (!result.success) {
+    throw new Error(result.error || 'Error de impresión desconocido');
+  }
 }
 
 /**
@@ -136,48 +63,37 @@ export async function printRawBase64(
   port: number,
   dataBase64: string
 ): Promise<void> {
-  const ok = await connectQZ();
-  if (!ok) {
-    throw new Error('QZ_NOT_AVAILABLE');
-  }
+  const res = await fetch(`${PRINT_BRIDGE_URL}/print`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ip, port, data: dataBase64 }),
+    signal: AbortSignal.timeout(10000),
+  });
 
-  const config = qz.configs.create({ host: ip, port: port } as any);
-  await qz.print(config, [{ type: 'raw', format: 'base64', data: dataBase64 }]);
+  const result = await res.json();
+  if (!result.success) {
+    throw new Error(result.error || 'Error de impresión desconocido');
+  }
 }
 
 /**
- * Testea conectividad con una impresora enviando un comando ESC/POS mínimo (Init).
+ * Testea conectividad con una impresora.
  * Retorna si la impresora es alcanzable y la latencia.
  */
 export async function testPrinterConnection(
   ip: string,
-  port: number,
-  timeoutMs = 5000
+  port: number
 ): Promise<{ reachable: boolean; latencyMs?: number; error?: string }> {
-  const ok = await connectQZ();
-  if (!ok) {
-    return { reachable: false, error: 'QZ_NOT_AVAILABLE' };
-  }
-
-  const start = performance.now();
   try {
-    const config = qz.configs.create({ host: ip, port } as any);
-    // ESC @ = Initialize printer (0x1B 0x40) - minimal safe command
-    const initCmd = btoa(String.fromCharCode(0x1b, 0x40));
-    await Promise.race([
-      qz.print(config, [{ type: 'raw', format: 'base64', data: initCmd }]),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs)
-      ),
-    ]);
-    const latencyMs = Math.round(performance.now() - start);
-    return { reachable: true, latencyMs };
-  } catch (error: any) {
-    const msg = error?.message || String(error);
-    if (msg === 'TIMEOUT') {
-      return { reachable: false, error: 'Tiempo de espera agotado' };
-    }
-    return { reachable: false, error: msg };
+    const res = await fetch(`${PRINT_BRIDGE_URL}/test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip, port }),
+      signal: AbortSignal.timeout(5000),
+    });
+    return await res.json();
+  } catch {
+    return { reachable: false, error: 'Print Bridge no disponible' };
   }
 }
 
@@ -194,14 +110,4 @@ export async function getNetworkFingerprint(): Promise<string | null> {
   } catch {
     return null;
   }
-}
-
-/**
- * Desconecta de QZ Tray.
- */
-export async function disconnectQZ(): Promise<void> {
-  if (qz.websocket.isActive()) {
-    await qz.websocket.disconnect();
-  }
-  connected = false;
 }
