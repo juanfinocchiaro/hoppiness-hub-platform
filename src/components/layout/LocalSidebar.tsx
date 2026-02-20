@@ -18,6 +18,7 @@ import {
   NavItemButton,
   NavDashboardLink,
 } from './WorkSidebar';
+import { PrinterStatusDot } from '@/components/local/PrinterStatusDot';
 
 interface LocalSidebarProps {
   branchId: string;
@@ -319,7 +320,12 @@ export function LocalSidebar({ branchId, posEnabled = false, permissions }: Loca
           forceOpen={isConfigActive}
         >
           <NavItemButton to={`${basePath}/config/turnos`} icon={Clock} label="Turnos" />
-          <NavItemButton to={`${basePath}/config/impresoras`} icon={Printer} label="Impresoras" />
+          <div className="relative">
+            <NavItemButton to={`${basePath}/config/impresoras`} icon={Printer} label="Impresoras" />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <PrinterStatusDot />
+            </div>
+          </div>
           <NavItemButton to={`${basePath}/config/estaciones`} icon={Flame} label="Estaciones Cocina" />
           <NavItemButton to={`${basePath}/config/impresion`} icon={SlidersHorizontal} label="Config Impresión" />
           <NavItemButton to={`${basePath}/config/facturacion`} icon={Receipt} label="Facturación" />

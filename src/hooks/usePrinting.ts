@@ -1,13 +1,14 @@
 /**
- * usePrinting - Hook de impresión que genera ESC/POS y envía a impresoras de red
+ * usePrinting - Hook de impresión directa via QZ Tray
  *
- * Estrategia dual:
- * 1. Intenta imprimir directamente desde el navegador (LAN, mismo segmento de red)
- * 2. Fallback a Edge Function (impresoras con IP pública)
+ * Envía datos ESC/POS a impresoras térmicas vía QZ Tray (WebSocket local).
+ * QZ Tray abre conexión TCP directa a la impresora en la red local.
  */
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { printRawBase64, detectQZ } from '@/lib/qz-print';
 import {
   generateComandaCompleta,
   generateComandaEstacion,
@@ -19,6 +20,8 @@ import {
 } from '@/lib/escpos';
 import type { BranchPrinter } from '@/hooks/useBranchPrinters';
 
+export type QZStatus = 'checking' | 'connected' | 'not_available';
+
 interface PrintJobInput {
   branchId: string;
   printer: BranchPrinter;
@@ -28,26 +31,31 @@ interface PrintJobInput {
 }
 
 async function sendToPrinter(printer: BranchPrinter, dataBase64: string): Promise<boolean> {
-  // Strategy 1: Direct LAN via raw TCP (only works via Edge Function since browsers can't do raw TCP)
-  // We always use the Edge Function approach
-  const { data, error } = await supabase.functions.invoke('print-to-network', {
-    body: {
-      printer_ip: printer.ip_address,
-      printer_port: printer.port,
-      data_base64: dataBase64,
-    },
-  });
-
-  if (error) {
-    console.error('Print error:', error);
-    return false;
+  if (!printer.ip_address) {
+    throw new Error('La impresora no tiene IP configurada');
   }
 
-  return data?.success === true;
+  try {
+    await printRawBase64(printer.ip_address, printer.port, dataBase64);
+    return true;
+  } catch (error: any) {
+    if (error.message === 'QZ_NOT_AVAILABLE') {
+      throw new Error('Sistema de impresión no detectado. Andá a Configuración > Impresoras para instalarlo.');
+    }
+    throw new Error(
+      `No se pudo conectar a ${printer.ip_address}:${printer.port} — verificá que la impresora esté encendida y en la misma red.`
+    );
+  }
 }
 
 export function usePrinting(branchId: string) {
-  const qc = useQueryClient();
+  const [qzStatus, setQzStatus] = useState<QZStatus>('checking');
+
+  useEffect(() => {
+    detectQZ().then((result) => {
+      setQzStatus(result.available ? 'connected' : 'not_available');
+    });
+  }, []);
 
   const printMutation = useMutation({
     mutationFn: async ({ printer, jobType, pedidoId, dataBase64 }: PrintJobInput) => {
@@ -63,13 +71,18 @@ export function usePrinting(branchId: string) {
 
       const success = await sendToPrinter(printer, dataBase64);
 
-      // Update job status
       if (!success) {
         throw new Error('No se pudo imprimir');
       }
     },
+    onSuccess: () => {
+      toast.success('Impreso correctamente');
+    },
     onError: (err) => {
-      toast.error(`Error de impresión: ${err instanceof Error ? err.message : 'desconocido'}`);
+      toast.error(`Error de impresión`, {
+        description: err instanceof Error ? err.message : 'Error desconocido',
+        duration: 8000,
+      });
     },
   });
 
@@ -138,7 +151,6 @@ export function usePrinting(branchId: string) {
       jobType: 'test',
       dataBase64: data,
     });
-    toast.info(`Enviando página de prueba a ${printer.name}...`);
   };
 
   return {
@@ -148,5 +160,6 @@ export function usePrinting(branchId: string) {
     printDelivery,
     printTest,
     isPrinting: printMutation.isPending,
+    qzStatus,
   };
 }
