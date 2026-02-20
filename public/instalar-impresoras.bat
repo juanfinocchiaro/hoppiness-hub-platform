@@ -18,6 +18,7 @@ echo.
 echo   Paso 2/3: Configurando certificado...
 echo.
 
+:: Escribir el certificado como archivo de texto plano
 set "CERTFILE=%TEMP%\hoppiness-hub.crt"
 > "%CERTFILE%" echo -----BEGIN CERTIFICATE-----
 >> "%CERTFILE%" echo MIIDIjCCAgqgAwIBAgIBATANBgkqhkiG9w0BAQsFADBFMR0wGwYDVQQDExRIb3Bw
@@ -39,14 +40,31 @@ set "CERTFILE=%TEMP%\hoppiness-hub.crt"
 >> "%CERTFILE%" echo UZ51nhbiseVD4j99EhiMk5TG00mmQMzg/IJa4GLi17MosHQ7PvY=
 >> "%CERTFILE%" echo -----END CERTIFICATE-----
 
-powershell -ExecutionPolicy Bypass -Command "Copy-Item -Path $env:TEMP'\hoppiness-hub.crt' -Destination 'C:\Program Files\QZ Tray\hoppiness-hub.crt' -Force; $p='C:\Program Files\QZ Tray\qz-tray.properties'; if(Test-Path $p){$c=Get-Content $p|Where-Object{$_ -notmatch 'authcert.override'};Set-Content $p $c};Add-Content $p 'authcert.override=hoppiness-hub.crt'"
-del "%CERTFILE%"
+:: Escribir el script PowerShell como archivo separado
+set "PSFILE=%TEMP%\hoppiness-setup.ps1"
+> "%PSFILE%" echo $src = Join-Path $env:TEMP 'hoppiness-hub.crt'
+>> "%PSFILE%" echo $dst = 'C:\Program Files\QZ Tray\hoppiness-hub.crt'
+>> "%PSFILE%" echo $props = 'C:\Program Files\QZ Tray\qz-tray.properties'
+>> "%PSFILE%" echo Copy-Item -Path $src -Destination $dst -Force
+>> "%PSFILE%" echo Write-Host 'Certificado copiado a QZ Tray'
+>> "%PSFILE%" echo if (Test-Path $props) {
+>> "%PSFILE%" echo   $lines = Get-Content $props
+>> "%PSFILE%" echo   $clean = $lines ^| Where-Object { $_ -notmatch 'authcert.override' }
+>> "%PSFILE%" echo   Set-Content -Path $props -Value $clean
+>> "%PSFILE%" echo }
+>> "%PSFILE%" echo Add-Content -Path $props -Value 'authcert.override=hoppiness-hub.crt'
+>> "%PSFILE%" echo Write-Host 'Configuracion actualizada'
+
+powershell -ExecutionPolicy Bypass -File "%PSFILE%"
+
+del "%CERTFILE%" 2>nul
+del "%PSFILE%" 2>nul
 
 echo.
 echo   Paso 3/3: Reiniciando servicio...
 echo.
 taskkill /IM qz-tray.exe /F >nul 2>&1
-timeout /t 2 /nobreak >nul
+timeout /t 3 /nobreak >nul
 start "" "C:\Program Files\QZ Tray\qz-tray.exe"
 
 echo.
