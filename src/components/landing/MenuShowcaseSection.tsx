@@ -2,40 +2,40 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 
-import americanDoble from '@/assets/american-doble.jpg';
-import royalDoble from '@/assets/royal-doble.jpg';
-import carolina from '@/assets/carolina.jpg';
-import notAmerican from '@/assets/not-american.jpg';
-import ultraCheese from '@/assets/ultra-cheese.jpg';
+import clasicasImg from '@/assets/menu/clasicas.webp';
+import originalesImg from '@/assets/menu/originales.webp';
+import masSaborImg from '@/assets/menu/mas-sabor.webp';
+import veggiesImg from '@/assets/menu/veggies.webp';
+import ultrasmashImg from '@/assets/menu/ultrasmash.webp';
 
 const categories = [
   {
     name: 'Clásicas',
-    image: americanDoble,
+    image: clasicasImg,
     products: ['Victoria', 'American Simple', 'American Doble'],
     description: 'Las de siempre. Smash puro.',
   },
   {
     name: 'Originales',
-    image: royalDoble,
+    image: originalesImg,
     products: ['Argenta', 'Royal', 'Provoleta'],
     description: 'Combinaciones únicas de autor.',
   },
   {
     name: 'Más Sabor',
-    image: carolina,
+    image: masSaborImg,
     products: ['Baconator', 'Carolina', 'Django'],
     description: 'Triples. Para los que quieren más.',
   },
   {
     name: 'Veggies',
-    image: notAmerican,
+    image: veggiesImg,
     products: ['Not American', 'Not Chicken'],
     description: '100% vegetal. 100% sabor.',
   },
   {
     name: 'Ultrasmash',
-    image: ultraCheese,
+    image: ultrasmashImg,
     products: ['Ultra Cheese', 'Ultra Bacon'],
     description: 'La máxima expresión del smash.',
   },
