@@ -64,7 +64,7 @@ export function InspectionStaffChecklist({
         .select('user_id, local_role')
         .eq('branch_id', branchId)
         .eq('is_active', true)
-        .in('local_role', ['encargado', 'cajero', 'empleado']);
+        .in('local_role', ['cajero', 'empleado']);
 
       if (!roles?.length) return [];
 

@@ -61,13 +61,13 @@ export default function InspectionDetailPage() {
     queryFn: async () => {
       if (!inspection?.branch_id) return [];
       
-      // Query user_branch_roles for encargado/franquiciado in this branch
+      // Query user_branch_roles for encargado only
       const { data: roles } = await supabase
         .from('user_branch_roles')
         .select('user_id')
         .eq('branch_id', inspection.branch_id)
         .eq('is_active', true)
-        .in('local_role', ['encargado', 'franquiciado']);
+        .eq('local_role', 'encargado');
 
       if (!roles?.length) return [];
 
