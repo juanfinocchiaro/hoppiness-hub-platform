@@ -27,6 +27,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useBranchPrinters, type BranchPrinter } from '@/hooks/useBranchPrinters';
 import { usePrinting } from '@/hooks/usePrinting';
 import { detectPrintBridge, testPrinterConnection, getNetworkFingerprint } from '@/lib/qz-print';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 type SystemState = 'checking' | 'not_available' | 'ready';
 
@@ -630,7 +632,18 @@ function ReadyScreen({
 export default function PrintersConfigPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const { data: printers, isLoading, create, update, remove } = useBranchPrinters(branchId!);
-  const { printTest } = usePrinting(branchId!);
+  const { printTest: printTestFn } = usePrinting(branchId!);
+  const { data: branchData } = useQuery({
+    queryKey: ['branch-name-printers', branchId],
+    queryFn: async () => {
+      const { data } = await supabase.from('branches').select('name').eq('id', branchId!).single();
+      return data;
+    },
+    enabled: !!branchId,
+  });
+  const printTest = useCallback((p: BranchPrinter) => {
+    printTestFn(p, branchData?.name || '');
+  }, [printTestFn, branchData]);
   const [systemState, setSystemState] = useState<SystemState>('checking');
   const [bridgeAvailable, setBridgeAvailable] = useState(false);
 
