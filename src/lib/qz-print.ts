@@ -19,7 +19,10 @@ const DETECTION_CACHE_TTL = 30_000; // 30 segundos
 /**
  * Configura QZ Tray sin certificado (uso interno en red local).
  */
+let qzSetupDone = false;
+
 function setupQZ() {
+  if (qzSetupDone) return;
   qz.security.setCertificatePromise((resolve: (value: string) => void) => {
     resolve(getQZCertificate());
   });
@@ -29,6 +32,7 @@ function setupQZ() {
       resolve(signQZData(toSign));
     };
   });
+  qzSetupDone = true;
 }
 
 /**
