@@ -1,56 +1,44 @@
 
 
-## Health Check de Impresoras y Deteccion de Red
+## Fix: Popup repetido de QZ Tray "Action Required"
 
-Implementacion del sistema de verificacion automatica de conectividad de impresoras con deteccion de red, basado en el documento proporcionado.
+### Por que pasa
 
----
+Cada vez que entras a cualquier pagina de "Mi Local", **tres componentes diferentes** intentan conectarse a QZ Tray al mismo tiempo:
 
-### Que se va a hacer
+1. `PrinterStatusDot` (en el sidebar, siempre visible)
+2. `usePrinting` hook (en el ManagerDashboard)
+3. `PrintersConfigPage` (solo si entras a impresoras)
 
-1. **Verificacion de conectividad por impresora**: Al entrar a la pagina de configuracion, el sistema testea cada impresora enviando un comando ESC/POS minimo (init `0x1B 0x40`) via QZ Tray. Muestra estado verde/rojo/gris por impresora.
+Cada llamada a `detectQZ()` abre un WebSocket nuevo hacia QZ Tray, y como el certificado esta vacio (uso interno), QZ muestra el popup de "Allow". Si no marcaste **"Remember this decision"**, lo pide cada vez.
 
-2. **Deteccion de red**: Guarda un fingerprint de la IP publica cuando se configura una impresora. Si el usuario entra desde otra red, muestra un banner de advertencia (solo si alguna impresora no responde).
+### Solucion (dos partes)
 
-3. **Rediseno de la pagina de impresoras**: Las impresoras ya no se muestran en cards simples. Cada una muestra su estado de conectividad en tiempo real con acciones contextuales (Reintentar, Test de impresion).
+**Parte 1 - Accion tuya (inmediata):**
+Cuando aparezca el popup de QZ Tray:
+1. Marca la casilla **"Remember this decision"**
+2. Hace clic en **"Allow"**
 
-4. **Mejora del manejo de errores al imprimir**: Mensajes mas claros y accionables cuando una impresion falla.
+Esto evita que vuelva a preguntar en esta computadora.
 
----
+**Parte 2 - Mejora en el codigo:**
+Cachear el resultado de deteccion para evitar multiples conexiones simultaneas innecesarias.
 
 ### Cambios tecnicos
 
-#### Migracion de base de datos
+**`src/lib/qz-print.ts`**
+- Agregar cache de deteccion con TTL de 30 segundos: si `detectQZ()` ya se llamo hace menos de 30s y fue exitoso, retornar el resultado cacheado sin abrir otro WebSocket
+- Esto evita que 3 componentes abran 3 conexiones en paralelo al montar la pagina
 
-```sql
-ALTER TABLE branch_printers
-ADD COLUMN IF NOT EXISTS configured_from_network TEXT;
+```text
+detectQZ() llamada por PrinterStatusDot  ─┐
+detectQZ() llamada por usePrinting       ─┤─> UNA sola conexion WebSocket
+detectQZ() llamada por PrintersConfig    ─┘   (las demas usan cache)
 ```
 
-#### Archivos a modificar
+**`src/components/local/PrinterStatusDot.tsx`**
+- Sin cambios funcionales, se beneficia automaticamente del cache
 
-| Archivo | Cambio |
-|---------|--------|
-| `src/lib/qz-print.ts` | Agregar `testPrinterConnection(ip, port)` y `getNetworkFingerprint()` |
-| `src/hooks/useBranchPrinters.ts` | Guardar `configured_from_network` al crear/editar |
-| `src/pages/local/PrintersConfigPage.tsx` | Redisenar ReadyScreen: estado por impresora, banner de red, boton reintentar |
-| `src/hooks/usePrinting.ts` | Mejorar mensajes de error con toasts accionables |
-
-#### Nuevas funciones en `qz-print.ts`
-
-- `testPrinterConnection(ip, port, timeout)` -- Envia ESC init via QZ Tray, retorna `{ reachable, latencyMs, error }`
-- `getNetworkFingerprint()` -- Llama a `api.ipify.org` para obtener IP publica como identificador de red
-
-#### Logica de la pagina de impresoras (ReadyScreen)
-
-1. Al cargar: obtener fingerprint de red actual + cargar impresoras
-2. Para cada impresora con IP: ejecutar `testPrinterConnection` en paralelo
-3. Mostrar estado por impresora: verificando (gris+spinner), accesible (verde+latencia), no responde (rojo+mensaje)
-4. Si la red actual difiere de `configured_from_network` Y alguna impresora no responde: mostrar banner amarillo
-5. Boton "Reintentar" en impresoras rojas, "Test de impresion" en verdes
-
-#### Mejora de errores en `usePrinting.ts`
-
-- Error `QZ_NOT_AVAILABLE`: toast con descripcion y link a configuracion
-- Error de conexion: toast con nombre de impresora, IP, y sugerencia de verificar red
+**`src/hooks/usePrinting.ts`**
+- Sin cambios funcionales, se beneficia automaticamente del cache
 
