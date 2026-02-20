@@ -20,6 +20,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePrinting } from '@/hooks/usePrinting';
 import { usePrintConfig } from '@/hooks/usePrintConfig';
 import { useBranchPrinters } from '@/hooks/useBranchPrinters';
+import { useAfipConfig, useEmitirFactura } from '@/hooks/useAfipConfig';
+import { evaluateInvoicing, type SalesChannel, type OrderPayment } from '@/lib/invoicing-rules';
 import { toast } from 'sonner';
 import type { LocalPayment } from '@/types/pos';
 import { Button } from '@/components/ui/button';
@@ -126,6 +128,10 @@ export default function POSPage() {
 
   const shiftStatus = useShiftStatus(branchId);
   const createPedido = useCreatePedido(branchId!);
+
+  // ARCA invoicing
+  const { data: afipConfig } = useAfipConfig(branchId);
+  const emitirFactura = useEmitirFactura();
 
   // Printing integration
   const printing = usePrinting(branchId!);
@@ -308,6 +314,33 @@ export default function POSPage() {
           );
         } catch (printErr) {
           console.error('Print error (non-blocking):', printErr);
+        }
+      }
+
+      // Auto-invoicing based on branch rules
+      if (afipConfig?.reglas_facturacion && afipConfig.estado_conexion === 'conectado') {
+        try {
+          // Map POS channel to invoicing channel
+          const channel: SalesChannel = orderConfig.canalVenta === 'mostrador' ? 'mostrador' : 'delivery';
+          const orderPayments: OrderPayment[] = payments.map(p => ({
+            method: p.method as any,
+            amount: p.amount,
+          }));
+
+          const result = evaluateInvoicing(orderPayments, channel, afipConfig.reglas_facturacion);
+
+          if (result.shouldInvoice && result.invoiceableAmount > 0) {
+            await emitirFactura.mutateAsync({
+              branch_id: branchId!,
+              pedido_id: pedido?.id,
+              tipo_factura: 'C',
+              items: [{ descripcion: 'Venta POS', cantidad: 1, precio_unitario: result.invoiceableAmount }],
+              total: result.invoiceableAmount,
+            });
+          }
+        } catch (invoiceErr) {
+          console.error('Invoice error (non-blocking):', invoiceErr);
+          // Don't block the order if invoicing fails
         }
       }
 

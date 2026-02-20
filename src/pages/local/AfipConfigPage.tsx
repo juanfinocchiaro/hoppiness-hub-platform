@@ -171,7 +171,7 @@ function ReglasFacturacionSection({
       <div className="flex items-start gap-2 text-xs text-muted-foreground">
         <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
         <p>
-          Estos ajustes afectan el cálculo de "facturación esperada" en el cierre de turno. No afectan la emisión de facturas electrónicas.
+          Estas reglas determinan qué medios de pago generan factura electrónica automática desde el POS y cómo se calcula la facturación esperada en el cierre de turno.
         </p>
       </div>
 
