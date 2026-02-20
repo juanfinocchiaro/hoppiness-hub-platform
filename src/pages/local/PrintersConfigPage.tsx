@@ -1,14 +1,16 @@
 /**
  * PrintersConfigPage - Configuración de impresoras con detección automática de QZ Tray
+ * y health check de conectividad por impresora.
  *
  * Estado 1: Sistema no detectado → muestra instalador
- * Estado 2: Sistema listo → CRUD de impresoras con test directo
+ * Estado 2: Sistema listo → CRUD de impresoras con health check en tiempo real
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Printer, Plus, Trash2, TestTube, Pencil, Download, CheckCircle2,
-  Loader2, AlertCircle, HelpCircle, ChevronDown,
+  Loader2, AlertCircle, HelpCircle, ChevronDown, RefreshCw, Wifi, WifiOff,
+  AlertTriangle,
 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,9 +26,17 @@ import { EmptyState } from '@/components/ui/states/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBranchPrinters, type BranchPrinter } from '@/hooks/useBranchPrinters';
 import { usePrinting } from '@/hooks/usePrinting';
-import { detectQZ } from '@/lib/qz-print';
+import { detectQZ, testPrinterConnection, getNetworkFingerprint } from '@/lib/qz-print';
 
 type SystemState = 'checking' | 'not_available' | 'blocked' | 'just_detected' | 'ready';
+
+type PrinterHealthStatus = 'idle' | 'checking' | 'reachable' | 'unreachable';
+
+interface PrinterHealth {
+  status: PrinterHealthStatus;
+  latencyMs?: number;
+  error?: string;
+}
 
 const DEFAULT_PRINTER = {
   name: '',
@@ -170,6 +180,134 @@ function JustDetectedScreen() {
   );
 }
 
+/* ─────────── Network Warning Banner ─────────── */
+function NetworkWarningBanner({ currentNetwork, printerNetwork }: { currentNetwork: string; printerNetwork: string }) {
+  return (
+    <Card className="border-orange-500/50 bg-orange-50 dark:bg-orange-950/20">
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-medium text-sm">
+              Estás en una red diferente a la configurada
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Red actual: {currentNetwork} · Red configurada: {printerNetwork}.
+              Las impresoras pueden no responder porque sus IPs son de otra red local.
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ─────────── Printer Health Indicator ─────────── */
+function HealthIndicator({ health }: { health: PrinterHealth }) {
+  if (health.status === 'checking') {
+    return (
+      <div className="flex items-center gap-1.5 text-muted-foreground">
+        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        <span className="text-xs">Verificando...</span>
+      </div>
+    );
+  }
+  if (health.status === 'reachable') {
+    return (
+      <div className="flex items-center gap-1.5 text-primary">
+        <Wifi className="w-3.5 h-3.5" />
+        <span className="text-xs font-medium">
+          Conectada{health.latencyMs != null ? ` · ${health.latencyMs}ms` : ''}
+        </span>
+      </div>
+    );
+  }
+  if (health.status === 'unreachable') {
+    return (
+      <div className="flex items-center gap-1.5 text-destructive">
+        <WifiOff className="w-3.5 h-3.5" />
+        <span className="text-xs font-medium">No responde</span>
+      </div>
+    );
+  }
+  return null;
+}
+
+/* ─────────── Printer Card ─────────── */
+function PrinterCard({
+  printer,
+  health,
+  onTest,
+  onEdit,
+  onDelete,
+  onRetry,
+}: {
+  printer: BranchPrinter;
+  health: PrinterHealth;
+  onTest: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onRetry: () => void;
+}) {
+  const borderClass =
+    health.status === 'reachable'
+      ? 'border-primary/30'
+      : health.status === 'unreachable'
+        ? 'border-destructive/30'
+        : '';
+
+  return (
+    <Card className={borderClass}>
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Printer className="w-5 h-5 text-muted-foreground" />
+            <span className="font-semibold">{printer.name}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <HealthIndicator health={health} />
+            <Badge variant={printer.is_active ? 'default' : 'secondary'}>
+              {printer.is_active ? 'Activa' : 'Inactiva'}
+            </Badge>
+          </div>
+        </div>
+        <div className="text-sm text-muted-foreground space-y-1">
+          <p>IP: {printer.ip_address}:{printer.port}</p>
+          <p>Papel: {printer.paper_width}mm</p>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {health.status === 'unreachable' && (
+            <Button variant="outline" size="sm" onClick={onRetry}>
+              <RefreshCw className="w-3.5 h-3.5 mr-1" /> Reintentar
+            </Button>
+          )}
+          {health.status === 'reachable' && (
+            <Button variant="outline" size="sm" onClick={onTest}>
+              <TestTube className="w-3.5 h-3.5 mr-1" /> Test
+            </Button>
+          )}
+          {health.status === 'idle' && (
+            <Button variant="outline" size="sm" onClick={onTest}>
+              <TestTube className="w-3.5 h-3.5 mr-1" /> Test
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={onEdit}>
+            <Pencil className="w-3.5 h-3.5 mr-1" /> Editar
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-destructive"
+            onClick={onDelete}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ─────────── Ready Screen (State 2) ─────────── */
 function ReadyScreen({
   branchId,
@@ -191,6 +329,65 @@ function ReadyScreen({
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<BranchPrinter | null>(null);
   const [form, setForm] = useState(DEFAULT_PRINTER);
+  const [healthMap, setHealthMap] = useState<Record<string, PrinterHealth>>({});
+  const [currentNetwork, setCurrentNetwork] = useState<string | null>(null);
+
+  // Get network fingerprint on mount
+  useEffect(() => {
+    getNetworkFingerprint().then(setCurrentNetwork);
+  }, []);
+
+  // Run health checks when printers change
+  const runHealthChecks = useCallback(async (printerList: BranchPrinter[]) => {
+    const toCheck = printerList.filter((p) => p.ip_address && p.is_active);
+    if (!toCheck.length) return;
+
+    // Set all to checking
+    setHealthMap((prev) => {
+      const next = { ...prev };
+      toCheck.forEach((p) => { next[p.id] = { status: 'checking' }; });
+      return next;
+    });
+
+    // Test all in parallel
+    const results = await Promise.allSettled(
+      toCheck.map(async (p) => {
+        const result = await testPrinterConnection(p.ip_address!, p.port);
+        return { id: p.id, result };
+      })
+    );
+
+    setHealthMap((prev) => {
+      const next = { ...prev };
+      results.forEach((r) => {
+        if (r.status === 'fulfilled') {
+          const { id, result } = r.value;
+          next[id] = result.reachable
+            ? { status: 'reachable', latencyMs: result.latencyMs }
+            : { status: 'unreachable', error: result.error };
+        }
+      });
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (printers?.length) {
+      runHealthChecks(printers);
+    }
+  }, [printers, runHealthChecks]);
+
+  const retryPrinter = async (printer: BranchPrinter) => {
+    if (!printer.ip_address) return;
+    setHealthMap((prev) => ({ ...prev, [printer.id]: { status: 'checking' } }));
+    const result = await testPrinterConnection(printer.ip_address, printer.port);
+    setHealthMap((prev) => ({
+      ...prev,
+      [printer.id]: result.reachable
+        ? { status: 'reachable', latencyMs: result.latencyMs }
+        : { status: 'unreachable', error: result.error },
+    }));
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -211,12 +408,19 @@ function ReadyScreen({
     setModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name || !form.ip_address) return;
+    const networkFp = await getNetworkFingerprint();
     if (editing) {
-      update.mutate({ id: editing.id, ...form }, { onSuccess: () => setModalOpen(false) });
+      update.mutate(
+        { id: editing.id, ...form, configured_from_network: networkFp },
+        { onSuccess: () => setModalOpen(false) }
+      );
     } else {
-      create.mutate({ branch_id: branchId, ...form } as any, { onSuccess: () => setModalOpen(false) });
+      create.mutate(
+        { branch_id: branchId, ...form, configured_from_network: networkFp } as any,
+        { onSuccess: () => setModalOpen(false) }
+      );
     }
   };
 
@@ -230,6 +434,15 @@ function ReadyScreen({
     );
   }
 
+  // Determine if we should show network warning
+  const hasUnreachable = Object.values(healthMap).some((h) => h.status === 'unreachable');
+  const configuredNetworks = printers
+    ?.map((p) => p.configured_from_network)
+    .filter((n): n is string => !!n) || [];
+  const mismatchedNetwork = currentNetwork && configuredNetworks.length > 0
+    && !configuredNetworks.includes(currentNetwork);
+  const showNetworkWarning = hasUnreachable && mismatchedNetwork;
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <PageHeader
@@ -237,9 +450,16 @@ function ReadyScreen({
         subtitle="Configurá las impresoras térmicas de tu local"
         icon={<Printer className="w-5 h-5" />}
         actions={
-          <Button onClick={openCreate} size="sm">
-            <Plus className="w-4 h-4 mr-1" /> Nueva impresora
-          </Button>
+          <div className="flex gap-2">
+            {(printers?.length ?? 0) > 0 && (
+              <Button variant="outline" size="sm" onClick={() => printers && runHealthChecks(printers)}>
+                <RefreshCw className="w-4 h-4 mr-1" /> Verificar todas
+              </Button>
+            )}
+            <Button onClick={openCreate} size="sm">
+              <Plus className="w-4 h-4 mr-1" /> Nueva impresora
+            </Button>
+          </div>
         }
       />
 
@@ -251,6 +471,14 @@ function ReadyScreen({
         </span>
       </div>
 
+      {/* Network warning */}
+      {showNetworkWarning && (
+        <NetworkWarningBanner
+          currentNetwork={currentNetwork!}
+          printerNetwork={configuredNetworks[0]}
+        />
+      )}
+
       {!printers?.length ? (
         <EmptyState
           icon={Printer}
@@ -260,39 +488,15 @@ function ReadyScreen({
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {printers.map((p) => (
-            <Card key={p.id}>
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Printer className="w-5 h-5 text-muted-foreground" />
-                    <span className="font-semibold">{p.name}</span>
-                  </div>
-                  <Badge variant={p.is_active ? 'default' : 'secondary'}>
-                    {p.is_active ? 'Activa' : 'Inactiva'}
-                  </Badge>
-                </div>
-                <div className="text-sm text-muted-foreground space-y-1">
-                  <p>IP: {p.ip_address}:{p.port}</p>
-                  <p>Papel: {p.paper_width}mm</p>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => printTest(p)}>
-                    <TestTube className="w-3.5 h-3.5 mr-1" /> Test
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => openEdit(p)}>
-                    <Pencil className="w-3.5 h-3.5 mr-1" /> Editar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-destructive"
-                    onClick={() => remove.mutate(p.id)}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <PrinterCard
+              key={p.id}
+              printer={p}
+              health={healthMap[p.id] || { status: 'idle' }}
+              onTest={() => printTest(p)}
+              onEdit={() => openEdit(p)}
+              onDelete={() => remove.mutate(p.id)}
+              onRetry={() => retryPrinter(p)}
+            />
           ))}
         </div>
       )}
@@ -320,6 +524,10 @@ function ReadyScreen({
             <div>
               <p className="font-medium text-foreground">La impresora no imprime</p>
               <p>La impresora debe estar conectada por cable de red al mismo router que esta computadora. Verificá que esté encendida y en la misma subred.</p>
+            </div>
+            <div>
+              <p className="font-medium text-foreground">Dice "No responde" pero la impresora está encendida</p>
+              <p>Verificá que estás en la misma red WiFi/LAN que la impresora. Si la configuraste desde otra ubicación, actualizá la IP.</p>
             </div>
           </div>
         </CollapsibleContent>
@@ -404,7 +612,6 @@ export default function PrintersConfigPage() {
     const result = await detectQZ();
     if (result.available) {
       if (systemState === 'not_available' || systemState === 'blocked') {
-        // Transition: just detected after waiting
         setSystemState('just_detected');
         setTimeout(() => setSystemState('ready'), 1500);
       } else if (systemState === 'checking') {
@@ -420,7 +627,6 @@ export default function PrintersConfigPage() {
   useEffect(() => {
     checkSystem();
 
-    // Poll every 3s while not ready
     const interval = setInterval(() => {
       if (systemState !== 'ready' && systemState !== 'just_detected') {
         checkSystem();

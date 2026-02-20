@@ -128,6 +128,57 @@ export async function printRawBase64(
 }
 
 /**
+ * Testea conectividad con una impresora enviando un comando ESC/POS mínimo (Init).
+ * Retorna si la impresora es alcanzable y la latencia.
+ */
+export async function testPrinterConnection(
+  ip: string,
+  port: number,
+  timeoutMs = 5000
+): Promise<{ reachable: boolean; latencyMs?: number; error?: string }> {
+  const ok = await connectQZ();
+  if (!ok) {
+    return { reachable: false, error: 'QZ_NOT_AVAILABLE' };
+  }
+
+  const start = performance.now();
+  try {
+    const config = qz.configs.create(null as any, { host: ip, port });
+    // ESC @ = Initialize printer (0x1B 0x40) - minimal safe command
+    const initCmd = btoa(String.fromCharCode(0x1b, 0x40));
+    await Promise.race([
+      qz.print(config, [{ type: 'raw', format: 'base64', data: initCmd }]),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs)
+      ),
+    ]);
+    const latencyMs = Math.round(performance.now() - start);
+    return { reachable: true, latencyMs };
+  } catch (error: any) {
+    const msg = error?.message || String(error);
+    if (msg === 'TIMEOUT') {
+      return { reachable: false, error: 'Tiempo de espera agotado' };
+    }
+    return { reachable: false, error: msg };
+  }
+}
+
+/**
+ * Obtiene un fingerprint de la red actual (IP pública).
+ */
+export async function getNetworkFingerprint(): Promise<string | null> {
+  try {
+    const res = await fetch('https://api.ipify.org?format=text', {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!res.ok) return null;
+    return (await res.text()).trim();
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Desconecta de QZ Tray.
  */
 export async function disconnectQZ(): Promise<void> {

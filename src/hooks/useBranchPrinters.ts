@@ -14,6 +14,7 @@ export interface BranchPrinter {
   port: number;
   paper_width: number;
   is_active: boolean;
+  configured_from_network: string | null;
   created_at: string;
 }
 
