@@ -7,6 +7,7 @@
  * Configurado sin certificado digital (uso interno en red local).
  */
 import qz from 'qz-tray';
+import { getQZCertificate, signQZData } from './qz-certificate';
 
 let connected = false;
 let connecting = false;
@@ -20,12 +21,12 @@ const DETECTION_CACHE_TTL = 30_000; // 30 segundos
  */
 function setupQZ() {
   qz.security.setCertificatePromise((resolve: (value: string) => void) => {
-    resolve('');
+    resolve(getQZCertificate());
   });
   qz.security.setSignatureAlgorithm('SHA512');
-  qz.security.setSignaturePromise((_toSign: string) => {
+  qz.security.setSignaturePromise((toSign: string) => {
     return (resolve: (value: string) => void) => {
-      resolve('');
+      resolve(signQZData(toSign));
     };
   });
 }
@@ -116,7 +117,7 @@ export async function printRaw(
     throw new Error('QZ_NOT_AVAILABLE');
   }
 
-  const config = qz.configs.create(null as any, { host: ip, port: port });
+  const config = qz.configs.create({ host: ip, port: port } as any);
   const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
   const base64 = btoa(String.fromCharCode(...bytes));
 
@@ -136,7 +137,7 @@ export async function printRawBase64(
     throw new Error('QZ_NOT_AVAILABLE');
   }
 
-  const config = qz.configs.create(null as any, { host: ip, port: port });
+  const config = qz.configs.create({ host: ip, port: port } as any);
   await qz.print(config, [{ type: 'raw', format: 'base64', data: dataBase64 }]);
 }
 
@@ -156,7 +157,7 @@ export async function testPrinterConnection(
 
   const start = performance.now();
   try {
-    const config = qz.configs.create(null as any, { host: ip, port });
+    const config = qz.configs.create({ host: ip, port } as any);
     // ESC @ = Initialize printer (0x1B 0x40) - minimal safe command
     const initCmd = btoa(String.fromCharCode(0x1b, 0x40));
     await Promise.race([
