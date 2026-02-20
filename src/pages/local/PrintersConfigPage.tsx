@@ -48,7 +48,7 @@ const DEFAULT_PRINTER = {
 };
 
 /* ─────────── Setup Screen (State 1) ─────────── */
-function SetupScreen({ state }: { state: 'checking' | 'not_available' }) {
+function SetupScreen({ state, onSkip }: { state: 'checking' | 'not_available'; onSkip: () => void }) {
   const handleDownload = async () => {
     try {
       const response = await fetch('/instalar-impresoras.bat');
@@ -114,9 +114,14 @@ function SetupScreen({ state }: { state: 'checking' | 'not_available' }) {
             )}
 
             {state === 'not_available' && (
-              <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Esperando instalación...
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Esperando instalación...
+                </div>
+                <Button variant="ghost" size="sm" onClick={onSkip}>
+                  Ya lo tengo instalado
+                </Button>
               </div>
             )}
           </div>
@@ -283,6 +288,7 @@ function ReadyScreen({
   branchId,
   printers,
   isLoading,
+  bridgeAvailable,
   printTest,
   create,
   update,
@@ -291,6 +297,7 @@ function ReadyScreen({
   branchId: string;
   printers: BranchPrinter[] | undefined;
   isLoading: boolean;
+  bridgeAvailable: boolean;
   printTest: (p: BranchPrinter) => void;
   create: any;
   update: any;
@@ -447,6 +454,24 @@ function ReadyScreen({
           currentNetwork={currentNetwork!}
           printerNetwork={configuredNetworks[0]}
         />
+      )}
+
+      {!bridgeAvailable && (
+        <Card className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-medium text-sm">
+                  Sistema de impresión no detectado en esta PC
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Podés configurar impresoras pero no vas a poder imprimir hasta que Print Bridge esté corriendo en esta computadora.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {!printers?.length ? (
@@ -607,32 +632,26 @@ export default function PrintersConfigPage() {
   const { data: printers, isLoading, create, update, remove } = useBranchPrinters(branchId!);
   const { printTest } = usePrinting(branchId!);
   const [systemState, setSystemState] = useState<SystemState>('checking');
+  const [bridgeAvailable, setBridgeAvailable] = useState(false);
 
   const checkSystem = useCallback(async () => {
     const result = await detectPrintBridge();
-    if (result.available) {
+    setBridgeAvailable(result.available);
+    if (result.available && systemState !== 'ready') {
       setSystemState('ready');
-    } else {
-      if (systemState === 'checking' || systemState === 'not_available') {
-        setSystemState('not_available');
-      }
+    } else if (!result.available && (systemState === 'checking')) {
+      setSystemState('not_available');
     }
   }, [systemState]);
 
   useEffect(() => {
     checkSystem();
-
-    const interval = setInterval(() => {
-      if (systemState !== 'ready') {
-        checkSystem();
-      }
-    }, 3000);
-
+    const interval = setInterval(checkSystem, 3000);
     return () => clearInterval(interval);
-  }, [systemState, checkSystem]);
+  }, [checkSystem]);
 
   if (systemState === 'checking' || systemState === 'not_available') {
-    return <SetupScreen state={systemState} />;
+    return <SetupScreen state={systemState} onSkip={() => setSystemState('ready')} />;
   }
 
   return (
@@ -640,6 +659,7 @@ export default function PrintersConfigPage() {
       branchId={branchId!}
       printers={printers}
       isLoading={isLoading}
+      bridgeAvailable={bridgeAvailable}
       printTest={printTest}
       create={create}
       update={update}
