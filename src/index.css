@@ -28,6 +28,22 @@ html, body {
 
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
 
+@font-face {
+  font-family: 'HamburgHand';
+  src: url('/fonts/HamburgHand-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'HamburgHand';
+  src: url('/fonts/HamburgHand-Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   :root {
     /* Core brand colors - Hoppiness Official */
@@ -164,6 +180,12 @@ html, body {
   /* Typography - Space Mono for titles like brand manual suggests */
   .font-brand {
     font-family: 'Space Mono', monospace;
+  }
+
+  /* HamburgHand - Display font for hero/section titles */
+  .font-display {
+    font-family: 'HamburgHand', 'Space Mono', monospace;
+    font-weight: 700;
   }
 }
 

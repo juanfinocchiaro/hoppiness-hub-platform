@@ -46,7 +46,7 @@ export function MenuShowcaseSection() {
     <section className="py-20 px-4 bg-foreground">
       <div className="container mx-auto max-w-6xl">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-black mb-3 font-brand text-accent">
+          <h2 className="text-4xl font-black mb-3 font-display text-accent">
             NUESTRO MENÚ
           </h2>
           <p className="text-background/70 text-lg">
