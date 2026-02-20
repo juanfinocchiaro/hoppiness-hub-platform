@@ -19,6 +19,7 @@ import {
   type PrintableOrder,
   type PrintableItem,
   type FiscalTicketData,
+  type TicketClienteData,
 } from '@/lib/escpos';
 import type { BranchPrinter } from '@/hooks/useBranchPrinters';
 import type { PrintConfig } from '@/hooks/usePrintConfig';
@@ -64,7 +65,6 @@ export function usePrinting(branchId: string) {
 
   const printMutation = useMutation({
     mutationFn: async ({ printer, jobType, pedidoId, dataBase64 }: PrintJobInput) => {
-      // Record print job
       await supabase.from('print_jobs').insert({
         branch_id: branchId,
         printer_id: printer.id,
@@ -75,10 +75,7 @@ export function usePrinting(branchId: string) {
       });
 
       const success = await sendToPrinter(printer, dataBase64);
-
-      if (!success) {
-        throw new Error('No se pudo imprimir');
-      }
+      if (!success) throw new Error('No se pudo imprimir');
     },
     onSuccess: () => {
       toast.success('Impreso correctamente');
@@ -104,8 +101,8 @@ export function usePrinting(branchId: string) {
     },
   });
 
-  const printComandaCompleta = (order: PrintableOrder, printer: BranchPrinter) => {
-    const data = generateComandaCompleta(order, printer.paper_width);
+  const printComandaCompleta = (order: PrintableOrder, branchName: string, printer: BranchPrinter) => {
+    const data = generateComandaCompleta(order, branchName, printer.paper_width);
     printMutation.mutate({
       branchId,
       printer,
@@ -119,9 +116,10 @@ export function usePrinting(branchId: string) {
     order: PrintableOrder,
     stationName: string,
     stationItems: PrintableItem[],
+    branchName: string,
     printer: BranchPrinter
   ) => {
-    const data = generateComandaEstacion(order, stationName, stationItems, printer.paper_width);
+    const data = generateComandaEstacion(order, stationName, stationItems, branchName, printer.paper_width);
     printMutation.mutate({
       branchId,
       printer,
@@ -131,15 +129,10 @@ export function usePrinting(branchId: string) {
   };
 
   const printTicket = (
-    order: PrintableOrder & {
-      items: (PrintableItem & { precio_unitario?: number; subtotal?: number })[];
-      total?: number;
-      descuento?: number;
-    },
-    branchName: string,
+    ticketData: TicketClienteData,
     printer: BranchPrinter
   ) => {
-    const data = generateTicketCliente(order, branchName, printer.paper_width);
+    const data = generateTicketCliente(ticketData, printer.paper_width);
     printMutation.mutate({
       branchId,
       printer,
@@ -150,9 +143,10 @@ export function usePrinting(branchId: string) {
 
   const printDelivery = (
     order: PrintableOrder & { cliente_telefono?: string | null; cliente_direccion?: string | null },
+    branchName: string,
     printer: BranchPrinter
   ) => {
-    const data = generateComandaDelivery(order, printer.paper_width);
+    const data = generateComandaDelivery(order, branchName, printer.paper_width);
     printMutation.mutate({
       branchId,
       printer,
@@ -161,8 +155,8 @@ export function usePrinting(branchId: string) {
     });
   };
 
-  const printTest = (printer: BranchPrinter) => {
-    const data = generateTestPage(printer.name, printer.paper_width);
+  const printTest = (printer: BranchPrinter, branchName: string) => {
+    const data = generateTestPage(printer.name, branchName, printer.paper_width);
     printMutation.mutate({
       branchId,
       printer,
@@ -196,9 +190,6 @@ export function usePrinting(branchId: string) {
     }
   };
 
-  /**
-   * Print order using the routing system (by category tipo_impresion)
-   */
   const printOrder = async (
     order: PrintableOrder & { items: (PrintableItem & { categoria_carta_id?: string | null; precio_unitario?: number; subtotal?: number })[]; total?: number; descuento?: number },
     config: PrintConfig,
@@ -221,7 +212,6 @@ export function usePrinting(branchId: string) {
       if (printer) {
         try {
           await sendToPrinter(printer, job.dataBase64);
-          // Record in print_jobs
           await supabase.from('print_jobs').insert({
             branch_id: branchId,
             printer_id: printer.id,
@@ -232,7 +222,6 @@ export function usePrinting(branchId: string) {
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Error desconocido';
           toast.error(`Error al imprimir ${job.label}`, { description: msg });
-          // Record failed job
           await supabase.from('print_jobs').insert({
             branch_id: branchId,
             printer_id: printer.id,

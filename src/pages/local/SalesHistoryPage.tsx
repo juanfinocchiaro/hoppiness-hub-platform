@@ -36,7 +36,7 @@ import { useAfipConfig } from '@/hooks/useAfipConfig';
 import { usePrinting } from '@/hooks/usePrinting';
 import { usePrintConfig } from '@/hooks/usePrintConfig';
 import { useBranchPrinters } from '@/hooks/useBranchPrinters';
-import { generateTicketCliente, generateComandaCompleta, generateValeBebida, generateComandaDelivery } from '@/lib/escpos';
+import { generateTicketCliente, generateComandaCompleta, generateVale, generateComandaDelivery, type TicketClienteData } from '@/lib/escpos';
 import { toast } from 'sonner';
 import type { ShiftType } from '@/types/shiftClosure';
 
@@ -135,14 +135,18 @@ function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: {
     try {
       switch (type) {
         case 'ticket': {
-          const data = generateTicketCliente(printableOrder, branchName, ticketPrinter.paper_width);
+          const ticketData: TicketClienteData = {
+            order: printableOrder,
+            branchName,
+          };
+          const data = generateTicketCliente(ticketData, ticketPrinter.paper_width);
           const { printRawBase64 } = await import('@/lib/qz-print');
           await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, data);
           toast.success('Ticket impreso');
           break;
         }
         case 'comanda': {
-          const data = generateComandaCompleta(printableOrder, ticketPrinter.paper_width);
+          const data = generateComandaCompleta(printableOrder, branchName, ticketPrinter.paper_width);
           const comandaPrinter = printConfig?.comanda_printer_id
             ? allPrinters.find(p => p.id === printConfig.comanda_printer_id && p.is_active)
             : ticketPrinter;
@@ -159,7 +163,14 @@ function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: {
           const { printRawBase64 } = await import('@/lib/qz-print');
           for (const item of printableOrder.items) {
             for (let i = 0; i < item.cantidad; i++) {
-              const data = generateValeBebida(printableOrder, item.nombre || 'Producto', printer.paper_width);
+              const data = generateVale(
+                item.nombre || 'Producto',
+                printableOrder.numero_pedido,
+                printableOrder.created_at,
+                printableOrder.canal_venta || undefined,
+                undefined,
+                printer.paper_width
+              );
               await printRawBase64(printer.ip_address!, printer.port, data);
             }
           }
@@ -167,7 +178,7 @@ function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: {
           break;
         }
         case 'delivery': {
-          const data = generateComandaDelivery(printableOrder, ticketPrinter.paper_width);
+          const data = generateComandaDelivery(printableOrder, branchName, ticketPrinter.paper_width);
           const { printRawBase64 } = await import('@/lib/qz-print');
           await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, data);
           toast.success('Ticket delivery impreso');

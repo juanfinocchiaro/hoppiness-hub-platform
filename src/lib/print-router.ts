@@ -6,9 +6,10 @@ import type { PrintConfig } from '@/hooks/usePrintConfig';
 import {
   generateTicketCliente,
   generateComandaCompleta,
-  generateValeBebida,
+  generateVale,
   type PrintableOrder,
   type PrintableItem,
+  type TicketClienteData,
 } from '@/lib/escpos';
 
 interface MenuCategoria {
@@ -65,7 +66,11 @@ export function buildPrintJobs(
   if (config.ticket_enabled && config.ticket_printer_id) {
     const printer = findPrinter(config.ticket_printer_id);
     if (printer) {
-      const data = generateTicketCliente(order, branchName, printer.paper_width);
+      const ticketData: TicketClienteData = {
+        order,
+        branchName,
+      };
+      const data = generateTicketCliente(ticketData, printer.paper_width);
       jobs.push({
         type: 'ticket',
         printerId: printer.id,
@@ -82,7 +87,14 @@ export function buildPrintJobs(
       for (const item of order.items) {
         if (getTipoImpresion(item) === 'vale') {
           for (let i = 0; i < item.cantidad; i++) {
-            const data = generateValeBebida(order, item.nombre || 'Producto', printer.paper_width);
+            const data = generateVale(
+              item.nombre || 'Producto',
+              order.numero_pedido,
+              order.created_at,
+              order.canal_venta || undefined,
+              order.numero_llamador,
+              printer.paper_width
+            );
             jobs.push({
               type: 'vale',
               printerId: printer.id,
@@ -102,19 +114,16 @@ export function buildPrintJobs(
       let comandaItems: PrintableItem[];
 
       if (esSalon) {
-        // En salón: solo items tipo 'comanda'
         comandaItems = order.items.filter(item => getTipoImpresion(item) === 'comanda');
       } else if (config.no_salon_todo_en_comanda !== false) {
-        // No salón con todo en comanda: incluir comanda + vale
         comandaItems = order.items.filter(item => getTipoImpresion(item) !== 'no_imprimir');
       } else {
-        // No salón sin todo en comanda: solo tipo comanda
         comandaItems = order.items.filter(item => getTipoImpresion(item) === 'comanda');
       }
 
       if (comandaItems.length > 0) {
         const comandaOrder = { ...order, items: comandaItems };
-        const data = generateComandaCompleta(comandaOrder, printer.paper_width);
+        const data = generateComandaCompleta(comandaOrder, branchName, printer.paper_width);
         jobs.push({
           type: 'comanda',
           printerId: printer.id,
