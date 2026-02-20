@@ -1,75 +1,103 @@
 
 
-## Mensajes de WhatsApp personalizados y editables por tipo de consulta
+## Impresion directa sin dialogo via QZ Tray
 
 ### Que se va a hacer
 
-Cuando apretes "WhatsApp" en un mensaje de contacto, se va a abrir WhatsApp con un mensaje pre-armado segun el tipo de consulta (franquicia, empleo, proveedor, etc.). Ademas, vas a poder editar esas plantillas desde la plataforma sin tocar codigo.
+Reemplazar el sistema actual de impresion (que usa una Edge Function en la nube y no puede llegar a IPs privadas) por impresion directa usando QZ Tray como puente local. La app se comunica con QZ Tray via WebSocket en localhost, y QZ Tray envia los bytes ESC/POS directo a la impresora por TCP. Sin dialogo, sin delay.
 
-### Flujo del usuario
-
-1. Vas a `/mimarca/mensajes` y apretas "WhatsApp" en una consulta de franquicia
-2. Se abre WhatsApp con el mensaje ya armado, reemplazando `[NOMBRE]` por el nombre real del contacto
-3. Si queres cambiar el mensaje, vas a una seccion de configuracion y lo editas
-4. Cada tipo de consulta (franquicia, empleo, proveedor, pedidos, consulta, otro) tiene su propia plantilla
-
-### Variables disponibles en las plantillas
-
-- `[NOMBRE]` - Nombre del contacto
-- `[EMAIL]` - Email del contacto
-- `[TELEFONO]` - Telefono del contacto
-
-### Cambios
-
-**1. Base de datos - Nueva tabla `whatsapp_templates`**
+### Flujo
 
 ```text
-whatsapp_templates
-- id (UUID, PK)
-- subject_type (TEXT, UNIQUE) -> 'franquicia', 'empleo', 'proveedor', 'pedidos', 'consulta', 'otro'
-- template_text (TEXT) -> El mensaje con variables como [NOMBRE]
-- is_active (BOOLEAN, default true)
-- updated_by (UUID, FK auth.users)
-- created_at, updated_at (TIMESTAMPTZ)
+Navegador (Hoppiness Hub)
+    |
+    | WebSocket a localhost:8182
+    v
+QZ Tray (programa en la PC)
+    |
+    | TCP directo a 192.168.x.x:9100
+    v
+Impresora termica
 ```
 
-RLS: Solo superadmin y coordinador pueden leer/editar.
+### Primera vez en una PC
 
-Se pre-cargan los 6 tipos con el mensaje de franquicia que ya tenes definido y mensajes genericos para el resto.
+1. El usuario va a Configuracion > Impresoras
+2. La app detecta que el sistema de impresion no esta instalado
+3. Muestra pantalla simple: "Descarga e instala esto (doble clic)"
+4. El usuario descarga un `.bat`, le da doble clic, se instala solo
+5. La pagina detecta automaticamente que ya esta listo (polling cada 3 seg)
+6. Aparece la config de impresoras, pone IP y puerto, hace Test, y sale imprimiendo
 
-**2. `src/pages/admin/ContactMessagesPage.tsx`**
+### Uso diario
 
-- Modificar `handleWhatsApp()` para buscar la plantilla del tipo de consulta, reemplazar `[NOMBRE]` por `message.name`, y agregar `?text=` al link de WhatsApp
-- Agregar un boton/icono de "Configurar plantillas" en el header de la pagina
+1. QZ Tray arranca con Windows
+2. El indicador en el sidebar muestra impresora en verde
+3. Cada ticket/comanda se imprime directo, sin dialogo
 
-**3. Nuevo componente: `src/components/admin/WhatsAppTemplatesDialog.tsx`**
+### Cambios tecnicos
 
-- Dialog/modal que muestra las 6 plantillas en tabs o acordeon
-- Cada una con un textarea editable
-- Boton guardar que actualiza la tabla
-- Preview en tiempo real del mensaje con datos de ejemplo
+**1. Instalar dependencia npm: `qz-tray`**
 
-**4. Nuevo hook: `src/hooks/useWhatsAppTemplates.ts`**
+**2. Crear: `src/lib/qz-print.ts`**
 
-- Query para traer todas las plantillas
-- Mutation para actualizar una plantilla
-- Funcion helper `getMessageForContact(subjectType, contactName)` que reemplaza variables
+Modulo que maneja la conexion WebSocket con QZ Tray:
+- `connectQZ()` - Conecta al WebSocket local
+- `printRaw(ip, port, data)` - Envia bytes ESC/POS a la impresora via TCP
+- `detectQZ()` - Detecta si QZ Tray esta corriendo (retorna available, version, error)
+- `isQZConnected()` - Estado actual de conexion
+- `disconnectQZ()` - Desconecta
+- Configuracion sin certificado digital (uso en red local)
+- Reconexion automatica si se pierde la conexion
 
-### Datos iniciales
+**3. Modificar: `src/hooks/usePrinting.ts`**
 
-Se van a cargar estos mensajes predeterminados:
+- Reemplazar la llamada a la Edge Function `print-to-network` por `printRaw()` del nuevo modulo
+- Mantener la misma API publica (printTest, printComandaCompleta, etc.)
+- Agregar estado exportado `qzStatus` ('checking' | 'connected' | 'not_available')
+- Deteccion al montar el hook
+- Si QZ no esta disponible, toast con instrucciones (sin mencionar "QZ Tray" por nombre)
 
-- **Franquicia**: El mensaje que ya tenes definido (el largo con las 3 preguntas)
-- **Empleo**: "Hola [NOMBRE]! Gracias por postularte en Hoppiness Club. Recibimos tu CV y lo estamos revisando. Te contactamos pronto!"
-- **Proveedor**: "Hola [NOMBRE]! Gracias por contactarnos como proveedor. Recibimos tu informacion y la estamos evaluando."
-- **Pedidos**: "Hola [NOMBRE]! Recibimos tu consulta sobre tu pedido. Danos un momento para revisarlo."
-- **Consulta**: "Hola [NOMBRE]! Gracias por escribirnos. Recibimos tu mensaje y te respondemos a la brevedad."
-- **Otro**: "Hola [NOMBRE]! Gracias por contactar a Hoppiness Club. Recibimos tu mensaje."
+**4. Redisenar: `src/pages/local/PrintersConfigPage.tsx`**
 
-### Detalle tecnico
+La pagina tiene 2 estados con transicion automatica:
 
-- La tabla es liviana (6 filas fijas), no necesita paginacion
-- El reemplazo de variables se hace en el frontend antes de abrir el link
-- Se usa `encodeURIComponent()` para que el mensaje se envie correctamente por URL
-- El link final queda: `whatsapp://send?phone=54XXXXXXXXXX&text=Hola%20Juan...`
+**Estado 1 - Sistema no detectado:**
+- Pantalla limpia explicando que hay que instalar un programa (una sola vez)
+- Boton "Descargar instalador" que baja el `.bat`
+- Animacion de "Esperando instalacion..." con polling cada 3 seg
+- Seccion de solucion de problemas en acordeon (Windows SmartScreen, antivirus, etc.)
+- Sub-estado si detecta QZ instalado pero sin permiso: mensaje para aceptar el popup
+
+**Estado 2 - Sistema listo:**
+- Badge verde "Sistema de impresion listo"
+- Cards de impresoras con IP, Puerto, Tipo, Ancho de papel
+- Boton Test que imprime directo (resultado inline: ok o error)
+- Boton Agregar impresora
+- Seccion de ayuda expandible (como encontrar la IP, que puerto usar)
+- Transicion animada desde Estado 1 (fade con pausa de 1.5s)
+
+**5. Crear: `public/instalar-impresoras.bat`**
+
+Archivo `.bat` descargable que instala QZ Tray automaticamente con un doble clic. Usa PowerShell para descargar e instalar.
+
+**6. Indicador de estado en el sidebar de Mi Local**
+
+- Icono de impresora con punto verde (conectado) o rojo (no disponible)
+- Tooltip descriptivo
+- Clic navega a la pagina de impresoras
+- Solo verifica una vez al cargar (no polling continuo)
+
+### Lo que NO cambia
+
+- `src/lib/escpos.ts` - Todo el codigo ESC/POS se mantiene tal cual
+- Tabla `branch_printers` - Ya tiene `ip_address` y `port`, no hay migracion
+- Edge Function `print-to-network` - Se mantiene sin uso activo
+- Tabla `print_jobs` - Se mantiene para historial
+
+### Reglas de UX
+
+- Nunca mostrar "QZ Tray" en la UI. Siempre decir "sistema de impresion"
+- Todos los mensajes de error en espanol y orientados a la accion
+- La transicion entre Estado 1 y 2 es automatica y animada
 
