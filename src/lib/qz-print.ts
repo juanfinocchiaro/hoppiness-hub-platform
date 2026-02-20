@@ -6,7 +6,7 @@
  * Sin Java, sin certificados, sin popups.
  */
 
-const PRINT_BRIDGE_URL = 'http://127.0.0.1:3001';
+const PRINT_BRIDGE_URL = 'http://localhost:3001';
 
 /**
  * Verifica si Print Bridge está corriendo.
