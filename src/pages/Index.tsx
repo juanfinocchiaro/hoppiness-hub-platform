@@ -18,7 +18,7 @@ import {
   ReviewsSection,
   MenuShowcaseSection
 } from '@/components/landing';
-import ultraCheese from '@/assets/ultra-cheese.jpg';
+import fotoHero from '@/assets/foto-hero.jpg';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 
 export default function Index() {
@@ -32,7 +32,7 @@ export default function Index() {
       <section className="relative h-[90vh] min-h-[600px] flex items-center">
         <div 
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${ultraCheese})` }}
+          style={{ backgroundImage: `url(${fotoHero})` }}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-transparent" />
         
@@ -48,7 +48,7 @@ export default function Index() {
               <span className="text-accent font-bold">4 VECES CAMPEONES</span>
             </div>
             
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-white mb-6 font-brand tracking-tight leading-tight">
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-white mb-6 font-display tracking-tight leading-none">
               CULTO<br />
               AL SABOR
             </h1>
