@@ -29,12 +29,12 @@ export default function Index() {
       <PublicHeader />
 
       {/* Hero Section - Producto protagonista */}
-      <section className="relative h-[90vh] min-h-[600px] flex items-center">
+      <section className="relative h-[70vh] min-h-[500px] flex items-center">
         <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${fotoHero})` }}
+          className="absolute inset-0 bg-cover"
+          style={{ backgroundImage: `url(${fotoHero})`, backgroundPosition: '70% center' }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/65 to-black/20" />
         
         <div className="relative container mx-auto px-4">
           <div className="max-w-2xl">
