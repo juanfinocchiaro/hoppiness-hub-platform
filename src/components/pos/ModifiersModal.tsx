@@ -85,6 +85,7 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
         precio_unitario: precioBase,
         subtotal: precioBase,
         precio_referencia: hasDiscount ? precioRef : undefined,
+        categoria_carta_id: item.categoria_carta_id ?? null,
       });
       onOpenChange(false);
     }
@@ -150,6 +151,7 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
       extras: cartExtras.length > 0 ? cartExtras : undefined,
       removibles: cartRemovibles.length > 0 ? cartRemovibles : undefined,
       precio_referencia: hasDiscount ? precioRef : undefined,
+      categoria_carta_id: item.categoria_carta_id ?? null,
     });
 
     onOpenChange(false);

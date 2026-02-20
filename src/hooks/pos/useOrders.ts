@@ -14,6 +14,7 @@ export interface PedidoItemInput {
   notas?: string;
   estacion?: string;
   precio_referencia?: number;
+  categoria_carta_id?: string | null;
 }
 
 /** Una línea de pago (pago dividido) */
@@ -124,6 +125,7 @@ export function useCreatePedido(branchId: string) {
           notas: it.notas ?? null,
           estacion: it.estacion ?? 'armado',
           precio_referencia: it.precio_referencia ?? null,
+          categoria_carta_id: it.categoria_carta_id ?? null,
         } as any);
         if (errItem) throw errItem;
       }

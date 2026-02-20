@@ -4,6 +4,8 @@
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { ProductGrid, type CartItem } from '@/components/pos/ProductGrid';
 import { AccountPanel } from '@/components/pos/AccountPanel';
 import { ConfigForm } from '@/components/pos/OrderConfigPanel';
@@ -15,6 +17,9 @@ import { usePOSSessionState } from '@/hooks/pos/usePOSSessionState';
 import { useShiftStatus } from '@/hooks/useShiftStatus';
 import { useCashRegisters, useOpenShift } from '@/hooks/useCashRegister';
 import { useAuth } from '@/hooks/useAuth';
+import { usePrinting } from '@/hooks/usePrinting';
+import { usePrintConfig } from '@/hooks/usePrintConfig';
+import { useBranchPrinters } from '@/hooks/useBranchPrinters';
 import { toast } from 'sonner';
 import type { LocalPayment } from '@/types/pos';
 import { Button } from '@/components/ui/button';
@@ -122,6 +127,32 @@ export default function POSPage() {
   const shiftStatus = useShiftStatus(branchId);
   const createPedido = useCreatePedido(branchId!);
 
+  // Printing integration
+  const printing = usePrinting(branchId!);
+  const { data: printConfig } = usePrintConfig(branchId!);
+  const { data: printersData } = useBranchPrinters(branchId!);
+  const allPrinters = printersData ?? [];
+
+  const { data: branchInfo } = useQuery({
+    queryKey: ['branch-name', branchId],
+    queryFn: async () => {
+      const { data } = await supabase.from('branches').select('name').eq('id', branchId!).single();
+      return data;
+    },
+    enabled: !!branchId,
+  });
+
+  const { data: menuCategorias } = useQuery({
+    queryKey: ['menu-categorias-print'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('menu_categorias')
+        .select('id, nombre, tipo_impresion')
+        .eq('activo', true);
+      return (data ?? []) as { id: string; nombre: string; tipo_impresion: string }[];
+    },
+  });
+
   // Cart management
   const addItem = useCallback((item: CartItem) => {
     setCart((prev) => {
@@ -218,7 +249,7 @@ export default function POSPage() {
     setShowPaymentPanel(true);
   };
 
-  // Send to kitchen = persist everything to DB
+  // Send to kitchen = persist everything to DB + print
   const handleSendToKitchen = async () => {
     if (!branchId || cart.length === 0) return;
     try {
@@ -231,9 +262,10 @@ export default function POSPage() {
         notas: c.notas,
         estacion: 'armado' as const,
         precio_referencia: c.precio_referencia,
+        categoria_carta_id: c.categoria_carta_id,
       }));
 
-      await createPedido.mutateAsync({
+      const pedido = await createPedido.mutateAsync({
         items,
         payments: payments.map((p) => ({
           method: p.method,
@@ -242,6 +274,42 @@ export default function POSPage() {
         })),
         orderConfig,
       });
+
+      // Print order using routing system
+      if (printConfig && menuCategorias && printing.bridgeStatus === 'connected') {
+        const esSalon = orderConfig.tipoServicio === 'comer_aca';
+        const printableOrder = {
+          numero_pedido: 0,
+          tipo_servicio: orderConfig.tipoServicio ?? null,
+          canal_venta: orderConfig.canalVenta ?? null,
+          numero_llamador: orderConfig.numeroLlamador ? parseInt(orderConfig.numeroLlamador, 10) : null,
+          cliente_nombre: orderConfig.clienteNombre ?? null,
+          created_at: new Date().toISOString(),
+          items: cart.map((c) => ({
+            nombre: c.nombre,
+            cantidad: c.cantidad,
+            notas: c.notas,
+            estacion: 'armado',
+            categoria_carta_id: c.categoria_carta_id,
+            precio_unitario: c.precio_unitario,
+            subtotal: c.subtotal,
+          })),
+          total: subtotal,
+          descuento: 0,
+        };
+        try {
+          await printing.printOrder(
+            printableOrder,
+            printConfig,
+            allPrinters,
+            menuCategorias,
+            branchInfo?.name ?? 'Hoppiness',
+            esSalon
+          );
+        } catch (printErr) {
+          console.error('Print error (non-blocking):', printErr);
+        }
+      }
 
       toast.success('Pedido enviado a cocina');
       resetAll();

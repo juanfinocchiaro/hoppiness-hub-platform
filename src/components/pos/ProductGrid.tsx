@@ -35,6 +35,7 @@ export interface CartItem {
   extras?: CartItemExtra[];
   removibles?: CartItemRemovible[];
   precio_referencia?: number;
+  categoria_carta_id?: string | null;
   createdAt?: number;
 }
 
@@ -229,6 +230,7 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
         precio_unitario: precio,
         subtotal: precio,
         precio_referencia: precioRef && precioRef > precio ? precioRef : undefined,
+        categoria_carta_id: item.categoria_carta_id ?? null,
       });
     }
   };
