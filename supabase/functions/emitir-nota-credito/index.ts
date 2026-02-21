@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { authenticateWSAA, requestCAEWithAssoc } from "../_shared/wsaa.ts";
+import { authenticateWSAA, requestCAEWithAssoc, getLastVoucher } from "../_shared/wsaa.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -51,16 +51,14 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } =
-      await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = claimsData.claims.sub;
+    const userId = user.id;
 
     const body: EmitirNotaCreditoRequest = await req.json();
     const { factura_id } = body;
@@ -93,13 +91,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    const branchId = body.branch_id || original.branch_id;
+    const branchId = original.branch_id;
     const tipoOriginal = original.tipo_comprobante; // "A", "B", "C"
     const ncInfo = NC_TYPE_MAP[tipoOriginal];
 
     if (!ncInfo) {
       return new Response(
         JSON.stringify({ error: `Tipo de comprobante no soportado: ${tipoOriginal}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!original.fecha_emision || !original.punto_venta || !original.numero_comprobante) {
+      return new Response(
+        JSON.stringify({ error: "La factura original tiene datos incompletos (fecha, punto de venta o número)" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -118,9 +123,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!config.certificado_crt || !config.clave_privada_enc || !config.punto_venta) {
+    if (!config.certificado_crt || !config.clave_privada_enc || !config.punto_venta || !config.cuit) {
       return new Response(
-        JSON.stringify({ error: "Configuración ARCA incompleta" }),
+        JSON.stringify({ error: "Configuración ARCA incompleta. Falta certificado, CUIT o punto de venta." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -133,17 +138,21 @@ Deno.serve(async (req) => {
       clavePrivada = config.clave_privada_enc;
     }
 
-    // 4. Get next NC number (reuse same RPC, NC types use same counter approach)
-    const { data: nuevoNumero, error: rpcError } = await adminSupabase.rpc(
-      "obtener_proximo_numero_factura",
-      { _branch_id: branchId, _tipo: ncInfo.tipoNC }
-    );
+    // 4. Get next NC number from existing NCs in the DB (NOT from the invoice counter)
+    const ncTipoComprobante = ncInfo.tipoNC; // "NC_A", "NC_B", "NC_C"
+    const { data: lastNC, error: lastNCError } = await adminSupabase
+      .from("facturas_emitidas")
+      .select("numero_comprobante")
+      .eq("branch_id", branchId)
+      .eq("tipo_comprobante", ncTipoComprobante)
+      .eq("punto_venta", config.punto_venta)
+      .order("numero_comprobante", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (rpcError || nuevoNumero == null) {
-      return new Response(
-        JSON.stringify({ error: "Error al obtener número de NC", details: rpcError?.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    let nuevoNumero: number = (lastNC?.numero_comprobante ?? 0) + 1;
+    if (lastNCError) {
+      console.error("Error querying last NC:", lastNCError.message);
     }
 
     // 5. Build ARCA request with CbtesAsoc
@@ -195,9 +204,7 @@ Deno.serve(async (req) => {
         Cuit: config.cuit?.replace(/-/g, "") || "",
         CbteFch: original.fecha_emision.replace(/-/g, ""),
       }],
-      ...(tipoOriginal === "A"
-        ? { Iva: [{ Id: 5, BaseImp: neto, Importe: iva }] }
-        : {}),
+      Iva: [{ Id: 5, BaseImp: neto, Importe: iva }],
     };
 
     let cae: string;
@@ -227,6 +234,21 @@ Deno.serve(async (req) => {
           esProduccion
         );
 
+        // Sync with ARCA's last authorized NC number
+        const lastAuthorized = await getLastVoucher(
+          credentials, config.cuit, config.punto_venta, ncInfo.cbteTipo, esProduccion
+        );
+        const cbteNumero = lastAuthorized + 1;
+        console.log(`ARCA último NC autorizado tipo ${ncInfo.cbteTipo}: ${lastAuthorized}, usando: ${cbteNumero} (DB tenía: ${nuevoNumero})`);
+
+        if (cbteNumero !== nuevoNumero) {
+          console.log(`NC number adjusted: DB had ${nuevoNumero}, ARCA says next is ${cbteNumero}`);
+        }
+
+        // Update request with correct number
+        afipRequest.CbteDesde = cbteNumero;
+        afipRequest.CbteHasta = cbteNumero;
+
         const result = await requestCAEWithAssoc(
           credentials,
           config.cuit,
@@ -236,8 +258,8 @@ Deno.serve(async (req) => {
             concepto: 1,
             docTipo: original.receptor_cuit ? 80 : 99,
             docNro: original.receptor_cuit ? parseInt(original.receptor_cuit.replace(/-/g, "")) : 0,
-            cbteDesde: nuevoNumero,
-            cbteHasta: nuevoNumero,
+            cbteDesde: cbteNumero,
+            cbteHasta: cbteNumero,
             cbteFch,
             impTotal: total,
             impTotConc: 0,
@@ -271,11 +293,14 @@ Deno.serve(async (req) => {
           Resultado: result.resultado,
           Observaciones: result.observaciones,
         };
+
+        nuevoNumero = cbteNumero;
+        console.log(`NC emitida: CAE=${cae}, Vto=${caeVencimiento}, Nro=${cbteNumero}`);
       } catch (arcaError) {
         const errorMsg = arcaError instanceof Error ? arcaError.message : String(arcaError);
         console.error("Error ARCA al emitir NC:", errorMsg);
 
-        await supabase.from("afip_errores_log").insert({
+        await adminSupabase.from("afip_errores_log").insert({
           branch_id: branchId,
           tipo_error: "emision_nota_credito",
           mensaje: errorMsg.substring(0, 500),
@@ -289,8 +314,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 6. Save credit note
-    const { data: notaCredito, error: insertError } = await supabase
+    // 6. Save credit note (admin client bypasses RLS)
+    const { data: notaCredito, error: insertError } = await adminSupabase
       .from("facturas_emitidas")
       .insert({
         branch_id: branchId,
@@ -298,6 +323,7 @@ Deno.serve(async (req) => {
         tipo_comprobante: ncInfo.tipoNC,
         punto_venta: config.punto_venta,
         numero_comprobante: nuevoNumero,
+        fecha_emision: `${cbteFch.slice(0, 4)}-${cbteFch.slice(4, 6)}-${cbteFch.slice(6, 8)}`,
         cae,
         cae_vencimiento: caeVencimiento,
         receptor_cuit: original.receptor_cuit,
@@ -321,11 +347,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 7. Mark original invoice as cancelled
-    await supabase
+    // 7. Mark original invoice as cancelled (admin client bypasses RLS)
+    const { error: cancelError } = await adminSupabase
       .from("facturas_emitidas")
       .update({ anulada: true })
       .eq("id", factura_id);
+
+    if (cancelError) {
+      console.error("Failed to mark original invoice as cancelled:", cancelError.message);
+    }
 
     return new Response(
       JSON.stringify({
