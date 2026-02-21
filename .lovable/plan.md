@@ -1,54 +1,89 @@
 
 
-## Plan: Hacer que el Print Bridge soporte impresión de logo bitmap
+## Plan: Acciones completas en detalle de pedido (Reimprimir, Anular, Notas de Credito)
 
-### Problema raíz
+Este plan mejora la fila expandida de cada pedido en el Historial de Ventas con 3 grandes mejoras:
 
-Las comandas ya tienen el nuevo diseño en el código (`escpos.ts`), pero el logo no se imprime porque el Print Bridge (el servidor Node.js local en `localhost:3001`) recibe los datos en base64, los convierte a bytes y los envía tal cual a la impresora. No tiene lógica para detectar el marcador `__BITMAP_B64:...:END__` que el frontend inyecta en el stream ESC/POS.
+### 1. Botones de reimpresion inteligentes
 
-Como resultado, el marcador se envía como texto ASCII a la impresora, que lo ignora o imprime caracteres basura. El resto del formato (negrita, doble tamaño, separadores) sí funciona porque son comandos ESC/POS estándar.
+Actualmente los botones de reimprimir no consideran el contexto del pedido. Se van a mostrar **todos los tipos de ticket siempre**, pero deshabilitando los que no correspondan:
 
-### Solución
+- **Ticket cliente**: Siempre habilitado (es un comprobante no fiscal generico)
+- **Factura**: Habilitado SOLO si el pedido tiene una factura emitida (`facturas_emitidas.length > 0`). Deshabilitado con tooltip "Sin factura emitida" si no la tiene
+- **Comanda**: Siempre habilitado
+- **Vales**: Habilitado solo si el pedido tiene items con `tipo_impresion === 'vale'`. Deshabilitado con tooltip "Sin items de tipo vale" si no tiene
+- **Delivery**: Habilitado solo si `tipo_servicio === 'delivery'`. Deshabilitado si no es delivery
 
-Actualizar el Print Bridge para que intercepte los marcadores bitmap en el buffer de datos, convierta las imágenes PNG a formato raster ESC/POS (comando `GS v 0`), y reemplace el marcador por los bytes correctos antes de enviar a la impresora.
+Los botones deshabilitados se muestran visualmente "apagados" (opacity reducida, cursor not-allowed) para que el cajero entienda que existen pero no aplican.
 
-### Cambios
+### 2. Anulacion de pedidos
 
-**1. Actualizar el Print Bridge (`public/instalar-impresoras.bat`)**
+Se agrega un boton "Anular pedido" con confirmacion (AlertDialog). Al anular:
 
-- Modificar el código del `print-bridge.js` embebido en base64 dentro del .bat
-- Agregar una función `processBuffer(buffer)` que:
-  1. Busca el patrón `__BITMAP_B64:...:END__` en el buffer
-  2. Decodifica el PNG base64 a píxeles monocromáticos
-  3. Convierte los píxeles a formato raster ESC/POS (`GS v 0`)
-  4. Reemplaza el marcador por los bytes ESC/POS del bitmap
-  5. Retorna el buffer procesado
-- La conversión PNG a raster se hace con un parser PNG mínimo en JavaScript puro (sin dependencias npm), ya que las impresoras térmicas solo necesitan datos 1-bit (blanco/negro)
+- Se cambia el `estado` del pedido a `'cancelado'` en la tabla `pedidos`
+- Si el pedido **NO tiene factura**: solo se marca como cancelado
+- Si el pedido **tiene factura**: se emite una **Nota de Credito** automaticamente antes de cancelar. La nota de credito es un comprobante ARCA tipo 3 (NC A), 8 (NC B) o 13 (NC C) que referencia la factura original
 
-**2. Alternativa: Logo como texto estilizado (fallback)**
+Para las Notas de Credito se necesita:
+- Una nueva edge function `emitir-nota-credito` que recibe el `factura_id` original, emite el comprobante de anulacion ante ARCA y lo guarda en `facturas_emitidas` con tipo `NC_A`, `NC_B` o `NC_C`
+- Campo `factura_asociada_id` en `facturas_emitidas` para vincular la NC con la factura original
+- Campo `anulada` (boolean) en `facturas_emitidas` para marcar facturas que fueron anuladas por una NC
 
-- En `src/lib/escpos.ts`, modificar la función `printBrandHeader` para que use texto grande centrado como fallback principal
-- El logo bitmap queda como mejora opcional para bridges actualizados
-- Esto garantiza que las comandas se impriman correctamente incluso sin actualizar el bridge
+### 3. Cambio de datos de facturacion
 
-### Enfoque recomendado
+Se agrega un boton "Cambiar facturacion" (visible solo si el pedido tiene factura). Al usarlo:
 
-Implementar ambos cambios:
-1. Actualizar el bridge con soporte de bitmap para nuevas instalaciones
-2. Agregar detección inteligente: si el bridge no soporta bitmaps (versión vieja), usar texto como fallback automático
+1. Se abre un modal donde se cargan los nuevos datos (tipo factura, CUIT, razon social, condicion IVA)
+2. Al confirmar, el sistema:
+   - Emite una Nota de Credito por la factura original (misma logica que anulacion)
+   - Emite una nueva factura con los datos corregidos
+   - Ambos movimientos quedan vinculados en la base de datos
 
-### Detalles técnicos
+---
 
-El formato raster ESC/POS (`GS v 0`) funciona así:
+### Detalle tecnico
+
+**Migracion de base de datos:**
+- Agregar columnas a `facturas_emitidas`:
+  - `factura_asociada_id UUID REFERENCES facturas_emitidas(id)` (para vincular NC con factura original)
+  - `anulada BOOLEAN DEFAULT false` (marca si fue anulada por una NC)
+
+**Nueva edge function `emitir-nota-credito`:**
+- Recibe `factura_id` (la factura a anular) y opcionalmente `branch_id`
+- Lee la factura original de `facturas_emitidas`
+- Determina el tipo de NC segun el tipo original (A->3, B->8, C->13)
+- Usa el mismo flujo WSAA/WSFE que `emitir-factura` pero con CbteTipo de NC y referenciando el comprobante original via `CbtesAsoc`
+- Guarda la NC en `facturas_emitidas` con `factura_asociada_id` apuntando a la original
+- Marca la factura original como `anulada = true`
+
+**Archivos a modificar:**
+- `src/components/pos/OrderHistoryTable.tsx` - Redisenar seccion de acciones con botones inteligentes, boton anular, boton cambiar facturacion
+- `src/pages/local/SalesHistoryPage.tsx` - Agregar handlers para anulacion y re-facturacion, pasar categorias como prop para determinar vales
+- `src/hooks/useAfipConfig.ts` - Agregar mutation `emitirNotaCredito`
+- `src/hooks/pos/usePosOrderHistory.ts` - Agregar `receptor_cuit`, `receptor_razon_social`, `receptor_condicion_iva` al select de `facturas_emitidas`
+
+**Archivos a crear:**
+- `supabase/functions/emitir-nota-credito/index.ts` - Edge function para notas de credito
+- `src/components/pos/CancelOrderDialog.tsx` - Dialog de confirmacion de anulacion
+- `src/components/pos/ChangeInvoiceModal.tsx` - Modal para cambiar datos de facturacion
+
+**Flujo visual del detalle expandido:**
 
 ```text
-Comando: 1D 76 30 00 [xL xH yL yH] [datos...]
-- xL/xH: ancho en bytes (ancho_px / 8)
-- yL/yH: alto en líneas de píxeles
-- datos: 1 bit por píxel, MSB primero
++------------------------------------------+
+| Items                | Pagos             |
+| Pepsi x1    $2.500   | QR      $2.500    |
+|                      |                   |
+| Total       $2.500   | Factura C 00001-12|
+|                      | CAE: 12345678     |
++------------------------------------------+
+| Reimprimir                               |
+| [Ticket] [Factura] [Comanda] [Vales]     |
+|  (cada uno habilitado/deshabilitado       |
+|   segun contexto)                        |
++------------------------------------------+
+| Acciones                                 |
+| [Cambiar facturacion]  [Anular pedido]   |
++------------------------------------------+
 ```
-
-El parser PNG mínimo decodifica el IDAT chunk, aplica un umbral de luminosidad para convertir a 1-bit, y genera los bytes raster. Esto funciona sin librerías externas porque el logo es una imagen simple monocromática de 200x200px.
-
-La nueva versión del bridge se embebe en base64 dentro del `.bat` igual que ahora, y los locales que ya tienen el bridge instalado deberán re-ejecutar el instalador para actualizar.
 
