@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Store, Clock, DollarSign, Utensils, BarChart3, MapPin } from 'lucide-react';
+import { Store, Clock, DollarSign, Utensils, BarChart3, MapPin, ArrowRight } from 'lucide-react';
 import { BrandDailySalesTable } from '@/components/admin/BrandDailySalesTable';
 import { PageHelp } from '@/components/ui/PageHelp';
 import { PageHeader } from '@/components/ui/page-header';
@@ -122,7 +122,7 @@ export default function BrandHome() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div className="text-center p-4 bg-muted/50 rounded-lg">
+            <div className="text-center p-4 bg-primary/5 rounded-lg border border-primary/10">
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
                 <DollarSign className="w-4 h-4" />
                 Facturación Total
@@ -131,7 +131,7 @@ export default function BrandHome() {
                 {loading ? <Skeleton className="h-8 w-24 mx-auto" /> : formatCurrency(stats.globalRevenue)}
               </div>
             </div>
-            <div className="text-center p-4 bg-muted/50 rounded-lg">
+            <div className="text-center p-4 bg-primary/5 rounded-lg border border-primary/10">
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
                 <Utensils className="w-4 h-4" />
                 Hamburguesas
@@ -140,7 +140,7 @@ export default function BrandHome() {
                 {loading ? <Skeleton className="h-8 w-16 mx-auto" /> : stats.globalHamburguesas.toLocaleString('es-AR')}
               </div>
             </div>
-            <div className="text-center p-4 bg-muted/50 rounded-lg">
+            <div className="text-center p-4 bg-primary/5 rounded-lg border border-primary/10">
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
                 <Clock className="w-4 h-4" />
                 Horas Registradas
@@ -149,7 +149,7 @@ export default function BrandHome() {
                 {loading ? <Skeleton className="h-8 w-16 mx-auto" /> : `${stats.globalHours}h`}
               </div>
             </div>
-            <div className="text-center p-4 bg-muted/50 rounded-lg">
+            <div className="text-center p-4 bg-accent/5 rounded-lg border border-accent/10">
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
                 <BarChart3 className="w-4 h-4" />
                 Productividad
@@ -183,16 +183,17 @@ export default function BrandHome() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {branches.map(branch => (
                 <Link key={branch.id} to={`/mimarca/locales/${branch.slug}`}>
-                  <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+                  <Card className="hover:border-primary/50 hover:shadow-card transition-all duration-200 cursor-pointer group">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div>
-                          <h3 className="font-bold">{branch.name}</h3>
+                          <h3 className="font-bold group-hover:text-primary transition-colors">{branch.name}</h3>
                           <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                             <MapPin className="w-3 h-3" />
                             {branch.city}
                           </div>
                         </div>
+                        <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     </CardContent>
                   </Card>

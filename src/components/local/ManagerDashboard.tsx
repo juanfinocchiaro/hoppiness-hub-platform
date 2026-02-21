@@ -398,16 +398,16 @@ export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboar
 
       {/* BANNER CIERRE Z - cuando todos los turnos están cargados */}
       {!posEnabled && shifts.length > 0 && loadedShifts.length >= shifts.length && (isEncargado || isSuperadmin) && (
-        <Card className="border-l-4 border-l-destructive">
+        <Card className="border-l-4 border-l-accent bg-accent/5">
           <CardContent className="flex items-center justify-between py-4">
             <div className="flex items-center gap-3">
-              <Lock className="w-5 h-5 text-destructive" />
+              <Lock className="w-5 h-5 text-accent" />
               <div>
                 <p className="font-medium text-sm">Todos los turnos cerrados</p>
                 <p className="text-xs text-muted-foreground">Generá el Cierre Z del día fiscal</p>
               </div>
             </div>
-            <Button size="sm" variant="destructive" onClick={() => setShowZConfirm(true)} disabled={generateZ.isPending}>
+            <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => setShowZConfirm(true)} disabled={generateZ.isPending}>
               {generateZ.isPending ? 'Generando...' : 'Generar Cierre Z'}
             </Button>
           </CardContent>

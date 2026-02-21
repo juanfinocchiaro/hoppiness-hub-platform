@@ -2,17 +2,17 @@ import { cn } from '@/lib/utils';
 import { cva, type VariantProps } from 'class-variance-authority';
 
 const statusBadgeVariants = cva(
-  'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+  'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors',
   {
     variants: {
       variant: {
-        active: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-        pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-        validated: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-        blocked: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-        inactive: 'bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-400',
-        info: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400',
-        warning: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+        active: 'bg-success/15 text-success dark:bg-success/20',
+        pending: 'bg-warning/20 text-warning-foreground dark:bg-warning/25',
+        validated: 'bg-info/15 text-info dark:bg-info/20',
+        blocked: 'bg-destructive/15 text-destructive dark:bg-destructive/20',
+        inactive: 'bg-muted text-muted-foreground',
+        info: 'bg-info/15 text-info dark:bg-info/20',
+        warning: 'bg-accent/15 text-accent dark:bg-accent/20',
       },
     },
     defaultVariants: {

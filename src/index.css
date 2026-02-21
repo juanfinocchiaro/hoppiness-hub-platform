@@ -168,13 +168,20 @@ html, body {
 
   html {
     scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch; /* Better iOS scroll */
+    -webkit-overflow-scrolling: touch;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
-    overscroll-behavior-y: contain; /* Prevent pull-to-refresh conflict */
+    overscroll-behavior-y: contain;
+  }
+
+  /* Global micro-transition for interactive elements */
+  button, a, input, select, textarea, [role="button"], [tabindex] {
+    transition-property: color, background-color, border-color, opacity, box-shadow, transform;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   /* Typography - Space Mono for titles like brand manual suggests */
