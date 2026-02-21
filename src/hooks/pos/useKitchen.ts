@@ -34,6 +34,7 @@ export interface KitchenPedido {
   estado: string;
   tiempo_listo: string | null;
   tiempo_inicio_prep: string | null;
+  origen: string | null;
   pedido_items: KitchenItem[];
 }
 
@@ -47,7 +48,7 @@ export function useKitchen(branchId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('pedidos')
-        .select('id, numero_pedido, tipo_servicio, numero_llamador, canal_venta, cliente_nombre, cliente_user_id, created_at, estado, tiempo_listo, tiempo_inicio_prep, pedido_items(id, nombre, cantidad, notas, estacion, estado, pedido_item_modificadores(id, descripcion, tipo, precio_extra))')
+        .select('id, numero_pedido, tipo_servicio, numero_llamador, canal_venta, cliente_nombre, cliente_user_id, created_at, estado, tiempo_listo, tiempo_inicio_prep, origen, pedido_items(id, nombre, cantidad, notas, estacion, estado, pedido_item_modificadores(id, descripcion, tipo, precio_extra))')
         .eq('branch_id', branchId)
         .in('estado', ['pendiente', 'confirmado', 'en_preparacion', 'listo'])
         .order('created_at', { ascending: true });
