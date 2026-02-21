@@ -1,88 +1,86 @@
 
+# Fix: 3 Puntos de Fuga + Bug Post-Confirmacion en la WebApp
 
-## Separar Pedidos por Origen: Mostrador vs WebApp (Ciclo Completo)
+## Resumen
 
-### Problema actual
-
-Cuando un pedido WebApp se acepta, desaparece del panel WebApp (que solo muestra `estado = 'pendiente'`) y pasa al `PendingOrdersBar` generico donde no hay chat ni contexto de cliente remoto. El cajero pierde la comunicacion con el cliente.
-
-### Solucion
-
-Dos paneles independientes, cada uno con su ciclo de vida completo separados por origen:
-
-```text
-+--------------------------------------------------+
-| ShoppingBag  Pedidos Mostrador  2 prep   [Ocultar] |
-|  PREPARANDO: #60 3m  #61 1m                        |
-|  LISTOS:     #57 8m  [Entregar]                     |
-+--------------------------------------------------+
-+--------------------------------------------------+
-| Globe  Pedidos WebApp            1 nuevo  [Ocultar] |
-|                                                      |
-|  NUEVO (pendiente)                                   |
-|  #62 Retiro 1min Maria $11.600 [Aceptar][Rechazar][Chat] |
-|                                                      |
-|  PREPARANDO                                          |
-|  #58 Retiro 8min Juan $15.500 [Marcar listo][Chat 1] |
-|                                                      |
-|  LISTO                                               |
-|  #55 Delivery 15min Carlos $22.800 [Entregar][Chat]  |
-|                                                      |
-|  -- Ultimos entregados --                            |
-|  #54 Ana $10.900 entregado  #53 Pedro $11.600        |
-+--------------------------------------------------+
-```
+Hay 4 problemas donde el usuario es expulsado de la tienda o ve una pantalla incorrecta. Todos se resuelven manteniendo al usuario DENTRO de `/pedir/:slug`, usando Sheets y paneles inline.
 
 ---
 
-### Cambios por archivo
+## Problema 1: Banner "Ver estado" no funciona en mobile
 
-**1. `src/hooks/pos/useKitchen.ts`**
-- Agregar `origen` al tipo `KitchenPedido` y al SELECT del query
-- Cambio minimo: una linea en la interfaz, una en el select string
+**Causa**: `ActiveOrderBanner.onShowTracking` solo alimenta `CartSidePanel` (desktop). En mobile, `CartSheet` nunca recibe el tracking code ni se abre.
 
-**2. `src/components/pos/PendingOrdersBar.tsx`**
-- Filtrar pedidos: solo mostrar `origen !== 'webapp'` (y null, que son los del POS)
-- Renombrar titulo: "Pedidos Mostrador" con icono `ShoppingBag`
-- Envolver en `Card` con `CardHeader`/`CardContent` (mismo estilo rectangular que WebappOrdersPanel)
-- Agregar estado `expanded` con boton "Mostrar/Ocultar"
-- Auto-expandir cuando hay pedidos activos
-- Mantener toda la logica existente de chips, estados, tickets, push, contador de hamburguesas
-- Sin chat (el cliente esta fisicamente en el local)
+**Solucion**: En `PedirPage.tsx`, cuando `externalTrackingCode` cambia, tambien abrir el `CartSheet` en mobile con step `tracking`.
 
-**3. `src/components/pos/WebappOrdersPanel.tsx` -- CAMBIO PRINCIPAL**
-- Agregar un segundo query `webapp-active-orders` para pedidos en curso:
-  - estados: `confirmado`, `en_preparacion`, `listo`, `listo_retiro`, `listo_mesa`, `listo_envio`, `en_camino`
-  - mismos campos que el query actual + `pedido_items`
-  - `refetchInterval: 15000`
-- Agregar mutation `updateEstado` con la misma logica que tiene PendingOrdersBar:
-  - Timestamps: `tiempo_inicio_prep` al preparar, `tiempo_listo` al marcar listo
-  - Impresion de tickets (delivery ticket + on_ready ticket)
-  - Push notifications al cliente
-  - Invalidar queries relevantes
-- Renderizar 3 secciones dentro del CardContent:
-  - **Nuevos** (pendientes): cards actuales con Aceptar/Rechazar + Chat (sin cambios)
-  - **En curso** (confirmado/preparando/listo): cards con boton de avanzar estado + Chat
-  - **Recientes** (entregados/cancelados): lista compacta sin chat (como esta hoy)
-- Agregar hooks `usePrintConfig`, `useBranchPrinters`, `useAfipConfig` para la logica de tickets
-- Agregar Realtime: suscripcion a cambios en pedidos webapp para invalidar queries instantaneamente
+**Archivo**: `PedirPage.tsx`
+- Agregar un `useEffect` que reaccione a `externalTrackingCode`: si tiene valor, setear `cartOpen=true` y `cartInitialStep='tracking'` (o un nuevo estado `trackingCodeForSheet`).
+- Pasar `externalTrackingCode` como prop al `CartSheet`.
 
-**4. `src/pages/pos/POSPage.tsx`**
-- Filtrar pedidos antes de pasarlos a PendingOrdersBar:
-  ```
-  pedidos={(kitchenPedidos ?? []).filter(p => p.origen !== 'webapp')}
-  ```
-- Sin otros cambios, el orden de renderizado se mantiene igual
+**Archivo**: `CartSheet.tsx`
+- Agregar prop `externalTrackingCode?: string | null`.
+- Cuando reciba un tracking code externo, setear `step='tracking'` y `trackingCode` internamente.
 
-### Resumen de acciones por grupo en WebappOrdersPanel
+---
 
-| Grupo | Estados | Acciones | Chat |
-|-------|---------|----------|------|
-| Nuevos | pendiente | Aceptar / Rechazar | Si |
-| En curso | confirmado, en_preparacion, listo, en_camino | Avanzar estado (Preparar, Listo, Entregar) | Si |
-| Recientes | entregado, cancelado | Solo info | No |
+## Problema 2: "Mis pedidos" navega fuera de la tienda
 
-### Dependencia de impresion
+**Causa**: `UserMenuDropdown` hace `navigate('/cuenta/pedidos')`.
 
-La logica de impresion de tickets se extraera de PendingOrdersBar y se replicara en WebappOrdersPanel (mismas llamadas a `printReadyTicketByPedidoId` y `printDeliveryTicketByPedidoId`). Ambos paneles usan los mismos hooks de configuracion (`usePrintConfig`, `useBranchPrinters`, `useAfipConfig`).
+**Solucion**: Crear un `MisPedidosSheet` que se abre inline dentro de la tienda. Extraer la logica de lista de `MisPedidosPage` a un componente reutilizable.
 
+**Archivos nuevos**:
+- `src/components/webapp/MisPedidosSheet.tsx` — Sheet (mobile) / Dialog (desktop) que muestra el historial de pedidos inline.
+
+**Archivo modificado**: `UserMenuDropdown.tsx`
+- Agregar prop `onMisPedidos?: () => void`.
+- Si existe `onMisPedidos`, llamarlo en vez de `navigate('/cuenta/pedidos')`.
+- Cuando se usa dentro de la tienda, pasar el callback.
+
+**Archivo modificado**: `WebappMenuView.tsx`
+- Pasar `onMisPedidos` callback a `UserMenuDropdown`.
+- Manejar estado `misPedidosOpen` y renderizar `MisPedidosSheet`.
+
+**Archivo modificado**: `PedirPage.tsx`
+- Pasar callback `onMisPedidosTrack` para que desde el sheet de "Mis pedidos", el boton "Ver tracking" abra el CartSheet/CartSidePanel en modo tracking (mismo mecanismo que Problema 1).
+
+---
+
+## Problema 3: "Ver tracking" navega fuera de la tienda
+
+**Causa**: En `MisPedidosPage` y el futuro `MisPedidosSheet`, el boton "Ver tracking" hace `navigate('/pedido/:code')`.
+
+**Solucion**: Dentro del `MisPedidosSheet`, el boton "Ver tracking" cierra el sheet y dispara el tracking inline (via `externalTrackingCode`).
+
+La ruta `/pedido/:code` sigue existiendo como fallback para links externos.
+
+**Implementacion**: El `MisPedidosSheet` recibe un callback `onShowTracking(trackingCode)` que:
+1. Cierra el sheet de Mis Pedidos
+2. Abre el CartSheet/CartSidePanel en modo tracking
+
+---
+
+## Problema 4: Post-confirmacion muestra "Tu carrito esta vacio"
+
+**Causa**: En `CartSheet.tsx` linea 360, la condicion `cart.items.length === 0` se evalua ANTES de verificar `step === 'tracking'`. Despues de confirmar un pedido el carrito se limpia, asi que se muestra el estado vacio en vez del tracking.
+
+**Solucion**: Reorganizar la logica condicional para que `step === 'tracking'` se verifique PRIMERO, antes del check de carrito vacio.
+
+**Archivo**: `CartSheet.tsx`
+- Mover el bloque `step === 'tracking'` ANTES del check `cart.items.length === 0`.
+- Actualizar el header para mostrar titulo contextual cuando step es tracking.
+- Ocultar el stepper visual cuando step es tracking.
+
+---
+
+## Detalle tecnico de cambios por archivo
+
+| Archivo | Tipo | Cambios |
+|---------|------|---------|
+| `CartSheet.tsx` | Modificar | Reordenar logica (tracking antes de carrito vacio), agregar prop `externalTrackingCode`, actualizar header para tracking |
+| `CartSidePanel.tsx` | Sin cambios | Ya funciona correctamente |
+| `PedirPage.tsx` | Modificar | Conectar banner con CartSheet en mobile, manejar estado de MisPedidosSheet |
+| `UserMenuDropdown.tsx` | Modificar | Agregar prop `onMisPedidos` opcional |
+| `WebappMenuView.tsx` | Modificar | Pasar `onMisPedidos` y renderizar MisPedidosSheet |
+| `MisPedidosSheet.tsx` | Crear | Sheet inline con lista de pedidos, botones "Ver tracking" y "Repetir" |
+| `MisPedidosPage.tsx` | Sin cambios | Se mantiene para uso fuera de la tienda (en /cuenta) |
