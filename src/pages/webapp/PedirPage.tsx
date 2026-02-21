@@ -24,9 +24,31 @@ export default function PedirPage() {
   const navigate = useNavigate();
   const mpEnabled = mpStatus?.estado_conexion === 'conectado';
 
+  // Skip landing when store is open — go straight to menu
+  const storeIsOpen = data?.config?.estado === 'abierto';
+  const hasOnlyOneService = data?.config
+    ? [data.config.retiro_habilitado, data.config.delivery_habilitado, data.config.comer_aca_habilitado].filter(Boolean).length === 1
+    : false;
   const [step, setStep] = useState<'landing' | 'menu'>('landing');
   const [cartOpen, setCartOpen] = useState(false);
   const [cartInitialStep, setCartInitialStep] = useState<'cart' | 'checkout'>('cart');
+
+  // Auto-skip landing when store is open
+  useEffect(() => {
+    if (!data?.config) return;
+    if (storeIsOpen && step === 'landing') {
+      // Auto-select default service and skip to menu
+      const config = data.config;
+      if (config.retiro_habilitado) {
+        cart.setTipoServicio('retiro');
+      } else if (config.delivery_habilitado) {
+        cart.setTipoServicio('delivery');
+      } else if (config.comer_aca_habilitado) {
+        cart.setTipoServicio('comer_aca');
+      }
+      setStep('menu');
+    }
+  }, [data?.config, storeIsOpen]);
   const [customizeItem, setCustomizeItem] = useState<WebappMenuItem | null>(null);
 
   if (isLoading) {

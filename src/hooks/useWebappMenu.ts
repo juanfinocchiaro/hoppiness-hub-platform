@@ -64,7 +64,7 @@ export function useWebappItemExtras(itemId: string | undefined) {
       const { data, error } = await supabase
         .from('item_carta_grupo_opcional' as any)
         .select(`
-          id, nombre, orden,
+          id, nombre, orden, es_obligatorio, max_selecciones,
           items:item_carta_grupo_opcional_items(
             id, cantidad, costo_unitario,
             insumos(id, nombre, costo_por_unidad_base),
@@ -75,6 +75,27 @@ export function useWebappItemExtras(itemId: string | undefined) {
         .order('orden');
       if (error) throw error;
       return data as any[];
+    },
+    enabled: !!itemId,
+  });
+}
+
+export function useWebappItemRemovables(itemId: string | undefined) {
+  return useQuery({
+    queryKey: ['webapp-item-removables', itemId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('item_carta_composicion' as any)
+        .select(`
+          id, cantidad, orden, es_removible,
+          insumos:insumo_id(id, nombre),
+          preparaciones:preparacion_id(id, nombre)
+        `)
+        .eq('item_carta_id', itemId!)
+        .eq('es_removible', true)
+        .order('orden');
+      if (error) throw error;
+      return (data ?? []) as any[];
     },
     enabled: !!itemId,
   });
