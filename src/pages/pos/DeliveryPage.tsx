@@ -47,7 +47,7 @@ export default function DeliveryPage() {
     mutationFn: async ({ pedidoId, cadeteId }: { pedidoId: string; cadeteId: string }) => {
       const { error } = await supabase
         .from('pedidos')
-        .update({ cadete_id: cadeteId, estado: 'en_camino' })
+        .update({ cadete_id: cadeteId, estado: 'en_camino', tiempo_en_camino: new Date().toISOString() } as any)
         .eq('id', pedidoId);
       if (error) throw error;
     },

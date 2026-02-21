@@ -47,6 +47,7 @@ Deno.serve(async (req) => {
         `id, numero_pedido, estado, tipo, tipo_servicio,
          subtotal, costo_delivery, descuento, total,
          tiempo_prometido, tiempo_inicio_prep, tiempo_listo, tiempo_entregado,
+         tiempo_confirmado, tiempo_en_camino,
          pago_estado, created_at,
          branch_id`,
       )
@@ -74,30 +75,55 @@ Deno.serve(async (req) => {
       .single();
 
     // Build timeline from timestamps
+    // States flow: pendiente → confirmado → en_preparacion → listo → [en_camino] → entregado
+    const estado = pedido.estado;
     const timeline: Array<{ estado: string; timestamp: string | null }> = [
       { estado: "pendiente", timestamp: pedido.created_at },
     ];
-    if (
-      pedido.estado !== "pendiente" &&
-      pedido.estado !== "cancelado"
-    ) {
+
+    // Confirmado (accepted by store)
+    const pastConfirmado = estado !== "pendiente" && estado !== "cancelado";
+    if (pastConfirmado) {
+      timeline.push({
+        estado: "confirmado",
+        timestamp: pedido.tiempo_confirmado ?? pedido.tiempo_inicio_prep ?? null,
+      });
+    }
+
+    // En preparación
+    const pastPrep = ["en_preparacion", "listo", "en_camino", "entregado"].includes(estado);
+    if (pastPrep) {
       timeline.push({
         estado: "en_preparacion",
         timestamp: pedido.tiempo_inicio_prep,
       });
     }
-    if (
-      ["listo", "entregado"].includes(pedido.estado)
-    ) {
+
+    // Listo
+    const pastListo = ["listo", "en_camino", "entregado"].includes(estado);
+    if (pastListo) {
       timeline.push({ estado: "listo", timestamp: pedido.tiempo_listo });
     }
-    if (pedido.estado === "entregado") {
+
+    // En camino (delivery only)
+    const pastEnCamino = ["en_camino", "entregado"].includes(estado);
+    if (pastEnCamino && pedido.tipo_servicio === "delivery") {
+      timeline.push({
+        estado: "en_camino",
+        timestamp: pedido.tiempo_en_camino ?? null,
+      });
+    }
+
+    // Entregado
+    if (estado === "entregado") {
       timeline.push({
         estado: "entregado",
         timestamp: pedido.tiempo_entregado,
       });
     }
-    if (pedido.estado === "cancelado") {
+
+    // Cancelado
+    if (estado === "cancelado") {
       timeline.push({ estado: "cancelado", timestamp: null });
     }
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, CheckCircle2, Clock, Flame, Package, Truck, PartyPopper, XCircle, MessageCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, Clock, Flame, Package, Truck, PartyPopper, XCircle, MessageCircle, Send, Utensils } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SEO } from '@/components/SEO';
 
@@ -30,17 +30,35 @@ interface TrackingData {
   timeline: Array<{ estado: string; timestamp: string | null }>;
 }
 
-const ESTADO_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
-  pendiente: { label: 'Recibido', icon: <Clock className="w-5 h-5" />, color: 'text-blue-500' },
-  confirmado: { label: 'Confirmado', icon: <Clock className="w-5 h-5" />, color: 'text-blue-500' },
-  en_preparacion: { label: 'Preparando', icon: <Flame className="w-5 h-5" />, color: 'text-orange-500' },
-  listo: { label: 'Listo', icon: <Package className="w-5 h-5" />, color: 'text-green-500' },
-  en_camino: { label: 'En camino', icon: <Truck className="w-5 h-5" />, color: 'text-purple-500' },
-  entregado: { label: 'Entregado', icon: <PartyPopper className="w-5 h-5" />, color: 'text-green-600' },
-  cancelado: { label: 'Cancelado', icon: <XCircle className="w-5 h-5" />, color: 'text-red-500' },
-};
+/** Returns the ordered list of timeline steps based on service type */
+function getEstadoOrder(tipoServicio: string | null): string[] {
+  if (tipoServicio === 'delivery') {
+    return ['pendiente', 'confirmado', 'en_preparacion', 'listo', 'en_camino', 'entregado'];
+  }
+  // takeaway / comer_aca / default
+  return ['pendiente', 'confirmado', 'en_preparacion', 'listo', 'entregado'];
+}
 
-const ESTADO_ORDER = ['pendiente', 'confirmado', 'en_preparacion', 'listo', 'entregado'];
+/** Returns label + icon for each estado, adapting "listo" and "en_camino" based on service type */
+function getEstadoConfig(estado: string, tipoServicio: string | null): { label: string; icon: React.ReactNode; color: string } {
+  const isDelivery = tipoServicio === 'delivery';
+
+  const map: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+    pendiente: { label: 'Enviado', icon: <Send className="w-5 h-5" />, color: 'text-blue-500' },
+    confirmado: { label: 'Aceptado', icon: <CheckCircle2 className="w-5 h-5" />, color: 'text-blue-600' },
+    en_preparacion: { label: 'Preparando', icon: <Flame className="w-5 h-5" />, color: 'text-orange-500' },
+    listo: {
+      label: isDelivery ? 'Listo para enviar' : (tipoServicio === 'comer_aca' ? 'Listo para consumir' : 'Listo para retirar'),
+      icon: <Package className="w-5 h-5" />,
+      color: 'text-green-500',
+    },
+    en_camino: { label: 'En camino', icon: <Truck className="w-5 h-5" />, color: 'text-purple-500' },
+    entregado: { label: 'Entregado', icon: <PartyPopper className="w-5 h-5" />, color: 'text-green-600' },
+    cancelado: { label: 'Cancelado', icon: <XCircle className="w-5 h-5" />, color: 'text-red-500' },
+  };
+
+  return map[estado] ?? map.pendiente;
+}
 
 function formatPrice(n: number) {
   return `$${n.toLocaleString('es-AR')}`;
@@ -127,8 +145,10 @@ export default function TrackingPage() {
   }
 
   const { pedido, items, branch, timeline } = data;
-  const currentEstado = ESTADO_CONFIG[pedido.estado] ?? ESTADO_CONFIG.pendiente;
+  const tipoServicio = pedido.tipo_servicio;
+  const currentCfg = getEstadoConfig(pedido.estado, tipoServicio);
   const isFinal = pedido.estado === 'entregado' || pedido.estado === 'cancelado';
+  const estadoOrder = getEstadoOrder(tipoServicio);
 
   const tiempoRestante = pedido.tiempo_prometido
     ? Math.max(0, Math.round((new Date(pedido.tiempo_prometido).getTime() - Date.now()) / 60_000))
@@ -146,9 +166,9 @@ export default function TrackingPage() {
       <div className="bg-primary text-primary-foreground px-5 pt-8 pb-6">
         <p className="text-sm opacity-80">{branch?.name ?? 'Hoppiness'}</p>
         <h1 className="text-2xl font-black mt-1">Pedido #{pedido.numero_pedido}</h1>
-        <div className={`mt-3 flex items-center gap-2 ${currentEstado.color} bg-white/90 rounded-xl px-4 py-2.5 w-fit`}>
-          {currentEstado.icon}
-          <span className="font-bold text-sm">{currentEstado.label}</span>
+        <div className={`mt-3 flex items-center gap-2 ${currentCfg.color} bg-white/90 rounded-xl px-4 py-2.5 w-fit`}>
+          {currentCfg.icon}
+          <span className="font-bold text-sm">{currentCfg.label}</span>
         </div>
       </div>
 
@@ -165,11 +185,11 @@ export default function TrackingPage() {
 
         {/* Timeline */}
         <div className="space-y-1">
-          {ESTADO_ORDER.map((estado, i) => {
+          {estadoOrder.map((estado, i) => {
             const timelineEntry = timeline.find(t => t.estado === estado);
             const isPast = timeline.some(t => t.estado === estado);
             const isCurrent = pedido.estado === estado;
-            const cfg = ESTADO_CONFIG[estado];
+            const cfg = getEstadoConfig(estado, tipoServicio);
 
             return (
               <div key={estado} className="flex items-start gap-3">
@@ -179,7 +199,7 @@ export default function TrackingPage() {
                   } ${isCurrent ? 'ring-2 ring-primary ring-offset-2' : ''}`}>
                     {isPast ? <CheckCircle2 className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
                   </div>
-                  {i < ESTADO_ORDER.length - 1 && (
+                  {i < estadoOrder.length - 1 && (
                     <div className={`w-0.5 h-8 ${isPast ? 'bg-primary' : 'bg-muted'}`} />
                   )}
                 </div>
