@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWebappConfig, useWebappMenuItems } from '@/hooks/useWebappMenu';
@@ -20,6 +20,7 @@ export default function PedirPage() {
   const { data: menuItems, isLoading: menuLoading } = useWebappMenuItems(data?.branch?.id);
   const { data: mpStatus } = useMercadoPagoStatus(data?.branch?.id);
   const cart = useWebappCart();
+  const navigate = useNavigate();
   const mpEnabled = mpStatus?.estado_conexion === 'conectado';
 
   const [step, setStep] = useState<'landing' | 'menu'>('landing');
@@ -98,6 +99,7 @@ export default function PedirPage() {
           config={config}
           onSelectService={handleSelectService}
           onViewMenu={() => setStep('menu')}
+          onBack={() => navigate('/pedir')}
         />
       ) : (
         <>
