@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { 
@@ -20,30 +21,34 @@ import {
   MenuShowcaseSection
 } from '@/components/landing';
 import fotoHero from '@/assets/foto-hero.jpg';
-import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
+
 
 export default function Index() {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 300);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <SEO path="/" />
       <ImpersonationBanner />
-      <WebappHeader title="HOPPINESS CLUB" showNavMenu />
+      <WebappHeader title="HOPPINESS CLUB" showNavMenu variant="transparent" scrolled={scrolled} />
 
-      {/* Hero Section - Producto protagonista */}
-      <section className="relative h-[70vh] min-h-[500px] flex items-center">
+      {/* Hero Section - Full height, header overlays */}
+      <section className="relative h-[85vh] min-h-[600px] flex items-end pb-16">
         <div 
           className="absolute inset-0 bg-cover saturate-[1.05] brightness-105"
           style={{ backgroundImage: `url(${fotoHero})`, backgroundPosition: '65% 35%' }}
         />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(0,0,0,0.82)_0%,rgba(0,0,0,0.5)_30%,rgba(0,0,0,0.1)_45%,transparent_55%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(0,0,0,0.75)_0%,rgba(0,0,0,0.45)_30%,rgba(0,0,0,0.1)_45%,transparent_55%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(0,0,0,0.5)_0%,transparent_30%)]" />
         
         <div className="relative container mx-auto px-4">
           <div className="max-w-xl">
-            {/* Logo */}
-            <div className="mb-8">
-              <img src={logoHoppiness} alt="Hoppiness Club" className="w-28 h-28 object-contain rounded-full shadow-2xl" />
-            </div>
-            
             <div className="flex items-center gap-2 mb-4">
               <Trophy className="w-6 h-6 text-accent" />
               <span className="text-accent font-bold">4 VECES CAMPEONES</span>
@@ -80,7 +85,7 @@ export default function Index() {
       </section>
 
       {/* Stats Banner */}
-      <section className="bg-accent text-accent-foreground py-6">
+      <section className="bg-gradient-to-r from-accent via-accent to-accent/90 text-accent-foreground py-6">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             <div>

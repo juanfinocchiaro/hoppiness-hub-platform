@@ -14,7 +14,7 @@ import { WorkShell } from '@/components/layout/WorkShell';
 import { CuentaSidebar } from '@/components/layout/CuentaSidebar';
 import { PanelSwitcher } from '@/components/layout/PanelSwitcher';
 import { Button } from '@/components/ui/button';
-import { LogOut, Home, Eye } from 'lucide-react';
+import { LogOut, Home, Eye, ShoppingBag } from 'lucide-react';
 import { ExternalLink } from '@/components/ui/ExternalLink';
 import ImpersonationSelector from '@/components/admin/ImpersonationSelector';
 
@@ -66,6 +66,12 @@ export default function CuentaLayout() {
       <PanelSwitcher currentPanel="cuenta" localBranchId={firstBranchId} />
 
       <div className="pt-4 border-t space-y-1">
+        <ExternalLink to="/pedir">
+          <Button variant="ghost" className="w-full justify-start text-muted-foreground">
+            <ShoppingBag className="w-4 h-4 mr-3" />
+            Ir a la Tienda
+          </Button>
+        </ExternalLink>
         <ExternalLink to="/">
           <Button variant="ghost" className="w-full justify-start text-muted-foreground">
             <Home className="w-4 h-4 mr-3" />

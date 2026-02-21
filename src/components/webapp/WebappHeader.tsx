@@ -11,36 +11,25 @@ import { UserMenuDropdown } from './UserMenuDropdown';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 
 interface WebappHeaderProps {
-  /** Show ← back button */
   showBack?: boolean;
-  /** Back action (default: navigate(-1)) */
   onBack?: () => void;
-
-  /** Main title text */
   title: string;
-  /** Subtitle below title (e.g. "Retiro ~15 min") */
   subtitle?: string;
-
-  /** Show search icon (menu page only) */
   showSearch?: boolean;
   onSearchToggle?: () => void;
-
-  /** Show cart icon with badge */
   showCart?: boolean;
   cartCount?: number;
   onCartClick?: () => void;
-
-  /** Show hamburger nav menu (landing/institutional pages) */
   showNavMenu?: boolean;
-
-  /** Mis pedidos callback (passed to UserMenuDropdown) */
   onMisPedidos?: () => void;
-
-  /** Extra action buttons rendered before UserMenuDropdown */
+  onMisDirecciones?: () => void;
+  onMiPerfil?: () => void;
   extraActions?: React.ReactNode;
-
-  /** Children rendered below the header row (e.g. category tabs, banners) */
   children?: React.ReactNode;
+  /** Transparent header for landing hero overlay */
+  variant?: 'default' | 'transparent';
+  /** Whether header has scrolled past hero (used with transparent variant) */
+  scrolled?: boolean;
 }
 
 export function WebappHeader({
@@ -55,8 +44,12 @@ export function WebappHeader({
   onCartClick,
   showNavMenu,
   onMisPedidos,
+  onMisDirecciones,
+  onMiPerfil,
   extraActions,
   children,
+  variant = 'default',
+  scrolled = false,
 }: WebappHeaderProps) {
   const navigate = useNavigate();
 
@@ -65,10 +58,16 @@ export function WebappHeader({
     else navigate(-1);
   };
 
+  const isTransparent = variant === 'transparent' && !scrolled;
+
   return (
-    <header className="sticky top-0 z-50 bg-background border-b shadow-sm">
-      {/* Gradient accent line */}
-      <div className="h-1 w-full bg-gradient-to-r from-primary via-accent to-warning" />
+    <header className={`${variant === 'transparent' ? 'fixed' : 'sticky'} top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      isTransparent
+        ? 'bg-transparent border-b-0 shadow-none'
+        : 'bg-background border-b shadow-sm'
+    }`}>
+      {/* Gradient accent line — hidden when transparent */}
+      {!isTransparent && <div className="h-1 w-full bg-gradient-to-r from-primary via-accent to-warning" />}
 
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center h-14 px-4 gap-3">
@@ -77,7 +76,9 @@ export function WebappHeader({
             {showBack && (
               <button
                 onClick={handleBack}
-                className="p-1.5 -ml-1 hover:bg-muted rounded-lg transition-colors text-muted-foreground shrink-0"
+                className={`p-1.5 -ml-1 rounded-lg transition-colors shrink-0 ${
+                  isTransparent ? 'text-white/80 hover:bg-white/10' : 'hover:bg-muted text-muted-foreground'
+                }`}
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
@@ -88,17 +89,17 @@ export function WebappHeader({
               <img
                 src={logoHoppiness}
                 alt="Hoppiness"
-                className="w-8 h-8 rounded-full object-contain"
+                className={`w-8 h-8 rounded-full object-contain ${isTransparent ? 'drop-shadow-lg' : ''}`}
               />
             </Link>
 
             {/* Context text */}
             <div className="min-w-0">
-              <h1 className="text-sm font-bold text-foreground truncate leading-tight">
+              <h1 className={`text-sm font-bold truncate leading-tight ${isTransparent ? 'text-white' : 'text-foreground'}`}>
                 {title}
               </h1>
               {subtitle && (
-                <p className="text-[11px] text-muted-foreground truncate leading-tight">
+                <p className={`text-[11px] truncate leading-tight ${isTransparent ? 'text-white/70' : 'text-muted-foreground'}`}>
                   {subtitle}
                 </p>
               )}
@@ -110,7 +111,9 @@ export function WebappHeader({
             {showSearch && (
               <button
                 onClick={onSearchToggle}
-                className="p-1.5 hover:bg-muted rounded-lg transition-colors text-muted-foreground"
+                className={`p-1.5 rounded-lg transition-colors ${
+                  isTransparent ? 'text-white/80 hover:bg-white/10' : 'hover:bg-muted text-muted-foreground'
+                }`}
               >
                 <Search className="w-5 h-5" />
               </button>
@@ -119,7 +122,9 @@ export function WebappHeader({
             {showCart && (
               <button
                 onClick={onCartClick}
-                className="p-1.5 hover:bg-muted rounded-lg transition-colors text-muted-foreground relative"
+                className={`p-1.5 rounded-lg transition-colors relative ${
+                  isTransparent ? 'text-white/80 hover:bg-white/10' : 'hover:bg-muted text-muted-foreground'
+                }`}
               >
                 <ShoppingBag className="w-5 h-5" />
                 {cartCount > 0 && (
@@ -134,7 +139,7 @@ export function WebappHeader({
             {extraActions}
 
             {/* User avatar / dropdown — always show */}
-            <UserMenuDropdown onMisPedidos={onMisPedidos} />
+            <UserMenuDropdown onMisPedidos={onMisPedidos} onMisDirecciones={onMisDirecciones} onMiPerfil={onMiPerfil} />
 
             {/* Nav hamburger menu for landing/institutional pages */}
             {showNavMenu && <NavMenuSheet />}

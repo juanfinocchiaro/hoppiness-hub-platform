@@ -20,9 +20,11 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface UserMenuDropdownProps {
   onMisPedidos?: () => void;
+  onMisDirecciones?: () => void;
+  onMiPerfil?: () => void;
 }
 
-export function UserMenuDropdown({ onMisPedidos }: UserMenuDropdownProps = {}) {
+export function UserMenuDropdown({ onMisPedidos, onMisDirecciones, onMiPerfil }: UserMenuDropdownProps = {}) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { openAuthModal } = useAuthModal();
@@ -86,11 +88,11 @@ export function UserMenuDropdown({ onMisPedidos }: UserMenuDropdownProps = {}) {
           <Package className="w-4 h-4 mr-2" />
           Mis pedidos
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate('/cuenta/direcciones')}>
+        <DropdownMenuItem onClick={() => onMisDirecciones ? onMisDirecciones() : navigate('/cuenta/direcciones')}>
           <MapPin className="w-4 h-4 mr-2" />
           Mis direcciones
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate('/cuenta/perfil')}>
+        <DropdownMenuItem onClick={() => onMiPerfil ? onMiPerfil() : navigate('/cuenta/perfil')}>
           <User className="w-4 h-4 mr-2" />
           Mi perfil
         </DropdownMenuItem>

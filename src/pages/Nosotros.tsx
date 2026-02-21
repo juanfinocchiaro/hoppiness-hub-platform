@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
@@ -26,6 +26,17 @@ import team6 from '@/assets/team-6.jpg';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 
 export default function Nosotros() {
+  const navigate = useNavigate();
+
+  const getCartCount = () => {
+    try {
+      const raw = localStorage.getItem('hoppiness_cart');
+      if (!raw) return 0;
+      const parsed = JSON.parse(raw);
+      return (parsed.items || []).reduce((s: number, i: any) => s + (i.cantidad || 1), 0);
+    } catch { return 0; }
+  };
+
   const valores = [
     {
       icon: Beef,
@@ -57,7 +68,7 @@ export default function Nosotros() {
         path="/nosotros"
       />
       <ImpersonationBanner />
-      <WebappHeader title="Nosotros" showBack onBack={() => window.history.back()} showNavMenu />
+      <WebappHeader title="Nosotros" showBack onBack={() => window.history.back()} showNavMenu showCart cartCount={getCartCount()} onCartClick={() => navigate('/pedir')} />
       
       {/* Hero Section */}
       <section className="relative h-[50vh] min-h-[400px] flex items-center">
