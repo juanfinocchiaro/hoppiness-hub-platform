@@ -5,6 +5,7 @@
  * pedidos que llegan desde la tienda online.
  */
 import { useState, useCallback } from 'react';
+import { sendOrderPushNotification } from '@/utils/orderPush';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
@@ -42,6 +43,7 @@ interface WebappOrder {
   cliente_nombre: string | null;
   cliente_telefono: string | null;
   cliente_direccion: string | null;
+  cliente_user_id: string | null;
   total: number;
   estado: string;
   created_at: string;
@@ -78,7 +80,7 @@ export function WebappOrdersPanel({ branchId }: { branchId: string }) {
         .from('pedidos')
         .select(`
           id, numero_pedido, tipo_servicio, cliente_nombre,
-          cliente_telefono, cliente_direccion, total, estado,
+          cliente_telefono, cliente_direccion, cliente_user_id, total, estado,
           created_at, webapp_tracking_code,
           pedido_items(id, nombre, cantidad, precio_unitario, subtotal)
         `)
@@ -119,10 +121,12 @@ export function WebappOrdersPanel({ branchId }: { branchId: string }) {
         .eq('id', orderId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, orderId) => {
       queryClient.invalidateQueries({ queryKey: ['webapp-pending-orders', branchId] });
       queryClient.invalidateQueries({ queryKey: ['webapp-recent-orders', branchId] });
       toast.success('Pedido aceptado');
+      const order = orders?.find(o => o.id === orderId);
+      if (order) sendOrderPushNotification({ pedidoId: orderId, estado: 'confirmado', numeroPedido: order.numero_pedido, clienteUserId: order.cliente_user_id });
     },
   });
 
@@ -134,10 +138,12 @@ export function WebappOrdersPanel({ branchId }: { branchId: string }) {
         .eq('id', orderId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, orderId) => {
       queryClient.invalidateQueries({ queryKey: ['webapp-pending-orders', branchId] });
       queryClient.invalidateQueries({ queryKey: ['webapp-recent-orders', branchId] });
       toast.success('Pedido rechazado');
+      const order = orders?.find(o => o.id === orderId);
+      if (order) sendOrderPushNotification({ pedidoId: orderId, estado: 'cancelado', numeroPedido: order.numero_pedido, clienteUserId: order.cliente_user_id });
     },
   });
 
