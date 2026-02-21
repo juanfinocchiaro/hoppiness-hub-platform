@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { OrderChatDialog } from './OrderChatDialog';
 
 const SERVICIO_ICONS: Record<string, typeof ShoppingBag> = {
   retiro: ShoppingBag,
@@ -57,6 +58,18 @@ interface WebappOrder {
 export function WebappOrdersPanel({ branchId }: { branchId: string }) {
   const [expanded, setExpanded] = useState(false);
   const queryClient = useQueryClient();
+
+  // Fetch branch name for chat
+  const { data: branchData } = useQuery({
+    queryKey: ['branch-name', branchId],
+    queryFn: async () => {
+      const { data } = await supabase.from('branches').select('name').eq('id', branchId).single();
+      return data;
+    },
+    enabled: !!branchId,
+    staleTime: Infinity,
+  });
+  const branchName = branchData?.name ?? 'Local';
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ['webapp-pending-orders', branchId],
@@ -220,6 +233,13 @@ export function WebappOrdersPanel({ branchId }: { branchId: string }) {
                 >
                   <X className="w-4 h-4 mr-1" /> Rechazar
                 </Button>
+                <OrderChatDialog
+                  pedidoId={order.id}
+                  branchId={branchId}
+                  branchName={branchName}
+                  numeroPedido={order.numero_pedido}
+                  clienteNombre={order.cliente_nombre}
+                />
               </div>
             </div>
           );
