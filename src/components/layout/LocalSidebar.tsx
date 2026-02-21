@@ -19,6 +19,7 @@ import {
   NavDashboardLink,
 } from './WorkSidebar';
 import { PrinterStatusDot } from '@/components/local/PrinterStatusDot';
+import { useWebappPendingCount } from '@/hooks/useWebappPendingCount';
 
 interface LocalSidebarProps {
   branchId: string;
@@ -55,6 +56,7 @@ interface LocalSidebarProps {
 export function LocalSidebar({ branchId, posEnabled = false, permissions }: LocalSidebarProps) {
   const location = useLocation();
   const basePath = `/milocal/${branchId}`;
+  const { count: webappPendingCount } = useWebappPendingCount({ branchId, enabled: posEnabled });
 
   const {
     canViewDashboard,
@@ -151,7 +153,7 @@ export function LocalSidebar({ branchId, posEnabled = false, permissions }: Loca
           icon={Store}
           forceOpen={isOperarActive}
         >
-          {posEnabled && <NavItemButton to={`${basePath}/ventas/pos`} icon={ShoppingCart} label="Punto de Venta" />}
+          {posEnabled && <NavItemButton to={`${basePath}/ventas/pos`} icon={ShoppingCart} label="Punto de Venta" badge={webappPendingCount || undefined} badgeVariant="destructive" />}
           {posEnabled && <NavItemButton to={`${basePath}/ventas/cocina`} icon={ChefHat} label="Cocina" />}
           {posEnabled && <NavItemButton to={`${basePath}/ventas/entrega`} icon={Truck} label="Entrega" />}
           {posEnabled && <NavItemButton to={`${basePath}/ventas/caja`} icon={Wallet} label="Caja" />}
