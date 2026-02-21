@@ -88,6 +88,21 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   const { data: zones = [] } = usePublicDeliveryZones(branchId, isDelivery);
   const hasZones = zones.length > 0;
 
+  // Fetch saved addresses for logged-in users
+  const { data: savedAddresses = [] } = useQuery({
+    queryKey: ['saved-addresses-checkout', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cliente_direcciones')
+        .select('id, etiqueta, direccion, piso, referencia')
+        .eq('user_id', user!.id)
+        .order('es_principal', { ascending: false });
+      if (error) throw error;
+      return (data || []) as Array<{ id: string; etiqueta: string; direccion: string; piso: string | null; referencia: string | null }>;
+    },
+    enabled: !!user && isDelivery,
+  });
+
   const [step, setStep] = useState<Step>(initialStep || 'cart');
 
   useEffect(() => {
@@ -520,6 +535,35 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                           Pedido mínimo para esta zona: ${pedidoMinimo}
                         </p>
                       )}
+                    </div>
+                  )}
+
+                  {/* Saved addresses picker */}
+                  {savedAddresses.length > 0 && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Dirección guardada</Label>
+                      <Select
+                        value=""
+                        onValueChange={(addrId) => {
+                          const addr = savedAddresses.find(a => a.id === addrId);
+                          if (addr) {
+                            setDireccion(addr.direccion);
+                            setPiso(addr.piso || '');
+                            setReferencia(addr.referencia || '');
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar dirección guardada" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {savedAddresses.map(a => (
+                            <SelectItem key={a.id} value={a.id}>
+                              {a.etiqueta} — {a.direccion}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   )}
 

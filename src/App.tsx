@@ -117,6 +117,7 @@ import MiReglamentoPage from "./pages/cuenta/MiReglamentoPage";
 import MisApercibimientosPage from "./pages/cuenta/MisApercibimientosPage";
 import BranchComparisonPage from "./pages/cuenta/BranchComparisonPage";
 import MisPedidosPage from "./pages/cuenta/MisPedidosPage";
+import MisDireccionesPage from "./pages/cuenta/MisDireccionesPage";
 
 import NotFound from "./pages/NotFound";
 
@@ -162,6 +163,7 @@ const App = () => (
               <Route index element={<CuentaHome />} />
               <Route path="perfil" element={<CuentaPerfil />} />
               <Route path="pedidos" element={<MisPedidosPage />} />
+              <Route path="direcciones" element={<MisDireccionesPage />} />
               <Route path="horario" element={<MiHorarioPage />} />
               <Route path="fichajes" element={<MisFichajesPage />} />
               <Route path="coachings" element={<MisCoachingsPage />} />

@@ -1091,6 +1091,51 @@ export type Database = {
         }
         Relationships: []
       }
+      cliente_direcciones: {
+        Row: {
+          ciudad: string | null
+          created_at: string | null
+          direccion: string
+          es_principal: boolean | null
+          etiqueta: string
+          id: string
+          latitud: number | null
+          longitud: number | null
+          piso: string | null
+          referencia: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          ciudad?: string | null
+          created_at?: string | null
+          direccion: string
+          es_principal?: boolean | null
+          etiqueta?: string
+          id?: string
+          latitud?: number | null
+          longitud?: number | null
+          piso?: string | null
+          referencia?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          ciudad?: string | null
+          created_at?: string | null
+          direccion?: string
+          es_principal?: boolean | null
+          etiqueta?: string
+          id?: string
+          latitud?: number | null
+          longitud?: number | null
+          piso?: string | null
+          referencia?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       clock_entries: {
         Row: {
           branch_id: string
@@ -6100,6 +6145,7 @@ export type Database = {
           onboarding_completed_at: string | null
           phone: string | null
           pin_hash: string | null
+          preferencia_pago: string | null
           show_floating_help: boolean | null
           total_orders: number | null
           total_spent: number | null
@@ -6135,6 +6181,7 @@ export type Database = {
           onboarding_completed_at?: string | null
           phone?: string | null
           pin_hash?: string | null
+          preferencia_pago?: string | null
           show_floating_help?: boolean | null
           total_orders?: number | null
           total_spent?: number | null
@@ -6170,6 +6217,7 @@ export type Database = {
           onboarding_completed_at?: string | null
           phone?: string | null
           pin_hash?: string | null
+          preferencia_pago?: string | null
           show_floating_help?: boolean | null
           total_orders?: number | null
           total_spent?: number | null

@@ -24,6 +24,7 @@ import {
   BarChart3,
   ShoppingBag,
   Receipt,
+  MapPin,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -71,9 +72,10 @@ export function CuentaSidebar() {
         id="pedidos"
         label="Mis Pedidos"
         icon={ShoppingBag}
-        forceOpen={location.pathname.startsWith('/cuenta/pedidos')}
+        forceOpen={location.pathname.startsWith('/cuenta/pedidos') || location.pathname.startsWith('/cuenta/direcciones')}
       >
         <NavItemButton to="/cuenta/pedidos" icon={Receipt} label="Historial" />
+        <NavItemButton to="/cuenta/direcciones" icon={MapPin} label="Mis Direcciones" />
       </NavSectionGroup>
       
       {/* Mi Trabajo - Only for operational staff */}
