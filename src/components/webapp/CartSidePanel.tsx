@@ -16,13 +16,14 @@ interface Props {
   mpEnabled: boolean;
   suggestedItems?: WebappMenuItem[];
   onAddSuggested?: (item: WebappMenuItem) => void;
+  externalTrackingCode?: string | null;
 }
 
 function formatPrice(n: number) {
   return `$${n.toLocaleString('es-AR')}`;
 }
 
-export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnabled, suggestedItems, onAddSuggested }: Props) {
+export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnabled, suggestedItems, onAddSuggested, externalTrackingCode }: Props) {
   const [step, setStep] = useState<SidePanelStep>('cart');
   const [trackingCode, setTrackingCode] = useState<string | null>(null);
 
@@ -39,6 +40,14 @@ export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnable
       setStep('tracking');
     }
   }, []);
+
+  // Handle external tracking code (from ActiveOrderBanner)
+  useEffect(() => {
+    if (externalTrackingCode) {
+      setTrackingCode(externalTrackingCode);
+      setStep('tracking');
+    }
+  }, [externalTrackingCode]);
 
   const totalConEnvio = cart.totalPrecio + costoEnvio;
 
