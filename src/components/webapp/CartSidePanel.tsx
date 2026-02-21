@@ -77,9 +77,19 @@ export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnable
 
   const totalConEnvio = cart.totalPrecio + costoEnvio;
 
-  const suggestions = (suggestedItems || [])
-    .filter(item => !cart.items.some(ci => ci.itemId === item.id))
-    .slice(0, 3);
+  const UPSELL_CATEGORIES = ['ACOMPAÑAMIENTOS', 'BEBIDAS'];
+
+  const allSuggestions = (suggestedItems || [])
+    .filter(item =>
+      !cart.items.some(ci => ci.itemId === item.id) &&
+      item.tipo !== 'extra' &&
+      item.categoria_nombre &&
+      UPSELL_CATEGORIES.includes(item.categoria_nombre.toUpperCase())
+    );
+
+  const acompSuggestions = allSuggestions.filter(i => i.categoria_nombre?.toUpperCase() === 'ACOMPAÑAMIENTOS').slice(0, 2);
+  const bebidaSuggestions = allSuggestions.filter(i => i.categoria_nombre?.toUpperCase() === 'BEBIDAS').slice(0, 2);
+  const hasSuggestions = acompSuggestions.length > 0 || bebidaSuggestions.length > 0;
 
   const handleNewOrder = () => {
     setStep('cart');
@@ -151,31 +161,39 @@ export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnable
               })}
 
               {/* Upsell suggestions */}
-              {suggestions.length > 0 && onAddSuggested && (
-                <div className="pt-3 border-t">
-                  <p className="text-xs font-bold text-foreground mb-2">¿Querés agregar algo más?</p>
-                  <div className="space-y-2">
-                    {suggestions.map(item => (
-                      <button
-                        key={item.id}
-                        onClick={() => onAddSuggested(item)}
-                        className="w-full flex items-center gap-2.5 p-2 rounded-lg border hover:border-accent/50 hover:bg-accent/5 transition-colors text-left"
-                      >
-                        {item.imagen_url ? (
-                          <img src={item.imagen_url} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
-                        ) : (
-                          <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0 text-sm">🍔</div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold truncate">{item.nombre}</p>
-                          <p className="text-xs text-accent font-bold">{formatPrice(item.precio_base)}</p>
-                        </div>
-                        <div className="w-6 h-6 rounded-full bg-accent text-accent-foreground flex items-center justify-center shrink-0">
-                          <Plus className="w-3 h-3" />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
+              {hasSuggestions && onAddSuggested && (
+                <div className="pt-3 border-t space-y-3">
+                  <p className="text-xs font-bold text-foreground">¿Querés agregar algo más?</p>
+                  {[
+                    { label: 'Acompañamientos', items: acompSuggestions },
+                    { label: 'Bebidas', items: bebidaSuggestions },
+                  ].filter(g => g.items.length > 0).map(group => (
+                    <div key={group.label}>
+                      <p className="text-[11px] text-muted-foreground font-medium mb-1.5">{group.label}</p>
+                      <div className="space-y-1.5">
+                        {group.items.map(item => (
+                          <button
+                            key={item.id}
+                            onClick={() => onAddSuggested(item)}
+                            className="w-full flex items-center gap-2.5 p-2 rounded-lg border hover:border-accent/50 hover:bg-accent/5 transition-colors text-left"
+                          >
+                            {item.imagen_url ? (
+                              <img src={item.imagen_url} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0 text-sm">🍟</div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold truncate">{item.nombre}</p>
+                              <p className="text-xs text-accent font-bold">{formatPrice(item.precio_base)}</p>
+                            </div>
+                            <div className="w-6 h-6 rounded-full bg-accent text-accent-foreground flex items-center justify-center shrink-0">
+                              <Plus className="w-3 h-3" />
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
