@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,20 @@ export default function PedirPage() {
   const cart = useWebappCart();
   const navigate = useNavigate();
   const mpEnabled = mpStatus?.estado_conexion === 'conectado';
+  const reorderChecked = useRef(false);
+
+  // Check for reorder items when menu loads
+  useEffect(() => {
+    if (reorderChecked.current || !menuItems || menuItems.length === 0) return;
+    if (localStorage.getItem('hoppiness_reorder')) {
+      const loaded = cart.loadReorderItems(menuItems);
+      if (loaded) {
+        // Ensure we're on menu step
+        setStep('menu');
+      }
+      reorderChecked.current = true;
+    }
+  }, [menuItems]);
 
   // Skip landing when store is open — go straight to menu
   const storeIsOpen = data?.config?.estado === 'abierto';

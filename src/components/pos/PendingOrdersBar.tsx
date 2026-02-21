@@ -16,6 +16,7 @@ import { usePrintConfig } from '@/hooks/usePrintConfig';
 import { useBranchPrinters } from '@/hooks/useBranchPrinters';
 import { useAfipConfig } from '@/hooks/useAfipConfig';
 import { printReadyTicketByPedidoId, printDeliveryTicketByPedidoId, extractErrorMessage } from '@/lib/ready-ticket';
+import { sendOrderPushNotification } from '@/utils/orderPush';
 
 interface Props {
   pedidos: KitchenPedido[];
@@ -161,6 +162,17 @@ export function PendingOrdersBar({ pedidos, branchId, shiftOpenedAt }: Props) {
       if (estado === 'listo') toast.success('Pedido marcado como listo');
       if (estado === 'entregado') toast.success('Pedido entregado');
       setSelectedId(null);
+
+      // Send push notification to customer
+      const pedido = pedidos.find((p) => p.id === pedidoId);
+      if (pedido) {
+        sendOrderPushNotification({
+          pedidoId,
+          estado,
+          numeroPedido: pedido.numero_pedido,
+          clienteUserId: pedido.cliente_user_id,
+        });
+      }
 
       if (estado === 'listo') {
         const pedido = pedidos.find((p) => p.id === pedidoId);

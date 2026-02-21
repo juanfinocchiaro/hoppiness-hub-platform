@@ -30,6 +30,44 @@ export function useWebappCart() {
   const [items, setItems] = useState<CartItem[]>(initial.current.items);
   const [tipoServicio, setTipoServicio] = useState<TipoServicioWebapp>(initial.current.tipoServicio);
 
+  /** Load reorder items from localStorage (set by MisPedidosPage) */
+  const loadReorderItems = useCallback((menuItems: Array<{ id: string; nombre: string; precio_base: number; imagen_url: string | null }>) => {
+    try {
+      const raw = localStorage.getItem('hoppiness_reorder');
+      if (!raw) return false;
+      localStorage.removeItem('hoppiness_reorder');
+      const reorderItems: CartItem[] = JSON.parse(raw);
+      if (!Array.isArray(reorderItems) || reorderItems.length === 0) return false;
+      
+      // Match reorder items to current menu by name
+      const matchedItems: CartItem[] = [];
+      for (const ri of reorderItems) {
+        const menuItem = menuItems.find(m => m.nombre === ri.nombre);
+        if (menuItem) {
+          matchedItems.push({
+            cartId: crypto.randomUUID(),
+            itemId: menuItem.id,
+            nombre: menuItem.nombre,
+            imagen_url: menuItem.imagen_url,
+            precioUnitario: menuItem.precio_base,
+            cantidad: ri.cantidad,
+            extras: [],
+            removidos: [],
+            notas: '',
+          });
+        }
+      }
+      if (matchedItems.length > 0) {
+        setItems(matchedItems);
+        return true;
+      }
+      return false;
+    } catch {
+      localStorage.removeItem('hoppiness_reorder');
+      return false;
+    }
+  }, []);
+
   // Persist to localStorage on changes (debounced)
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -100,6 +138,6 @@ export function useWebappCart() {
   return {
     items, tipoServicio, setTipoServicio,
     addItem, removeItem, updateQuantity, quickAdd, clearCart,
-    totalItems, totalPrecio, getItemQty,
+    totalItems, totalPrecio, getItemQty, loadReorderItems,
   };
 }

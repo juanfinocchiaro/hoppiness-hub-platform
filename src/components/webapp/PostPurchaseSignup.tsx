@@ -2,8 +2,9 @@
  * PostPurchaseSignup — Banner shown on TrackingPage for guest users
  * to encourage account creation after placing an order.
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,6 +19,14 @@ export function PostPurchaseSignup({ trackingCode }: Props) {
   const { user } = useAuth();
   const [dismissed, setDismissed] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // When user logs in (e.g. after Google OAuth redirect), link guest orders
+  useEffect(() => {
+    if (!user || !trackingCode) return;
+    supabase.functions.invoke('link-guest-orders', {
+      body: { tracking_code: trackingCode },
+    }).catch(() => {});
+  }, [user, trackingCode]);
 
   // Don't show if already logged in or dismissed
   if (user || dismissed) return null;
