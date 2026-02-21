@@ -91,13 +91,21 @@ function InformeXCard({ branchId, branchData }: {
 }) {
   const xReport = useFiscalXReport(branchId);
   const [previewData, setPreviewData] = useState<FiscalXData | null>(null);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const printing = usePrinting(branchId);
   const { data: printConfig } = usePrintConfig(branchId);
   const { data: printers } = useBranchPrinters(branchId);
 
+  const handleClick = () => {
+    setSelectedDate(new Date().toISOString().slice(0, 10));
+    setDatePickerOpen(true);
+  };
+
   const handleGenerate = async () => {
+    setDatePickerOpen(false);
     try {
-      const data = await xReport.mutateAsync(undefined);
+      const data = await xReport.mutateAsync(selectedDate);
       setPreviewData(data);
     } catch (e: any) {
       toast.error(e.message || 'Error al generar Informe X');
@@ -109,23 +117,50 @@ function InformeXCard({ branchId, branchData }: {
     const ticketPrinter = printConfig?.ticket_printer_id
       ? (printers ?? []).find((p: any) => p.id === printConfig.ticket_printer_id && p.is_active)
       : null;
-    if (!ticketPrinter) {
-      toast.error('No hay impresora de tickets configurada');
-      return;
-    }
-    try {
-      const data = generateInformeX(previewData, branchData, ticketPrinter.paper_width);
-      const { printRawBase64 } = await import('@/lib/qz-print');
-      await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, data);
-      toast.success('Informe X impreso');
-    } catch (e: any) {
-      toast.error('Error de impresión: ' + e.message);
+
+    if (ticketPrinter && printing.bridgeStatus === 'connected') {
+      try {
+        const data = generateInformeX(previewData, branchData, ticketPrinter.paper_width);
+        const { printRawBase64 } = await import('@/lib/qz-print');
+        await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, data);
+        toast.success('Informe X impreso');
+      } catch (e: any) {
+        toast.error('Error de impresión: ' + e.message);
+      }
+    } else {
+      // Fallback window.print
+      const html = `<html><head><title>Informe X</title>
+        <style>body{font-family:monospace;max-width:400px;margin:20px auto;font-size:12px}.c{text-align:center}.b{font-weight:bold}.r{display:flex;justify-content:space-between}.line{border-top:1px dashed #000;margin:8px 0}@media print{body{margin:0}}</style></head><body>
+        <div class="c b">INFORME X</div>
+        <div class="c">Fecha: ${previewData.fecha} — Hora: ${previewData.hora}</div>
+        <div class="line"></div>
+        <div class="b">Comprobantes</div>
+        <div class="r"><span>Facturas B</span><span>${previewData.facturas_b}</span></div>
+        <div class="r"><span>Facturas C</span><span>${previewData.facturas_c}</span></div>
+        <div class="r"><span>NC B</span><span>${previewData.notas_credito_b}</span></div>
+        <div class="r"><span>NC C</span><span>${previewData.notas_credito_c}</span></div>
+        <div class="line"></div>
+        <div class="b">Totales</div>
+        <div class="r"><span>Subtotal neto</span><span>${fmtCurrency(previewData.subtotal_neto)}</span></div>
+        <div class="r"><span>Total IVA</span><span>${fmtCurrency(previewData.total_iva)}</span></div>
+        <div class="r b"><span>TOTAL VENTAS</span><span>${fmtCurrency(previewData.total_ventas)}</span></div>
+        <div class="line"></div>
+        <div class="b">Medios de Pago</div>
+        <div class="r"><span>Efectivo</span><span>${fmtCurrency(previewData.pago_efectivo)}</span></div>
+        <div class="r"><span>Débito</span><span>${fmtCurrency(previewData.pago_debito)}</span></div>
+        <div class="r"><span>Crédito</span><span>${fmtCurrency(previewData.pago_credito)}</span></div>
+        <div class="r"><span>MP / QR</span><span>${fmtCurrency(previewData.pago_qr)}</span></div>
+        <div class="r"><span>Transferencia</span><span>${fmtCurrency(previewData.pago_transferencia)}</span></div>
+      </body></html>`;
+      const w = window.open('', '_blank', 'width=450,height=600');
+      if (w) { w.document.write(html); w.document.close(); w.focus(); w.print(); }
+      toast.success('Informe X generado');
     }
   };
 
   return (
     <>
-      <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={handleGenerate}>
+      <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={handleClick}>
         <CardContent className="flex flex-col items-center justify-center py-8 gap-3">
           <div className="rounded-xl bg-blue-50 p-4">
             <FileText className="h-10 w-10 text-blue-600" />
@@ -136,16 +171,37 @@ function InformeXCard({ branchId, branchData }: {
         </CardContent>
       </Card>
 
+      {/* Date picker dialog */}
+      <Dialog open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Informe X</DialogTitle>
+            <DialogDescription>Seleccioná la fecha para generar el informe</DialogDescription>
+          </DialogHeader>
+          <div>
+            <Label>Fecha</Label>
+            <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDatePickerOpen(false)}>Cancelar</Button>
+            <Button onClick={handleGenerate} disabled={xReport.isPending}>
+              {xReport.isPending ? 'Generando...' : 'Generar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview dialog */}
       <Dialog open={!!previewData} onOpenChange={() => setPreviewData(null)}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Informe X — Vista Previa</DialogTitle>
-            <DialogDescription>Datos en vivo al momento de la consulta</DialogDescription>
+            <DialogDescription>Fecha: {selectedDate}</DialogDescription>
           </DialogHeader>
           {previewData && <XReportPreview data={previewData} />}
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setPreviewData(null)}>Cerrar</Button>
-            <Button onClick={handlePrint} disabled={printing.bridgeStatus !== 'connected'}>
+            <Button onClick={handlePrint}>
               <Printer className="h-4 w-4 mr-2" />
               Imprimir
             </Button>
@@ -254,17 +310,42 @@ function CierreZCard({ branchId, branchData, lastZ }: {
     const ticketPrinter = printConfig?.ticket_printer_id
       ? (printers ?? []).find((p: any) => p.id === printConfig.ticket_printer_id && p.is_active)
       : null;
-    if (!ticketPrinter) {
-      toast.error('No hay impresora de tickets configurada');
-      return;
-    }
-    try {
-      const data = generateCierreZ(zData, branchData, ticketPrinter.paper_width);
-      const { printRawBase64 } = await import('@/lib/qz-print');
-      await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, data);
-      toast.success('Cierre Z impreso');
-    } catch (e: any) {
-      toast.error('Error de impresión: ' + e.message);
+    const d = zData as any;
+
+    if (ticketPrinter && printing.bridgeStatus === 'connected') {
+      try {
+        const data = generateCierreZ(zData, branchData, ticketPrinter.paper_width);
+        const { printRawBase64 } = await import('@/lib/qz-print');
+        await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, data);
+        toast.success('Cierre Z impreso');
+      } catch (e: any) {
+        toast.error('Error de impresión: ' + e.message);
+      }
+    } else {
+      const html = `<html><head><title>Cierre Z N° ${String(d.z_number).padStart(4,'0')}</title>
+        <style>body{font-family:monospace;max-width:400px;margin:20px auto;font-size:12px}.c{text-align:center}.b{font-weight:bold}.r{display:flex;justify-content:space-between}.line{border-top:1px dashed #000;margin:8px 0}@media print{body{margin:0}}</style></head><body>
+        <div class="c b">CIERRE Z N° ${String(d.z_number).padStart(4,'0')}</div>
+        <div class="line"></div>
+        <div class="b">Comprobantes: ${d.total_invoices}</div>
+        <div class="r"><span>Facturas B</span><span>${d.total_invoices_b}</span></div>
+        <div class="r"><span>Facturas C</span><span>${d.total_invoices_c}</span></div>
+        <div class="r"><span>NC B</span><span>${d.total_credit_notes_b}</span></div>
+        <div class="r"><span>NC C</span><span>${d.total_credit_notes_c}</span></div>
+        <div class="line"></div>
+        <div class="r b"><span>TOTAL VENTAS</span><span>${fmtCurrency(d.total_sales)}</span></div>
+        <div class="r"><span>Notas de Crédito</span><span>${fmtCurrency(d.total_credit_notes_amount)}</span></div>
+        <div class="r b"><span>NETO</span><span>${fmtCurrency(d.net_total)}</span></div>
+        <div class="line"></div>
+        <div class="b">Medios de Pago</div>
+        <div class="r"><span>Efectivo</span><span>${fmtCurrency(d.payment_cash)}</span></div>
+        <div class="r"><span>Débito</span><span>${fmtCurrency(d.payment_debit)}</span></div>
+        <div class="r"><span>Crédito</span><span>${fmtCurrency(d.payment_credit)}</span></div>
+        <div class="r"><span>MP / QR</span><span>${fmtCurrency(d.payment_qr)}</span></div>
+        <div class="r"><span>Transferencia</span><span>${fmtCurrency(d.payment_transfer)}</span></div>
+      </body></html>`;
+      const w = window.open('', '_blank', 'width=450,height=600');
+      if (w) { w.document.write(html); w.document.close(); w.focus(); w.print(); }
+      toast.success('Cierre Z generado');
     }
   };
 
@@ -312,7 +393,7 @@ function CierreZCard({ branchId, branchData, lastZ }: {
           {previewData && <ZReportPreview data={previewData} />}
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setPreviewData(null)}>Cerrar</Button>
-            <Button onClick={() => handlePrint(previewData!)} disabled={printing.bridgeStatus !== 'connected'}>
+            <Button onClick={() => handlePrint(previewData!)}>
               <Printer className="h-4 w-4 mr-2" />
               Imprimir
             </Button>
@@ -330,8 +411,7 @@ function CierreZCard({ branchId, branchData, lastZ }: {
           </DialogHeader>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setExistingZ(null)}>Cerrar</Button>
-            <Button onClick={() => { handlePrint(existingZ!); setExistingZ(null); }}
-              disabled={printing.bridgeStatus !== 'connected'}>
+            <Button onClick={() => { handlePrint(existingZ!); setExistingZ(null); }}>
               <Printer className="h-4 w-4 mr-2" />
               Reimprimir Z
             </Button>
@@ -424,17 +504,37 @@ function AuditoriaCard({ branchId, branchData }: {
     const ticketPrinter = printConfig?.ticket_printer_id
       ? (printers ?? []).find((p: any) => p.id === printConfig.ticket_printer_id && p.is_active)
       : null;
-    if (!ticketPrinter) {
-      toast.error('No hay impresora de tickets configurada');
-      return;
-    }
-    try {
-      const printData = generateInformeAuditoria(previewData, branchData, ticketPrinter.paper_width);
-      const { printRawBase64 } = await import('@/lib/qz-print');
-      await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, printData);
-      toast.success('Informe de auditoría impreso');
-    } catch (e: any) {
-      toast.error('Error de impresión: ' + e.message);
+
+    if (ticketPrinter && printing.bridgeStatus === 'connected') {
+      try {
+        const printData = generateInformeAuditoria(previewData, branchData, ticketPrinter.paper_width);
+        const { printRawBase64 } = await import('@/lib/qz-print');
+        await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, printData);
+        toast.success('Informe de auditoría impreso');
+      } catch (e: any) {
+        toast.error('Error de impresión: ' + e.message);
+      }
+    } else {
+      const jornadasHtml = previewData.jornadas?.map(j =>
+        `<div class="r"><span>${j.fecha} | Z ${String(j.z_number).padStart(4,'0')}</span><span>${fmtCurrency(j.total_sales)}</span></div>`
+      ).join('') || '';
+      const html = `<html><head><title>Auditoría</title>
+        <style>body{font-family:monospace;max-width:400px;margin:20px auto;font-size:12px}.c{text-align:center}.b{font-weight:bold}.r{display:flex;justify-content:space-between}.line{border-top:1px dashed #000;margin:8px 0}@media print{body{margin:0}}</style></head><body>
+        <div class="c b">INFORME DE AUDITORÍA</div>
+        <div class="c">Z ${previewData.desde_z} a Z ${previewData.hasta_z} — ${previewData.cantidad_jornadas} jornadas</div>
+        <div class="line"></div>
+        <div class="b">Resumen por Jornada</div>
+        ${jornadasHtml}
+        <div class="line"></div>
+        <div class="b">Totales del Período</div>
+        <div class="r"><span>Comprobantes</span><span>${previewData.total_comprobantes}</span></div>
+        <div class="r"><span>Ventas brutas</span><span>${fmtCurrency(previewData.total_ventas_brutas)}</span></div>
+        <div class="r"><span>Notas de crédito</span><span>${fmtCurrency(previewData.total_nc)}</span></div>
+        <div class="r b"><span>Total neto</span><span>${fmtCurrency(previewData.total_neto)}</span></div>
+      </body></html>`;
+      const w = window.open('', '_blank', 'width=450,height=600');
+      if (w) { w.document.write(html); w.document.close(); w.focus(); w.print(); }
+      toast.success('Informe de auditoría generado');
     }
   };
 
@@ -503,7 +603,7 @@ function AuditoriaCard({ branchId, branchData }: {
           {previewData && <AuditPreview data={previewData} />}
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setPreviewData(null)}>Cerrar</Button>
-            <Button onClick={handlePrint} disabled={printing.bridgeStatus !== 'connected'}>
+            <Button onClick={handlePrint}>
               <Printer className="h-4 w-4 mr-2" />
               Imprimir
             </Button>

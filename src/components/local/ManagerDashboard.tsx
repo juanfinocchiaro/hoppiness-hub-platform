@@ -14,6 +14,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { 
   DollarSign, 
   Plus,
@@ -26,15 +30,18 @@ import {
   CalendarX,
   ChevronRight,
   ClipboardList,
+  Lock,
 } from 'lucide-react';
 import { format, differenceInMinutes } from 'date-fns';
 import { useTodayClosures, useEnabledShifts } from '@/hooks/useShiftClosures';
 import { getOperationalDateString, formatOperationalDate, isEarlyMorning } from '@/lib/operationalDate';
 import { ShiftClosureModal } from '@/components/local/closure/ShiftClosureModal';
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
+import { useGenerateZClosing } from '@/hooks/useFiscalReports';
 import { CoachingPendingCard } from '@/components/coaching';
 import { MeetingPendingCard } from '@/components/meetings/MeetingPendingCard';
 import { StockAlertCard } from '@/components/stock/StockAlertCard';
+import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Branch = Tables<'branches'>;
@@ -184,9 +191,13 @@ function usePendingItems(branchId: string) {
 export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboardProps) {
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [selectedShift, setSelectedShift] = useState<string>('mediodía');
+  const [showZConfirm, setShowZConfirm] = useState(false);
 
   // Permisos - verificar rol para vista limitada (con soporte de impersonación)
   const { isCajero, isEncargado, isSuperadmin, local } = usePermissionsWithImpersonation(branch.id);
+
+  // Z closing generator
+  const generateZ = useGenerateZClosing(branch.id);
 
   // Enabled shifts for this branch
   const { data: enabledShifts, isLoading: loadingShifts } = useEnabledShifts(branch.id);
@@ -385,6 +396,24 @@ export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboar
         </CardContent>
       </Card>
 
+      {/* BANNER CIERRE Z - cuando todos los turnos están cargados */}
+      {!posEnabled && shifts.length > 0 && loadedShifts.length >= shifts.length && (isEncargado || isSuperadmin) && (
+        <Card className="border-l-4 border-l-destructive">
+          <CardContent className="flex items-center justify-between py-4">
+            <div className="flex items-center gap-3">
+              <Lock className="w-5 h-5 text-destructive" />
+              <div>
+                <p className="font-medium text-sm">Todos los turnos cerrados</p>
+                <p className="text-xs text-muted-foreground">Generá el Cierre Z del día fiscal</p>
+              </div>
+            </div>
+            <Button size="sm" variant="destructive" onClick={() => setShowZConfirm(true)} disabled={generateZ.isPending}>
+              {generateZ.isPending ? 'Generando...' : 'Generar Cierre Z'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* EQUIPO AHORA - Visible para todos (cajeros incluidos) */}
       <Card>
           <CardHeader className="pb-2">
@@ -526,6 +555,41 @@ export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboar
     branchName={branch.name}
     defaultShift={selectedShift}
   />
+
+  {/* Z Closure Confirm Dialog */}
+  <AlertDialog open={showZConfirm} onOpenChange={setShowZConfirm}>
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Confirmar Cierre Z</AlertDialogTitle>
+        <AlertDialogDescription>
+          Todos los turnos del día están cargados. ¿Generar el Cierre Z fiscal?
+          <br /><br />
+          <strong>Este cierre es definitivo y no puede modificarse.</strong>
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+        <AlertDialogAction
+          className="bg-destructive hover:bg-destructive/90"
+          onClick={async () => {
+            setShowZConfirm(false);
+            try {
+              const data = await generateZ.mutateAsync(undefined);
+              toast.success(`Cierre Z N° ${String((data as any).z_number).padStart(4, '0')} generado`);
+            } catch (e: any) {
+              if (e.message?.includes('Ya existe')) {
+                toast.info('El Cierre Z del día ya fue generado');
+              } else {
+                toast.error(e.message || 'Error al generar Cierre Z');
+              }
+            }
+          }}
+        >
+          Confirmar Cierre Z
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </div>
   );
 }
