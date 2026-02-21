@@ -81,6 +81,13 @@ export default function PedirPage() {
     }
   }, [searchParams, menuItems, customizeItem]);
 
+  // Open CartSheet on mobile when externalTrackingCode changes (Problem 1: banner "Ver estado")
+  useEffect(() => {
+    if (externalTrackingCode) {
+      setCartOpen(true);
+    }
+  }, [externalTrackingCode]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -143,12 +150,7 @@ export default function PedirPage() {
     setCartOpen(true);
   };
 
-  // Open CartSheet on mobile when externalTrackingCode changes (Problem 1: banner "Ver estado")
-  useEffect(() => {
-    if (externalTrackingCode) {
-      setCartOpen(true);
-    }
-  }, [externalTrackingCode]);
+
 
   // Handler for MisPedidosSheet tracking — feeds into same mechanism
   const handleMisPedidosTrack = (trackingCode: string) => {
