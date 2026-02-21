@@ -73,7 +73,7 @@ function useCurrentlyWorking(branchId: string) {
       });
 
       const workingUserIds = [...userStatus.entries()]
-        .filter(([_, v]) => v.type === 'entrada')
+        .filter(([_, v]) => v.type === 'clock_in')
         .map(([k, v]) => ({ user_id: k, clock_in: v.time }));
 
       if (!workingUserIds.length) return [];
@@ -224,7 +224,29 @@ export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboar
     setShowEntryModal(true);
   };
 
-  const isLoading = loadingShifts || loadingClosures;
+  // Hook for POS sales when posEnabled
+  const { data: posSales, isLoading: loadingPosSales } = useQuery({
+    queryKey: ['pos-sales-today', branch.id],
+    queryFn: async () => {
+      const today = getOperationalDateString();
+      const { data, error } = await supabase
+        .from('pedidos')
+        .select('id, total, estado, created_at')
+        .eq('branch_id', branch.id)
+        .gte('created_at', today)
+        .not('estado', 'eq', 'cancelado');
+      if (error) throw error;
+      const pedidos = data || [];
+      const totalVendido = pedidos.reduce((sum, p) => sum + Number(p.total || 0), 0);
+      const cantidad = pedidos.length;
+      const ticketPromedio = cantidad > 0 ? totalVendido / cantidad : 0;
+      return { totalVendido, cantidad, ticketPromedio };
+    },
+    enabled: posEnabled,
+    refetchInterval: 60000,
+  });
+
+  const isLoading = posEnabled ? loadingPosSales : (loadingShifts || loadingClosures);
 
   // Default shifts if none configured
   const shifts = enabledShifts?.length ? enabledShifts : [
@@ -268,7 +290,37 @@ export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboar
             <div className="grid grid-cols-2 gap-3">
               {[1, 2].map(i => <Skeleton key={i} className="h-16" />)}
             </div>
+          ) : posEnabled ? (
+            /* ── Vista POS: ventas en tiempo real desde pedidos ── */
+            <>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="p-3 rounded-lg border bg-success/5 border-success/40">
+                  <span className="text-xs font-medium text-muted-foreground">Total vendido</span>
+                  <div className="text-lg font-bold text-success">
+                    {formatCurrency(posSales?.totalVendido || 0)}
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg border">
+                  <span className="text-xs font-medium text-muted-foreground">Pedidos</span>
+                  <div className="text-lg font-bold">{posSales?.cantidad || 0}</div>
+                </div>
+                <div className="p-3 rounded-lg border">
+                  <span className="text-xs font-medium text-muted-foreground">Ticket prom.</span>
+                  <div className="text-lg font-bold">
+                    {formatCurrency(posSales?.ticketPromedio || 0)}
+                  </div>
+                </div>
+              </div>
+
+              <Link to={`/milocal/${branch.id}/ventas/historial`}>
+                <Button variant="ghost" size="sm" className="w-full text-xs">
+                  Ver historial de ventas
+                  <ChevronRight className="w-3 h-3 ml-1" />
+                </Button>
+              </Link>
+            </>
           ) : (
+            /* ── Vista manual: cierres de turno ── */
             <>
               <div className="grid grid-cols-2 gap-3">
                 {shifts.map(shiftDef => {
@@ -315,7 +367,6 @@ export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboar
                 </span>
               </div>
 
-              {/* Link al historial de ventas */}
               <Link to={`/milocal/${branch.id}/ventas/historial`}>
                 <Button variant="ghost" size="sm" className="w-full text-xs">
                   Ver historial de ventas

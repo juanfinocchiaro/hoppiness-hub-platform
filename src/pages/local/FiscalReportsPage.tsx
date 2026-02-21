@@ -554,9 +554,110 @@ function ReimprimirCard({ branchId, branchData }: {
   const [searchDate, setSearchDate] = useState('');
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [printing2, setPrinting2] = useState<string | null>(null);
   const printing = usePrinting(branchId);
   const { data: printConfig } = usePrintConfig(branchId);
   const { data: printers } = useBranchPrinters(branchId);
+
+  const handleReprint = async (factura: any) => {
+    const ticketPrinter = printConfig?.ticket_printer_id
+      ? (printers ?? []).find((p: any) => p.id === printConfig.ticket_printer_id && p.is_active)
+      : null;
+    if (!ticketPrinter) {
+      toast.error('No hay impresora de tickets configurada');
+      return;
+    }
+    setPrinting2(factura.id);
+    try {
+      // Fetch full order data for ticket generation
+      const { data: pedido, error: pedidoErr } = await supabase
+        .from('pedidos')
+        .select('*')
+        .eq('id', factura.pedido_id)
+        .single();
+      if (pedidoErr) throw pedidoErr;
+
+      const { data: items } = await supabase
+        .from('pedido_items')
+        .select('*')
+        .eq('pedido_id', factura.pedido_id);
+
+      const { data: pagos } = await supabase
+        .from('pedido_pagos')
+        .select('*')
+        .eq('pedido_id', factura.pedido_id)
+        .limit(1);
+
+      const pago = pagos?.[0];
+
+      // Build TicketClienteData
+      const { generateTicketCliente, generateArcaQrBitmap } = await import('@/lib/escpos');
+
+      // Build factura info for fiscal ticket
+      const facturaData = {
+        tipo: factura.tipo_comprobante?.replace('Factura ', '') as 'A' | 'B' | 'C',
+        codigo: factura.tipo_comprobante === 'Factura B' ? '006' : factura.tipo_comprobante === 'Factura C' ? '011' : '001',
+        numero: `${String(factura.punto_venta).padStart(5, '0')}-${String(factura.numero_comprobante).padStart(8, '0')}`,
+        fecha: format(new Date(factura.created_at), 'dd/MM/yyyy'),
+        emisor: {
+          razon_social: branchData?.razon_social || '',
+          cuit: branchData?.cuit || '',
+          iibb: branchData?.iibb || '',
+          condicion_iva: branchData?.condicion_iva || 'Responsable Inscripto',
+          inicio_actividades: branchData?.inicio_actividades || '',
+          direccion_fiscal: branchData?.direccion_fiscal || '',
+          punto_venta: factura.punto_venta,
+        },
+        cae: factura.cae || '',
+        cae_vto: factura.cae_vencimiento || '',
+        qr_base64: '',
+        detalle_iva: [],
+        subtotal_neto: factura.total || 0,
+        total_iva: 0,
+        total: factura.total || 0,
+      };
+
+      // Try to generate QR
+      try {
+        facturaData.qr_base64 = await generateArcaQrBitmap(facturaData as any);
+      } catch { /* QR optional */ }
+
+      const ticketData = {
+        order: {
+          numero_pedido: pedido.numero_pedido,
+          tipo_servicio: pedido.tipo_servicio,
+          numero_llamador: pedido.numero_llamador,
+          canal_venta: pedido.canal_venta,
+          cliente_nombre: pedido.cliente_nombre,
+          referencia_app: (pedido as any).referencia_app || null,
+          created_at: pedido.created_at,
+          items: (items || []).map((it: any) => ({
+            nombre: it.nombre,
+            cantidad: it.cantidad,
+            notas: it.notas,
+            estacion: it.estacion,
+            precio_unitario: it.precio_unitario,
+            subtotal: it.subtotal,
+          })),
+          total: pedido.total,
+          descuento: pedido.descuento,
+          descuento_porcentaje: (pedido as any).descuento_porcentaje,
+        },
+        branchName: branchData?.name || branchData?.razon_social || '',
+        metodo_pago: pago?.metodo || undefined,
+        factura: facturaData as any,
+      };
+
+      const base64 = generateTicketCliente(ticketData as any, ticketPrinter.paper_width);
+      const { printRawBase64 } = await import('@/lib/qz-print');
+      await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, base64);
+      toast.success('Comprobante reimpreso');
+    } catch (e: any) {
+      toast.error('Error al reimprimir: ' + (e.message || 'Error desconocido'));
+    } finally {
+      setPrinting2(null);
+    }
+  };
 
   const handleSearch = async () => {
     setLoading(true);
@@ -648,7 +749,7 @@ function ReimprimirCard({ branchId, branchData }: {
                 key={r.id}
                 className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
               >
-                <div>
+                <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm">
                     {r.tipo_comprobante} {String(r.punto_venta).padStart(5, '0')}-{String(r.numero_comprobante).padStart(8, '0')}
                   </div>
@@ -661,6 +762,16 @@ function ReimprimirCard({ branchId, branchData }: {
                   <Badge variant={r.anulada ? 'destructive' : 'secondary'} className="text-xs">
                     {r.anulada ? 'Anulada' : 'CAE ' + (r.cae?.slice(-6) || '')}
                   </Badge>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={printing.bridgeStatus !== 'connected' || printing2 === r.id}
+                    onClick={(e) => { e.stopPropagation(); handleReprint(r); }}
+                    title="Reimprimir comprobante"
+                  >
+                    <Printer className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             ))}
