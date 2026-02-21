@@ -32,6 +32,7 @@ interface TrackingData {
 
 const ESTADO_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   pendiente: { label: 'Recibido', icon: <Clock className="w-5 h-5" />, color: 'text-blue-500' },
+  confirmado: { label: 'Confirmado', icon: <Clock className="w-5 h-5" />, color: 'text-blue-500' },
   en_preparacion: { label: 'Preparando', icon: <Flame className="w-5 h-5" />, color: 'text-orange-500' },
   listo: { label: 'Listo', icon: <Package className="w-5 h-5" />, color: 'text-green-500' },
   en_camino: { label: 'En camino', icon: <Truck className="w-5 h-5" />, color: 'text-purple-500' },
@@ -39,7 +40,7 @@ const ESTADO_CONFIG: Record<string, { label: string; icon: React.ReactNode; colo
   cancelado: { label: 'Cancelado', icon: <XCircle className="w-5 h-5" />, color: 'text-red-500' },
 };
 
-const ESTADO_ORDER = ['pendiente', 'en_preparacion', 'listo', 'entregado'];
+const ESTADO_ORDER = ['pendiente', 'confirmado', 'en_preparacion', 'listo', 'entregado'];
 
 function formatPrice(n: number) {
   return `$${n.toLocaleString('es-AR')}`;
