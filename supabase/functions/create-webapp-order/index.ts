@@ -32,6 +32,7 @@ interface CreateWebappOrderBody {
   cliente_referencia?: string | null;
   cliente_notas?: string | null;
   metodo_pago: "mercadopago" | "efectivo";
+  delivery_zone_id?: string | null;
   items: OrderItemInput[];
 }
 
@@ -130,17 +131,48 @@ Deno.serve(async (req) => {
       subtotal += (item.precio_unitario + extrasTotal) * item.cantidad;
     }
 
-    const costoDelivery =
-      body.tipo_servicio === "delivery" ? (config.delivery_costo ?? 0) : 0;
+    // ── Resolve delivery cost from zone or flat rate ────────────
+    let costoDelivery = 0;
+    let deliveryZoneId: string | null = null;
+    let tiempoEstimadoZona: number | null = null;
 
-    if (
-      body.tipo_servicio === "delivery" &&
-      config.delivery_pedido_minimo &&
-      subtotal < config.delivery_pedido_minimo
-    ) {
-      return json(400, {
-        error: `El pedido mínimo para delivery es $${config.delivery_pedido_minimo}`,
-      });
+    if (body.tipo_servicio === "delivery") {
+      if (body.delivery_zone_id) {
+        // Look up zone
+        const { data: zone, error: zoneErr } = await supabase
+          .from("delivery_zones")
+          .select("id, costo_envio, pedido_minimo, tiempo_estimado_min, is_active")
+          .eq("id", body.delivery_zone_id)
+          .eq("branch_id", body.branch_id)
+          .single();
+
+        if (zoneErr || !zone)
+          return json(400, { error: "Zona de delivery no encontrada" });
+        if (!zone.is_active)
+          return json(400, { error: "Esta zona de delivery no está disponible" });
+
+        costoDelivery = zone.costo_envio ?? 0;
+        deliveryZoneId = zone.id;
+        tiempoEstimadoZona = zone.tiempo_estimado_min;
+
+        if (zone.pedido_minimo && subtotal < zone.pedido_minimo) {
+          return json(400, {
+            error: `El pedido mínimo para esta zona es $${zone.pedido_minimo}`,
+          });
+        }
+      } else {
+        // Fallback: flat rate from config
+        costoDelivery = config.delivery_costo ?? 0;
+
+        if (
+          config.delivery_pedido_minimo &&
+          subtotal < config.delivery_pedido_minimo
+        ) {
+          return json(400, {
+            error: `El pedido mínimo para delivery es $${config.delivery_pedido_minimo}`,
+          });
+        }
+      }
     }
 
     const total = subtotal + costoDelivery;
@@ -160,7 +192,7 @@ Deno.serve(async (req) => {
     // ── Estimated time ──────────────────────────────────────────
     let tiempoEstimado: number | null = null;
     if (body.tipo_servicio === "delivery") {
-      tiempoEstimado = config.prep_time_delivery ?? config.tiempo_estimado_delivery_min ?? 40;
+      tiempoEstimado = tiempoEstimadoZona ?? config.prep_time_delivery ?? config.tiempo_estimado_delivery_min ?? 40;
     } else if (body.tipo_servicio === "retiro") {
       tiempoEstimado = config.prep_time_retiro ?? config.tiempo_estimado_retiro_min ?? 15;
     } else {
@@ -195,6 +227,7 @@ Deno.serve(async (req) => {
       cliente_direccion: body.cliente_direccion ?? null,
       direccion_entrega: body.cliente_direccion ?? null,
       cliente_notas: body.cliente_notas ?? null,
+      delivery_zone_id: deliveryZoneId,
       webapp_tracking_code: trackingCode,
       tiempo_prometido: tiempoEstimado
         ? new Date(Date.now() + tiempoEstimado * 60_000).toISOString()

@@ -1,15 +1,44 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Minus, Plus, Trash2, ShoppingBag, Loader2, ArrowLeft, CreditCard, Banknote } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Minus, Plus, Trash2, ShoppingBag, Loader2, ArrowLeft, CreditCard, Banknote, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { useWebappCart } from '@/hooks/useWebappCart';
+
+interface DeliveryZone {
+  id: string;
+  nombre: string;
+  costo_envio: number;
+  pedido_minimo: number;
+  tiempo_estimado_min: number;
+  barrios: string[];
+  descripcion: string | null;
+}
+
+function usePublicDeliveryZones(branchId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ['delivery-zones-public', branchId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('delivery_zones' as any)
+        .select('id, nombre, costo_envio, pedido_minimo, tiempo_estimado_min, barrios, descripcion')
+        .eq('branch_id', branchId!)
+        .eq('is_active', true)
+        .order('orden', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as DeliveryZone[];
+    },
+    enabled: !!branchId && enabled,
+  });
+}
 
 interface Props {
   open: boolean;
@@ -32,8 +61,22 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   const navigate = useNavigate();
   const servicioLabel = cart.tipoServicio === 'retiro' ? 'Retiro en local' : cart.tipoServicio === 'delivery' ? 'Delivery' : 'Comer acá';
 
+  const isDelivery = cart.tipoServicio === 'delivery';
+  const { data: zones = [] } = usePublicDeliveryZones(branchId, isDelivery);
+  const hasZones = zones.length > 0;
+
   const [step, setStep] = useState<Step>('cart');
   const [submitting, setSubmitting] = useState(false);
+  const [selectedZoneId, setSelectedZoneId] = useState<string>('');
+
+  // Auto-select first zone when zones load
+  useEffect(() => {
+    if (hasZones && !selectedZoneId) {
+      setSelectedZoneId(zones[0].id);
+    }
+  }, [hasZones, zones, selectedZoneId]);
+
+  const selectedZone = zones.find(z => z.id === selectedZoneId);
 
   // Checkout form state
   const [nombre, setNombre] = useState('');
@@ -45,14 +88,20 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   const [notas, setNotas] = useState('');
   const [metodoPago, setMetodoPago] = useState<MetodoPago>(mpEnabled ? 'mercadopago' : 'efectivo');
 
-  const isDelivery = cart.tipoServicio === 'delivery';
-  const costoEnvio = isDelivery ? deliveryCosto : 0;
+  const costoEnvio = isDelivery
+    ? (hasZones && selectedZone ? selectedZone.costo_envio : deliveryCosto)
+    : 0;
+  const pedidoMinimo = isDelivery && hasZones && selectedZone ? selectedZone.pedido_minimo : 0;
   const totalConEnvio = cart.totalPrecio + costoEnvio;
+
+  const meetsMinimum = pedidoMinimo <= 0 || cart.totalPrecio >= pedidoMinimo;
 
   const canSubmit =
     nombre.trim().length >= 2 &&
     telefono.trim().length >= 8 &&
     (!isDelivery || direccion.trim().length >= 5) &&
+    (!isDelivery || !hasZones || !!selectedZoneId) &&
+    meetsMinimum &&
     (metodoPago === 'efectivo' || mpEnabled);
 
   const handleContinue = () => setStep('checkout');
@@ -86,6 +135,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
           cliente_referencia: isDelivery ? referencia.trim() || null : null,
           cliente_notas: notas.trim() || null,
           metodo_pago: metodoPago,
+          delivery_zone_id: isDelivery && hasZones && selectedZoneId ? selectedZoneId : null,
           items: orderItems,
         },
       });
@@ -301,10 +351,51 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                 </div>
               </div>
 
-              {/* Delivery address */}
+              {/* Delivery address + zone */}
               {isDelivery && (
                 <div className="space-y-3">
                   <h3 className="text-sm font-bold text-foreground">Dirección de entrega</h3>
+
+                  {/* Zone selector */}
+                  {hasZones && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs flex items-center gap-1">
+                        <MapPin className="w-3 h-3" /> Zona de delivery *
+                      </Label>
+                      <Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccioná tu zona" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {zones.map(z => (
+                            <SelectItem key={z.id} value={z.id}>
+                              <div className="flex justify-between items-center gap-3 w-full">
+                                <span>{z.nombre}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {z.costo_envio > 0 ? `$${z.costo_envio}` : 'Gratis'}
+                                  {z.tiempo_estimado_min ? ` · ${z.tiempo_estimado_min} min` : ''}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {selectedZone?.descripcion && (
+                        <p className="text-xs text-muted-foreground">{selectedZone.descripcion}</p>
+                      )}
+                      {selectedZone?.barrios && selectedZone.barrios.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          Barrios: {selectedZone.barrios.join(', ')}
+                        </p>
+                      )}
+                      {!meetsMinimum && (
+                        <p className="text-xs text-destructive">
+                          Pedido mínimo para esta zona: ${pedidoMinimo}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <div>
                       <Label htmlFor="checkout-dir" className="text-xs">Dirección *</Label>
