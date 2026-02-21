@@ -7830,6 +7830,71 @@ export type Database = {
         }
         Relationships: []
       }
+      webapp_pedido_mensajes: {
+        Row: {
+          branch_id: string
+          created_at: string | null
+          id: string
+          leido: boolean | null
+          mensaje: string
+          pedido_id: string
+          sender_id: string | null
+          sender_nombre: string
+          sender_type: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string | null
+          id?: string
+          leido?: boolean | null
+          mensaje: string
+          pedido_id: string
+          sender_id?: string | null
+          sender_nombre: string
+          sender_type: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string | null
+          id?: string
+          leido?: boolean | null
+          mensaje?: string
+          pedido_id?: string
+          sender_id?: string | null
+          sender_nombre?: string
+          sender_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webapp_pedido_mensajes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webapp_pedido_mensajes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webapp_pedido_mensajes_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webapp_pedido_mensajes_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_multivista_ventas_base"
+            referencedColumns: ["pedido_id"]
+          },
+        ]
+      }
       whatsapp_templates: {
         Row: {
           created_at: string

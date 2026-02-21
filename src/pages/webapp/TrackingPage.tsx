@@ -4,9 +4,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader2, CheckCircle2, Clock, Flame, Package, Truck, PartyPopper, XCircle, MessageCircle, Send, Utensils } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SEO } from '@/components/SEO';
+import { OrderChat } from '@/components/webapp/OrderChat';
 
 interface TrackingData {
   pedido: {
+    id: string;
     numero_pedido: number;
     estado: string;
     tipo_servicio: string | null;
@@ -17,6 +19,7 @@ interface TrackingData {
     pago_estado: string | null;
     tiempo_prometido: string | null;
     created_at: string;
+    cliente_nombre: string | null;
   };
   items: Array<{
     nombre: string;
@@ -274,16 +277,17 @@ export default function TrackingPage() {
           </div>
         )}
 
+        {/* Chat */}
+        <OrderChat
+          trackingCode={trackingCode!}
+          pedidoId={pedido.id}
+          branchName={branch?.name ?? 'Local'}
+          clienteNombre={pedido.cliente_nombre ?? 'Cliente'}
+          chatActive={!isFinal}
+        />
+
         {/* Actions */}
         <div className="space-y-2">
-          {whatsappLink && (
-            <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="block">
-              <Button variant="outline" className="w-full gap-2">
-                <MessageCircle className="w-4 h-4" />
-                Contactar al local
-              </Button>
-            </a>
-          )}
           <Link to="/pedir" className="block">
             <Button variant="ghost" className="w-full text-muted-foreground">
               Volver al menú

@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
          subtotal, costo_delivery, descuento, total,
          tiempo_prometido, tiempo_inicio_prep, tiempo_listo, tiempo_entregado,
          tiempo_confirmado, tiempo_en_camino,
-         pago_estado, created_at,
+         pago_estado, created_at, cliente_nombre,
          branch_id`,
       )
       .eq("webapp_tracking_code", trackingCode)
@@ -129,6 +129,7 @@ Deno.serve(async (req) => {
 
     return json(200, {
       pedido: {
+        id: pedido.id,
         numero_pedido: pedido.numero_pedido,
         estado: pedido.estado,
         tipo_servicio: pedido.tipo_servicio,
@@ -139,6 +140,7 @@ Deno.serve(async (req) => {
         pago_estado: pedido.pago_estado,
         tiempo_prometido: pedido.tiempo_prometido,
         created_at: pedido.created_at,
+        cliente_nombre: pedido.cliente_nombre,
       },
       items: (items ?? []).map((it: any) => ({
         nombre: it.nombre,

@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.print-to-network]
 verify_jwt = false
+
+[functions.webapp-pedido-chat]
+verify_jwt = false
