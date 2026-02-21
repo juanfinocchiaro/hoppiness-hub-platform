@@ -9,8 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Store, Utensils, Bike, ShoppingCart, User, Hash, ChevronRight, Pencil } from 'lucide-react';
-import type { CanalVenta, TipoServicio, CanalApp, OrderConfig } from '@/types/pos';
+import { Store, Utensils, Bike, ShoppingCart, User, Hash, ChevronRight, Pencil, FileText } from 'lucide-react';
+import type { CanalVenta, TipoServicio, CanalApp, TipoFactura, OrderConfig } from '@/types/pos';
 
 const CANAL_OPTS: { value: CanalVenta; label: string; icon: React.ElementType }[] = [
   { value: 'mostrador', label: 'Mostrador', icon: Store },
@@ -30,6 +30,12 @@ const CANAL_APP_OPTS: { value: CanalApp; label: string }[] = [
 ];
 
 const CALLER_NUMBERS = Array.from({ length: 30 }, (_, i) => i + 1);
+
+const TIPO_FACTURA_OPTS: { value: TipoFactura; label: string; short: string }[] = [
+  { value: 'C', label: 'Consumidor Final', short: 'CF' },
+  { value: 'A', label: 'Factura A', short: 'A' },
+  { value: 'B', label: 'Factura B', short: 'B' },
+];
 
 const CANAL_LABELS: Record<CanalVenta, string> = { mostrador: 'Mostrador', apps: 'Apps' };
 const TIPO_LABELS: Record<TipoServicio, string> = { takeaway: 'Para llevar', comer_aca: 'Comer acá', delivery: 'Delivery' };
@@ -66,6 +72,9 @@ function ConfigSummaryLine({ config }: { config: OrderConfig }) {
   }
   if (config.clienteTelefono) details.push(config.clienteTelefono);
   if (config.clienteDireccion) details.push(config.clienteDireccion);
+  if (config.tipoFactura && config.tipoFactura !== 'C') {
+    details.push(`Fact. ${config.tipoFactura}`);
+  }
 
   return (
     <div className="flex flex-col gap-0.5 min-w-0">
@@ -247,6 +256,65 @@ export function ConfigForm({
           </div>
         </>
       )}
+
+      {/* Tipo de factura */}
+      <div className="space-y-2 border-t pt-4 mt-2">
+        <Label className="text-xs flex items-center gap-1">
+          <FileText className="w-3.5 h-3.5" />
+          Comprobante
+        </Label>
+        <div className="flex gap-2 flex-wrap">
+          {TIPO_FACTURA_OPTS.map((opt) => (
+            <Button
+              key={opt.value}
+              type="button"
+              variant={config.tipoFactura === opt.value ? 'default' : 'outline'}
+              size="sm"
+              className="flex-1 min-w-0"
+              onClick={() => set({
+                tipoFactura: opt.value,
+                // Clear receptor fields when switching to CF
+                ...(opt.value === 'C' ? { receptorCuit: '', receptorRazonSocial: '', receptorEmail: '' } : {}),
+              })}
+            >
+              {opt.label}
+            </Button>
+          ))}
+        </div>
+
+        {(config.tipoFactura === 'A' || config.tipoFactura === 'B') && (
+          <div className="space-y-2 mt-2 p-3 rounded-md bg-muted/50 border">
+            <div>
+              <Label className="text-xs">CUIT *</Label>
+              <Input
+                placeholder="20-12345678-9"
+                value={config.receptorCuit}
+                onChange={(e) => set({ receptorCuit: e.target.value })}
+                className="h-9 mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Razón Social *</Label>
+              <Input
+                placeholder="Nombre o razón social"
+                value={config.receptorRazonSocial}
+                onChange={(e) => set({ receptorRazonSocial: e.target.value })}
+                className="h-9 mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Email (opcional)</Label>
+              <Input
+                placeholder="email@ejemplo.com"
+                value={config.receptorEmail}
+                onChange={(e) => set({ receptorEmail: e.target.value })}
+                className="h-9 mt-1"
+                type="email"
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       {onConfirm && (
         <Button size="lg" className="w-full" onClick={onConfirm}>
