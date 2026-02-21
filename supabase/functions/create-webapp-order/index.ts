@@ -214,7 +214,7 @@ Deno.serve(async (req) => {
       tipo: "webapp",
       estado: autoAccept ? "en_preparacion" : "pendiente",
       canal_venta: "webapp",
-      tipo_servicio: body.tipo_servicio === "comer_aca" ? "comer_aca" : body.tipo_servicio,
+      tipo_servicio: body.tipo_servicio === "retiro" ? "takeaway" : body.tipo_servicio,
       subtotal,
       descuento: 0,
       total,
