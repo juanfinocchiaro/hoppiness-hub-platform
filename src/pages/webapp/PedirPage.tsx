@@ -140,14 +140,12 @@ export default function PedirPage() {
     setCartOpen(true);
   };
 
-  const handleContinueFromSidePanel = () => {
-    setCartInitialStep('checkout');
-    setCartOpen(true);
-  };
+  // Side panel now handles checkout inline, no need for this handler
 
   const isDelivery = cart.tipoServicio === 'delivery';
   const costoEnvio = isDelivery ? (config.delivery_costo ?? 0) : 0;
-  const showSidePanel = step === 'menu' && cart.totalItems > 0;
+  const hasActiveTracking = !!localStorage.getItem('hoppiness_last_tracking');
+  const showSidePanel = step === 'menu' && (cart.totalItems > 0 || hasActiveTracking);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -180,12 +178,14 @@ export default function PedirPage() {
             cartPanelVisible={showSidePanel}
           />
 
-          {/* Desktop side cart panel */}
+          {/* Desktop side cart panel — shows cart, checkout, and tracking inline */}
           {showSidePanel && (
             <CartSidePanel
               cart={cart}
               costoEnvio={costoEnvio}
-              onContinue={handleContinueFromSidePanel}
+              branchId={branch.id}
+              branchName={branch.name}
+              mpEnabled={mpEnabled}
               suggestedItems={menuItems || []}
               onAddSuggested={(item) => cart.quickAdd(item.id, item.nombre, item.precio_base, item.imagen_url)}
             />
