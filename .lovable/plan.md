@@ -1,89 +1,97 @@
 
 
-## Plan: Acciones completas en detalle de pedido (Reimprimir, Anular, Notas de Credito)
+# Auditoria del Dashboard de Mi Local (Manantiales)
 
-Este plan mejora la fila expandida de cada pedido en el Historial de Ventas con 3 grandes mejoras:
+## Problemas Encontrados
 
-### 1. Botones de reimpresion inteligentes
+### 1. Orden de turnos invertido (Noche antes de Mediodia)
+**Severidad: Media**
 
-Actualmente los botones de reimprimir no consideran el contexto del pedido. Se van a mostrar **todos los tipos de ticket siempre**, pero deshabilitando los que no correspondan:
+En la base de datos, los turnos "Noche" y "Mediodia" tienen el mismo `sort_order = 2`. Esto causa que el orden sea indeterminado y aparezca "Noche" primero. Logicamente, Mediodia deberia aparecer antes que Noche.
 
-- **Ticket cliente**: Siempre habilitado (es un comprobante no fiscal generico)
-- **Factura**: Habilitado SOLO si el pedido tiene una factura emitida (`facturas_emitidas.length > 0`). Deshabilitado con tooltip "Sin factura emitida" si no la tiene
-- **Comanda**: Siempre habilitado
-- **Vales**: Habilitado solo si el pedido tiene items con `tipo_impresion === 'vale'`. Deshabilitado con tooltip "Sin items de tipo vale" si no tiene
-- **Delivery**: Habilitado solo si `tipo_servicio === 'delivery'`. Deshabilitado si no es delivery
-
-Los botones deshabilitados se muestran visualmente "apagados" (opacity reducida, cursor not-allowed) para que el cajero entienda que existen pero no aplican.
-
-### 2. Anulacion de pedidos
-
-Se agrega un boton "Anular pedido" con confirmacion (AlertDialog). Al anular:
-
-- Se cambia el `estado` del pedido a `'cancelado'` en la tabla `pedidos`
-- Si el pedido **NO tiene factura**: solo se marca como cancelado
-- Si el pedido **tiene factura**: se emite una **Nota de Credito** automaticamente antes de cancelar. La nota de credito es un comprobante ARCA tipo 3 (NC A), 8 (NC B) o 13 (NC C) que referencia la factura original
-
-Para las Notas de Credito se necesita:
-- Una nueva edge function `emitir-nota-credito` que recibe el `factura_id` original, emite el comprobante de anulacion ante ARCA y lo guarda en `facturas_emitidas` con tipo `NC_A`, `NC_B` o `NC_C`
-- Campo `factura_asociada_id` en `facturas_emitidas` para vincular la NC con la factura original
-- Campo `anulada` (boolean) en `facturas_emitidas` para marcar facturas que fueron anuladas por una NC
-
-### 3. Cambio de datos de facturacion
-
-Se agrega un boton "Cambiar facturacion" (visible solo si el pedido tiene factura). Al usarlo:
-
-1. Se abre un modal donde se cargan los nuevos datos (tipo factura, CUIT, razon social, condicion IVA)
-2. Al confirmar, el sistema:
-   - Emite una Nota de Credito por la factura original (misma logica que anulacion)
-   - Emite una nueva factura con los datos corregidos
-   - Ambos movimientos quedan vinculados en la base de datos
+**Solucion:** Corregir los valores de `sort_order` en la tabla `branch_shifts` para Manantiales: Mediodia = 2, Noche = 3. Revisar si otras sucursales tienen el mismo problema.
 
 ---
 
-### Detalle tecnico
+### 2. "Comunicados sin leer" siempre muestra 0 (hardcodeado)
+**Severidad: Alta**
 
-**Migracion de base de datos:**
-- Agregar columnas a `facturas_emitidas`:
-  - `factura_asociada_id UUID REFERENCES facturas_emitidas(id)` (para vincular NC con factura original)
-  - `anulada BOOLEAN DEFAULT false` (marca si fue anulada por una NC)
-
-**Nueva edge function `emitir-nota-credito`:**
-- Recibe `factura_id` (la factura a anular) y opcionalmente `branch_id`
-- Lee la factura original de `facturas_emitidas`
-- Determina el tipo de NC segun el tipo original (A->3, B->8, C->13)
-- Usa el mismo flujo WSAA/WSFE que `emitir-factura` pero con CbteTipo de NC y referenciando el comprobante original via `CbtesAsoc`
-- Guarda la NC en `facturas_emitidas` con `factura_asociada_id` apuntando a la original
-- Marca la factura original como `anulada = true`
-
-**Archivos a modificar:**
-- `src/components/pos/OrderHistoryTable.tsx` - Redisenar seccion de acciones con botones inteligentes, boton anular, boton cambiar facturacion
-- `src/pages/local/SalesHistoryPage.tsx` - Agregar handlers para anulacion y re-facturacion, pasar categorias como prop para determinar vales
-- `src/hooks/useAfipConfig.ts` - Agregar mutation `emitirNotaCredito`
-- `src/hooks/pos/usePosOrderHistory.ts` - Agregar `receptor_cuit`, `receptor_razon_social`, `receptor_condicion_iva` al select de `facturas_emitidas`
-
-**Archivos a crear:**
-- `supabase/functions/emitir-nota-credito/index.ts` - Edge function para notas de credito
-- `src/components/pos/CancelOrderDialog.tsx` - Dialog de confirmacion de anulacion
-- `src/components/pos/ChangeInvoiceModal.tsx` - Modal para cambiar datos de facturacion
-
-**Flujo visual del detalle expandido:**
+En el hook `usePendingItems` (linea 142), el valor `unreadComms` esta hardcodeado a `0`:
 
 ```text
-+------------------------------------------+
-| Items                | Pagos             |
-| Pepsi x1    $2.500   | QR      $2.500    |
-|                      |                   |
-| Total       $2.500   | Factura C 00001-12|
-|                      | CAE: 12345678     |
-+------------------------------------------+
-| Reimprimir                               |
-| [Ticket] [Factura] [Comanda] [Vales]     |
-|  (cada uno habilitado/deshabilitado       |
-|   segun contexto)                        |
-+------------------------------------------+
-| Acciones                                 |
-| [Cambiar facturacion]  [Anular pedido]   |
-+------------------------------------------+
+return {
+  pendingRequests: pendingRequests || 0,
+  unreadComms: 0,  // <-- HARDCODED, nunca se calcula
+  pendingSignatures,
+  total: ...
+};
 ```
+
+No se hace ninguna consulta a la tabla `communications` / `communication_reads` para calcular los comunicados sin leer del equipo.
+
+**Solucion:** Consultar la tabla `communications` y `communication_reads` para contar cuantos comunicados no fueron leidos por los empleados de la sucursal.
+
+---
+
+### 3. Calculo incorrecto del badge "Pendientes" (total)
+**Severidad: Media**
+
+La formula del total en linea 144 es inconsistente:
+
+```text
+total: (pendingRequests || 0) + (pendingSignatures > 0 ? 1 : 0)
+```
+
+Esto suma las solicitudes pendientes (1) + 1 si hay **alguna** firma pendiente, dando total = 2 en la screenshot. Pero no refleja la cantidad real de items pendientes. Deberia sumar los 3 contadores: solicitudes + comunicados sin leer + firmas pendientes.
+
+**Solucion:** Cambiar la formula a: `pendingRequests + unreadComms + pendingSignatures`.
+
+---
+
+### 4. Boton "Cargar" no visible
+**Severidad: Baja**
+
+El boton "Cargar" solo se muestra si `local.canEnterSales && !posEnabled`. Si el POS esta habilitado para Manantiales, el boton no aparece (correcto), pero tampoco hay indicacion visual de que las ventas se cargan via POS. Esto podria confundir al encargado.
+
+**Nota:** Este comportamiento es probablemente correcto si el local usa POS. No requiere cambio.
+
+---
+
+### 5. StockAlertCard no visible
+**Severidad: Informativa**
+
+El componente `StockAlertCard` se renderiza pero solo aparece si hay items criticos o bajos. Si no hay alertas, no muestra nada (correcto por diseno).
+
+---
+
+## Plan de Implementacion
+
+### Paso 1: Corregir sort_order de turnos en la DB
+Ejecutar migracion SQL para corregir el orden de los turnos en `branch_shifts` para todas las sucursales donde Mediodia y Noche tengan el mismo sort_order.
+
+### Paso 2: Implementar calculo real de comunicados sin leer
+Modificar `usePendingItems` en `ManagerDashboard.tsx` para:
+- Consultar `communications` enviados a la sucursal
+- Cruzar con `communication_reads` para contar los no leidos por el equipo
+- Asignar el resultado a `unreadComms`
+
+### Paso 3: Corregir formula del badge total de Pendientes
+Cambiar la formula para sumar todos los contadores reales: `pendingRequests + unreadComms + pendingSignatures`.
+
+---
+
+## Detalle Tecnico
+
+### Migracion SQL (Paso 1)
+```text
+-- Corregir sort_order para que Mediodia=2 y Noche=3
+UPDATE branch_shifts SET sort_order = 2 WHERE name = 'Mediodía' AND sort_order != 2;
+UPDATE branch_shifts SET sort_order = 3 WHERE name = 'Noche';
+```
+
+### Cambios en ManagerDashboard.tsx (Pasos 2 y 3)
+En el hook `usePendingItems`:
+- Agregar query para contar comunicados sin leer por empleados de la sucursal
+- Calcular `unreadComms` con datos reales de `communications` + `communication_reads`
+- Actualizar formula: `total: pendingRequests + unreadComms + pendingSignatures`
 
