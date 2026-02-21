@@ -160,13 +160,54 @@ function buildCAEBody(creds: WSAACredentials, cuit: string, r: CAERequestParams)
 }
 
 function parseCAEResponse(resp: string): CAEResult {
-  const caeM = resp.match(/<CAE>(\d+)<\/CAE>/), vtoM = resp.match(/<CAEFchVto>(\d+)<\/CAEFchVto>/);
-  const resM = resp.match(/<Resultado>(\w)<\/Resultado>/), errM = resp.match(/<Msg>([\s\S]*?)<\/Msg>/), obsM = resp.match(/<Obs>([\s\S]*?)<\/Obs>/);
+  // Log raw ARCA response for diagnostics (first 3000 chars)
+  console.log("ARCA raw response (first 3000):", resp.substring(0, 3000));
+
+  const caeM = resp.match(/<CAE>(\d+)<\/CAE>/);
+  const vtoM = resp.match(/<CAEFchVto>(\d+)<\/CAEFchVto>/);
+  const resM = resp.match(/<Resultado>(\w)<\/Resultado>/);
+
+  // Parse <Err> blocks (real errors from ARCA)
+  const errMatches = [...resp.matchAll(/<Err>[\s\S]*?<Code>(\d+)<\/Code>[\s\S]*?<Msg>([\s\S]*?)<\/Msg>[\s\S]*?<\/Err>/g)];
+  const errors = errMatches.map(m => `[${m[1]}] ${m[2].trim()}`);
+
+  // Parse <Obs> blocks (observations/warnings per voucher)
+  const obsMatches = [...resp.matchAll(/<Obs>[\s\S]*?<Code>(\d+)<\/Code>[\s\S]*?<Msg>([\s\S]*?)<\/Msg>[\s\S]*?<\/Obs>/g)];
+  const observations = obsMatches.map(m => `[${m[1]}] ${m[2].trim()}`);
+
+  // Parse <Events> blocks (informational events like RG 5616 warning)
+  const evtMatches = [...resp.matchAll(/<Evt>[\s\S]*?<Code>(\d+)<\/Code>[\s\S]*?<Msg>([\s\S]*?)<\/Msg>[\s\S]*?<\/Evt>/g)];
+  const events = evtMatches.map(m => `[${m[1]}] ${m[2].trim()}`);
+
+  if (events.length > 0) console.log("ARCA Events (informational):", events.join(" | "));
+  if (observations.length > 0) console.log("ARCA Observations:", observations.join(" | "));
+  if (errors.length > 0) console.error("ARCA Errors:", errors.join(" | "));
+
   const resultado = resM?.[1] || "R";
-  if (resultado === "R" && !caeM) throw new Error(`ARCA rechazó: ${errM?.[1] || obsM?.[1] || "Error desconocido"}`);
-  if (!caeM || !vtoM) throw new Error(`Sin CAE: ${resp.substring(0, 1000)}`);
+
+  // Priority: Errors > Observations > Events
+  if (resultado === "R" && !caeM) {
+    const errorMsg = errors.length > 0
+      ? errors.join("; ")
+      : observations.length > 0
+        ? observations.join("; ")
+        : events.length > 0
+          ? events.join("; ")
+          : "Error desconocido";
+    throw new Error(`ARCA rechazó: ${errorMsg}`);
+  }
+
+  if (!caeM || !vtoM) throw new Error(`Sin CAE en respuesta: ${resp.substring(0, 2000)}`);
+
   const v = vtoM[1];
-  return { cae: caeM[1], caeVto: `${v.substring(0,4)}-${v.substring(4,6)}-${v.substring(6,8)}`, cbteDesde: parseInt(resp.match(/<CbteDesde>(\d+)/)?.[1]||"0"), cbteHasta: parseInt(resp.match(/<CbteHasta>(\d+)/)?.[1]||"0"), resultado, observaciones: obsM?.[1] };
+  return {
+    cae: caeM[1],
+    caeVto: `${v.substring(0, 4)}-${v.substring(4, 6)}-${v.substring(6, 8)}`,
+    cbteDesde: parseInt(resp.match(/<CbteDesde>(\d+)/)?.[1] || "0"),
+    cbteHasta: parseInt(resp.match(/<CbteHasta>(\d+)/)?.[1] || "0"),
+    resultado,
+    observaciones: observations.length > 0 ? observations.join("; ") : undefined,
+  };
 }
 
 export async function requestCAE(
