@@ -147,7 +147,7 @@ export default function MyClockInsCard() {
             <CardTitle className="text-lg">Mis Fichajes</CardTitle>
           </div>
           {isCurrentlyWorking && (
-            <Badge className="bg-green-500 text-white animate-pulse">Trabajando</Badge>
+            <Badge className="bg-success text-success-foreground animate-pulse">Trabajando</Badge>
           )}
         </div>
       </CardHeader>
@@ -190,13 +190,13 @@ export default function MyClockInsCard() {
                       </span>
                       <div className="flex items-center gap-2 text-xs">
                         {shift.clockIn && (
-                          <span className="flex items-center gap-1 text-green-600">
+                          <span className="flex items-center gap-1 text-success">
                             <LogIn className="w-3 h-3" />
                             {format(new Date(shift.clockIn.created_at), 'HH:mm')}
                           </span>
                         )}
                         {shift.clockOut && (
-                          <span className="flex items-center gap-1 text-red-600">
+                          <span className="flex items-center gap-1 text-destructive">
                             <LogOut className="w-3 h-3" />
                             {format(new Date(shift.clockOut.created_at), 'HH:mm')}
                           </span>

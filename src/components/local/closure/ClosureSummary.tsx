@@ -121,7 +121,7 @@ export function ClosureSummary({
         {/* All good indicator */}
         {alertas && !tieneAlertas && (
           <div className="mt-4 pt-3 border-t">
-            <div className="flex items-center justify-center gap-2 text-green-600">
+            <div className="flex items-center justify-center gap-2 text-success">
               <CheckCircle2 className="w-4 h-4" />
               <span className="text-sm font-medium">Sin alertas</span>
             </div>

@@ -104,8 +104,8 @@ export function TeamTable({ team, branchId, onMemberUpdated }: TeamTableProps) {
                       <TableCell>
                         <span className={cn(
                           "text-sm font-medium",
-                          member.local_role === 'encargado' && "text-green-600",
-                          (member.local_role === 'cajero' || member.local_role === 'empleado') && "text-slate-600"
+                          member.local_role === 'encargado' && "text-success",
+                          (member.local_role === 'cajero' || member.local_role === 'empleado') && "text-muted-foreground"
                         )}>
                           {permissionLabel}
                         </span>
@@ -166,8 +166,8 @@ function StatusBadge({ member }: { member: TeamMember }) {
   
   if (member.is_working) {
     return (
-      <span className="inline-flex items-center gap-1 text-sm text-green-600">
-        <span className="w-2 h-2 rounded-full bg-green-500" />
+      <span className="inline-flex items-center gap-1 text-sm text-success">
+        <span className="w-2 h-2 rounded-full bg-success" />
         Trabajando
       </span>
     );
@@ -175,7 +175,7 @@ function StatusBadge({ member }: { member: TeamMember }) {
   
   return (
     <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-      <span className="w-2 h-2 rounded-full bg-gray-300" />
+      <span className="w-2 h-2 rounded-full bg-muted-foreground/30" />
       Fuera
     </span>
   );

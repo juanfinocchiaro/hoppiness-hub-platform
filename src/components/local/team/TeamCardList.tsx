@@ -130,7 +130,7 @@ export function TeamCardList({ team, branchId, onMemberUpdated }: TeamCardListPr
 function StatusIndicator({ member }: { member: TeamMember }) {
   if (member.is_working) {
     return (
-      <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+      <span className="w-2.5 h-2.5 rounded-full bg-success animate-pulse flex-shrink-0" />
     );
   }
   

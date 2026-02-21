@@ -53,7 +53,7 @@ export function UserExpandedRow({ user, branches, onClose, onUserUpdated }: User
         <div className="space-y-3 text-sm">
           {/* Brand Access */}
           <div className="flex items-start gap-2">
-            <span className={`w-2.5 h-2.5 rounded-full mt-1 ${user.brand_role ? 'bg-green-500' : 'bg-gray-300'}`} />
+            <span className={`w-2.5 h-2.5 rounded-full mt-1 ${user.brand_role ? 'bg-success' : 'bg-muted-foreground/30'}`} />
             <div className="flex-1">
               <span className="font-medium">Mi Marca: </span>
               <span className="text-muted-foreground">
@@ -64,7 +64,7 @@ export function UserExpandedRow({ user, branches, onClose, onUserUpdated }: User
 
           {/* Local Access - Nueva arquitectura con múltiples sucursales */}
           <div className="flex items-start gap-2">
-            <span className={`w-2.5 h-2.5 rounded-full mt-1 ${user.hasLocalAccess ? 'bg-green-500' : 'bg-gray-300'}`} />
+            <span className={`w-2.5 h-2.5 rounded-full mt-1 ${user.hasLocalAccess ? 'bg-success' : 'bg-muted-foreground/30'}`} />
             <div className="flex-1">
               <span className="font-medium">Mi Local: </span>
               {user.branch_roles.length > 0 ? (

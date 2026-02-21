@@ -26,12 +26,12 @@ interface Warning {
 }
 
 const WARNING_TYPE_LABELS: Record<string, { label: string; color: string }> = {
-  verbal: { label: 'Verbal', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
-  written: { label: 'Escrito', color: 'bg-orange-100 text-orange-800 border-orange-300' },
-  lateness: { label: 'Llegada tarde', color: 'bg-blue-100 text-blue-800 border-blue-300' },
-  absence: { label: 'Inasistencia', color: 'bg-red-100 text-red-800 border-red-300' },
-  suspension: { label: 'Suspensión', color: 'bg-red-200 text-red-900 border-red-400' },
-  other: { label: 'Otro', color: 'bg-gray-100 text-gray-800 border-gray-300' },
+  verbal: { label: 'Verbal', color: 'bg-warning/15 text-warning-foreground border-warning/30' },
+  written: { label: 'Escrito', color: 'bg-accent/15 text-accent border-accent/30' },
+  lateness: { label: 'Llegada tarde', color: 'bg-info/15 text-info border-info/30' },
+  absence: { label: 'Inasistencia', color: 'bg-destructive/15 text-destructive border-destructive/30' },
+  suspension: { label: 'Suspensión', color: 'bg-destructive/20 text-destructive border-destructive/40' },
+  other: { label: 'Otro', color: 'bg-muted text-muted-foreground border-border' },
 };
 
 export default function MyWarningsCard() {
@@ -137,11 +137,11 @@ export default function MyWarningsCard() {
   }
 
   return (
-    <Card className={unreadCount > 0 ? 'border-yellow-300 bg-yellow-50/30' : ''}>
+    <Card className={unreadCount > 0 ? 'border-warning/40 bg-warning/5' : ''}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <AlertTriangle className={`w-5 h-5 ${unreadCount > 0 ? 'text-yellow-600' : 'text-muted-foreground'}`} />
+            <AlertTriangle className={`w-5 h-5 ${unreadCount > 0 ? 'text-warning-foreground' : 'text-muted-foreground'}`} />
             <CardTitle className="text-lg">Mis Apercibimientos</CardTitle>
           </div>
           {unreadCount > 0 && (
@@ -157,7 +157,7 @@ export default function MyWarningsCard() {
             key={warning.id} 
             className={`p-3 rounded-lg border ${
               !warning.acknowledged_at 
-                ? 'bg-yellow-50 border-yellow-200' 
+                ? 'bg-warning/5 border-warning/20' 
                 : 'bg-muted/50 border-muted'
             }`}
           >
