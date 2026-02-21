@@ -1,125 +1,59 @@
 
 
-# Auditoria y Correcciones: 4 Problemas del Dashboard y Modulos del Local
+# Correcciones en Reportes Fiscales
+
+## Problema 1: Informe X sin selector de fecha
+
+El Informe X siempre consulta el dia actual. No hay forma de elegir otra fecha.
+
+### Solucion
+Agregar un selector de fecha en la card de Informe X. Al hacer clic, en vez de generar directamente, abrir un mini dialog que permita elegir la fecha y luego generar. Por defecto se precarga la fecha de hoy.
+
+### Cambios en `FiscalReportsPage.tsx`
+- En `InformeXCard`: agregar state `selectedDate` y un dialog previo con input date
+- Pasar la fecha seleccionada a `xReport.mutateAsync(selectedDate)`
 
 ---
 
-## Problema 1: Panel "Tienda Online" desordenado
+## Problema 2: Botones "Imprimir" deshabilitados sin Print Bridge
 
-**Diagnostico:** La pagina `WebappConfigPage.tsx` tiene toda la configuracion en cards separadas sin jerarquia clara. Los servicios (Retiro, Delivery, Comer aca) son toggles planos sin posibilidad de expandir configuraciones individuales. Los horarios son un unico rango por servicio (no por dia de semana). La config de Delivery esta en una card separada, los tiempos de preparacion en otra, y los horarios en otra. No queda claro que toggle afecta que.
+Los botones de imprimir en X, Z y Auditoria estan condicionados a `printing.bridgeStatus !== 'connected'`. Como el bridge solo funciona en localhost, desde el preview nunca se puede imprimir.
 
-**Solucion: Redisenar con servicios expandibles**
+### Solucion
+Aplicar el mismo patron de fallback (window.print con HTML formateado) que ya se implemento en Reimprimir. Quitar el `disabled` de todos los botones de impresion y agregar fallback a window.print cuando el bridge no esta conectado.
 
-Cada servicio se convierte en una seccion Collapsible que al activarse muestra:
-- Toggle on/off del servicio
-- Al expandir: tiempos de preparacion propios del servicio
-- Horarios POR DIA DE SEMANA (Lunes a Domingo), cada uno con toggle activo/inactivo + hora desde/hasta
-- Para Delivery ademas: radio, costo, pedido minimo
-
-La estructura `service_schedules` en la DB (JSONB) se amplia de:
-```text
-{ retiro: { from: "10:00", to: "23:00", enabled: true } }
-```
-a:
-```text
-{
-  retiro: {
-    enabled: true,
-    prep_time: 15,
-    days: {
-      lunes: { enabled: true, from: "11:00", to: "23:00" },
-      martes: { enabled: true, from: "11:00", to: "23:00" },
-      ...
-      domingo: { enabled: true, from: "11:00", to: "15:00" }
-    }
-  },
-  delivery: {
-    enabled: true,
-    prep_time: 40,
-    radio_km: 5,
-    costo: 500,
-    pedido_minimo: 3000,
-    days: { ... }
-  },
-  comer_aca: {
-    enabled: true,
-    prep_time: 15,
-    days: { ... }
-  }
-}
-```
-
-La seccion "Recepcion de pedidos" (auto/manual, auto-accept, auto-print) se mantiene como card separada al final.
-
-No se necesita migracion SQL ya que `service_schedules` es JSONB y puede cambiar de estructura sin alterar la tabla. Se mantiene retrocompatibilidad con el formato anterior.
-
-### Archivos a modificar:
-- `src/pages/local/WebappConfigPage.tsx` - Rediseno completo del layout
+### Cambios en `FiscalReportsPage.tsx`
+- `InformeXCard.handlePrint`: quitar disabled, agregar fallback window.print
+- `CierreZCard.handlePrint`: quitar disabled, agregar fallback window.print
+- `AuditoriaCard.handlePrint`: quitar disabled, agregar fallback window.print
+- Lineas afectadas: 148, 315, 334, 506
 
 ---
 
-## Problema 2: Disponibilidad de productos en Tienda Online y POS
+## Problema 3: Cierre Z automatico por turno
 
-**Diagnostico:** Actualmente no hay mecanismo visible para apagar/prender productos de la tienda online desde el panel del local. Tampoco hay un toggle de disponibilidad en el POS que mueva productos a una categoria "Apagados".
+Actualmente el Z es manual y se genera por dia completo. El usuario quiere que sea automatico al cerrar cada turno.
 
-**Nota:** Este es un desarrollo significativo que requiere su propio ciclo. Se recomienda implementar en una segunda fase, ya que implica:
-- Agregar columna `disponible` a `items_carta` o tabla de disponibilidad por sucursal
-- UI para toggle en el panel del local
-- Logica en el POS para filtrar/categorizar items apagados
-- Logica en la WebApp publica para ocultar items no disponibles
+### Solucion
+Integrar la generacion del Z con el cierre de turno (shift_closures). Cuando se guarda el ultimo turno activo del dia, ofrecer automaticamente generar el Cierre Z.
 
-**Por ahora: no incluir en esta iteracion**, ya que los otros 3 puntos son correcciones criticas.
+**Enfoque:** No hacer el Z completamente automatico (requiere confirmacion por razones fiscales/legales). En su lugar:
+- Cuando se cierra el ultimo turno del dia, mostrar un prompt: "Todos los turnos del dia estan cerrados. Generar Cierre Z?"
+- Si acepta, se genera el Z automaticamente
+- Esto se implementa en el `ManagerDashboard` o en el modal de cierre de turno
 
----
-
-## Problema 3: Reportes Fiscales - Reimprimir no funciona
-
-**Diagnostico:** El `ReimprimirCard` en `FiscalReportsPage.tsx` (lineas 547-671) lista los comprobantes correctamente, pero NO tiene boton de reimprimir por cada fila. Solo muestra la informacion del comprobante sin accion posible. Falta un boton `<Printer>` por cada resultado que genere y envie el ticket a la impresora.
-
-**Solucion:**
-
-Agregar un boton de impresion por cada comprobante en la lista de resultados. Al hacer clic:
-1. Obtener los datos completos del pedido asociado (`pedido_items`, pagos, etc.)
-2. Generar el ticket fiscal usando `generateTicketCliente` de `escpos.ts`
-3. Enviarlo a la impresora de tickets configurada via Print Bridge
-
-### Archivos a modificar:
-- `src/pages/local/FiscalReportsPage.tsx` - Agregar boton reimprimir por fila en `ReimprimirCard`
+### Cambios
+- En `ManagerDashboard.tsx`: detectar cuando todos los turnos activos del dia tienen cierre. Mostrar banner/boton "Generar Cierre Z del dia"
+- Reutilizar `useGenerateZClosing` existente
 
 ---
 
-## Problema 4: Dashboard - Fichajes y Ventas no se muestran
-
-### 4a. Fichajes: "Equipo Ahora" muestra 0 pero hay empleados fichados
-
-**Diagnostico:** En `ManagerDashboard.tsx`, el hook `useCurrentlyWorking` (linea 76) filtra con `v.type === 'entrada'`, pero la tabla `clock_entries` usa `entry_type = 'clock_in'` / `'clock_out'`. La condicion nunca matchea, por eso siempre muestra "Nadie fichado".
-
-**Solucion:** Cambiar la comparacion en linea 76 de `'entrada'` a `'clock_in'`.
-
-### 4b. Ventas Hoy: muestra $0 pero hay ventas POS
-
-**Diagnostico:** El dashboard usa `useTodayClosures` (shift_closures) para mostrar ventas. Pero cuando el POS esta habilitado, las ventas estan en la tabla `pedidos`, no en `shift_closures`. Hoy (2026-02-21) hay pedidos entregados por $15,800 pero no hay shift_closures para hoy, por eso muestra $0.
-
-El componente `ManagerDashboard` recibe `posEnabled` como prop pero NO lo usa para cambiar la fuente de datos de "Ventas Hoy".
-
-**Solucion:** Cuando `posEnabled = true`, en vez de mostrar cards de turnos (mediodia/noche), mostrar un resumen de ventas del dia desde la tabla `pedidos` (pedidos entregados/listos de hoy). Incluir:
-- Total vendido hoy (suma de pedidos no cancelados)
-- Cantidad de pedidos
-- Ticket promedio
-- Link a historial de ventas
-
-### Archivos a modificar:
-- `src/components/local/ManagerDashboard.tsx` - Fix `'entrada'` -> `'clock_in'` y agregar vista POS para ventas
-
----
-
-## Resumen de cambios
+## Resumen tecnico de cambios
 
 | Archivo | Cambio |
 |---------|--------|
-| `WebappConfigPage.tsx` | Rediseno con servicios expandibles y horarios por dia |
-| `FiscalReportsPage.tsx` | Boton reimprimir por fila en ReimprimirCard |
-| `ManagerDashboard.tsx` | Fix fichajes (`clock_in`), ventas POS en tiempo real |
+| `FiscalReportsPage.tsx` | Selector de fecha para X, quitar disabled de botones, agregar fallback window.print en X/Z/Auditoria |
+| `ManagerDashboard.tsx` | Banner "Generar Cierre Z" cuando todos los turnos estan cerrados |
 
-No se requieren migraciones SQL ya que todos los cambios son en la capa de UI/hooks.
+No se requieren migraciones SQL. Las funciones `get_fiscal_x_report` y `generate_z_closing` ya aceptan parametro de fecha.
 
