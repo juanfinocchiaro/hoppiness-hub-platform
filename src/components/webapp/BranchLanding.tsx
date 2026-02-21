@@ -1,10 +1,19 @@
-import { MapPin, Clock, Truck, ShoppingBag, UtensilsCrossed, Pause, ArrowLeft } from 'lucide-react';
+import { MapPin, Clock, Truck, ShoppingBag, UtensilsCrossed, Pause, ArrowLeft, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { WebappConfig, TipoServicioWebapp } from '@/types/webapp';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 
 interface Props {
-  branch: { name: string; address: string; city: string; opening_time: string | null; closing_time: string | null };
+  branch: {
+    name: string;
+    address: string;
+    city: string;
+    opening_time: string | null;
+    closing_time: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    public_hours?: any;
+  };
   config: WebappConfig;
   onSelectService: (tipo: TipoServicioWebapp) => void;
   onViewMenu: () => void;
@@ -17,14 +26,53 @@ function formatPrice(n: number) {
 
 function formatTime(time: string | null): string {
   if (!time) return '';
-  // Remove seconds: "12:00:00" → "12:00"
   const parts = time.split(':');
   return `${parts[0]}:${parts[1]}`;
+}
+
+const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+const DAY_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+function WeeklySchedule({ publicHours }: { publicHours: any }) {
+  if (!publicHours || !Array.isArray(publicHours) || publicHours.length === 0) return null;
+
+  const today = new Date().getDay();
+  // JS Sunday=0, our array Monday=0
+  const todayIdx = today === 0 ? 6 : today - 1;
+
+  return (
+    <div className="w-full space-y-1.5">
+      <h3 className="text-xs font-bold text-foreground mb-2">Horarios de la semana</h3>
+      {publicHours.map((day: any, idx: number) => {
+        const isToday = idx === todayIdx;
+        const label = DAY_SHORT[idx] || `Día ${idx + 1}`;
+        const open = day?.open || day?.apertura;
+        const close = day?.close || day?.cierre;
+        const isClosed = day?.closed || day?.cerrado || (!open && !close);
+
+        return (
+          <div
+            key={idx}
+            className={`flex items-center justify-between text-xs px-3 py-1.5 rounded-lg ${
+              isToday ? 'bg-primary/10 font-bold text-primary' : 'text-muted-foreground'
+            }`}
+          >
+            <span>{label}{isToday ? ' (hoy)' : ''}</span>
+            <span>{isClosed ? 'Cerrado' : `${formatTime(open)} - ${formatTime(close)}`}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export function BranchLanding({ branch, config, onSelectService, onViewMenu, onBack }: Props) {
   const isOpen = config.estado === 'abierto';
   const isPaused = config.estado === 'pausado';
+  const hasCoords = branch.latitude && branch.longitude;
+  const mapsUrl = hasCoords
+    ? `https://maps.google.com/?q=${branch.latitude},${branch.longitude}`
+    : `https://maps.google.com/?q=${encodeURIComponent(branch.address + ', ' + branch.city)}`;
 
   return (
     <div className="flex-1 flex flex-col bg-background">
@@ -44,10 +92,15 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
           className="w-16 h-16 lg:w-20 lg:h-20 rounded-full mx-auto mb-3 shadow-md object-contain ring-2 ring-border"
         />
         <h1 className="text-2xl lg:text-3xl font-black font-brand tracking-tight text-foreground">{branch.name}</h1>
-        <div className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground mt-1.5">
+        <a
+          href={mapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground mt-1.5 hover:text-primary transition-colors"
+        >
           <MapPin className="w-3.5 h-3.5" />
-          <span>{branch.address}, {branch.city}</span>
-        </div>
+          <span className="underline-offset-2 hover:underline">{branch.address}, {branch.city}</span>
+        </a>
 
         {/* Status badge */}
         <div className="mt-3 inline-flex">
@@ -72,6 +125,28 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
             </span>
           )}
         </div>
+
+        {/* Mini map */}
+        {hasCoords && (
+          <div className="mt-4 max-w-sm mx-auto">
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="block">
+              <div className="w-full h-32 rounded-xl overflow-hidden border shadow-sm relative group">
+                <img
+                  src={`https://maps.googleapis.com/maps/api/staticmap?center=${branch.latitude},${branch.longitude}&zoom=15&size=400x160&scale=2&markers=color:red%7C${branch.latitude},${branch.longitude}&style=feature:poi%7Cvisibility:off&key=`}
+                  alt="Ubicación del local"
+                  className="w-full h-full object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+                <div className="absolute inset-0 bg-primary/5 flex items-center justify-center">
+                  <div className="bg-background/90 backdrop-blur-sm rounded-full px-3 py-1.5 flex items-center gap-1.5 text-xs font-semibold text-primary shadow-sm group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                    <Navigation className="w-3 h-3" />
+                    Cómo llegar
+                  </div>
+                </div>
+              </div>
+            </a>
+          </div>
+        )}
       </div>
 
       {/* Service selection */}
@@ -160,6 +235,10 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
                 Este local no está recibiendo pedidos en este momento.
               </p>
             )}
+
+            {/* Weekly schedule when closed */}
+            <WeeklySchedule publicHours={branch.public_hours} />
+
             <Button variant="outline" onClick={onViewMenu} className="w-full">
               Ver menú igualmente
             </Button>

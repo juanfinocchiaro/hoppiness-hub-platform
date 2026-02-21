@@ -1,22 +1,30 @@
 import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { useWebappCart } from '@/hooks/useWebappCart';
+import type { WebappMenuItem } from '@/types/webapp';
 
 interface Props {
   cart: ReturnType<typeof useWebappCart>;
   costoEnvio: number;
   onContinue: () => void;
+  suggestedItems?: WebappMenuItem[];
+  onAddSuggested?: (item: WebappMenuItem) => void;
 }
 
 function formatPrice(n: number) {
   return `$${n.toLocaleString('es-AR')}`;
 }
 
-export function CartSidePanel({ cart, costoEnvio, onContinue }: Props) {
+export function CartSidePanel({ cart, costoEnvio, onContinue, suggestedItems, onAddSuggested }: Props) {
   const totalConEnvio = cart.totalPrecio + costoEnvio;
 
+  // Filter suggestions: items not already in cart
+  const suggestions = (suggestedItems || [])
+    .filter(item => !cart.items.some(ci => ci.itemId === item.id))
+    .slice(0, 3);
+
   return (
-    <div className="hidden lg:flex fixed top-[110px] right-0 w-[350px] bottom-0 border-l bg-background flex-col z-20">
+    <div className="hidden lg:flex fixed top-[114px] right-0 w-[350px] bottom-0 border-l bg-background flex-col z-20">
       {/* Header */}
       <div className="px-4 py-3 border-b flex items-center gap-2">
         <ShoppingBag className="w-4 h-4 text-primary" />
@@ -74,6 +82,35 @@ export function CartSidePanel({ cart, costoEnvio, onContinue }: Props) {
             </div>
           );
         })}
+
+        {/* Upsell suggestions */}
+        {suggestions.length > 0 && onAddSuggested && (
+          <div className="pt-3 border-t">
+            <p className="text-xs font-bold text-foreground mb-2">¿Querés agregar algo más?</p>
+            <div className="space-y-2">
+              {suggestions.map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => onAddSuggested(item)}
+                  className="w-full flex items-center gap-2.5 p-2 rounded-lg border hover:border-accent/50 hover:bg-accent/5 transition-colors text-left"
+                >
+                  {item.imagen_url ? (
+                    <img src={item.imagen_url} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0 text-sm">🍔</div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold truncate">{item.nombre}</p>
+                    <p className="text-xs text-accent font-bold">{formatPrice(item.precio_base)}</p>
+                  </div>
+                  <div className="w-6 h-6 rounded-full bg-accent text-accent-foreground flex items-center justify-center shrink-0">
+                    <Plus className="w-3 h-3" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Footer */}

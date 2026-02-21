@@ -272,6 +272,24 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
           <p className="text-xs text-muted-foreground">
             {servicioLabel} · {branchName}
           </p>
+          {/* Visual stepper */}
+          {cart.items.length > 0 && (
+            <div className="flex items-center gap-2 pt-2">
+              <div className="flex items-center gap-1.5">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                  step === 'cart' ? 'bg-primary text-primary-foreground' : 'bg-primary text-primary-foreground'
+                }`}>1</div>
+                <span className={`text-xs font-medium ${step === 'cart' ? 'text-foreground' : 'text-muted-foreground'}`}>Pedido</span>
+              </div>
+              <div className={`flex-1 h-0.5 rounded ${step === 'checkout' ? 'bg-primary' : 'bg-border'}`} />
+              <div className="flex items-center gap-1.5">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                  step === 'checkout' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                }`}>2</div>
+                <span className={`text-xs font-medium ${step === 'checkout' ? 'text-foreground' : 'text-muted-foreground'}`}>Datos y pago</span>
+              </div>
+            </div>
+          )}
         </SheetHeader>
 
         {cart.items.length === 0 ? (

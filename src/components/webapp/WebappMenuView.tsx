@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { ArrowLeft, Search, X, LayoutGrid, List } from 'lucide-react';
+import { ArrowLeft, Search, X, LayoutGrid, List, Star } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ProductCard } from './ProductCard';
 import { Loader2 } from 'lucide-react';
@@ -24,8 +24,15 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [searchExpanded, setSearchExpanded] = useState(false);
   const categoryRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const tabsRef = useRef<HTMLDivElement>(null);
+
+  // Popular items — first 4 items as "Destacados" (fallback until real order data exists)
+  const popularItems = useMemo(() => {
+    if (items.length <= 6) return []; // Don't show if menu is tiny
+    return items.slice(0, 4);
+  }, [items]);
 
   const categories = useMemo(() => {
     const filtered = search.trim()
@@ -106,8 +113,9 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Header - white professional */}
+      {/* Header with brand gradient accent */}
       <header className="sticky top-0 z-30 bg-background border-b shadow-sm">
+        <div className="h-1 w-full bg-gradient-to-r from-primary via-accent to-warning" />
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center gap-3 px-4 py-3">
             <button onClick={onBack} className="p-1.5 -ml-1 hover:bg-muted rounded-lg transition-colors text-muted-foreground">
@@ -140,6 +148,13 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
                 </p>
               )}
             </div>
+            {/* Search icon (mobile: collapsible) */}
+            <button
+              onClick={() => setSearchExpanded(v => !v)}
+              className="p-1.5 hover:bg-muted rounded-lg transition-colors lg:hidden text-muted-foreground"
+            >
+              <Search className="w-4 h-4" />
+            </button>
             {/* View toggle - only on mobile */}
             <button
               onClick={() => setViewMode(v => v === 'grid' ? 'list' : 'grid')}
@@ -150,8 +165,8 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
             </button>
           </div>
 
-          {/* Search */}
-          <div className="px-4 pb-3">
+          {/* Search - collapsible on mobile, always visible on desktop */}
+          <div className={`px-4 pb-3 ${searchExpanded ? '' : 'hidden lg:block'}`}>
             <div className="relative max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -159,6 +174,7 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Buscar en el menú..."
                 className="pl-9 pr-8 bg-muted border-border text-foreground placeholder:text-muted-foreground h-9 text-sm"
+                autoFocus={searchExpanded}
               />
               {search && (
                 <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2">
@@ -199,8 +215,23 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
         <div className="max-w-6xl mx-auto flex">
           {/* Desktop sidebar categories */}
           {!search && categories.length > 1 && (
-            <aside className="hidden lg:block w-[200px] shrink-0 sticky top-[110px] self-start max-h-[calc(100vh-130px)] overflow-y-auto border-r">
+            <aside className="hidden lg:block w-[200px] shrink-0 sticky top-[120px] self-start max-h-[calc(100vh-140px)] overflow-y-auto border-r">
               <nav className="py-4 pr-2">
+                {popularItems.length > 0 && (
+                  <button
+                    onClick={() => scrollToCategory('__popular')}
+                    className={`
+                      w-full text-left px-4 py-2.5 text-sm rounded-lg transition-colors mb-0.5 flex items-center gap-1.5
+                      ${activeCategory === '__popular'
+                        ? 'bg-accent/10 text-accent font-bold'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      }
+                    `}
+                  >
+                    <Star className="w-3.5 h-3.5" />
+                    Destacados
+                  </button>
+                )}
                 {categories.map(cat => (
                   <button
                     key={cat.nombre}
@@ -226,48 +257,82 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
               </div>
-            ) : categories.length === 0 ? (
+            ) : categories.length === 0 && !popularItems.length ? (
               <div className="text-center py-20 text-muted-foreground">
                 {search ? 'No se encontraron productos' : 'No hay productos disponibles'}
               </div>
             ) : (
-              categories.map(cat => (
-                <div
-                  key={cat.nombre}
-                  ref={el => { categoryRefs.current[cat.nombre] = el; }}
-                  data-category={cat.nombre}
-                  className="scroll-mt-36"
-                >
-                  <div className="sticky top-[110px] lg:top-[110px] z-10 bg-background/95 backdrop-blur-sm px-4 py-2.5 border-b">
-                    <h2 className="text-sm font-black text-primary uppercase tracking-wide">
-                      {cat.nombre}
-                      <span className="text-xs font-normal text-muted-foreground ml-2 lowercase tracking-normal">
-                        {cat.items.length} {cat.items.length === 1 ? 'producto' : 'productos'}
-                      </span>
-                    </h2>
-                  </div>
-
-                  {/* Mobile: grid or list view */}
-                  <div className="lg:hidden">
-                    {viewMode === 'grid' ? (
-                      <div className="px-4 py-3 grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {cat.items.map(item => renderProductCard(item, 'grid'))}
+              <>
+                {/* Popular / Featured section */}
+                {!search && popularItems.length > 0 && (
+                  <div
+                    ref={el => { categoryRefs.current['__popular'] = el; }}
+                    data-category="__popular"
+                    className="scroll-mt-36"
+                  >
+                    <div className="sticky top-[120px] lg:top-[120px] z-10 bg-background/95 backdrop-blur-sm px-4 py-2.5 border-b">
+                      <h2 className="text-sm font-black text-accent uppercase tracking-wide flex items-center gap-1.5">
+                        <Star className="w-3.5 h-3.5 fill-accent" />
+                        Destacados
+                      </h2>
+                    </div>
+                    {/* Horizontal scroll on mobile, grid on desktop */}
+                    <div className="lg:hidden">
+                      <div className="flex gap-3 overflow-x-auto px-4 py-3 scrollbar-none">
+                        {popularItems.map(item => (
+                          <div key={item.id} className="shrink-0 w-[160px]">
+                            {renderProductCard(item, 'grid')}
+                          </div>
+                        ))}
                       </div>
-                    ) : (
-                      <div className="px-4 py-2 space-y-2">
-                        {cat.items.map(item => renderProductCard(item, 'list'))}
+                    </div>
+                    <div className="hidden lg:block px-4 py-3">
+                      <div className={`grid gap-3 ${cartPanelVisible ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-3'}`}>
+                        {popularItems.map(item => renderProductCard(item, 'desktop'))}
                       </div>
-                    )}
-                  </div>
-
-                  {/* Desktop: horizontal cards */}
-                  <div className="hidden lg:block px-4 py-3">
-                    <div className={`grid gap-3 ${cartPanelVisible ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-3'}`}>
-                      {cat.items.map(item => renderProductCard(item, 'desktop'))}
                     </div>
                   </div>
-                </div>
-              ))
+                )}
+
+                {/* Regular categories */}
+                {categories.map(cat => (
+                  <div
+                    key={cat.nombre}
+                    ref={el => { categoryRefs.current[cat.nombre] = el; }}
+                    data-category={cat.nombre}
+                    className="scroll-mt-36"
+                  >
+                    <div className="sticky top-[120px] lg:top-[120px] z-10 bg-background/95 backdrop-blur-sm px-4 py-2.5 border-b">
+                      <h2 className="text-sm font-black text-primary uppercase tracking-wide">
+                        {cat.nombre}
+                        <span className="text-xs font-normal text-muted-foreground ml-2 lowercase tracking-normal">
+                          {cat.items.length} {cat.items.length === 1 ? 'producto' : 'productos'}
+                        </span>
+                      </h2>
+                    </div>
+
+                    {/* Mobile: grid or list view */}
+                    <div className="lg:hidden">
+                      {viewMode === 'grid' ? (
+                        <div className="px-4 py-3 grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {cat.items.map(item => renderProductCard(item, 'grid'))}
+                        </div>
+                      ) : (
+                        <div className="px-4 py-2 space-y-2">
+                          {cat.items.map(item => renderProductCard(item, 'list'))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Desktop: horizontal cards */}
+                    <div className="hidden lg:block px-4 py-3">
+                      <div className={`grid gap-3 ${cartPanelVisible ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-3'}`}>
+                        {cat.items.map(item => renderProductCard(item, 'desktop'))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
             )}
           </div>
         </div>
