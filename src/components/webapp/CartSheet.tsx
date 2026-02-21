@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -58,6 +58,12 @@ function formatPrice(n: number) {
   return `$${n.toLocaleString('es-AR')}`;
 }
 
+// Inline validation helper
+function FieldError({ error }: { error: string | null }) {
+  if (!error) return null;
+  return <p className="text-xs text-destructive mt-1">{error}</p>;
+}
+
 export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEnabled, deliveryCosto = 0, initialStep }: Props) {
   const navigate = useNavigate();
   const servicioLabel = cart.tipoServicio === 'retiro' ? 'Retiro en local' : cart.tipoServicio === 'delivery' ? 'Delivery' : 'Comer acá';
@@ -68,7 +74,6 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
 
   const [step, setStep] = useState<Step>(initialStep || 'cart');
 
-  // Sync step when sheet opens with a specific initialStep
   useEffect(() => {
     if (open && initialStep) {
       setStep(initialStep);
@@ -76,8 +81,8 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   }, [open, initialStep]);
   const [submitting, setSubmitting] = useState(false);
   const [selectedZoneId, setSelectedZoneId] = useState<string>('');
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
-  // Auto-select first zone when zones load
   useEffect(() => {
     if (hasZones && !selectedZoneId) {
       setSelectedZoneId(zones[0].id);
@@ -95,6 +100,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   const [referencia, setReferencia] = useState('');
   const [notas, setNotas] = useState('');
   const [metodoPago, setMetodoPago] = useState<MetodoPago>(mpEnabled ? 'mercadopago' : 'efectivo');
+  const [pagaCon, setPagaCon] = useState<string>('');
 
   const costoEnvio = isDelivery
     ? (hasZones && selectedZone ? selectedZone.costo_envio : deliveryCosto)
@@ -104,23 +110,38 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
 
   const meetsMinimum = pedidoMinimo <= 0 || cart.totalPrecio >= pedidoMinimo;
 
+  // Inline validation errors
+  const errors = useMemo(() => {
+    const e: Record<string, string | null> = {};
+    e.nombre = nombre.trim().length === 0 ? 'Ingresá tu nombre' : nombre.trim().length < 2 ? 'Mínimo 2 caracteres' : null;
+    e.telefono = telefono.trim().length === 0 ? 'Ingresá tu teléfono' : telefono.trim().length < 8 ? 'Mínimo 8 dígitos' : null;
+    e.email = email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? 'Email no válido' : null;
+    if (isDelivery) {
+      e.direccion = direccion.trim().length === 0 ? 'Ingresá tu dirección' : direccion.trim().length < 5 ? 'Mínimo 5 caracteres' : null;
+    }
+    return e;
+  }, [nombre, telefono, email, direccion, isDelivery]);
+
+  const hasErrors = Object.values(errors).some(e => e !== null);
+
   const canSubmit =
-    nombre.trim().length >= 2 &&
-    telefono.trim().length >= 8 &&
-    (!isDelivery || direccion.trim().length >= 5) &&
+    !hasErrors &&
     (!isDelivery || !hasZones || !!selectedZoneId) &&
     meetsMinimum &&
     (metodoPago === 'efectivo' || mpEnabled);
+
+  const handleBlur = (field: string) => setTouched(prev => ({ ...prev, [field]: true }));
 
   const handleContinue = () => setStep('checkout');
 
   const handleBack = () => setStep('cart');
 
   const handleConfirm = async () => {
+    // Mark all fields as touched to show errors
+    setTouched({ nombre: true, telefono: true, email: true, direccion: true });
     if (!branchId || !canSubmit) return;
     setSubmitting(true);
     try {
-      // Step 1: Create the order in the database
       const orderItems = cart.items.map(item => ({
         item_carta_id: item.itemId,
         nombre: item.nombre,
@@ -143,13 +164,13 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
           cliente_referencia: isDelivery ? referencia.trim() || null : null,
           cliente_notas: notas.trim() || null,
           metodo_pago: metodoPago,
+          paga_con: metodoPago === 'efectivo' && pagaCon ? parseInt(pagaCon) : null,
           delivery_zone_id: isDelivery && hasZones && selectedZoneId ? selectedZoneId : null,
           items: orderItems,
         },
       });
 
       if (orderErr) {
-        // Extract the actual error message from the edge function response
         let errorMsg = 'Error al crear el pedido';
         try {
           if (orderErr instanceof Error && 'context' in orderErr) {
@@ -161,14 +182,13 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
           } else if (typeof orderErr === 'object' && orderErr !== null && 'error' in (orderErr as any)) {
             errorMsg = (orderErr as any).error;
           }
-        } catch { /* ignore parse errors */ }
+        } catch { /* ignore */ }
         throw new Error(errorMsg);
       }
       if (!orderData?.pedido_id) throw new Error('No se pudo crear el pedido');
 
       const { pedido_id, tracking_code, numero_pedido } = orderData;
 
-      // Step 2: If MercadoPago, create payment preference and redirect
       if (metodoPago === 'mercadopago') {
         const checkoutItems = cart.items.map(item => ({
           title: item.nombre,
@@ -206,7 +226,6 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
         throw new Error('No se pudo crear el link de pago');
       }
 
-      // Step 3: Cash payment — go to tracking directly
       cart.clearCart();
       toast.success(`Pedido #${numero_pedido} confirmado`);
       onOpenChange(false);
@@ -220,9 +239,22 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   };
 
   const handleOpenChange = (open: boolean) => {
-    if (!open) setStep('cart');
+    if (!open) {
+      setStep('cart');
+      setTouched({});
+    }
     onOpenChange(open);
   };
+
+  // Quick cash amount buttons
+  const quickAmounts = useMemo(() => {
+    const t = totalConEnvio;
+    const base = Math.ceil(t / 5000) * 5000;
+    const amounts = [base];
+    if (base + 5000 <= base * 2) amounts.push(base + 5000);
+    if (base + 10000 <= base * 2) amounts.push(base + 10000);
+    return amounts.filter((v, i, a) => a.indexOf(v) === i && v >= t);
+  }, [totalConEnvio]);
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
@@ -273,7 +305,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                         </p>
                       )}
                       {item.removidos.length > 0 && (
-                        <p className="text-xs text-red-500">
+                        <p className="text-xs text-destructive">
                           {item.removidos.map(r => `Sin ${r}`).join(', ')}
                         </p>
                       )}
@@ -345,9 +377,11 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                       id="checkout-nombre"
                       value={nombre}
                       onChange={e => setNombre(e.target.value)}
+                      onBlur={() => handleBlur('nombre')}
                       placeholder="Tu nombre"
-                      className="mt-1"
+                      className={`mt-1 ${touched.nombre && errors.nombre ? 'border-destructive' : ''}`}
                     />
+                    {touched.nombre && <FieldError error={errors.nombre} />}
                   </div>
                   <div>
                     <Label htmlFor="checkout-telefono" className="text-xs">Teléfono *</Label>
@@ -356,9 +390,11 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                       type="tel"
                       value={telefono}
                       onChange={e => setTelefono(e.target.value)}
+                      onBlur={() => handleBlur('telefono')}
                       placeholder="351 456-7890"
-                      className="mt-1"
+                      className={`mt-1 ${touched.telefono && errors.telefono ? 'border-destructive' : ''}`}
                     />
+                    {touched.telefono && <FieldError error={errors.telefono} />}
                   </div>
                   <div>
                     <Label htmlFor="checkout-email" className="text-xs">Email (opcional)</Label>
@@ -367,9 +403,11 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                       type="email"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
+                      onBlur={() => handleBlur('email')}
                       placeholder="tu@email.com"
-                      className="mt-1"
+                      className={`mt-1 ${touched.email && errors.email ? 'border-destructive' : ''}`}
                     />
+                    {touched.email && <FieldError error={errors.email} />}
                   </div>
                 </div>
               </div>
@@ -379,7 +417,6 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                 <div className="space-y-3">
                   <h3 className="text-sm font-bold text-foreground">Dirección de entrega</h3>
 
-                  {/* Zone selector */}
                   {hasZones && (
                     <div className="space-y-1.5">
                       <Label className="text-xs flex items-center gap-1">
@@ -426,9 +463,11 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                         id="checkout-dir"
                         value={direccion}
                         onChange={e => setDireccion(e.target.value)}
+                        onBlur={() => handleBlur('direccion')}
                         placeholder="Av. Colón 1234"
-                        className="mt-1"
+                        className={`mt-1 ${touched.direccion && errors.direccion ? 'border-destructive' : ''}`}
                       />
+                      {touched.direccion && <FieldError error={errors.direccion} />}
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
@@ -508,6 +547,41 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                     </div>
                   </label>
                 </RadioGroup>
+
+                {/* "¿Con cuánto pagás?" for cash */}
+                {metodoPago === 'efectivo' && (
+                  <div className="space-y-2 pl-1">
+                    <Label className="text-xs">¿Con cuánto pagás?</Label>
+                    <div className="flex gap-2 flex-wrap">
+                      <button
+                        onClick={() => setPagaCon('')}
+                        className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
+                          !pagaCon ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:border-primary/30'
+                        }`}
+                      >
+                        Monto justo
+                      </button>
+                      {quickAmounts.map(amt => (
+                        <button
+                          key={amt}
+                          onClick={() => setPagaCon(String(amt))}
+                          className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
+                            pagaCon === String(amt) ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:border-primary/30'
+                          }`}
+                        >
+                          {formatPrice(amt)}
+                        </button>
+                      ))}
+                    </div>
+                    <Input
+                      type="number"
+                      value={pagaCon}
+                      onChange={e => setPagaCon(e.target.value)}
+                      placeholder="Otro monto..."
+                      className="mt-1 h-8 text-sm"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Order summary */}

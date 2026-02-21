@@ -3257,6 +3257,7 @@ export type Database = {
         Row: {
           cantidad: number
           created_at: string | null
+          es_removible: boolean
           id: string
           insumo_id: string | null
           item_carta_id: string
@@ -3266,6 +3267,7 @@ export type Database = {
         Insert: {
           cantidad?: number
           created_at?: string | null
+          es_removible?: boolean
           id?: string
           insumo_id?: string | null
           item_carta_id: string
@@ -3275,6 +3277,7 @@ export type Database = {
         Update: {
           cantidad?: number
           created_at?: string | null
+          es_removible?: boolean
           id?: string
           insumo_id?: string | null
           item_carta_id?: string
@@ -3372,8 +3375,10 @@ export type Database = {
         Row: {
           costo_promedio: number | null
           created_at: string
+          es_obligatorio: boolean
           id: string
           item_carta_id: string
+          max_selecciones: number | null
           nombre: string
           orden: number
           updated_at: string
@@ -3381,8 +3386,10 @@ export type Database = {
         Insert: {
           costo_promedio?: number | null
           created_at?: string
+          es_obligatorio?: boolean
           id?: string
           item_carta_id: string
+          max_selecciones?: number | null
           nombre: string
           orden?: number
           updated_at?: string
@@ -3390,8 +3397,10 @@ export type Database = {
         Update: {
           costo_promedio?: number | null
           created_at?: string
+          es_obligatorio?: boolean
           id?: string
           item_carta_id?: string
+          max_selecciones?: number | null
           nombre?: string
           orden?: number
           updated_at?: string
