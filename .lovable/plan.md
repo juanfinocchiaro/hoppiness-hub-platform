@@ -1,69 +1,48 @@
 
-# Login Modal en lugar de pagina separada
+# Upsell: Top Acompañamientos + Bebidas
 
-## Objetivo
-Reemplazar la navegacion a `/ingresar` (pagina completa) con un modal/dialog que se superpone sobre la pagina actual, evitando que el usuario pierda su contexto.
+## Problema actual
+La seccion "Queres agregar algo mas?" muestra los primeros 3 items del menu que no estan en el carrito, sin importar la categoria. Esto resulta en sugerencias poco utiles (muestra otras hamburguesas en vez de complementos).
 
-## Arquitectura
+## Solucion
+Filtrar las sugerencias para mostrar solo items de las categorias **ACOMPAÑAMIENTOS** y **BEBIDAS**, que son los complementos naturales de una hamburguesa.
 
-### 1. Crear `AuthModal.tsx` — Componente reutilizable
-**Archivo nuevo**: `src/components/auth/AuthModal.tsx`
+## Cambio
 
-- Un `Dialog` (Radix) que contiene todo el formulario de login/registro actual de `Ingresar.tsx`
-- Props: `open`, `onOpenChange`, `onSuccess?: () => void`
-- Incluye: Google OAuth, tabs Login/Registro, validacion con Zod
-- Al autenticarse exitosamente: cierra el modal y ejecuta `onSuccess` (sin navegar)
-- NO incluye el fondo gradient ni el header "Volver al inicio" (eso es de la pagina completa)
-- Mantiene el logo, las tabs, y todo el contenido del card blanco
+### `src/components/webapp/CartSidePanel.tsx`
+Modificar la logica de `suggestions` (linea 80-82):
 
-### 2. Crear contexto `AuthModalContext`
-**Archivo nuevo**: `src/contexts/AuthModalContext.tsx`
+Actualmente:
+```ts
+const suggestions = (suggestedItems || [])
+  .filter(item => !cart.items.some(ci => ci.itemId === item.id))
+  .slice(0, 3);
+```
 
-- Provee `openAuthModal()` y `closeAuthModal()` globalmente
-- Permite que cualquier componente (header, checkout, guards) abra el modal sin navegar
-- Mantiene estado `isOpen` y un callback `onSuccess` opcional
+Nuevo:
+```ts
+const UPSELL_CATEGORIES = ['ACOMPAÑAMIENTOS', 'BEBIDAS'];
 
-### 3. Integrar el Provider en `App.tsx`
-- Envolver la app con `AuthModalProvider`
-- Renderizar `AuthModal` una sola vez a nivel global
+const suggestions = (suggestedItems || [])
+  .filter(item =>
+    !cart.items.some(ci => ci.itemId === item.id) &&
+    item.tipo !== 'extra' &&
+    item.categoria_nombre &&
+    UPSELL_CATEGORIES.includes(item.categoria_nombre.toUpperCase())
+  )
+  .slice(0, 4);
+```
 
-### 4. Actualizar puntos de disparo
+Esto muestra hasta 4 sugerencias (para tener variedad), solo de acompañamientos y bebidas, excluyendo items ya en el carrito y los de tipo "extra".
 
+### Agregar subtitulos por categoria
+Separar visualmente los dos grupos:
+- Primero los acompañamientos disponibles (hasta 2)
+- Luego las bebidas disponibles (hasta 2)
+
+Esto se logra mostrando dos mini-secciones dentro del bloque de upsell, cada una con su label ("Acompañamientos" y "Bebidas"), solo si hay items de esa categoria.
+
+## Archivos modificados
 | Archivo | Cambio |
 |---------|--------|
-| `UserMenuDropdown.tsx` | En lugar de `navigate('/ingresar')`, llamar `openAuthModal()` |
-| `WebappHeader.tsx` | Sin cambios directos (ya delega en UserMenuDropdown) |
-| `PublicHeader.tsx` | Boton "Ingresar" llama `openAuthModal()` en vez de `Link to="/ingresar"` |
-| `PublicFooter.tsx` | Link "Ingresar" llama `openAuthModal()` |
-
-### 5. Mantener la pagina `/ingresar` como fallback
-- La ruta `/ingresar` sigue existiendo para:
-  - Links directos / bookmarks
-  - Redireccion desde `RequireAuth` (guards de rutas protegidas)
-  - Flujo de "Olvide contrasena" y "Reset password"
-- NO se elimina, solo deja de ser el camino principal
-
-### 6. RequireAuth: mejorar para webapp
-- En contexto de la webapp publica (`/pedir/*`), en vez de redirigir a `/ingresar`, abrir el modal
-- Para rutas protegidas del backoffice (`/milocal`, `/mimarca`, `/cuenta`), mantener redirect normal
-
-## Detalle tecnico
-
-### AuthModal contenido
-- Logo centrado
-- Boton "Continuar con Google" (usando `lovable.auth.signInWithOAuth`)
-- Separador "o con email"
-- Tabs: Iniciar Sesion / Registrarse
-- Formularios identicos a los actuales
-- Al login exitoso: `onOpenChange(false)` + toast de exito
-
-### Archivos modificados
-| Archivo | Tipo | Descripcion |
-|---------|------|-------------|
-| `src/components/auth/AuthModal.tsx` | Crear | Dialog con formulario login/registro |
-| `src/contexts/AuthModalContext.tsx` | Crear | Context global para abrir/cerrar el modal |
-| `src/App.tsx` | Modificar | Agregar AuthModalProvider |
-| `src/components/webapp/UserMenuDropdown.tsx` | Modificar | Usar `openAuthModal()` |
-| `src/components/layout/PublicHeader.tsx` | Modificar | Usar `openAuthModal()` |
-| `src/components/layout/PublicFooter.tsx` | Modificar | Usar `openAuthModal()` |
-| `src/pages/Ingresar.tsx` | Sin cambios | Se mantiene como fallback |
+| `src/components/webapp/CartSidePanel.tsx` | Filtrar sugerencias por categoria ACOMPAÑAMIENTOS y BEBIDAS, mostrar en dos grupos |
