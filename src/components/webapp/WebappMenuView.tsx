@@ -21,9 +21,11 @@ interface Props {
   cartPanelVisible?: boolean;
   onShowTracking?: (trackingCode: string) => void;
   onMisPedidos?: () => void;
+  onMisDirecciones?: () => void;
+  onMiPerfil?: () => void;
 }
 
-export function WebappMenuView({ branch, config, items, loading, tipoServicio, cart, onProductClick, onBack, onServiceChange, cartPanelVisible, onShowTracking, onMisPedidos }: Props) {
+export function WebappMenuView({ branch, config, items, loading, tipoServicio, cart, onProductClick, onBack, onServiceChange, cartPanelVisible, onShowTracking, onMisPedidos, onMisDirecciones, onMiPerfil }: Props) {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -135,6 +137,8 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
         showSearch
         onSearchToggle={() => setSearchExpanded(v => !v)}
         onMisPedidos={onMisPedidos}
+        onMisDirecciones={onMisDirecciones}
+        onMiPerfil={onMiPerfil}
         extraActions={
           <button
             onClick={() => setViewMode(v => v === 'grid' ? 'list' : 'grid')}

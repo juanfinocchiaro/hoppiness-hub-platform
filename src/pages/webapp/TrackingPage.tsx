@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, CheckCircle2, Clock, Flame, Package, Truck, PartyPopper, XCircle, MessageCircle, Send, Utensils } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SEO } from '@/components/SEO';
 import { OrderChat } from '@/components/webapp/OrderChat';
 import { PostPurchaseSignup } from '@/components/webapp/PostPurchaseSignup';
+import { WebappHeader } from '@/components/webapp/WebappHeader';
 
 interface TrackingData {
   pedido: {
@@ -74,6 +75,7 @@ function formatTime(iso: string) {
 
 export default function TrackingPage() {
   const { trackingCode } = useParams<{ trackingCode: string }>();
+  const navigate = useNavigate();
   const [data, setData] = useState<TrackingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -164,6 +166,7 @@ export default function TrackingPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <WebappHeader title="Hoppiness" showBack onBack={() => navigate('/pedir')} />
       <SEO title={`Pedido #${pedido.numero_pedido} | Hoppiness`} path={`/pedido/${trackingCode}`} />
 
       {/* Header */}

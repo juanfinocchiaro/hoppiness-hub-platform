@@ -11,6 +11,8 @@ import { CartBar } from '@/components/webapp/CartBar';
 import { CartSheet } from '@/components/webapp/CartSheet';
 import { CartSidePanel } from '@/components/webapp/CartSidePanel';
 import { MisPedidosSheet } from '@/components/webapp/MisPedidosSheet';
+import { PerfilSheet } from '@/components/webapp/PerfilSheet';
+import { DireccionesSheet } from '@/components/webapp/DireccionesSheet';
 import { ProductCustomizeSheet } from '@/components/webapp/ProductCustomizeSheet';
 import { SEO } from '@/components/SEO';
 import { Loader2 } from 'lucide-react';
@@ -50,6 +52,8 @@ export default function PedirPage() {
   const [cartInitialStep, setCartInitialStep] = useState<'cart' | 'checkout'>('cart');
   const [externalTrackingCode, setExternalTrackingCode] = useState<string | null>(null);
   const [misPedidosOpen, setMisPedidosOpen] = useState(false);
+  const [perfilOpen, setPerfilOpen] = useState(false);
+  const [direccionesOpen, setDireccionesOpen] = useState(false);
 
   // Auto-skip landing when store is open
   useEffect(() => {
@@ -195,8 +199,9 @@ export default function PedirPage() {
             cartPanelVisible={showSidePanel}
             onShowTracking={(code) => setExternalTrackingCode(code)}
             onMisPedidos={() => setMisPedidosOpen(true)}
+            onMisDirecciones={() => setDireccionesOpen(true)}
+            onMiPerfil={() => setPerfilOpen(true)}
           />
-
           {/* Desktop side cart panel — shows cart, checkout, and tracking inline */}
           {showSidePanel && (
             <CartSidePanel
@@ -238,6 +243,9 @@ export default function PedirPage() {
             onShowTracking={handleMisPedidosTrack}
             currentBranchSlug={branchSlug}
           />
+
+          <PerfilSheet open={perfilOpen} onOpenChange={setPerfilOpen} />
+          <DireccionesSheet open={direccionesOpen} onOpenChange={setDireccionesOpen} />
 
           <ProductCustomizeSheet
             item={customizeItem}

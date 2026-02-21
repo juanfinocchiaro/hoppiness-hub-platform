@@ -1,7 +1,7 @@
-import { MapPin, Clock, Truck, ShoppingBag, UtensilsCrossed, Pause, ArrowLeft, Navigation } from 'lucide-react';
+import { MapPin, Clock, Truck, ShoppingBag, UtensilsCrossed, Pause, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { WebappConfig, TipoServicioWebapp } from '@/types/webapp';
-import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
+import { WebappHeader } from './WebappHeader';
 
 interface Props {
   branch: {
@@ -76,22 +76,15 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
 
   return (
     <div className="flex-1 flex flex-col bg-background">
-      {/* Clean white header */}
-      <div className="border-b bg-background px-6 py-6 lg:py-8 text-center relative">
-        {onBack && (
-          <button
-            onClick={onBack}
-            className="absolute top-4 left-4 p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-        )}
-        <img
-          src={logoHoppiness}
-          alt="Hoppiness"
-          className="w-16 h-16 lg:w-20 lg:h-20 rounded-full mx-auto mb-3 shadow-md object-contain ring-2 ring-border"
-        />
-        <h1 className="text-2xl lg:text-3xl font-black font-brand tracking-tight text-foreground">{branch.name}</h1>
+      <WebappHeader
+        title={branch.name}
+        showBack={!!onBack}
+        onBack={onBack}
+      />
+
+      {/* Branch info */}
+      <div className="border-b bg-background px-6 py-6 lg:py-8 text-center">
+        <h2 className="text-2xl lg:text-3xl font-black font-brand tracking-tight text-foreground">{branch.name}</h2>
         <a
           href={mapsUrl}
           target="_blank"
