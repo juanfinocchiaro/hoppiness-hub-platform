@@ -67,7 +67,6 @@ function FieldError({ error }: { error: string | null }) {
 
 export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEnabled, deliveryCosto = 0, initialStep }: Props) {
   const { user } = useAuth();
-  const { user } = useAuth();
   const servicioLabel = cart.tipoServicio === 'retiro' ? 'Retiro en local' : cart.tipoServicio === 'delivery' ? 'Delivery' : 'Comer acá';
 
   // Fetch profile for pre-fill when logged in
