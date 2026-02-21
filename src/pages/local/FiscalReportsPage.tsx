@@ -560,13 +560,6 @@ function ReimprimirCard({ branchId, branchData }: {
   const { data: printers } = useBranchPrinters(branchId);
 
   const handleReprint = async (factura: any) => {
-    const ticketPrinter = printConfig?.ticket_printer_id
-      ? (printers ?? []).find((p: any) => p.id === printConfig.ticket_printer_id && p.is_active)
-      : null;
-    if (!ticketPrinter) {
-      toast.error('No hay impresora de tickets configurada');
-      return;
-    }
     setPrinting2(factura.id);
     try {
       // Fetch full order data for ticket generation
@@ -590,13 +583,15 @@ function ReimprimirCard({ branchId, branchData }: {
 
       const pago = pagos?.[0];
 
-      // Build TicketClienteData
       const { generateTicketCliente, generateArcaQrBitmap } = await import('@/lib/escpos');
 
-      // Build factura info for fiscal ticket
+      const tipoComprobante = factura.tipo_comprobante || '';
+      const isNC = tipoComprobante.includes('NC') || tipoComprobante.includes('Nota de Crédito');
+      const tipoLetra = tipoComprobante.includes('B') ? 'B' : tipoComprobante.includes('C') ? 'C' : 'A';
+
       const facturaData = {
-        tipo: factura.tipo_comprobante?.replace('Factura ', '') as 'A' | 'B' | 'C',
-        codigo: factura.tipo_comprobante === 'Factura B' ? '006' : factura.tipo_comprobante === 'Factura C' ? '011' : '001',
+        tipo: tipoLetra as 'A' | 'B' | 'C',
+        codigo: tipoLetra === 'B' ? (isNC ? '008' : '006') : tipoLetra === 'C' ? (isNC ? '013' : '011') : (isNC ? '003' : '001'),
         numero: `${String(factura.punto_venta).padStart(5, '0')}-${String(factura.numero_comprobante).padStart(8, '0')}`,
         fecha: format(new Date(factura.created_at), 'dd/MM/yyyy'),
         emisor: {
@@ -617,7 +612,6 @@ function ReimprimirCard({ branchId, branchData }: {
         total: factura.total || 0,
       };
 
-      // Try to generate QR
       try {
         facturaData.qr_base64 = await generateArcaQrBitmap(facturaData as any);
       } catch { /* QR optional */ }
@@ -648,10 +642,65 @@ function ReimprimirCard({ branchId, branchData }: {
         factura: facturaData as any,
       };
 
-      const base64 = generateTicketCliente(ticketData as any, ticketPrinter.paper_width);
-      const { printRawBase64 } = await import('@/lib/qz-print');
-      await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, base64);
-      toast.success('Comprobante reimpreso');
+      // Try thermal printer first
+      const ticketPrinter = printConfig?.ticket_printer_id
+        ? (printers ?? []).find((p: any) => p.id === printConfig.ticket_printer_id && p.is_active)
+        : null;
+
+      if (ticketPrinter && printing.bridgeStatus === 'connected') {
+        const base64 = generateTicketCliente(ticketData as any, ticketPrinter.paper_width);
+        const { printRawBase64 } = await import('@/lib/qz-print');
+        await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, base64);
+        toast.success('Comprobante reimpreso');
+      } else {
+        // Fallback: generate a simple printable window
+        const tipoLabel = isNC ? `Nota de Crédito ${tipoLetra}` : `Factura ${tipoLetra}`;
+        const itemsHtml = (items || []).map((it: any) =>
+          `<tr><td>${it.cantidad}x</td><td>${it.nombre}</td><td style="text-align:right">$${(it.subtotal || 0).toLocaleString('es-AR')}</td></tr>`
+        ).join('');
+
+        const html = `
+          <html><head><title>${tipoLabel} ${facturaData.numero}</title>
+          <style>
+            body { font-family: Arial, sans-serif; max-width: 400px; margin: 20px auto; font-size: 13px; }
+            h2 { text-align: center; margin-bottom: 4px; }
+            .center { text-align: center; }
+            .line { border-top: 1px dashed #000; margin: 8px 0; }
+            table { width: 100%; border-collapse: collapse; }
+            td { padding: 2px 4px; }
+            .total { font-weight: bold; font-size: 16px; text-align: right; }
+            @media print { body { margin: 0; } }
+          </style></head><body>
+            <h2>${branchData?.razon_social || 'Hoppiness Club'}</h2>
+            <p class="center">${branchData?.direccion_fiscal || ''}</p>
+            <p class="center">CUIT: ${branchData?.cuit || ''}</p>
+            <div class="line"></div>
+            <h3 class="center">${tipoLabel}</h3>
+            <p class="center"><strong>${facturaData.numero}</strong></p>
+            <p class="center">Fecha: ${facturaData.fecha}</p>
+            ${factura.anulada ? '<p class="center" style="color:red;font-weight:bold">ANULADA</p>' : ''}
+            <div class="line"></div>
+            <p>Pedido #${pedido.numero_pedido} — ${pedido.tipo_servicio || ''}</p>
+            ${pedido.cliente_nombre ? `<p>Cliente: ${pedido.cliente_nombre}</p>` : ''}
+            <div class="line"></div>
+            <table>${itemsHtml}</table>
+            <div class="line"></div>
+            <p class="total">Total: $${(factura.total || 0).toLocaleString('es-AR')}</p>
+            ${facturaData.cae ? `<div class="line"></div><p class="center">CAE: ${facturaData.cae}</p><p class="center">Vto: ${facturaData.cae_vto}</p>` : ''}
+            <div class="line"></div>
+            <p class="center" style="font-size:11px">Pago: ${pago?.metodo || 'No especificado'}</p>
+          </body></html>
+        `;
+
+        const printWindow = window.open('', '_blank', 'width=450,height=600');
+        if (printWindow) {
+          printWindow.document.write(html);
+          printWindow.document.close();
+          printWindow.focus();
+          printWindow.print();
+        }
+        toast.success('Comprobante generado');
+      }
     } catch (e: any) {
       toast.error('Error al reimprimir: ' + (e.message || 'Error desconocido'));
     } finally {
@@ -666,7 +715,6 @@ function ReimprimirCard({ branchId, branchData }: {
         .from('facturas_emitidas')
         .select('*, pedidos!inner(numero_pedido, total, cliente_nombre)')
         .eq('branch_id', branchId)
-        .not('cae', 'is', null)
         .order('created_at', { ascending: false });
 
       if (searchMode === 'number') {
@@ -766,7 +814,7 @@ function ReimprimirCard({ branchId, branchData }: {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
-                    disabled={printing.bridgeStatus !== 'connected' || printing2 === r.id}
+                    disabled={printing2 === r.id}
                     onClick={(e) => { e.stopPropagation(); handleReprint(r); }}
                     title="Reimprimir comprobante"
                   >
