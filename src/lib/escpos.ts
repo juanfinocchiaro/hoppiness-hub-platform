@@ -1,14 +1,17 @@
 /**
  * ESC/POS Command Generator for thermal printers
- * Generates raw byte arrays for 80mm and 58mm thermal printers
+ * Hoppiness Club — Sistema de tickets térmicos v2
  * 
- * Rediseño v2: Identidad Hoppiness Club con logo bitmap,
- * header de marca unificado, formato fiscal ARCA.
+ * Genera comandos raw para impresoras térmicas 80mm y 58mm.
+ * Los bitmaps se envían como marcadores __BITMAP_B64:...:END__
+ * que el Print Bridge (Node.js en localhost:3001) convierte a
+ * raster ESC/POS (GS v 0).
  */
 
 // ─── ESC/POS Commands ────────────────────────────────────────
 const ESC = 0x1b;
 const GS = 0x1d;
+const LF = 0x0a;
 
 const CMD = {
   INIT: [ESC, 0x40],
@@ -28,15 +31,13 @@ const CMD = {
   LINE_SPACING: (n: number) => [ESC, 0x33, n],
 } as const;
 
-// ─── Logo térmico ────────────────────────────────────────────
-/**
- * Logo Hoppiness Club para impresión térmica.
- * Bitmap monocromático 200x200px, invertido (trazos en negro, fondo blanco).
- * Se imprime centrado con GS v 0 via Print Bridge.
- */
+// ─── Logo bitmap ─────────────────────────────────────────────
+// Logo Hoppiness Club invertido para impresión térmica.
+// Monocromático 200x200px. Trazos en negro, fondo transparente.
+// El Print Bridge convierte este PNG base64 a raster ESC/POS.
 const LOGO_THERMAL_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAAAAACIM/FCAAAH3UlEQVR4nO1d2bLEKAjVqfn/X3YesrmwHJbctqbCw73pqMgRUMR0urby/6B/fi1AFn1AdqMPyG70AdmNPiC70QdkN/qA7EYfkN3oA7IbfUB2ow/IbvQB2Y0+ILvRvy/yruut9/Ka9Q3WBIKBXukzm6kG4qL0flMZTigW3lp5pOs8Zr2UIle4oqn3LE6PdBBHY3WAYQ6fWy4DO08bgVsCF79EV8sMIeI8Tml8jNKghIGEYCRxKCUMJEWIFK3EgNS4AB2fEKMIEBxGVeuFoQSi31pKKQ3FodDJBw1wVnIDqQcOqsTH8IBSvVC8psXBIM2NrFy5UMwnkVMjDI5rPIFhrUStUykuiVxAaLOqnVlgwqy1/Eg8QEgvv1Ew7k9ZG1fNg8Sx1aXUMaxpzT/3nI0J/9HIrhF2tgLn4ocJPfRORzEDkXD0VUw8xxYuJFYgAo6rBjZljUzGRh4kRiAcjvtWdawFawDjQGJzdlkf8Pb1kFyaE+zzhUkjgH+UYvH5m+vSohWjSszOrgqpw9Bj4WJHYgEiCnAUNLs2OK5GJAYgwEDCmSAULo4EB4L0z/TblBlCcDsYSd6xggRyNrh2/5UENVkpDMRiEDKRMxRbE1UJurGacVC4zFj1jTrOEtTIxPBYvyNBbkc5evZtrKb/J71wfoMbFwaE0/C6WYXYaU26EBJGAsVas2EdH5mNqoHoiOrP9uwXrARLohaYyf1QlSBARoXcn/CR42suEc2ahwHH683j6WVWgMJJ8r6OBqlSWIVIjflwRWvSpu0CtJhYNQIaFl9aWaGeTIwnDaNrZBiPe6zEvSJt4J104lR+sbepxOMjF3hlZOfybv5Zh69DeRXa0tJqbWIN6QRjGvClXPmVs7i6W1SiyWldRxpxNQh0SsT3K5yEtBHEUEVzGwRIYz8spMJ4iolU1sgld89OxCFK1I0kURil9Pa0jJ6CyhP9nmKsnPU05M1imcIXlTRbWkkBQk98jJnjOK56FIc21CCuaXLu2SkkJhwrkh4AyUW2LR2IlFnseRtx0EhQJ1tJBiJlZ6dI3oyDti6uR5VzIB3UgjgWJM6s2UEqEIH7XGS3CGqba2ZyUFKCzpv1GhcIMcencBKBwKPjz97NSFyOXsp2T2IjARBNGhBogCLpVDjfo3SQpZEXknM2koDA+eOQBHgyUSTTDhFNhvyCFNMa9tx1vjg/lhg2g0qEarYTK4DhrwgI44er8CN7AHWqZ3csCyk+suaBlqRTzlFJlwQZNrrwc0KW6bfPAr1rXJXqIbofuYncuuUTue/UuwWn35F7q2NCLIpsGet22TKu+PDKnmFj3EA0wxBtEzT2Lt7IEpm2ARIl96nubnEK6Oyze4+F5396314LfztxNCxB453vJwuf/9ShyHibqRwh1LSevDPzGHZ/Xdervgp9d73XLHMirJE2hCJk8ly6A989lw79HGYi3LSaxpsxPPq2ZKWucwVPiCLimPIg9yfmLpEh7y6mbKZEFmdvvHfOpxnEVEXfPU/bhju96uGDRKkiNKekrCnUVLcyFeUJP/kQ+moCx9PRZosQJWMsUoDssIXfQSPxFEpRnR0xV0AO/SgN60eoJTl7nh97NxkLHx7J35lWZT8UeJ5yakSkJ09zPl7Fjla9w6cxuUSfDXvJCaSWSc/C9rrdi/qwD7AuFgpe+yMcZUn+Isnb/lGHEcfkP94v64oaYbzd11Ubsm6MPmTWkhId30Mcs8BXBzq6Rl4PCgmkXz3PNM5SodSIxuJchpaVAgAZXJqzDDE30VWjV7UhefGklm1jpXRfZysYux4qerS0GFY/I8/7aZG/7iN1ubDtySHe14dhZdFyFAOZt7rMd4JdZw38BspOhjPEUg4YtIYdSJj1pBZyL69YLqCRx8Pb4i/TNz1MSGR9WGNM/zONJ383EgJH5CgJeYSDdIi6RhMmJJQ+Lp5Lp8Cc6E8+EBLjrzmgEkM0T5R8D5510cmcu4LEYXB0XJgFhifIR3jJllntqK9srw+zmqOD/sKxJEEpuNWWx76JQnabxbd99CQG+gxfey5RixulUF1pWzvbZAJkVkozEGXEuyqrOMtNvrkRBzJrkaGtyLk9YlNzm96lYyWBst1LDAw2oghqOlsyMqGjMnVI8NGiVkwrZQLJOTvwEdr1DrlfieAhxID41qg/JVAjv0KC2/TepmXwTcsDA1sbF6yRXyCxTJa4af09EtOk73m/1h+RrS/Xkw+J/St8DEGEZcHWdT2ExsOzvK27gySQjThspgW5yV1prFmfv4jOrDiMPqIhqaW00oCHQ5vyIi4zDmsWRU27N0wCRSl2HK7vs78+dTlw+N5BF0dymBbDx4PDEWvJSA5vppP1z5wmGqALh+vFxUJP/fQ7TLJUAc3Eh8OfxKaV0pa/UkEiDuerpL29vcjZtx8xniDAxL8xXG/qHFc5De2kiKL9L8BPN6/Y2Pi3uod55dlXUMeh31ZItK8wq4wfiYhDSeAT/f2RDCgpw5H1QyoB4w62v9jELTwEJTwON6MMV5XOqN5oR/LKWQnkOFBukiRB2pJmwYIfw+HdJ67Nw+LI8q1IJUfnueHSutA3oCil5/xgHIpa0rt95YcdZTAv9fjy0eALbs109KMzznTa+8TKQB+Q3egDsht9QHajD8hu9AHZjT4gu9EHZDf6gOxGH5Dd6AOyG31AdqMPyG70HwTHdn4H1KtGAAAAAElFTkSuQmCC';
 
-// ─── Encoder ─────────────────────────────────────────────────
+// ─── Builder ─────────────────────────────────────────────────
 class EscPosBuilder {
   private buffer: number[] = [];
 
@@ -64,6 +65,7 @@ class EscPosBuilder {
   boldOff() { this.buffer.push(...CMD.BOLD_OFF); return this; }
   doubleSize() { this.buffer.push(...CMD.DOUBLE_SIZE); return this; }
   doubleHeight() { this.buffer.push(...CMD.DOUBLE_HEIGHT); return this; }
+  doubleWidth() { this.buffer.push(...CMD.DOUBLE_WIDTH); return this; }
   normalSize() { this.buffer.push(...CMD.NORMAL_SIZE); return this; }
   underlineOn() { this.buffer.push(...CMD.UNDERLINE_ON); return this; }
   underlineOff() { this.buffer.push(...CMD.UNDERLINE_OFF); return this; }
@@ -90,22 +92,14 @@ class EscPosBuilder {
   }
 
   /**
-   * Imprime una imagen bitmap monocromática desde base64 PNG.
-   * Envía un marcador especial que el Print Bridge interpreta y convierte
-   * a formato raster ESC/POS (GS v 0).
-   * Si el bridge no soporta bitmaps, se imprime texto fallback.
+   * Inserta un marcador de bitmap que el Print Bridge reemplaza
+   * por bytes ESC/POS raster (GS v 0).
+   * Si el bridge no soporta bitmaps, se ignora el marcador.
    */
   printBitmap(base64Png: string): EscPosBuilder {
-    try {
-      const marker = `__BITMAP_B64:${base64Png}:END__`;
-      for (let i = 0; i < marker.length; i++) {
-        this.buffer.push(marker.charCodeAt(i));
-      }
-    } catch {
-      this.doubleSize().boldOn()
-        .text('HOPPINESS CLUB')
-        .line('')
-        .normalSize().boldOff();
+    const marker = `__BITMAP_B64:${base64Png}:END__`;
+    for (let i = 0; i < marker.length; i++) {
+      this.buffer.push(marker.charCodeAt(i));
     }
     return this;
   }
@@ -125,6 +119,7 @@ class EscPosBuilder {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
+
 function formatTime(date: string | Date): string {
   const d = new Date(date);
   return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
@@ -135,8 +130,7 @@ function formatDate(date: string | Date): string {
   const day = String(d.getDate()).padStart(2, '0');
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const year = d.getFullYear();
-  const time = formatTime(date);
-  return `${day}/${month}/${year} ${time}`;
+  return `${day}/${month}/${year} ${formatTime(date)}`;
 }
 
 function formatNumber(n: number): string {
@@ -157,9 +151,7 @@ function canalLabel(canal: string | null, tipo: string | null): string {
     case 'pedidosya': return 'PEDIDOSYA';
     case 'masdelivery': return 'MASDELIVERY';
     case 'webapp': return 'WEBAPP';
-    case 'mostrador':
-    default:
-      return serviceLabel(tipo);
+    default: return serviceLabel(tipo);
   }
 }
 
@@ -172,6 +164,24 @@ function modPrefix(tipo: string): string {
   }
 }
 
+/**
+ * Imprime logo + nombre del local.
+ * 
+ * IMPORTANTE: El logo YA contiene "HOPPINESS CLUB" en su diseño.
+ * NO imprimir ese texto. Solo el nombre del local debajo.
+ */
+function printBrandHeader(b: EscPosBuilder, branchName: string): void {
+  b.alignCenter();
+  b.printBitmap(LOGO_THERMAL_B64);
+  b.feed(1);
+  // Solo el nombre del local — NO "HOPPINESS CLUB"
+  b.boldOn().line(branchName.toUpperCase()).boldOff();
+}
+
+/**
+ * Imprime modificadores de un item.
+ * "SIN" siempre en BOLD + UPPERCASE (error costoso si se pierde).
+ */
 function printMods(b: EscPosBuilder, item: PrintableItem): void {
   if (item.modificadores?.length) {
     for (const mod of item.modificadores) {
@@ -189,31 +199,21 @@ function printMods(b: EscPosBuilder, item: PrintableItem): void {
 }
 
 /**
- * Header de marca Hoppiness Club: logo bitmap + texto fallback.
- * 
- * El bitmap se envía como marcador __BITMAP_B64:...:END__ que el Print Bridge v2+
- * intercepta y convierte a raster ESC/POS. Si el bridge es v1 (sin soporte bitmap),
- * el marcador se envía como ASCII basura pero el texto "HOPPINESS CLUB" que sigue
- * actúa como fallback visible.
- * 
- * Para bridges v2+: se imprime el logo bitmap y el texto styled.
- * Para bridges v1: el marcador se ignora/descarta, se imprime solo el texto.
+ * Footer de marketing — solo para documentos que toca el CLIENTE.
  */
-function printBrandHeader(b: EscPosBuilder, branchName: string): void {
-  b.alignCenter();
-  
-  // Bitmap marker — Bridge v2+ lo convierte a raster, v1 lo descarta
-  b.printBitmap(LOGO_THERMAL_B64);
-  b.feed(1);
-  
-  // Texto grande como identificación (siempre se imprime)
-  b.doubleSize().boldOn().line('HOPPINESS CLUB').normalSize().boldOff();
-  
-  const spaced = branchName.toUpperCase().split('').join(' ');
-  b.line(spaced);
+function printMarketingFooter(b: EscPosBuilder): void {
+  b.feed(1)
+    .alignCenter()
+    .line('Gracias por elegirnos!')
+    .feed(1)
+    .boldOn().line('Pedi por hoppinessclub.com').boldOff()
+    .line('y accede a precios exclusivos')
+    .feed(1)
+    .line('Seguinos en @hoppinessclub');
 }
 
 // ─── Types ───────────────────────────────────────────────────
+
 export interface PrintableItem {
   nombre: string | null;
   cantidad: number;
@@ -235,7 +235,6 @@ export interface PrintableOrder {
   items: PrintableItem[];
 }
 
-// ─── Ticket Cliente Data ─────────────────────────────────────
 export interface TicketClienteData {
   order: PrintableOrder & {
     items: (PrintableItem & { precio_unitario?: number; subtotal?: number })[];
@@ -296,11 +295,12 @@ export interface FiscalTicketData {
   branchName?: string;
 }
 
-// ─── Generators ──────────────────────────────────────────────
+// ═════════════════════════════════════════════════════════════
+// GENERADORES
+// ═════════════════════════════════════════════════════════════
 
-/**
- * Comanda de cocina completa (todos los items)
- */
+// ─── 1. COMANDA COMPLETA (cocina) ────────────────────────────
+
 export function generateComandaCompleta(
   order: PrintableOrder,
   branchName: string,
@@ -317,26 +317,32 @@ export function generateComandaCompleta(
     .boldOn().line('C O M A N D A').boldOff()
     .feed(1);
 
+  // Número de pedido — LO MÁS GRANDE
   b.doubleSize().boldOn()
     .line(`# ${order.numero_pedido}`)
     .normalSize().boldOff();
 
+  // Canal
   b.boldOn().line(canalLabel(order.canal_venta, order.tipo_servicio)).boldOff();
 
+  // Llamador — UNA SOLA VEZ
   if (order.numero_llamador) {
     b.doubleHeight().boldOn()
       .line(`LLAMADOR #${order.numero_llamador}`)
       .normalSize().boldOff();
   }
 
+  // Cliente
   if (order.cliente_nombre) {
     b.line(order.cliente_nombre);
   }
 
+  // Hora
   b.feed(1).alignLeft();
-  b.columns(formatTime(order.created_at), '', cols);
+  b.line(formatTime(order.created_at));
   b.separator('=', cols);
 
+  // Items — doble alto, sin precios
   for (const item of order.items) {
     b.boldOn().doubleHeight()
       .line(`${item.cantidad}x ${item.nombre || 'Producto'}`)
@@ -346,6 +352,7 @@ export function generateComandaCompleta(
     b.separator('-', cols);
   }
 
+  // Conteo
   b.alignCenter()
     .line(`Items: ${order.items.reduce((s, i) => s + i.cantidad, 0)}`)
     .feed(1).cut();
@@ -353,9 +360,8 @@ export function generateComandaCompleta(
   return b.toBase64();
 }
 
-/**
- * Comanda por estación (solo items de esa estación)
- */
+// ─── 2. COMANDA POR ESTACIÓN ─────────────────────────────────
+
 export function generateComandaEstacion(
   order: PrintableOrder,
   stationName: string,
@@ -411,9 +417,76 @@ export function generateComandaEstacion(
   return b.toBase64();
 }
 
-/**
- * Ticket del cliente (con precios, pago, y opcionalmente datos fiscales ARCA)
- */
+// ─── 3. COMANDA DELIVERY ─────────────────────────────────────
+
+export function generateComandaDelivery(
+  order: PrintableOrder & {
+    cliente_telefono?: string | null;
+    cliente_direccion?: string | null;
+    hora_entrega?: string | null;
+    referencia_app?: string | null;
+  },
+  branchName: string,
+  paperWidth: number = 80
+): string {
+  const cols = paperWidth === 80 ? 42 : 32;
+  const b = new EscPosBuilder();
+
+  b.init();
+  printBrandHeader(b, branchName);
+
+  b.alignCenter()
+    .feed(1)
+    .boldOn().line('C O M A N D A').boldOff()
+    .feed(1);
+
+  b.doubleSize().boldOn()
+    .line(`# ${order.numero_pedido}`)
+    .normalSize().boldOff();
+
+  b.boldOn().line(canalLabel(order.canal_venta, order.tipo_servicio)).boldOff();
+
+  if (order.referencia_app) {
+    b.line(order.referencia_app);
+  }
+
+  // Bloque datos entrega
+  b.alignLeft().separator('=', cols);
+  if (order.cliente_nombre) {
+    b.boldOn().line(order.cliente_nombre).boldOff();
+  }
+  if (order.cliente_direccion) {
+    b.line(order.cliente_direccion);
+  }
+  if (order.cliente_telefono) {
+    b.line(`Tel: ${order.cliente_telefono}`);
+  }
+  if (order.hora_entrega) {
+    b.boldOn().line(`Entrega: ${order.hora_entrega}`).boldOff();
+  }
+  b.separator('=', cols);
+
+  b.line(formatTime(order.created_at));
+  b.separator('=', cols);
+
+  for (const item of order.items) {
+    b.boldOn().doubleHeight()
+      .line(`${item.cantidad}x ${item.nombre || 'Producto'}`)
+      .normalSize().boldOff();
+
+    printMods(b, item);
+    b.separator('-', cols);
+  }
+
+  b.alignCenter()
+    .line(`Items: ${order.items.reduce((s, i) => s + i.cantidad, 0)}`)
+    .feed(1).cut();
+
+  return b.toBase64();
+}
+
+// ─── 4. TICKET CLIENTE (con/sin factura) ─────────────────────
+
 export function generateTicketCliente(
   data: TicketClienteData,
   paperWidth: number = 80
@@ -428,18 +501,19 @@ export function generateTicketCliente(
   // Datos del pedido
   b.alignLeft().separator('-', cols);
   b.columns(`Pedido #${order.numero_pedido}`, formatDate(order.created_at), cols);
-  
-  const canalText = canalLabel(order.canal_venta, order.tipo_servicio);
+
+  const canal = canalLabel(order.canal_venta, order.tipo_servicio);
   if (order.numero_llamador) {
-    b.columns(canalText, `Llamador: #${order.numero_llamador}`, cols);
+    b.columns(canal, `Llamador: #${order.numero_llamador}`, cols);
   } else {
-    b.line(canalText);
+    b.line(canal);
   }
-  
+
   if (order.cliente_nombre) {
     b.line(`Cliente: ${order.cliente_nombre}`);
   }
   b.separator('-', cols);
+
   b.feed(1);
 
   // Items con precios
@@ -486,11 +560,14 @@ export function generateTicketCliente(
 
   // Pago
   if (metodo_pago) {
-    const pagoRight = tarjeta_marca || '';
-    b.columns(`Pago: ${metodo_pago}`, pagoRight, cols);
+    b.columns(`Pago: ${metodo_pago}`, tarjeta_marca || '', cols);
   }
   if (monto_recibido && vuelto !== undefined) {
-    b.columns(`Recibido: $${formatNumber(monto_recibido)}`, `Vuelto: $${formatNumber(vuelto)}`, cols);
+    b.columns(
+      `Recibido: $${formatNumber(monto_recibido)}`,
+      `Vuelto: $${formatNumber(vuelto)}`,
+      cols
+    );
   }
 
   b.separator('-', cols);
@@ -504,19 +581,100 @@ export function generateTicketCliente(
       .boldOn().line('*** NO VALIDO COMO FACTURA ***').boldOff();
   }
 
-  // Footer
-  b.feed(1)
+  // Marketing footer — solo documentos que toca el CLIENTE
+  printMarketingFooter(b);
+  b.feed(2).cut();
+
+  return b.toBase64();
+}
+
+// ─── 5. VALE DE CANJE ───────────────────────────────────────
+
+export function generateVale(
+  productName: string,
+  orderNumber: number,
+  orderTime: string,
+  canal?: string,
+  llamador?: number | null,
+  paperWidth: number = 80
+): string {
+  const cols = paperWidth === 80 ? 42 : 32;
+  const b = new EscPosBuilder();
+
+  // Sin logo — el vale es cortito y se diferencia del ticket
+  b.init()
+    .separator('=', cols)
     .alignCenter()
-    .line('Gracias por elegirnos!')
-    .line('www.hoppinessclub.com')
+    .feed(1)
+    .doubleSize().boldOn()
+    .line('V A L E')
+    .normalSize().boldOff()
+    .feed(1)
+    .doubleSize().boldOn()
+    .line(productName)
+    .normalSize().boldOff()
+    .feed(1)
+    .separator('=', cols)
+    .line(`Pedido #${orderNumber} - ${formatTime(orderTime)}`);
+
+  if (canal || llamador) {
+    const parts: string[] = [];
+    if (canal) parts.push(canal);
+    if (llamador) parts.push(`Llamador #${llamador}`);
+    b.line(parts.join(' - '));
+  }
+
+  b.feed(1)
+    .line('@hoppinessclub')
+    .feed(1).cut();
+
+  return b.toBase64();
+}
+
+// ─── 6. TEST PAGE ────────────────────────────────────────────
+
+export function generateTestPage(
+  printerName: string,
+  branchName: string,
+  paperWidth: number = 80
+): string {
+  const cols = paperWidth === 80 ? 42 : 32;
+  const b = new EscPosBuilder();
+
+  b.init();
+  printBrandHeader(b, branchName);
+
+  b.separator('=', cols)
+    .alignCenter()
+    .boldOn().line('TEST DE IMPRESORA').boldOff()
+    .separator('-', cols)
+    .line(`Impresora: ${printerName}`)
+    .line(`Ancho: ${paperWidth}mm`)
+    .line(`Fecha: ${new Date().toLocaleString('es-AR')}`)
+    .separator('-', cols)
+    .alignLeft()
+    .boldOn().line('Texto en negrita').boldOff()
+    .doubleHeight().line('Texto doble alto').normalSize()
+    .doubleSize().line('Texto grande').normalSize()
+    .separator('=', cols)
+    .alignCenter()
+    .line('Logo + texto = impresora lista')
     .feed(2).cut();
 
   return b.toBase64();
 }
 
-/**
- * Sección fiscal ARCA con formato correcto para Factura B/A/C.
- */
+// ─── SECCION FISCAL (helper interno) ─────────────────────────
+//
+// Orden ARCA correcto:
+// 1. "ORIGINAL"
+// 2. Datos emisor (razón social, CUIT, IIBB, cond. IVA, domicilio)
+// 3. Tipo factura (A/B/C) grande + número + fecha
+// 4. Datos receptor (nombre, DNI, cond. IVA)
+// 5. Totales
+// 6. Transparencia fiscal Ley 27.743
+// 7. QR + CAE + "Comprobante Autorizado"
+
 function printSeccionFiscal(
   b: EscPosBuilder,
   f: NonNullable<TicketClienteData['factura']>,
@@ -551,9 +709,9 @@ function printSeccionFiscal(
 
   // 4. Datos del receptor
   b.alignLeft();
-  b.boldOn().line('A CONSUMIDOR FINAL').boldOff();
+  b.boldOn().line(`A ${f.receptor.condicion_iva.toUpperCase()}`).boldOff();
   if (f.receptor.nombre) {
-    b.line(`Apellido y Nombre: ${f.receptor.nombre}`);
+    b.line(`Nombre: ${f.receptor.nombre}`);
   }
   if (f.receptor.documento_numero) {
     b.line(`${f.receptor.documento_tipo || 'DNI'}: ${f.receptor.documento_numero}`);
@@ -561,18 +719,19 @@ function printSeccionFiscal(
 
   b.separator('-', cols);
 
-  // 5-6. Totales
+  // 5. Totales
+  const total = f.neto_gravado + f.iva + f.otros_tributos;
   b.columns('Subtotal:', `$${formatNumber(f.neto_gravado + f.iva)}`, cols);
   if (f.otros_tributos > 0) {
     b.columns('Otros tributos:', `$${formatNumber(f.otros_tributos)}`, cols);
   }
   b.boldOn()
-    .columns('Total:', `$${formatNumber(f.neto_gravado + f.iva + f.otros_tributos)}`, cols)
+    .columns('Total:', `$${formatNumber(total)}`, cols)
     .boldOff();
 
   b.separator('-', cols);
 
-  // 7. Transparencia Fiscal (Ley 27.743)
+  // 6. Transparencia Fiscal (Ley 27.743)
   b.alignCenter()
     .line('Reg. Transparencia Fiscal')
     .line('al Consumidor (Ley 27.743)')
@@ -582,124 +741,16 @@ function printSeccionFiscal(
 
   b.separator('=', cols);
 
-  // 8. QR + CAE
+  // 7. QR + CAE
   b.alignCenter();
-  b.line('[QR ARCA]');
+  b.line('[QR ARCA]');  // El Print Bridge reemplaza por QR bitmap
   b.feed(1)
     .boldOn().line('Comprobante Autorizado').boldOff();
   b.columns(`CAE: ${f.cae}`, `Vto: ${f.cae_vto}`, cols);
 }
 
-/**
- * Comanda de delivery (con datos del cliente y dirección)
- */
-export function generateComandaDelivery(
-  order: PrintableOrder & {
-    cliente_telefono?: string | null;
-    cliente_direccion?: string | null;
-    hora_entrega?: string | null;
-    referencia_app?: string | null;
-  },
-  branchName: string,
-  paperWidth: number = 80
-): string {
-  const cols = paperWidth === 80 ? 42 : 32;
-  const b = new EscPosBuilder();
-
-  b.init();
-  printBrandHeader(b, branchName);
-
-  b.alignCenter()
-    .feed(1)
-    .boldOn().line('C O M A N D A').boldOff()
-    .feed(1);
-
-  b.doubleSize().boldOn()
-    .line(`# ${order.numero_pedido}`)
-    .normalSize().boldOff();
-
-  b.boldOn().line(canalLabel(order.canal_venta, order.tipo_servicio)).boldOff();
-
-  if (order.referencia_app) {
-    b.line(order.referencia_app);
-  }
-
-  // Datos de entrega
-  b.alignLeft().separator('=', cols);
-  if (order.cliente_nombre) {
-    b.boldOn().line(order.cliente_nombre).boldOff();
-  }
-  if (order.cliente_direccion) {
-    b.line(order.cliente_direccion);
-  }
-  if (order.cliente_telefono) {
-    b.line(`Tel: ${order.cliente_telefono}`);
-  }
-  if (order.hora_entrega) {
-    b.boldOn().line(`Entrega: ${order.hora_entrega}`).boldOff();
-  }
-  b.separator('=', cols);
-
-  b.columns(formatTime(order.created_at), '', cols);
-  b.separator('=', cols);
-
-  for (const item of order.items) {
-    b.boldOn().doubleHeight()
-      .line(`${item.cantidad}x ${item.nombre || 'Producto'}`)
-      .normalSize().boldOff();
-
-    printMods(b, item);
-    b.separator('-', cols);
-  }
-
-  b.alignCenter()
-    .line(`Items: ${order.items.reduce((s, i) => s + i.cantidad, 0)}`)
-    .feed(1).cut();
-
-  return b.toBase64();
-}
-
-/**
- * Vale de canje (1 por unidad de producto)
- */
-export function generateVale(
-  productName: string,
-  orderNumber: number,
-  orderTime: string,
-  canal?: string,
-  llamador?: number | null,
-  paperWidth: number = 80
-): string {
-  const cols = paperWidth === 80 ? 42 : 32;
-  const b = new EscPosBuilder();
-
-  b.init()
-    .separator('=', cols)
-    .alignCenter()
-    .feed(1)
-    .doubleSize().boldOn()
-    .line('V A L E')
-    .normalSize().boldOff()
-    .feed(1)
-    .doubleSize().boldOn()
-    .line(productName)
-    .normalSize().boldOff()
-    .feed(1)
-    .separator('=', cols)
-    .line(`Pedido #${orderNumber} - ${formatTime(orderTime)}`);
-
-  if (llamador) {
-    b.line(`Llamador #${llamador}`);
-  }
-
-  b.feed(1).cut();
-
-  return b.toBase64();
-}
-
-/**
- * @deprecated Use generateVale instead
- */
+// ─── LEGACY: generateValeBebida ──────────────────────────────
+/** @deprecated Use generateVale instead */
 export function generateValeBebida(
   order: { numero_pedido: number; created_at: string },
   itemNombre: string,
@@ -708,6 +759,7 @@ export function generateValeBebida(
   return generateVale(itemNombre, order.numero_pedido, order.created_at, undefined, undefined, paperWidth);
 }
 
+// ─── LEGACY: generateTicketFiscal ────────────────────────────
 /**
  * Legacy generateTicketFiscal — kept for backward compatibility.
  * Prefer generateTicketCliente with factura data for new code.
@@ -786,41 +838,6 @@ export function generateTicketFiscal(
     .line('Comprobante no valido como factura')
     .feed(2)
     .cut();
-
-  return b.toBase64();
-}
-
-/**
- * Test page for printer verification
- */
-export function generateTestPage(
-  printerName: string,
-  branchName: string,
-  paperWidth: number = 80
-): string {
-  const cols = paperWidth === 80 ? 42 : 32;
-  const b = new EscPosBuilder();
-
-  b.init();
-  printBrandHeader(b, branchName);
-
-  b.separator('=', cols)
-    .alignCenter()
-    .boldOn().line('TEST DE IMPRESORA').boldOff()
-    .separator('-', cols)
-    .line(`Impresora: ${printerName}`)
-    .line(`Ancho: ${paperWidth}mm`)
-    .line(`Fecha: ${new Date().toLocaleString('es-AR')}`)
-    .separator('-', cols)
-    .alignLeft()
-    .boldOn().line('Texto en negrita').boldOff()
-    .doubleHeight().line('Texto doble alto').normalSize()
-    .doubleSize().line('Texto grande').normalSize()
-    .separator('=', cols)
-    .alignCenter()
-    .line('Si ves esto, funciona OK!')
-    .line('Logo + texto = impresora lista')
-    .feed(2).cut();
 
   return b.toBase64();
 }
