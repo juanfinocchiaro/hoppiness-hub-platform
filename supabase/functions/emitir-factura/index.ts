@@ -147,7 +147,22 @@ Deno.serve(async (req) => {
     // 5. Fecha del comprobante
     const cbteFch = new Date().toISOString().slice(0, 10).replace(/-/g, "");
 
-    // 6. Armar request ARCA
+    // 6. Determinar condición IVA del receptor (obligatorio desde RG 5616)
+    const condicionIvaMap: Record<string, number> = {
+      "IVA Responsable Inscripto": 1,
+      "Responsable Monotributo": 6,
+      "Monotributista Social": 13,
+      "IVA Sujeto Exento": 4,
+      "Consumidor Final": 5,
+    };
+    let condicionIvaId = 5; // default: Consumidor Final
+    if (tipo_factura === "A") {
+      condicionIvaId = condicionIvaMap[receptor_condicion_iva || ""] || 1;
+    } else if (tipo_factura === "B") {
+      condicionIvaId = condicionIvaMap[receptor_condicion_iva || ""] || 5;
+    }
+
+    // 7. Armar request ARCA
     const afipRequest = {
       CbteTipo: cbteTipo,
       PtoVta: config.punto_venta,
@@ -165,6 +180,7 @@ Deno.serve(async (req) => {
       ImpTrib: 0,
       MonId: "PES",
       MonCotiz: 1,
+      CondicionIVAReceptorId: condicionIvaId,
       ...(tipo_factura === "A"
         ? { Iva: [{ Id: 5, BaseImp: neto, Importe: iva }] }
         : {}),
@@ -222,6 +238,7 @@ Deno.serve(async (req) => {
             impTrib: 0,
             monId: "PES",
             monCotiz: 1,
+            condicionIVAReceptorId: condicionIvaId,
             iva: tipo_factura === "A"
               ? [{ id: 5, baseImp: neto, importe: iva }]
               : undefined,

@@ -132,18 +132,19 @@ export async function getLastVoucher(creds: WSAACredentials, cuit: string, pv: n
 
 export async function requestCAE(
   creds: WSAACredentials, cuit: string,
-  r: { puntoVenta: number; cbteTipo: number; concepto: number; docTipo: number; docNro: number; cbteDesde: number; cbteHasta: number; cbteFch: string; impTotal: number; impTotConc: number; impNeto: number; impOpEx: number; impIVA: number; impTrib: number; monId: string; monCotiz: number; iva?: { id: number; baseImp: number; importe: number }[] },
+  r: { puntoVenta: number; cbteTipo: number; concepto: number; docTipo: number; docNro: number; cbteDesde: number; cbteHasta: number; cbteFch: string; impTotal: number; impTotConc: number; impNeto: number; impOpEx: number; impIVA: number; impTrib: number; monId: string; monCotiz: number; condicionIVAReceptorId?: number; iva?: { id: number; baseImp: number; importe: number }[] },
   prod: boolean
 ): Promise<{ cae: string; caeVto: string; cbteDesde: number; cbteHasta: number; resultado: string; observaciones?: string }> {
   const c = cuit.replace(/-/g, "");
   const ivaXml = r.iva?.length ? `<ar:Iva>${r.iva.map(i => `<ar:AlicIva><ar:Id>${i.id}</ar:Id><ar:BaseImp>${i.baseImp.toFixed(2)}</ar:BaseImp><ar:Importe>${i.importe.toFixed(2)}</ar:Importe></ar:AlicIva>`).join("")}</ar:Iva>` : "";
+  const condIvaXml = r.condicionIVAReceptorId ? `<ar:CondicionIVAReceptorId>${r.condicionIVAReceptorId}</ar:CondicionIVAReceptorId>` : "";
   const body = `<ar:Auth><ar:Token>${creds.token}</ar:Token><ar:Sign>${creds.sign}</ar:Sign><ar:Cuit>${c}</ar:Cuit></ar:Auth>
     <ar:FeCAEReq><ar:FeCabReq><ar:CantReg>1</ar:CantReg><ar:PtoVta>${r.puntoVenta}</ar:PtoVta><ar:CbteTipo>${r.cbteTipo}</ar:CbteTipo></ar:FeCabReq>
     <ar:FeDetReq><ar:FECAEDetRequest><ar:Concepto>${r.concepto}</ar:Concepto><ar:DocTipo>${r.docTipo}</ar:DocTipo><ar:DocNro>${r.docNro}</ar:DocNro>
     <ar:CbteDesde>${r.cbteDesde}</ar:CbteDesde><ar:CbteHasta>${r.cbteHasta}</ar:CbteHasta><ar:CbteFch>${r.cbteFch}</ar:CbteFch>
     <ar:ImpTotal>${r.impTotal.toFixed(2)}</ar:ImpTotal><ar:ImpTotConc>${r.impTotConc.toFixed(2)}</ar:ImpTotConc><ar:ImpNeto>${r.impNeto.toFixed(2)}</ar:ImpNeto>
     <ar:ImpOpEx>${r.impOpEx.toFixed(2)}</ar:ImpOpEx><ar:ImpIVA>${r.impIVA.toFixed(2)}</ar:ImpIVA><ar:ImpTrib>${r.impTrib.toFixed(2)}</ar:ImpTrib>
-    <ar:MonId>${r.monId}</ar:MonId><ar:MonCotiz>${r.monCotiz}</ar:MonCotiz>${ivaXml}
+    <ar:MonId>${r.monId}</ar:MonId><ar:MonCotiz>${r.monCotiz}</ar:MonCotiz>${condIvaXml}${ivaXml}
     </ar:FECAEDetRequest></ar:FeDetReq></ar:FeCAEReq>`;
 
   const resp = await callWSFE("FECAESolicitar", body, prod);

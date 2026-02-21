@@ -80,8 +80,8 @@ export function buildPrintJobs(
     }
   }
 
-  // 2. VALES (solo si es salón y está habilitado)
-  if (esSalon && config.salon_vales_enabled !== false && config.vale_printer_id) {
+  // 2. VALES (mostrador: siempre que esté habilitado; apps/delivery: según config)
+  if (config.salon_vales_enabled !== false && config.vale_printer_id) {
     const printer = findPrinter(config.vale_printer_id);
     if (printer) {
       for (const item of order.items) {
