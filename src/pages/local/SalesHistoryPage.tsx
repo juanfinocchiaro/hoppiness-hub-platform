@@ -161,7 +161,26 @@ function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: {
             : ticketPrinter;
           const printer = valePrinter || ticketPrinter;
           const { printRawBase64 } = await import('@/lib/qz-print');
-          for (const item of printableOrder.items) {
+
+          // Fetch categories to filter only 'vale' items
+          const { data: catData } = await supabase
+            .from('menu_categorias')
+            .select('id, tipo_impresion')
+            .eq('activo', true);
+          const valeCatIds = new Set(
+            (catData ?? []).filter(c => c.tipo_impresion === 'vale').map(c => c.id)
+          );
+
+          const valeItems = printableOrder.items.filter(item =>
+            item.categoria_carta_id && valeCatIds.has(item.categoria_carta_id)
+          );
+
+          if (valeItems.length === 0) {
+            toast.info('Este pedido no tiene items de tipo vale (bebidas)');
+            break;
+          }
+
+          for (const item of valeItems) {
             for (let i = 0; i < item.cantidad; i++) {
               const data = generateVale(
                 item.nombre || 'Producto',
@@ -174,7 +193,7 @@ function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: {
               await printRawBase64(printer.ip_address!, printer.port, data);
             }
           }
-          toast.success('Vales impresos');
+          toast.success(`${valeItems.length} vale(s) impresos`);
           break;
         }
         case 'delivery': {
