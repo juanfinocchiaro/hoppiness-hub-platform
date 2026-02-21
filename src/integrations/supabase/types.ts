@@ -1740,6 +1740,66 @@ export type Database = {
           },
         ]
       }
+      delivery_zones: {
+        Row: {
+          barrios: string[] | null
+          branch_id: string
+          costo_envio: number
+          created_at: string | null
+          descripcion: string | null
+          id: string
+          is_active: boolean | null
+          nombre: string
+          orden: number | null
+          pedido_minimo: number | null
+          tiempo_estimado_min: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          barrios?: string[] | null
+          branch_id: string
+          costo_envio?: number
+          created_at?: string | null
+          descripcion?: string | null
+          id?: string
+          is_active?: boolean | null
+          nombre: string
+          orden?: number | null
+          pedido_minimo?: number | null
+          tiempo_estimado_min?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          barrios?: string[] | null
+          branch_id?: string
+          costo_envio?: number
+          created_at?: string | null
+          descripcion?: string | null
+          id?: string
+          is_active?: boolean | null
+          nombre?: string
+          orden?: number | null
+          pedido_minimo?: number | null
+          tiempo_estimado_min?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_zones_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_zones_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       devoluciones: {
         Row: {
           branch_id: string
@@ -5233,6 +5293,7 @@ export type Database = {
           costo_delivery: number | null
           created_at: string | null
           created_by: string | null
+          delivery_zone_id: string | null
           descuento: number | null
           descuento_motivo: string | null
           direccion_entrega: string | null
@@ -5274,6 +5335,7 @@ export type Database = {
           costo_delivery?: number | null
           created_at?: string | null
           created_by?: string | null
+          delivery_zone_id?: string | null
           descuento?: number | null
           descuento_motivo?: string | null
           direccion_entrega?: string | null
@@ -5315,6 +5377,7 @@ export type Database = {
           costo_delivery?: number | null
           created_at?: string | null
           created_by?: string | null
+          delivery_zone_id?: string | null
           descuento?: number | null
           descuento_motivo?: string | null
           direccion_entrega?: string | null
@@ -5356,6 +5419,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_delivery_zone_id_fkey"
+            columns: ["delivery_zone_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_zones"
             referencedColumns: ["id"]
           },
         ]
