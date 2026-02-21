@@ -1,0 +1,2 @@
+ALTER TABLE public.pedidos DROP CONSTRAINT pedidos_canal_venta_check;
+ALTER TABLE public.pedidos ADD CONSTRAINT pedidos_canal_venta_check CHECK (canal_venta::text = ANY (ARRAY['mostrador', 'apps', 'webapp']::text[]));
