@@ -245,6 +245,11 @@ export default function POSPage() {
       }
       if (!orderConfig.clienteDireccion?.trim()) return 'Ingresá la dirección de entrega';
     }
+    // Validate invoice fields for A/B
+    if (orderConfig.tipoFactura === 'A' || orderConfig.tipoFactura === 'B') {
+      if (!orderConfig.receptorCuit?.trim()) return 'Ingresá el CUIT del cliente';
+      if (!orderConfig.receptorRazonSocial?.trim()) return 'Ingresá la razón social del cliente';
+    }
     return null;
   };
 
@@ -333,10 +338,13 @@ export default function POSPage() {
           const result = evaluateInvoicing(orderPayments, channel, afipConfig.reglas_facturacion);
 
           if (result.shouldInvoice && result.invoiceableAmount > 0) {
+            const tipoFactura = orderConfig.tipoFactura || 'C';
             const invoiceResult = await emitirFactura.mutateAsync({
               branch_id: branchId!,
               pedido_id: pedido?.id,
-              tipo_factura: 'C',
+              tipo_factura: tipoFactura,
+              receptor_cuit: tipoFactura !== 'C' ? orderConfig.receptorCuit : undefined,
+              receptor_razon_social: tipoFactura !== 'C' ? orderConfig.receptorRazonSocial : undefined,
               items: [{ descripcion: 'Venta POS', cantidad: 1, precio_unitario: result.invoiceableAmount }],
               total: result.invoiceableAmount,
             });

@@ -12,6 +12,9 @@ export type TipoServicio = 'takeaway' | 'comer_aca' | 'delivery';
 /** App de delivery cuando canal = apps */
 export type CanalApp = 'rappi' | 'pedidos_ya' | 'mp_delivery';
 
+/** Tipo de comprobante fiscal */
+export type TipoFactura = 'C' | 'A' | 'B';
+
 export interface OrderConfig {
   canalVenta: CanalVenta;
   tipoServicio: TipoServicio;
@@ -20,6 +23,14 @@ export interface OrderConfig {
   clienteNombre: string;
   clienteTelefono: string;
   clienteDireccion: string;
+  /** Tipo de comprobante fiscal */
+  tipoFactura: TipoFactura;
+  /** CUIT del receptor (requerido para A/B) */
+  receptorCuit: string;
+  /** Razón social del receptor (requerido para A/B) */
+  receptorRazonSocial: string;
+  /** Email para envío de factura (opcional) */
+  receptorEmail: string;
 }
 
 export const DEFAULT_ORDER_CONFIG: OrderConfig = {
@@ -30,6 +41,10 @@ export const DEFAULT_ORDER_CONFIG: OrderConfig = {
   clienteNombre: '',
   clienteTelefono: '',
   clienteDireccion: '',
+  tipoFactura: 'C',
+  receptorCuit: '',
+  receptorRazonSocial: '',
+  receptorEmail: '',
 };
 
 export type PedidoEstado =
