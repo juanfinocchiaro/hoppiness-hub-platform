@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { SEO } from '@/components/SEO';
 import { PublicHeader, MobileOrderFAB } from '@/components/layout/PublicHeader';
+import { WebappHeader } from '@/components/webapp/WebappHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 import heroWall from '@/assets/hero-wall.webp';
@@ -56,7 +57,7 @@ export default function Nosotros() {
         path="/nosotros"
       />
       <ImpersonationBanner />
-      <PublicHeader />
+      <WebappHeader title="Nosotros" showBack onBack={() => window.history.back()} showNavMenu />
       
       {/* Hero Section */}
       <section className="relative h-[50vh] min-h-[400px] flex items-center">

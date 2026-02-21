@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import { SEO } from '@/components/SEO';
 import { PublicHeader } from '@/components/layout/PublicHeader';
+import { WebappHeader } from '@/components/webapp/WebappHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import { cn } from '@/lib/utils';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
@@ -750,7 +751,7 @@ ${formData.message || 'Sin mensaje adicional'}
           path="/contacto"
         />
         <ImpersonationBanner />
-        <PublicHeader />
+        <WebappHeader title="Contacto" showBack onBack={() => window.history.back()} showNavMenu />
         
         <section className="py-20 px-4">
           <div className="container mx-auto max-w-lg text-center">
@@ -782,7 +783,7 @@ ${formData.message || 'Sin mensaje adicional'}
         path="/contacto"
       />
       <ImpersonationBanner />
-      <PublicHeader />
+      <WebappHeader title="Contacto" showBack onBack={() => window.history.back()} showNavMenu />
       
       {/* Hero */}
       <section className="py-16 bg-primary">

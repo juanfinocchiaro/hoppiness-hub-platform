@@ -8,8 +8,9 @@ import {
   Store
 } from 'lucide-react';
 import { SEO } from '@/components/SEO';
-import { PublicHeader, MobileOrderFAB } from '@/components/layout/PublicHeader';
+import { MobileOrderFAB } from '@/components/layout/PublicHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
+import { WebappHeader } from '@/components/webapp/WebappHeader';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 import { 
   AwardsSection, 
@@ -26,7 +27,7 @@ export default function Index() {
     <div className="min-h-screen bg-background">
       <SEO path="/" />
       <ImpersonationBanner />
-      <PublicHeader />
+      <WebappHeader title="HOPPINESS CLUB" showNavMenu />
 
       {/* Hero Section - Producto protagonista */}
       <section className="relative h-[70vh] min-h-[500px] flex items-center">
