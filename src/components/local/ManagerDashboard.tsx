@@ -137,11 +137,45 @@ function usePendingItems(branchId: string) {
         pendingSignatures = userIds.filter(id => !signedUserIds.has(id)).length;
       }
 
+      // Calculate unread communications for branch employees
+      let unreadComms = 0;
+      if (userIds.length > 0) {
+        // Get published communications targeting this branch
+        const { data: comms } = await supabase
+          .from('communications')
+          .select('id, target_branch_ids')
+          .eq('is_published', true);
+
+        const branchComms = (comms || []).filter(c => 
+          !c.target_branch_ids || c.target_branch_ids.length === 0 || c.target_branch_ids.includes(branchId)
+        );
+
+        if (branchComms.length > 0) {
+          const commIds = branchComms.map(c => c.id);
+          const { data: reads } = await supabase
+            .from('communication_reads')
+            .select('communication_id, user_id')
+            .in('communication_id', commIds)
+            .in('user_id', userIds);
+
+          const readSet = new Set((reads || []).map(r => `${r.communication_id}_${r.user_id}`));
+          
+          // Count total unread: each comm × each employee that hasn't read it
+          for (const comm of branchComms) {
+            for (const userId of userIds) {
+              if (!readSet.has(`${comm.id}_${userId}`)) {
+                unreadComms++;
+              }
+            }
+          }
+        }
+      }
+
       return {
         pendingRequests: pendingRequests || 0,
-        unreadComms: 0,
+        unreadComms,
         pendingSignatures,
-        total: (pendingRequests || 0) + (pendingSignatures > 0 ? 1 : 0),
+        total: (pendingRequests || 0) + unreadComms + pendingSignatures,
       };
     },
   });
