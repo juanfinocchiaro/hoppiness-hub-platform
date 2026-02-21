@@ -32,6 +32,14 @@ const ESTADO_CONFIG: Record<string, { label: string; color: string; chipBg: stri
     next: 'en_preparacion',
     nextLabel: 'Preparar',
   },
+  confirmado: {
+    label: 'Pendiente',
+    color: 'bg-warning/15 text-warning border-warning/30',
+    chipBg: 'bg-warning/10 text-warning-foreground border-warning/30 hover:bg-warning/20',
+    icon: Clock,
+    next: 'en_preparacion',
+    nextLabel: 'Preparar',
+  },
   en_preparacion: {
     label: 'Preparando',
     color: 'bg-info/15 text-info border-info/30',

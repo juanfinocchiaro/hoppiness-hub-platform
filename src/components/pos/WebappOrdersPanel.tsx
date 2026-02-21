@@ -102,7 +102,7 @@ export function WebappOrdersPanel({ branchId }: { branchId: string }) {
     mutationFn: async (orderId: string) => {
       const { error } = await supabase
         .from('pedidos')
-        .update({ estado: 'en_preparacion' })
+        .update({ estado: 'confirmado' })
         .eq('id', orderId);
       if (error) throw error;
     },

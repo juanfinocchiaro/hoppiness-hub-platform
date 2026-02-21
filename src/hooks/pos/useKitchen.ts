@@ -48,7 +48,7 @@ export function useKitchen(branchId: string) {
         .from('pedidos')
         .select('id, numero_pedido, tipo_servicio, numero_llamador, canal_venta, cliente_nombre, created_at, estado, tiempo_listo, tiempo_inicio_prep, pedido_items(id, nombre, cantidad, notas, estacion, estado, pedido_item_modificadores(id, descripcion, tipo, precio_extra))')
         .eq('branch_id', branchId)
-        .in('estado', ['pendiente', 'en_preparacion', 'listo'])
+        .in('estado', ['pendiente', 'confirmado', 'en_preparacion', 'listo'])
         .order('created_at', { ascending: true });
       if (error) throw error;
       return (data ?? []) as unknown as KitchenPedido[];
