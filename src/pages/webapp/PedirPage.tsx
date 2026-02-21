@@ -47,6 +47,7 @@ export default function PedirPage() {
   const [step, setStep] = useState<'landing' | 'menu'>('landing');
   const [cartOpen, setCartOpen] = useState(false);
   const [cartInitialStep, setCartInitialStep] = useState<'cart' | 'checkout'>('cart');
+  const [externalTrackingCode, setExternalTrackingCode] = useState<string | null>(null);
 
   // Auto-skip landing when store is open
   useEffect(() => {
@@ -144,7 +145,7 @@ export default function PedirPage() {
 
   const isDelivery = cart.tipoServicio === 'delivery';
   const costoEnvio = isDelivery ? (config.delivery_costo ?? 0) : 0;
-  const hasActiveTracking = !!localStorage.getItem('hoppiness_last_tracking');
+  const hasActiveTracking = !!localStorage.getItem('hoppiness_last_tracking') || !!externalTrackingCode;
   const showSidePanel = step === 'menu' && (cart.totalItems > 0 || hasActiveTracking);
 
   return (
@@ -176,6 +177,7 @@ export default function PedirPage() {
             onBack={() => setStep('landing')}
             onServiceChange={(tipo) => cart.setTipoServicio(tipo)}
             cartPanelVisible={showSidePanel}
+            onShowTracking={(code) => setExternalTrackingCode(code)}
           />
 
           {/* Desktop side cart panel — shows cart, checkout, and tracking inline */}
@@ -188,6 +190,7 @@ export default function PedirPage() {
               mpEnabled={mpEnabled}
               suggestedItems={menuItems || []}
               onAddSuggested={(item) => cart.quickAdd(item.id, item.nombre, item.precio_base, item.imagen_url)}
+              externalTrackingCode={externalTrackingCode}
             />
           )}
 

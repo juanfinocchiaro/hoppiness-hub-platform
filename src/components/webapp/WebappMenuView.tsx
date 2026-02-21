@@ -3,6 +3,8 @@ import { ArrowLeft, Search, X, LayoutGrid, List, Star } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ProductCard } from './ProductCard';
 import { Loader2 } from 'lucide-react';
+import { ActiveOrderBanner } from './ActiveOrderBanner';
+import { UserMenuDropdown } from './UserMenuDropdown';
 import type { WebappMenuItem, TipoServicioWebapp } from '@/types/webapp';
 import type { useWebappCart } from '@/hooks/useWebappCart';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
@@ -18,9 +20,10 @@ interface Props {
   onBack: () => void;
   onServiceChange?: (tipo: TipoServicioWebapp) => void;
   cartPanelVisible?: boolean;
+  onShowTracking?: (trackingCode: string) => void;
 }
 
-export function WebappMenuView({ branch, config, items, loading, tipoServicio, cart, onProductClick, onBack, onServiceChange, cartPanelVisible }: Props) {
+export function WebappMenuView({ branch, config, items, loading, tipoServicio, cart, onProductClick, onBack, onServiceChange, cartPanelVisible, onShowTracking }: Props) {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -168,6 +171,8 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
             >
               {viewMode === 'grid' ? <List className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
             </button>
+            {/* User menu */}
+            <UserMenuDropdown />
           </div>
 
           {/* Search - collapsible on mobile, always visible on desktop */}
@@ -188,6 +193,9 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
               )}
             </div>
           </div>
+
+          {/* Active order banner */}
+          {onShowTracking && <ActiveOrderBanner onShowTracking={onShowTracking} />}
 
           {/* Category tabs - mobile only */}
           {!search && categories.length > 1 && (

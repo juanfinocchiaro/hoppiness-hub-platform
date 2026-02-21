@@ -7,6 +7,7 @@ import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
 import { AdminRoute, LocalRoute, RequireQRAccess, RequireAuth } from "@/components/guards";
 import UserFingerprint from "@/components/ui/UserFingerprint";
 import VersionBadge from "@/components/ui/VersionBadge";
+import { FloatingOrderChat } from "@/components/webapp/FloatingOrderChat";
 
 // Páginas públicas
 import Index from "./pages/Index";
@@ -138,6 +139,7 @@ const App = () => (
       <AuthProvider>
         <ImpersonationProvider>
           <Sonner />
+          <FloatingOrderChat />
           <div className="pointer-events-none fixed bottom-2 right-2 z-[60] flex flex-col items-end gap-1">
             <VersionBadge />
             <UserFingerprint />

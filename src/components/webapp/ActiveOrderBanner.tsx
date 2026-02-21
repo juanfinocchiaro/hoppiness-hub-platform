@@ -1,0 +1,77 @@
+/**
+ * ActiveOrderBanner — Shows a banner in the store when user has an active order.
+ * Clicking it opens the tracking view in the side panel.
+ */
+import { Flame, Clock, CheckCircle2, Truck, Package } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+
+const ACTIVE_STATES = ['pendiente', 'confirmado', 'en_preparacion', 'listo', 'listo_retiro', 'listo_mesa', 'listo_envio', 'en_camino'];
+
+const ESTADO_CONFIG: Record<string, { label: string; icon: typeof Flame }> = {
+  pendiente: { label: 'fue enviado', icon: Clock },
+  confirmado: { label: 'fue aceptado', icon: CheckCircle2 },
+  en_preparacion: { label: 'se está preparando', icon: Flame },
+  listo: { label: 'está listo', icon: Package },
+  listo_retiro: { label: 'está listo para retirar', icon: Package },
+  listo_mesa: { label: 'está listo', icon: Package },
+  listo_envio: { label: 'está listo para enviar', icon: Package },
+  en_camino: { label: 'está en camino', icon: Truck },
+};
+
+interface Props {
+  onShowTracking: (trackingCode: string) => void;
+}
+
+export function ActiveOrderBanner({ onShowTracking }: Props) {
+  const { user } = useAuth();
+
+  const { data: activeOrder } = useQuery({
+    queryKey: ['active-order-banner', user?.id],
+    queryFn: async () => {
+      if (user) {
+        const { data } = await supabase
+          .from('pedidos')
+          .select('numero_pedido, estado, webapp_tracking_code')
+          .eq('cliente_user_id', user.id)
+          .eq('origen', 'webapp')
+          .in('estado', ACTIVE_STATES)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        return data;
+      }
+      // Guest
+      const code = localStorage.getItem('hoppiness_last_tracking');
+      if (!code) return null;
+      const { data } = await supabase
+        .from('pedidos')
+        .select('numero_pedido, estado, webapp_tracking_code')
+        .eq('webapp_tracking_code', code)
+        .in('estado', ACTIVE_STATES)
+        .maybeSingle();
+      return data;
+    },
+    refetchInterval: 30000,
+    staleTime: 15000,
+  });
+
+  if (!activeOrder) return null;
+
+  const config = ESTADO_CONFIG[activeOrder.estado] || ESTADO_CONFIG.pendiente;
+  const Icon = config.icon;
+
+  return (
+    <button
+      onClick={() => onShowTracking(activeOrder.webapp_tracking_code)}
+      className="w-full bg-primary/10 border-b border-primary/20 px-4 py-2 flex items-center gap-2 hover:bg-primary/15 transition-colors text-left"
+    >
+      <Icon className="w-4 h-4 text-primary shrink-0" />
+      <p className="text-xs font-medium text-foreground flex-1">
+        Tu pedido <span className="font-bold">#{activeOrder.numero_pedido}</span> {config.label}
+      </p>
+      <span className="text-[10px] font-semibold text-primary shrink-0">Ver estado →</span>
+    </button>
+  );
+}
