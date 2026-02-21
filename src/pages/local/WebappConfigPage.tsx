@@ -153,7 +153,7 @@ export default function WebappConfigPage() {
     <div className="space-y-6">
       <PageHeader
         title="Tienda Online"
-        description="Configurá tu tienda online para recibir pedidos desde la web."
+        subtitle="Configurá tu tienda online para recibir pedidos desde la web."
       />
 
       {isLoading ? (

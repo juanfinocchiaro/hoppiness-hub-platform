@@ -99,8 +99,8 @@ export function RdoFinancieroDashboard({ branchId }: RdoFinancieroDashboardProps
 
   const ingresos = data?.ingresos ?? { total: 0, aportes_socios: 0, por_metodo: {} };
   const egresos = data?.egresos ?? { proveedores: 0, gastos_total: 0, adelantos_sueldo: 0, retiros_socios: 0, inversiones_capex: 0, gastos_por_categoria: {} };
-  const totalIngresos = data?.total_ingresos ?? ((ingresos.total ?? 0) + (ingresos.aportes_socios ?? 0));
-  const totalEgresos = data?.total_egresos ?? (
+  const totalIngresos = (ingresos.total ?? 0) + (ingresos.aportes_socios ?? 0);
+  const totalEgresos = (
     (egresos.proveedores ?? 0) +
     (egresos.gastos_total ?? 0) +
     (egresos.adelantos_sueldo ?? 0) +

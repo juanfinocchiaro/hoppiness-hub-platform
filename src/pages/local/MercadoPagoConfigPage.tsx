@@ -46,7 +46,7 @@ export default function MercadoPagoConfigPage() {
     <div className="space-y-6">
       <PageHeader
         title="MercadoPago"
-        description="Configurá la integración con MercadoPago para cobrar online desde la WebApp y con QR en el POS."
+        subtitle="Configurá la integración con MercadoPago para cobrar online desde la WebApp y con QR en el POS."
       />
 
       {isLoading ? (

@@ -26,7 +26,7 @@ export function useRdoFinanciero(branchId: string, periodo: string) {
   return useQuery({
     queryKey: ['rdo-financiero', branchId, periodo],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_rdo_financiero', {
+      const { data, error } = await (supabase.rpc as any)('get_rdo_financiero', {
         _branch_id: branchId,
         _periodo: periodo,
       });
