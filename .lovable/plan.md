@@ -1,126 +1,98 @@
 
 
-## Plan: Rediseno Profesional de la WebApp de Pedidos
+## Plan: WebApp - Carrito lateral, menos azul, mas profesional
 
-Basado en el analisis de todas las referencias (DoorDash, Rappi, PedidosYa, BK, McDonald's) y el plan previamente aprobado, este es el plan completo de implementacion.
+### Problemas detectados
 
-### Resumen de cambios
+**1. "Se ve roto" (Imagen 1 - BranchLanding)**
+- El hero azul ocupa ~40% de la pantalla, el contenido util queda flotando en un vacio blanco enorme.
+- En desktop, el card de "Cerrado / Ver menu" es demasiado estrecho (`max-w-md`) centrado en un oceano de espacio vacio.
 
-Se va a transformar la WebApp de un layout mobile-only a un sistema responsivo profesional con 3 breakpoints claros, inspirado en DoorDash/Rappi.
+**2. Carrito ocupa toda la pantalla (Imagen 2)**
+- El `CartSheet` se abre como sheet bottom al 85% de altura, tapando todo el menu.
+- En desktop deberia ser un panel lateral fijo a la derecha que conviva con el menu.
 
----
-
-### 1. Selector de Locales (`src/pages/Pedir.tsx`)
-
-**Problemas actuales**: `opacity-70` en locales cerrados, `max-w-3xl` deja mucho espacio vacio, grilla solo 2 columnas.
-
-**Cambios**:
-- Quitar `opacity-70` de locales cerrados (usar solo badge de estado)
-- Cambiar `max-w-3xl` a `max-w-5xl`
-- Grilla responsiva: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`
+**3. Demasiado azul**
+- Header del menu: fondo `bg-primary` (azul oscuro) de borde a borde.
+- Landing: hero completamente azul.
+- Solucion: Header blanco con texto oscuro, acentos de color solo en badges/botones. Fondo general blanco.
 
 ---
 
-### 2. Landing del Local (`src/components/webapp/BranchLanding.tsx`)
+### Cambios por archivo
 
-**Problema**: No hay forma de volver a `/pedir`.
+**1. `src/components/webapp/BranchLanding.tsx`**
+- Reducir el hero: fondo blanco en vez de `bg-primary`, logo mas pequeno, info del local en texto oscuro.
+- Badge de estado (Abierto/Cerrado) con colores sutiles sobre fondo blanco.
+- Ampliar el card de opciones de servicio a `max-w-lg` y centrarlo mejor.
+- Quitar el estilo "splash screen azul" y reemplazar por un layout limpio profesional.
 
-**Cambios**:
-- Agregar boton "Volver" en el hero que navega a `/pedir`
-- Pasar `onBack` como prop desde `PedirPage.tsx`
+**2. `src/components/webapp/WebappMenuView.tsx`**
+- **Header**: Cambiar de `bg-primary text-primary-foreground` a `bg-white border-b text-foreground`. Logo y nombre en oscuro. Search con borde gris.
+- **Tabs de categorias**: Sobre fondo blanco, tab activa con `bg-primary text-white`, inactivas con `bg-muted`.
+- **Layout desktop**: Agregar espacio para el panel lateral de carrito cuando hay items (`cart.totalItems > 0`). El area de productos se comprime para dejar ~350px al carrito.
+- Recibir flag `showCartPanel` como prop para ajustar el layout.
+
+**3. `src/components/webapp/CartSidePanel.tsx` (NUEVO)**
+- Panel lateral derecho, solo visible en `lg:` cuando hay items en el carrito.
+- Sticky, `w-[350px]`, borde izquierdo.
+- Muestra: titulo "Tu pedido", lista de items con thumbnail + nombre + controles +/-, subtotal, envio, total, boton "Continuar".
+- Al hacer click en "Continuar", abre el `CartSheet` en step checkout (datos del cliente + pago).
+
+**4. `src/components/webapp/CartBar.tsx`**
+- Ocultar en desktop (`lg:hidden`) cuando el `CartSidePanel` esta visible.
+- Mantener en mobile como esta.
+
+**5. `src/pages/webapp/PedirPage.tsx`**
+- Pasar el `CartSidePanel` como parte del layout del menu en desktop.
+- Integrar el flujo: CartSidePanel (desktop) -> click Continuar -> CartSheet step checkout.
+
+**6. `src/components/webapp/CartSheet.tsx`**
+- Agregar prop `initialStep` para poder abrirse directamente en step `checkout` (cuando viene del side panel).
+- En desktop, el step `cart` ya no se necesita (lo maneja el side panel), solo se abre en `checkout`.
 
 ---
 
-### 3. Menu de Productos - Layout Responsivo (`src/components/webapp/WebappMenuView.tsx`)
+### Paleta de colores actualizada (menos azul)
 
-Este es el cambio principal. Layout inspirado en DoorDash imagen 789/792:
+| Elemento | Antes | Despues |
+|----------|-------|---------|
+| Header menu | `bg-primary` (azul oscuro) | `bg-white border-b` |
+| Texto header | Blanco | `text-foreground` (oscuro) |
+| Search bar | `bg-white/15` sobre azul | `bg-muted border-border` sobre blanco |
+| Landing hero | `bg-primary` full | `bg-white` con logo y texto oscuro |
+| Tabs activa | `bg-accent` sobre azul | `bg-primary text-white` sobre blanco |
+| Tabs inactiva | `bg-white/10` sobre azul | `bg-muted text-muted-foreground` |
+| Boton "Agregar" | `bg-accent` (naranja) | Mantener naranja (es el CTA) |
+| Category headers | `text-primary uppercase` | Mantener (funciona bien sobre blanco) |
+
+---
+
+### Layout desktop resultante
 
 ```text
-MOBILE (<1024px)                    DESKTOP (>=1024px)
-+---------------------+            +------+-----------------------+
-| [Header + Search]   |            | [Header full-width]         |
-| [Tabs categorias]   |            +------+-----------------------+
-+---------------------+            | Side | Productos             |
-| Productos           |            | bar  | 2 cols horizontal     |
-| 2 cols grid         |            | cats | (texto izq, img der)  |
-|                     |            |      |                       |
-+---------------------+            +------+-----------------------+
++--------------------------------------------------+
+| [<-] Logo  Manantiales  Retiro ~20min  [Search]  |  <- Header blanco
++------+---------------------------+---------------+
+| Side | Productos                 | Tu Pedido     |
+| bar  | (grid/list cards)         | Item 1  $X    |
+| cats |                           | Item 2  $X    |
+|      |                           | ----------    |
+|      |                           | Total   $XX   |
+|      |                           | [Continuar]   |
++------+---------------------------+---------------+
 ```
 
-**Cambios**:
-- Agregar sidebar de categorias visible solo en `lg:` (sticky, ~200px ancho)
-- Ocultar tabs horizontales en `lg:` (`lg:hidden`)
-- Contenedor principal `max-w-6xl mx-auto`
-- Grilla de productos adaptativa: `grid-cols-2` mobile, `md:grid-cols-3` tablet, en desktop 2 columnas de cards horizontales (estilo DoorDash)
-- Scroll-spy sincronizado entre sidebar y tabs
-
 ---
 
-### 4. Cards de Producto (`src/components/webapp/ProductCard.tsx`)
+### Archivos involucrados
 
-Inspirado en DoorDash imagen 788/789: cards horizontales con texto a la izquierda e imagen cuadrada a la derecha.
-
-**Cambios**:
-- **Mobile (grid)**: Mantener cards verticales compactas pero reducir aspect-ratio de imagen a `aspect-[3/2]`
-- **Desktop**: Nuevo layout horizontal estilo DoorDash: nombre (bold), descripcion (2 lineas max), precio a la izquierda. Imagen cuadrada ~100px a la derecha con bordes redondeados. Boton "+" discreto sobre la imagen.
-- Preparar estructura para futuros badges de promo (precio tachado, badge "%-OFF") -- se renderiza condicionalmente, hoy no hay datos
-
----
-
-### 5. Detalle de Producto (`src/components/webapp/ProductCustomizeSheet.tsx`)
-
-Inspirado en DoorDash imagenes 790/793: modal centrado en desktop.
-
-**Cambios**:
-- **Mobile**: Mantener Sheet desde abajo (funciona bien)
-- **Desktop (lg+)**: Usar `Dialog` (modal centrado) con imagen arriba, opciones debajo, footer sticky con cantidad + "Agregar $X"
-- Crear wrapper que detecte viewport y renderice Sheet o Dialog segun corresponda
-
----
-
-### 6. Carrito: Panel Lateral Desktop (`src/components/webapp/CartSidePanel.tsx` - NUEVO)
-
-Inspirado en DoorDash imagen 795 (carrito lateral derecho en checkout).
-
-**Nota**: Este componente se agrega como mejora futura opcional. Por ahora el foco esta en los puntos 1-5 que son los mas impactantes visualmente. Se puede implementar en una segunda iteracion si se desea.
-
----
-
-### 7. Barra de Carrito (`src/components/webapp/CartBar.tsx`)
-
-**Cambio menor**: Ocultar en desktop cuando se implemente el CartSidePanel (futuro). Por ahora se mantiene.
-
----
-
-### 8. Pagina del Pedido (`src/pages/webapp/PedirPage.tsx`)
-
-**Cambios**:
-- Pasar prop `onBack` a `BranchLanding` para navegar a `/pedir`
-
----
-
-### Archivos a modificar
-
-| Archivo | Tipo de cambio |
-|---------|---------------|
-| `src/pages/Pedir.tsx` | Quitar opacity, mejorar grilla, max-width |
-| `src/pages/webapp/PedirPage.tsx` | Pasar onBack a BranchLanding |
-| `src/components/webapp/BranchLanding.tsx` | Agregar boton volver |
-| `src/components/webapp/WebappMenuView.tsx` | Layout responsivo, sidebar desktop, max-width |
-| `src/components/webapp/ProductCard.tsx` | Cards estilo DoorDash horizontal para desktop |
-| `src/components/webapp/ProductCustomizeSheet.tsx` | Dialog en desktop, Sheet en mobile |
-
-### Secuencia de implementacion
-
-1. `Pedir.tsx` - Arreglos rapidos (opacity, grilla)
-2. `BranchLanding.tsx` + `PedirPage.tsx` - Boton volver
-3. `ProductCard.tsx` - Cards compactas estilo DoorDash
-4. `WebappMenuView.tsx` - Layout responsivo con sidebar desktop
-5. `ProductCustomizeSheet.tsx` - Dialog en desktop
-
-### Preparacion para futuras mejoras
-
-- **Promociones**: Las cards quedan preparadas con espacio condicional para badge de descuento y precio tachado. Solo falta agregar `precio_promo` al tipo `WebappMenuItem` cuando se implemente.
-- **Tracking**: Ya esta implementado en `/pedido/:trackingCode` con realtime.
-- **CartSidePanel desktop**: La arquitectura queda lista para agregar un panel lateral de carrito en desktop en una segunda fase.
+| Archivo | Cambio |
+|---------|--------|
+| `src/components/webapp/BranchLanding.tsx` | Fondo blanco, layout limpio |
+| `src/components/webapp/WebappMenuView.tsx` | Header blanco, layout con espacio para cart panel |
+| `src/components/webapp/CartSidePanel.tsx` | **NUEVO** - Panel lateral de carrito desktop |
+| `src/components/webapp/CartBar.tsx` | `lg:hidden` cuando hay side panel |
+| `src/components/webapp/CartSheet.tsx` | Prop `initialStep` para abrir en checkout |
+| `src/pages/webapp/PedirPage.tsx` | Integrar CartSidePanel en el layout |
 
