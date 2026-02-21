@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { TrackingInlineView } from './TrackingInlineView';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,7 +52,7 @@ interface Props {
   initialStep?: Step;
 }
 
-type Step = 'cart' | 'checkout';
+type Step = 'cart' | 'checkout' | 'tracking';
 type MetodoPago = 'mercadopago' | 'efectivo';
 
 function formatPrice(n: number) {
@@ -66,7 +66,7 @@ function FieldError({ error }: { error: string | null }) {
 }
 
 export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEnabled, deliveryCosto = 0, initialStep }: Props) {
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const { user } = useAuth();
   const servicioLabel = cart.tipoServicio === 'retiro' ? 'Retiro en local' : cart.tipoServicio === 'delivery' ? 'Delivery' : 'Comer acá';
 
@@ -104,6 +104,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   });
 
   const [step, setStep] = useState<Step>(initialStep || 'cart');
+  const [trackingCode, setTrackingCode] = useState<string | null>(null);
 
   useEffect(() => {
     if (open && initialStep) {
@@ -292,8 +293,9 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
 
       cart.clearCart();
       toast.success(`Pedido #${numero_pedido} confirmado`);
-      onOpenChange(false);
-      navigate(`/pedido/${tracking_code}`);
+      localStorage.setItem('hoppiness_last_tracking', tracking_code);
+      setTrackingCode(tracking_code);
+      setStep('tracking');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al crear el pedido';
       toast.error('Error', { description: msg });
@@ -303,7 +305,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   };
 
   const handleOpenChange = (open: boolean) => {
-    if (!open) {
+    if (!open && step !== 'tracking') {
       setStep('cart');
       setTouched({});
     }
@@ -749,6 +751,20 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                   : `Confirmar pedido ${formatPrice(totalConEnvio)}`}
               </Button>
             </div>
+          </div>
+        )}
+
+        {step === 'tracking' && trackingCode && (
+          <div className="flex flex-col flex-1 min-h-0">
+            <TrackingInlineView
+              trackingCode={trackingCode}
+              onNewOrder={() => {
+                setTrackingCode(null);
+                setStep('cart');
+                localStorage.removeItem('hoppiness_last_tracking');
+                onOpenChange(false);
+              }}
+            />
           </div>
         )}
       </SheetContent>

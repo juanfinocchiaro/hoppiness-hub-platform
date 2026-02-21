@@ -1,0 +1,467 @@
+/**
+ * CheckoutInlineView — Checkout form for CartSidePanel (350px desktop panel).
+ * Contains: customer data, delivery address, payment method, order summary, confirm button.
+ * Shares logic with CartSheet but optimized for narrow inline layout.
+ */
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { ArrowLeft, Loader2, CreditCard, Banknote, MapPin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
+import type { useWebappCart } from '@/hooks/useWebappCart';
+
+interface DeliveryZone {
+  id: string;
+  nombre: string;
+  costo_envio: number;
+  pedido_minimo: number;
+  tiempo_estimado_min: number;
+  barrios: string[];
+  descripcion: string | null;
+}
+
+function formatPrice(n: number) {
+  return `$${n.toLocaleString('es-AR')}`;
+}
+
+function FieldError({ error }: { error: string | null }) {
+  if (!error) return null;
+  return <p className="text-xs text-destructive mt-1">{error}</p>;
+}
+
+type MetodoPago = 'mercadopago' | 'efectivo';
+
+interface Props {
+  cart: ReturnType<typeof useWebappCart>;
+  branchId: string;
+  branchName: string;
+  mpEnabled: boolean;
+  costoEnvio: number;
+  onBack: () => void;
+  onConfirmed: (trackingCode: string) => void;
+}
+
+export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, costoEnvio: propCostoEnvio, onBack, onConfirmed }: Props) {
+  const { user } = useAuth();
+  const isDelivery = cart.tipoServicio === 'delivery';
+  const servicioLabel = cart.tipoServicio === 'retiro' ? 'Retiro en local' : cart.tipoServicio === 'delivery' ? 'Delivery' : 'Comer acá';
+
+  // Profile prefill
+  const { data: userProfile } = useQuery({
+    queryKey: ['webapp-profile-prefill', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('profiles').select('full_name, phone, email').eq('id', user!.id).single();
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  // Delivery zones
+  const { data: zones = [] } = useQuery({
+    queryKey: ['delivery-zones-public', branchId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('delivery_zones' as any)
+        .select('id, nombre, costo_envio, pedido_minimo, tiempo_estimado_min, barrios, descripcion')
+        .eq('branch_id', branchId)
+        .eq('is_active', true)
+        .order('orden', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as DeliveryZone[];
+    },
+    enabled: isDelivery,
+  });
+  const hasZones = zones.length > 0;
+
+  // Saved addresses
+  const { data: savedAddresses = [] } = useQuery({
+    queryKey: ['saved-addresses-checkout', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cliente_direcciones')
+        .select('id, etiqueta, direccion, piso, referencia')
+        .eq('user_id', user!.id)
+        .order('es_principal', { ascending: false });
+      if (error) throw error;
+      return (data || []) as Array<{ id: string; etiqueta: string; direccion: string; piso: string | null; referencia: string | null }>;
+    },
+    enabled: !!user && isDelivery,
+  });
+
+  // Form state
+  const [submitting, setSubmitting] = useState(false);
+  const [selectedZoneId, setSelectedZoneId] = useState<string>('');
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [showMpConfirm, setShowMpConfirm] = useState(false);
+
+  const [nombre, setNombre] = useState(() => {
+    try { return localStorage.getItem('hop_client_nombre') || ''; } catch { return ''; }
+  });
+  const [telefono, setTelefono] = useState(() => {
+    try { return localStorage.getItem('hop_client_telefono') || ''; } catch { return ''; }
+  });
+  const [email, setEmail] = useState(() => {
+    try { return localStorage.getItem('hop_client_email') || ''; } catch { return ''; }
+  });
+  const [direccion, setDireccion] = useState(() => {
+    try { return localStorage.getItem('hop_client_direccion') || ''; } catch { return ''; }
+  });
+  const [piso, setPiso] = useState('');
+  const [referencia, setReferencia] = useState('');
+  const [notas, setNotas] = useState('');
+  const [metodoPago, setMetodoPago] = useState<MetodoPago>(mpEnabled ? 'mercadopago' : 'efectivo');
+  const [pagaCon, setPagaCon] = useState<string>('');
+
+  // Profile prefill
+  useEffect(() => {
+    if (userProfile) {
+      if (userProfile.full_name && !nombre) setNombre(userProfile.full_name);
+      if (userProfile.phone && !telefono) setTelefono(userProfile.phone);
+      if ((userProfile.email || user?.email) && !email) setEmail(userProfile.email || user?.email || '');
+    }
+  }, [userProfile]);
+
+  useEffect(() => {
+    if (hasZones && !selectedZoneId) setSelectedZoneId(zones[0].id);
+  }, [hasZones, zones, selectedZoneId]);
+
+  const selectedZone = zones.find(z => z.id === selectedZoneId);
+  const costoEnvio = isDelivery ? (hasZones && selectedZone ? selectedZone.costo_envio : propCostoEnvio) : 0;
+  const pedidoMinimo = isDelivery && hasZones && selectedZone ? selectedZone.pedido_minimo : 0;
+  const totalConEnvio = cart.totalPrecio + costoEnvio;
+  const meetsMinimum = pedidoMinimo <= 0 || cart.totalPrecio >= pedidoMinimo;
+
+  // Validation
+  const errors = useMemo(() => {
+    const e: Record<string, string | null> = {};
+    e.nombre = nombre.trim().length === 0 ? 'Ingresá tu nombre' : nombre.trim().length < 2 ? 'Mínimo 2 caracteres' : null;
+    e.telefono = telefono.trim().length === 0 ? 'Ingresá tu teléfono' : telefono.trim().length < 8 ? 'Mínimo 8 dígitos' : null;
+    e.email = email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? 'Email no válido' : null;
+    if (isDelivery) {
+      e.direccion = direccion.trim().length === 0 ? 'Ingresá tu dirección' : direccion.trim().length < 5 ? 'Mínimo 5 caracteres' : null;
+    }
+    return e;
+  }, [nombre, telefono, email, direccion, isDelivery]);
+
+  const hasErrors = Object.values(errors).some(e => e !== null);
+  const canSubmit = !hasErrors && (!isDelivery || !hasZones || !!selectedZoneId) && meetsMinimum && (metodoPago === 'efectivo' || mpEnabled);
+
+  const handleBlur = (field: string) => setTouched(prev => ({ ...prev, [field]: true }));
+
+  const quickAmounts = useMemo(() => {
+    const t = totalConEnvio;
+    const base = Math.ceil(t / 5000) * 5000;
+    const amounts = [base];
+    if (base + 5000 <= base * 2) amounts.push(base + 5000);
+    if (base + 10000 <= base * 2) amounts.push(base + 10000);
+    return amounts.filter((v, i, a) => a.indexOf(v) === i && v >= t);
+  }, [totalConEnvio]);
+
+  const handleConfirm = async () => {
+    setTouched({ nombre: true, telefono: true, email: true, direccion: true });
+    if (!canSubmit) return;
+
+    if (metodoPago === 'mercadopago' && !showMpConfirm) {
+      setShowMpConfirm(true);
+      return;
+    }
+
+    try {
+      localStorage.setItem('hop_client_nombre', nombre.trim());
+      localStorage.setItem('hop_client_telefono', telefono.trim());
+      if (email.trim()) localStorage.setItem('hop_client_email', email.trim());
+      if (direccion.trim()) localStorage.setItem('hop_client_direccion', direccion.trim());
+    } catch { /* ignore */ }
+
+    setSubmitting(true);
+    try {
+      const orderItems = cart.items.map(item => ({
+        item_carta_id: item.itemId,
+        nombre: item.nombre,
+        cantidad: item.cantidad,
+        precio_unitario: item.precioUnitario,
+        extras: item.extras.map(e => ({ nombre: e.nombre, precio: e.precio })),
+        removidos: item.removidos,
+        notas: item.notas || null,
+      }));
+
+      const { data: orderData, error: orderErr } = await supabase.functions.invoke('create-webapp-order', {
+        body: {
+          branch_id: branchId,
+          tipo_servicio: cart.tipoServicio,
+          cliente_nombre: nombre.trim(),
+          cliente_telefono: telefono.trim(),
+          cliente_email: email.trim() || null,
+          cliente_direccion: isDelivery ? direccion.trim() : null,
+          cliente_piso: isDelivery ? piso.trim() || null : null,
+          cliente_referencia: isDelivery ? referencia.trim() || null : null,
+          cliente_notas: notas.trim() || null,
+          metodo_pago: metodoPago,
+          paga_con: metodoPago === 'efectivo' && pagaCon ? parseInt(pagaCon) : null,
+          delivery_zone_id: isDelivery && hasZones && selectedZoneId ? selectedZoneId : null,
+          items: orderItems,
+        },
+      });
+
+      if (orderErr) {
+        let errorMsg = 'Error al crear el pedido';
+        try {
+          if (orderErr instanceof Error && 'context' in orderErr) {
+            const ctx = (orderErr as any).context;
+            if (ctx?.json) {
+              const body = await ctx.json();
+              errorMsg = body?.error || errorMsg;
+            }
+          } else if (typeof orderErr === 'object' && orderErr !== null && 'error' in (orderErr as any)) {
+            errorMsg = (orderErr as any).error;
+          }
+        } catch { /* ignore */ }
+        throw new Error(errorMsg);
+      }
+      if (!orderData?.pedido_id) throw new Error('No se pudo crear el pedido');
+
+      const { pedido_id, tracking_code, numero_pedido } = orderData;
+
+      if (metodoPago === 'mercadopago') {
+        const checkoutItems = cart.items.map(item => ({
+          title: item.nombre,
+          quantity: item.cantidad,
+          unit_price: item.precioUnitario + item.extras.reduce((s, e) => s + e.precio, 0),
+        }));
+        if (costoEnvio > 0) {
+          checkoutItems.push({ title: 'Envío', quantity: 1, unit_price: costoEnvio });
+        }
+        const trackingUrl = `${window.location.origin}/pedido/${tracking_code}`;
+        const { data: mpData, error: mpErr } = await supabase.functions.invoke('mp-checkout', {
+          body: {
+            branch_id: branchId,
+            items: checkoutItems,
+            external_reference: pedido_id,
+            payer: { name: nombre.trim(), email: email.trim() || undefined, phone: telefono.trim() },
+            back_url: trackingUrl,
+            webapp_order: true,
+          },
+        });
+        if (mpErr) throw mpErr;
+        if (mpData?.init_point) {
+          cart.clearCart();
+          window.location.href = mpData.init_point;
+          return;
+        }
+        throw new Error('No se pudo crear el link de pago');
+      }
+
+      cart.clearCart();
+      toast.success(`Pedido #${numero_pedido} confirmado`);
+      localStorage.setItem('hoppiness_last_tracking', tracking_code);
+      onConfirmed(tracking_code);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error al crear el pedido';
+      toast.error('Error', { description: msg });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <>
+      {/* Header */}
+      <div className="px-4 py-3 border-b flex items-center gap-2">
+        <button onClick={onBack} className="p-1 -ml-1 rounded-full hover:bg-muted">
+          <ArrowLeft className="w-4 h-4" />
+        </button>
+        <h2 className="font-bold text-sm text-foreground">Completá tus datos</h2>
+      </div>
+
+      {/* Form */}
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+        <p className="text-xs text-muted-foreground">{servicioLabel} · {branchName}</p>
+
+        {/* Customer data */}
+        <div className="space-y-2">
+          <h3 className="text-xs font-bold text-foreground">Tus datos</h3>
+          <div>
+            <Label className="text-xs">Nombre *</Label>
+            <Input value={nombre} onChange={e => setNombre(e.target.value)} onBlur={() => handleBlur('nombre')}
+              placeholder="Tu nombre" className={`mt-1 h-8 text-sm ${touched.nombre && errors.nombre ? 'border-destructive' : ''}`} />
+            {touched.nombre && <FieldError error={errors.nombre} />}
+          </div>
+          <div>
+            <Label className="text-xs">Teléfono *</Label>
+            <Input type="tel" value={telefono} onChange={e => setTelefono(e.target.value)} onBlur={() => handleBlur('telefono')}
+              placeholder="351 456-7890" className={`mt-1 h-8 text-sm ${touched.telefono && errors.telefono ? 'border-destructive' : ''}`} />
+            {touched.telefono && <FieldError error={errors.telefono} />}
+          </div>
+          <div>
+            <Label className="text-xs">Email (opcional)</Label>
+            <Input type="email" value={email} onChange={e => setEmail(e.target.value)} onBlur={() => handleBlur('email')}
+              placeholder="tu@email.com" className={`mt-1 h-8 text-sm ${touched.email && errors.email ? 'border-destructive' : ''}`} />
+            {touched.email && <FieldError error={errors.email} />}
+          </div>
+        </div>
+
+        {/* Delivery address */}
+        {isDelivery && (
+          <div className="space-y-2">
+            <h3 className="text-xs font-bold text-foreground">Dirección de entrega</h3>
+            {hasZones && (
+              <div className="space-y-1">
+                <Label className="text-xs flex items-center gap-1"><MapPin className="w-3 h-3" /> Zona *</Label>
+                <Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
+                  <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Seleccioná tu zona" /></SelectTrigger>
+                  <SelectContent>
+                    {zones.map(z => (
+                      <SelectItem key={z.id} value={z.id}>
+                        {z.nombre} · {z.costo_envio > 0 ? `$${z.costo_envio}` : 'Gratis'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {!meetsMinimum && <p className="text-xs text-destructive">Pedido mínimo: ${pedidoMinimo}</p>}
+              </div>
+            )}
+            {savedAddresses.length > 0 && (
+              <Select value="" onValueChange={(id) => {
+                const addr = savedAddresses.find(a => a.id === id);
+                if (addr) { setDireccion(addr.direccion); setPiso(addr.piso || ''); setReferencia(addr.referencia || ''); }
+              }}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Dirección guardada" /></SelectTrigger>
+                <SelectContent>
+                  {savedAddresses.map(a => <SelectItem key={a.id} value={a.id}>{a.etiqueta} — {a.direccion}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+            <div>
+              <Label className="text-xs">Dirección *</Label>
+              <Input value={direccion} onChange={e => setDireccion(e.target.value)} onBlur={() => handleBlur('direccion')}
+                placeholder="Av. Colón 1234" className={`mt-1 h-8 text-sm ${touched.direccion && errors.direccion ? 'border-destructive' : ''}`} />
+              {touched.direccion && <FieldError error={errors.direccion} />}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Piso / Depto</Label>
+                <Input value={piso} onChange={e => setPiso(e.target.value)} placeholder="3B" className="mt-1 h-8 text-sm" />
+              </div>
+              <div>
+                <Label className="text-xs">Referencia</Label>
+                <Input value={referencia} onChange={e => setReferencia(e.target.value)} placeholder="Edificio verde" className="mt-1 h-8 text-sm" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notes */}
+        <div>
+          <Label className="text-xs font-bold">Notas (opcional)</Label>
+          <Textarea value={notas} onChange={e => setNotas(e.target.value)} placeholder="Ej: tocar timbre..." rows={2} className="resize-none mt-1 text-sm" />
+        </div>
+
+        {/* Payment method */}
+        <div className="space-y-2">
+          <h3 className="text-xs font-bold text-foreground">Método de pago</h3>
+          <RadioGroup value={metodoPago} onValueChange={v => setMetodoPago(v as MetodoPago)} className="space-y-1.5">
+            {mpEnabled && (
+              <label className={`flex items-center gap-2 rounded-lg border p-2.5 cursor-pointer transition-colors ${
+                metodoPago === 'mercadopago' ? 'border-primary bg-primary/5' : ''
+              }`}>
+                <RadioGroupItem value="mercadopago" />
+                <CreditCard className="w-4 h-4 text-blue-500" />
+                <div>
+                  <p className="text-xs font-semibold">MercadoPago</p>
+                  <p className="text-[10px] text-muted-foreground">Tarjeta, débito o billetera</p>
+                </div>
+              </label>
+            )}
+            <label className={`flex items-center gap-2 rounded-lg border p-2.5 cursor-pointer transition-colors ${
+              metodoPago === 'efectivo' ? 'border-primary bg-primary/5' : ''
+            }`}>
+              <RadioGroupItem value="efectivo" />
+              <Banknote className="w-4 h-4 text-green-600" />
+              <div>
+                <p className="text-xs font-semibold">Efectivo</p>
+                <p className="text-[10px] text-muted-foreground">{isDelivery ? 'Pagás al recibir' : 'Pagás al retirar'}</p>
+              </div>
+            </label>
+          </RadioGroup>
+
+          {metodoPago === 'efectivo' && (
+            <div className="space-y-1.5 pl-1">
+              <Label className="text-xs">¿Con cuánto pagás?</Label>
+              <div className="flex gap-1.5 flex-wrap">
+                <button onClick={() => setPagaCon('')}
+                  className={`text-[10px] px-2.5 py-1 rounded-full border font-medium transition-colors ${
+                    !pagaCon ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground'
+                  }`}>Justo</button>
+                {quickAmounts.map(amt => (
+                  <button key={amt} onClick={() => setPagaCon(String(amt))}
+                    className={`text-[10px] px-2.5 py-1 rounded-full border font-medium transition-colors ${
+                      pagaCon === String(amt) ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground'
+                    }`}>{formatPrice(amt)}</button>
+                ))}
+              </div>
+              <Input type="number" value={pagaCon} onChange={e => setPagaCon(e.target.value)} placeholder="Otro monto..." className="h-7 text-xs" />
+            </div>
+          )}
+        </div>
+
+        {/* Order summary */}
+        <div className="rounded-lg border p-3 bg-muted/30 space-y-1.5">
+          <h3 className="text-xs font-bold">Resumen</h3>
+          {cart.items.map(item => {
+            const ext = item.extras.reduce((s, e) => s + e.precio, 0);
+            return (
+              <div key={item.cartId} className="flex justify-between text-[11px]">
+                <span className="text-muted-foreground truncate">{item.cantidad}x {item.nombre}</span>
+                <span className="font-medium shrink-0 ml-2">{formatPrice((item.precioUnitario + ext) * item.cantidad)}</span>
+              </div>
+            );
+          })}
+          <div className="border-t pt-1.5 mt-1.5 space-y-0.5">
+            <div className="flex justify-between text-[11px]">
+              <span className="text-muted-foreground">Subtotal</span>
+              <span>{formatPrice(cart.totalPrecio)}</span>
+            </div>
+            {costoEnvio > 0 && (
+              <div className="flex justify-between text-[11px]">
+                <span className="text-muted-foreground">Envío</span>
+                <span>{formatPrice(costoEnvio)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-xs font-bold pt-1">
+              <span>Total</span>
+              <span>{formatPrice(totalConEnvio)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="border-t px-4 py-3 bg-background space-y-2">
+        {showMpConfirm && metodoPago === 'mercadopago' && (
+          <div className="rounded-lg bg-blue-50 border border-blue-200 p-2 space-y-1">
+            <p className="text-xs font-semibold text-blue-900">Te vamos a llevar a MercadoPago</p>
+            <p className="text-[10px] text-blue-700">Vas a completar el pago de forma segura.</p>
+          </div>
+        )}
+        <Button
+          size="default"
+          className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-sm"
+          disabled={!canSubmit || submitting}
+          onClick={handleConfirm}
+        >
+          {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+          {metodoPago === 'mercadopago'
+            ? (showMpConfirm ? `Ir a MercadoPago · ${formatPrice(totalConEnvio)}` : `Pagar ${formatPrice(totalConEnvio)}`)
+            : `Confirmar ${formatPrice(totalConEnvio)}`}
+        </Button>
+      </div>
+    </>
+  );
+}
