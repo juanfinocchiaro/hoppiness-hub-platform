@@ -163,15 +163,20 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
   const ivaCompras = data?.fiscal.iva_compras || 0;
   const saldoIva = data?.fiscal.saldo_iva || 0;
   const rdoLines = data?.rdo_lines || [];
-  const variablesRaw = rdoLines.filter((l) => l.rdo_section === 'costos_variables');
   const fijos = rdoLines.filter((l) => l.rdo_section === 'costos_fijos');
-  const variablesNoCmv = variablesRaw.filter((l) => !(l.level === 3 && l.category_code.startsWith('cmv')));
 
-  const totalVariablesNoCmv = variablesNoCmv.filter((l) => l.level === 3).reduce((s, l) => s + l.total, 0);
+  // CMV data
   const cmvAuto = data?.cmv.cmv_auto || 0;
   const cmvAjuste = data?.cmv.cmv_manual_ajuste || 0;
   const cmvPorRubro = data?.cmv.por_rubro || [];
-  const totalVariables = totalVariablesNoCmv + cmvAuto + cmvAjuste;
+  const cmvTotal = cmvAuto + cmvAjuste;
+
+  // Other variable costs (excluding CMV lines that come from rdo_lines to avoid duplication)
+  const variablesNoCmv = rdoLines.filter((l) => l.rdo_section === 'costos_variables' && !(l.level === 3 && l.category_code.startsWith('cmv')));
+  const totalVariablesNoCmv = variablesNoCmv.filter((l) => l.level === 3).reduce((s, l) => s + l.total, 0);
+
+  // Unified total: CMV + other variable costs
+  const totalVariables = cmvTotal + totalVariablesNoCmv;
   const totalFijos = fijos.filter((l) => l.level === 3).reduce((s, l) => s + l.total, 0);
   const totalCostos = totalVariables + totalFijos;
   const resultadoOperativo = totalVentasNetas - totalCostos;
@@ -249,7 +254,7 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              {resultadoEconomico >= 0 ? <TrendingUp className="w-4 h-4 text-green-500" /> : <TrendingDown className="w-4 h-4 text-destructive" />}
+              {resultadoEconomico >= 0 ? <TrendingUp className="w-4 h-4 text-success" /> : <TrendingDown className="w-4 h-4 text-destructive" />}
               Resultado Económico
             </div>
             <div className={`text-2xl font-bold font-mono mt-1 ${resultadoEconomico < 0 ? 'text-destructive' : ''}`}>{formatCurrency(resultadoEconomico)}</div>
@@ -293,90 +298,126 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
 
           <Separator className="my-3" />
 
-          {/* Costos Variables (sin CMV) */}
-          <SectionBlock title={RDO_SECTIONS.costos_variables} lines={variablesNoCmv} ventas={totalVentasNetas} />
-
-          {/* CMV Unificado */}
+          {/* Costos Variables — Unified tree with CMV inside */}
           <CollapsibleRow
-            label="CMV (Costo de Mercadería Vendida)"
-            value={cmvAuto + cmvAjuste}
-            pct={totalVentasNetas > 0 ? ((cmvAuto + cmvAjuste) / totalVentasNetas) * 100 : 0}
-            indent={1}
+            label={RDO_SECTIONS.costos_variables}
+            value={totalVariables}
+            pct={totalVentasNetas > 0 ? (totalVariables / totalVentasNetas) * 100 : 0}
             bold
             expanded={cmvExpanded}
             onToggle={() => setCmvExpanded((e) => !e)}
           >
-            {/* Automatic CMV from POS with expandable product detail */}
-            {cmvPorRubro.length > 0 ? (
-              cmvPorRubro.map((rubro) => {
-                const expanded = !!cmvRubrosExpanded[rubro.category_code];
-                return (
-                  <div key={rubro.category_code} className="pl-10">
+            {/* 1. CMV (Costo de Mercadería Vendida) */}
+            {cmvTotal > 0 && (
+              <CollapsibleRow
+                label="CMV (Costo de Mercadería Vendida)"
+                value={cmvTotal}
+                pct={totalVentasNetas > 0 ? (cmvTotal / totalVentasNetas) * 100 : 0}
+                indent={1}
+                bold
+                expanded={!!cmvRubrosExpanded['_cmv_root']}
+                onToggle={() => setCmvRubrosExpanded((prev) => ({ ...prev, '_cmv_root': !prev['_cmv_root'] }))}
+              >
+                {/* CMV Automático: desglose por categoría de carta */}
+                {cmvPorRubro.length > 0 ? (
+                  cmvPorRubro.map((rubro) => {
+                    const expanded = !!cmvRubrosExpanded[rubro.category_code];
+                    return (
+                      <div key={rubro.category_code} className="pl-8">
+                        <button
+                          type="button"
+                          onClick={() => setCmvRubrosExpanded((prev) => ({ ...prev, [rubro.category_code]: !prev[rubro.category_code] }))}
+                          className="w-full flex items-center justify-between py-1.5 text-sm hover:bg-muted/40 rounded-sm transition-colors"
+                        >
+                          <span className="flex items-center gap-1.5 text-muted-foreground">
+                            {expanded ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                            {rubro.category_name}
+                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs text-muted-foreground font-mono w-14 text-right">
+                              {totalVentasNetas > 0 ? ((rubro.total / totalVentasNetas) * 100).toFixed(1) : '0.0'}%
+                            </span>
+                            <span className="font-mono min-w-[100px] text-right">{formatCurrency(rubro.total)}</span>
+                          </div>
+                        </button>
+                        {expanded && rubro.gastos.map((gasto, idx) => (
+                          <RdoLine
+                            key={`${rubro.category_code}-${gasto.producto_id || idx}`}
+                            label={`${gasto.producto_nombre} (${gasto.cantidad.toFixed(0)} uds)`}
+                            value={gasto.total}
+                            indent={3}
+                          />
+                        ))}
+                      </div>
+                    );
+                  })
+                ) : cmvAuto > 0 ? (
+                  <RdoLine label="CMV Automático (recetas POS)" value={cmvAuto} indent={2} />
+                ) : null}
+
+                {/* CMV por Deducción de Stock */}
+                {cmvAjuste !== 0 && (
+                  <div className="pl-8">
                     <button
                       type="button"
-                      onClick={() => setCmvRubrosExpanded((prev) => ({ ...prev, [rubro.category_code]: !prev[rubro.category_code] }))}
-                      className="w-full flex items-center justify-between py-1 text-sm hover:bg-muted/40 rounded-sm"
+                      onClick={() => setCmvRubrosExpanded((prev) => ({ ...prev, '_stock': !prev['_stock'] }))}
+                      className="w-full flex items-center justify-between py-1.5 text-sm hover:bg-muted/40 rounded-sm transition-colors"
                     >
                       <span className="flex items-center gap-1.5 text-muted-foreground">
-                        {expanded ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                        {rubro.category_name}
+                        {cmvRubrosExpanded['_stock'] ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                        Consumo por Deducción de Stock
                       </span>
-                      <span className="font-mono">{formatCurrency(rubro.total)}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground font-mono w-14 text-right">
+                          {totalVentasNetas > 0 ? ((cmvAjuste / totalVentasNetas) * 100).toFixed(1) : '0.0'}%
+                        </span>
+                        <span className="font-mono min-w-[100px] text-right">{formatCurrency(cmvAjuste)}</span>
+                      </div>
                     </button>
-                    {expanded && rubro.gastos.map((gasto, idx) => (
+                    {cmvRubrosExpanded['_stock'] && (
+                      <div className="pl-6 py-1.5 text-xs text-muted-foreground space-y-1 border-l-2 border-border/50 ml-2">
+                        <p className="font-medium">Packaging, Descartables, Insumos no en receta.</p>
+                        <p>Fórmula: Stock Inicial + Compras − Stock Final = Consumo</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CollapsibleRow>
+            )}
+
+            {/* 2. Other variable costs from rdo_lines (non-CMV) */}
+            {(() => {
+              const level2 = variablesNoCmv.filter((l) => l.level === 2);
+              const level3 = variablesNoCmv.filter((l) => l.level === 3);
+              return level2.map((parent) => {
+                const children = level3.filter((c) => c.parent_code === parent.category_code);
+                const parentTotal = children.reduce((s, c) => s + c.total, 0);
+                if (parentTotal === 0 && children.length === 0) return null;
+                const parentPct = totalVentasNetas > 0 ? (parentTotal / totalVentasNetas) * 100 : 0;
+                return (
+                  <CollapsibleRow
+                    key={parent.category_code}
+                    label={parent.category_name}
+                    value={parentTotal}
+                    pct={parentPct}
+                    indent={1}
+                    bold
+                    expanded={!!cmvRubrosExpanded[parent.category_code]}
+                    onToggle={() => setCmvRubrosExpanded((prev) => ({ ...prev, [parent.category_code]: !prev[parent.category_code] }))}
+                  >
+                    {children.map((child) => (
                       <RdoLine
-                        key={`${rubro.category_code}-${gasto.producto_id || idx}`}
-                        label={`${gasto.producto_nombre} (${gasto.cantidad.toFixed(0)})`}
-                        value={gasto.total}
-                        indent={3}
+                        key={child.category_code}
+                        label={child.category_name}
+                        value={child.total}
+                        pct={child.percentage}
+                        indent={2}
                       />
                     ))}
-                  </div>
+                  </CollapsibleRow>
                 );
-              })
-            ) : cmvAuto > 0 ? (
-              <div className="pl-10">
-                <button
-                  type="button"
-                  onClick={() => setCmvRubrosExpanded((prev) => ({ ...prev, '_auto': !prev['_auto'] }))}
-                  className="w-full flex items-center justify-between py-1 text-sm hover:bg-muted/40 rounded-sm"
-                >
-                  <span className="flex items-center gap-1.5 text-muted-foreground">
-                    {cmvRubrosExpanded['_auto'] ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                    CMV Automático (consumos POS)
-                  </span>
-                  <span className="font-mono">{formatCurrency(cmvAuto)}</span>
-                </button>
-                {cmvRubrosExpanded['_auto'] && (
-                  <p className="text-xs text-muted-foreground pl-6 py-1">
-                    Calculado automáticamente desde las ventas del POS y el costo de cada producto de la carta.
-                  </p>
-                )}
-              </div>
-            ) : null}
-
-            {/* Manual CMV items from stock consumption */}
-            {cmvAjuste !== 0 && (
-              <div className="pl-10">
-                <button
-                  type="button"
-                  onClick={() => setCmvRubrosExpanded((prev) => ({ ...prev, '_manual': !prev['_manual'] }))}
-                  className="w-full flex items-center justify-between py-1 text-sm hover:bg-muted/40 rounded-sm"
-                >
-                  <span className="flex items-center gap-1.5 text-muted-foreground">
-                    {cmvRubrosExpanded['_manual'] ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                    CMV por Consumo de Stock
-                  </span>
-                  <span className="font-mono">{formatCurrency(cmvAjuste)}</span>
-                </button>
-                {cmvRubrosExpanded['_manual'] && (
-                  <div className="pl-6 py-1 text-xs text-muted-foreground space-y-1">
-                    <p>Incluye: Packaging, Descartables Salón/Delivery, Insumos para Clientes.</p>
-                    <p>Fórmula: Stock inicial + Compras - Stock final = Consumo</p>
-                  </div>
-                )}
-              </div>
-            )}
+              });
+            })()}
           </CollapsibleRow>
 
           <Separator className="my-3" />

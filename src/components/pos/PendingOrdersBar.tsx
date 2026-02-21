@@ -1,14 +1,14 @@
 /**
  * PendingOrdersBar - Barra de pedidos activos sobre el POS
- * Muestra pedidos pendiente/en_preparacion/listo con acciones de cambio de estado
- * Siempre visible con altura consistente.
+ * Muestra pedidos pendiente/en_preparacion/listo con acciones de cambio de estado.
+ * Diseño: header fijo con contadores + zona scrollable horizontal de chips agrupados por estado.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Clock, ChefHat, CheckCircle, Package } from 'lucide-react';
+import { Clock, ChefHat, CheckCircle, Package, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import type { KitchenPedido } from '@/hooks/pos/useKitchen';
 import { cn } from '@/lib/utils';
@@ -23,24 +23,27 @@ interface Props {
   shiftOpenedAt: string | null;
 }
 
-const ESTADO_CONFIG: Record<string, { label: string; color: string; icon: typeof Clock; next: string; nextLabel: string }> = {
+const ESTADO_CONFIG: Record<string, { label: string; color: string; chipBg: string; icon: typeof Clock; next: string; nextLabel: string }> = {
   pendiente: {
     label: 'Pendiente',
-    color: 'bg-amber-100 text-amber-800 border-amber-300',
+    color: 'bg-warning/15 text-warning border-warning/30',
+    chipBg: 'bg-warning/10 text-warning-foreground border-warning/30 hover:bg-warning/20',
     icon: Clock,
     next: 'en_preparacion',
     nextLabel: 'Preparar',
   },
   en_preparacion: {
     label: 'Preparando',
-    color: 'bg-blue-100 text-blue-800 border-blue-300',
+    color: 'bg-info/15 text-info border-info/30',
+    chipBg: 'bg-info/10 text-info-foreground border-info/30 hover:bg-info/20',
     icon: ChefHat,
     next: 'listo',
     nextLabel: 'Listo',
   },
   listo: {
     label: 'Listo',
-    color: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    color: 'bg-success/15 text-success border-success/30',
+    chipBg: 'bg-success/10 text-success-foreground border-success/30 hover:bg-success/20',
     icon: CheckCircle,
     next: 'entregado',
     nextLabel: 'Entregar',
@@ -64,32 +67,26 @@ function useHamburguesasCount(branchId: string, shiftOpenedAt: string | null) {
     queryKey: ['shift-hamburguesas', branchId, shiftOpenedAt],
     queryFn: async () => {
       if (!shiftOpenedAt) return 0;
-
       const { data: cats } = await supabase
         .from('menu_categorias')
         .select('id')
         .ilike('nombre', '%hamburguesa%');
       const catIds = (cats ?? []).map(c => c.id);
       if (catIds.length === 0) return 0;
-
       const { data: validPedidos } = await supabase
         .from('pedidos')
         .select('id')
         .eq('branch_id', branchId)
         .gte('created_at', shiftOpenedAt)
         .not('estado', 'eq', 'cancelado');
-
       const pedidoIds = (validPedidos ?? []).map(p => p.id);
       if (pedidoIds.length === 0) return 0;
-
       const { data: items } = await supabase
         .from('pedido_items')
         .select('cantidad')
         .in('categoria_carta_id', catIds)
         .in('pedido_id', pedidoIds);
-
       if (!items || items.length === 0) return 0;
-
       return items.reduce((sum, i) => sum + (i.cantidad ?? 0), 0);
     },
     enabled: !!branchId && !!shiftOpenedAt,
@@ -97,8 +94,35 @@ function useHamburguesasCount(branchId: string, shiftOpenedAt: string | null) {
   });
 }
 
+/* ── Scroll indicators hook ── */
+function useScrollIndicators(ref: React.RefObject<HTMLDivElement | null>) {
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const check = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, [ref]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    check();
+    el.addEventListener('scroll', check, { passive: true });
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => { el.removeEventListener('scroll', check); ro.disconnect(); };
+  }, [ref, check]);
+
+  return { canScrollLeft, canScrollRight, check };
+}
+
 export function PendingOrdersBar({ pedidos, branchId, shiftOpenedAt }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const { canScrollLeft, canScrollRight } = useScrollIndicators(scrollRef);
   const qc = useQueryClient();
   const { data: printConfig } = usePrintConfig(branchId);
   const { data: printersData } = useBranchPrinters(branchId);
@@ -133,31 +157,19 @@ export function PendingOrdersBar({ pedidos, branchId, shiftOpenedAt }: Props) {
       if (estado === 'listo') {
         const pedido = pedidos.find((p) => p.id === pedidoId);
         const isDelivery = pedido?.tipo_servicio === 'delivery' || pedido?.canal_venta === 'apps';
-
         if (isDelivery) {
           try {
-            await printDeliveryTicketByPedidoId({
-              branchId,
-              pedidoId,
-              branchName: branchInfo?.name || 'Hoppiness',
-              printConfig,
-              printers: allPrinters,
-            });
+            await printDeliveryTicketByPedidoId({ branchId, pedidoId, branchName: branchInfo?.name || 'Hoppiness', printConfig, printers: allPrinters });
             toast.success('Ticket delivery impreso');
           } catch (err) {
             console.error('[PendingOrdersBar] delivery ticket error:', err);
             toast.error('Error al imprimir ticket delivery', { description: extractErrorMessage(err) });
           }
         }
-
         if (printConfig?.ticket_trigger === 'on_ready') {
           try {
             await printReadyTicketByPedidoId({
-              branchId,
-              pedidoId,
-              branchName: branchInfo?.name || 'Hoppiness',
-              printConfig,
-              printers: allPrinters,
+              branchId, pedidoId, branchName: branchInfo?.name || 'Hoppiness', printConfig, printers: allPrinters,
               afipConfig: afipConfig as unknown as { razon_social?: string | null; cuit?: string | null; direccion_fiscal?: string | null; inicio_actividades?: string | null; iibb?: string | null; condicion_iva?: string | null } | null,
             });
             toast.success('Ticket impreso al marcar listo');
@@ -175,29 +187,40 @@ export function PendingOrdersBar({ pedidos, branchId, shiftOpenedAt }: Props) {
     updateEstado.mutate({ pedidoId, estado: nextEstado });
   }, [updateEstado]);
 
+  const scroll = (dir: 'left' | 'right') => {
+    scrollRef.current?.scrollBy({ left: dir === 'left' ? -200 : 200, behavior: 'smooth' });
+  };
+
   const pendientes = pedidos.filter(p => p.estado === 'pendiente');
   const preparando = pedidos.filter(p => p.estado === 'en_preparacion');
   const listos = pedidos.filter(p => p.estado === 'listo');
 
+  const groups = [
+    { key: 'pendiente', items: pendientes, config: ESTADO_CONFIG.pendiente },
+    { key: 'en_preparacion', items: preparando, config: ESTADO_CONFIG.en_preparacion },
+    { key: 'listo', items: listos, config: ESTADO_CONFIG.listo },
+  ].filter(g => g.items.length > 0);
+
   return (
-    <div className="border-b bg-background min-h-[72px]">
-      {/* Header with status counters */}
-      <div className="flex items-center gap-3 px-4 py-2">
+    <div className="border-b bg-background shrink-0">
+      {/* Row 1: Header — status counters + hamburguesas */}
+      <div className="flex items-center gap-3 px-4 py-2 border-b border-border/50">
         <Package className="h-4 w-4 text-muted-foreground shrink-0" />
-        <span className="text-sm font-medium whitespace-nowrap">Pedidos activos</span>
-        <div className="flex gap-1.5 flex-wrap">
+        <span className="text-sm font-semibold whitespace-nowrap">Pedidos activos</span>
+
+        <div className="flex gap-1.5 items-center">
           {pendientes.length > 0 && (
-            <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 text-xs">
+            <Badge variant="outline" className={cn('text-xs font-medium', ESTADO_CONFIG.pendiente.color)}>
               {pendientes.length} pendiente{pendientes.length > 1 ? 's' : ''}
             </Badge>
           )}
           {preparando.length > 0 && (
-            <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 text-xs">
+            <Badge variant="outline" className={cn('text-xs font-medium', ESTADO_CONFIG.en_preparacion.color)}>
               {preparando.length} preparando
             </Badge>
           )}
           {listos.length > 0 && (
-            <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-300 text-xs">
+            <Badge variant="outline" className={cn('text-xs font-medium', ESTADO_CONFIG.listo.color)}>
               {listos.length} listo{listos.length > 1 ? 's' : ''}
             </Badge>
           )}
@@ -206,54 +229,101 @@ export function PendingOrdersBar({ pedidos, branchId, shiftOpenedAt }: Props) {
           )}
         </div>
 
-        {/* Hamburguesas counter — right-aligned */}
         <div className="ml-auto flex items-center gap-1.5 text-sm font-semibold tabular-nums whitespace-nowrap">
           <span>🍔</span>
           <span>{hamburguesasCount}</span>
         </div>
       </div>
 
-      {/* Chips — scrollable on desktop, wrapping on mobile */}
+      {/* Row 2: Chips — horizontally scrollable with arrow buttons */}
       {pedidos.length > 0 && (
-        <div className="px-4 pb-3 flex gap-2 flex-wrap sm:flex-nowrap sm:overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-          {pedidos.map(pedido => {
-            const config = ESTADO_CONFIG[pedido.estado];
-            if (!config) return null;
-            const Icon = config.icon;
-            const mins = getElapsedMin(pedido.created_at);
-            const isSelected = selectedId === pedido.id;
-            const isUrgent = pedido.estado === 'pendiente' && mins >= 10;
+        <div className="relative flex items-center">
+          {/* Left scroll arrow */}
+          {canScrollLeft && (
+            <button
+              onClick={() => scroll('left')}
+              className="absolute left-0 z-10 h-full w-8 flex items-center justify-center bg-gradient-to-r from-background to-transparent"
+              aria-label="Scroll izquierda"
+            >
+              <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+            </button>
+          )}
 
-            return (
-              <div key={pedido.id} className="flex-shrink-0 min-w-0 flex items-center gap-1">
-                <button
-                  className={cn(
-                    'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-all whitespace-nowrap',
-                    config.color,
-                    isUrgent && 'ring-2 ring-red-400 animate-pulse',
-                    isSelected && 'ring-2 ring-primary'
-                  )}
-                  onClick={() => setSelectedId(isSelected ? null : pedido.id)}
-                >
-                  <span className="text-xs">{serviceIcon(pedido.tipo_servicio)}</span>
-                  <span className="font-bold">#{String(pedido.numero_pedido).slice(-3)}</span>
-                  <Icon className="h-3.5 w-3.5 shrink-0" />
-                  <span className="text-xs opacity-75">{mins}m</span>
-                </button>
+          {/* Scrollable container */}
+          <div
+            ref={scrollRef}
+            className="flex-1 overflow-x-auto px-4 py-2.5 flex items-stretch gap-4"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            {groups.map((group) => (
+              <div key={group.key} className="flex items-center gap-1.5 shrink-0">
+                {/* Group label */}
+                <span className={cn(
+                  'text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0',
+                  group.config.color,
+                )}>
+                  {group.config.label}
+                </span>
 
-                {isSelected && (
-                  <Button
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => handleAdvance(pedido.id, config.next)}
-                    disabled={updateEstado.isPending}
-                  >
-                    {config.nextLabel}
-                  </Button>
-                )}
+                {/* Chips in this group */}
+                <div className="flex items-center gap-1.5">
+                  {group.items.map(pedido => {
+                    const config = ESTADO_CONFIG[pedido.estado]!;
+                    const Icon = config.icon;
+                    const mins = getElapsedMin(pedido.created_at);
+                    const isSelected = selectedId === pedido.id;
+                    const isUrgent = pedido.estado === 'pendiente' && mins >= 10;
+
+                    return (
+                      <div key={pedido.id} className="flex items-center gap-1 shrink-0">
+                        <button
+                          className={cn(
+                            'flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-all whitespace-nowrap',
+                            config.chipBg,
+                            isUrgent && 'ring-2 ring-destructive/60 animate-pulse',
+                            isSelected && 'ring-2 ring-primary shadow-sm',
+                          )}
+                          onClick={() => setSelectedId(isSelected ? null : pedido.id)}
+                        >
+                          <span className="text-xs">{serviceIcon(pedido.tipo_servicio)}</span>
+                          <span className="font-bold tabular-nums">#{String(pedido.numero_pedido).slice(-3)}</span>
+                          <span className="text-xs tabular-nums opacity-70 flex items-center gap-0.5">
+                            <Clock className="h-3 w-3" />
+                            {mins}m
+                          </span>
+                        </button>
+
+                        {isSelected && (
+                          <Button
+                            size="sm"
+                            className="h-8 text-xs shrink-0 animate-fade-in"
+                            onClick={() => handleAdvance(pedido.id, config.next)}
+                            disabled={updateEstado.isPending}
+                          >
+                            {config.nextLabel}
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Group separator */}
+                <div className="w-px h-6 bg-border/50 ml-2 shrink-0 last:hidden" />
               </div>
-            );
-          })}
+            ))}
+          </div>
+
+          {/* Right scroll arrow */}
+          {canScrollRight && (
+            <button
+              onClick={() => scroll('right')}
+              className="absolute right-0 z-10 h-full w-8 flex items-center justify-center bg-gradient-to-l from-background to-transparent"
+              aria-label="Scroll derecha"
+            >
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
+          )}
         </div>
       )}
     </div>
