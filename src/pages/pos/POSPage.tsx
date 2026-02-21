@@ -486,7 +486,7 @@ export default function POSPage() {
     <POSPortalProvider>
     <div className="flex flex-col h-[calc(100vh-6rem)] pb-16 lg:pb-0">
       {/* Pending orders bar — always visible */}
-      <PendingOrdersBar pedidos={kitchenPedidos ?? []} branchId={branchId!} shiftOpenedAt={shiftStatus.activeCashShift?.opened_at ?? null} />
+      <PendingOrdersBar pedidos={(kitchenPedidos ?? []).filter(p => p.origen !== 'webapp')} branchId={branchId!} shiftOpenedAt={shiftStatus.activeCashShift?.opened_at ?? null} />
       <WebappOrdersPanel branchId={branchId!} />
       {/* Main grid: menu + account */}
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_minmax(380px,1.1fr)] flex-1 min-h-0">
