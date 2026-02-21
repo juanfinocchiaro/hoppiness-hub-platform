@@ -162,14 +162,29 @@ export function useCreatePedido(branchId: string) {
         if (errPago) throw errPago;
       }
 
-      // Fase 3: registrar en caja cada pago en efectivo
-      const { data: openShift } = await supabase
-        .from('cash_register_shifts')
+      // Fase 3: registrar en caja cada pago en efectivo (solo en Caja de Ventas)
+      // Primero buscar la caja de ventas, luego el turno abierto de esa caja
+      const { data: ventasRegisters } = await supabase
+        .from('cash_registers')
         .select('id')
         .eq('branch_id', branchId)
-        .eq('status', 'open')
-        .limit(1)
-        .maybeSingle();
+        .eq('register_type', 'ventas')
+        .eq('is_active', true);
+
+      const ventasRegisterIds = (ventasRegisters || []).map(r => r.id);
+
+      let openShift: { id: string } | null = null;
+      if (ventasRegisterIds.length > 0) {
+        const { data: shiftData } = await supabase
+          .from('cash_register_shifts')
+          .select('id')
+          .eq('branch_id', branchId)
+          .eq('status', 'open')
+          .in('cash_register_id', ventasRegisterIds)
+          .limit(1)
+          .maybeSingle();
+        openShift = shiftData;
+      }
 
       for (const row of paymentRows) {
         const isCash = String(row.method).toLowerCase() === 'efectivo';

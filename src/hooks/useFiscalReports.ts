@@ -5,11 +5,17 @@ import type { FiscalXData, FiscalZData, FiscalAuditData, FiscalReportBranchData 
 export function useFiscalBranchData(branchId: string | undefined) {
   return useQuery({
     queryKey: ['fiscal-branch-data', branchId],
-    queryFn: async (): Promise<FiscalReportBranchData | null> => {
+    queryFn: async (): Promise<(FiscalReportBranchData & {
+      razon_social: string;
+      iibb: string;
+      condicion_iva: string;
+      inicio_actividades: string;
+      direccion_fiscal: string;
+    }) | null> => {
       if (!branchId) return null;
       const [branchRes, afipRes] = await Promise.all([
         supabase.from('branches').select('name, address').eq('id', branchId).single(),
-        supabase.from('afip_config').select('cuit, punto_venta, direccion_fiscal').eq('branch_id', branchId).single(),
+        supabase.from('afip_config').select('cuit, punto_venta, direccion_fiscal, razon_social, inicio_actividades').eq('branch_id', branchId).single(),
       ]);
       if (!branchRes.data || !afipRes.data) return null;
       return {
@@ -17,6 +23,11 @@ export function useFiscalBranchData(branchId: string | undefined) {
         cuit: afipRes.data.cuit || '',
         address: afipRes.data.direccion_fiscal || branchRes.data.address || '',
         punto_venta: afipRes.data.punto_venta || 0,
+        razon_social: afipRes.data.razon_social || branchRes.data.name || '',
+        iibb: afipRes.data.cuit || '',
+        condicion_iva: 'IVA Responsable Inscripto',
+        inicio_actividades: afipRes.data.inicio_actividades || '',
+        direccion_fiscal: afipRes.data.direccion_fiscal || branchRes.data.address || '',
       };
     },
     enabled: !!branchId,

@@ -93,10 +93,7 @@ export function LocalSidebar({ branchId, posEnabled = false, permissions }: Loca
   /* ── Section activity detection ──────────────────────── */
 
   const isOperarActive = isActive([
-    'ventas/pos', 'ventas/cocina', 'ventas/entrega', 'ventas/caja', 'equipo/fichajes',
-  ]);
-
-  const isVenderActive = isActive([
+    'ventas/pos', 'ventas/cocina', 'ventas/entrega', 'ventas/caja',
     'ventas/historial', 'ventas/cierre-turno', 'ventas/stock', 'config/webapp',
   ]);
 
@@ -106,6 +103,7 @@ export function LocalSidebar({ branchId, posEnabled = false, permissions }: Loca
 
   const isEquipoActive = isActive([
     'equipo',
+    'equipo/fichajes',
     'equipo/coaching',
     'equipo/reuniones',
     'equipo/horarios',
@@ -130,9 +128,7 @@ export function LocalSidebar({ branchId, posEnabled = false, permissions }: Loca
 
   /* ── Visibility flags ──────────────────────────────────── */
 
-  const canSeeOperar = posEnabled;
-  const canSeeVender =
-    canViewClosures || canCloseShifts || canViewStock;
+  const canSeeOperar = posEnabled || canViewClosures || canCloseShifts || canViewStock;
   const canSeeComprar =
     canViewPurchaseHistory || canViewSuppliers || canUploadInvoice || canViewConsumos || canViewGastos;
   const canSeeEquipo =
@@ -155,46 +151,20 @@ export function LocalSidebar({ branchId, posEnabled = false, permissions }: Loca
           icon={Store}
           forceOpen={isOperarActive}
         >
-          <NavItemButton to={`${basePath}/ventas/pos`} icon={ShoppingCart} label="Punto de Venta" />
-          <NavItemButton to={`${basePath}/ventas/cocina`} icon={ChefHat} label="Cocina" />
-          <NavItemButton to={`${basePath}/ventas/entrega`} icon={Truck} label="Entrega" />
-          <NavItemButton to={`${basePath}/ventas/caja`} icon={Wallet} label="Caja" />
-          {canViewAllClockIns && (
-            <NavItemButton to={`${basePath}/equipo/fichajes`} icon={Clock} label="Fichajes del día" />
-          )}
-        </NavSectionGroup>
-      )}
-
-      {/* ─── 2. Vender (gestión comercial) ─────────────── */}
-      {canSeeVender && (
-        <NavSectionGroup
-          id="vender"
-          label="Vender"
-          icon={TrendingUp}
-          forceOpen={isVenderActive}
-        >
-          {posEnabled && (
-            <NavItemButton to={`${basePath}/config/webapp`} icon={Globe} label="Tienda Online" />
-          )}
+          {posEnabled && <NavItemButton to={`${basePath}/ventas/pos`} icon={ShoppingCart} label="Punto de Venta" />}
+          {posEnabled && <NavItemButton to={`${basePath}/ventas/cocina`} icon={ChefHat} label="Cocina" />}
+          {posEnabled && <NavItemButton to={`${basePath}/ventas/entrega`} icon={Truck} label="Entrega" />}
+          {posEnabled && <NavItemButton to={`${basePath}/ventas/caja`} icon={Wallet} label="Caja" />}
           {canViewStock && (
             <NavItemButton to={`${basePath}/ventas/stock`} icon={Package} label="Stock" />
           )}
           {(canViewClosures || canCloseShifts) && (
             <NavItemButton to={`${basePath}/ventas/historial`} icon={TrendingUp} label="Historial de Ventas" />
           )}
-          {(canViewClosures || canCloseShifts) && (
-            <NavItemButton to={`${basePath}/ventas/cierre-turno`} icon={FileText} label="Cierre de Turno" />
+          {posEnabled && (
+            <NavItemButton to={`${basePath}/config/webapp`} icon={Globe} label="Tienda Online" />
           )}
         </NavSectionGroup>
-      )}
-
-      {/* Without POS: standalone Cierre de Turno link */}
-      {!posEnabled && (canViewClosures || canCloseShifts) && (
-        <NavDashboardLink
-          to={`${basePath}/ventas/historial`}
-          icon={TrendingUp}
-          label="Cierre de Turno"
-        />
       )}
 
       {/* ─── 3. Comprar (abastecimiento) ──────────────── */}
@@ -230,6 +200,9 @@ export function LocalSidebar({ branchId, posEnabled = false, permissions }: Loca
         >
           {canViewTeam && (
             <NavItemButton to={`${basePath}/equipo`} icon={Users} label="Equipo" exact />
+          )}
+          {canViewAllClockIns && (
+            <NavItemButton to={`${basePath}/equipo/fichajes`} icon={Clock} label="Fichajes" />
           )}
           {canEditSchedules && (
             <NavItemButton to={`${basePath}/equipo/horarios`} icon={Clock} label="Horarios" />
