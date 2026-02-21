@@ -7,13 +7,87 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { PageHeader } from '@/components/ui/page-header';
-import { Globe, ExternalLink, Loader2, Truck, ShoppingBag, Utensils, Clock, MapPin, DollarSign } from 'lucide-react';
+import { Globe, ExternalLink, Loader2, Truck, ShoppingBag, Utensils, Clock, MapPin, DollarSign, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
+
+const DAYS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'] as const;
+const DAY_LABELS: Record<string, string> = {
+  lunes: 'Lunes', martes: 'Martes', miércoles: 'Miércoles',
+  jueves: 'Jueves', viernes: 'Viernes', sábado: 'Sábado', domingo: 'Domingo',
+};
+
+type DaySchedule = { enabled: boolean; from: string; to: string };
+type ServiceScheduleV2 = {
+  enabled: boolean;
+  prep_time: number;
+  days: Record<string, DaySchedule>;
+  // delivery-only
+  radio_km?: number;
+  costo?: number;
+  pedido_minimo?: number;
+};
+
+const defaultDays = (): Record<string, DaySchedule> =>
+  Object.fromEntries(DAYS.map(d => [d, { enabled: true, from: '11:00', to: '23:00' }]));
+
+const defaultService = (prepTime: number): ServiceScheduleV2 => ({
+  enabled: false,
+  prep_time: prepTime,
+  days: defaultDays(),
+});
+
+/** Migrate old flat format to new v2 format */
+function migrateSchedules(
+  raw: any,
+  form: { retiro_habilitado: boolean; delivery_habilitado: boolean; comer_aca_habilitado: boolean },
+  config: any,
+): Record<string, ServiceScheduleV2> {
+  const result: Record<string, ServiceScheduleV2> = {
+    retiro: defaultService(config?.prep_time_retiro ?? 15),
+    delivery: {
+      ...defaultService(config?.prep_time_delivery ?? 40),
+      radio_km: config?.delivery_radio_km ?? 5,
+      costo: config?.delivery_costo ?? 0,
+      pedido_minimo: config?.delivery_pedido_minimo ?? 0,
+    },
+    comer_aca: defaultService(config?.prep_time_comer_aca ?? 15),
+  };
+
+  // If already v2 format (has .days object)
+  if (raw?.retiro?.days || raw?.delivery?.days || raw?.comer_aca?.days) {
+    for (const key of ['retiro', 'delivery', 'comer_aca']) {
+      if (raw[key]) {
+        result[key] = { ...result[key], ...raw[key], days: { ...result[key].days, ...(raw[key].days || {}) } };
+      }
+    }
+  } else if (raw) {
+    // Old format: { retiro: { from, to, enabled } }
+    for (const key of ['retiro', 'delivery', 'comer_aca']) {
+      if (raw[key]) {
+        const old = raw[key];
+        result[key].enabled = old.enabled ?? false;
+        if (old.from && old.to) {
+          // Apply same hours to all days
+          for (const d of DAYS) {
+            result[key].days[d] = { enabled: true, from: old.from, to: old.to };
+          }
+        }
+      }
+    }
+  }
+
+  // Sync enabled from top-level booleans
+  result.retiro.enabled = form.retiro_habilitado;
+  result.delivery.enabled = form.delivery_habilitado;
+  result.comer_aca.enabled = form.comer_aca_habilitado;
+
+  return result;
+}
 
 function useWebappConfigAdmin(branchId: string | undefined) {
   return useQuery({
@@ -46,6 +120,207 @@ function useBranchSlug(branchId: string | undefined) {
   });
 }
 
+// ─── Service Config Section ─────────────────────────────────
+
+function ServiceSection({
+  serviceKey,
+  label,
+  icon: Icon,
+  schedule,
+  onChange,
+  isDelivery,
+}: {
+  serviceKey: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  schedule: ServiceScheduleV2;
+  onChange: (s: ServiceScheduleV2) => void;
+  isDelivery?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const updateDay = (day: string, patch: Partial<DaySchedule>) => {
+    onChange({
+      ...schedule,
+      days: { ...schedule.days, [day]: { ...schedule.days[day], ...patch } },
+    });
+  };
+
+  const toggleAllDays = (enabled: boolean) => {
+    const newDays = { ...schedule.days };
+    for (const d of DAYS) {
+      newDays[d] = { ...newDays[d], enabled };
+    }
+    onChange({ ...schedule, days: newDays });
+  };
+
+  const copyToAll = (sourceDay: string) => {
+    const src = schedule.days[sourceDay];
+    if (!src) return;
+    const newDays = { ...schedule.days };
+    for (const d of DAYS) {
+      newDays[d] = { ...src };
+    }
+    onChange({ ...schedule, days: newDays });
+  };
+
+  return (
+    <div className="border rounded-lg">
+      <div className="flex items-center justify-between p-4">
+        <div className="flex items-center gap-3">
+          <Icon className="w-5 h-5 text-muted-foreground" />
+          <div>
+            <span className="font-medium">{label}</span>
+            {schedule.enabled && (
+              <p className="text-xs text-muted-foreground">
+                Prep: {schedule.prep_time} min
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={schedule.enabled}
+            onCheckedChange={(v) => onChange({ ...schedule, enabled: v })}
+          />
+          {schedule.enabled && (
+            <Collapsible open={open} onOpenChange={setOpen}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <ChevronDown className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
+            </Collapsible>
+          )}
+        </div>
+      </div>
+
+      {schedule.enabled && (
+        <Collapsible open={open} onOpenChange={setOpen}>
+          <CollapsibleContent>
+            <div className="px-4 pb-4 space-y-4 border-t pt-4">
+              {/* Prep time */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5" />
+                  Tiempo de preparación (min)
+                </Label>
+                <Input
+                  type="number"
+                  value={schedule.prep_time}
+                  onChange={(e) => onChange({ ...schedule, prep_time: parseInt(e.target.value) || 0 })}
+                  className="w-32"
+                />
+              </div>
+
+              {/* Delivery-specific fields */}
+              {isDelivery && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <Label className="flex items-center gap-1 text-xs">
+                      <MapPin className="w-3 h-3" /> Radio (km)
+                    </Label>
+                    <Input
+                      type="number"
+                      value={schedule.radio_km ?? ''}
+                      onChange={(e) => onChange({ ...schedule, radio_km: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="flex items-center gap-1 text-xs">
+                      <DollarSign className="w-3 h-3" /> Costo envío
+                    </Label>
+                    <Input
+                      type="number"
+                      value={schedule.costo ?? ''}
+                      onChange={(e) => onChange({ ...schedule, costo: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="flex items-center gap-1 text-xs">
+                      <DollarSign className="w-3 h-3" /> Pedido mínimo
+                    </Label>
+                    <Input
+                      type="number"
+                      value={schedule.pedido_minimo ?? ''}
+                      onChange={(e) => onChange({ ...schedule, pedido_minimo: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <Separator />
+
+              {/* Schedule per day */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Horarios por día</Label>
+                  <div className="flex gap-1">
+                    <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => toggleAllDays(true)}>
+                      Activar todos
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => toggleAllDays(false)}>
+                      Desactivar todos
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  {DAYS.map((day) => {
+                    const ds = schedule.days[day] || { enabled: true, from: '11:00', to: '23:00' };
+                    return (
+                      <div key={day} className="flex items-center gap-2 py-1">
+                        <Switch
+                          checked={ds.enabled}
+                          onCheckedChange={(v) => updateDay(day, { enabled: v })}
+                          className="scale-75"
+                        />
+                        <span className={`text-sm w-20 ${ds.enabled ? 'font-medium' : 'text-muted-foreground'}`}>
+                          {DAY_LABELS[day]}
+                        </span>
+                        {ds.enabled ? (
+                          <div className="flex items-center gap-1.5 flex-1">
+                            <Input
+                              type="time"
+                              value={ds.from}
+                              onChange={(e) => updateDay(day, { from: e.target.value })}
+                              className="w-28 h-8 text-sm"
+                            />
+                            <span className="text-xs text-muted-foreground">a</span>
+                            <Input
+                              type="time"
+                              value={ds.to}
+                              onChange={(e) => updateDay(day, { to: e.target.value })}
+                              className="w-28 h-8 text-sm"
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs h-7 px-2 text-muted-foreground"
+                              onClick={() => copyToAll(day)}
+                              title="Copiar este horario a todos los días"
+                            >
+                              Copiar a todos
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">Cerrado</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Page ───────────────────────────────────────────────
+
 export default function WebappConfigPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const { data: config, isLoading } = useWebappConfigAdmin(branchId);
@@ -55,22 +330,16 @@ export default function WebappConfigPage() {
   const [form, setForm] = useState({
     webapp_activa: false,
     estado: 'cerrado',
-    retiro_habilitado: true,
-    delivery_habilitado: false,
-    comer_aca_habilitado: false,
-    delivery_radio_km: '',
-    delivery_costo: '',
-    delivery_pedido_minimo: '',
-    tiempo_estimado_retiro_min: '',
-    tiempo_estimado_delivery_min: '',
     mensaje_pausa: '',
     recepcion_modo: 'auto',
-    prep_time_retiro: '15',
-    prep_time_delivery: '40',
-    prep_time_comer_aca: '15',
     auto_accept_orders: false,
     auto_print_orders: false,
-    service_schedules: {} as Record<string, { from: string; to: string; enabled: boolean }>,
+  });
+
+  const [services, setServices] = useState<Record<string, ServiceScheduleV2>>({
+    retiro: defaultService(15),
+    delivery: { ...defaultService(40), radio_km: 5, costo: 0, pedido_minimo: 0 },
+    comer_aca: defaultService(15),
   });
 
   useEffect(() => {
@@ -78,23 +347,16 @@ export default function WebappConfigPage() {
       setForm({
         webapp_activa: config.webapp_activa ?? false,
         estado: config.estado ?? 'cerrado',
+        mensaje_pausa: config.mensaje_pausa ?? '',
+        recepcion_modo: config.recepcion_modo ?? 'auto',
+        auto_accept_orders: config.auto_accept_orders ?? false,
+        auto_print_orders: config.auto_print_orders ?? false,
+      });
+      setServices(migrateSchedules(config.service_schedules, {
         retiro_habilitado: config.retiro_habilitado ?? true,
         delivery_habilitado: config.delivery_habilitado ?? false,
         comer_aca_habilitado: config.comer_aca_habilitado ?? false,
-        delivery_radio_km: config.delivery_radio_km?.toString() ?? '',
-        delivery_costo: config.delivery_costo?.toString() ?? '',
-        delivery_pedido_minimo: config.delivery_pedido_minimo?.toString() ?? '',
-        tiempo_estimado_retiro_min: config.tiempo_estimado_retiro_min?.toString() ?? '',
-        tiempo_estimado_delivery_min: config.tiempo_estimado_delivery_min?.toString() ?? '',
-        mensaje_pausa: config.mensaje_pausa ?? '',
-        recepcion_modo: config.recepcion_modo ?? 'auto',
-        prep_time_retiro: config.prep_time_retiro?.toString() ?? '15',
-        prep_time_delivery: config.prep_time_delivery?.toString() ?? '40',
-        prep_time_comer_aca: config.prep_time_comer_aca?.toString() ?? '15',
-        auto_accept_orders: config.auto_accept_orders ?? false,
-        auto_print_orders: config.auto_print_orders ?? false,
-        service_schedules: config.service_schedules ?? {},
-      });
+      }, config));
     }
   }, [config]);
 
@@ -104,22 +366,25 @@ export default function WebappConfigPage() {
         branch_id: branchId!,
         webapp_activa: form.webapp_activa,
         estado: form.estado,
-        retiro_habilitado: form.retiro_habilitado,
-        delivery_habilitado: form.delivery_habilitado,
-        comer_aca_habilitado: form.comer_aca_habilitado,
-        delivery_radio_km: form.delivery_radio_km ? parseFloat(form.delivery_radio_km) : null,
-        delivery_costo: form.delivery_costo ? parseFloat(form.delivery_costo) : null,
-        delivery_pedido_minimo: form.delivery_pedido_minimo ? parseFloat(form.delivery_pedido_minimo) : null,
-        tiempo_estimado_retiro_min: form.tiempo_estimado_retiro_min ? parseInt(form.tiempo_estimado_retiro_min) : null,
-        tiempo_estimado_delivery_min: form.tiempo_estimado_delivery_min ? parseInt(form.tiempo_estimado_delivery_min) : null,
         mensaje_pausa: form.mensaje_pausa || null,
         recepcion_modo: form.recepcion_modo,
-        prep_time_retiro: form.prep_time_retiro ? parseInt(form.prep_time_retiro) : 15,
-        prep_time_delivery: form.prep_time_delivery ? parseInt(form.prep_time_delivery) : 40,
-        prep_time_comer_aca: form.prep_time_comer_aca ? parseInt(form.prep_time_comer_aca) : 15,
         auto_accept_orders: form.auto_accept_orders,
         auto_print_orders: form.auto_print_orders,
-        service_schedules: form.service_schedules,
+        // Sync flat booleans for backward compat
+        retiro_habilitado: services.retiro?.enabled ?? false,
+        delivery_habilitado: services.delivery?.enabled ?? false,
+        comer_aca_habilitado: services.comer_aca?.enabled ?? false,
+        // Sync flat fields for backward compat
+        delivery_radio_km: services.delivery?.radio_km ?? null,
+        delivery_costo: services.delivery?.costo ?? null,
+        delivery_pedido_minimo: services.delivery?.pedido_minimo ?? null,
+        prep_time_retiro: services.retiro?.prep_time ?? 15,
+        prep_time_delivery: services.delivery?.prep_time ?? 40,
+        prep_time_comer_aca: services.comer_aca?.prep_time ?? 15,
+        tiempo_estimado_retiro_min: services.retiro?.prep_time ?? null,
+        tiempo_estimado_delivery_min: services.delivery?.prep_time ?? null,
+        // New v2 schedules
+        service_schedules: services,
         updated_at: new Date().toISOString(),
       };
 
@@ -145,9 +410,11 @@ export default function WebappConfigPage() {
     },
   });
 
-  const set = (partial: Partial<typeof form>) => setForm(prev => ({ ...prev, ...partial }));
-
   const publicUrl = branchData?.slug ? `${window.location.origin}/pedir/${branchData.slug}` : null;
+
+  const updateService = (key: string, s: ServiceScheduleV2) => {
+    setServices(prev => ({ ...prev, [key]: s }));
+  };
 
   return (
     <div className="space-y-6">
@@ -179,7 +446,7 @@ export default function WebappConfigPage() {
                 </div>
                 <Switch
                   checked={form.webapp_activa}
-                  onCheckedChange={(v) => set({ webapp_activa: v })}
+                  onCheckedChange={(v) => setForm(f => ({ ...f, webapp_activa: v }))}
                 />
               </div>
 
@@ -187,7 +454,7 @@ export default function WebappConfigPage() {
                 <>
                   <div className="space-y-2">
                     <Label>Estado operativo</Label>
-                    <Select value={form.estado} onValueChange={(v) => set({ estado: v })}>
+                    <Select value={form.estado} onValueChange={(v) => setForm(f => ({ ...f, estado: v }))}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -220,7 +487,7 @@ export default function WebappConfigPage() {
                       <Input
                         placeholder="Ej: Volvemos en 15 minutos"
                         value={form.mensaje_pausa}
-                        onChange={(e) => set({ mensaje_pausa: e.target.value })}
+                        onChange={(e) => setForm(f => ({ ...f, mensaje_pausa: e.target.value }))}
                       />
                     </div>
                   )}
@@ -242,234 +509,37 @@ export default function WebappConfigPage() {
             </CardContent>
           </Card>
 
-          {/* Services */}
+          {/* Services — Collapsible sections */}
           <Card>
             <CardHeader>
-              <CardTitle>Servicios disponibles</CardTitle>
-              <CardDescription>Elegí qué tipos de servicio ofrece tu tienda online</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ShoppingBag className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <Label>Retiro en local</Label>
-                    <p className="text-xs text-muted-foreground">El cliente retira su pedido</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={form.retiro_habilitado}
-                  onCheckedChange={(v) => set({ retiro_habilitado: v })}
-                />
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Truck className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <Label>Delivery</Label>
-                    <p className="text-xs text-muted-foreground">Envío a domicilio</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={form.delivery_habilitado}
-                  onCheckedChange={(v) => set({ delivery_habilitado: v })}
-                />
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Utensils className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <Label>Comer en el local</Label>
-                    <p className="text-xs text-muted-foreground">Pedido para consumir en el local</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={form.comer_aca_habilitado}
-                  onCheckedChange={(v) => set({ comer_aca_habilitado: v })}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Delivery config */}
-          {form.delivery_habilitado && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Truck className="w-5 h-5" />
-                  Configuración de Delivery
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5" /> Radio de cobertura (km)
-                    </Label>
-                    <Input
-                      type="number"
-                      placeholder="5"
-                      value={form.delivery_radio_km}
-                      onChange={(e) => set({ delivery_radio_km: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      <DollarSign className="w-3.5 h-3.5" /> Costo de envío
-                    </Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                      <Input
-                        type="number"
-                        placeholder="500"
-                        value={form.delivery_costo}
-                        onChange={(e) => set({ delivery_costo: e.target.value })}
-                        className="pl-7"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      <DollarSign className="w-3.5 h-3.5" /> Pedido mínimo
-                    </Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                      <Input
-                        type="number"
-                        placeholder="3000"
-                        value={form.delivery_pedido_minimo}
-                        onChange={(e) => set({ delivery_pedido_minimo: e.target.value })}
-                        className="pl-7"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Prep times per service */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                Tiempos de preparación por servicio
-              </CardTitle>
+              <CardTitle>Servicios</CardTitle>
               <CardDescription>
-                Configurá los tiempos estimados que se muestran al cliente, diferenciados por tipo de servicio
+                Activá cada servicio y configurá sus horarios y tiempos de preparación de forma independiente
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {form.retiro_habilitado && (
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1.5">
-                      <ShoppingBag className="w-3.5 h-3.5" /> Retiro (min)
-                    </Label>
-                    <Input
-                      type="number"
-                      placeholder="15"
-                      value={form.prep_time_retiro}
-                      onChange={(e) => set({ prep_time_retiro: e.target.value })}
-                    />
-                  </div>
-                )}
-                {form.delivery_habilitado && (
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1.5">
-                      <Truck className="w-3.5 h-3.5" /> Delivery (min)
-                    </Label>
-                    <Input
-                      type="number"
-                      placeholder="40"
-                      value={form.prep_time_delivery}
-                      onChange={(e) => set({ prep_time_delivery: e.target.value })}
-                    />
-                  </div>
-                )}
-                {form.comer_aca_habilitado && (
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1.5">
-                      <Utensils className="w-3.5 h-3.5" /> Comer acá (min)
-                    </Label>
-                    <Input
-                      type="number"
-                      placeholder="15"
-                      value={form.prep_time_comer_aca}
-                      onChange={(e) => set({ prep_time_comer_aca: e.target.value })}
-                    />
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Service schedules */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Horarios por servicio</CardTitle>
-              <CardDescription>
-                Definí en qué horarios están disponibles los distintos tipos de servicio. Fuera de estos horarios, ese tipo de servicio no aparece.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {[
-                { key: 'retiro', label: 'Retiro en local', icon: ShoppingBag, enabled: form.retiro_habilitado },
-                { key: 'delivery', label: 'Delivery', icon: Truck, enabled: form.delivery_habilitado },
-                { key: 'comer_aca', label: 'Comer en el local', icon: Utensils, enabled: form.comer_aca_habilitado },
-              ].filter(s => s.enabled).map(service => {
-                const sched = form.service_schedules[service.key] || { from: '10:00', to: '23:00', enabled: true };
-                return (
-                  <div key={service.key} className="flex items-center gap-4 flex-wrap border rounded-lg p-3">
-                    <div className="flex items-center gap-2 min-w-[140px]">
-                      <service.icon className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">{service.label}</span>
-                    </div>
-                    <Switch
-                      checked={sched.enabled}
-                      onCheckedChange={(v) => set({
-                        service_schedules: {
-                          ...form.service_schedules,
-                          [service.key]: { ...sched, enabled: v },
-                        },
-                      })}
-                    />
-                    {sched.enabled && (
-                      <>
-                        <Input
-                          type="time"
-                          value={sched.from}
-                          onChange={(e) => set({
-                            service_schedules: {
-                              ...form.service_schedules,
-                              [service.key]: { ...sched, from: e.target.value },
-                            },
-                          })}
-                          className="w-28"
-                        />
-                        <span className="text-sm text-muted-foreground">a</span>
-                        <Input
-                          type="time"
-                          value={sched.to}
-                          onChange={(e) => set({
-                            service_schedules: {
-                              ...form.service_schedules,
-                              [service.key]: { ...sched, to: e.target.value },
-                            },
-                          })}
-                          className="w-28"
-                        />
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+            <CardContent className="space-y-3">
+              <ServiceSection
+                serviceKey="retiro"
+                label="Retiro en local"
+                icon={ShoppingBag}
+                schedule={services.retiro}
+                onChange={(s) => updateService('retiro', s)}
+              />
+              <ServiceSection
+                serviceKey="delivery"
+                label="Delivery"
+                icon={Truck}
+                schedule={services.delivery}
+                onChange={(s) => updateService('delivery', s)}
+                isDelivery
+              />
+              <ServiceSection
+                serviceKey="comer_aca"
+                label="Comer en el local"
+                icon={Utensils}
+                schedule={services.comer_aca}
+                onChange={(s) => updateService('comer_aca', s)}
+              />
             </CardContent>
           </Card>
 
@@ -480,7 +550,7 @@ export default function WebappConfigPage() {
               <CardDescription>Cómo se reciben y procesan los pedidos entrantes de la webapp</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Select value={form.recepcion_modo} onValueChange={(v) => set({ recepcion_modo: v })}>
+              <Select value={form.recepcion_modo} onValueChange={(v) => setForm(f => ({ ...f, recepcion_modo: v }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -501,7 +571,7 @@ export default function WebappConfigPage() {
                 </div>
                 <Switch
                   checked={form.auto_accept_orders}
-                  onCheckedChange={(v) => set({ auto_accept_orders: v })}
+                  onCheckedChange={(v) => setForm(f => ({ ...f, auto_accept_orders: v }))}
                 />
               </div>
 
@@ -514,7 +584,7 @@ export default function WebappConfigPage() {
                 </div>
                 <Switch
                   checked={form.auto_print_orders}
-                  onCheckedChange={(v) => set({ auto_print_orders: v })}
+                  onCheckedChange={(v) => setForm(f => ({ ...f, auto_print_orders: v }))}
                 />
               </div>
             </CardContent>
