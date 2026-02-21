@@ -6,6 +6,7 @@
 import { User, Package, MapPin, LogOut, LogIn, Store, Building2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { useAuthModal } from '@/contexts/AuthModalContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +25,7 @@ interface UserMenuDropdownProps {
 export function UserMenuDropdown({ onMisPedidos }: UserMenuDropdownProps = {}) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { openAuthModal } = useAuthModal();
 
   // Check roles for staff links
   const { data: roles } = useQuery({
@@ -52,7 +54,7 @@ export function UserMenuDropdown({ onMisPedidos }: UserMenuDropdownProps = {}) {
   if (!user) {
     return (
       <button
-        onClick={() => navigate('/ingresar')}
+        onClick={() => openAuthModal()}
         className="p-1.5 hover:bg-muted rounded-lg transition-colors text-muted-foreground"
         title="Iniciar sesión"
       >

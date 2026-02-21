@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Instagram } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthModal } from '@/contexts/AuthModalContext';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 
 // TikTok icon (not available in lucide-react)
@@ -23,6 +24,7 @@ function SpotifyIcon({ className }: { className?: string }) {
 
 export function PublicFooter() {
   const { user } = useAuth();
+  const { openAuthModal } = useAuthModal();
 
   return (
     <footer className="bg-foreground text-background py-12 px-4">
@@ -59,7 +61,7 @@ export function PublicFooter() {
               {user ? (
                 <Link to="/cuenta" className="block text-background/70 hover:text-background">Mi Cuenta</Link>
               ) : (
-                <Link to="/ingresar" className="block text-background/70 hover:text-background">Ingresar</Link>
+                <button onClick={() => openAuthModal()} className="block text-background/70 hover:text-background text-sm text-left">Ingresar</button>
               )}
             </div>
           </div>
