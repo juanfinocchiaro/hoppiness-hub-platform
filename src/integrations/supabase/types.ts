@@ -4412,6 +4412,63 @@ export type Database = {
           },
         ]
       }
+      mercadopago_config: {
+        Row: {
+          access_token: string
+          branch_id: string
+          collector_id: string | null
+          created_at: string
+          estado_conexion: string
+          id: string
+          public_key: string
+          ultimo_test: string | null
+          ultimo_test_ok: boolean | null
+          updated_at: string
+          webhook_secret: string | null
+        }
+        Insert: {
+          access_token?: string
+          branch_id: string
+          collector_id?: string | null
+          created_at?: string
+          estado_conexion?: string
+          id?: string
+          public_key?: string
+          ultimo_test?: string | null
+          ultimo_test_ok?: boolean | null
+          updated_at?: string
+          webhook_secret?: string | null
+        }
+        Update: {
+          access_token?: string
+          branch_id?: string
+          collector_id?: string | null
+          created_at?: string
+          estado_conexion?: string
+          id?: string
+          public_key?: string
+          ultimo_test?: string | null
+          ultimo_test_ok?: boolean | null
+          updated_at?: string
+          webhook_secret?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mercadopago_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercadopago_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       movimientos_socio: {
         Row: {
           branch_id: string
