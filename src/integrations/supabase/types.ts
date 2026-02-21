@@ -5312,6 +5312,8 @@ export type Database = {
           propina: number
           requiere_factura: boolean | null
           subtotal: number
+          tiempo_confirmado: string | null
+          tiempo_en_camino: string | null
           tiempo_entregado: string | null
           tiempo_inicio_prep: string | null
           tiempo_listo: string | null
@@ -5354,6 +5356,8 @@ export type Database = {
           propina?: number
           requiere_factura?: boolean | null
           subtotal: number
+          tiempo_confirmado?: string | null
+          tiempo_en_camino?: string | null
           tiempo_entregado?: string | null
           tiempo_inicio_prep?: string | null
           tiempo_listo?: string | null
@@ -5396,6 +5400,8 @@ export type Database = {
           propina?: number
           requiere_factura?: boolean | null
           subtotal?: number
+          tiempo_confirmado?: string | null
+          tiempo_en_camino?: string | null
           tiempo_entregado?: string | null
           tiempo_inicio_prep?: string | null
           tiempo_listo?: string | null
