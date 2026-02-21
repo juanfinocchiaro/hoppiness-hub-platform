@@ -10,6 +10,7 @@ import { WebappMenuView } from '@/components/webapp/WebappMenuView';
 import { CartBar } from '@/components/webapp/CartBar';
 import { CartSheet } from '@/components/webapp/CartSheet';
 import { CartSidePanel } from '@/components/webapp/CartSidePanel';
+import { MisPedidosSheet } from '@/components/webapp/MisPedidosSheet';
 import { ProductCustomizeSheet } from '@/components/webapp/ProductCustomizeSheet';
 import { SEO } from '@/components/SEO';
 import { Loader2 } from 'lucide-react';
@@ -48,6 +49,7 @@ export default function PedirPage() {
   const [cartOpen, setCartOpen] = useState(false);
   const [cartInitialStep, setCartInitialStep] = useState<'cart' | 'checkout'>('cart');
   const [externalTrackingCode, setExternalTrackingCode] = useState<string | null>(null);
+  const [misPedidosOpen, setMisPedidosOpen] = useState(false);
 
   // Auto-skip landing when store is open
   useEffect(() => {
@@ -141,6 +143,18 @@ export default function PedirPage() {
     setCartOpen(true);
   };
 
+  // Open CartSheet on mobile when externalTrackingCode changes (Problem 1: banner "Ver estado")
+  useEffect(() => {
+    if (externalTrackingCode) {
+      setCartOpen(true);
+    }
+  }, [externalTrackingCode]);
+
+  // Handler for MisPedidosSheet tracking — feeds into same mechanism
+  const handleMisPedidosTrack = (trackingCode: string) => {
+    setExternalTrackingCode(trackingCode);
+  };
+
   // Side panel now handles checkout inline, no need for this handler
 
   const isDelivery = cart.tipoServicio === 'delivery';
@@ -178,6 +192,7 @@ export default function PedirPage() {
             onServiceChange={(tipo) => cart.setTipoServicio(tipo)}
             cartPanelVisible={showSidePanel}
             onShowTracking={(code) => setExternalTrackingCode(code)}
+            onMisPedidos={() => setMisPedidosOpen(true)}
           />
 
           {/* Desktop side cart panel — shows cart, checkout, and tracking inline */}
@@ -212,6 +227,14 @@ export default function PedirPage() {
             mpEnabled={mpEnabled}
             deliveryCosto={costoEnvio}
             initialStep={cartInitialStep}
+            externalTrackingCode={externalTrackingCode}
+          />
+
+          <MisPedidosSheet
+            open={misPedidosOpen}
+            onOpenChange={setMisPedidosOpen}
+            onShowTracking={handleMisPedidosTrack}
+            currentBranchSlug={branchSlug}
           />
 
           <ProductCustomizeSheet

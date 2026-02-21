@@ -50,6 +50,7 @@ interface Props {
   mpEnabled?: boolean;
   deliveryCosto?: number;
   initialStep?: Step;
+  externalTrackingCode?: string | null;
 }
 
 type Step = 'cart' | 'checkout' | 'tracking';
@@ -65,7 +66,7 @@ function FieldError({ error }: { error: string | null }) {
   return <p className="text-xs text-destructive mt-1">{error}</p>;
 }
 
-export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEnabled, deliveryCosto = 0, initialStep }: Props) {
+export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEnabled, deliveryCosto = 0, initialStep, externalTrackingCode }: Props) {
   const { user } = useAuth();
   const servicioLabel = cart.tipoServicio === 'retiro' ? 'Retiro en local' : cart.tipoServicio === 'delivery' ? 'Delivery' : 'Comer acá';
 
@@ -110,6 +111,14 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
       setStep(initialStep);
     }
   }, [open, initialStep]);
+
+  // React to external tracking code (e.g. from ActiveOrderBanner or MisPedidosSheet)
+  useEffect(() => {
+    if (externalTrackingCode) {
+      setTrackingCode(externalTrackingCode);
+      setStep('tracking');
+    }
+  }, [externalTrackingCode]);
   const [submitting, setSubmitting] = useState(false);
   const [selectedZoneId, setSelectedZoneId] = useState<string>('');
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -326,19 +335,21 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
       <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl px-0 flex flex-col">
         <SheetHeader className="px-5 pb-3 border-b shrink-0">
           <SheetTitle className="flex items-center gap-2 text-left">
-            {step === 'checkout' && (
-              <button onClick={handleBack} className="p-1 -ml-1 rounded-full hover:bg-muted">
+            {(step === 'checkout' || step === 'tracking') && (
+              <button onClick={step === 'tracking' ? () => { setTrackingCode(null); setStep('cart'); onOpenChange(false); } : handleBack} className="p-1 -ml-1 rounded-full hover:bg-muted">
                 <ArrowLeft className="w-4 h-4" />
               </button>
             )}
             <ShoppingBag className="w-5 h-5 text-primary" />
-            {step === 'cart' ? 'Tu pedido' : 'Completá tus datos'}
+            {step === 'tracking' ? 'Seguimiento' : step === 'cart' ? 'Tu pedido' : 'Completá tus datos'}
           </SheetTitle>
-          <p className="text-xs text-muted-foreground">
-            {servicioLabel} · {branchName}
-          </p>
-          {/* Visual stepper */}
-          {cart.items.length > 0 && (
+          {step !== 'tracking' && (
+            <p className="text-xs text-muted-foreground">
+              {servicioLabel} · {branchName}
+            </p>
+          )}
+          {/* Visual stepper — hidden during tracking */}
+          {step !== 'tracking' && cart.items.length > 0 && (
             <div className="flex items-center gap-2 pt-2">
               <div className="flex items-center gap-1.5">
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -357,7 +368,20 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
           )}
         </SheetHeader>
 
-        {cart.items.length === 0 ? (
+        {/* Tracking FIRST — before empty cart check (cart is cleared after order) */}
+        {step === 'tracking' && trackingCode ? (
+          <div className="flex flex-col flex-1 min-h-0">
+            <TrackingInlineView
+              trackingCode={trackingCode}
+              onNewOrder={() => {
+                setTrackingCode(null);
+                setStep('cart');
+                localStorage.removeItem('hoppiness_last_tracking');
+                onOpenChange(false);
+              }}
+            />
+          </div>
+        ) : cart.items.length === 0 ? (
           <div className="flex-1 flex items-center justify-center py-20 text-center">
             <div>
               <span className="text-5xl mb-4 block">🛒</span>
@@ -753,19 +777,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
           </div>
         )}
 
-        {step === 'tracking' && trackingCode && (
-          <div className="flex flex-col flex-1 min-h-0">
-            <TrackingInlineView
-              trackingCode={trackingCode}
-              onNewOrder={() => {
-                setTrackingCode(null);
-                setStep('cart');
-                localStorage.removeItem('hoppiness_last_tracking');
-                onOpenChange(false);
-              }}
-            />
-          </div>
-        )}
+        {/* Tracking block moved above empty cart check */}
       </SheetContent>
     </Sheet>
   );

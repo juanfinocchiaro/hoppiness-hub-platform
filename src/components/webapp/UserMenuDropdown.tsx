@@ -17,7 +17,11 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-export function UserMenuDropdown() {
+interface UserMenuDropdownProps {
+  onMisPedidos?: () => void;
+}
+
+export function UserMenuDropdown({ onMisPedidos }: UserMenuDropdownProps = {}) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -76,7 +80,7 @@ export function UserMenuDropdown() {
           <p className="text-xs text-muted-foreground truncate">{user.email}</p>
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate('/cuenta/pedidos')}>
+        <DropdownMenuItem onClick={() => onMisPedidos ? onMisPedidos() : navigate('/cuenta/pedidos')}>
           <Package className="w-4 h-4 mr-2" />
           Mis pedidos
         </DropdownMenuItem>

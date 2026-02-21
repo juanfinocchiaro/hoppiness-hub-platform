@@ -21,9 +21,10 @@ interface Props {
   onServiceChange?: (tipo: TipoServicioWebapp) => void;
   cartPanelVisible?: boolean;
   onShowTracking?: (trackingCode: string) => void;
+  onMisPedidos?: () => void;
 }
 
-export function WebappMenuView({ branch, config, items, loading, tipoServicio, cart, onProductClick, onBack, onServiceChange, cartPanelVisible, onShowTracking }: Props) {
+export function WebappMenuView({ branch, config, items, loading, tipoServicio, cart, onProductClick, onBack, onServiceChange, cartPanelVisible, onShowTracking, onMisPedidos }: Props) {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -172,7 +173,7 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
               {viewMode === 'grid' ? <List className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
             </button>
             {/* User menu */}
-            <UserMenuDropdown />
+            <UserMenuDropdown onMisPedidos={onMisPedidos} />
           </div>
 
           {/* Search - collapsible on mobile, always visible on desktop */}
