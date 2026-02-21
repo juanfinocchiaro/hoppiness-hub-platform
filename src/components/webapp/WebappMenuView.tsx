@@ -1,13 +1,12 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { ArrowLeft, Search, X, LayoutGrid, List, Star } from 'lucide-react';
+import { Search, X, LayoutGrid, List, Star } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ProductCard } from './ProductCard';
 import { Loader2 } from 'lucide-react';
 import { ActiveOrderBanner } from './ActiveOrderBanner';
-import { UserMenuDropdown } from './UserMenuDropdown';
+import { WebappHeader } from './WebappHeader';
 import type { WebappMenuItem, TipoServicioWebapp } from '@/types/webapp';
 import type { useWebappCart } from '@/hooks/useWebappCart';
-import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 
 interface Props {
   branch: { name: string };
@@ -104,6 +103,12 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
     ? config.tiempo_estimado_delivery_min
     : config.tiempo_estimado_retiro_min;
 
+  // Build subtitle for header
+  const headerSubtitle = [
+    servicioLabel,
+    tiempoEstimado ? `~${tiempoEstimado} min` : null,
+  ].filter(Boolean).join(' · ');
+
   const renderProductCard = (item: WebappMenuItem, layout: 'grid' | 'list' | 'desktop') => (
     <ProductCard
       key={item.id}
@@ -122,107 +127,90 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Header with brand gradient accent */}
-      <header className="sticky top-0 z-30 bg-background border-b shadow-sm">
-        <div className="h-1 w-full bg-gradient-to-r from-primary via-accent to-warning" />
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center gap-3 px-4 py-3">
-            <button onClick={onBack} className="p-1.5 -ml-1 hover:bg-muted rounded-lg transition-colors text-muted-foreground">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <img src={logoHoppiness} alt="" className="w-8 h-8 rounded-full object-contain" />
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm truncate text-foreground">{branch.name}</p>
-              {servicioOptions.length > 1 && onServiceChange ? (
-                <div className="flex gap-1 mt-1">
-                  {servicioOptions.map(opt => (
-                    <button
-                      key={opt.key}
-                      onClick={() => onServiceChange(opt.key)}
-                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full transition-colors ${
-                        tipoServicio === opt.key
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                      }`}
-                    >
-                      {opt.icon} {opt.label}
-                      {opt.tiempo && <span className="opacity-70"> ~{opt.tiempo}′</span>}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  {servicioLabel}
-                  {tiempoEstimado && <> · ~{tiempoEstimado} min</>}
-                </p>
-              )}
-            </div>
-            {/* Search icon (mobile: collapsible) */}
-            <button
-              onClick={() => setSearchExpanded(v => !v)}
-              className="p-1.5 hover:bg-muted rounded-lg transition-colors lg:hidden text-muted-foreground"
-            >
-              <Search className="w-4 h-4" />
-            </button>
-            {/* View toggle - only on mobile */}
-            <button
-              onClick={() => setViewMode(v => v === 'grid' ? 'list' : 'grid')}
-              className="p-1.5 hover:bg-muted rounded-lg transition-colors lg:hidden text-muted-foreground"
-              title={viewMode === 'grid' ? 'Vista lista' : 'Vista grilla'}
-            >
-              {viewMode === 'grid' ? <List className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
-            </button>
-            {/* User menu */}
-            <UserMenuDropdown onMisPedidos={onMisPedidos} />
+      <WebappHeader
+        title={branch.name}
+        subtitle={headerSubtitle}
+        showBack
+        onBack={onBack}
+        showSearch
+        onSearchToggle={() => setSearchExpanded(v => !v)}
+        onMisPedidos={onMisPedidos}
+        extraActions={
+          <button
+            onClick={() => setViewMode(v => v === 'grid' ? 'list' : 'grid')}
+            className="p-1.5 hover:bg-muted rounded-lg transition-colors lg:hidden text-muted-foreground"
+            title={viewMode === 'grid' ? 'Vista lista' : 'Vista grilla'}
+          >
+            {viewMode === 'grid' ? <List className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
+          </button>
+        }
+      >
+        {/* Service toggle pills — only if multiple services available */}
+        {servicioOptions.length > 1 && onServiceChange && (
+          <div className="flex gap-1 px-4 pb-2">
+            {servicioOptions.map(opt => (
+              <button
+                key={opt.key}
+                onClick={() => onServiceChange(opt.key)}
+                className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full transition-colors ${
+                  tipoServicio === opt.key
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+              >
+                {opt.icon} {opt.label}
+                {opt.tiempo && <span className="opacity-70"> ~{opt.tiempo}′</span>}
+              </button>
+            ))}
           </div>
+        )}
 
-          {/* Search - collapsible on mobile, always visible on desktop */}
-          <div className={`px-4 pb-3 ${searchExpanded ? '' : 'hidden lg:block'}`}>
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar en el menú..."
-                className="pl-9 pr-8 bg-muted border-border text-foreground placeholder:text-muted-foreground h-9 text-sm"
-                autoFocus={searchExpanded}
-              />
-              {search && (
-                <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2">
-                  <X className="w-4 h-4 text-muted-foreground" />
-                </button>
-              )}
-            </div>
+        {/* Search bar — collapsible on mobile, always visible on desktop */}
+        <div className={`px-4 pb-3 ${searchExpanded ? '' : 'hidden lg:block'}`}>
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar en el menú..."
+              className="pl-9 pr-8 bg-muted border-border text-foreground placeholder:text-muted-foreground h-9 text-sm"
+              autoFocus={searchExpanded}
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2">
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            )}
           </div>
-
-          {/* Active order banner */}
-          {onShowTracking && <ActiveOrderBanner onShowTracking={onShowTracking} />}
-
-          {/* Category tabs - mobile only */}
-          {!search && categories.length > 1 && (
-            <div
-              ref={tabsRef}
-              className="flex gap-1 overflow-x-auto px-4 pb-2 scrollbar-none lg:hidden"
-            >
-              {categories.map(cat => (
-                <button
-                  key={cat.nombre}
-                  onClick={() => scrollToCategory(cat.nombre)}
-                  className={`
-                    whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold transition-colors shrink-0
-                    ${activeCategory === cat.nombre
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                    }
-                  `}
-                >
-                  {cat.nombre}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
-      </header>
+
+        {/* Active order banner */}
+        {onShowTracking && <ActiveOrderBanner onShowTracking={onShowTracking} />}
+
+        {/* Category tabs - mobile only */}
+        {!search && categories.length > 1 && (
+          <div
+            ref={tabsRef}
+            className="flex gap-1 overflow-x-auto px-4 pb-2 scrollbar-none lg:hidden"
+          >
+            {categories.map(cat => (
+              <button
+                key={cat.nombre}
+                onClick={() => scrollToCategory(cat.nombre)}
+                className={`
+                  whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold transition-colors shrink-0
+                  ${activeCategory === cat.nombre
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  }
+                `}
+              >
+                {cat.nombre}
+              </button>
+            ))}
+          </div>
+        )}
+      </WebappHeader>
 
       {/* Main content: sidebar (desktop) + products */}
       <main className="flex-1 pb-24 lg:pb-8">

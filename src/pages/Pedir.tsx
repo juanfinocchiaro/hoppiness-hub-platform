@@ -1,9 +1,9 @@
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Loader2, MapPin, Clock, Truck, ShoppingBag, Pause } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Loader2, MapPin, Clock, Truck, ShoppingBag, Pause } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
+import { WebappHeader } from '@/components/webapp/WebappHeader';
 import { SEO } from '@/components/SEO';
 
 interface BranchWithWebapp {
@@ -77,6 +77,7 @@ function formatPrice(n: number) {
 
 export default function Pedir() {
   const { data: branches, isLoading } = useBranchesForPedir();
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -86,37 +87,15 @@ export default function Pedir() {
         path="/pedir"
       />
 
-      {/* Header */}
-      <header className="bg-primary text-primary-foreground">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-          <Link to="/">
-            <Button variant="ghost" size="sm" className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10 -ml-2">
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Volver
-            </Button>
-          </Link>
-          <Link to="/" className="flex items-center gap-2.5 ml-auto">
-            <img src={logoHoppiness} alt="Hoppiness Club" className="w-9 h-9 rounded-full object-contain" />
-            <span className="font-black font-brand text-base hidden sm:inline tracking-tight">HOPPINESS CLUB</span>
-          </Link>
-        </div>
-      </header>
-
-      {/* Hero */}
-      <div className="bg-primary text-primary-foreground pb-10 pt-4">
-        <div className="max-w-5xl mx-auto px-4 text-center">
-          <h1 className="text-3xl sm:text-4xl font-black font-brand tracking-tight">
-            PEDÍ ONLINE
-          </h1>
-          <p className="text-primary-foreground/70 mt-2 text-sm sm:text-base">
-            Elegí tu local y hacé tu pedido en minutos
-          </p>
-        </div>
-      </div>
+      <WebappHeader
+        title="Pedí Online"
+        showBack
+        onBack={() => navigate('/')}
+      />
 
       {/* Branch cards */}
-      <main className="flex-1 -mt-6">
-        <div className="max-w-5xl mx-auto px-4 pb-12">
+      <main className="flex-1">
+        <div className="max-w-5xl mx-auto px-4 py-6 pb-12">
           {isLoading ? (
             <div className="flex justify-center py-16">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
