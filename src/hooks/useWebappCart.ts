@@ -1,9 +1,43 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { CartItem, CartItemModifier, TipoServicioWebapp } from '@/types/webapp';
 
+const CART_STORAGE_KEY = 'hoppiness_cart';
+const CART_EXPIRY_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+interface PersistedCart {
+  items: CartItem[];
+  tipoServicio: TipoServicioWebapp;
+  timestamp: number;
+}
+
+function loadCart(): { items: CartItem[]; tipoServicio: TipoServicioWebapp } {
+  try {
+    const raw = localStorage.getItem(CART_STORAGE_KEY);
+    if (!raw) return { items: [], tipoServicio: 'retiro' };
+    const parsed: PersistedCart = JSON.parse(raw);
+    if (Date.now() - parsed.timestamp > CART_EXPIRY_MS) {
+      localStorage.removeItem(CART_STORAGE_KEY);
+      return { items: [], tipoServicio: 'retiro' };
+    }
+    return { items: parsed.items || [], tipoServicio: parsed.tipoServicio || 'retiro' };
+  } catch {
+    return { items: [], tipoServicio: 'retiro' };
+  }
+}
+
 export function useWebappCart() {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [tipoServicio, setTipoServicio] = useState<TipoServicioWebapp>('retiro');
+  const initial = useRef(loadCart());
+  const [items, setItems] = useState<CartItem[]>(initial.current.items);
+  const [tipoServicio, setTipoServicio] = useState<TipoServicioWebapp>(initial.current.tipoServicio);
+
+  // Persist to localStorage on changes (debounced)
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      const data: PersistedCart = { items, tipoServicio, timestamp: Date.now() };
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(data));
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [items, tipoServicio]);
 
   const addItem = useCallback((item: Omit<CartItem, 'cartId'>) => {
     setItems(prev => [...prev, { ...item, cartId: crypto.randomUUID() }]);
@@ -42,7 +76,10 @@ export function useWebappCart() {
     });
   }, []);
 
-  const clearCart = useCallback(() => setItems([]), []);
+  const clearCart = useCallback(() => {
+    setItems([]);
+    localStorage.removeItem(CART_STORAGE_KEY);
+  }, []);
 
   const totalItems = useMemo(() => items.reduce((s, i) => s + i.cantidad, 0), [items]);
 

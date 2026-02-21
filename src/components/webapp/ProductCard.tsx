@@ -67,7 +67,7 @@ export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecre
         {/* Text content */}
         <div className="flex-1 min-w-0 flex flex-col justify-between self-stretch">
           <div>
-            <h3 className="font-bold text-sm text-foreground leading-tight line-clamp-1">
+            <h3 className="font-bold text-sm text-foreground leading-tight line-clamp-2">
               {item.nombre_corto || item.nombre}
             </h3>
             {item.descripcion && (
@@ -163,7 +163,7 @@ export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecre
       )}
 
       <div className="flex-1 min-w-0">
-        <h3 className="font-bold text-sm text-foreground leading-tight truncate">
+        <h3 className="font-bold text-sm text-foreground leading-tight line-clamp-2">
           {item.nombre_corto || item.nombre}
         </h3>
         {item.descripcion && (
