@@ -128,7 +128,7 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
   );
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col flex-1 min-w-0 min-h-screen">
       <WebappHeader
         title={branch.name}
         subtitle={headerSubtitle}
@@ -258,7 +258,7 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
           )}
 
       {/* Products area */}
-          <div className={`flex-1 min-w-0 ${cartPanelVisible ? 'lg:mr-[360px]' : ''}`}>
+          <div className="flex-1 min-w-0">
             {/* Promo banner bar */}
             {!loading && !search && promoItems.length > 0 && (
               <div className="bg-accent/10 border-b border-accent/20">

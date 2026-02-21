@@ -1,6 +1,6 @@
 /**
- * ActiveOrderBanner — Shows a banner in the store when user has an active order.
- * Clicking it opens the tracking view in the side panel.
+ * ActiveOrderBanner — Shows a banner in the store when user has active orders.
+ * Supports multiple active orders.
  */
 import { Flame, Clock, CheckCircle2, Truck, Package } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -27,7 +27,7 @@ interface Props {
 export function ActiveOrderBanner({ onShowTracking }: Props) {
   const { user } = useAuth();
 
-  const { data: activeOrder } = useQuery({
+  const { data: activeOrders } = useQuery({
     queryKey: ['active-order-banner', user?.id],
     queryFn: async () => {
       if (user) {
@@ -37,39 +37,54 @@ export function ActiveOrderBanner({ onShowTracking }: Props) {
           .eq('cliente_user_id', user.id)
           .eq('origen', 'webapp')
           .in('estado', ACTIVE_STATES)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        return data;
+          .order('created_at', { ascending: false });
+        return data || [];
       }
       // Guest
       const code = localStorage.getItem('hoppiness_last_tracking');
-      if (!code) return null;
+      if (!code) return [];
       const { data } = await supabase
         .from('pedidos')
         .select('numero_pedido, estado, webapp_tracking_code')
         .eq('webapp_tracking_code', code)
-        .in('estado', ACTIVE_STATES)
-        .maybeSingle();
-      return data;
+        .in('estado', ACTIVE_STATES);
+      return data || [];
     },
     refetchInterval: 30000,
     staleTime: 15000,
   });
 
-  if (!activeOrder) return null;
+  if (!activeOrders || activeOrders.length === 0) return null;
 
-  const config = ESTADO_CONFIG[activeOrder.estado] || ESTADO_CONFIG.pendiente;
+  // Multiple orders
+  if (activeOrders.length > 1) {
+    return (
+      <button
+        onClick={() => onShowTracking(activeOrders[0].webapp_tracking_code)}
+        className="w-full bg-primary/10 border-b border-primary/20 px-4 py-2 flex items-center gap-2 hover:bg-primary/15 transition-colors text-left"
+      >
+        <Package className="w-4 h-4 text-primary shrink-0" />
+        <p className="text-xs font-medium text-foreground flex-1">
+          Tenés <span className="font-bold">{activeOrders.length} pedidos activos</span>
+        </p>
+        <span className="text-[10px] font-semibold text-primary shrink-0">Ver estado →</span>
+      </button>
+    );
+  }
+
+  // Single order
+  const order = activeOrders[0];
+  const config = ESTADO_CONFIG[order.estado] || ESTADO_CONFIG.pendiente;
   const Icon = config.icon;
 
   return (
     <button
-      onClick={() => onShowTracking(activeOrder.webapp_tracking_code)}
+      onClick={() => onShowTracking(order.webapp_tracking_code)}
       className="w-full bg-primary/10 border-b border-primary/20 px-4 py-2 flex items-center gap-2 hover:bg-primary/15 transition-colors text-left"
     >
       <Icon className="w-4 h-4 text-primary shrink-0" />
       <p className="text-xs font-medium text-foreground flex-1">
-        Tu pedido <span className="font-bold">#{activeOrder.numero_pedido}</span> {config.label}
+        Tu pedido <span className="font-bold">#{order.numero_pedido}</span> {config.label}
       </p>
       <span className="text-[10px] font-semibold text-primary shrink-0">Ver estado →</span>
     </button>

@@ -1,10 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
-import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { Minus, Plus, Trash2, ShoppingBag, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CheckoutInlineView } from './CheckoutInlineView';
 import { TrackingInlineView } from './TrackingInlineView';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import type { useWebappCart } from '@/hooks/useWebappCart';
 import type { WebappMenuItem } from '@/types/webapp';
+
+const TERMINAL_STATES = ['entregado', 'cancelado'];
+const ACTIVE_STATES = ['pendiente', 'confirmado', 'en_preparacion', 'listo', 'listo_retiro', 'listo_mesa', 'listo_envio', 'en_camino'];
 
 /** Simple fade+slide transition wrapper */
 function StepTransition({ children, stepKey }: { children: React.ReactNode; stepKey: string }) {
@@ -32,8 +37,6 @@ function StepTransition({ children, stepKey }: { children: React.ReactNode; step
   );
 }
 
-type SidePanelStep = 'cart' | 'checkout' | 'tracking';
-
 interface Props {
   cart: ReturnType<typeof useWebappCart>;
   costoEnvio: number;
@@ -43,37 +46,70 @@ interface Props {
   suggestedItems?: WebappMenuItem[];
   onAddSuggested?: (item: WebappMenuItem) => void;
   externalTrackingCode?: string | null;
+  trackingTrigger?: number;
 }
 
 function formatPrice(n: number) {
   return `$${n.toLocaleString('es-AR')}`;
 }
 
-export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnabled, suggestedItems, onAddSuggested, externalTrackingCode }: Props) {
-  const [step, setStep] = useState<SidePanelStep>('cart');
-  const [trackingCode, setTrackingCode] = useState<string | null>(null);
-
-  // If cart becomes empty while on cart step, stay. If on checkout, go back.
-  useEffect(() => {
-    if (cart.items.length === 0 && step === 'checkout') setStep('cart');
-  }, [cart.items.length, step]);
-
-  // Restore tracking if there's a recent one
-  useEffect(() => {
+export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnabled, suggestedItems, onAddSuggested, externalTrackingCode, trackingTrigger }: Props) {
+  // Multi-order tab system
+  const [activeOrders, setActiveOrders] = useState<string[]>(() => {
     const saved = localStorage.getItem('hoppiness_last_tracking');
-    if (saved && step === 'cart' && cart.items.length === 0) {
-      setTrackingCode(saved);
-      setStep('tracking');
-    }
-  }, []);
+    return saved ? [saved] : [];
+  });
+  const [selectedTab, setSelectedTab] = useState<'cart' | 'checkout' | string>('cart');
 
-  // Handle external tracking code (from ActiveOrderBanner)
+  // Poll active orders to remove terminal ones
+  const { data: orderStatuses } = useQuery({
+    queryKey: ['side-panel-order-statuses', activeOrders],
+    queryFn: async () => {
+      if (activeOrders.length === 0) return [];
+      const { data } = await supabase
+        .from('pedidos')
+        .select('webapp_tracking_code, estado, numero_pedido')
+        .in('webapp_tracking_code', activeOrders);
+      return data || [];
+    },
+    enabled: activeOrders.length > 0,
+    refetchInterval: 15000,
+    staleTime: 10000,
+  });
+
+  // Remove terminal orders from tabs
+  useEffect(() => {
+    if (!orderStatuses || orderStatuses.length === 0) return;
+    const terminalCodes = orderStatuses
+      .filter(o => TERMINAL_STATES.includes(o.estado))
+      .map(o => o.webapp_tracking_code)
+      .filter(Boolean) as string[];
+    
+    if (terminalCodes.length > 0) {
+      setActiveOrders(prev => {
+        const next = prev.filter(c => !terminalCodes.includes(c));
+        return next;
+      });
+      // If selected tab was a terminal order, go to cart
+      if (typeof selectedTab === 'string' && selectedTab !== 'cart' && selectedTab !== 'checkout' && terminalCodes.includes(selectedTab)) {
+        setSelectedTab('cart');
+      }
+    }
+  }, [orderStatuses]);
+
+  // If cart becomes empty while on checkout, go back to cart
+  useEffect(() => {
+    if (cart.items.length === 0 && selectedTab === 'checkout') setSelectedTab('cart');
+  }, [cart.items.length, selectedTab]);
+
+  // Handle external tracking code (from ActiveOrderBanner or MisPedidos)
   useEffect(() => {
     if (externalTrackingCode) {
-      setTrackingCode(externalTrackingCode);
-      setStep('tracking');
+      // Add to active orders if not already there
+      setActiveOrders(prev => prev.includes(externalTrackingCode) ? prev : [...prev, externalTrackingCode]);
+      setSelectedTab(externalTrackingCode);
     }
-  }, [externalTrackingCode]);
+  }, [externalTrackingCode, trackingTrigger]);
 
   const totalConEnvio = cart.totalPrecio + costoEnvio;
 
@@ -92,15 +128,62 @@ export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnable
   const hasSuggestions = acompSuggestions.length > 0 || bebidaSuggestions.length > 0;
 
   const handleNewOrder = () => {
-    setStep('cart');
-    setTrackingCode(null);
-    localStorage.removeItem('hoppiness_last_tracking');
+    // Don't destroy tracking — just switch to cart tab
+    setSelectedTab('cart');
   };
 
+  const handleOrderConfirmed = (code: string) => {
+    setActiveOrders(prev => prev.includes(code) ? prev : [...prev, code]);
+    localStorage.setItem('hoppiness_last_tracking', code);
+    setSelectedTab(code);
+  };
+
+  // Build tab label from order statuses
+  const getOrderTabLabel = (code: string) => {
+    const status = orderStatuses?.find(o => o.webapp_tracking_code === code);
+    if (!status) return code.slice(0, 6);
+    return `#${status.numero_pedido}`;
+  };
+
+  const hasTabs = activeOrders.length > 0;
+  const isTrackingTab = selectedTab !== 'cart' && selectedTab !== 'checkout';
+  const effectiveStep = isTrackingTab ? 'tracking' : selectedTab;
+
   return (
-    <div className="hidden lg:flex fixed top-[114px] right-0 w-[350px] bottom-0 border-l bg-background flex-col z-20">
-      <StepTransition stepKey={step}>
-        {step === 'cart' && (
+    <aside className="hidden lg:flex w-[350px] shrink-0 border-l bg-background flex-col sticky top-0 h-screen z-20">
+      {/* Tabs bar — only show if there are active orders */}
+      {hasTabs && (
+        <div className="flex items-center gap-1 px-2 py-1.5 border-b bg-muted/30 overflow-x-auto scrollbar-none">
+          <button
+            onClick={() => setSelectedTab('cart')}
+            className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${
+              selectedTab === 'cart' || selectedTab === 'checkout'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-muted'
+            }`}
+          >
+            <ShoppingBag className="w-3 h-3" />
+            Carrito{cart.totalItems > 0 ? ` (${cart.totalItems})` : ''}
+          </button>
+          {activeOrders.map(code => (
+            <button
+              key={code}
+              onClick={() => setSelectedTab(code)}
+              className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${
+                selectedTab === code
+                  ? 'bg-accent text-accent-foreground'
+                  : 'text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              <Package className="w-3 h-3" />
+              {getOrderTabLabel(code)}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <StepTransition stepKey={effectiveStep}>
+        {effectiveStep === 'cart' && (
           <>
             {/* Header */}
             <div className="px-4 py-3 border-b flex items-center gap-2">
@@ -111,6 +194,14 @@ export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnable
 
             {/* Items */}
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+              {cart.items.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <ShoppingBag className="w-10 h-10 text-muted-foreground/40 mb-3" />
+                  <p className="text-sm font-medium text-muted-foreground">Tu carrito está vacío</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Agregá productos del menú</p>
+                </div>
+              )}
+
               {cart.items.map(item => {
                 const extrasTotal = item.extras.reduce((s, e) => s + e.precio, 0);
                 const lineTotal = (item.precioUnitario + extrasTotal) * item.cantidad;
@@ -160,8 +251,8 @@ export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnable
                 );
               })}
 
-              {/* Upsell suggestions */}
-              {hasSuggestions && onAddSuggested && (
+              {/* Upsell suggestions — ONLY when cart has items (Bug 7E fix) */}
+              {cart.items.length > 0 && hasSuggestions && onAddSuggested && (
                 <div className="pt-3 border-t space-y-3">
                   <p className="text-xs font-bold text-foreground">¿Querés agregar algo más?</p>
                   {[
@@ -218,7 +309,7 @@ export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnable
                 <Button
                   size="lg"
                   className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-sm mt-2"
-                  onClick={() => setStep('checkout')}
+                  onClick={() => setSelectedTab('checkout')}
                 >
                   Continuar al pago
                 </Button>
@@ -227,28 +318,25 @@ export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnable
           </>
         )}
 
-        {step === 'checkout' && (
+        {effectiveStep === 'checkout' && (
           <CheckoutInlineView
             cart={cart}
             branchId={branchId}
             branchName={branchName}
             mpEnabled={mpEnabled}
             costoEnvio={costoEnvio}
-            onBack={() => setStep('cart')}
-            onConfirmed={(code) => {
-              setTrackingCode(code);
-              setStep('tracking');
-            }}
+            onBack={() => setSelectedTab('cart')}
+            onConfirmed={handleOrderConfirmed}
           />
         )}
 
-        {step === 'tracking' && trackingCode && (
+        {effectiveStep === 'tracking' && isTrackingTab && (
           <TrackingInlineView
-            trackingCode={trackingCode}
+            trackingCode={selectedTab}
             onNewOrder={handleNewOrder}
           />
         )}
       </StepTransition>
-    </div>
+    </aside>
   );
 }

@@ -51,6 +51,7 @@ export default function PedirPage() {
   const [cartOpen, setCartOpen] = useState(false);
   const [cartInitialStep, setCartInitialStep] = useState<'cart' | 'checkout'>('cart');
   const [externalTrackingCode, setExternalTrackingCode] = useState<string | null>(null);
+  const [trackingTrigger, setTrackingTrigger] = useState(0);
   const [misPedidosOpen, setMisPedidosOpen] = useState(false);
   const [perfilOpen, setPerfilOpen] = useState(false);
   const [direccionesOpen, setDireccionesOpen] = useState(false);
@@ -85,12 +86,12 @@ export default function PedirPage() {
     }
   }, [searchParams, menuItems, customizeItem]);
 
-  // Open CartSheet on mobile when externalTrackingCode changes (Problem 1: banner "Ver estado")
+  // Open CartSheet on mobile ONLY when side panel is not visible (Bug 7F fix)
   useEffect(() => {
-    if (externalTrackingCode) {
+    if (externalTrackingCode && !showSidePanel) {
       setCartOpen(true);
     }
-  }, [externalTrackingCode]);
+  }, [externalTrackingCode, trackingTrigger]);
 
   if (isLoading) {
     return (
@@ -159,6 +160,7 @@ export default function PedirPage() {
   // Handler for MisPedidosSheet tracking — feeds into same mechanism
   const handleMisPedidosTrack = (trackingCode: string) => {
     setExternalTrackingCode(trackingCode);
+    setTrackingTrigger(prev => prev + 1);
   };
 
   // Side panel now handles checkout inline, no need for this handler
@@ -166,7 +168,7 @@ export default function PedirPage() {
   const isDelivery = cart.tipoServicio === 'delivery';
   const costoEnvio = isDelivery ? (config.delivery_costo ?? 0) : 0;
   const hasActiveTracking = !!localStorage.getItem('hoppiness_last_tracking') || !!externalTrackingCode;
-  const showSidePanel = step === 'menu' && (cart.totalItems > 0 || hasActiveTracking);
+  const showSidePanel = step === 'menu';
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -186,24 +188,27 @@ export default function PedirPage() {
         />
       ) : (
         <>
-          <WebappMenuView
-            branch={branch}
-            config={config}
-            items={menuItems || []}
-            loading={menuLoading}
-            tipoServicio={cart.tipoServicio}
-            cart={cart}
-            onProductClick={handleProductClick}
-            onBack={() => setStep('landing')}
-            onServiceChange={(tipo) => cart.setTipoServicio(tipo)}
-            cartPanelVisible={showSidePanel}
-            onShowTracking={(code) => setExternalTrackingCode(code)}
-            onMisPedidos={() => setMisPedidosOpen(true)}
-            onMisDirecciones={() => setDireccionesOpen(true)}
-            onMiPerfil={() => setPerfilOpen(true)}
-          />
-          {/* Desktop side cart panel — shows cart, checkout, and tracking inline */}
-          {showSidePanel && (
+          <div className="flex flex-1 min-h-0">
+            <WebappMenuView
+              branch={branch}
+              config={config}
+              items={menuItems || []}
+              loading={menuLoading}
+              tipoServicio={cart.tipoServicio}
+              cart={cart}
+              onProductClick={handleProductClick}
+              onBack={() => setStep('landing')}
+              onServiceChange={(tipo) => cart.setTipoServicio(tipo)}
+              cartPanelVisible={showSidePanel}
+              onShowTracking={(code) => {
+                setExternalTrackingCode(code);
+                setTrackingTrigger(prev => prev + 1);
+              }}
+              onMisPedidos={() => setMisPedidosOpen(true)}
+              onMisDirecciones={() => setDireccionesOpen(true)}
+              onMiPerfil={() => setPerfilOpen(true)}
+            />
+            {/* Desktop side cart panel — sticky alongside menu */}
             <CartSidePanel
               cart={cart}
               costoEnvio={costoEnvio}
@@ -213,8 +218,9 @@ export default function PedirPage() {
               suggestedItems={menuItems || []}
               onAddSuggested={(item) => cart.quickAdd(item.id, item.nombre, item.precio_base, item.imagen_url)}
               externalTrackingCode={externalTrackingCode}
+              trackingTrigger={trackingTrigger}
             />
-          )}
+          </div>
 
           {/* Mobile cart bar */}
           {cart.totalItems > 0 && (
