@@ -62,6 +62,31 @@ Deno.serve(async (req) => {
 
     const body: CreateWebappOrderBody = await req.json();
 
+    // ── Extract authenticated user (if any) ─────────────────────
+    let clienteUserId: string | null = null;
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.replace("Bearer ", "");
+      const { data: { user } } = await supabase.auth.getUser(token);
+      if (user) {
+        clienteUserId = user.id;
+
+        // Auto-fill from profile if not provided
+        if (!body.cliente_nombre?.trim() || !body.cliente_telefono?.trim()) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name, phone")
+            .eq("id", user.id)
+            .single();
+
+          if (profile) {
+            if (!body.cliente_nombre?.trim()) body.cliente_nombre = profile.full_name || "";
+            if (!body.cliente_telefono?.trim()) body.cliente_telefono = profile.phone || "";
+          }
+        }
+      }
+    }
+
     // ── Validation ──────────────────────────────────────────────
     if (!body.branch_id) return json(400, { error: "branch_id es requerido" });
     if (!body.cliente_nombre?.trim())
@@ -234,6 +259,7 @@ Deno.serve(async (req) => {
         : null,
       tiempo_inicio_prep: autoAccept ? now : null,
       origen: "webapp",
+      cliente_user_id: clienteUserId,
     } as any);
 
     if (pedidoErr) {

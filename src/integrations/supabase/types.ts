@@ -5308,6 +5308,7 @@ export type Database = {
           cliente_nombre: string | null
           cliente_notas: string | null
           cliente_telefono: string | null
+          cliente_user_id: string | null
           costo_delivery: number | null
           created_at: string | null
           created_by: string | null
@@ -5352,6 +5353,7 @@ export type Database = {
           cliente_nombre?: string | null
           cliente_notas?: string | null
           cliente_telefono?: string | null
+          cliente_user_id?: string | null
           costo_delivery?: number | null
           created_at?: string | null
           created_by?: string | null
@@ -5396,6 +5398,7 @@ export type Database = {
           cliente_nombre?: string | null
           cliente_notas?: string | null
           cliente_telefono?: string | null
+          cliente_user_id?: string | null
           costo_delivery?: number | null
           created_at?: string | null
           created_by?: string | null

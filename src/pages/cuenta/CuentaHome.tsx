@@ -7,10 +7,13 @@ import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { User, ArrowRight, Building2, AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { User, ArrowRight, Building2, AlertTriangle, Package, ShoppingBag } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import { BranchWorkCard } from '@/components/cuenta/BranchWorkCard';
 import { PendingItemsPanel } from '@/components/cuenta/PendingItemsPanel';
 import { ProfileCompletenessCard } from '@/components/cuenta/ProfileCompletenessCard';
@@ -23,6 +26,8 @@ export default function CuentaHome() {
   const effectiveUser = useEffectiveUser();
   const effectiveUserId = effectiveUser.id;
   const { branchRoles, brandRole, canAccessBrandPanel } = usePermissionsWithImpersonation();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Check access levels
   const hasBrandAccess = canAccessBrandPanel;
@@ -103,8 +108,53 @@ export default function CuentaHome() {
     staleTime: 60000,
   });
 
+  // Fetch last order for client section
+  const { data: lastOrder } = useQuery({
+    queryKey: ['my-last-order', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pedidos')
+        .select(`
+          id, numero_pedido, estado, total, created_at, webapp_tracking_code, branch_id,
+          pedido_items(nombre, cantidad)
+        `)
+        .eq('cliente_user_id', user!.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  // Fetch branch name for last order
+  const { data: lastOrderBranch } = useQuery({
+    queryKey: ['branch-name', lastOrder?.branch_id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('branches')
+        .select('name')
+        .eq('id', lastOrder!.branch_id)
+        .single();
+      return data?.name || '';
+    },
+    enabled: !!lastOrder?.branch_id,
+  });
+
   const displayName = effectiveUser.full_name || profile?.full_name?.split(' ')[0] || 'Usuario';
   const hasLocalRoles = branchPinData && branchPinData.filter((r: any) => r.local_role).length > 0;
+
+  const estadoLabels: Record<string, string> = {
+    pendiente: '⏳ Pendiente',
+    confirmado: '✅ Confirmado',
+    en_preparacion: '🔥 Preparando',
+    listo: '✅ Listo',
+    en_camino: '🚀 En camino',
+    entregado: '✅ Entregado',
+    cancelado: '❌ Cancelado',
+    rechazado: '❌ Rechazado',
+  };
 
   return (
     <div className="space-y-6">
@@ -136,6 +186,43 @@ export default function CuentaHome() {
       {/* Pending Items */}
       {effectiveUserId && <PendingItemsPanel userId={effectiveUserId} />}
 
+      {/* Last Order Card - visible for all users with orders */}
+      {lastOrder && (
+        <Card className="border-accent/30 bg-accent/5">
+          <CardContent className="p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4 text-accent" />
+                <span className="text-sm font-semibold">Tu último pedido</span>
+              </div>
+              <Badge variant="secondary" className="text-xs">
+                #{lastOrder.numero_pedido}
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {lastOrderBranch} · {estadoLabels[lastOrder.estado] || lastOrder.estado}
+            </p>
+            <p className="text-sm text-muted-foreground truncate">
+              {(lastOrder.pedido_items || []).slice(0, 2).map((i: any) => `${i.cantidad}x ${i.nombre}`).join(' · ')}
+            </p>
+            <div className="flex items-center justify-between pt-1">
+              <span className="font-bold text-sm">${lastOrder.total?.toLocaleString('es-AR')}</span>
+              <div className="flex gap-2">
+                {lastOrder.webapp_tracking_code && (
+                  <Button variant="outline" size="sm" onClick={() => navigate(`/pedido/${lastOrder.webapp_tracking_code}`)}>
+                    Ver detalle
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" onClick={() => navigate('/cuenta/pedidos')}>
+                  <ShoppingBag className="w-3.5 h-3.5 mr-1" />
+                  Mis pedidos
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Mi Marca Access Card */}
       {hasBrandAccess && (
         <Link to="/mimarca">
@@ -159,15 +246,19 @@ export default function CuentaHome() {
       {/* Profile completeness */}
       {effectiveUserId && !isOnlyFranquiciado && <ProfileCompletenessCard userId={effectiveUserId} />}
 
-      {/* No Role Message */}
-      {hasNoRole && (
+      {/* No Role Message - updated for clients */}
+      {hasNoRole && !lastOrder && (
         <Card className="border-dashed">
           <CardContent className="py-12 text-center">
             <User className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <h2 className="text-lg font-medium">Tu cuenta está activa</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Si trabajás en Hoppiness, pedile a tu encargado que te asigne un rol.
+              Hacé tu primer pedido o, si trabajás en Hoppiness, pedile a tu encargado que te asigne un rol.
             </p>
+            <Button className="mt-4" onClick={() => navigate('/pedir')}>
+              <ShoppingBag className="w-4 h-4 mr-2" />
+              Pedir ahora
+            </Button>
           </CardContent>
         </Card>
       )}
