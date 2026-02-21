@@ -16,9 +16,10 @@ interface Props {
   cart: ReturnType<typeof useWebappCart>;
   onProductClick: (item: WebappMenuItem) => void;
   onBack: () => void;
+  cartPanelVisible?: boolean;
 }
 
-export function WebappMenuView({ branch, config, items, loading, tipoServicio, cart, onProductClick, onBack }: Props) {
+export function WebappMenuView({ branch, config, items, loading, tipoServicio, cart, onProductClick, onBack, cartPanelVisible }: Props) {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -98,17 +99,17 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-primary text-primary-foreground shadow-md">
+      {/* Header - white professional */}
+      <header className="sticky top-0 z-30 bg-background border-b shadow-sm">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center gap-3 px-4 py-3">
-            <button onClick={onBack} className="p-1.5 -ml-1 hover:bg-white/10 rounded-lg transition-colors">
+            <button onClick={onBack} className="p-1.5 -ml-1 hover:bg-muted rounded-lg transition-colors text-muted-foreground">
               <ArrowLeft className="w-5 h-5" />
             </button>
             <img src={logoHoppiness} alt="" className="w-8 h-8 rounded-full object-contain" />
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm truncate">{branch.name}</p>
-              <p className="text-xs text-primary-foreground/70">
+              <p className="font-bold text-sm truncate text-foreground">{branch.name}</p>
+              <p className="text-xs text-muted-foreground">
                 {servicioLabel}
                 {tiempoEstimado && <> · ~{tiempoEstimado} min</>}
               </p>
@@ -116,7 +117,7 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
             {/* View toggle - only on mobile */}
             <button
               onClick={() => setViewMode(v => v === 'grid' ? 'list' : 'grid')}
-              className="p-1.5 hover:bg-white/10 rounded-lg transition-colors lg:hidden"
+              className="p-1.5 hover:bg-muted rounded-lg transition-colors lg:hidden text-muted-foreground"
               title={viewMode === 'grid' ? 'Vista lista' : 'Vista grilla'}
             >
               {viewMode === 'grid' ? <List className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
@@ -126,16 +127,16 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
           {/* Search */}
           <div className="px-4 pb-3">
             <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-foreground/50" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Buscar en el menú..."
-                className="pl-9 pr-8 bg-white/15 border-white/20 text-primary-foreground placeholder:text-primary-foreground/50 h-9 text-sm"
+                className="pl-9 pr-8 bg-muted border-border text-foreground placeholder:text-muted-foreground h-9 text-sm"
               />
               {search && (
                 <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2">
-                  <X className="w-4 h-4 text-primary-foreground/50" />
+                  <X className="w-4 h-4 text-muted-foreground" />
                 </button>
               )}
             </div>
@@ -154,8 +155,8 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
                   className={`
                     whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold transition-colors shrink-0
                     ${activeCategory === cat.nombre
-                      ? 'bg-accent text-accent-foreground'
-                      : 'bg-white/10 text-primary-foreground/80 hover:bg-white/20'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
                     }
                   `}
                 >
@@ -168,11 +169,11 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
       </header>
 
       {/* Main content: sidebar (desktop) + products */}
-      <main className="flex-1 pb-24">
+      <main className="flex-1 pb-24 lg:pb-8">
         <div className="max-w-6xl mx-auto flex">
           {/* Desktop sidebar categories */}
           {!search && categories.length > 1 && (
-            <aside className="hidden lg:block w-[200px] shrink-0 sticky top-[120px] self-start max-h-[calc(100vh-140px)] overflow-y-auto border-r">
+            <aside className="hidden lg:block w-[200px] shrink-0 sticky top-[110px] self-start max-h-[calc(100vh-130px)] overflow-y-auto border-r">
               <nav className="py-4 pr-2">
                 {categories.map(cat => (
                   <button
@@ -194,7 +195,7 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
           )}
 
           {/* Products area */}
-          <div className="flex-1 min-w-0">
+          <div className={`flex-1 min-w-0 ${cartPanelVisible ? 'lg:mr-[360px]' : ''}`}>
             {loading ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -211,7 +212,7 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
                   data-category={cat.nombre}
                   className="scroll-mt-36"
                 >
-                  <div className="sticky top-[120px] lg:top-[120px] z-10 bg-background/95 backdrop-blur-sm px-4 py-2.5 border-b">
+                  <div className="sticky top-[110px] lg:top-[110px] z-10 bg-background/95 backdrop-blur-sm px-4 py-2.5 border-b">
                     <h2 className="text-sm font-black text-primary uppercase tracking-wide">
                       {cat.nombre}
                       <span className="text-xs font-normal text-muted-foreground ml-2 lowercase tracking-normal">
