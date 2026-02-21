@@ -37,7 +37,8 @@ export function useWebappMenuItems(branchId: string | undefined) {
         .from('items_carta')
         .select(`
           id, nombre, nombre_corto, descripcion, imagen_url,
-          precio_base, categoria_carta_id, orden, disponible_delivery,
+          precio_base, precio_promo, promo_etiqueta,
+          categoria_carta_id, orden, disponible_delivery,
           disponible_webapp, tipo,
           menu_categorias:categoria_carta_id(id, nombre, orden)
         `)

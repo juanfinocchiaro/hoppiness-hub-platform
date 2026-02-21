@@ -13,6 +13,7 @@ interface BranchWithWebapp {
   city: string;
   slug: string | null;
   public_status: string | null;
+  cover_image_url: string | null;
   webapp_activa: boolean;
   estado: string;
   delivery_habilitado: boolean;
@@ -28,7 +29,7 @@ function useBranchesForPedir() {
     queryFn: async () => {
       const { data: branches, error: bErr } = await supabase
         .from('branches_public')
-        .select('id, name, address, city, slug, public_status')
+        .select('id, name, address, city, slug, public_status, cover_image_url')
         .in('public_status', ['active', 'coming_soon'])
         .order('name');
       if (bErr) throw bErr;
@@ -51,6 +52,7 @@ function useBranchesForPedir() {
           const cfg = configMap[b.id];
           return {
             ...b,
+            cover_image_url: b.cover_image_url ?? null,
             webapp_activa: cfg?.webapp_activa === true,
             estado: cfg?.estado ?? 'cerrado',
             delivery_habilitado: cfg?.delivery_habilitado ?? false,
@@ -144,6 +146,21 @@ function BranchCard({ branch }: { branch: BranchWithWebapp }) {
 
   return (
     <div className="rounded-2xl bg-card border shadow-sm overflow-hidden transition-shadow hover:shadow-md">
+      {/* Cover image */}
+      {branch.cover_image_url ? (
+        <div className="aspect-[16/7] w-full overflow-hidden bg-muted">
+          <img
+            src={branch.cover_image_url}
+            alt={branch.name}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        </div>
+      ) : (
+        <div className="aspect-[16/7] w-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+          <span className="text-4xl">🍔</span>
+        </div>
+      )}
       <div className="p-5 space-y-3">
         {/* Name + status */}
         <div className="flex items-start justify-between gap-2">

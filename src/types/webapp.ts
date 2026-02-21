@@ -29,6 +29,8 @@ export interface WebappMenuItem {
   descripcion: string | null;
   imagen_url: string | null;
   precio_base: number;
+  precio_promo: number | null;
+  promo_etiqueta: string | null;
   categoria_carta_id: string | null;
   categoria_nombre: string | null;
   categoria_orden: number | null;

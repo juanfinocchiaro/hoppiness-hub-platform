@@ -34,6 +34,11 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
     return items.slice(0, 4);
   }, [items]);
 
+  // Promo items — items with promo_etiqueta or precio_promo
+  const promoItems = useMemo(() => {
+    return items.filter(i => i.promo_etiqueta || (i.precio_promo != null && i.precio_promo < i.precio_base));
+  }, [items]);
+
   const categories = useMemo(() => {
     const filtered = search.trim()
       ? items.filter(i =>
@@ -251,8 +256,35 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
             </aside>
           )}
 
-          {/* Products area */}
+      {/* Products area */}
           <div className={`flex-1 min-w-0 ${cartPanelVisible ? 'lg:mr-[360px]' : ''}`}>
+            {/* Promo banner bar */}
+            {!loading && !search && promoItems.length > 0 && (
+              <div className="bg-accent/10 border-b border-accent/20">
+                <div className="flex gap-3 overflow-x-auto px-4 py-3 scrollbar-none">
+                  {promoItems.map(item => (
+                    <button
+                      key={item.id}
+                      onClick={() => onProductClick(item)}
+                      className="shrink-0 flex items-center gap-2 bg-card rounded-full border border-accent/30 px-3 py-1.5 hover:border-accent transition-colors"
+                    >
+                      {item.imagen_url && (
+                        <img src={item.imagen_url} alt="" className="w-7 h-7 rounded-full object-cover" />
+                      )}
+                      <span className="text-xs font-bold text-foreground whitespace-nowrap">{item.nombre_corto || item.nombre}</span>
+                      {item.promo_etiqueta && (
+                        <span className="bg-accent text-accent-foreground text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase">
+                          {item.promo_etiqueta}
+                        </span>
+                      )}
+                      {item.precio_promo != null && item.precio_promo < item.precio_base && (
+                        <span className="text-xs font-bold text-accent">${item.precio_promo.toLocaleString('es-AR')}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {loading ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
