@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { lovable } from '@/integrations/lovable';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,16 @@ const passwordSchema = z.string().min(6, 'Mínimo 6 caracteres');
 
 export function AuthModal() {
   const { isOpen, closeAuthModal, onSuccess } = useAuthModal();
-  const { signIn, signUp } = useAuth();
+  const { user, signIn, signUp } = useAuth();
+
+  // Close modal when user becomes authenticated (handles Google OAuth redirect too)
+  useEffect(() => {
+    if (user && isOpen) {
+      resetForm();
+      closeAuthModal();
+      onSuccess?.();
+    }
+  }, [user, isOpen]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
