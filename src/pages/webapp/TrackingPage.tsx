@@ -5,6 +5,7 @@ import { Loader2, CheckCircle2, Clock, Flame, Package, Truck, PartyPopper, XCirc
 import { Button } from '@/components/ui/button';
 import { SEO } from '@/components/SEO';
 import { OrderChat } from '@/components/webapp/OrderChat';
+import { PostPurchaseSignup } from '@/components/webapp/PostPurchaseSignup';
 
 interface TrackingData {
   pedido: {
@@ -285,6 +286,9 @@ export default function TrackingPage() {
           clienteNombre={pedido.cliente_nombre ?? 'Cliente'}
           chatActive={!isFinal}
         />
+
+        {/* Post-purchase signup for guests */}
+        <PostPurchaseSignup trackingCode={trackingCode!} />
 
         {/* Actions */}
         <div className="space-y-2">
