@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useState } from 'react';
+import { useAuthModal } from '@/contexts/AuthModalContext';
 
 export function PublicHeader() {
   const { user, signOut } = useAuth();
@@ -27,6 +28,7 @@ export function PublicHeader() {
   const canUseMiCuenta = !!user;
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const { openAuthModal } = useAuthModal();
 
   const isActive = (path: string) => location.pathname.startsWith(path);
   const isHome = location.pathname === '/';
@@ -173,11 +175,9 @@ export function PublicHeader() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Link to="/ingresar">
-              <Button size="sm" variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/10">
-                Ingresar
-              </Button>
-            </Link>
+            <Button size="sm" variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={() => openAuthModal()}>
+              Ingresar
+            </Button>
           )}
         </nav>
 
@@ -318,11 +318,9 @@ export function PublicHeader() {
                     </Button>
                   </>
                 ) : (
-                  <Link to="/ingresar" onClick={() => setOpen(false)}>
-                    <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
-                      Ingresar
-                    </Button>
-                  </Link>
+                  <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => { setOpen(false); openAuthModal(); }}>
+                    Ingresar
+                  </Button>
                 )}
               </nav>
             </SheetContent>

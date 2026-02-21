@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
+import { AuthModalProvider } from "@/contexts/AuthModalContext";
+import { AuthModal } from "@/components/auth/AuthModal";
 import { AdminRoute, LocalRoute, RequireQRAccess, RequireAuth } from "@/components/guards";
 import UserFingerprint from "@/components/ui/UserFingerprint";
 import VersionBadge from "@/components/ui/VersionBadge";
@@ -138,6 +140,8 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <ImpersonationProvider>
+          <AuthModalProvider>
+          <AuthModal />
           <Sonner />
           <FloatingOrderChat />
           <div className="pointer-events-none fixed bottom-2 right-2 z-[60] flex flex-col items-end gap-1">
@@ -308,6 +312,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
+        </AuthModalProvider>
         </ImpersonationProvider>
       </AuthProvider>
     </TooltipProvider>
