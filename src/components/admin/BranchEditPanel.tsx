@@ -258,7 +258,7 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
               <RadioGroupItem value="active" id="status-active" className="mt-1" />
               <div className="flex-1">
                 <Label htmlFor="status-active" className="flex items-center gap-2 cursor-pointer font-medium">
-                  <Eye className="h-4 w-4 text-green-600" />
+                  <Eye className="h-4 w-4 text-success" />
                   Activo
                 </Label>
                 <p className="text-xs text-muted-foreground mt-0.5">

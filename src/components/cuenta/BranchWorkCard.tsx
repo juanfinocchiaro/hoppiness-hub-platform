@@ -104,7 +104,7 @@ export function BranchWorkCard({
                         <EyeOff className="w-3.5 h-3.5" />
                       </Button>
                     )}
-                    <Check className="w-4 h-4 text-green-500" />
+                    <Check className="w-4 h-4 text-success" />
                   </>
                 ) : (
                   <span className="text-sm text-warning">Sin PIN configurado</span>

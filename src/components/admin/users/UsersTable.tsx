@@ -118,9 +118,9 @@ export function UsersTable({ users, branches, onUserUpdated }: UsersTableProps) 
                     <TableCell>
                       <span className={cn(
                         "text-sm",
-                        user.brand_role === 'superadmin' && "font-medium text-purple-600",
-                        user.brand_role === 'coordinador' && "font-medium text-blue-600",
-                        user.brand_role && !['superadmin', 'coordinador'].includes(user.brand_role) && "text-slate-600",
+                        user.brand_role === 'superadmin' && "font-medium text-primary",
+                        user.brand_role === 'coordinador' && "font-medium text-info",
+                        user.brand_role && !['superadmin', 'coordinador'].includes(user.brand_role) && "text-muted-foreground",
                         !user.brand_role && "text-muted-foreground"
                       )}>
                         {brandLabel}
@@ -129,9 +129,9 @@ export function UsersTable({ users, branches, onUserUpdated }: UsersTableProps) 
                     <TableCell>
                       <span className={cn(
                         "text-sm",
-                        user.primaryLocalRole === 'franquiciado' && "font-medium text-amber-600",
-                        user.primaryLocalRole === 'encargado' && "font-medium text-green-600",
-                        user.primaryLocalRole && !['franquiciado', 'encargado'].includes(user.primaryLocalRole) && "text-slate-600",
+                        user.primaryLocalRole === 'franquiciado' && "font-medium text-accent",
+                        user.primaryLocalRole === 'encargado' && "font-medium text-success",
+                        user.primaryLocalRole && !['franquiciado', 'encargado'].includes(user.primaryLocalRole) && "text-muted-foreground",
                         !user.primaryLocalRole && "text-muted-foreground"
                       )}>
                         {localLabel}
@@ -142,8 +142,8 @@ export function UsersTable({ users, branches, onUserUpdated }: UsersTableProps) 
                     </TableCell>
                     <TableCell className="text-sm">
                       <span className={cn(
-                        user.brand_role === 'superadmin' && "text-purple-600 font-medium",
-                        user.branch_roles.length > 0 && user.brand_role !== 'superadmin' && "text-green-600",
+                        user.brand_role === 'superadmin' && "text-primary font-medium",
+                        user.branch_roles.length > 0 && user.brand_role !== 'superadmin' && "text-success",
                         user.branch_roles.length === 0 && user.brand_role !== 'superadmin' && "text-muted-foreground"
                       )}>
                         {branchesLabel}

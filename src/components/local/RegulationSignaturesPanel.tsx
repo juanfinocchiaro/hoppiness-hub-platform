@@ -287,7 +287,7 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
         <CardContent className="space-y-4">
           {/* Alert for pending signatures */}
           {pendingSignatures.length > 0 && (
-            <div className={`p-3 rounded-lg flex items-start gap-2 ${daysSincePublished > 5 ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400'}`}>
+            <div className={`p-3 rounded-lg flex items-start gap-2 ${daysSincePublished > 5 ? 'bg-destructive/5 text-destructive dark:bg-destructive/10' : 'bg-warning/10 text-warning-foreground dark:bg-warning/15'}`}>
               <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-medium">
@@ -310,14 +310,14 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
                 key={member.user_id} 
                 className={`flex items-center justify-between p-3 rounded-lg border ${
                   member.signature 
-                    ? 'bg-green-50/50 border-green-200 dark:bg-green-900/10 dark:border-green-800' 
+                    ? 'bg-success/5 border-success/20 dark:bg-success/10 dark:border-success/20' 
                     : 'bg-muted/50'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                     member.signature 
-                      ? 'bg-green-100 text-green-600 dark:bg-green-900/30' 
+                      ? 'bg-success/15 text-success dark:bg-success/20' 
                       : 'bg-muted text-muted-foreground'
                   }`}>
                     {member.signature ? <CheckCircle className="w-4 h-4" /> : <User className="w-4 h-4" />}
@@ -330,7 +330,7 @@ export default function RegulationSignaturesPanel({ branchId }: RegulationSignat
 
                 {member.signature ? (
                   <div className="text-right">
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
+                    <Badge variant="success">
                       <CheckCircle className="w-3 h-3 mr-1" />
                       Firmado
                     </Badge>

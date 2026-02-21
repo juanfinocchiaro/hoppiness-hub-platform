@@ -139,7 +139,7 @@ export default function MyRegulationsCard() {
             <CardTitle className="text-base">Reglamento Interno</CardTitle>
           </div>
           {isSigned ? (
-            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+            <Badge variant="success">
               <CheckCircle className="w-3 h-3 mr-1" />
               Firmado
             </Badge>
@@ -149,7 +149,7 @@ export default function MyRegulationsCard() {
               Vencido
             </Badge>
           ) : (
-            <Badge variant="secondary" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+            <Badge variant="warning">
               <AlertCircle className="w-3 h-3 mr-1" />
               Pendiente ({daysRemaining}d)
             </Badge>
@@ -180,15 +180,15 @@ export default function MyRegulationsCard() {
 
         {/* Signature Status */}
         {isSigned && mySignature && (
-          <div className="p-3 border rounded-lg bg-green-50/50">
-            <p className="text-sm font-medium text-green-700">
+          <div className="p-3 border rounded-lg bg-success/5 border-success/20">
+            <p className="text-sm font-medium text-success">
               ✓ Firmado el {format(new Date(mySignature.signed_at), "d/MM/yyyy 'a las' HH:mm", { locale: es })}
             </p>
             {mySignature.signed_document_url && (
               <Button 
                 variant="link" 
                 size="sm" 
-                className="p-0 h-auto text-green-700"
+                className="p-0 h-auto text-success"
                 onClick={() => handleViewSignature(mySignature.signed_document_url!)}
               >
                 <ExternalLink className="w-3 h-3 mr-1" />
@@ -199,8 +199,8 @@ export default function MyRegulationsCard() {
         )}
 
         {!isSigned && (
-          <div className={`p-3 border rounded-lg ${isOverdue ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'}`}>
-            <p className={`text-sm ${isOverdue ? 'text-red-700' : 'text-yellow-700'}`}>
+          <div className={`p-3 border rounded-lg ${isOverdue ? 'bg-destructive/5 border-destructive/20' : 'bg-warning/10 border-warning/20'}`}>
+            <p className={`text-sm ${isOverdue ? 'text-destructive' : 'text-warning-foreground'}`}>
               {isOverdue 
                 ? '⚠️ Tu firma está vencida. Contactá a tu encargado para regularizar tu situación.'
                 : `📝 Tenés ${daysRemaining} día${daysRemaining !== 1 ? 's' : ''} para firmar el reglamento. Tu encargado debe cargar la foto del documento firmado.`

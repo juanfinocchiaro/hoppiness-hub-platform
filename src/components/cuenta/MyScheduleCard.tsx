@@ -33,10 +33,10 @@ interface ScheduleEntry {
 }
 
 const POSITION_ICONS: Record<string, { icon: React.ComponentType<any>; color: string; label: string }> = {
-  sandwichero: { icon: Flame, color: 'text-orange-500', label: 'Sandwichero' },
-  cajero: { icon: CreditCard, color: 'text-blue-500', label: 'Cajero' },
-  delivery: { icon: Package, color: 'text-green-500', label: 'Delivery' },
-  limpieza: { icon: Utensils, color: 'text-purple-500', label: 'Limpieza' },
+  sandwichero: { icon: Flame, color: 'text-accent', label: 'Sandwichero' },
+  cajero: { icon: CreditCard, color: 'text-info', label: 'Cajero' },
+  delivery: { icon: Package, color: 'text-success', label: 'Delivery' },
+  limpieza: { icon: Utensils, color: 'text-primary', label: 'Limpieza' },
 };
 
 const DAY_NAMES_SHORT = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];

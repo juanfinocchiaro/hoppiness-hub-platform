@@ -33,7 +33,7 @@ export function PageHeader({
   const isCompact = variant === 'compact';
 
   return (
-    <div className={cn('mb-6', className)}>
+    <div className={cn('mb-6 animate-fade-in', className)}>
       {/* Breadcrumb */}
       {breadcrumb && breadcrumb.length > 0 && (
         <nav className="flex items-center gap-1 text-sm text-muted-foreground mb-2">

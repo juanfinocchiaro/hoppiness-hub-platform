@@ -143,10 +143,10 @@ export function MyCoachingsCardEnhanced() {
                 return (
                   <div 
                     key={coaching.id}
-                    className="flex items-center justify-between p-3 rounded-lg border border-amber-200 bg-amber-50"
+                    className="flex items-center justify-between p-3 rounded-lg border border-warning/30 bg-warning/10"
                   >
                     <div className="flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-amber-600" />
+                      <AlertCircle className="h-4 w-4 text-warning-foreground" />
                       <div>
                         <p className="text-sm font-medium capitalize">
                           Coaching de {monthName}
@@ -232,7 +232,7 @@ export function MyCoachingsCardEnhanced() {
             <div className="p-3 rounded-lg border bg-muted/30">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <CheckCircle className="h-4 w-4 text-success" />
                   <span className="text-sm capitalize">
                     {format(new Date(lastCoaching.coaching_date), 'MMMM yyyy', { locale: es })}
                   </span>
@@ -278,8 +278,8 @@ export function MyCoachingsCardEnhanced() {
 
             {selectedCoaching?.strengths && (
               <div>
-                <Label className="text-sm font-medium text-green-700">Fortalezas</Label>
-                <p className="text-sm mt-1 p-2 rounded bg-green-50">
+                <Label className="text-sm font-medium text-success">Fortalezas</Label>
+                <p className="text-sm mt-1 p-2 rounded bg-success/10">
                   {selectedCoaching.strengths}
                 </p>
               </div>
@@ -287,8 +287,8 @@ export function MyCoachingsCardEnhanced() {
 
             {selectedCoaching?.areas && (
               <div>
-                <Label className="text-sm font-medium text-amber-700">Áreas de Mejora</Label>
-                <p className="text-sm mt-1 p-2 rounded bg-amber-50">
+                <Label className="text-sm font-medium text-warning-foreground">Áreas de Mejora</Label>
+                <p className="text-sm mt-1 p-2 rounded bg-warning/10">
                   {selectedCoaching.areas}
                 </p>
               </div>
