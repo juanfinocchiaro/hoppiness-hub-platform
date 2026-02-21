@@ -62,7 +62,7 @@ export interface CashRegisterShift {
   difference: number | null;
   notes: string | null;
   status: 'open' | 'closed';
-  current_balance: number | null;
+  current_balance?: number | null;
 }
 
 export interface CashRegisterMovement {
@@ -76,8 +76,8 @@ export interface CashRegisterMovement {
   order_id: string | null;
   recorded_by: string | null;
   created_at: string;
-  transfer_id: string | null;
-  source_register_id: string | null;
+  transfer_id?: string | null;
+  source_register_id?: string | null;
 }
 
 export const cashRegisterKeys = {
@@ -381,7 +381,7 @@ export function useTransferBetweenRegisters(branchId: string) {
       concept: string;
       userId: string;
     }) => {
-      const { data, error } = await supabase.rpc('transfer_between_registers', {
+      const { data, error } = await (supabase.rpc as any)('transfer_between_registers', {
         p_source_shift_id: sourceShiftId,
         p_dest_shift_id: destShiftId,
         p_amount: amount,
@@ -390,7 +390,7 @@ export function useTransferBetweenRegisters(branchId: string) {
         p_branch_id: branchId,
       });
       if (error) throw error;
-      return data as { transfer_id: string; withdrawal: any; deposit: any };
+      return data as unknown as { transfer_id: string; withdrawal: any; deposit: any };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cashRegisterKeys.all });

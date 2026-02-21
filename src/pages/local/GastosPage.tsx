@@ -109,7 +109,7 @@ export default function GastosPage() {
         .is('deleted_at', null)
         .order('fecha', { ascending: false });
       if (error) throw error;
-      return (data || []) as Gasto[];
+      return (data || []) as unknown as Gasto[];
     },
     enabled: !!branchId,
   });

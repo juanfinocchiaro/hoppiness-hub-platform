@@ -144,6 +144,7 @@ function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: {
     numero_llamador: order.numero_llamador ?? null,
     canal_venta: order.canal_venta,
     cliente_nombre: order.cliente_nombre,
+    referencia_app: (order as any).referencia_app ?? null,
     created_at: order.created_at,
     items: order.pedido_items.map(i => ({
       nombre: i.nombre,

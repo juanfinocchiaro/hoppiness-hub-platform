@@ -26,7 +26,7 @@ export function useFiscalBranchData(branchId: string | undefined) {
 export function useFiscalXReport(branchId: string | undefined) {
   return useMutation({
     mutationFn: async (date?: string): Promise<FiscalXData> => {
-      const { data, error } = await supabase.rpc('get_fiscal_x_report', {
+      const { data, error } = await (supabase.rpc as any)('get_fiscal_x_report', {
         p_branch_id: branchId!,
         p_date: date || new Date().toISOString().slice(0, 10),
       });
@@ -40,7 +40,7 @@ export function useGenerateZClosing(branchId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (date?: string): Promise<FiscalZData> => {
-      const { data, error } = await supabase.rpc('generate_z_closing', {
+      const { data, error } = await (supabase.rpc as any)('generate_z_closing', {
         p_branch_id: branchId!,
         p_date: date || new Date().toISOString().slice(0, 10),
       });
@@ -98,7 +98,7 @@ export function useFiscalAuditReport(branchId: string | undefined) {
       fromZ?: number;
       toZ?: number;
     }): Promise<FiscalAuditData> => {
-      const { data, error } = await supabase.rpc('get_fiscal_audit_report', {
+      const { data, error } = await (supabase.rpc as any)('get_fiscal_audit_report', {
         p_branch_id: branchId!,
         p_from_date: params.mode === 'date' ? params.fromDate : null,
         p_to_date: params.mode === 'date' ? params.toDate : null,

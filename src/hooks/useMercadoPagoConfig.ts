@@ -25,8 +25,7 @@ export function useMercadoPagoConfig(branchId: string | undefined) {
   return useQuery({
     queryKey: ['mp-config', branchId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('mercadopago_config')
+      const { data, error } = await (supabase.from as any)('mercadopago_config')
         .select('*')
         .eq('branch_id', branchId!)
         .maybeSingle();
@@ -45,8 +44,7 @@ export function useMercadoPagoStatus(branchId: string | undefined) {
   return useQuery({
     queryKey: ['mp-status', branchId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('mercadopago_config')
+      const { data, error } = await (supabase.from as any)('mercadopago_config')
         .select('estado_conexion')
         .eq('branch_id', branchId!)
         .maybeSingle();
@@ -63,8 +61,7 @@ export function useMercadoPagoConfigMutations(branchId: string | undefined) {
   const upsert = useMutation({
     mutationFn: async (values: { access_token: string; public_key: string }) => {
       if (!branchId) throw new Error('branch_id requerido');
-      const { data, error } = await supabase
-        .from('mercadopago_config')
+      const { data, error } = await (supabase.from as any)('mercadopago_config')
         .upsert(
           {
             branch_id: branchId,
@@ -91,8 +88,7 @@ export function useMercadoPagoConfigMutations(branchId: string | undefined) {
   const testConnection = useMutation({
     mutationFn: async () => {
       if (!branchId) throw new Error('branch_id requerido');
-      const { data: config } = await supabase
-        .from('mercadopago_config')
+      const { data: config } = await (supabase.from as any)('mercadopago_config')
         .select('access_token')
         .eq('branch_id', branchId)
         .single();
@@ -117,8 +113,7 @@ export function useMercadoPagoConfigMutations(branchId: string | undefined) {
   const disconnect = useMutation({
     mutationFn: async () => {
       if (!branchId) throw new Error('branch_id requerido');
-      const { error } = await supabase
-        .from('mercadopago_config')
+      const { error } = await (supabase.from as any)('mercadopago_config')
         .update({
           access_token: '',
           public_key: '',

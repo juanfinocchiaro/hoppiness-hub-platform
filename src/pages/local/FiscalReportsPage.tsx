@@ -5,6 +5,7 @@
  * Accessible desde Historial de Ventas (tab "Reportes Fiscales").
  */
 import { useState, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import {
@@ -96,7 +97,7 @@ function InformeXCard({ branchId, branchData }: {
 
   const handleGenerate = async () => {
     try {
-      const data = await xReport.mutateAsync();
+      const data = await xReport.mutateAsync(undefined);
       setPreviewData(data);
     } catch (e: any) {
       toast.error(e.message || 'Error al generar Informe X');
@@ -217,7 +218,7 @@ function CierreZCard({ branchId, branchData, lastZ }: {
 
   const handleClick = async () => {
     try {
-      const xData = await xReport.mutateAsync();
+      const xData = await xReport.mutateAsync(undefined);
       if (xData.total_comprobantes === 0) {
         toast.info('No hay comprobantes emitidos hoy para generar Cierre Z');
         return;
@@ -235,7 +236,7 @@ function CierreZCard({ branchId, branchData, lastZ }: {
   const handleConfirm = async () => {
     setConfirmOpen(false);
     try {
-      const data = await generateZ.mutateAsync();
+      const data = await generateZ.mutateAsync(undefined);
       setPreviewData(data);
       toast.success(`Cierre Z N° ${(data as any).z_number} generado correctamente`);
     } catch (e: any) {
