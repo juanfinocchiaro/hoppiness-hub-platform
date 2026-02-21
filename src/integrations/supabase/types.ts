@@ -808,6 +808,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_register_movements_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_multivista_ventas_base"
+            referencedColumns: ["pedido_id"]
+          },
+          {
             foreignKeyName: "cash_register_movements_shift_id_fkey"
             columns: ["shift_id"]
             isOneToOne: false
@@ -830,6 +837,7 @@ export type Database = {
           closed_at: string | null
           closed_by: string | null
           closing_amount: number | null
+          closing_report: Json | null
           difference: number | null
           expected_amount: number | null
           id: string
@@ -837,6 +845,7 @@ export type Database = {
           opened_at: string
           opened_by: string
           opening_amount: number
+          printed_at: string | null
           status: string
         }
         Insert: {
@@ -845,6 +854,7 @@ export type Database = {
           closed_at?: string | null
           closed_by?: string | null
           closing_amount?: number | null
+          closing_report?: Json | null
           difference?: number | null
           expected_amount?: number | null
           id?: string
@@ -852,6 +862,7 @@ export type Database = {
           opened_at?: string
           opened_by: string
           opening_amount?: number
+          printed_at?: string | null
           status?: string
         }
         Update: {
@@ -860,6 +871,7 @@ export type Database = {
           closed_at?: string | null
           closed_by?: string | null
           closing_amount?: number | null
+          closing_report?: Json | null
           difference?: number | null
           expected_amount?: number | null
           id?: string
@@ -867,6 +879,7 @@ export type Database = {
           opened_at?: string
           opened_by?: string
           opening_amount?: number
+          printed_at?: string | null
           status?: string
         }
         Relationships: [
@@ -2262,6 +2275,13 @@ export type Database = {
             referencedRelation: "pedidos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "facturas_emitidas_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_multivista_ventas_base"
+            referencedColumns: ["pedido_id"]
+          },
         ]
       }
       facturas_proveedores: {
@@ -2452,12 +2472,152 @@ export type Database = {
         }
         Relationships: []
       }
+      fiscal_z_closings: {
+        Row: {
+          branch_id: string
+          created_at: string
+          date: string
+          exempt: number
+          first_voucher_number: string | null
+          first_voucher_type: string | null
+          generated_at: string
+          generated_by: string | null
+          id: string
+          is_locked: boolean
+          last_voucher_number: string | null
+          last_voucher_type: string | null
+          net_total: number
+          non_taxable: number
+          other_taxes: number
+          payment_cash: number
+          payment_credit: number
+          payment_debit: number
+          payment_qr: number
+          payment_transfer: number
+          period_from: string
+          period_to: string
+          pos_point_of_sale: number
+          subtotal_net: number
+          taxable_105: number
+          taxable_21: number
+          total_credit_notes_amount: number
+          total_credit_notes_b: number
+          total_credit_notes_c: number
+          total_invoices: number
+          total_invoices_b: number
+          total_invoices_c: number
+          total_sales: number
+          total_tickets: number
+          total_vat: number
+          vat_105: number
+          vat_21: number
+          z_number: number
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          date: string
+          exempt?: number
+          first_voucher_number?: string | null
+          first_voucher_type?: string | null
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          is_locked?: boolean
+          last_voucher_number?: string | null
+          last_voucher_type?: string | null
+          net_total?: number
+          non_taxable?: number
+          other_taxes?: number
+          payment_cash?: number
+          payment_credit?: number
+          payment_debit?: number
+          payment_qr?: number
+          payment_transfer?: number
+          period_from: string
+          period_to: string
+          pos_point_of_sale: number
+          subtotal_net?: number
+          taxable_105?: number
+          taxable_21?: number
+          total_credit_notes_amount?: number
+          total_credit_notes_b?: number
+          total_credit_notes_c?: number
+          total_invoices?: number
+          total_invoices_b?: number
+          total_invoices_c?: number
+          total_sales?: number
+          total_tickets?: number
+          total_vat?: number
+          vat_105?: number
+          vat_21?: number
+          z_number: number
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          date?: string
+          exempt?: number
+          first_voucher_number?: string | null
+          first_voucher_type?: string | null
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          is_locked?: boolean
+          last_voucher_number?: string | null
+          last_voucher_type?: string | null
+          net_total?: number
+          non_taxable?: number
+          other_taxes?: number
+          payment_cash?: number
+          payment_credit?: number
+          payment_debit?: number
+          payment_qr?: number
+          payment_transfer?: number
+          period_from?: string
+          period_to?: string
+          pos_point_of_sale?: number
+          subtotal_net?: number
+          taxable_105?: number
+          taxable_21?: number
+          total_credit_notes_amount?: number
+          total_credit_notes_b?: number
+          total_credit_notes_c?: number
+          total_invoices?: number
+          total_invoices_b?: number
+          total_invoices_c?: number
+          total_sales?: number
+          total_tickets?: number
+          total_vat?: number
+          vat_105?: number
+          vat_21?: number
+          z_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiscal_z_closings_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_z_closings_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gastos: {
         Row: {
           adjuntos: Json | null
+          afecta_caja: boolean | null
           branch_id: string
           categoria_principal: string
           concepto: string
+          costo_transferencia: number | null
           created_at: string | null
           created_by: string | null
           deleted_at: string | null
@@ -2474,15 +2634,20 @@ export type Database = {
           periodo: string
           proveedor_id: string | null
           rdo_category_code: string | null
+          rdo_section: string | null
           referencia_pago: string | null
+          shift_id: string | null
           subcategoria: string | null
+          tipo_pago: string | null
           updated_at: string | null
         }
         Insert: {
           adjuntos?: Json | null
+          afecta_caja?: boolean | null
           branch_id: string
           categoria_principal: string
           concepto: string
+          costo_transferencia?: number | null
           created_at?: string | null
           created_by?: string | null
           deleted_at?: string | null
@@ -2499,15 +2664,20 @@ export type Database = {
           periodo: string
           proveedor_id?: string | null
           rdo_category_code?: string | null
+          rdo_section?: string | null
           referencia_pago?: string | null
+          shift_id?: string | null
           subcategoria?: string | null
+          tipo_pago?: string | null
           updated_at?: string | null
         }
         Update: {
           adjuntos?: Json | null
+          afecta_caja?: boolean | null
           branch_id?: string
           categoria_principal?: string
           concepto?: string
+          costo_transferencia?: number | null
           created_at?: string | null
           created_by?: string | null
           deleted_at?: string | null
@@ -2524,8 +2694,11 @@ export type Database = {
           periodo?: string
           proveedor_id?: string | null
           rdo_category_code?: string | null
+          rdo_section?: string | null
           referencia_pago?: string | null
+          shift_id?: string | null
           subcategoria?: string | null
+          tipo_pago?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2570,6 +2743,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "rdo_categories"
             referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "gastos_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "cash_register_shifts"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3856,6 +4036,13 @@ export type Database = {
             referencedRelation: "pedidos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "llamadores_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_multivista_ventas_base"
+            referencedColumns: ["pedido_id"]
+          },
         ]
       }
       manager_competencies: {
@@ -4391,6 +4578,63 @@ export type Database = {
           },
         ]
       }
+      mercadopago_config: {
+        Row: {
+          access_token: string
+          branch_id: string
+          collector_id: string | null
+          created_at: string
+          estado_conexion: string
+          id: string
+          public_key: string
+          ultimo_test: string | null
+          ultimo_test_ok: boolean | null
+          updated_at: string
+          webhook_secret: string | null
+        }
+        Insert: {
+          access_token?: string
+          branch_id: string
+          collector_id?: string | null
+          created_at?: string
+          estado_conexion?: string
+          id?: string
+          public_key?: string
+          ultimo_test?: string | null
+          ultimo_test_ok?: boolean | null
+          updated_at?: string
+          webhook_secret?: string | null
+        }
+        Update: {
+          access_token?: string
+          branch_id?: string
+          collector_id?: string | null
+          created_at?: string
+          estado_conexion?: string
+          id?: string
+          public_key?: string
+          ultimo_test?: string | null
+          ultimo_test_ok?: boolean | null
+          updated_at?: string
+          webhook_secret?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mercadopago_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercadopago_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       movimientos_socio: {
         Row: {
           branch_id: string
@@ -4777,6 +5021,13 @@ export type Database = {
             referencedRelation: "pedido_items"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pedido_item_modificadores_pedido_item_id_fkey"
+            columns: ["pedido_item_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_multivista_items_base"
+            referencedColumns: ["item_id"]
+          },
         ]
       }
       pedido_items: {
@@ -4854,6 +5105,13 @@ export type Database = {
             referencedRelation: "pedidos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pedido_items_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_multivista_ventas_base"
+            referencedColumns: ["pedido_id"]
+          },
         ]
       }
       pedido_pagos: {
@@ -4907,6 +5165,13 @@ export type Database = {
             referencedRelation: "pedidos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pedido_pagos_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_multivista_ventas_base"
+            referencedColumns: ["pedido_id"]
+          },
         ]
       }
       pedido_payment_edits: {
@@ -4945,6 +5210,13 @@ export type Database = {
             referencedRelation: "pedidos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pedido_payment_edits_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_multivista_ventas_base"
+            referencedColumns: ["pedido_id"]
+          },
         ]
       }
       pedidos: {
@@ -4977,7 +5249,6 @@ export type Database = {
           pago_estado: string | null
           pago_online_id: string | null
           propina: number
-          referencia_app: string | null
           requiere_factura: boolean | null
           subtotal: number
           tiempo_entregado: string | null
@@ -5019,7 +5290,6 @@ export type Database = {
           pago_estado?: string | null
           pago_online_id?: string | null
           propina?: number
-          referencia_app?: string | null
           requiere_factura?: boolean | null
           subtotal: number
           tiempo_entregado?: string | null
@@ -5061,7 +5331,6 @@ export type Database = {
           pago_estado?: string | null
           pago_online_id?: string | null
           propina?: number
-          referencia_app?: string | null
           requiere_factura?: boolean | null
           subtotal?: number
           tiempo_entregado?: string | null
@@ -5445,6 +5714,85 @@ export type Database = {
           },
         ]
       }
+      price_list_items: {
+        Row: {
+          created_at: string
+          id: string
+          item_carta_id: string
+          precio: number
+          price_list_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_carta_id: string
+          precio: number
+          price_list_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_carta_id?: string
+          precio?: number
+          price_list_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_list_items_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "items_carta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_list_items_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "webapp_menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_list_items_price_list_id_fkey"
+            columns: ["price_list_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_lists: {
+        Row: {
+          channel: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       print_config: {
         Row: {
           backup_enabled: boolean
@@ -5607,6 +5955,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "pedidos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_jobs_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_multivista_ventas_base"
+            referencedColumns: ["pedido_id"]
           },
           {
             foreignKeyName: "print_jobs_printer_id_fkey"
@@ -6958,6 +7313,13 @@ export type Database = {
             referencedRelation: "pedidos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "stock_movimientos_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_multivista_ventas_base"
+            referencedColumns: ["pedido_id"]
+          },
         ]
       }
       turnos_caja: {
@@ -7247,6 +7609,8 @@ export type Database = {
       }
       webapp_config: {
         Row: {
+          auto_accept_orders: boolean | null
+          auto_print_orders: boolean | null
           branch_id: string
           comer_aca_habilitado: boolean
           created_at: string
@@ -7258,14 +7622,20 @@ export type Database = {
           horarios: Json | null
           id: string
           mensaje_pausa: string | null
+          prep_time_comer_aca: number | null
+          prep_time_delivery: number | null
+          prep_time_retiro: number | null
           recepcion_modo: string
           retiro_habilitado: boolean
+          service_schedules: Json | null
           tiempo_estimado_delivery_min: number | null
           tiempo_estimado_retiro_min: number | null
           updated_at: string
           webapp_activa: boolean
         }
         Insert: {
+          auto_accept_orders?: boolean | null
+          auto_print_orders?: boolean | null
           branch_id: string
           comer_aca_habilitado?: boolean
           created_at?: string
@@ -7277,14 +7647,20 @@ export type Database = {
           horarios?: Json | null
           id?: string
           mensaje_pausa?: string | null
+          prep_time_comer_aca?: number | null
+          prep_time_delivery?: number | null
+          prep_time_retiro?: number | null
           recepcion_modo?: string
           retiro_habilitado?: boolean
+          service_schedules?: Json | null
           tiempo_estimado_delivery_min?: number | null
           tiempo_estimado_retiro_min?: number | null
           updated_at?: string
           webapp_activa?: boolean
         }
         Update: {
+          auto_accept_orders?: boolean | null
+          auto_print_orders?: boolean | null
           branch_id?: string
           comer_aca_habilitado?: boolean
           created_at?: string
@@ -7296,8 +7672,12 @@ export type Database = {
           horarios?: Json | null
           id?: string
           mensaje_pausa?: string | null
+          prep_time_comer_aca?: number | null
+          prep_time_delivery?: number | null
+          prep_time_retiro?: number | null
           recepcion_modo?: string
           retiro_habilitado?: boolean
+          service_schedules?: Json | null
           tiempo_estimado_delivery_min?: number | null
           tiempo_estimado_retiro_min?: number | null
           updated_at?: string
@@ -7594,6 +7974,109 @@ export type Database = {
         }
         Relationships: []
       }
+      rdo_multivista_items_base: {
+        Row: {
+          branch_id: string | null
+          canal: string | null
+          cantidad: number | null
+          categoria_id: string | null
+          categoria_nombre: string | null
+          costo_total: number | null
+          costo_unitario: number | null
+          fecha: string | null
+          item_id: string | null
+          pedido_id: string | null
+          producto_id: string | null
+          producto_nombre: string | null
+          ventas: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedido_items_item_carta_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "items_carta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedido_items_item_carta_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "webapp_menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedido_items_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedido_items_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_multivista_ventas_base"
+            referencedColumns: ["pedido_id"]
+          },
+          {
+            foreignKeyName: "pedidos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rdo_multivista_ventas_base: {
+        Row: {
+          branch_id: string | null
+          canal: string | null
+          created_at: string | null
+          fecha: string | null
+          pedido_id: string | null
+          total: number | null
+        }
+        Insert: {
+          branch_id?: string | null
+          canal?: never
+          created_at?: string | null
+          fecha?: never
+          pedido_id?: string | null
+          total?: never
+        }
+        Update: {
+          branch_id?: string | null
+          canal?: never
+          created_at?: string | null
+          fecha?: never
+          pedido_id?: string | null
+          total?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rdo_report_data: {
         Row: {
           branch_id: string | null
@@ -7727,6 +8210,10 @@ export type Database = {
         Args: { p_branch_id: string; p_fecha: string; p_turno: string }
         Returns: string
       }
+      generate_z_closing: {
+        Args: { p_branch_id: string; p_date?: string }
+        Returns: Json
+      }
       get_branch_contact_info: {
         Args: { _branch_id: string }
         Returns: {
@@ -7762,6 +8249,20 @@ export type Database = {
           total_shifts: number
         }[]
       }
+      get_fiscal_audit_report: {
+        Args: {
+          p_branch_id: string
+          p_from_date?: string
+          p_from_z?: number
+          p_to_date?: string
+          p_to_z?: number
+        }
+        Returns: Json
+      }
+      get_fiscal_x_report: {
+        Args: { p_branch_id: string; p_date?: string }
+        Returns: Json
+      }
       get_iibb_alicuota: {
         Args: { _branch_id: string; _fecha?: string }
         Returns: number
@@ -7773,6 +8274,22 @@ export type Database = {
       get_local_role_for_branch: {
         Args: { _branch_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["local_role_type"]
+      }
+      get_rdo_financiero: {
+        Args: { _branch_id: string; _periodo: string }
+        Returns: Json
+      }
+      get_rdo_multivista: {
+        Args: {
+          _branch_id: string
+          _canales?: string[]
+          _categorias?: string[]
+          _fecha_desde: string
+          _fecha_hasta: string
+          _medios?: string[]
+          _productos?: string[]
+        }
+        Returns: Json
       }
       get_rdo_report: {
         Args: { _branch_id: string; _periodo: string }
@@ -7787,18 +8304,6 @@ export type Database = {
           sort_order: number
           total: number
         }[]
-      }
-      get_rdo_multivista: {
-        Args: {
-          _branch_id: string
-          _canales?: string[]
-          _categorias?: string[]
-          _fecha_desde: string
-          _fecha_hasta: string
-          _medios?: string[]
-          _productos?: string[]
-        }
-        Returns: Json
       }
       get_rdo_unified_report: {
         Args: {
@@ -7876,6 +8381,14 @@ export type Database = {
       is_staff_member: { Args: { _user_id: string }; Returns: boolean }
       is_superadmin: { Args: { _user_id: string }; Returns: boolean }
       liberar_llamador: { Args: { p_pedido_id: string }; Returns: undefined }
+      normalize_rdo_channel: {
+        Args: { _canal_app: string; _canal_venta: string; _tipo: string }
+        Returns: string
+      }
+      normalize_rdo_payment_method: {
+        Args: { _metodo: string }
+        Returns: string
+      }
       obtener_proximo_numero_factura: {
         Args: { _branch_id: string; _tipo: string }
         Returns: number
