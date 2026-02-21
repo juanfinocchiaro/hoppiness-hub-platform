@@ -1,4 +1,4 @@
-import { MapPin, Clock, Truck, ShoppingBag, UtensilsCrossed, Pause } from 'lucide-react';
+import { MapPin, Clock, Truck, ShoppingBag, UtensilsCrossed, Pause, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { WebappConfig, TipoServicioWebapp } from '@/types/webapp';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
@@ -8,20 +8,29 @@ interface Props {
   config: WebappConfig;
   onSelectService: (tipo: TipoServicioWebapp) => void;
   onViewMenu: () => void;
+  onBack?: () => void;
 }
 
 function formatPrice(n: number) {
   return `$${n.toLocaleString('es-AR')}`;
 }
 
-export function BranchLanding({ branch, config, onSelectService, onViewMenu }: Props) {
+export function BranchLanding({ branch, config, onSelectService, onViewMenu, onBack }: Props) {
   const isOpen = config.estado === 'abierto';
   const isPaused = config.estado === 'pausado';
 
   return (
     <div className="flex-1 flex flex-col">
       {/* Hero */}
-      <div className="bg-primary text-primary-foreground px-6 pt-10 pb-12 text-center">
+      <div className="bg-primary text-primary-foreground px-6 pt-10 pb-12 text-center relative">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="absolute top-4 left-4 p-2 hover:bg-white/10 rounded-lg transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+        )}
         <img
           src={logoHoppiness}
           alt="Hoppiness"

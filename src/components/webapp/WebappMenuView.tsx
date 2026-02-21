@@ -80,142 +80,170 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
     ? config.tiempo_estimado_delivery_min
     : config.tiempo_estimado_retiro_min;
 
+  const renderProductCard = (item: WebappMenuItem, layout: 'grid' | 'list' | 'desktop') => (
+    <ProductCard
+      key={item.id}
+      item={item}
+      qty={cart.getItemQty(item.id)}
+      layout={layout}
+      onTap={() => onProductClick(item)}
+      onQuickAdd={() => cart.quickAdd(item.id, item.nombre, item.precio_base, item.imagen_url)}
+      onIncrement={() => cart.quickAdd(item.id, item.nombre, item.precio_base, item.imagen_url)}
+      onDecrement={() => {
+        const entry = cart.items.find(i => i.itemId === item.id);
+        if (entry) cart.updateQuantity(entry.cartId, entry.cantidad - 1);
+      }}
+    />
+  );
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-primary text-primary-foreground shadow-md">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <button onClick={onBack} className="p-1.5 -ml-1 hover:bg-white/10 rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <img src={logoHoppiness} alt="" className="w-8 h-8 rounded-full object-contain" />
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-sm truncate">{branch.name}</p>
-            <p className="text-xs text-primary-foreground/70">
-              {servicioLabel}
-              {tiempoEstimado && <> · ~{tiempoEstimado} min</>}
-            </p>
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center gap-3 px-4 py-3">
+            <button onClick={onBack} className="p-1.5 -ml-1 hover:bg-white/10 rounded-lg transition-colors">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <img src={logoHoppiness} alt="" className="w-8 h-8 rounded-full object-contain" />
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm truncate">{branch.name}</p>
+              <p className="text-xs text-primary-foreground/70">
+                {servicioLabel}
+                {tiempoEstimado && <> · ~{tiempoEstimado} min</>}
+              </p>
+            </div>
+            {/* View toggle - only on mobile */}
+            <button
+              onClick={() => setViewMode(v => v === 'grid' ? 'list' : 'grid')}
+              className="p-1.5 hover:bg-white/10 rounded-lg transition-colors lg:hidden"
+              title={viewMode === 'grid' ? 'Vista lista' : 'Vista grilla'}
+            >
+              {viewMode === 'grid' ? <List className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
+            </button>
           </div>
-          {/* View toggle */}
-          <button
-            onClick={() => setViewMode(v => v === 'grid' ? 'list' : 'grid')}
-            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
-            title={viewMode === 'grid' ? 'Vista lista' : 'Vista grilla'}
-          >
-            {viewMode === 'grid' ? <List className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
-          </button>
-        </div>
 
-        {/* Search */}
-        <div className="px-4 pb-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-foreground/50" />
-            <Input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar en el menú..."
-              className="pl-9 pr-8 bg-white/15 border-white/20 text-primary-foreground placeholder:text-primary-foreground/50 h-9 text-sm"
-            />
-            {search && (
-              <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2">
-                <X className="w-4 h-4 text-primary-foreground/50" />
-              </button>
+          {/* Search */}
+          <div className="px-4 pb-3">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-foreground/50" />
+              <Input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Buscar en el menú..."
+                className="pl-9 pr-8 bg-white/15 border-white/20 text-primary-foreground placeholder:text-primary-foreground/50 h-9 text-sm"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2">
+                  <X className="w-4 h-4 text-primary-foreground/50" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Category tabs - mobile only */}
+          {!search && categories.length > 1 && (
+            <div
+              ref={tabsRef}
+              className="flex gap-1 overflow-x-auto px-4 pb-2 scrollbar-none lg:hidden"
+            >
+              {categories.map(cat => (
+                <button
+                  key={cat.nombre}
+                  onClick={() => scrollToCategory(cat.nombre)}
+                  className={`
+                    whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold transition-colors shrink-0
+                    ${activeCategory === cat.nombre
+                      ? 'bg-accent text-accent-foreground'
+                      : 'bg-white/10 text-primary-foreground/80 hover:bg-white/20'
+                    }
+                  `}
+                >
+                  {cat.nombre}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* Main content: sidebar (desktop) + products */}
+      <main className="flex-1 pb-24">
+        <div className="max-w-6xl mx-auto flex">
+          {/* Desktop sidebar categories */}
+          {!search && categories.length > 1 && (
+            <aside className="hidden lg:block w-[200px] shrink-0 sticky top-[120px] self-start max-h-[calc(100vh-140px)] overflow-y-auto border-r">
+              <nav className="py-4 pr-2">
+                {categories.map(cat => (
+                  <button
+                    key={cat.nombre}
+                    onClick={() => scrollToCategory(cat.nombre)}
+                    className={`
+                      w-full text-left px-4 py-2.5 text-sm rounded-lg transition-colors mb-0.5
+                      ${activeCategory === cat.nombre
+                        ? 'bg-primary/10 text-primary font-bold'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      }
+                    `}
+                  >
+                    {cat.nombre}
+                  </button>
+                ))}
+              </nav>
+            </aside>
+          )}
+
+          {/* Products area */}
+          <div className="flex-1 min-w-0">
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : categories.length === 0 ? (
+              <div className="text-center py-20 text-muted-foreground">
+                {search ? 'No se encontraron productos' : 'No hay productos disponibles'}
+              </div>
+            ) : (
+              categories.map(cat => (
+                <div
+                  key={cat.nombre}
+                  ref={el => { categoryRefs.current[cat.nombre] = el; }}
+                  data-category={cat.nombre}
+                  className="scroll-mt-36"
+                >
+                  <div className="sticky top-[120px] lg:top-[120px] z-10 bg-background/95 backdrop-blur-sm px-4 py-2.5 border-b">
+                    <h2 className="text-sm font-black text-primary uppercase tracking-wide">
+                      {cat.nombre}
+                      <span className="text-xs font-normal text-muted-foreground ml-2 lowercase tracking-normal">
+                        {cat.items.length} {cat.items.length === 1 ? 'producto' : 'productos'}
+                      </span>
+                    </h2>
+                  </div>
+
+                  {/* Mobile: grid or list view */}
+                  <div className="lg:hidden">
+                    {viewMode === 'grid' ? (
+                      <div className="px-4 py-3 grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {cat.items.map(item => renderProductCard(item, 'grid'))}
+                      </div>
+                    ) : (
+                      <div className="px-4 py-2 space-y-2">
+                        {cat.items.map(item => renderProductCard(item, 'list'))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Desktop: horizontal cards */}
+                  <div className="hidden lg:block px-4 py-3">
+                    <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
+                      {cat.items.map(item => renderProductCard(item, 'desktop'))}
+                    </div>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>
-
-        {/* Category tabs */}
-        {!search && categories.length > 1 && (
-          <div
-            ref={tabsRef}
-            className="flex gap-1 overflow-x-auto px-4 pb-2 scrollbar-none"
-          >
-            {categories.map(cat => (
-              <button
-                key={cat.nombre}
-                onClick={() => scrollToCategory(cat.nombre)}
-                className={`
-                  whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold transition-colors shrink-0
-                  ${activeCategory === cat.nombre
-                    ? 'bg-accent text-accent-foreground'
-                    : 'bg-white/10 text-primary-foreground/80 hover:bg-white/20'
-                  }
-                `}
-              >
-                {cat.nombre}
-              </button>
-            ))}
-          </div>
-        )}
-      </header>
-
-      {/* Menu content */}
-      <main className="flex-1 pb-24">
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          </div>
-        ) : categories.length === 0 ? (
-          <div className="text-center py-20 text-muted-foreground">
-            {search ? 'No se encontraron productos' : 'No hay productos disponibles'}
-          </div>
-        ) : (
-          categories.map(cat => (
-            <div
-              key={cat.nombre}
-              ref={el => { categoryRefs.current[cat.nombre] = el; }}
-              data-category={cat.nombre}
-              className="scroll-mt-36"
-            >
-              <div className="sticky top-[140px] z-10 bg-background/95 backdrop-blur-sm px-4 py-2.5 border-b">
-                <h2 className="text-sm font-black text-primary uppercase tracking-wide">
-                  {cat.nombre}
-                  <span className="text-xs font-normal text-muted-foreground ml-2 lowercase tracking-normal">
-                    {cat.items.length} {cat.items.length === 1 ? 'producto' : 'productos'}
-                  </span>
-                </h2>
-              </div>
-
-              {viewMode === 'grid' ? (
-                <div className="px-4 py-3 grid grid-cols-2 gap-3">
-                  {cat.items.map(item => (
-                    <ProductCard
-                      key={item.id}
-                      item={item}
-                      qty={cart.getItemQty(item.id)}
-                      layout="grid"
-                      onTap={() => onProductClick(item)}
-                      onQuickAdd={() => cart.quickAdd(item.id, item.nombre, item.precio_base, item.imagen_url)}
-                      onIncrement={() => cart.quickAdd(item.id, item.nombre, item.precio_base, item.imagen_url)}
-                      onDecrement={() => {
-                        const entry = cart.items.find(i => i.itemId === item.id);
-                        if (entry) cart.updateQuantity(entry.cartId, entry.cantidad - 1);
-                      }}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="px-4 py-2 space-y-2">
-                  {cat.items.map(item => (
-                    <ProductCard
-                      key={item.id}
-                      item={item}
-                      qty={cart.getItemQty(item.id)}
-                      layout="list"
-                      onTap={() => onProductClick(item)}
-                      onQuickAdd={() => cart.quickAdd(item.id, item.nombre, item.precio_base, item.imagen_url)}
-                      onIncrement={() => cart.quickAdd(item.id, item.nombre, item.precio_base, item.imagen_url)}
-                      onDecrement={() => {
-                        const entry = cart.items.find(i => i.itemId === item.id);
-                        if (entry) cart.updateQuantity(entry.cartId, entry.cantidad - 1);
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          ))
-        )}
       </main>
     </div>
   );

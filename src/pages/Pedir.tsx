@@ -86,7 +86,7 @@ export default function Pedir() {
 
       {/* Header */}
       <header className="bg-primary text-primary-foreground">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5">
             <img src={logoHoppiness} alt="Hoppiness Club" className="w-9 h-9 rounded-full object-contain" />
             <span className="font-black font-brand text-base hidden sm:inline tracking-tight">HOPPINESS CLUB</span>
@@ -102,7 +102,7 @@ export default function Pedir() {
 
       {/* Hero */}
       <div className="bg-primary text-primary-foreground pb-10 pt-4">
-        <div className="max-w-3xl mx-auto px-4 text-center">
+        <div className="max-w-5xl mx-auto px-4 text-center">
           <h1 className="text-3xl sm:text-4xl font-black font-brand tracking-tight">
             PEDÍ ONLINE
           </h1>
@@ -114,7 +114,7 @@ export default function Pedir() {
 
       {/* Branch cards */}
       <main className="flex-1 -mt-6">
-        <div className="max-w-3xl mx-auto px-4 pb-12">
+        <div className="max-w-5xl mx-auto px-4 pb-12">
           {isLoading ? (
             <div className="flex justify-center py-16">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -124,7 +124,7 @@ export default function Pedir() {
               No hay locales disponibles en este momento.
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               {branches.map((branch) => (
                 <BranchCard key={branch.id} branch={branch} />
               ))}
@@ -143,9 +143,7 @@ function BranchCard({ branch }: { branch: BranchWithWebapp }) {
   const isClosed = !isOpen && !isPaused;
 
   return (
-    <div className={`rounded-2xl bg-card border shadow-sm overflow-hidden transition-shadow hover:shadow-md ${
-      isClosed ? 'opacity-70' : ''
-    }`}>
+    <div className="rounded-2xl bg-card border shadow-sm overflow-hidden transition-shadow hover:shadow-md">
       <div className="p-5 space-y-3">
         {/* Name + status */}
         <div className="flex items-start justify-between gap-2">
