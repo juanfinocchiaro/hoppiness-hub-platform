@@ -48,6 +48,7 @@ interface Props {
   branchId?: string;
   mpEnabled?: boolean;
   deliveryCosto?: number;
+  initialStep?: Step;
 }
 
 type Step = 'cart' | 'checkout';
@@ -57,7 +58,7 @@ function formatPrice(n: number) {
   return `$${n.toLocaleString('es-AR')}`;
 }
 
-export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEnabled, deliveryCosto = 0 }: Props) {
+export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEnabled, deliveryCosto = 0, initialStep }: Props) {
   const navigate = useNavigate();
   const servicioLabel = cart.tipoServicio === 'retiro' ? 'Retiro en local' : cart.tipoServicio === 'delivery' ? 'Delivery' : 'Comer acá';
 
@@ -65,7 +66,14 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   const { data: zones = [] } = usePublicDeliveryZones(branchId, isDelivery);
   const hasZones = zones.length > 0;
 
-  const [step, setStep] = useState<Step>('cart');
+  const [step, setStep] = useState<Step>(initialStep || 'cart');
+
+  // Sync step when sheet opens with a specific initialStep
+  useEffect(() => {
+    if (open && initialStep) {
+      setStep(initialStep);
+    }
+  }, [open, initialStep]);
   const [submitting, setSubmitting] = useState(false);
   const [selectedZoneId, setSelectedZoneId] = useState<string>('');
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { BranchLanding } from '@/components/webapp/BranchLanding';
 import { WebappMenuView } from '@/components/webapp/WebappMenuView';
 import { CartBar } from '@/components/webapp/CartBar';
 import { CartSheet } from '@/components/webapp/CartSheet';
+import { CartSidePanel } from '@/components/webapp/CartSidePanel';
 import { ProductCustomizeSheet } from '@/components/webapp/ProductCustomizeSheet';
 import { SEO } from '@/components/SEO';
 import { Loader2 } from 'lucide-react';
@@ -25,6 +26,7 @@ export default function PedirPage() {
 
   const [step, setStep] = useState<'landing' | 'menu'>('landing');
   const [cartOpen, setCartOpen] = useState(false);
+  const [cartInitialStep, setCartInitialStep] = useState<'cart' | 'checkout'>('cart');
   const [customizeItem, setCustomizeItem] = useState<WebappMenuItem | null>(null);
 
   if (isLoading) {
@@ -46,7 +48,6 @@ export default function PedirPage() {
     );
   }
 
-  // Fallback: si el local no tiene webapp activa, redirigir a MasDelivery
   if (!data.config.webapp_activa) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-primary p-6">
@@ -80,10 +81,22 @@ export default function PedirPage() {
   };
 
   const handleProductClick = (item: WebappMenuItem) => {
-    // For simple items, quick add. For complex, open customize.
-    // For now, all open customize to let user see the product
     setCustomizeItem(item);
   };
+
+  const handleOpenCartMobile = () => {
+    setCartInitialStep('cart');
+    setCartOpen(true);
+  };
+
+  const handleContinueFromSidePanel = () => {
+    setCartInitialStep('checkout');
+    setCartOpen(true);
+  };
+
+  const isDelivery = cart.tipoServicio === 'delivery';
+  const costoEnvio = isDelivery ? (config.delivery_costo ?? 0) : 0;
+  const showSidePanel = step === 'menu' && cart.totalItems > 0;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -112,13 +125,24 @@ export default function PedirPage() {
             cart={cart}
             onProductClick={handleProductClick}
             onBack={() => setStep('landing')}
+            cartPanelVisible={showSidePanel}
           />
 
+          {/* Desktop side cart panel */}
+          {showSidePanel && (
+            <CartSidePanel
+              cart={cart}
+              costoEnvio={costoEnvio}
+              onContinue={handleContinueFromSidePanel}
+            />
+          )}
+
+          {/* Mobile cart bar */}
           {cart.totalItems > 0 && (
             <CartBar
               totalItems={cart.totalItems}
               totalPrecio={cart.totalPrecio}
-              onOpen={() => setCartOpen(true)}
+              onOpen={handleOpenCartMobile}
             />
           )}
 
@@ -129,7 +153,8 @@ export default function PedirPage() {
             branchName={branch.name}
             branchId={branch.id}
             mpEnabled={mpEnabled}
-            deliveryCosto={config.delivery_costo ?? 0}
+            deliveryCosto={costoEnvio}
+            initialStep={cartInitialStep}
           />
 
           <ProductCustomizeSheet

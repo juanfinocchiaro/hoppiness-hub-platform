@@ -20,13 +20,13 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
   const isPaused = config.estado === 'pausado';
 
   return (
-    <div className="flex-1 flex flex-col">
-      {/* Hero */}
-      <div className="bg-primary text-primary-foreground px-6 pt-10 pb-12 text-center relative">
+    <div className="flex-1 flex flex-col bg-background">
+      {/* Clean white header */}
+      <div className="border-b bg-background px-6 py-6 lg:py-8 text-center relative">
         {onBack && (
           <button
             onClick={onBack}
-            className="absolute top-4 left-4 p-2 hover:bg-white/10 rounded-lg transition-colors"
+            className="absolute top-4 left-4 p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -34,31 +34,31 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
         <img
           src={logoHoppiness}
           alt="Hoppiness"
-          className="w-24 h-24 rounded-full mx-auto mb-5 shadow-xl object-contain ring-4 ring-white/20"
+          className="w-16 h-16 lg:w-20 lg:h-20 rounded-full mx-auto mb-3 shadow-md object-contain ring-2 ring-border"
         />
-        <h1 className="text-3xl font-black font-brand tracking-tight">{branch.name}</h1>
-        <div className="flex items-center justify-center gap-1.5 text-sm text-primary-foreground/70 mt-2">
+        <h1 className="text-2xl lg:text-3xl font-black font-brand tracking-tight text-foreground">{branch.name}</h1>
+        <div className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground mt-1.5">
           <MapPin className="w-3.5 h-3.5" />
           <span>{branch.address}, {branch.city}</span>
         </div>
 
-        {/* Status */}
-        <div className="mt-4 inline-flex">
+        {/* Status badge */}
+        <div className="mt-3 inline-flex">
           {isOpen && (
-            <span className="flex items-center gap-2 text-sm font-semibold bg-white/15 backdrop-blur px-4 py-2 rounded-full">
-              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <span className="flex items-center gap-2 text-sm font-semibold bg-green-50 text-green-700 border border-green-200 px-4 py-1.5 rounded-full">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
               Abierto
-              {branch.closing_time && <span className="text-primary-foreground/60">· Cierra {branch.closing_time}</span>}
+              {branch.closing_time && <span className="text-green-600/70">· Cierra {branch.closing_time}</span>}
             </span>
           )}
           {isPaused && (
-            <span className="flex items-center gap-2 text-sm font-semibold bg-amber-500/20 backdrop-blur px-4 py-2 rounded-full text-amber-200">
+            <span className="flex items-center gap-2 text-sm font-semibold bg-amber-50 text-amber-700 border border-amber-200 px-4 py-1.5 rounded-full">
               <Pause className="w-3.5 h-3.5" />
               Pausado temporalmente
             </span>
           )}
           {!isOpen && !isPaused && (
-            <span className="flex items-center gap-2 text-sm font-semibold bg-white/10 backdrop-blur px-4 py-2 rounded-full text-primary-foreground/70">
+            <span className="flex items-center gap-2 text-sm font-semibold bg-muted text-muted-foreground border px-4 py-1.5 rounded-full">
               <span className="w-2 h-2 rounded-full bg-red-400" />
               Cerrado
               {branch.opening_time && <span>· Abre {branch.opening_time}</span>}
@@ -68,9 +68,9 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
       </div>
 
       {/* Service selection */}
-      <div className="flex-1 flex flex-col items-center px-6 -mt-6 max-w-md mx-auto w-full">
+      <div className="flex-1 flex flex-col items-center px-6 py-8 max-w-lg mx-auto w-full">
         {isOpen ? (
-          <div className="w-full bg-card rounded-2xl shadow-lg border p-5 space-y-3">
+          <div className="w-full bg-card rounded-2xl shadow-sm border p-5 space-y-3">
             <p className="text-center text-sm font-bold text-foreground">
               ¿Cómo querés tu pedido?
             </p>
@@ -85,9 +85,7 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
                 </div>
                 <div className="flex-1">
                   <p className="font-bold text-foreground">Retiro en local</p>
-                  <p className="text-xs text-muted-foreground">
-                    Paso a buscarlo
-                  </p>
+                  <p className="text-xs text-muted-foreground">Paso a buscarlo</p>
                 </div>
                 <div className="text-right shrink-0">
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -146,7 +144,7 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
             )}
           </div>
         ) : (
-          <div className="w-full bg-card rounded-2xl shadow-lg border p-6 text-center space-y-4">
+          <div className="w-full bg-card rounded-2xl shadow-sm border p-6 text-center space-y-4">
             {isPaused && config.mensaje_pausa && (
               <p className="text-sm text-muted-foreground">{config.mensaje_pausa}</p>
             )}
