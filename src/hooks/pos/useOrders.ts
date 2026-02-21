@@ -43,11 +43,12 @@ export function useOrders(branchId: string) {
   return useQuery({
     queryKey: ['pos-orders', branchId],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('pedidos')
         .select('*')
         .eq('branch_id', branchId)
         .order('created_at', { ascending: false });
+      if (error) throw error;
       return data ?? [];
     },
     enabled: !!branchId,
@@ -102,7 +103,10 @@ export function useCreatePedido(branchId: string) {
         if (cfg.clienteDireccion) insertPayload.cliente_direccion = cfg.clienteDireccion;
         insertPayload.canal_venta = cfg.canalVenta;
         insertPayload.tipo_servicio = cfg.tipoServicio;
-        if (cfg.canalVenta === 'apps') insertPayload.canal_app = cfg.canalApp;
+        if (cfg.canalVenta === 'apps') {
+          insertPayload.canal_app = cfg.canalApp;
+          if (cfg.referenciaApp) insertPayload.referencia_app = cfg.referenciaApp;
+        }
       }
 
       const { data: pedido, error: errPedido } = await supabase
@@ -131,6 +135,9 @@ export function useCreatePedido(branchId: string) {
       }
 
       const useSplit = params.payments && params.payments.length > 0;
+      if (!useSplit && !params.metodoPago) {
+        throw new Error('Se requiere un método de pago');
+      }
       const paymentRows = useSplit
         ? params.payments!
         : [
@@ -167,7 +174,7 @@ export function useCreatePedido(branchId: string) {
       for (const row of paymentRows) {
         const isCash = String(row.method).toLowerCase() === 'efectivo';
         if (isCash && row.amount > 0 && openShift) {
-          await supabase.from('cash_register_movements').insert({
+          const { error: errMov } = await supabase.from('cash_register_movements').insert({
             shift_id: openShift.id,
             branch_id: branchId,
             type: 'income',
@@ -177,6 +184,7 @@ export function useCreatePedido(branchId: string) {
             order_id: pedido.id,
             recorded_by: user.id,
           });
+          if (errMov) console.error('Error registrando movimiento de caja:', errMov);
         }
       }
 

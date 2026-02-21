@@ -62,7 +62,7 @@ export default function MySalaryAdvancesCard() {
         .limit(20);
       
       if (error) {
-        console.warn('Could not fetch salary advances:', error.message);
+        if (import.meta.env.DEV) console.warn('Could not fetch salary advances:', error.message);
         return [];
       }
       return data as SalaryAdvance[];

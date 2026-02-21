@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -21,7 +21,7 @@ interface Props {
 }
 
 export interface ChangeInvoiceData {
-  tipo_factura: 'A' | 'B' | 'C';
+  tipo_factura: 'A' | 'B';
   receptor_cuit: string;
   receptor_razon_social: string;
   receptor_condicion_iva: string;
@@ -37,14 +37,23 @@ const CONDICIONES_IVA = [
 
 export function ChangeInvoiceModal({ open, onOpenChange, facturaOriginal, onConfirm }: Props) {
   const [loading, setLoading] = useState(false);
-  const [tipoFactura, setTipoFactura] = useState<'A' | 'B' | 'C'>(
-    facturaOriginal.tipo_comprobante as 'A' | 'B' | 'C'
+  const [tipoFactura, setTipoFactura] = useState<'A' | 'B'>(
+    (facturaOriginal.tipo_comprobante === 'A' ? 'A' : 'B') as 'A' | 'B'
   );
   const [cuit, setCuit] = useState('');
   const [razonSocial, setRazonSocial] = useState('');
   const [condicionIva, setCondicionIva] = useState('Consumidor Final');
 
-  const needsCuit = tipoFactura === 'A' || tipoFactura === 'B';
+  useEffect(() => {
+    if (open) {
+      setTipoFactura((facturaOriginal.tipo_comprobante === 'A' ? 'A' : 'B') as 'A' | 'B');
+      setCuit('');
+      setRazonSocial('');
+      setCondicionIva('Consumidor Final');
+    }
+  }, [open, facturaOriginal]);
+
+  const needsCuit = condicionIva === 'IVA Responsable Inscripto' || condicionIva === 'Responsable Monotributo';
 
   const canSubmit = tipoFactura && condicionIva && (!needsCuit || (cuit.length >= 10 && razonSocial));
 
@@ -86,12 +95,11 @@ export function ChangeInvoiceModal({ open, onOpenChange, facturaOriginal, onConf
 
           <div className="space-y-2">
             <Label>Tipo de factura</Label>
-            <Select value={tipoFactura} onValueChange={(v) => setTipoFactura(v as 'A' | 'B' | 'C')}>
+            <Select value={tipoFactura} onValueChange={(v) => setTipoFactura(v as 'A' | 'B')}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="A">Factura A</SelectItem>
-                <SelectItem value="B">Factura B</SelectItem>
-                <SelectItem value="C">Factura C</SelectItem>
+                <SelectItem value="B">Factura B (CF / Mono / Exento)</SelectItem>
+                <SelectItem value="A">Factura A (Resp. Inscripto)</SelectItem>
               </SelectContent>
             </Select>
           </div>

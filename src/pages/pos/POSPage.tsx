@@ -23,6 +23,7 @@ import { usePrintConfig } from '@/hooks/usePrintConfig';
 import { useBranchPrinters } from '@/hooks/useBranchPrinters';
 import { useAfipConfig, useEmitirFactura } from '@/hooks/useAfipConfig';
 import { evaluateInvoicing, type SalesChannel, type OrderPayment } from '@/lib/invoicing-rules';
+import type { FacturaPrintData, PaymentPrintData } from '@/lib/print-router';
 import { toast } from 'sonner';
 import type { LocalPayment } from '@/types/pos';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Banknote, ChefHat, PlusCircle, ShoppingBag } from 'lucide-react';
 import { PendingOrdersBar } from '@/components/pos/PendingOrdersBar';
+import { WebappOrdersPanel } from '@/components/pos/WebappOrdersPanel';
 
 /* Inline cash open form - shown when no register is open */
 function InlineCashOpen({ branchId, onOpened }: { branchId: string; onOpened: () => void }) {
@@ -165,9 +167,10 @@ export default function POSPage() {
   // Cart management
   const addItem = useCallback((item: CartItem) => {
     setCart((prev) => {
-      if (!item.notas && !item.extras && !item.removibles) {
+      const hasNoMods = !item.notas && (!item.extras || item.extras.length === 0) && (!item.removibles || item.removibles.length === 0);
+      if (hasNoMods) {
         const idx = prev.findIndex(
-          (i) => i.item_carta_id === item.item_carta_id && !i.notas && !i.extras && !i.removibles
+          (i) => i.item_carta_id === item.item_carta_id && !i.notas && (!i.extras || i.extras.length === 0) && (!i.removibles || i.removibles.length === 0)
         );
         if (idx >= 0) {
           const copy = [...prev];
@@ -245,8 +248,8 @@ export default function POSPage() {
       }
       if (!orderConfig.clienteDireccion?.trim()) return 'Ingresá la dirección de entrega';
     }
-    // Validate invoice fields for A/B
-    if (orderConfig.tipoFactura === 'A' || orderConfig.tipoFactura === 'B') {
+    // Validate invoice fields — required only for Factura A
+    if (orderConfig.tipoFactura === 'A') {
       if (!orderConfig.receptorCuit?.trim()) return 'Ingresá el CUIT del cliente';
       if (!orderConfig.receptorRazonSocial?.trim()) return 'Ingresá la razón social del cliente';
     }
@@ -263,128 +266,194 @@ export default function POSPage() {
     setShowPaymentPanel(true);
   };
 
+  const formatMetodoPago = (method?: string) => {
+    switch (method) {
+      case 'efectivo':
+        return 'Efectivo';
+      case 'tarjeta_debito':
+        return 'Tarjeta debito';
+      case 'tarjeta_credito':
+        return 'Tarjeta credito';
+      case 'mercadopago_qr':
+        return 'QR Mercado Pago';
+      case 'transferencia':
+        return 'Transferencia';
+      default:
+        return 'Otro';
+    }
+  };
+
+  const resolveInvoicingChannel = (): SalesChannel => {
+    if (orderConfig.canalVenta === 'mostrador') return 'mostrador';
+    if (orderConfig.canalVenta === 'apps') {
+      if (orderConfig.canalApp === 'rappi') return 'rappi';
+      if (orderConfig.canalApp === 'pedidos_ya') return 'pedidosya';
+      if (orderConfig.canalApp === 'mp_delivery') return 'mp_delivery';
+    }
+    return 'delivery';
+  };
+
+  const willInvoice = afipConfig?.estado_conexion === 'conectado';
+  const willPrint = !!(printConfig && menuCategorias && printing.bridgeStatus === 'connected');
+
   // Send to kitchen = persist everything to DB + print
-  const handleSendToKitchen = async () => {
+  const handleSendToKitchen = async (onProgress?: (stage: string) => void) => {
     if (!branchId || cart.length === 0) return;
-    try {
-      const items = cart.map((c) => ({
-        item_carta_id: c.item_carta_id,
-        nombre: c.nombre,
-        cantidad: c.cantidad,
-        precio_unitario: c.precio_unitario,
-        subtotal: c.subtotal,
-        notas: c.notas,
-        estacion: 'armado' as const,
-        precio_referencia: c.precio_referencia,
-        categoria_carta_id: c.categoria_carta_id,
-      }));
 
-      const pedido = await createPedido.mutateAsync({
-        items,
-        payments: payments.map((p) => ({
-          method: p.method,
+    onProgress?.('creating');
+    const items = cart.map((c) => ({
+      item_carta_id: c.item_carta_id,
+      nombre: c.nombre,
+      cantidad: c.cantidad,
+      precio_unitario: c.precio_unitario,
+      subtotal: c.subtotal,
+      notas: c.notas,
+      estacion: 'armado' as const,
+      precio_referencia: c.precio_referencia,
+      categoria_carta_id: c.categoria_carta_id,
+    }));
+
+    const pedido = await createPedido.mutateAsync({
+      items,
+      payments: payments.map((p) => ({
+        method: p.method,
+        amount: p.amount,
+        montoRecibido: p.method === 'efectivo' ? p.montoRecibido : undefined,
+      })),
+      orderConfig,
+    });
+
+    let facturaData: FacturaPrintData | null = null;
+    if (afipConfig?.estado_conexion === 'conectado') {
+      onProgress?.('invoicing');
+      try {
+        const channel = resolveInvoicingChannel();
+        const orderPayments: OrderPayment[] = payments.map(p => ({
+          method: p.method as OrderPayment['method'],
           amount: p.amount,
-          montoRecibido: p.method === 'efectivo' ? p.montoRecibido : undefined,
-        })),
-        orderConfig,
-      });
+        }));
 
-      // Print order using routing system
-      if (printConfig && menuCategorias && printing.bridgeStatus === 'connected') {
-        const esSalon = orderConfig.tipoServicio === 'comer_aca';
-        const printableOrder = {
-          numero_pedido: pedido.numero_pedido ?? 0,
-          tipo_servicio: orderConfig.tipoServicio ?? null,
-          canal_venta: orderConfig.canalVenta ?? null,
-          numero_llamador: orderConfig.numeroLlamador ? parseInt(orderConfig.numeroLlamador, 10) : null,
-          cliente_nombre: orderConfig.clienteNombre ?? null,
-          created_at: new Date().toISOString(),
-          items: cart.map((c) => ({
-            nombre: c.nombre,
-            cantidad: c.cantidad,
-            notas: c.notas,
-            estacion: 'armado',
-            categoria_carta_id: c.categoria_carta_id,
-            precio_unitario: c.precio_unitario,
-            subtotal: c.subtotal,
-          })),
-          total: subtotal,
-          descuento: 0,
-        };
-        try {
-          await printing.printOrder(
-            printableOrder,
-            printConfig,
-            allPrinters,
-            menuCategorias,
-            branchInfo?.name ?? 'Hoppiness',
-            esSalon
-          );
-        } catch (printErr) {
-          console.error('Print error (non-blocking):', printErr);
-        }
-      }
+        const totalAmount = orderPayments.reduce((s, p) => s + p.amount, 0);
 
-      // Auto-invoicing based on branch rules
-      if (afipConfig?.reglas_facturacion && afipConfig.estado_conexion === 'conectado') {
-        try {
-          // Map POS channel to invoicing channel
-          const channel: SalesChannel = orderConfig.canalVenta === 'mostrador' ? 'mostrador' : 'delivery';
-          const orderPayments: OrderPayment[] = payments.map(p => ({
-            method: p.method as any,
-            amount: p.amount,
-          }));
+        const clienteQuiereFactura = !!(orderConfig.receptorCuit && orderConfig.receptorRazonSocial);
+        const result = clienteQuiereFactura
+          ? { shouldInvoice: true, invoiceableAmount: totalAmount, totalAmount }
+          : evaluateInvoicing(orderPayments, channel, afipConfig.reglas_facturacion ?? null);
 
-          const result = evaluateInvoicing(orderPayments, channel, afipConfig.reglas_facturacion);
+        if (result.shouldInvoice && result.invoiceableAmount > 0) {
+          const tipoFactura = orderConfig.tipoFactura === 'A' ? 'A' : 'B';
+          const condicionIvaReceptor = tipoFactura === 'A'
+            ? 'IVA Responsable Inscripto'
+            : 'Consumidor Final';
 
-          if (result.shouldInvoice && result.invoiceableAmount > 0) {
-            const tipoFactura = orderConfig.tipoFactura || 'C';
-            const invoiceResult = await emitirFactura.mutateAsync({
-              branch_id: branchId!,
-              pedido_id: pedido?.id,
-              tipo_factura: tipoFactura,
-              receptor_cuit: tipoFactura !== 'C' ? orderConfig.receptorCuit : undefined,
-              receptor_razon_social: tipoFactura !== 'C' ? orderConfig.receptorRazonSocial : undefined,
-              items: [{ descripcion: 'Venta POS', cantidad: 1, precio_unitario: result.invoiceableAmount }],
-              total: result.invoiceableAmount,
-            });
+          const invoiceResult = await emitirFactura.mutateAsync({
+            branch_id: branchId!,
+            pedido_id: pedido?.id,
+            tipo_factura: tipoFactura,
+            receptor_cuit: orderConfig.receptorCuit || undefined,
+            receptor_razon_social: orderConfig.receptorRazonSocial || undefined,
+            receptor_condicion_iva: condicionIvaReceptor,
+            items: [{ descripcion: 'Venta POS', cantidad: 1, precio_unitario: result.invoiceableAmount }],
+            total: result.invoiceableAmount,
+          });
 
-            // Print fiscal ticket if invoice was successful
-            if (invoiceResult && printing.bridgeStatus === 'connected') {
-              const ticketPrinter = printConfig?.ticket_printer_id
-                ? allPrinters.find(p => p.id === printConfig.ticket_printer_id && p.is_active)
-                : null;
-              if (ticketPrinter) {
-                await printing.printFiscalTicket({
-                  razon_social: afipConfig.razon_social || '',
-                  cuit: afipConfig.cuit || '',
-                  direccion_fiscal: afipConfig.direccion_fiscal || '',
-                  punto_venta: invoiceResult.punto_venta,
-                  tipo_comprobante: invoiceResult.tipo,
-                  numero_comprobante: invoiceResult.numero,
-                  cae: invoiceResult.cae,
-                  cae_vencimiento: invoiceResult.cae_vencimiento,
-                  fecha_emision: new Date().toISOString().slice(0, 10).replace(/-/g, ''),
-                  neto: result.invoiceableAmount / 1.21,
-                  iva: result.invoiceableAmount - result.invoiceableAmount / 1.21,
-                  total: result.invoiceableAmount,
-                  numero_pedido: pedido?.numero_pedido,
-                  items: [{ descripcion: 'Venta POS', cantidad: 1, precio_unitario: result.invoiceableAmount }],
-                  branchName: branchInfo?.name ?? 'Hoppiness',
-                }, ticketPrinter);
-              }
-            }
+          if (invoiceResult) {
+            const pvStr = String(invoiceResult.punto_venta).padStart(5, '0');
+            const numStr = String(invoiceResult.numero).padStart(8, '0');
+            const neto = result.invoiceableAmount / 1.21;
+            const iva = result.invoiceableAmount - neto;
+            const afipExtra = afipConfig as unknown as { iibb?: string; condicion_iva?: string };
+            facturaData = {
+              tipo: tipoFactura as 'A' | 'B',
+              codigo: tipoFactura === 'A' ? '01' : '06',
+              numero: `${pvStr}-${numStr}`,
+              fecha: new Date().toLocaleDateString('es-AR'),
+              emisor: {
+                razon_social: afipConfig.razon_social || '',
+                cuit: afipConfig.cuit || '',
+                iibb: afipExtra.iibb || afipConfig.cuit || '',
+                condicion_iva: afipExtra.condicion_iva || 'Responsable Inscripto',
+                domicilio: afipConfig.direccion_fiscal || '',
+                inicio_actividades: afipConfig.inicio_actividades || '',
+              },
+              receptor: {
+                nombre: orderConfig.receptorRazonSocial || orderConfig.clienteNombre || undefined,
+                documento_tipo: orderConfig.receptorCuit ? 'CUIT' : 'DNI',
+                documento_numero: orderConfig.receptorCuit || undefined,
+                condicion_iva: condicionIvaReceptor,
+              },
+              neto_gravado: neto,
+              iva,
+              otros_tributos: 0,
+              iva_contenido: iva,
+              otros_imp_nacionales: 0,
+              cae: invoiceResult.cae,
+              cae_vto: invoiceResult.cae_vencimiento,
+            };
           }
-        } catch (invoiceErr) {
-          console.error('Invoice error (non-blocking):', invoiceErr);
-          // Don't block the order if invoicing fails
         }
+      } catch (invoiceErr) {
+        if (import.meta.env.DEV) console.error('Invoice error (non-blocking):', invoiceErr);
       }
+    }
 
-      toast.success('Pedido enviado a cocina');
-      resetAll();
-    } catch (e: any) {
-      toast.error(e?.message ?? 'Error al registrar pedido');
+    if (printConfig && menuCategorias && printing.bridgeStatus === 'connected') {
+      onProgress?.('printing');
+      const ticketTrigger = printConfig.ticket_trigger || 'on_payment';
+      const shouldPrintTicketNow = ticketTrigger !== 'on_ready';
+      const effectivePrintConfig = shouldPrintTicketNow
+        ? printConfig
+        : { ...printConfig, ticket_enabled: false };
+      const esSalon = orderConfig.tipoServicio === 'comer_aca';
+      const printableOrder = {
+        numero_pedido: pedido.numero_pedido ?? 0,
+        tipo_servicio: orderConfig.tipoServicio ?? null,
+        canal_venta: orderConfig.canalVenta === 'apps' ? orderConfig.canalApp : orderConfig.canalVenta ?? null,
+        numero_llamador: orderConfig.numeroLlamador ? parseInt(orderConfig.numeroLlamador, 10) : null,
+        cliente_nombre: orderConfig.clienteNombre ?? null,
+        referencia_app: orderConfig.referenciaApp ?? null,
+        created_at: new Date().toISOString(),
+        items: cart.map((c) => ({
+          nombre: c.nombre,
+          cantidad: c.cantidad,
+          notas: c.notas,
+          estacion: 'armado',
+          categoria_carta_id: c.categoria_carta_id,
+          precio_unitario: c.precio_unitario,
+          subtotal: c.subtotal,
+        })),
+        total: subtotal,
+        descuento: 0,
+        cliente_telefono: orderConfig.clienteTelefono ?? null,
+        cliente_direccion: orderConfig.clienteDireccion ?? null,
+      };
+
+      const singlePayment = payments.length === 1 ? payments[0] : null;
+      const paymentData: PaymentPrintData = {
+        metodo_pago: payments.length > 1
+          ? `Mixto: ${payments.map((p) => formatMetodoPago(p.method)).join(' + ')}`
+          : formatMetodoPago(singlePayment?.method),
+        monto_recibido: singlePayment?.method === 'efectivo' ? singlePayment.montoRecibido : undefined,
+        vuelto: singlePayment?.method === 'efectivo'
+          ? Math.max(0, (singlePayment.montoRecibido || 0) - singlePayment.amount)
+          : undefined,
+      };
+
+      try {
+        await printing.printOrder(
+          printableOrder,
+          effectivePrintConfig,
+          allPrinters,
+          menuCategorias as { id: string; nombre: string; tipo_impresion: 'comanda' | 'vale' | 'no_imprimir' }[],
+          branchInfo?.name ?? 'Hoppiness',
+          esSalon,
+          paymentData,
+          facturaData,
+          pedido?.id,
+        );
+      } catch (printErr) {
+        if (import.meta.env.DEV) console.error('Print error (non-blocking):', printErr);
+      }
     }
   };
 
@@ -396,7 +465,7 @@ export default function POSPage() {
   const subtotal = cart.reduce((s, i) => s + i.subtotal, 0);
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
   const saldo = subtotal - totalPaid;
-  const canSend = saldo === 0 && cart.length > 0;
+  const canSend = Math.abs(saldo) < 0.01 && cart.length > 0;
 
   // Show full-page "Abrir Caja" when cash register is closed
   if (!shiftStatus.loading && !shiftStatus.hasCashOpen) {
@@ -416,10 +485,9 @@ export default function POSPage() {
   return (
     <POSPortalProvider>
     <div className="flex flex-col h-[calc(100vh-6rem)] pb-16 lg:pb-0">
-      {/* Pending orders bar */}
-      {configConfirmed && kitchenPedidos && kitchenPedidos.length > 0 && (
-        <PendingOrdersBar pedidos={kitchenPedidos} branchId={branchId!} />
-      )}
+      {/* Pending orders bar — always visible */}
+      <PendingOrdersBar pedidos={kitchenPedidos ?? []} branchId={branchId!} shiftOpenedAt={shiftStatus.activeCashShift?.opened_at ?? null} />
+      <WebappOrdersPanel branchId={branchId!} />
       {/* Main grid: menu + account */}
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_minmax(380px,1.1fr)] flex-1 min-h-0">
         {/* Menu column - Zona B */}
@@ -472,6 +540,9 @@ export default function POSPage() {
                 onRegisterPayment={handleOpenPayment}
                 onRemovePayment={removePayment}
                 onSendToKitchen={handleSendToKitchen}
+                onSendComplete={resetAll}
+                willInvoice={willInvoice}
+                willPrint={willPrint}
                 disabled={createPedido.isPending}
                 orderConfig={orderConfig}
                 onEditConfig={handleEditConfig}
@@ -494,7 +565,7 @@ export default function POSPage() {
           {canSend ? (
             <Button
               size="lg"
-              onClick={handleSendToKitchen}
+              onClick={() => handleSendToKitchen().then(resetAll).catch((e: any) => toast.error(e?.message ?? 'Error al registrar pedido'))}
               disabled={createPedido.isPending}
               className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white"
             >

@@ -10,7 +10,7 @@ const corsHeaders = {
 interface EmitirFacturaRequest {
   branch_id: string;
   pedido_id?: string;
-  tipo_factura: "A" | "B" | "C";
+  tipo_factura: "A" | "B";
   receptor_cuit?: string;
   receptor_razon_social?: string;
   receptor_condicion_iva?: string;
@@ -38,16 +38,14 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } =
-      await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = claimsData.claims.sub;
+    const userId = user.id;
 
     const body: EmitirFacturaRequest = await req.json();
     const { branch_id, pedido_id, tipo_factura, receptor_cuit, receptor_razon_social, receptor_condicion_iva, items, total } = body;
@@ -97,9 +95,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!config.certificado_crt || !config.clave_privada_enc || !config.punto_venta) {
+    if (!config.certificado_crt || !config.clave_privada_enc || !config.punto_venta || !config.cuit) {
       return new Response(
-        JSON.stringify({ error: "Configuración ARCA incompleta. Falta certificado o punto de venta." }),
+        JSON.stringify({ error: "Configuración ARCA incompleta. Falta certificado, CUIT o punto de venta." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -112,9 +110,15 @@ Deno.serve(async (req) => {
       clavePrivada = config.clave_privada_enc;
     }
 
-    // 3. Determinar número de comprobante y tipo (atómico para concurrencia)
-    const tipoMap: Record<string, number> = { A: 1, B: 6, C: 11 };
-    const cbteTipo = tipoMap[tipo_factura] || 11;
+    // 3. Determinar número de comprobante y tipo (RI emite A=1 o B=6)
+    const tipoMap: Record<string, number> = { A: 1, B: 6 };
+    const cbteTipo = tipoMap[tipo_factura];
+    if (!cbteTipo) {
+      return new Response(
+        JSON.stringify({ error: `Tipo de factura inválido: ${tipo_factura}. Hoppiness (RI) solo emite A o B.` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Usar RPC atómico para obtener el próximo número (evita colisiones entre PCs)
     const adminSupabase = createClient(
@@ -122,19 +126,21 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    let { data: nuevoNumero, error: rpcError } = await adminSupabase.rpc(
+    const { data: rpcNumero, error: rpcError } = await adminSupabase.rpc(
       "obtener_proximo_numero_factura",
       { _branch_id: branch_id, _tipo: tipo_factura }
     );
 
-    if (rpcError || nuevoNumero == null) {
+    if (rpcError || rpcNumero == null) {
       return new Response(
         JSON.stringify({ error: "Error al obtener número de factura", details: rpcError?.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // 4. Calcular montos según tipo
+    let nuevoNumero: number = rpcNumero;
+
+    // 4. Calcular montos según tipo (RI siempre desglosa IVA en A y B)
     const esProduccion = !!config.es_produccion;
     const neto = Math.round((total / 1.21) * 100) / 100;
     const iva = Math.round((total - neto) * 100) / 100;
@@ -210,32 +216,26 @@ Deno.serve(async (req) => {
           esProduccion
         );
 
-        // Consultar último comprobante autorizado en ARCA (fuente de verdad)
+        // Consultar a ARCA el último número autorizado (fuente de verdad)
         const lastAuthorized = await getLastVoucher(
-          credentials,
-          config.cuit,
-          config.punto_venta,
-          cbteTipo,
-          esProduccion
+          credentials, config.cuit, config.punto_venta, cbteTipo, esProduccion
         );
-        const arcaNumero = lastAuthorized + 1;
+        const cbteNumero = lastAuthorized + 1;
+        console.log(`ARCA último autorizado tipo ${cbteTipo}: ${lastAuthorized}, usando: ${cbteNumero} (DB tenía: ${rpcNumero})`);
 
-        console.log(`DB numero: ${nuevoNumero}, ARCA ultimo autorizado: ${lastAuthorized}, usando: ${arcaNumero}`);
-
-        // Si el contador de la DB está desfasado, sincronizar
-        if (arcaNumero !== nuevoNumero) {
-          console.warn(`Desfase detectado: DB=${nuevoNumero}, ARCA=${arcaNumero}. Sincronizando DB...`);
-          const tipoCol = tipo_factura === "A" ? "ultimo_nro_factura_a" 
-            : tipo_factura === "B" ? "ultimo_nro_factura_b" 
-            : "ultimo_nro_factura_c";
-          await adminSupabase
-            .from("afip_config")
-            .update({ [tipoCol]: arcaNumero })
-            .eq("branch_id", branch_id);
+        // Sincronizar DB si está desfasada
+        if (cbteNumero !== rpcNumero) {
+          const colMap: Record<string, string> = { A: "ultimo_nro_factura_a", B: "ultimo_nro_factura_b" };
+          const col = colMap[tipo_factura];
+          if (col) {
+            const { error: syncErr } = await adminSupabase.from("afip_config").update({ [col]: lastAuthorized }).eq("branch_id", branch_id);
+            if (syncErr) console.error("Error syncing DB counter with ARCA:", syncErr.message);
+          }
         }
 
-        // Usar el número real de ARCA
-        nuevoNumero = arcaNumero;
+        // Actualizar afipRequest con el número correcto
+        afipRequest.CbteDesde = cbteNumero;
+        afipRequest.CbteHasta = cbteNumero;
 
         // Solicitar CAE
         const result = await requestCAE(
@@ -247,8 +247,8 @@ Deno.serve(async (req) => {
             concepto: 1,
             docTipo: receptor_cuit ? 80 : 99,
             docNro: receptor_cuit ? parseInt(receptor_cuit.replace(/-/g, "")) : 0,
-            cbteDesde: arcaNumero,
-            cbteHasta: arcaNumero,
+            cbteDesde: cbteNumero,
+            cbteHasta: cbteNumero,
             cbteFch,
             impTotal: total,
             impTotConc: 0,
@@ -275,12 +275,19 @@ Deno.serve(async (req) => {
           Observaciones: result.observaciones,
         };
 
-        console.log(`Factura emitida: CAE=${cae}, Vto=${caeVencimiento}, Nro=${arcaNumero}`);
+        // Actualizar contador en DB al número recién emitido
+        const colMap2: Record<string, string> = { A: "ultimo_nro_factura_a", B: "ultimo_nro_factura_b" };
+        const col2 = colMap2[tipo_factura];
+        if (col2) {
+          await adminSupabase.from("afip_config").update({ [col2]: cbteNumero }).eq("branch_id", branch_id);
+        }
+
+        nuevoNumero = cbteNumero;
+        console.log(`Factura emitida: CAE=${cae}, Vto=${caeVencimiento}, Nro=${cbteNumero}`);
       } catch (arcaError) {
         const errorMsg = arcaError instanceof Error ? arcaError.message : String(arcaError);
         console.error("Error ARCA al emitir factura:", errorMsg);
 
-        // Loguear error (2000 chars para no truncar)
         await supabase.from("afip_errores_log").insert({
           branch_id,
           tipo_error: "emision_factura",
@@ -306,6 +313,7 @@ Deno.serve(async (req) => {
         tipo_comprobante: tipo_factura,
         punto_venta: config.punto_venta,
         numero_comprobante: nuevoNumero,
+        fecha_emision: `${cbteFch.slice(0, 4)}-${cbteFch.slice(4, 6)}-${cbteFch.slice(6, 8)}`,
         cae,
         cae_vencimiento: caeVencimiento,
         receptor_cuit,
@@ -340,7 +348,7 @@ Deno.serve(async (req) => {
 
     // 9. Actualizar pedido con datos fiscales (si aplica)
     if (pedido_id) {
-      await supabase
+      const { error: pedidoUpdateError } = await supabase
         .from("pedidos")
         .update({
           factura_tipo: tipo_factura,
@@ -348,6 +356,15 @@ Deno.serve(async (req) => {
           factura_cae: cae,
         })
         .eq("id", pedido_id);
+
+      if (pedidoUpdateError) {
+        await supabase.from("afip_errores_log").insert({
+          branch_id,
+          tipo_error: "update_pedido_factura",
+          mensaje: pedidoUpdateError.message,
+          request_data: { pedido_id, factura_id: factura.id },
+        });
+      }
     }
 
     return new Response(

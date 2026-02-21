@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo, Fragment } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ChevronDown, ChevronRight, Pencil, Printer, FileText, ChefHat, Truck, Wine, Ban, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronUp, Pencil, Printer, FileText, ChefHat, Truck, Wine, Ban, RefreshCw, ArrowUpDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,7 +16,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { PaymentEditModal } from '@/components/pos/PaymentEditModal';
 import type { PosOrder } from '@/hooks/pos/usePosOrderHistory';
 
-export type ReprintType = 'ticket' | 'comanda' | 'vale' | 'delivery' | 'factura';
+export type ReprintType = 'ticket' | 'comanda' | 'vale' | 'delivery' | 'factura' | 'nota_credito';
 
 interface Props {
   orders: PosOrder[];
@@ -66,10 +66,56 @@ function paymentSummary(pagos: PosOrder['pedido_pagos']) {
   return 'Dividido';
 }
 
+type SortKey = 'numero_pedido' | 'created_at' | 'canal_venta' | 'tipo_servicio' | 'cliente_nombre' | 'total' | 'estado';
+type SortDir = 'asc' | 'desc';
+
 export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, onReprint, onCancelOrder, onChangeInvoice, valeCategoryIds }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingOrder, setEditingOrder] = useState<PosOrder | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>('created_at');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
   const isMobile = useIsMobile();
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir(key === 'total' || key === 'numero_pedido' ? 'desc' : 'asc');
+    }
+  };
+
+  const sortedOrders = useMemo(() => {
+    const sorted = [...orders].sort((a, b) => {
+      let va: any = (a as any)[sortKey];
+      let vb: any = (b as any)[sortKey];
+      if (typeof va === 'string') va = va.toLowerCase();
+      if (typeof vb === 'string') vb = vb.toLowerCase();
+      if (va == null) va = '';
+      if (vb == null) vb = '';
+      if (va < vb) return sortDir === 'asc' ? -1 : 1;
+      if (va > vb) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return sorted;
+  }, [orders, sortKey, sortDir]);
+
+  const SortIcon = ({ col }: { col: SortKey }) => {
+    if (sortKey !== col) return <ArrowUpDown className="w-3 h-3 opacity-40" />;
+    return sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
+  };
+
+  const SortableHead = ({ col, children, className }: { col: SortKey; children: React.ReactNode; className?: string }) => (
+    <TableHead
+      className={`cursor-pointer select-none hover:bg-muted/50 ${className || ''}`}
+      onClick={() => handleSort(col)}
+    >
+      <span className="flex items-center gap-1">
+        {children}
+        <SortIcon col={col} />
+      </span>
+    </TableHead>
+  );
 
   if (isLoading) {
     return (
@@ -100,26 +146,25 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, o
           <TableHeader>
             <TableRow>
               <TableHead className="w-8" />
-              <TableHead>#</TableHead>
-              <TableHead>Fecha</TableHead>
-              {!isMobile && <TableHead>Canal</TableHead>}
-              {!isMobile && <TableHead>Servicio</TableHead>}
-              {!isMobile && <TableHead>Cliente</TableHead>}
+              <SortableHead col="numero_pedido">#</SortableHead>
+              <SortableHead col="created_at">Fecha</SortableHead>
+              {!isMobile && <SortableHead col="canal_venta">Canal</SortableHead>}
+              {!isMobile && <SortableHead col="tipo_servicio">Servicio</SortableHead>}
+              {!isMobile && <SortableHead col="cliente_nombre">Cliente</SortableHead>}
               {!isMobile && <TableHead className="text-center">Items</TableHead>}
-              <TableHead className="text-right">Total</TableHead>
+              <SortableHead col="total" className="text-right">Total</SortableHead>
               {!isMobile && <TableHead>Pago</TableHead>}
-              <TableHead className="text-center">Estado</TableHead>
+              <SortableHead col="estado" className="text-center">Estado</SortableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {orders.map(order => {
+            {sortedOrders.map(order => {
               const isExpanded = expandedId === order.id;
               const activeInvoice = order.facturas_emitidas?.find(f => !f.anulada);
               const hasActiveInvoice = !!activeInvoice;
               return (
-                <>
+                <Fragment key={order.id}>
                   <TableRow
-                    key={order.id}
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => toggle(order.id)}
                   >
@@ -164,7 +209,7 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, o
                       </TableCell>
                     </TableRow>
                   )}
-                </>
+                </Fragment>
               );
             })}
           </TableBody>
@@ -234,12 +279,18 @@ function OrderDetail({ order, canEdit, onEdit, onReprint, onCancelOrder, onChang
   valeCategoryIds?: Set<string>;
 }) {
   const activeInvoice = order.facturas_emitidas?.find(f => !f.anulada);
+  const activeFactura = order.facturas_emitidas?.find(
+    f => !f.anulada && !f.tipo_comprobante.startsWith('NC_')
+  );
   const cancelledInvoices = order.facturas_emitidas?.filter(f => f.anulada) || [];
   const creditNotes = order.facturas_emitidas?.filter(f =>
     f.tipo_comprobante.startsWith('NC_')
   ) || [];
+  const lastCreditNote = creditNotes.length > 0 ? creditNotes[creditNotes.length - 1] : null;
 
   const hasActiveInvoice = !!activeInvoice;
+  const hasActiveFactura = !!activeFactura;
+  const hasCreditNote = !!lastCreditNote;
   const isDelivery = order.tipo_servicio === 'delivery';
   const isCancelled = order.estado === 'cancelado';
 
@@ -299,7 +350,7 @@ function OrderDetail({ order, canEdit, onEdit, onReprint, onCancelOrder, onChang
             <div className="mt-3 pt-2 border-t space-y-1">
               <p className="font-medium flex items-center gap-1">
                 <FileText className="h-3.5 w-3.5 text-primary" />
-                Factura {activeInvoice.tipo_comprobante} — N° {String(activeInvoice.punto_venta).padStart(5, '0')}-{String(activeInvoice.numero_comprobante).padStart(8, '0')}
+                {activeInvoice.tipo_comprobante.startsWith('NC_') ? 'Nota de Crédito' : 'Factura'} {activeInvoice.tipo_comprobante} — N° {String(activeInvoice.punto_venta).padStart(5, '0')}-{String(activeInvoice.numero_comprobante).padStart(8, '0')}
               </p>
               {activeInvoice.cae && <p className="text-muted-foreground text-xs">CAE: {activeInvoice.cae}</p>}
               <p className="font-medium">{fmt(activeInvoice.total)}</p>
@@ -327,7 +378,7 @@ function OrderDetail({ order, canEdit, onEdit, onReprint, onCancelOrder, onChang
             </div>
           )}
 
-          {isMobileInfo(order) && (
+          {isMobileView() && (
             <div className="mt-2 text-muted-foreground space-y-0.5">
               {order.canal_venta && <p>Canal: {CANAL_LABELS[order.canal_venta] || order.canal_venta}</p>}
               {order.tipo_servicio && <p>Servicio: {SERVICIO_LABELS[order.tipo_servicio] || order.tipo_servicio}</p>}
@@ -352,11 +403,18 @@ function OrderDetail({ order, canEdit, onEdit, onReprint, onCancelOrder, onChang
               onClick={() => onReprint(order, 'ticket')}
             />
             <ReprintButton
-              label={hasActiveInvoice ? 'Factura' : 'Factura'}
+              label="Factura"
               icon={FileText}
-              enabled={hasActiveInvoice}
+              enabled={hasActiveFactura}
               disabledReason="Sin factura emitida"
               onClick={() => onReprint(order, 'factura')}
+            />
+            <ReprintButton
+              label="Nota de Crédito"
+              icon={FileText}
+              enabled={hasCreditNote}
+              disabledReason="Sin nota de crédito emitida"
+              onClick={() => onReprint(order, 'nota_credito')}
             />
             <ReprintButton
               label="Comanda"
@@ -424,6 +482,6 @@ function OrderDetail({ order, canEdit, onEdit, onReprint, onCancelOrder, onChang
   );
 }
 
-function isMobileInfo(order: PosOrder) {
+function isMobileView() {
   return typeof window !== 'undefined' && window.innerWidth < 768;
 }

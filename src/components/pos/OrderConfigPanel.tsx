@@ -2,14 +2,14 @@
  * OrderConfigPanel - Selector de canal de venta y número de llamador
  * Fase 1: canal mostrador/apps, tipo servicio (takeaway, comer acá, delivery), llamadores
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Store, Utensils, Bike, ShoppingCart, User, Hash, ChevronRight, Pencil, FileText } from 'lucide-react';
+import { Store, Utensils, Bike, ShoppingCart, Hash, ChevronRight, Pencil, FileText, ChevronDown } from 'lucide-react';
 import type { CanalVenta, TipoServicio, CanalApp, TipoFactura, OrderConfig } from '@/types/pos';
 
 const CANAL_OPTS: { value: CanalVenta; label: string; icon: React.ElementType }[] = [
@@ -32,14 +32,19 @@ const CANAL_APP_OPTS: { value: CanalApp; label: string }[] = [
 const CALLER_NUMBERS = Array.from({ length: 30 }, (_, i) => i + 1);
 
 const TIPO_FACTURA_OPTS: { value: TipoFactura; label: string; short: string }[] = [
-  { value: 'C', label: 'Consumidor Final', short: 'CF' },
-  { value: 'A', label: 'Factura A', short: 'A' },
-  { value: 'B', label: 'Factura B', short: 'B' },
+  { value: 'B', label: 'Factura B (CF / Mono)', short: 'B' },
+  { value: 'A', label: 'Factura A (RI)', short: 'A' },
 ];
 
 const CANAL_LABELS: Record<CanalVenta, string> = { mostrador: 'Mostrador', apps: 'Apps' };
 const TIPO_LABELS: Record<TipoServicio, string> = { takeaway: 'Para llevar', comer_aca: 'Comer acá', delivery: 'Delivery' };
 const APP_LABELS: Record<CanalApp, string> = { rappi: 'Rappi', pedidos_ya: 'PedidosYa', mp_delivery: 'MP Delivery' };
+
+const APP_REF_DIGITS: Record<CanalApp, { maxLength: number; placeholder: string } | null> = {
+  rappi: { maxLength: 6, placeholder: '6 dígitos' },
+  mp_delivery: { maxLength: 3, placeholder: '3 dígitos' },
+  pedidos_ya: null,
+};
 
 interface OrderConfigPanelProps {
   config: OrderConfig;
@@ -65,15 +70,18 @@ function ConfigSummaryLine({ config }: { config: OrderConfig }) {
   // Build detail chips
   const details: string[] = [];
   if (config.numeroLlamador) details.push(`#${config.numeroLlamador}`);
+  if (config.referenciaApp && config.canalVenta === 'apps') details.push(config.referenciaApp);
   if (config.clienteNombre && !config.clienteNombre.startsWith('Llamador #')) {
     details.push(config.clienteNombre);
   } else if (config.clienteNombre) {
     details.push(config.clienteNombre);
   }
-  if (config.clienteTelefono) details.push(config.clienteTelefono);
-  if (config.clienteDireccion) details.push(config.clienteDireccion);
-  if (config.tipoFactura && config.tipoFactura !== 'C') {
-    details.push(`Fact. ${config.tipoFactura}`);
+  if (config.canalVenta === 'mostrador') {
+    if (config.clienteTelefono) details.push(config.clienteTelefono);
+    if (config.clienteDireccion) details.push(config.clienteDireccion);
+  }
+  if (config.tipoFactura === 'A' && config.canalVenta === 'mostrador') {
+    details.push('Fact. A');
   }
 
   return (
@@ -95,6 +103,14 @@ function ConfigSummaryLine({ config }: { config: OrderConfig }) {
   );
 }
 
+/** Parse a combined referenciaApp back into digits + name parts */
+function parseRefParts(ref: string): { digits: string; name: string } {
+  const trimmed = ref.trim();
+  const match = trimmed.match(/^(\d+)\s*(.*)/);
+  if (match) return { digits: match[1], name: match[2] };
+  return { digits: '', name: trimmed };
+}
+
 export function ConfigForm({
   config,
   onChange,
@@ -108,7 +124,31 @@ export function ConfigForm({
   deliveryDisabled?: boolean;
   deliveryDisabledReason?: string;
 }) {
-  const set = (partial: Partial<OrderConfig>) => onChange({ ...config, ...partial });
+  const [receptorOpen, setReceptorOpen] = useState(false);
+
+  const parsed = parseRefParts(config.referenciaApp);
+  const [refDigits, setRefDigits] = useState(parsed.digits);
+  const [refName, setRefName] = useState(parsed.name);
+
+  const set = (partial: Partial<OrderConfig>) => {
+    if (partial.tipoFactura && partial.tipoFactura !== config.tipoFactura) {
+      setReceptorOpen(false);
+    }
+    onChange({ ...config, ...partial });
+  };
+
+  useEffect(() => {
+    const p = parseRefParts(config.referenciaApp);
+    setRefDigits(p.digits);
+    setRefName(p.name);
+  }, [config.canalApp, config.referenciaApp]);
+
+  const updateRef = (digits: string, name: string) => {
+    setRefDigits(digits);
+    setRefName(name);
+    const combined = [digits, name].filter(Boolean).join(' ');
+    set({ referenciaApp: combined });
+  };
 
   return (
     <div className="space-y-4">
@@ -198,7 +238,7 @@ export function ConfigForm({
                 <Label className="text-xs text-muted-foreground">Nombre (opcional)</Label>
                 <Input
                   placeholder="Nombre del cliente"
-                  value={config.clienteNombre.startsWith('Llamador #') ? '' : config.clienteNombre}
+                  value={config.clienteNombre?.startsWith('Llamador #') ? '' : (config.clienteNombre ?? '')}
                   onChange={(e) => {
                     const v = e.target.value;
                     set({
@@ -243,78 +283,139 @@ export function ConfigForm({
             </div>
           </div>
           <div className="space-y-2">
-            <Label className="text-xs flex items-center gap-1"><User className="w-3.5 h-3.5" /> Nombre *</Label>
-            <Input placeholder="Cliente" value={config.clienteNombre} onChange={(e) => set({ clienteNombre: e.target.value })} className="h-9" />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Teléfono</Label>
-            <Input placeholder="Teléfono" value={config.clienteTelefono} onChange={(e) => set({ clienteTelefono: e.target.value })} className="h-9" />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Dirección *</Label>
-            <Input placeholder="Dirección" value={config.clienteDireccion} onChange={(e) => set({ clienteDireccion: e.target.value })} className="h-9" />
+            <Label className="text-xs flex items-center gap-1"><Hash className="w-3.5 h-3.5" /> Referencia del pedido</Label>
+            {APP_REF_DIGITS[config.canalApp] ? (
+              <div className="flex gap-2">
+                <Input
+                  placeholder={APP_REF_DIGITS[config.canalApp]!.placeholder}
+                  value={refDigits}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/\D/g, '').slice(0, APP_REF_DIGITS[config.canalApp]!.maxLength);
+                    updateRef(v, refName);
+                  }}
+                  className="h-9 w-28 shrink-0"
+                  inputMode="numeric"
+                />
+                <Input
+                  placeholder="Nombre"
+                  value={refName}
+                  onChange={(e) => updateRef(refDigits, e.target.value)}
+                  className="h-9 flex-1"
+                />
+              </div>
+            ) : (
+              <Input
+                placeholder="Nombre de la persona"
+                value={config.referenciaApp}
+                onChange={(e) => set({ referenciaApp: e.target.value })}
+                className="h-9"
+              />
+            )}
           </div>
         </>
       )}
 
-      {/* Tipo de factura */}
-      <div className="space-y-2 border-t pt-4 mt-2">
-        <Label className="text-xs flex items-center gap-1">
-          <FileText className="w-3.5 h-3.5" />
-          Comprobante
-        </Label>
-        <div className="flex gap-2 flex-wrap">
-          {TIPO_FACTURA_OPTS.map((opt) => (
-            <Button
-              key={opt.value}
-              type="button"
-              variant={config.tipoFactura === opt.value ? 'default' : 'outline'}
-              size="sm"
-              className="flex-1 min-w-0"
-              onClick={() => set({
-                tipoFactura: opt.value,
-                // Clear receptor fields when switching to CF
-                ...(opt.value === 'C' ? { receptorCuit: '', receptorRazonSocial: '', receptorEmail: '' } : {}),
-              })}
-            >
-              {opt.label}
-            </Button>
-          ))}
-        </div>
-
-        {(config.tipoFactura === 'A' || config.tipoFactura === 'B') && (
-          <div className="space-y-2 mt-2 p-3 rounded-md bg-muted/50 border">
-            <div>
-              <Label className="text-xs">CUIT *</Label>
-              <Input
-                placeholder="20-12345678-9"
-                value={config.receptorCuit}
-                onChange={(e) => set({ receptorCuit: e.target.value })}
-                className="h-9 mt-1"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Razón Social *</Label>
-              <Input
-                placeholder="Nombre o razón social"
-                value={config.receptorRazonSocial}
-                onChange={(e) => set({ receptorRazonSocial: e.target.value })}
-                className="h-9 mt-1"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Email (opcional)</Label>
-              <Input
-                placeholder="email@ejemplo.com"
-                value={config.receptorEmail}
-                onChange={(e) => set({ receptorEmail: e.target.value })}
-                className="h-9 mt-1"
-                type="email"
-              />
-            </div>
+      {/* Tipo de factura - solo mostrador (apps siempre CF) */}
+      {config.canalVenta === 'mostrador' && (
+        <div className="space-y-2 border-t pt-4 mt-2">
+          <Label className="text-xs flex items-center gap-1">
+            <FileText className="w-3.5 h-3.5" />
+            Comprobante
+          </Label>
+          <div className="flex gap-2 flex-wrap">
+            {TIPO_FACTURA_OPTS.map((opt) => (
+              <Button
+                key={opt.value}
+                type="button"
+                variant={config.tipoFactura === opt.value ? 'default' : 'outline'}
+                size="sm"
+                className="flex-1 min-w-0"
+                onClick={() => set({
+                  tipoFactura: opt.value,
+                })}
+              >
+                {opt.label}
+              </Button>
+            ))}
           </div>
-        )}
-      </div>
+
+          {config.tipoFactura === 'A' && (
+            <div className="space-y-2 mt-2 p-3 rounded-md bg-muted/50 border">
+              <div>
+                <Label className="text-xs">CUIT *</Label>
+                <Input
+                  placeholder="20-12345678-9"
+                  value={config.receptorCuit}
+                  onChange={(e) => set({ receptorCuit: e.target.value })}
+                  className="h-9 mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Razón Social *</Label>
+                <Input
+                  placeholder="Nombre o razón social"
+                  value={config.receptorRazonSocial}
+                  onChange={(e) => set({ receptorRazonSocial: e.target.value })}
+                  className="h-9 mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Email (opcional)</Label>
+                <Input
+                  placeholder="email@ejemplo.com"
+                  value={config.receptorEmail}
+                  onChange={(e) => set({ receptorEmail: e.target.value })}
+                  className="h-9 mt-1"
+                  type="email"
+                />
+              </div>
+            </div>
+          )}
+
+          {config.tipoFactura === 'B' && (
+            <Collapsible open={receptorOpen} onOpenChange={setReceptorOpen}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="mt-1 gap-1.5 text-xs text-muted-foreground w-full justify-start">
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${receptorOpen ? '' : '-rotate-90'}`} />
+                  Datos del receptor (opcional)
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="space-y-2 mt-1 p-3 rounded-md bg-muted/50 border">
+                  <div>
+                    <Label className="text-xs">CUIT (opcional)</Label>
+                    <Input
+                      placeholder="20-12345678-9"
+                      value={config.receptorCuit}
+                      onChange={(e) => set({ receptorCuit: e.target.value })}
+                      className="h-9 mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Razón Social (opcional)</Label>
+                    <Input
+                      placeholder="Nombre o razón social"
+                      value={config.receptorRazonSocial}
+                      onChange={(e) => set({ receptorRazonSocial: e.target.value })}
+                      className="h-9 mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Email (opcional)</Label>
+                    <Input
+                      placeholder="email@ejemplo.com"
+                      value={config.receptorEmail}
+                      onChange={(e) => set({ receptorEmail: e.target.value })}
+                      className="h-9 mt-1"
+                      type="email"
+                    />
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+        </div>
+      )}
 
       {onConfirm && (
         <Button size="lg" className="w-full" onClick={onConfirm}>

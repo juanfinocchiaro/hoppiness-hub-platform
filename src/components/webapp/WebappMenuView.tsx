@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { ArrowLeft, Search, X } from 'lucide-react';
+import { ArrowLeft, Search, X, LayoutGrid, List } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ProductCard } from './ProductCard';
 import { Loader2 } from 'lucide-react';
@@ -21,10 +21,10 @@ interface Props {
 export function WebappMenuView({ branch, config, items, loading, tipoServicio, cart, onProductClick, onBack }: Props) {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const categoryRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const tabsRef = useRef<HTMLDivElement>(null);
 
-  // Group items by category
   const categories = useMemo(() => {
     const filtered = search.trim()
       ? items.filter(i =>
@@ -44,14 +44,12 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
     return Object.values(grouped).sort((a, b) => a.orden - b.orden);
   }, [items, search]);
 
-  // Set initial active category
   useEffect(() => {
     if (categories.length > 0 && !activeCategory) {
       setActiveCategory(categories[0].nombre);
     }
   }, [categories, activeCategory]);
 
-  // Scroll spy
   useEffect(() => {
     const observer = new IntersectionObserver(
       entries => {
@@ -78,19 +76,34 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
 
   const servicioLabel = tipoServicio === 'retiro' ? '🛒 Retiro en local' : tipoServicio === 'delivery' ? '🛵 Delivery' : '🍽 Comer acá';
 
+  const tiempoEstimado = tipoServicio === 'delivery'
+    ? config.tiempo_estimado_delivery_min
+    : config.tiempo_estimado_retiro_min;
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-primary text-primary-foreground shadow-md">
         <div className="flex items-center gap-3 px-4 py-3">
-          <button onClick={onBack} className="p-1 -ml-1 hover:bg-white/10 rounded-lg transition-colors">
+          <button onClick={onBack} className="p-1.5 -ml-1 hover:bg-white/10 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <img src={logoHoppiness} alt="" className="w-8 h-8 rounded-full object-contain" />
           <div className="flex-1 min-w-0">
             <p className="font-bold text-sm truncate">{branch.name}</p>
-            <p className="text-xs text-primary-foreground/70">{servicioLabel}</p>
+            <p className="text-xs text-primary-foreground/70">
+              {servicioLabel}
+              {tiempoEstimado && <> · ~{tiempoEstimado} min</>}
+            </p>
           </div>
+          {/* View toggle */}
+          <button
+            onClick={() => setViewMode(v => v === 'grid' ? 'list' : 'grid')}
+            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+            title={viewMode === 'grid' ? 'Vista lista' : 'Vista grilla'}
+          >
+            {viewMode === 'grid' ? <List className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
+          </button>
         </div>
 
         {/* Search */}
@@ -154,27 +167,52 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
               data-category={cat.nombre}
               className="scroll-mt-36"
             >
-              <div className="sticky top-[140px] z-10 bg-background/95 backdrop-blur-sm px-4 py-2 border-b">
+              <div className="sticky top-[140px] z-10 bg-background/95 backdrop-blur-sm px-4 py-2.5 border-b">
                 <h2 className="text-sm font-black text-primary uppercase tracking-wide">
                   {cat.nombre}
+                  <span className="text-xs font-normal text-muted-foreground ml-2 lowercase tracking-normal">
+                    {cat.items.length} {cat.items.length === 1 ? 'producto' : 'productos'}
+                  </span>
                 </h2>
               </div>
-              <div className="px-4 py-2 space-y-2">
-                {cat.items.map(item => (
-                  <ProductCard
-                    key={item.id}
-                    item={item}
-                    qty={cart.getItemQty(item.id)}
-                    onTap={() => onProductClick(item)}
-                    onQuickAdd={() => cart.quickAdd(item.id, item.nombre, item.precio_base, item.imagen_url)}
-                    onIncrement={() => cart.quickAdd(item.id, item.nombre, item.precio_base, item.imagen_url)}
-                    onDecrement={() => {
-                      const entry = cart.items.find(i => i.itemId === item.id);
-                      if (entry) cart.updateQuantity(entry.cartId, entry.cantidad - 1);
-                    }}
-                  />
-                ))}
-              </div>
+
+              {viewMode === 'grid' ? (
+                <div className="px-4 py-3 grid grid-cols-2 gap-3">
+                  {cat.items.map(item => (
+                    <ProductCard
+                      key={item.id}
+                      item={item}
+                      qty={cart.getItemQty(item.id)}
+                      layout="grid"
+                      onTap={() => onProductClick(item)}
+                      onQuickAdd={() => cart.quickAdd(item.id, item.nombre, item.precio_base, item.imagen_url)}
+                      onIncrement={() => cart.quickAdd(item.id, item.nombre, item.precio_base, item.imagen_url)}
+                      onDecrement={() => {
+                        const entry = cart.items.find(i => i.itemId === item.id);
+                        if (entry) cart.updateQuantity(entry.cartId, entry.cantidad - 1);
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="px-4 py-2 space-y-2">
+                  {cat.items.map(item => (
+                    <ProductCard
+                      key={item.id}
+                      item={item}
+                      qty={cart.getItemQty(item.id)}
+                      layout="list"
+                      onTap={() => onProductClick(item)}
+                      onQuickAdd={() => cart.quickAdd(item.id, item.nombre, item.precio_base, item.imagen_url)}
+                      onIncrement={() => cart.quickAdd(item.id, item.nombre, item.precio_base, item.imagen_url)}
+                      onDecrement={() => {
+                        const entry = cart.items.find(i => i.itemId === item.id);
+                        if (entry) cart.updateQuantity(entry.cartId, entry.cantidad - 1);
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           ))
         )}

@@ -14,14 +14,19 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Receipt, Wallet } from 'lucide-react';
+import { PlusCircle, Receipt, Wallet, Printer } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { usePrinting } from '@/hooks/usePrinting';
+import { usePrintConfig } from '@/hooks/usePrintConfig';
+import { useBranchPrinters } from '@/hooks/useBranchPrinters';
+import { generateCashClosingReport, type CashClosingReportData } from '@/lib/escpos';
 import {
   useCashRegistersByType,
   useCashShifts,
   useCashMovements,
   useCloseShift,
   useAddMovement,
+  useTransferBetweenRegisters,
   calculateExpectedCash,
   canViewSection,
   cashRegisterKeys,
@@ -35,9 +40,9 @@ import { CajaExpensesList } from '@/components/pos/CajaExpensesList';
 import { CashierDiscrepancyStats } from '@/components/pos/CashierDiscrepancyStats';
 import { CajaAlivioCard } from '@/components/pos/CajaAlivioCard';
 import { CajaFuerteCard } from '@/components/pos/CajaFuerteCard';
-import { RetiroAlivioModal } from '@/components/pos/RetiroAlivioModal';
+import { CashTransferModal } from '@/components/pos/CashTransferModal';
 import { supabase } from '@/integrations/supabase/client';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 export default function RegisterPage() {
@@ -61,6 +66,19 @@ export default function RegisterPage() {
   const [closingNotes, setClosingNotes] = useState('');
 
   const canApproveExpenses = isSuperadmin || ['franquiciado', 'encargado'].includes(localRole ?? '');
+
+  const printing = usePrinting(branchId);
+  const { data: printConfig } = usePrintConfig(branchId);
+  const { data: printersData } = useBranchPrinters(branchId);
+
+  const { data: branchData } = useQuery({
+    queryKey: ['branch-basic', branchId],
+    queryFn: async () => {
+      const { data } = await supabase.from('branches').select('name').eq('id', branchId!).single();
+      return data;
+    },
+    enabled: !!branchId,
+  });
 
   // Get the 3 registers
   const { ventas, alivio, fuerte, isLoading: loadingRegisters } = useCashRegistersByType(branchId);
@@ -89,10 +107,11 @@ export default function RegisterPage() {
 
   const closeShiftMutation = useCloseShift(branchId ?? '');
   const addMovement = useAddMovement(branchId ?? '');
+  const transferMutation = useTransferBetweenRegisters(branchId ?? '');
 
-  // Alivio balance
   const alivioBalance = useMemo(() => {
     if (!alivioShift) return 0;
+    if (alivioShift.current_balance != null) return Number(alivioShift.current_balance);
     let amount = Number(alivioShift.opening_amount);
     for (const mov of alivioMovements) {
       if (mov.type === 'income' || mov.type === 'deposit') amount += Number(mov.amount);
@@ -101,9 +120,9 @@ export default function RegisterPage() {
     return amount;
   }, [alivioShift, alivioMovements]);
 
-  // Fuerte balance
   const fuerteBalance = useMemo(() => {
     if (!fuerteShift) return 0;
+    if (fuerteShift.current_balance != null) return Number(fuerteShift.current_balance);
     let amount = Number(fuerteShift.opening_amount);
     for (const mov of fuerteMovements) {
       if (mov.type === 'income' || mov.type === 'deposit') amount += Number(mov.amount);
@@ -120,31 +139,63 @@ export default function RegisterPage() {
       return;
     }
     try {
-      // Withdrawal from ventas
-      await addMovement.mutateAsync({
-        shiftId: activeShift.id,
-        type: 'withdrawal',
+      await transferMutation.mutateAsync({
+        sourceShiftId: activeShift.id,
+        destShiftId: alivioShift.id,
         amount,
         concept: `Alivio a Caja de Alivio${alivioNotes ? ` - ${alivioNotes}` : ''}`,
-        paymentMethod: 'efectivo',
-        userId: user.id,
-      });
-      // Deposit to alivio
-      await addMovement.mutateAsync({
-        shiftId: alivioShift.id,
-        type: 'deposit',
-        amount,
-        concept: `Alivio desde Caja de Ventas${alivioNotes ? ` - ${alivioNotes}` : ''}`,
-        paymentMethod: 'efectivo',
         userId: user.id,
       });
       toast.success(`Alivio realizado: $ ${amount.toLocaleString('es-AR')}`);
       setShowAlivioModal(false);
       setAlivioAmount('');
       setAlivioNotes('');
-      queryClient.invalidateQueries({ queryKey: cashRegisterKeys.all });
     } catch (e: any) {
       toast.error(e?.message || 'Error al realizar alivio');
+    }
+  };
+
+  const printClosingReport = async (shift: typeof activeShift, counted: number) => {
+    if (!shift || !branchData || printing.bridgeStatus !== 'connected') return;
+    const ticketPrinter = printConfig?.ticket_printer_id
+      ? (printersData ?? []).find((p: any) => p.id === printConfig.ticket_printer_id && p.is_active)
+      : null;
+    if (!ticketPrinter) return;
+
+    const totalIncome = movements
+      .filter(m => m.type === 'income' || m.type === 'deposit')
+      .reduce((s, m) => s + Number(m.amount), 0);
+    const totalExpenses = movements
+      .filter(m => m.type === 'expense' || m.type === 'withdrawal')
+      .reduce((s, m) => s + Number(m.amount), 0);
+
+    const reportData: CashClosingReportData = {
+      register_name: 'Caja de Ventas',
+      opened_at: shift.opened_at,
+      closed_at: new Date().toISOString(),
+      opened_by: user?.email?.split('@')[0] || 'Operador',
+      closed_by: user?.email?.split('@')[0] || 'Operador',
+      opening_amount: Number(shift.opening_amount),
+      total_income: totalIncome,
+      total_expenses: totalExpenses,
+      expected_amount: expectedCash,
+      closing_amount: counted,
+      difference: counted - expectedCash,
+      movements: movements.slice(0, 30).map(m => ({
+        time: m.created_at,
+        concept: m.concept,
+        type: (m.type === 'income' || m.type === 'deposit') ? 'income' as const : 'expense' as const,
+        amount: Number(m.amount),
+      })),
+    };
+
+    try {
+      const data = generateCashClosingReport(reportData, branchData.name, ticketPrinter.paper_width);
+      const { printRawBase64 } = await import('@/lib/qz-print');
+      await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, data);
+      toast.success('Informe de cierre impreso');
+    } catch {
+      toast.error('No se pudo imprimir el informe de cierre');
     }
   };
 
@@ -158,6 +209,9 @@ export default function RegisterPage() {
       expectedAmount: expectedCash,
       notes: closingNotes.trim() || undefined,
     });
+
+    await printClosingReport(activeShift, counted);
+
     setClosingAmount('');
     setClosingNotes('');
     setShowCloseModal(false);
@@ -230,7 +284,7 @@ export default function RegisterPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAlivioModal(false)}>Cancelar</Button>
-            <Button onClick={handleAlivio} disabled={!alivioAmount || parseFloat(alivioAmount) <= 0 || parseFloat(alivioAmount) > expectedCash || addMovement.isPending}>
+            <Button onClick={handleAlivio} disabled={!alivioAmount || parseFloat(alivioAmount) <= 0 || parseFloat(alivioAmount) > expectedCash || transferMutation.isPending}>
               Confirmar Alivio
             </Button>
           </DialogFooter>
@@ -238,7 +292,7 @@ export default function RegisterPage() {
       </Dialog>
 
       {/* Retiro Alivio → Fuerte */}
-      <RetiroAlivioModal
+      <CashTransferModal
         open={showRetiroAlivioModal}
         onOpenChange={setShowRetiroAlivioModal}
         branchId={branchId!}
@@ -251,7 +305,7 @@ export default function RegisterPage() {
       />
 
       {/* Retiro final Fuerte */}
-      <RetiroAlivioModal
+      <CashTransferModal
         open={showRetiroFuerteModal}
         onOpenChange={setShowRetiroFuerteModal}
         branchId={branchId!}

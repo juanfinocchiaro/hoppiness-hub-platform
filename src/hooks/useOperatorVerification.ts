@@ -72,7 +72,7 @@ export function useOperatorVerification(branchId: string | undefined) {
         });
 
         if (error) {
-          console.error('Error validating PIN:', error);
+          if (import.meta.env.DEV) console.error('Error validating PIN:', error);
           return null;
         }
 
@@ -140,11 +140,15 @@ export function useOperatorVerification(branchId: string | undefined) {
           .eq('id', data.user.id)
           .single();
 
-        await logOperatorChange.mutateAsync({
-          previousUserId,
-          newUserId: data.user.id,
-          triggeredBy,
-        });
+        try {
+          await logOperatorChange.mutateAsync({
+            previousUserId,
+            newUserId: data.user.id,
+            triggeredBy,
+          });
+        } catch (logErr) {
+          console.error('Error logging operator change (non-blocking):', logErr);
+        }
 
         queryClient.invalidateQueries();
         toast.success(`Sesión cambiada a ${newProfile?.full_name || email}`);

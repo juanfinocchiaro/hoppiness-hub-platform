@@ -15,15 +15,14 @@ import {
   generateComandaDelivery,
   generateTicketCliente,
   generateTestPage,
-  generateTicketFiscal,
+  generateArcaQrBitmap,
   type PrintableOrder,
   type PrintableItem,
-  type FiscalTicketData,
   type TicketClienteData,
 } from '@/lib/escpos';
 import type { BranchPrinter } from '@/hooks/useBranchPrinters';
 import type { PrintConfig } from '@/hooks/usePrintConfig';
-import { buildPrintJobs } from '@/lib/print-router';
+import { buildPrintJobs, type FacturaPrintData, type PaymentPrintData } from '@/lib/print-router';
 
 export type PrintBridgeStatus = 'checking' | 'connected' | 'not_available';
 
@@ -58,14 +57,20 @@ export function usePrinting(branchId: string) {
   const [bridgeStatus, setBridgeStatus] = useState<PrintBridgeStatus>('checking');
 
   useEffect(() => {
-    detectPrintBridge().then((result) => {
-      setBridgeStatus(result.available ? 'connected' : 'not_available');
-    });
+    let cancelled = false;
+    detectPrintBridge()
+      .then((result) => {
+        if (!cancelled) setBridgeStatus(result.available ? 'connected' : 'not_available');
+      })
+      .catch(() => {
+        if (!cancelled) setBridgeStatus('not_available');
+      });
+    return () => { cancelled = true; };
   }, []);
 
   const printMutation = useMutation({
     mutationFn: async ({ printer, jobType, pedidoId, dataBase64 }: PrintJobInput) => {
-      await supabase.from('print_jobs').insert({
+      const { error: insertError } = await supabase.from('print_jobs').insert({
         branch_id: branchId,
         printer_id: printer.id,
         job_type: jobType,
@@ -73,6 +78,7 @@ export function usePrinting(branchId: string) {
         payload: { data_base64: dataBase64 },
         status: 'printing',
       });
+      if (insertError) console.error('Failed to log print job:', insertError.message);
 
       const success = await sendToPrinter(printer, dataBase64);
       if (!success) throw new Error('No se pudo imprimir');
@@ -128,11 +134,18 @@ export function usePrinting(branchId: string) {
     });
   };
 
-  const printTicket = (
+  const printTicket = async (
     ticketData: TicketClienteData,
     printer: BranchPrinter
   ) => {
-    const data = generateTicketCliente(ticketData, printer.paper_width);
+    let finalData = ticketData;
+    if (ticketData.factura && !ticketData.factura.qr_bitmap_b64) {
+      try {
+        const qr = await generateArcaQrBitmap(ticketData.factura);
+        finalData = { ...ticketData, factura: { ...ticketData.factura, qr_bitmap_b64: qr } };
+      } catch { /* fallback sin QR */ }
+    }
+    const data = generateTicketCliente(finalData, printer.paper_width);
     printMutation.mutate({
       branchId,
       printer,
@@ -165,46 +178,26 @@ export function usePrinting(branchId: string) {
     });
   };
 
-  const printFiscalTicket = async (fiscalData: FiscalTicketData, printer: BranchPrinter) => {
-    const data = generateTicketFiscal(fiscalData, printer.paper_width);
-    try {
-      await sendToPrinter(printer, data);
-      await supabase.from('print_jobs').insert({
-        branch_id: branchId,
-        printer_id: printer.id,
-        job_type: 'ticket_fiscal',
-        payload: { data_base64: data },
-        status: 'completed',
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error desconocido';
-      toast.error('Error al imprimir comprobante fiscal', { description: msg });
-      await supabase.from('print_jobs').insert({
-        branch_id: branchId,
-        printer_id: printer.id,
-        job_type: 'ticket_fiscal',
-        payload: { data_base64: data },
-        status: 'error',
-        error_message: msg,
-      });
-    }
-  };
-
   const printOrder = async (
     order: PrintableOrder & { items: (PrintableItem & { categoria_carta_id?: string | null; precio_unitario?: number; subtotal?: number })[]; total?: number; descuento?: number },
     config: PrintConfig,
     allPrinters: BranchPrinter[],
-    categorias: { id: string; nombre: string; tipo_impresion: string }[],
+    categorias: { id: string; nombre: string; tipo_impresion: 'comanda' | 'vale' | 'no_imprimir' }[],
     branchName: string,
-    esSalon: boolean
+    esSalon: boolean,
+    payment?: PaymentPrintData,
+    factura?: FacturaPrintData | null,
+    pedidoId?: string,
   ) => {
-    const jobs = buildPrintJobs(
+    const jobs = await buildPrintJobs(
       order,
       config,
       allPrinters,
-      categorias as any,
+      categorias,
       branchName,
-      esSalon
+      esSalon,
+      payment,
+      factura,
     );
 
     for (const job of jobs) {
@@ -212,24 +205,28 @@ export function usePrinting(branchId: string) {
       if (printer) {
         try {
           await sendToPrinter(printer, job.dataBase64);
-          await supabase.from('print_jobs').insert({
+          const { error: logErr } = await supabase.from('print_jobs').insert({
             branch_id: branchId,
             printer_id: printer.id,
+            pedido_id: pedidoId || null,
             job_type: job.type,
             payload: { data_base64: job.dataBase64 },
             status: 'completed',
           });
+          if (logErr) console.error('Failed to log print job:', logErr.message);
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Error desconocido';
           toast.error(`Error al imprimir ${job.label}`, { description: msg });
-          await supabase.from('print_jobs').insert({
+          const { error: logErr } = await supabase.from('print_jobs').insert({
             branch_id: branchId,
             printer_id: printer.id,
+            pedido_id: pedidoId || null,
             job_type: job.type,
             payload: { data_base64: job.dataBase64 },
             status: 'error',
             error_message: msg,
           });
+          if (logErr) console.error('Failed to log print job error:', logErr.message);
         }
       }
     }
@@ -241,7 +238,6 @@ export function usePrinting(branchId: string) {
     printTicket,
     printDelivery,
     printTest,
-    printFiscalTicket,
     printOrder,
     isPrinting: printMutation.isPending,
     bridgeStatus,

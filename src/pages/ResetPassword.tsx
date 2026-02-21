@@ -19,19 +19,18 @@ export default function ResetPassword() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isValidSession, setIsValidSession] = useState<boolean | null>(null);
+  const isValidRef = useRef<boolean | null>(null);
   const redirectTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     // IMPORTANT: Set up listener BEFORE checking session
     // This ensures we catch the PASSWORD_RECOVERY event from Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth event:', event, 'Session:', !!session);
-      
       if (event === 'PASSWORD_RECOVERY') {
-        console.log('Password recovery event received');
+        isValidRef.current = true;
         setIsValidSession(true);
       } else if (event === 'SIGNED_IN' && session) {
-        // User might already be signed in from recovery link
+        isValidRef.current = true;
         setIsValidSession(true);
       }
     });
@@ -42,10 +41,9 @@ export default function ResetPassword() {
       await new Promise(resolve => setTimeout(resolve, 500));
       
       const { data: { session } } = await supabase.auth.getSession();
-      console.log('Session check:', !!session);
       
-      // If session exists, the user clicked the recovery link
       if (session) {
+        isValidRef.current = true;
         setIsValidSession(true);
         return;
       }
@@ -59,10 +57,7 @@ export default function ResetPassword() {
         const error = hashParams.get('error');
         const errorDescription = hashParams.get('error_description');
         
-        console.log('Hash params:', { accessToken: !!accessToken, type, error });
-        
         if (error) {
-          console.error('Auth error:', error, errorDescription);
           toast.error(errorDescription || 'El link es inválido o expiró');
           setIsValidSession(false);
           return;
@@ -85,14 +80,13 @@ export default function ResetPassword() {
                 return;
               }
             }
-          } catch (err) {
-            console.error('Error setting session:', err);
+          } catch {
+            // Session recovery failed - will show invalid link UI
           }
         }
       }
       
-      // Only mark as invalid if we haven't already set it as valid
-      if (isValidSession === null) {
+      if (isValidRef.current === null) {
         setIsValidSession(false);
       }
     };

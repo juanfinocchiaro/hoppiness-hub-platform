@@ -54,7 +54,7 @@ export async function sendScheduleNotification(input: NotificationInput): Promis
         created_by: input.sender_id,
       });
     } catch (e) {
-      console.error('Failed to create communication:', e);
+      if (import.meta.env.DEV) console.error('Failed to create communication:', e);
     }
   }
   
@@ -108,7 +108,7 @@ export async function sendBulkScheduleNotifications(
         created_by: params.sender_id,
       });
     } catch (e) {
-      console.error('Failed to create bulk communication:', e);
+      if (import.meta.env.DEV) console.error('Failed to create bulk communication:', e);
     }
   }
   
@@ -126,7 +126,7 @@ export async function sendBulkScheduleNotifications(
           },
         });
       } catch (e) {
-        console.error(`Failed to send email to ${employee.name}:`, e);
+        if (import.meta.env.DEV) console.error(`Failed to send email to ${employee.name}:`, e);
         // Continue with other employees
       }
     }

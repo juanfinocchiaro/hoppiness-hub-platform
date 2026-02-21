@@ -1,8 +1,7 @@
 /**
  * LocalSidebar - Navegación de Mi Local organizada por flujo de trabajo
  *
- * Orden: Dashboard → Cierre de Turno → Operación del Día → Equipo y Tiempo → Finanzas → Socios → Comunicados → Supervisiones → Config
- * Usa useDynamicPermissions para determinar visibilidad.
+ * Secciones: Dashboard → Operar → Vender → Comprar → Equipo → Resultados → Socios → Comunicados → Supervisiones → Config
  */
 import { useLocation } from 'react-router-dom';
 import {
@@ -11,6 +10,7 @@ import {
   AlertTriangle, UserCheck, Calendar, Wallet, Truck, Package,
   TrendingUp, BarChart3, CalendarDays, Handshake, Calculator,
   FileInput, Building2, ChefHat, Printer, Flame, SlidersHorizontal,
+  Globe, Store,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -90,14 +90,21 @@ export function LocalSidebar({ branchId, posEnabled = false, permissions }: Loca
       return location.pathname === full || location.pathname.startsWith(`${full}/`);
     });
 
-  const isOperacionDiaActive = isActive([
-    'equipo/fichajes',
-    'finanzas/compras',
-    'finanzas/proveedores',
-    'ventas/stock',
+  /* ── Section activity detection ──────────────────────── */
+
+  const isOperarActive = isActive([
+    'ventas/pos', 'ventas/cocina', 'ventas/entrega', 'ventas/caja', 'equipo/fichajes',
   ]);
 
-  const isEquipoTiempoActive = isActive([
+  const isVenderActive = isActive([
+    'ventas/historial', 'ventas/cierre-turno', 'ventas/stock', 'config/webapp',
+  ]);
+
+  const isComprarActive = isActive([
+    'finanzas/proveedores', 'finanzas/compras', 'finanzas/consumos', 'finanzas/gastos',
+  ]);
+
+  const isEquipoActive = isActive([
     'equipo',
     'equipo/coaching',
     'equipo/reuniones',
@@ -109,106 +116,117 @@ export function LocalSidebar({ branchId, posEnabled = false, permissions }: Loca
     'equipo/reglamentos',
   ]);
 
-  const isFinanzasActive = isActive([
-    'finanzas/consumos',
-    'finanzas/consumos',
+  const isResultadosActive = isActive([
     'finanzas/pl',
-    'finanzas/periodos',
+    'finanzas/resultado-financiero',
     'finanzas/ventas-mensuales',
     'finanzas/rdo-carga',
+    'finanzas/periodos',
     'finanzas/inversiones',
   ]);
 
   const isSociosActive = isActive(['finanzas/socios']);
   const isConfigActive = location.pathname.startsWith(`${basePath}/config`);
-  const isVentasCajaActive = isActive([
-    'ventas/pos', 'ventas/cocina', 'ventas/entrega', 'ventas/caja', 'ventas/historial', 'ventas/cierre-turno',
-  ]);
 
-  const canSeeOperacionDia =
-    canViewAllClockIns ||
-    canViewPurchaseHistory ||
-    canViewSuppliers ||
-    canUploadInvoice ||
-    canViewStock;
-  const canSeeEquipoTiempo =
-    canViewTeam ||
-    canDoCoaching ||
-    canEditSchedules ||
-    canViewPayroll ||
-    canViewSalaryAdvances;
-  const canSeeFinanzas =
-    canViewLocalPnL ||
-    canViewGastos ||
-    canViewConsumos ||
-    canViewPeriodos ||
-    canViewVentasMensualesLocal ||
-    isContadorLocal ||
-    isFranquiciado;
-  const canSeeSocios = canViewSocios;
+  /* ── Visibility flags ──────────────────────────────────── */
+
+  const canSeeOperar = posEnabled;
+  const canSeeVender =
+    canViewClosures || canCloseShifts || canViewStock;
+  const canSeeComprar =
+    canViewPurchaseHistory || canViewSuppliers || canUploadInvoice || canViewConsumos || canViewGastos;
+  const canSeeEquipo =
+    canViewTeam || canDoCoaching || canEditSchedules || canViewPayroll || canViewSalaryAdvances;
+  const canSeeResultados =
+    canViewLocalPnL || canViewGastos || canViewPeriodos || canViewVentasMensualesLocal || isContadorLocal || isFranquiciado;
 
   return (
     <WorkSidebarNav>
-      {/* Dashboard */}
+      {/* ─── Dashboard ─────────────────────────────────── */}
       {canViewDashboard && (
         <NavDashboardLink to={basePath} icon={LayoutDashboard} label="Dashboard" />
       )}
 
-      {/* Ventas y Caja: con POS muestra sección completa, sin POS solo Cierre de Turno */}
-      {(canViewClosures || canCloseShifts) && (
-        posEnabled ? (
-          <NavSectionGroup
-            id="ventas-caja"
-            label="Ventas y Caja"
-            icon={ShoppingCart}
-            forceOpen={isVentasCajaActive}
-          >
-            <NavItemButton to={`${basePath}/ventas/pos`} icon={ShoppingCart} label="Punto de Venta" />
-            <NavItemButton to={`${basePath}/ventas/cocina`} icon={ChefHat} label="Cocina" />
-            <NavItemButton to={`${basePath}/ventas/entrega`} icon={Truck} label="Entrega" />
-            <NavItemButton to={`${basePath}/ventas/caja`} icon={Wallet} label="Caja" />
-            <NavItemButton to={`${basePath}/ventas/cierre-turno`} icon={FileText} label="Reporte Cierre" />
-            <NavItemButton to={`${basePath}/ventas/historial`} icon={TrendingUp} label="Historial ventas" />
-          </NavSectionGroup>
-        ) : (
-          <NavDashboardLink
-            to={`${basePath}/ventas/historial`}
-            icon={TrendingUp}
-            label="Cierre de Turno"
-          />
-        )
-      )}
-
-      {/* Operación del Día: Fichajes, Facturas, Proveedores */}
-      {canSeeOperacionDia && (
+      {/* ─── 1. Operar (día a día) ─────────────────────── */}
+      {canSeeOperar && (
         <NavSectionGroup
-          id="operacion-dia"
-          label="Operación del Día"
-          icon={ShoppingCart}
-          forceOpen={isOperacionDiaActive}
+          id="operar"
+          label="Operar"
+          icon={Store}
+          forceOpen={isOperarActive}
         >
+          <NavItemButton to={`${basePath}/ventas/pos`} icon={ShoppingCart} label="Punto de Venta" />
+          <NavItemButton to={`${basePath}/ventas/cocina`} icon={ChefHat} label="Cocina" />
+          <NavItemButton to={`${basePath}/ventas/entrega`} icon={Truck} label="Entrega" />
+          <NavItemButton to={`${basePath}/ventas/caja`} icon={Wallet} label="Caja" />
           {canViewAllClockIns && (
-            <NavItemButton to={`${basePath}/equipo/fichajes`} icon={Clock} label="Fichajes" />
-          )}
-          {canViewPurchaseHistory && (
-            <NavItemButton to={`${basePath}/finanzas/compras`} icon={Receipt} label="Facturas" />
-          )}
-          {canViewSuppliers && (
-            <NavItemButton to={`${basePath}/finanzas/proveedores`} icon={Truck} label="Proveedores" />
-          )}
-          {canViewStock && (
-            <NavItemButton to={`${basePath}/ventas/stock`} icon={Package} label="Stock" />
+            <NavItemButton to={`${basePath}/equipo/fichajes`} icon={Clock} label="Fichajes del día" />
           )}
         </NavSectionGroup>
       )}
 
-      {/* Equipo y Tiempo */}
-      {canSeeEquipoTiempo && (
+      {/* ─── 2. Vender (gestión comercial) ─────────────── */}
+      {canSeeVender && (
         <NavSectionGroup
-          id="equipo-tiempo"
-          label="Equipo y Tiempo"
+          id="vender"
+          label="Vender"
+          icon={TrendingUp}
+          forceOpen={isVenderActive}
+        >
+          {posEnabled && (
+            <NavItemButton to={`${basePath}/config/webapp`} icon={Globe} label="Tienda Online" />
+          )}
+          {canViewStock && (
+            <NavItemButton to={`${basePath}/ventas/stock`} icon={Package} label="Stock" />
+          )}
+          {(canViewClosures || canCloseShifts) && (
+            <NavItemButton to={`${basePath}/ventas/historial`} icon={TrendingUp} label="Historial de Ventas" />
+          )}
+          {(canViewClosures || canCloseShifts) && (
+            <NavItemButton to={`${basePath}/ventas/cierre-turno`} icon={FileText} label="Cierre de Turno" />
+          )}
+        </NavSectionGroup>
+      )}
+
+      {/* Without POS: standalone Cierre de Turno link */}
+      {!posEnabled && (canViewClosures || canCloseShifts) && (
+        <NavDashboardLink
+          to={`${basePath}/ventas/historial`}
+          icon={TrendingUp}
+          label="Cierre de Turno"
+        />
+      )}
+
+      {/* ─── 3. Comprar (abastecimiento) ──────────────── */}
+      {canSeeComprar && (
+        <NavSectionGroup
+          id="comprar"
+          label="Comprar"
+          icon={Receipt}
+          forceOpen={isComprarActive}
+        >
+          {canViewSuppliers && (
+            <NavItemButton to={`${basePath}/finanzas/proveedores`} icon={Truck} label="Proveedores" />
+          )}
+          {canViewPurchaseHistory && (
+            <NavItemButton to={`${basePath}/finanzas/compras`} icon={Receipt} label="Facturas de Compra" />
+          )}
+          {canViewConsumos && (
+            <NavItemButton to={`${basePath}/finanzas/consumos`} icon={Package} label="Consumos" />
+          )}
+          {canViewGastos && (
+            <NavItemButton to={`${basePath}/finanzas/gastos`} icon={Receipt} label="Gastos" />
+          )}
+        </NavSectionGroup>
+      )}
+
+      {/* ─── 4. Equipo (gestión de personas) ──────────── */}
+      {canSeeEquipo && (
+        <NavSectionGroup
+          id="equipo"
+          label="Equipo"
           icon={UserCheck}
-          forceOpen={isEquipoTiempoActive}
+          forceOpen={isEquipoActive}
         >
           {canViewTeam && (
             <NavItemButton to={`${basePath}/equipo`} icon={Users} label="Equipo" exact />
@@ -240,23 +258,16 @@ export function LocalSidebar({ branchId, posEnabled = false, permissions }: Loca
         </NavSectionGroup>
       )}
 
-      {/* Finanzas */}
-      {canSeeFinanzas && (
+      {/* ─── 5. Resultados (visión financiera) ────────── */}
+      {canSeeResultados && (
         <NavSectionGroup
-          id="finanzas"
-          label="Finanzas"
-          icon={Wallet}
-          forceOpen={isFinanzasActive}
+          id="resultados"
+          label="Resultados"
+          icon={BarChart3}
+          forceOpen={isResultadosActive}
         >
-          {canViewConsumos && (
-            <NavItemButton to={`${basePath}/finanzas/consumos`} icon={Package} label="Consumos" />
-          )}
           {!posEnabled && canViewVentasMensualesLocal && (
-            <NavItemButton
-              to={`${basePath}/finanzas/ventas-mensuales`}
-              icon={TrendingUp}
-              label="Ventas Mensuales"
-            />
+            <NavItemButton to={`${basePath}/finanzas/ventas-mensuales`} icon={TrendingUp} label="Ventas Mensuales" />
           )}
           {!posEnabled && canViewLocalPnL && (
             <NavItemButton to={`${basePath}/finanzas/rdo-carga`} icon={FileInput} label="Cargador RDO" />
@@ -264,22 +275,21 @@ export function LocalSidebar({ branchId, posEnabled = false, permissions }: Loca
           {canViewLocalPnL && (
             <NavItemButton to={`${basePath}/finanzas/pl`} icon={BarChart3} label="Resultado Económico" />
           )}
+          {canViewLocalPnL && (
+            <NavItemButton to={`${basePath}/finanzas/resultado-financiero`} icon={Wallet} label="Resultado Financiero" />
+          )}
           {canViewPeriodos && (
             <NavItemButton to={`${basePath}/finanzas/periodos`} icon={CalendarDays} label="Períodos" />
           )}
           {(isFranquiciado || isContadorLocal) && (
-            <NavItemButton
-              to={`${basePath}/finanzas/inversiones`}
-              icon={Building2}
-              label="Inversiones (CAPEX)"
-            />
+            <NavItemButton to={`${basePath}/finanzas/inversiones`} icon={Building2} label="Inversiones (CAPEX)" />
           )}
         </NavSectionGroup>
       )}
 
-      {canSeeSocios && <hr className="my-2 border-border" aria-hidden />}
-      {/* Mi Cuenta Socio */}
-      {canSeeSocios && (
+      {/* ─── Socios ──────────────────────────────────── */}
+      {canViewSocios && <hr className="my-2 border-border" aria-hidden />}
+      {canViewSocios && (
         <NavSectionGroup
           id="socios"
           label="Mi Cuenta Socio"
@@ -290,28 +300,18 @@ export function LocalSidebar({ branchId, posEnabled = false, permissions }: Loca
         </NavSectionGroup>
       )}
 
-      {(canViewLocalCommunications || (isFranquiciado || canViewTeam)) && (
+      {/* ─── Comunicados & Supervisiones ──────────────── */}
+      {(canViewLocalCommunications || isFranquiciado || canViewTeam) && (
         <hr className="my-2 border-border" aria-hidden />
       )}
-      {/* Comunicados */}
       {canViewLocalCommunications && (
-        <NavDashboardLink
-          to={`${basePath}/equipo/comunicados`}
-          icon={MessageSquare}
-          label="Comunicados"
-        />
+        <NavDashboardLink to={`${basePath}/equipo/comunicados`} icon={MessageSquare} label="Comunicados" />
       )}
-
-      {/* Supervisiones */}
       {(isFranquiciado || canViewTeam) && (
-        <NavDashboardLink
-          to={`${basePath}/supervisiones`}
-          icon={ClipboardCheck}
-          label="Supervisiones"
-        />
+        <NavDashboardLink to={`${basePath}/supervisiones`} icon={ClipboardCheck} label="Supervisiones" />
       )}
 
-      {/* Configuración */}
+      {/* ─── 6. Configuración ────────────────────────── */}
       {canConfigPrinters && (
         <NavSectionGroup
           id="config"
@@ -329,6 +329,9 @@ export function LocalSidebar({ branchId, posEnabled = false, permissions }: Loca
           <NavItemButton to={`${basePath}/config/estaciones`} icon={Flame} label="Estaciones Cocina" />
           <NavItemButton to={`${basePath}/config/impresion`} icon={SlidersHorizontal} label="Config Impresión" />
           <NavItemButton to={`${basePath}/config/facturacion`} icon={Receipt} label="Facturación" />
+          {posEnabled && (
+            <NavItemButton to={`${basePath}/config/mercadopago`} icon={DollarSign} label="MercadoPago" />
+          )}
         </NavSectionGroup>
       )}
     </WorkSidebarNav>

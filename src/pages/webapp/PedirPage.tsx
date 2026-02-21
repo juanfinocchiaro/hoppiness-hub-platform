@@ -4,6 +4,7 @@ import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWebappConfig, useWebappMenuItems } from '@/hooks/useWebappMenu';
 import { useWebappCart } from '@/hooks/useWebappCart';
+import { useMercadoPagoStatus } from '@/hooks/useMercadoPagoConfig';
 import { BranchLanding } from '@/components/webapp/BranchLanding';
 import { WebappMenuView } from '@/components/webapp/WebappMenuView';
 import { CartBar } from '@/components/webapp/CartBar';
@@ -17,7 +18,9 @@ export default function PedirPage() {
   const { branchSlug } = useParams<{ branchSlug: string }>();
   const { data, isLoading, error } = useWebappConfig(branchSlug);
   const { data: menuItems, isLoading: menuLoading } = useWebappMenuItems(data?.branch?.id);
+  const { data: mpStatus } = useMercadoPagoStatus(data?.branch?.id);
   const cart = useWebappCart();
+  const mpEnabled = mpStatus?.estado_conexion === 'conectado';
 
   const [step, setStep] = useState<'landing' | 'menu'>('landing');
   const [cartOpen, setCartOpen] = useState(false);
@@ -122,6 +125,9 @@ export default function PedirPage() {
             onOpenChange={setCartOpen}
             cart={cart}
             branchName={branch.name}
+            branchId={branch.id}
+            mpEnabled={mpEnabled}
+            deliveryCosto={config.delivery_costo ?? 0}
           />
 
           <ProductCustomizeSheet

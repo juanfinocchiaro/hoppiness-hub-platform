@@ -12,8 +12,8 @@ export type TipoServicio = 'takeaway' | 'comer_aca' | 'delivery';
 /** App de delivery cuando canal = apps */
 export type CanalApp = 'rappi' | 'pedidos_ya' | 'mp_delivery';
 
-/** Tipo de comprobante fiscal */
-export type TipoFactura = 'C' | 'A' | 'B';
+/** Tipo de comprobante fiscal (RI emite A o B, nunca C) */
+export type TipoFactura = 'B' | 'A';
 
 export interface OrderConfig {
   canalVenta: CanalVenta;
@@ -23,6 +23,8 @@ export interface OrderConfig {
   clienteNombre: string;
   clienteTelefono: string;
   clienteDireccion: string;
+  /** Identificador del pedido en la plataforma (Rappi: 6 dígitos, MP: 3 dígitos, PeYa: nombre) */
+  referenciaApp: string;
   /** Tipo de comprobante fiscal */
   tipoFactura: TipoFactura;
   /** CUIT del receptor (requerido para A/B) */
@@ -41,7 +43,8 @@ export const DEFAULT_ORDER_CONFIG: OrderConfig = {
   clienteNombre: '',
   clienteTelefono: '',
   clienteDireccion: '',
-  tipoFactura: 'C',
+  referenciaApp: '',
+  tipoFactura: 'B',
   receptorCuit: '',
   receptorRazonSocial: '',
   receptorEmail: '',

@@ -20,9 +20,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/states/empty-state';
-import { Progress } from '@/components/ui/progress';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
@@ -30,6 +30,10 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useKitchen, type KitchenPedido, type KitchenItem } from '@/hooks/pos/useKitchen';
 import { useKitchenStations } from '@/hooks/useKitchenStations';
 import { cn } from '@/lib/utils';
+import { usePrintConfig } from '@/hooks/usePrintConfig';
+import { useBranchPrinters } from '@/hooks/useBranchPrinters';
+import { useAfipConfig } from '@/hooks/useAfipConfig';
+import { printReadyTicketByPedidoId, printDeliveryTicketByPedidoId, extractErrorMessage } from '@/lib/ready-ticket';
 
 // ─── Constants ──────────────────────────────────────────────
 const FADE_AFTER_MS = 3 * 60 * 1000;   // 3 minutes
@@ -108,80 +112,26 @@ function ModifierLine({ tipo, descripcion }: { tipo: string; descripcion: string
   );
 }
 
-// ─── Item Row ───────────────────────────────────────────────
+// ─── Item Row (display only, no individual interaction) ─────
 function KdsItemRow({
   item,
-  onToggle,
   isKds,
 }: {
   item: KitchenItem;
-  onToggle: (itemId: string, nextEstado: string) => void;
   isKds: boolean;
 }) {
-  const done = item.estado === 'listo';
-  const inProgress = item.estado === 'en_preparacion';
-  const next = done ? null : inProgress ? 'listo' : 'en_preparacion';
-  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [pressing, setPressing] = useState(false);
-
-  const handlePointerDown = () => {
-    if (done) {
-      // Long press to undo
-      setPressing(true);
-      longPressRef.current = setTimeout(() => {
-        onToggle(item.id, 'en_preparacion');
-        setPressing(false);
-      }, 2000);
-    }
-  };
-
-  const handlePointerUp = () => {
-    if (longPressRef.current) {
-      clearTimeout(longPressRef.current);
-      longPressRef.current = null;
-    }
-    setPressing(false);
-    if (!done && next) {
-      onToggle(item.id, next);
-    }
-  };
-
   return (
-    <button
-      type="button"
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={() => {
-        if (longPressRef.current) clearTimeout(longPressRef.current);
-        setPressing(false);
-      }}
+    <div
       className={cn(
-        'w-full flex items-start gap-3 p-3 rounded-lg text-left transition-all border select-none',
+        'w-full flex items-start gap-3 p-3 rounded-lg text-left border',
         isKds ? 'min-h-[56px]' : 'min-h-[48px]',
-        done && 'opacity-40 border-emerald-800 bg-emerald-950/30',
-        inProgress && 'border-amber-700 bg-amber-950/30',
-        !done && !inProgress && 'border-zinc-700 bg-zinc-900/50 active:bg-zinc-800',
-        pressing && 'ring-2 ring-red-500'
+        'border-zinc-700 bg-zinc-900/50',
       )}
     >
-      {/* Status dot */}
-      <div
-        className={cn(
-          'mt-1 flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center',
-          done && 'bg-emerald-500 border-emerald-500',
-          inProgress && 'bg-amber-400 border-amber-400',
-          !done && !inProgress && 'border-zinc-600'
-        )}
-      >
-        {done && <Check className="w-4 h-4 text-white" />}
-        {inProgress && <div className="w-2 h-2 bg-white rounded-full" />}
-      </div>
-
       <div className="flex-1 min-w-0">
         <div className={cn(
-          'font-bold',
+          'font-bold text-zinc-100',
           isKds ? 'text-lg' : 'text-base',
-          done ? 'line-through text-zinc-500' : 'text-zinc-100'
         )}>
           {item.cantidad}× {item.nombre || 'Producto'}
         </div>
@@ -196,33 +146,28 @@ function KdsItemRow({
 
         {item.notas && (
           <div className="mt-1 text-sm bg-amber-900/40 text-amber-200 rounded px-2 py-1 italic">
-            📝 {item.notas}
+            {item.notas}
           </div>
         )}
       </div>
-    </button>
+    </div>
   );
 }
 
 // ─── Order Card ─────────────────────────────────────────────
 function KdsOrderCard({
   pedido,
-  onItemToggle,
   onPedidoAction,
   isKds,
   fadingOut,
 }: {
   pedido: KitchenPedido;
-  onItemToggle: (itemId: string, estado: string) => void;
   onPedidoAction: (pedidoId: string, action: string) => void;
   isKds: boolean;
   fadingOut: boolean;
 }) {
-  const itemsDone = pedido.pedido_items.filter((i) => i.estado === 'listo').length;
-  const totalItems = pedido.pedido_items.length;
-  const allDone = totalItems > 0 && itemsDone === totalItems;
-  const anyStarted = pedido.pedido_items.some((i) => i.estado !== 'pendiente');
   const isPendiente = pedido.estado === 'pendiente';
+  const isEnPrep = pedido.estado === 'en_preparacion';
   const isListo = pedido.estado === 'listo';
 
   const elapsed = Math.floor((Date.now() - new Date(pedido.created_at).getTime()) / 1000 / 60);
@@ -258,22 +203,22 @@ function KdsOrderCard({
       {(pedido.numero_llamador || pedido.cliente_nombre) && (
         <div className="px-4 py-2 border-b border-zinc-800 text-sm text-zinc-400 flex gap-3">
           {pedido.numero_llamador && (
-            <span className="font-semibold text-zinc-200">🔔 #{pedido.numero_llamador}</span>
+            <span className="font-semibold text-zinc-200">#{pedido.numero_llamador}</span>
           )}
           {pedido.cliente_nombre && <span>{pedido.cliente_nombre}</span>}
         </div>
       )}
 
-      {/* Items */}
+      {/* Items (display only) */}
       <div className="p-3 space-y-2">
         {pedido.pedido_items.map((item) => (
-          <KdsItemRow key={item.id} item={item} onToggle={onItemToggle} isKds={isKds} />
+          <KdsItemRow key={item.id} item={item} isKds={isKds} />
         ))}
       </div>
 
-      {/* Action Footer */}
+      {/* Action Footer — order-level only */}
       <div className="p-3 pt-0">
-        {isPendiente && !anyStarted && (
+        {isPendiente && (
           <Button
             className="w-full h-14 text-lg font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
             onClick={() => onPedidoAction(pedido.id, 'en_preparacion')}
@@ -282,17 +227,7 @@ function KdsOrderCard({
           </Button>
         )}
 
-        {!isPendiente && !allDone && !isListo && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm text-zinc-400">
-              <span>Preparando...</span>
-              <span className="font-semibold text-zinc-200">{itemsDone}/{totalItems}</span>
-            </div>
-            <Progress value={itemsDone} max={totalItems} className="h-2 bg-zinc-800" />
-          </div>
-        )}
-
-        {allDone && !isListo && (
+        {isEnPrep && (
           <Button
             className="w-full h-14 text-lg font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
             onClick={() => onPedidoAction(pedido.id, 'listo')}
@@ -321,7 +256,6 @@ function KdsColumn({
   pedidos,
   count,
   colorClass,
-  onItemToggle,
   onPedidoAction,
   isKds,
 }: {
@@ -329,7 +263,6 @@ function KdsColumn({
   pedidos: KitchenPedido[];
   count: number;
   colorClass: string;
-  onItemToggle: (itemId: string, estado: string) => void;
   onPedidoAction: (pedidoId: string, action: string) => void;
   isKds: boolean;
 }) {
@@ -344,7 +277,6 @@ function KdsColumn({
           <KdsOrderCard
             key={p.id}
             pedido={p}
-            onItemToggle={onItemToggle}
             onPedidoAction={onPedidoAction}
             isKds={isKds}
             fadingOut={false}
@@ -391,6 +323,18 @@ export default function KitchenPage() {
   const isMobile = useIsMobile();
   const { data: pedidos, isLoading, consumeNewOrderAlert } = useKitchen(branchId!);
   const { data: stations } = useKitchenStations(branchId!);
+  const { data: printConfig } = usePrintConfig(branchId!);
+  const { data: printersData } = useBranchPrinters(branchId!);
+  const { data: afipConfig } = useAfipConfig(branchId);
+  const allPrinters = printersData ?? [];
+  const { data: branchInfo } = useQuery({
+    queryKey: ['branch-name', branchId],
+    queryFn: async () => {
+      const { data } = await supabase.from('branches').select('name').eq('id', branchId!).single();
+      return data;
+    },
+    enabled: !!branchId,
+  });
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isKdsMode, setIsKdsMode] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -428,17 +372,6 @@ export default function KitchenPage() {
   }, []);
 
   // Mutations
-  const updateItemEstado = useMutation({
-    mutationFn: async ({ itemId, estado }: { itemId: string; estado: string }) => {
-      const { error } = await supabase
-        .from('pedido_items')
-        .update({ estado })
-        .eq('id', itemId);
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['pos-kitchen', branchId] }),
-  });
-
   const updatePedidoEstado = useMutation({
     mutationFn: async ({ pedidoId, estado }: { pedidoId: string; estado: string }) => {
       const updateData: Record<string, unknown> = { estado };
@@ -451,26 +384,52 @@ export default function KitchenPage() {
       const { error } = await supabase.from('pedidos').update(updateData).eq('id', pedidoId);
       if (error) throw error;
     },
-    onSuccess: (_, { estado }) => {
+    onSuccess: async (_, { pedidoId, estado }) => {
       qc.invalidateQueries({ queryKey: ['pos-kitchen', branchId] });
       if (estado === 'listo') toast.success('Pedido marcado como listo');
       if (estado === 'entregado') toast.success('Pedido entregado');
-    },
-  });
 
-  const handleItemToggle = useCallback(
-    (itemId: string, estado: string) => {
-      updateItemEstado.mutate({ itemId, estado });
-      // Auto-transition pedido to en_preparacion when first item is started
-      if (estado === 'en_preparacion') {
-        const pedido = pedidos?.find((p) => p.pedido_items.some((i) => i.id === itemId));
-        if (pedido && pedido.estado === 'pendiente') {
-          updatePedidoEstado.mutate({ pedidoId: pedido.id, estado: 'en_preparacion' });
+      if (estado === 'listo' && branchId) {
+        const pedido = pedidos?.find((p) => p.id === pedidoId);
+        const isDelivery = pedido?.tipo_servicio === 'delivery' || pedido?.canal_venta === 'apps';
+
+        // Delivery ticket: always print when delivery/apps order is ready
+        if (isDelivery) {
+          try {
+            await printDeliveryTicketByPedidoId({
+              branchId,
+              pedidoId,
+              branchName: branchInfo?.name || 'Hoppiness',
+              printConfig,
+              printers: allPrinters,
+            });
+            toast.success('Ticket delivery impreso');
+          } catch (err) {
+            console.error('[KitchenPage] delivery ticket error:', err);
+            toast.error('Error al imprimir ticket delivery', { description: extractErrorMessage(err) });
+          }
+        }
+
+        // Client ticket: only when configured to print on_ready
+        if (printConfig?.ticket_trigger === 'on_ready') {
+          try {
+            await printReadyTicketByPedidoId({
+              branchId,
+              pedidoId,
+              branchName: branchInfo?.name || 'Hoppiness',
+              printConfig,
+              printers: allPrinters,
+              afipConfig: afipConfig as unknown as { razon_social?: string | null; cuit?: string | null; direccion_fiscal?: string | null; inicio_actividades?: string | null; iibb?: string | null; condicion_iva?: string | null } | null,
+            });
+            toast.success('Ticket impreso al marcar listo');
+          } catch (err) {
+            console.error('[KitchenPage] on_ready ticket error:', err);
+            toast.error('Error al imprimir ticket on_ready', { description: extractErrorMessage(err) });
+          }
         }
       }
     },
-    [updateItemEstado, updatePedidoEstado, pedidos]
-  );
+  });
 
   const handlePedidoAction = useCallback(
     (pedidoId: string, action: string) => {
@@ -479,7 +438,13 @@ export default function KitchenPage() {
     [updatePedidoEstado]
   );
 
-  // Auto-cleanup: filter out old "listo" orders
+  // Tick every 30s so that listo auto-expire and urgency borders update
+  const [_tick, setTick] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setTick(t => t + 1), 30_000);
+    return () => clearInterval(iv);
+  }, []);
+
   const visiblePedidos = useMemo(() => {
     if (!pedidos) return [];
     const now = Date.now();
@@ -491,7 +456,8 @@ export default function KitchenPage() {
       if (p.estado === 'entregado') return false;
       return true;
     });
-  }, [pedidos]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pedidos, _tick]);
 
   const { pendientes, enPreparacion, listos } = useMemo(() => ({
     pendientes: visiblePedidos.filter((p) => p.estado === 'pendiente'),
@@ -573,19 +539,19 @@ export default function KitchenPage() {
           </TabsList>
           <TabsContent value="pendientes" className="flex-1 overflow-y-auto space-y-3 mt-3">
             {pendientes.map((p) => (
-              <KdsOrderCard key={p.id} pedido={p} onItemToggle={handleItemToggle} onPedidoAction={handlePedidoAction} isKds={isKdsMode} fadingOut={false} />
+              <KdsOrderCard key={p.id} pedido={p} onPedidoAction={handlePedidoAction} isKds={isKdsMode} fadingOut={false} />
             ))}
             {pendientes.length === 0 && <p className="text-center text-zinc-500 py-8">Sin pendientes</p>}
           </TabsContent>
           <TabsContent value="preparacion" className="flex-1 overflow-y-auto space-y-3 mt-3">
             {enPreparacion.map((p) => (
-              <KdsOrderCard key={p.id} pedido={p} onItemToggle={handleItemToggle} onPedidoAction={handlePedidoAction} isKds={isKdsMode} fadingOut={false} />
+              <KdsOrderCard key={p.id} pedido={p} onPedidoAction={handlePedidoAction} isKds={isKdsMode} fadingOut={false} />
             ))}
             {enPreparacion.length === 0 && <p className="text-center text-zinc-500 py-8">Nada en preparación</p>}
           </TabsContent>
           <TabsContent value="listos" className="flex-1 overflow-y-auto space-y-3 mt-3">
             {listos.map((p) => (
-              <KdsOrderCard key={p.id} pedido={p} onItemToggle={handleItemToggle} onPedidoAction={handlePedidoAction} isKds={isKdsMode} fadingOut={false} />
+              <KdsOrderCard key={p.id} pedido={p} onPedidoAction={handlePedidoAction} isKds={isKdsMode} fadingOut={false} />
             ))}
             {listos.length === 0 && <p className="text-center text-zinc-500 py-8">Sin pedidos listos</p>}
           </TabsContent>
@@ -597,7 +563,6 @@ export default function KitchenPage() {
             pedidos={pendientes}
             count={pendientes.length}
             colorClass="bg-red-900/30 text-red-300"
-            onItemToggle={handleItemToggle}
             onPedidoAction={handlePedidoAction}
             isKds={isKdsMode}
           />
@@ -606,7 +571,6 @@ export default function KitchenPage() {
             pedidos={enPreparacion}
             count={enPreparacion.length}
             colorClass="bg-amber-900/30 text-amber-300"
-            onItemToggle={handleItemToggle}
             onPedidoAction={handlePedidoAction}
             isKds={isKdsMode}
           />
@@ -615,7 +579,6 @@ export default function KitchenPage() {
             pedidos={listos}
             count={listos.length}
             colorClass="bg-emerald-900/30 text-emerald-300"
-            onItemToggle={handleItemToggle}
             onPedidoAction={handlePedidoAction}
             isKds={isKdsMode}
           />

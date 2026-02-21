@@ -1,0 +1,289 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+/**
+ * Public edge function — creates a webapp order (guest checkout, no auth).
+ *
+ * Flow:
+ *  1. Validate input
+ *  2. Verify branch + webapp_config (open, service type enabled)
+ *  3. Generate numero_pedido via RPC
+ *  4. Insert pedido → pedido_items → pedido_item_modificadores
+ *  5. Return { pedido_id, tracking_code, numero_pedido }
+ */
+
+interface OrderItemInput {
+  item_carta_id: string;
+  nombre: string;
+  cantidad: number;
+  precio_unitario: number;
+  notas?: string | null;
+  extras?: Array<{ nombre: string; precio: number }>;
+  removidos?: string[];
+}
+
+interface CreateWebappOrderBody {
+  branch_id: string;
+  tipo_servicio: "retiro" | "delivery" | "comer_aca";
+  cliente_nombre: string;
+  cliente_telefono: string;
+  cliente_email?: string | null;
+  cliente_direccion?: string | null;
+  cliente_piso?: string | null;
+  cliente_referencia?: string | null;
+  cliente_notas?: string | null;
+  metodo_pago: "mercadopago" | "efectivo";
+  items: OrderItemInput[];
+}
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+function json(status: number, body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS")
+    return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") return json(405, { error: "Method not allowed" });
+
+  try {
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    const body: CreateWebappOrderBody = await req.json();
+
+    // ── Validation ──────────────────────────────────────────────
+    if (!body.branch_id) return json(400, { error: "branch_id es requerido" });
+    if (!body.cliente_nombre?.trim())
+      return json(400, { error: "cliente_nombre es requerido" });
+    if (!body.cliente_telefono?.trim())
+      return json(400, { error: "cliente_telefono es requerido" });
+    if (!Array.isArray(body.items) || body.items.length === 0)
+      return json(400, { error: "Se requiere al menos un item" });
+    if (
+      body.tipo_servicio === "delivery" &&
+      !body.cliente_direccion?.trim()
+    )
+      return json(400, { error: "La dirección es requerida para delivery" });
+
+    // ── Verify branch & webapp config ───────────────────────────
+    const { data: config, error: cfgErr } = await supabase
+      .from("webapp_config")
+      .select("*")
+      .eq("branch_id", body.branch_id)
+      .single();
+
+    if (cfgErr || !config)
+      return json(400, { error: "Local no encontrado o webapp no configurada" });
+
+    if (!config.webapp_activa)
+      return json(400, { error: "La webapp de este local no está activa" });
+
+    if (config.estado !== "abierto")
+      return json(400, {
+        error: config.mensaje_pausa || "El local no está recibiendo pedidos en este momento",
+      });
+
+    if (body.tipo_servicio === "delivery" && !config.delivery_habilitado)
+      return json(400, { error: "Delivery no disponible en este local" });
+    if (body.tipo_servicio === "retiro" && !config.retiro_habilitado)
+      return json(400, { error: "Retiro no disponible en este local" });
+    if (body.tipo_servicio === "comer_aca" && !config.comer_aca_habilitado)
+      return json(400, { error: "Comer acá no disponible en este local" });
+
+    // ── Resolve item prices & station server-side ───────────────
+    const itemIds = body.items.map((i) => i.item_carta_id);
+    const { data: cartaItems, error: itemsErr } = await supabase
+      .from("items_carta")
+      .select("id, nombre, precio_base, kitchen_station_id, disponible_webapp, kitchen_stations(name)")
+      .in("id", itemIds);
+
+    if (itemsErr)
+      return json(500, { error: "Error al verificar productos" });
+
+    const cartaMap = new Map(
+      (cartaItems ?? []).map((ci: any) => [ci.id, ci]),
+    );
+
+    // Validate all items exist and are webapp-enabled
+    for (const item of body.items) {
+      const ci = cartaMap.get(item.item_carta_id);
+      if (!ci)
+        return json(400, { error: `Producto no encontrado: ${item.nombre}` });
+      if (ci.disponible_webapp === false)
+        return json(400, { error: `"${ci.nombre}" no está disponible para pedidos online` });
+    }
+
+    // ── Calculate totals server-side ────────────────────────────
+    let subtotal = 0;
+    for (const item of body.items) {
+      const extrasTotal = (item.extras ?? []).reduce((s, e) => s + e.precio, 0);
+      subtotal += (item.precio_unitario + extrasTotal) * item.cantidad;
+    }
+
+    const costoDelivery =
+      body.tipo_servicio === "delivery" ? (config.delivery_costo ?? 0) : 0;
+
+    if (
+      body.tipo_servicio === "delivery" &&
+      config.delivery_pedido_minimo &&
+      subtotal < config.delivery_pedido_minimo
+    ) {
+      return json(400, {
+        error: `El pedido mínimo para delivery es $${config.delivery_pedido_minimo}`,
+      });
+    }
+
+    const total = subtotal + costoDelivery;
+
+    // ── Generate numero_pedido ──────────────────────────────────
+    const { data: numeroPedido, error: numErr } = await supabase.rpc(
+      "generar_numero_pedido",
+      { p_branch_id: body.branch_id },
+    );
+    if (numErr)
+      return json(500, { error: "Error al generar número de pedido" });
+
+    // ── Determine auto-accept ───────────────────────────────────
+    const autoAccept = config.auto_accept_orders === true ||
+      config.recepcion_modo === "auto";
+
+    // ── Estimated time ──────────────────────────────────────────
+    let tiempoEstimado: number | null = null;
+    if (body.tipo_servicio === "delivery") {
+      tiempoEstimado = config.prep_time_delivery ?? config.tiempo_estimado_delivery_min ?? 40;
+    } else if (body.tipo_servicio === "retiro") {
+      tiempoEstimado = config.prep_time_retiro ?? config.tiempo_estimado_retiro_min ?? 15;
+    } else {
+      tiempoEstimado = config.prep_time_comer_aca ?? 15;
+    }
+
+    // ── Insert pedido ───────────────────────────────────────────
+    const pedidoId = crypto.randomUUID();
+    const trackingCode = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    const pagoEstado =
+      body.metodo_pago === "mercadopago" ? "pendiente" : "pendiente_entrega";
+
+    const { error: pedidoErr } = await supabase.from("pedidos").insert({
+      id: pedidoId,
+      branch_id: body.branch_id,
+      numero_pedido: numeroPedido as number,
+      tipo: "webapp",
+      estado: autoAccept ? "en_preparacion" : "pendiente",
+      canal_venta: "webapp",
+      tipo_servicio: body.tipo_servicio === "comer_aca" ? "comer_aca" : body.tipo_servicio,
+      subtotal,
+      descuento: 0,
+      total,
+      propina: 0,
+      costo_delivery: costoDelivery,
+      pago_estado: pagoEstado,
+      cliente_nombre: body.cliente_nombre.trim(),
+      cliente_telefono: body.cliente_telefono.trim(),
+      cliente_email: body.cliente_email ?? null,
+      cliente_direccion: body.cliente_direccion ?? null,
+      direccion_entrega: body.cliente_direccion ?? null,
+      cliente_notas: body.cliente_notas ?? null,
+      webapp_tracking_code: trackingCode,
+      tiempo_prometido: tiempoEstimado
+        ? new Date(Date.now() + tiempoEstimado * 60_000).toISOString()
+        : null,
+      tiempo_inicio_prep: autoAccept ? now : null,
+      origen: "webapp",
+    } as any);
+
+    if (pedidoErr) {
+      console.error("Pedido insert error:", pedidoErr);
+      return json(500, { error: "Error al crear el pedido" });
+    }
+
+    // ── Insert pedido_items ─────────────────────────────────────
+    for (const item of body.items) {
+      const ci = cartaMap.get(item.item_carta_id)!;
+      const stationName =
+        (ci.kitchen_stations as any)?.name ?? "armado";
+      const extrasTotal = (item.extras ?? []).reduce(
+        (s: number, e: { precio: number }) => s + e.precio,
+        0,
+      );
+      const lineSubtotal = (item.precio_unitario + extrasTotal) * item.cantidad;
+
+      const { data: insertedItem, error: itemErr } = await supabase
+        .from("pedido_items")
+        .insert({
+          pedido_id: pedidoId,
+          item_carta_id: item.item_carta_id,
+          nombre: item.nombre,
+          cantidad: item.cantidad,
+          precio_unitario: item.precio_unitario,
+          subtotal: lineSubtotal,
+          estacion: stationName,
+          notas: item.notas ?? null,
+          categoria_carta_id: ci.categoria_carta_id ?? null,
+        } as any)
+        .select("id")
+        .single();
+
+      if (itemErr) {
+        console.error("Item insert error:", itemErr);
+        await supabase.from("pedidos").delete().eq("id", pedidoId);
+        return json(500, { error: "Error al crear los items del pedido" });
+      }
+
+      // Insert modifiers (extras + removidos)
+      const modifiers: Array<{
+        pedido_item_id: string;
+        tipo: string;
+        descripcion: string;
+        precio_extra: number | null;
+      }> = [];
+
+      for (const extra of item.extras ?? []) {
+        modifiers.push({
+          pedido_item_id: insertedItem!.id,
+          tipo: "extra",
+          descripcion: extra.nombre,
+          precio_extra: extra.precio,
+        });
+      }
+      for (const rem of item.removidos ?? []) {
+        modifiers.push({
+          pedido_item_id: insertedItem!.id,
+          tipo: "sin",
+          descripcion: rem,
+          precio_extra: null,
+        });
+      }
+
+      if (modifiers.length > 0) {
+        const { error: modErr } = await supabase
+          .from("pedido_item_modificadores")
+          .insert(modifiers as any);
+        if (modErr) console.error("Modifier insert error:", modErr);
+      }
+    }
+
+    return json(200, {
+      pedido_id: pedidoId,
+      tracking_code: trackingCode,
+      numero_pedido: numeroPedido,
+      estado: autoAccept ? "en_preparacion" : "pendiente",
+      tiempo_estimado_min: tiempoEstimado,
+    });
+  } catch (err: unknown) {
+    console.error("create-webapp-order error:", err);
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return json(500, { error: "Error interno", details: message });
+  }
+});

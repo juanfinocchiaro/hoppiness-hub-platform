@@ -16,7 +16,7 @@ import { CopyArcaConfigDialog } from '@/components/local/arca/CopyArcaConfigDial
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { getArcaErrorMessage } from '@/lib/arca-error-messages';
 import {
-  Wifi, Shield, FileText, Copy, RotateCcw, ShieldAlert,
+  Wifi, Shield, Copy, RotateCcw, ShieldAlert,
   Pencil, X, RefreshCw, CheckCircle, AlertCircle, AlertTriangle,
   ChevronDown, Lock, Info, ClipboardList,
 } from 'lucide-react';
@@ -71,6 +71,9 @@ function ReglasFacturacionSection({
       onSuccess: () => {
         setDirty(false);
         toast.success('Reglas de facturación guardadas');
+      },
+      onError: (err: any) => {
+        toast.error('Error al guardar reglas', { description: err?.message });
       },
     });
   };
@@ -243,18 +246,29 @@ export default function AfipConfigPage() {
     };
     save.mutate(payload as any, {
       onSuccess: () => setIsEditingFiscal(false),
+      onError: (err: any) => {
+        toast.error('Error al guardar datos fiscales', { description: err?.message });
+      },
     });
   };
 
   const handleSwitchToHomologacion = () => {
     if (!branchId) return;
-    save.mutate({ branch_id: branchId, es_produccion: false } as any);
+    save.mutate({ branch_id: branchId, es_produccion: false } as any, {
+      onError: (err: any) => {
+        toast.error('Error al cambiar a homologación', { description: err?.message });
+      },
+    });
     setShowHomologacionConfirm(false);
   };
 
   const handleSwitchToProduccion = () => {
     if (!branchId) return;
-    save.mutate({ branch_id: branchId, es_produccion: true } as any);
+    save.mutate({ branch_id: branchId, es_produccion: true } as any, {
+      onError: (err: any) => {
+        toast.error('Error al cambiar a producción', { description: err?.message });
+      },
+    });
     setShowProduccionConfirm(false);
   };
 
@@ -269,9 +283,15 @@ export default function AfipConfigPage() {
       estado_conexion: 'sin_configurar',
       ultimo_error: null,
       es_produccion: false,
-    } as any);
+    } as any, {
+      onSuccess: () => {
+        toast.success('Configuración ARCA reseteada.');
+      },
+      onError: (err: any) => {
+        toast.error('Error al resetear configuración', { description: err?.message });
+      },
+    });
     setShowResetConfirm(false);
-    toast.success('Configuración ARCA reseteada.');
   };
 
   if (isLoading || permLoading) return <HoppinessLoader fullScreen size="lg" />;
@@ -433,10 +453,7 @@ export default function AfipConfigPage() {
                 <p className="text-xs text-muted-foreground">Factura B</p>
                 <p className="text-lg font-bold font-mono">{formatComprobante(config?.ultimo_nro_factura_b)}</p>
               </div>
-              <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">Factura C</p>
-                <p className="text-lg font-bold font-mono">{formatComprobante(config?.ultimo_nro_factura_c)}</p>
-              </div>
+              
             </div>
             <div className="flex items-start gap-2 text-xs text-muted-foreground">
               <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />

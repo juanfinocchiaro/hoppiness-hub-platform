@@ -16,8 +16,6 @@ import { useState, useEffect } from 'react';
 
 export default function PrintConfigPage() {
   const { branchId } = useParams<{ branchId: string }>();
-  const { data: config, isLoading: configLoading, upsert } = usePrintConfig(branchId!);
-  const { data: printers, isLoading: printersLoading } = useBranchPrinters(branchId!);
 
   const [form, setForm] = useState({
     ticket_printer_id: null as string | null,
@@ -26,7 +24,6 @@ export default function PrintConfigPage() {
     comanda_printer_id: null as string | null,
     vale_printer_id: null as string | null,
     salon_vales_enabled: true,
-    no_salon_todo_en_comanda: true,
     reprint_requires_pin: true,
     // Keep legacy fields
     delivery_printer_id: null as string | null,
@@ -34,6 +31,9 @@ export default function PrintConfigPage() {
     backup_printer_id: null as string | null,
     backup_enabled: false,
   });
+
+  const { data: config, isLoading: configLoading, upsert } = usePrintConfig(branchId!);
+  const { data: printers, isLoading: printersLoading } = useBranchPrinters(branchId!);
 
   useEffect(() => {
     if (config) {
@@ -44,7 +44,6 @@ export default function PrintConfigPage() {
         comanda_printer_id: (config as any).comanda_printer_id || null,
         vale_printer_id: (config as any).vale_printer_id || null,
         salon_vales_enabled: (config as any).salon_vales_enabled ?? true,
-        no_salon_todo_en_comanda: (config as any).no_salon_todo_en_comanda ?? true,
         delivery_printer_id: config.delivery_printer_id,
         delivery_enabled: config.delivery_enabled,
         backup_printer_id: config.backup_printer_id,
@@ -54,8 +53,15 @@ export default function PrintConfigPage() {
     }
   }, [config]);
 
+  if (!branchId) {
+    return <div className="p-6 text-sm text-muted-foreground">No se encontró el ID de sucursal.</div>;
+  }
+
   const handleSave = () => {
-    upsert.mutate(form as any);
+    upsert.mutate({
+      ...(form as any),
+      no_salon_todo_en_comanda: true,
+    });
   };
 
   if (configLoading || printersLoading) {
@@ -195,13 +201,9 @@ export default function PrintConfigPage() {
 
           <div className="space-y-2">
             <p className="text-sm font-medium">Delivery / Takeaway / Apps</p>
-            <div className="flex items-center gap-2 pl-2">
-              <Switch
-                checked={form.no_salon_todo_en_comanda}
-                onCheckedChange={(v) => setForm((f) => ({ ...f, no_salon_todo_en_comanda: v }))}
-              />
-              <Label className="text-sm">Incluir todo en la comanda de cocina (incluso bebidas)</Label>
-            </div>
+            <p className="text-sm text-muted-foreground pl-2">
+              Siempre se incluye todo en la comanda de cocina (incluidas bebidas).
+            </p>
           </div>
         </CardContent>
       </Card>

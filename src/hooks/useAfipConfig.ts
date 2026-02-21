@@ -113,8 +113,8 @@ export function useAfipConfigMutations(branchId: string | undefined) {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['afip-config', branchId] });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['afip-config', variables.branch_id] });
       toast.success('Configuración ARCA guardada');
     },
     onError: (err: Error) => {
@@ -150,8 +150,8 @@ export function useAfipConfigMutations(branchId: string | undefined) {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['afip-config', branchId] });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['afip-config', variables.branch_id] });
       toast.success('Clave privada y solicitud generadas correctamente');
     },
     onError: (err: Error) => {
@@ -170,8 +170,8 @@ export function useAfipConfigMutations(branchId: string | undefined) {
         .eq('branch_id', input.branch_id) as any);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['afip-config', branchId] });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['afip-config', variables.branch_id] });
     },
     onError: (err: Error) => {
       toast.error(`Error al guardar certificado: ${err.message}`);
@@ -206,7 +206,7 @@ export function useAfipConfigMutations(branchId: string | undefined) {
 interface EmitirFacturaInput {
   branch_id: string;
   pedido_id?: string;
-  tipo_factura: 'A' | 'B' | 'C';
+  tipo_factura: 'A' | 'B';
   receptor_cuit?: string;
   receptor_razon_social?: string;
   receptor_condicion_iva?: string;
@@ -220,7 +220,16 @@ export function useEmitirFactura() {
       const { data, error } = await supabase.functions.invoke('emitir-factura', {
         body: input,
       });
-      if (error) throw error;
+      if (error) {
+        const bodyError = (data as Record<string, unknown> | null)?.error;
+        if (typeof bodyError === 'string') {
+          throw new Error(bodyError);
+        }
+        throw error;
+      }
+      if (data?.error) {
+        throw new Error(data.error);
+      }
       return data;
     },
     onSuccess: (data) => {

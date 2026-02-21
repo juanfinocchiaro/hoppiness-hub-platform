@@ -64,6 +64,7 @@ export interface PosOrderFactura {
 export interface PosOrder {
   id: string;
   numero_pedido: number;
+  numero_llamador: number | null;
   created_at: string;
   canal_venta: string | null;
   tipo_servicio: string | null;
@@ -93,7 +94,7 @@ export function usePosOrderHistory(
       if (!branchId) return [];
       const { data, error } = await supabase
         .from('pedidos')
-        .select('id, numero_pedido, created_at, canal_venta, tipo_servicio, canal_app, cliente_nombre, cliente_telefono, cliente_direccion, estado, subtotal, descuento, total, pedido_items(id, nombre, cantidad, precio_unitario, subtotal, notas, categoria_carta_id), pedido_pagos(id, metodo, monto), facturas_emitidas(id, tipo_comprobante, punto_venta, numero_comprobante, cae, cae_vencimiento, neto, iva, total, fecha_emision, receptor_cuit, receptor_razon_social, receptor_condicion_iva, anulada, factura_asociada_id)')
+        .select('id, numero_pedido, numero_llamador, created_at, canal_venta, tipo_servicio, canal_app, cliente_nombre, cliente_telefono, cliente_direccion, estado, subtotal, descuento, total, pedido_items(id, nombre, cantidad, precio_unitario, subtotal, notas, categoria_carta_id), pedido_pagos(id, metodo, monto), facturas_emitidas(id, tipo_comprobante, punto_venta, numero_comprobante, cae, cae_vencimiento, neto, iva, total, fecha_emision, receptor_cuit, receptor_razon_social, receptor_condicion_iva, anulada, factura_asociada_id)')
         .eq('branch_id', branchId)
         .gte('created_at', fromDate)
         .order('created_at', { ascending: false });
@@ -126,7 +127,7 @@ export function usePosOrderHistory(
       }
       return true;
     });
-  }, [rawOrders, filters]);
+  }, [rawOrders, filters.canalVenta, filters.tipoServicio, filters.metodoPago, filters.estado, filters.searchQuery]);
 
   const totals = useMemo(() => {
     const totalVendido = orders.reduce((s, o) => s + (o.total || 0), 0);

@@ -808,13 +808,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cash_register_movements_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "rdo_multivista_ventas_base"
-            referencedColumns: ["pedido_id"]
-          },
-          {
             foreignKeyName: "cash_register_movements_shift_id_fkey"
             columns: ["shift_id"]
             isOneToOne: false
@@ -2268,13 +2261,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "pedidos"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "facturas_emitidas_pedido_id_fkey"
-            columns: ["pedido_id"]
-            isOneToOne: false
-            referencedRelation: "rdo_multivista_ventas_base"
-            referencedColumns: ["pedido_id"]
           },
         ]
       }
@@ -3870,13 +3856,6 @@ export type Database = {
             referencedRelation: "pedidos"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "llamadores_pedido_id_fkey"
-            columns: ["pedido_id"]
-            isOneToOne: false
-            referencedRelation: "rdo_multivista_ventas_base"
-            referencedColumns: ["pedido_id"]
-          },
         ]
       }
       manager_competencies: {
@@ -4412,63 +4391,6 @@ export type Database = {
           },
         ]
       }
-      mercadopago_config: {
-        Row: {
-          access_token: string
-          branch_id: string
-          collector_id: string | null
-          created_at: string
-          estado_conexion: string
-          id: string
-          public_key: string
-          ultimo_test: string | null
-          ultimo_test_ok: boolean | null
-          updated_at: string
-          webhook_secret: string | null
-        }
-        Insert: {
-          access_token?: string
-          branch_id: string
-          collector_id?: string | null
-          created_at?: string
-          estado_conexion?: string
-          id?: string
-          public_key?: string
-          ultimo_test?: string | null
-          ultimo_test_ok?: boolean | null
-          updated_at?: string
-          webhook_secret?: string | null
-        }
-        Update: {
-          access_token?: string
-          branch_id?: string
-          collector_id?: string | null
-          created_at?: string
-          estado_conexion?: string
-          id?: string
-          public_key?: string
-          ultimo_test?: string | null
-          ultimo_test_ok?: boolean | null
-          updated_at?: string
-          webhook_secret?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "mercadopago_config_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: true
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercadopago_config_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: true
-            referencedRelation: "branches_public"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       movimientos_socio: {
         Row: {
           branch_id: string
@@ -4855,13 +4777,6 @@ export type Database = {
             referencedRelation: "pedido_items"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "pedido_item_modificadores_pedido_item_id_fkey"
-            columns: ["pedido_item_id"]
-            isOneToOne: false
-            referencedRelation: "rdo_multivista_items_base"
-            referencedColumns: ["item_id"]
-          },
         ]
       }
       pedido_items: {
@@ -4939,13 +4854,6 @@ export type Database = {
             referencedRelation: "pedidos"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "pedido_items_pedido_id_fkey"
-            columns: ["pedido_id"]
-            isOneToOne: false
-            referencedRelation: "rdo_multivista_ventas_base"
-            referencedColumns: ["pedido_id"]
-          },
         ]
       }
       pedido_pagos: {
@@ -4999,13 +4907,6 @@ export type Database = {
             referencedRelation: "pedidos"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "pedido_pagos_pedido_id_fkey"
-            columns: ["pedido_id"]
-            isOneToOne: false
-            referencedRelation: "rdo_multivista_ventas_base"
-            referencedColumns: ["pedido_id"]
-          },
         ]
       }
       pedido_payment_edits: {
@@ -5044,13 +4945,6 @@ export type Database = {
             referencedRelation: "pedidos"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "pedido_payment_edits_pedido_id_fkey"
-            columns: ["pedido_id"]
-            isOneToOne: false
-            referencedRelation: "rdo_multivista_ventas_base"
-            referencedColumns: ["pedido_id"]
-          },
         ]
       }
       pedidos: {
@@ -5083,6 +4977,7 @@ export type Database = {
           pago_estado: string | null
           pago_online_id: string | null
           propina: number
+          referencia_app: string | null
           requiere_factura: boolean | null
           subtotal: number
           tiempo_entregado: string | null
@@ -5124,6 +5019,7 @@ export type Database = {
           pago_estado?: string | null
           pago_online_id?: string | null
           propina?: number
+          referencia_app?: string | null
           requiere_factura?: boolean | null
           subtotal: number
           tiempo_entregado?: string | null
@@ -5165,6 +5061,7 @@ export type Database = {
           pago_estado?: string | null
           pago_online_id?: string | null
           propina?: number
+          referencia_app?: string | null
           requiere_factura?: boolean | null
           subtotal?: number
           tiempo_entregado?: string | null
@@ -5710,13 +5607,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "pedidos"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "print_jobs_pedido_id_fkey"
-            columns: ["pedido_id"]
-            isOneToOne: false
-            referencedRelation: "rdo_multivista_ventas_base"
-            referencedColumns: ["pedido_id"]
           },
           {
             foreignKeyName: "print_jobs_printer_id_fkey"
@@ -7068,13 +6958,6 @@ export type Database = {
             referencedRelation: "pedidos"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "stock_movimientos_pedido_id_fkey"
-            columns: ["pedido_id"]
-            isOneToOne: false
-            referencedRelation: "rdo_multivista_ventas_base"
-            referencedColumns: ["pedido_id"]
-          },
         ]
       }
       turnos_caja: {
@@ -7711,109 +7594,6 @@ export type Database = {
         }
         Relationships: []
       }
-      rdo_multivista_items_base: {
-        Row: {
-          branch_id: string | null
-          canal: string | null
-          cantidad: number | null
-          categoria_id: string | null
-          categoria_nombre: string | null
-          costo_total: number | null
-          costo_unitario: number | null
-          fecha: string | null
-          item_id: string | null
-          pedido_id: string | null
-          producto_id: string | null
-          producto_nombre: string | null
-          ventas: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "pedido_items_item_carta_id_fkey"
-            columns: ["producto_id"]
-            isOneToOne: false
-            referencedRelation: "items_carta"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pedido_items_item_carta_id_fkey"
-            columns: ["producto_id"]
-            isOneToOne: false
-            referencedRelation: "webapp_menu_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pedido_items_pedido_id_fkey"
-            columns: ["pedido_id"]
-            isOneToOne: false
-            referencedRelation: "pedidos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pedido_items_pedido_id_fkey"
-            columns: ["pedido_id"]
-            isOneToOne: false
-            referencedRelation: "rdo_multivista_ventas_base"
-            referencedColumns: ["pedido_id"]
-          },
-          {
-            foreignKeyName: "pedidos_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pedidos_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches_public"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      rdo_multivista_ventas_base: {
-        Row: {
-          branch_id: string | null
-          canal: string | null
-          created_at: string | null
-          fecha: string | null
-          pedido_id: string | null
-          total: number | null
-        }
-        Insert: {
-          branch_id?: string | null
-          canal?: never
-          created_at?: string | null
-          fecha?: never
-          pedido_id?: string | null
-          total?: never
-        }
-        Update: {
-          branch_id?: string | null
-          canal?: never
-          created_at?: string | null
-          fecha?: never
-          pedido_id?: string | null
-          total?: never
-        }
-        Relationships: [
-          {
-            foreignKeyName: "pedidos_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pedidos_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches_public"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       rdo_report_data: {
         Row: {
           branch_id: string | null
@@ -7994,22 +7774,6 @@ export type Database = {
         Args: { _branch_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["local_role_type"]
       }
-      get_rdo_financiero: {
-        Args: { _branch_id: string; _periodo: string }
-        Returns: Json
-      }
-      get_rdo_multivista: {
-        Args: {
-          _branch_id: string
-          _canales?: string[]
-          _categorias?: string[]
-          _fecha_desde: string
-          _fecha_hasta: string
-          _medios?: string[]
-          _productos?: string[]
-        }
-        Returns: Json
-      }
       get_rdo_report: {
         Args: { _branch_id: string; _periodo: string }
         Returns: {
@@ -8023,6 +7787,18 @@ export type Database = {
           sort_order: number
           total: number
         }[]
+      }
+      get_rdo_multivista: {
+        Args: {
+          _branch_id: string
+          _canales?: string[]
+          _categorias?: string[]
+          _fecha_desde: string
+          _fecha_hasta: string
+          _medios?: string[]
+          _productos?: string[]
+        }
+        Returns: Json
       }
       get_rdo_unified_report: {
         Args: {
@@ -8100,14 +7876,6 @@ export type Database = {
       is_staff_member: { Args: { _user_id: string }; Returns: boolean }
       is_superadmin: { Args: { _user_id: string }; Returns: boolean }
       liberar_llamador: { Args: { p_pedido_id: string }; Returns: undefined }
-      normalize_rdo_channel: {
-        Args: { _canal_app: string; _canal_venta: string; _tipo: string }
-        Returns: string
-      }
-      normalize_rdo_payment_method: {
-        Args: { _metodo: string }
-        Returns: string
-      }
       obtener_proximo_numero_factura: {
         Args: { _branch_id: string; _tipo: string }
         Returns: number

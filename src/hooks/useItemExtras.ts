@@ -27,39 +27,27 @@ export function useItemExtras(itemId: string | undefined) {
 
       if (errAsig) throw errAsig;
 
-      if (asignaciones && asignaciones.length > 0) {
-        const extraIds = (asignaciones as any[]).map((a: any) => a.extra_id);
-        const { data: extras, error: errExtras } = await supabase
-          .from('items_carta')
-          .select('id, nombre, precio_base, activo')
-          .in('id', extraIds)
-          .eq('activo', true)
-          .is('deleted_at', null);
-        if (errExtras) throw errExtras;
-        // Map to ItemExtra-compatible shape for ModifiersModal
-        return (extras || []).map((e: any, i: number) => ({
-          id: e.id,
-          item_carta_id: itemId,
-          preparacion_id: null,
-          insumo_id: null,
-          orden: i,
-          preparaciones: { id: e.id, nombre: e.nombre, costo_calculado: 0, precio_extra: e.precio_base, puede_ser_extra: true },
-          insumos: null,
-        })) as ItemExtra[];
-      }
+      const extraIds = (asignaciones as any[] || []).map((a: any) => a.extra_id);
 
-      // Fallback: old item_carta_extras table
-      const { data, error } = await supabase
-        .from('item_carta_extras')
-        .select(`
-          *,
-          preparaciones(id, nombre, costo_calculado, precio_extra, puede_ser_extra),
-          insumos(id, nombre, costo_por_unidad_base, precio_extra, puede_ser_extra)
-        `)
-        .eq('item_carta_id', itemId)
-        .order('orden');
-      if (error) throw error;
-      return data as ItemExtra[];
+      if (extraIds.length === 0) return [];
+
+      const { data: extras, error: errExtras } = await supabase
+        .from('items_carta')
+        .select('id, nombre, precio_base, activo')
+        .in('id', extraIds)
+        .eq('activo', true)
+        .is('deleted_at', null);
+      if (errExtras) throw errExtras;
+
+      return (extras || []).map((e: any, i: number) => ({
+        id: e.id,
+        item_carta_id: itemId,
+        preparacion_id: null,
+        insumo_id: null,
+        orden: i,
+        preparaciones: { id: e.id, nombre: e.nombre, costo_calculado: 0, precio_extra: e.precio_base, puede_ser_extra: true },
+        insumos: null,
+      })) as ItemExtra[];
     },
     enabled: !!itemId,
   });
@@ -69,22 +57,20 @@ export function useItemExtrasMutations() {
   const qc = useQueryClient();
 
   const saveExtras = useMutation({
-    mutationFn: async ({ item_carta_id, extras }: {
+    mutationFn: async ({ item_carta_id, extra_ids }: {
       item_carta_id: string;
-      extras: { preparacion_id?: string | null; insumo_id?: string | null }[];
+      extra_ids: string[];
     }) => {
-      // Delete all existing extras for this item
-      await supabase.from('item_carta_extras').delete().eq('item_carta_id', item_carta_id);
+      const { error: delErr } = await supabase.from('item_extra_asignaciones' as any).delete().eq('item_carta_id', item_carta_id);
+      if (delErr) throw delErr;
 
-      if (extras.length > 0) {
+      if (extra_ids.length > 0) {
         const { error } = await supabase
-          .from('item_carta_extras')
-          .insert(extras.map((e, index) => ({
+          .from('item_extra_asignaciones' as any)
+          .insert(extra_ids.map((extra_id) => ({
             item_carta_id,
-            preparacion_id: e.preparacion_id || null,
-            insumo_id: e.insumo_id || null,
-            orden: index,
-          })) as any);
+            extra_id,
+          })));
         if (error) throw error;
       }
     },

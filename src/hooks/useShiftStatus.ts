@@ -19,7 +19,7 @@ export function useShiftStatus(branchId: string | undefined): ShiftStatus {
   const [loading, setLoading] = useState(true);
   const [hasChecked, setHasChecked] = useState(false);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (signal?: { cancelled: boolean }) => {
     if (!branchId) {
       setLoading(false);
       setHasChecked(true);
@@ -27,12 +27,13 @@ export function useShiftStatus(branchId: string | undefined): ShiftStatus {
       return;
     }
     try {
-      // Only look for open shifts on 'ventas' type registers
       const { data: ventasRegisters } = await supabase
         .from('cash_registers')
         .select('id')
         .eq('branch_id', branchId)
         .eq('register_type', 'ventas');
+      if (signal?.cancelled) return;
+
       const ventasIds = (ventasRegisters ?? []).map(r => r.id);
       
       let data = null;
@@ -46,22 +47,27 @@ export function useShiftStatus(branchId: string | undefined): ShiftStatus {
           .order('opened_at', { ascending: false })
           .limit(1)
           .maybeSingle();
+        if (signal?.cancelled) return;
         data = shiftData;
       }
       setActiveCashShift(data as CashRegisterShift | null);
     } catch (e) {
-      console.error('useShiftStatus:', e);
+      if (signal?.cancelled) return;
+      if (import.meta.env.DEV) console.error('useShiftStatus:', e);
       setActiveCashShift(null);
     } finally {
-      setLoading(false);
-      setHasChecked(true);
+      if (!signal?.cancelled) {
+        setLoading(false);
+        setHasChecked(true);
+      }
     }
   }, [branchId]);
 
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 60000);
-    return () => clearInterval(interval);
+    const signal = { cancelled: false };
+    fetchData(signal);
+    const interval = setInterval(() => fetchData(signal), 60000);
+    return () => { signal.cancelled = true; clearInterval(interval); };
   }, [fetchData]);
 
   return {

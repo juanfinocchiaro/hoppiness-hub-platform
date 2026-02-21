@@ -199,7 +199,7 @@ export function useCreateInspection() {
       toast.success('Visita iniciada');
     },
     onError: (error) => {
-      console.error('Error creating inspection:', error);
+      if (import.meta.env.DEV) console.error('Error creating inspection:', error);
       toast.error('Error al iniciar la visita');
     },
   });
@@ -265,7 +265,7 @@ export function useUpdateInspectionItem() {
       if (context?.previousInspection) {
         queryClient.setQueryData(['inspection', inspectionId], context.previousInspection);
       }
-      console.error('Error updating item:', error);
+      if (import.meta.env.DEV) console.error('Error updating item:', error);
       toast.error('Error al guardar');
     },
     onSettled: (_, __, { inspectionId }) => {
@@ -306,7 +306,7 @@ export function useUpdateInspection() {
       queryClient.invalidateQueries({ queryKey: ['inspections'] });
     },
     onError: (error) => {
-      console.error('Error updating inspection:', error);
+      if (import.meta.env.DEV) console.error('Error updating inspection:', error);
       toast.error('Error al actualizar');
     },
   });
@@ -365,7 +365,7 @@ export function useCompleteInspection() {
       toast.success(`Visita completada con puntaje ${score}/100`);
     },
     onError: (error) => {
-      console.error('Error completing inspection:', error);
+      if (import.meta.env.DEV) console.error('Error completing inspection:', error);
       toast.error('Error al completar la visita');
     },
   });
@@ -397,7 +397,7 @@ export function useCancelInspection() {
       toast.success('Visita cancelada');
     },
     onError: (error) => {
-      console.error('Error canceling inspection:', error);
+      if (import.meta.env.DEV) console.error('Error canceling inspection:', error);
       toast.error('Error al cancelar');
     },
   });
@@ -434,7 +434,7 @@ export function useDeleteInspection() {
       toast.success('Visita eliminada');
     },
     onError: (error) => {
-      console.error('Error deleting inspection:', error);
+      if (import.meta.env.DEV) console.error('Error deleting inspection:', error);
       toast.error('Error al eliminar la visita');
     },
   });
@@ -471,7 +471,7 @@ export function useUploadInspectionPhoto() {
       return publicUrl;
     },
     onError: (error) => {
-      console.error('Error uploading photo:', error);
+      if (import.meta.env.DEV) console.error('Error uploading photo:', error);
       toast.error('Error al subir la foto');
     },
   });

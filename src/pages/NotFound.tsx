@@ -5,7 +5,7 @@ const NotFound = () => {
   const location = useLocation();
 
   useEffect(() => {
-    console.warn("404: Ruta no encontrada:", location.pathname);
+    if (import.meta.env.DEV) console.warn("404: Ruta no encontrada:", location.pathname);
   }, [location.pathname]);
 
   return (

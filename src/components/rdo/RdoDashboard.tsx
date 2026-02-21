@@ -4,41 +4,38 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { TrendingUp, TrendingDown, DollarSign, BarChart3, ArrowDown, ArrowUp, ChevronRight, ChevronDown, Tag, Percent, Monitor, FileText } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useRdoReport } from '@/hooks/useRdoReport';
-import { usePromoDiscountData } from '@/hooks/usePromoDiscountData';
-import { usePosEnabled } from '@/hooks/usePosEnabled';
-import { usePosVentasAgregadas } from '@/hooks/usePosVentasAgregadas';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  BarChart3,
+  ArrowDown,
+  ArrowUp,
+  AlertTriangle,
+  ChevronRight,
+  ChevronDown,
+  Plus,
+  Minus,
+} from 'lucide-react';
 import { getCurrentPeriodo } from '@/types/compra';
 import { RDO_SECTIONS } from '@/types/rdo';
 import type { RdoReportLine } from '@/types/rdo';
-import { CmvDrillDown } from './CmvDrillDown';
+import { useRdoUnifiedReport } from '@/hooks/useRdoUnifiedReport';
 
-function useVentasManual(branchId: string, periodo: string) {
-  const { user } = useAuth();
-  return useQuery({
-    queryKey: ['rdo-ventas', branchId, periodo],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('ventas_mensuales_local')
-        .select('fc_total, ft_total')
-        .eq('branch_id', branchId)
-        .eq('periodo', periodo)
-        .maybeSingle();
-      const total = data ? Number(data.fc_total) + Number(data.ft_total) : 0;
-      return { fc: data ? Number(data.fc_total) : 0, ft: data ? Number(data.ft_total) : 0, total };
-    },
-    enabled: !!user && !!branchId,
-  });
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value || 0);
 }
 
 function RdoLine({ label, value, pct, indent = 0, bold = false }: {
   label: string; value: number; pct?: number; indent?: number; bold?: boolean;
 }) {
-  const formatted = `$ ${Math.abs(value).toLocaleString('es-AR', { minimumFractionDigits: 0 })}`;
+  const formatted = `$ ${Math.abs(value).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const pl = indent === 1 ? 'pl-5' : indent === 2 ? 'pl-10' : indent === 3 ? 'pl-14' : '';
   return (
     <div className={`flex justify-between items-center py-1.5 ${pl} ${bold ? 'font-semibold text-base' : 'text-sm'}`}>
@@ -57,7 +54,7 @@ function CollapsibleRow({ label, value, pct, indent = 0, bold = false, expanded,
   label: string; value: number; pct?: number; indent?: number; bold?: boolean;
   expanded: boolean; onToggle: () => void; children: React.ReactNode;
 }) {
-  const formatted = `$ ${Math.abs(value).toLocaleString('es-AR', { minimumFractionDigits: 0 })}`;
+  const formatted = `$ ${Math.abs(value).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const pl = indent === 1 ? 'pl-4' : indent === 2 ? 'pl-8' : '';
   return (
     <div>
@@ -85,22 +82,14 @@ function CollapsibleRow({ label, value, pct, indent = 0, bold = false, expanded,
 }
 
 function SectionBlock({ title, lines, ventas }: { title: string; lines: RdoReportLine[]; ventas: number }) {
-  const level2 = lines.filter(l => l.level === 2);
-  const level3 = lines.filter(l => l.level === 3);
-
-  const sectionTotal = level2.reduce((s, l) => {
-    const children = level3.filter(c => c.parent_code === l.category_code);
-    return s + children.reduce((cs, c) => cs + c.total, 0);
-  }, 0);
+  const level2 = lines.filter((l) => l.level === 2);
+  const level3 = lines.filter((l) => l.level === 3);
+  const sectionTotal = level3.reduce((s, l) => s + l.total, 0);
   const sectionPct = ventas > 0 ? (sectionTotal / ventas) * 100 : 0;
-
   const [sectionExpanded, setSectionExpanded] = useState(true);
-  const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(level2.map(p => [p.category_code, true]))
+  const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>(
+    Object.fromEntries(level2.map((p) => [p.category_code, true]))
   );
-
-  const toggleParent = (code: string) =>
-    setExpandedParents(prev => ({ ...prev, [code]: !prev[code] }));
 
   return (
     <CollapsibleRow
@@ -109,13 +98,12 @@ function SectionBlock({ title, lines, ventas }: { title: string; lines: RdoRepor
       pct={sectionPct}
       bold
       expanded={sectionExpanded}
-      onToggle={() => setSectionExpanded(e => !e)}
+      onToggle={() => setSectionExpanded((e) => !e)}
     >
-      {level2.map(parent => {
-        const children = level3.filter(c => c.parent_code === parent.category_code);
+      {level2.map((parent) => {
+        const children = level3.filter((c) => c.parent_code === parent.category_code);
         const parentTotal = children.reduce((s, c) => s + c.total, 0);
         const parentPct = ventas > 0 ? (parentTotal / ventas) * 100 : 0;
-
         return (
           <CollapsibleRow
             key={parent.category_code}
@@ -125,24 +113,17 @@ function SectionBlock({ title, lines, ventas }: { title: string; lines: RdoRepor
             indent={1}
             bold
             expanded={!!expandedParents[parent.category_code]}
-            onToggle={() => toggleParent(parent.category_code)}
+            onToggle={() => setExpandedParents((prev) => ({ ...prev, [parent.category_code]: !prev[parent.category_code] }))}
           >
-            {children.map(child => {
-              const isCmv = child.category_code.startsWith('cmv');
-              return (
-                <div key={child.category_code}>
-                  <RdoLine
-                    label={child.category_name}
-                    value={child.total}
-                    pct={child.percentage}
-                    indent={2}
-                  />
-                  {isCmv && expandedParents[parent.category_code] && (
-                    <CmvDrillDown rdoCategoryCode={child.category_code} />
-                  )}
-                </div>
-              );
-            })}
+            {children.map((child) => (
+              <RdoLine
+                key={child.category_code}
+                label={child.category_name}
+                value={child.total}
+                pct={child.percentage}
+                indent={2}
+              />
+            ))}
           </CollapsibleRow>
         );
       })}
@@ -156,16 +137,17 @@ interface RdoDashboardProps {
 
 export function RdoDashboard({ branchId }: RdoDashboardProps) {
   const [periodo, setPeriodo] = useState(getCurrentPeriodo());
-  const posEnabled = usePosEnabled(branchId);
-  const { data: ventasManual, isLoading: loadingVentasManual } = useVentasManual(branchId, periodo);
-  const { data: ventasPos, isLoading: loadingVentasPos } = usePosVentasAgregadas(branchId, periodo, posEnabled);
-  const { data: rdoLines, isLoading: loadingRdo } = useRdoReport(branchId, periodo);
-  const { data: promoData } = usePromoDiscountData(branchId, periodo);
+  const [ventasExpanded, setVentasExpanded] = useState(true);
+  const [cmvExpanded, setCmvExpanded] = useState(true);
+  const [cmvRubrosExpanded, setCmvRubrosExpanded] = useState<Record<string, boolean>>({});
+  const [ivaExpanded, setIvaExpanded] = useState(true);
 
-  const ventas = posEnabled ? ventasPos : ventasManual;
-  const loadingVentas = posEnabled ? loadingVentasPos : loadingVentasManual;
-  const isLoading = loadingVentas || loadingRdo;
-  const fuenteLabel = posEnabled ? 'POS' : 'Carga manual';
+  const { data, isLoading, isError, error } = useRdoUnifiedReport(branchId, periodo, {
+    canales: [],
+    mediosPago: [],
+    categorias: [],
+    productos: [],
+  });
 
   const periodos = Array.from({ length: 12 }, (_, i) => {
     const d = new Date();
@@ -173,202 +155,299 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
 
-  const totalVentas = ventas?.total ?? 0;
-  const descuentoPromo = promoData?.descuentoTotal ?? 0;
-  const ventaTeorica = descuentoPromo > 0 ? totalVentas + descuentoPromo : totalVentas;
-  const variables = (rdoLines || []).filter(l => l.rdo_section === 'costos_variables');
-  const fijos = (rdoLines || []).filter(l => l.rdo_section === 'costos_fijos');
+  const totalVentas = data?.multivista.totales.total_ventas || 0;
+  const totalVentasNetas = data?.fiscal.ventas_netas_rdo || totalVentas;
+  const ivaVentas = data?.fiscal.iva_ventas || 0;
+  const ivaVentasBruto = data?.fiscal.iva_ventas_bruto || ivaVentas;
+  const ivaNotasCredito = data?.fiscal.iva_notas_credito || 0;
+  const ivaCompras = data?.fiscal.iva_compras || 0;
+  const saldoIva = data?.fiscal.saldo_iva || 0;
+  const rdoLines = data?.rdo_lines || [];
+  const variablesRaw = rdoLines.filter((l) => l.rdo_section === 'costos_variables');
+  const fijos = rdoLines.filter((l) => l.rdo_section === 'costos_fijos');
+  const variablesNoCmv = variablesRaw.filter((l) => !(l.level === 3 && l.category_code.startsWith('cmv')));
 
-  const totalVariables = variables.filter(l => l.level === 3).reduce((s, l) => s + l.total, 0);
-  const totalFijos = fijos.filter(l => l.level === 3).reduce((s, l) => s + l.total, 0);
+  const totalVariablesNoCmv = variablesNoCmv.filter((l) => l.level === 3).reduce((s, l) => s + l.total, 0);
+  const cmvAuto = data?.cmv.cmv_auto || 0;
+  const cmvAjuste = data?.cmv.cmv_manual_ajuste || 0;
+  const cmvPorRubro = data?.cmv.por_rubro || [];
+  const totalVariables = totalVariablesNoCmv + cmvAuto + cmvAjuste;
+  const totalFijos = fijos.filter((l) => l.level === 3).reduce((s, l) => s + l.total, 0);
   const totalCostos = totalVariables + totalFijos;
-  const resultadoOperativo = totalVentas - totalCostos;
-  const margenOperativo = totalVentas > 0 ? (resultadoOperativo / totalVentas) * 100 : 0;
+  const resultadoOperativo = totalVentasNetas - totalCostos;
+  const resultadoEconomico = resultadoOperativo - saldoIva;
+  const margenOperativo = totalVentasNetas > 0 ? (resultadoOperativo / totalVentasNetas) * 100 : 0;
 
-  const [ventasExpanded, setVentasExpanded] = useState(false);
-  const [promoExpanded, setPromoExpanded] = useState(false);
+  if (isLoading) {
+    return (
+      <div className="grid gap-4">
+        {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>
+          Error al cargar Resultado Económico: {(error as Error)?.message || 'desconocido'}
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">RDO — Resultado de Operaciones</h2>
-          <p className="text-sm text-muted-foreground">Estado de resultados mensual del local</p>
-          <Badge variant="outline" className="mt-1 gap-1 text-xs">
-            {posEnabled ? <Monitor className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
-            Fuente: {fuenteLabel}
-          </Badge>
+          <h2 className="text-2xl font-bold tracking-tight">Resultado Económico</h2>
+          <p className="text-sm text-muted-foreground">Estado de resultados mensual (base devengado)</p>
         </div>
         <Select value={periodo} onValueChange={setPeriodo}>
           <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {periodos.map((p) => (
-              <SelectItem key={p} value={p}>{p}</SelectItem>
-            ))}
+            {periodos.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
 
-      {isLoading ? (
-        <div className="grid gap-4">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
-        </div>
-      ) : (
-        <>
-          {/* KPI Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground"><DollarSign className="w-4 h-4" /> Ventas</div>
-                <div className="text-2xl font-bold font-mono mt-1">$ {totalVentas.toLocaleString('es-AR')}</div>
-{ventas && ventas.total > 0 && (
-                  <div className="text-xs text-muted-foreground mt-1">FC: ${ventas.fc.toLocaleString('es-AR')} | FT: ${ventas.ft.toLocaleString('es-AR')}</div>
+      {(totalVentas > 0 && cmvAuto === 0) || (data?.diagnostico_costos.items_sin_costo_count || 0) > 0 ? (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            {totalVentas > 0 && cmvAuto === 0
+              ? 'Hay ventas en el período pero el CMV automático es 0. Revisá costos de carta y mapeo de items.'
+              : 'Se detectaron productos vendidos sin costo cargado.'}
+            {' '}Items sin costo: <strong>{data?.diagnostico_costos.items_sin_costo_count || 0}</strong> · Ventas afectadas: <strong>{formatCurrency(data?.diagnostico_costos.ventas_afectadas || 0)}</strong>.
+            {' '}Corregi costos en <a href="/mimarca/carta" className="underline">Mi Marca {'>'} Carta</a>.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {/* KPI Cards — flujo del P&L */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground"><DollarSign className="w-4 h-4" /> Ventas Netas</div>
+            <div className="text-2xl font-bold font-mono mt-1">{formatCurrency(totalVentasNetas)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground"><ArrowDown className="w-4 h-4" /> Costos Totales</div>
+            <div className="text-2xl font-bold font-mono mt-1">{formatCurrency(totalCostos)}</div>
+            <div className="text-xs text-muted-foreground mt-1">{totalVentasNetas > 0 ? ((totalCostos / totalVentasNetas) * 100).toFixed(1) : 0}% s/ventas</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground"><ArrowUp className="w-4 h-4" /> Margen Operativo</div>
+            <div className="text-2xl font-bold font-mono mt-1">{margenOperativo.toFixed(1)}%</div>
+            <div className="text-xs text-muted-foreground mt-1">{formatCurrency(resultadoOperativo)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              {resultadoEconomico >= 0 ? <TrendingUp className="w-4 h-4 text-green-500" /> : <TrendingDown className="w-4 h-4 text-destructive" />}
+              Resultado Económico
+            </div>
+            <div className={`text-2xl font-bold font-mono mt-1 ${resultadoEconomico < 0 ? 'text-destructive' : ''}`}>{formatCurrency(resultadoEconomico)}</div>
+            <div className="text-xs text-muted-foreground mt-1">Operativo - IVA neto</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* P&L Cascada */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <BarChart3 className="w-5 h-5" />
+            Estado de Resultados — {periodo}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-1">
+          {/* Ventas Netas */}
+          <CollapsibleRow
+            label="Ventas Netas"
+            value={totalVentasNetas}
+            pct={100}
+            bold
+            expanded={ventasExpanded}
+            onToggle={() => setVentasExpanded((e) => !e)}
+          >
+            <RdoLine label="Ventas facturadas (total c/IVA antes NC)" value={data?.fiscal.ventas_facturadas_brutas_original || 0} indent={1} />
+            <RdoLine
+              label="Base imponible facturada (neto antes NC)"
+              value={(data?.fiscal.ventas_facturadas_brutas_original || 0) - ivaVentasBruto}
+              indent={2}
+            />
+            <RdoLine label="(-) Notas de Crédito (total c/IVA)" value={-(data?.fiscal.notas_credito_brutas || 0)} indent={1} />
+            <RdoLine label="Ventas facturadas vigentes (total c/IVA)" value={data?.fiscal.ventas_facturadas_brutas || 0} indent={1} />
+            <RdoLine label="(-) IVA facturado neto de NC" value={-ivaVentas} indent={1} />
+            <RdoLine label="   • IVA facturas emitidas" value={-ivaVentasBruto} indent={2} />
+            <RdoLine label="   • Reverso IVA por NC" value={ivaNotasCredito} indent={2} />
+            <RdoLine label="Ventas facturadas (neto)" value={data?.fiscal.ventas_facturadas_netas || 0} indent={1} />
+            <RdoLine label="Ventas sin facturar (neto)" value={data?.fiscal.ventas_no_facturadas_netas || 0} indent={1} />
+          </CollapsibleRow>
+
+          <Separator className="my-3" />
+
+          {/* Costos Variables (sin CMV) */}
+          <SectionBlock title={RDO_SECTIONS.costos_variables} lines={variablesNoCmv} ventas={totalVentasNetas} />
+
+          {/* CMV Unificado */}
+          <CollapsibleRow
+            label="CMV (Costo de Mercadería Vendida)"
+            value={cmvAuto + cmvAjuste}
+            pct={totalVentasNetas > 0 ? ((cmvAuto + cmvAjuste) / totalVentasNetas) * 100 : 0}
+            indent={1}
+            bold
+            expanded={cmvExpanded}
+            onToggle={() => setCmvExpanded((e) => !e)}
+          >
+            {/* Automatic CMV from POS with expandable product detail */}
+            {cmvPorRubro.length > 0 ? (
+              cmvPorRubro.map((rubro) => {
+                const expanded = !!cmvRubrosExpanded[rubro.category_code];
+                return (
+                  <div key={rubro.category_code} className="pl-10">
+                    <button
+                      type="button"
+                      onClick={() => setCmvRubrosExpanded((prev) => ({ ...prev, [rubro.category_code]: !prev[rubro.category_code] }))}
+                      className="w-full flex items-center justify-between py-1 text-sm hover:bg-muted/40 rounded-sm"
+                    >
+                      <span className="flex items-center gap-1.5 text-muted-foreground">
+                        {expanded ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                        {rubro.category_name}
+                      </span>
+                      <span className="font-mono">{formatCurrency(rubro.total)}</span>
+                    </button>
+                    {expanded && rubro.gastos.map((gasto, idx) => (
+                      <RdoLine
+                        key={`${rubro.category_code}-${gasto.producto_id || idx}`}
+                        label={`${gasto.producto_nombre} (${gasto.cantidad.toFixed(0)})`}
+                        value={gasto.total}
+                        indent={3}
+                      />
+                    ))}
+                  </div>
+                );
+              })
+            ) : cmvAuto > 0 ? (
+              <div className="pl-10">
+                <button
+                  type="button"
+                  onClick={() => setCmvRubrosExpanded((prev) => ({ ...prev, '_auto': !prev['_auto'] }))}
+                  className="w-full flex items-center justify-between py-1 text-sm hover:bg-muted/40 rounded-sm"
+                >
+                  <span className="flex items-center gap-1.5 text-muted-foreground">
+                    {cmvRubrosExpanded['_auto'] ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                    CMV Automático (consumos POS)
+                  </span>
+                  <span className="font-mono">{formatCurrency(cmvAuto)}</span>
+                </button>
+                {cmvRubrosExpanded['_auto'] && (
+                  <p className="text-xs text-muted-foreground pl-6 py-1">
+                    Calculado automáticamente desde las ventas del POS y el costo de cada producto de la carta.
+                  </p>
                 )}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground"><ArrowDown className="w-4 h-4" /> C. Variables</div>
-                <div className="text-2xl font-bold font-mono mt-1">$ {totalVariables.toLocaleString('es-AR')}</div>
-                <div className="text-xs text-muted-foreground mt-1">{totalVentas > 0 ? ((totalVariables / totalVentas) * 100).toFixed(1) : 0}% s/ventas</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground"><ArrowUp className="w-4 h-4" /> C. Fijos</div>
-                <div className="text-2xl font-bold font-mono mt-1">$ {totalFijos.toLocaleString('es-AR')}</div>
-                <div className="text-xs text-muted-foreground mt-1">{totalVentas > 0 ? ((totalFijos / totalVentas) * 100).toFixed(1) : 0}% s/ventas</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  {resultadoOperativo >= 0 ? <TrendingUp className="w-4 h-4 text-green-500" /> : <TrendingDown className="w-4 h-4 text-destructive" />}
-                  Resultado
-                </div>
-                <div className={`text-2xl font-bold font-mono mt-1 ${resultadoOperativo < 0 ? 'text-destructive' : ''}`}>
-                  $ {resultadoOperativo.toLocaleString('es-AR')}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">{margenOperativo.toFixed(1)}% margen</div>
-              </CardContent>
-            </Card>
+              </div>
+            ) : null}
+
+            {/* Manual CMV items from stock consumption */}
+            {cmvAjuste !== 0 && (
+              <div className="pl-10">
+                <button
+                  type="button"
+                  onClick={() => setCmvRubrosExpanded((prev) => ({ ...prev, '_manual': !prev['_manual'] }))}
+                  className="w-full flex items-center justify-between py-1 text-sm hover:bg-muted/40 rounded-sm"
+                >
+                  <span className="flex items-center gap-1.5 text-muted-foreground">
+                    {cmvRubrosExpanded['_manual'] ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                    CMV por Consumo de Stock
+                  </span>
+                  <span className="font-mono">{formatCurrency(cmvAjuste)}</span>
+                </button>
+                {cmvRubrosExpanded['_manual'] && (
+                  <div className="pl-6 py-1 text-xs text-muted-foreground space-y-1">
+                    <p>Incluye: Packaging, Descartables Salón/Delivery, Insumos para Clientes.</p>
+                    <p>Fórmula: Stock inicial + Compras - Stock final = Consumo</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </CollapsibleRow>
+
+          <Separator className="my-3" />
+
+          {/* Contribución Marginal */}
+          <div className="flex justify-between items-center py-2 bg-muted/30 px-3 rounded-md">
+            <span className="font-bold">Contribución Marginal</span>
+            <div className="flex items-center gap-3">
+              <Badge variant={(totalVentasNetas - totalVariables) >= 0 ? 'default' : 'destructive'}>
+                {totalVentasNetas > 0 ? (((totalVentasNetas - totalVariables) / totalVentasNetas) * 100).toFixed(1) : 0}%
+              </Badge>
+              <span className={`font-mono font-bold ${(totalVentasNetas - totalVariables) < 0 ? 'text-destructive' : ''}`}>
+                {formatCurrency(totalVentasNetas - totalVariables)}
+              </span>
+            </div>
           </div>
 
-          {/* RDO Detail */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <BarChart3 className="w-5 h-5" />
-                RDO Detallado — {periodo}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1">
-              {/* Ventas */}
-              {descuentoPromo > 0 ? (
-                <>
-                  <CollapsibleRow
-                    label="Venta Teórica (a precio referencia)"
-                    value={ventaTeorica}
-                    bold
-                    expanded={ventasExpanded}
-                    onToggle={() => setVentasExpanded(e => !e)}
-                  >
-                    {ventas && ventas.total > 0 && (
-                      <>
-                        <RdoLine label="Facturación Contable (FC)" value={ventas.fc} indent={1} />
-                        <RdoLine label="Facturación Total (FT)" value={ventas.ft} indent={1} />
-                      </>
-                    )}
-                  </CollapsibleRow>
+          <Separator className="my-3" />
 
-                  <CollapsibleRow
-                    label="Descuento Promo Efectivo"
-                    value={-descuentoPromo}
-                    pct={ventaTeorica > 0 ? -(descuentoPromo / ventaTeorica) * 100 : 0}
-                    expanded={promoExpanded}
-                    onToggle={() => setPromoExpanded(e => !e)}
-                  >
-                    <div className="pl-5 py-1.5 text-xs text-muted-foreground space-y-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <Tag className="w-3 h-3" />
-                        <span>{promoData?.pedidosConPromo ?? 0} pedidos con promo de {promoData?.pedidosTotales ?? 0} totales ({promoData && promoData.pedidosTotales > 0 ? ((promoData.pedidosConPromo / promoData.pedidosTotales) * 100).toFixed(0) : 0}%)</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Percent className="w-3 h-3" />
-                        <span>Desc. promedio por pedido promo: $ {(promoData?.descuentoPromedio ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 0 })}</span>
-                      </div>
-                    </div>
-                  </CollapsibleRow>
+          {/* Costos Fijos */}
+          <SectionBlock title={RDO_SECTIONS.costos_fijos} lines={fijos} ventas={totalVentasNetas} />
 
-                  <div className="flex justify-between items-center py-2 bg-muted/30 px-3 rounded-md">
-                    <span className="font-bold">Venta Neta (ingreso en caja)</span>
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline">
-                        {ventaTeorica > 0 ? ((totalVentas / ventaTeorica) * 100).toFixed(1) : 100}%
-                      </Badge>
-                      <span className="font-mono font-bold">$ {totalVentas.toLocaleString('es-AR')}</span>
-                    </div>
-                  </div>
-                </>
-              ) : ventas && ventas.total > 0 ? (
-                <CollapsibleRow
-                  label="Ventas Totales"
-                  value={totalVentas}
-                  pct={100}
-                  bold
-                  expanded={ventasExpanded}
-                  onToggle={() => setVentasExpanded(e => !e)}
-                >
-                  <RdoLine label="Facturación Contable (FC)" value={ventas.fc} indent={1} />
-                  <RdoLine label="Facturación Total (FT)" value={ventas.ft} indent={1} />
-                </CollapsibleRow>
-              ) : (
-                <RdoLine label="Ventas Totales" value={totalVentas} pct={100} bold />
-              )}
+          <Separator className="my-3" />
 
-              <Separator className="my-3" />
+          {/* Resultado Operativo */}
+          <div className="flex justify-between items-center py-3 bg-muted/30 px-3 rounded-md">
+            <span className="font-bold text-lg">Resultado Operativo</span>
+            <div className="flex items-center gap-3">
+              <Badge variant={resultadoOperativo >= 0 ? 'default' : 'destructive'} className="text-sm">
+                {margenOperativo.toFixed(1)}%
+              </Badge>
+              <span className={`font-mono font-bold text-lg ${resultadoOperativo < 0 ? 'text-destructive' : ''}`}>
+                {formatCurrency(resultadoOperativo)}
+              </span>
+            </div>
+          </div>
 
-              {/* Costos Variables */}
-              <SectionBlock title={RDO_SECTIONS.costos_variables} lines={variables} ventas={totalVentas} />
+          <Separator className="my-3" />
 
-              <Separator className="my-3" />
+          {/* Control Fiscal IVA */}
+          <CollapsibleRow
+            label="Control Fiscal IVA"
+            value={saldoIva}
+            pct={totalVentasNetas > 0 ? (saldoIva / totalVentasNetas) * 100 : 0}
+            bold
+            expanded={ivaExpanded}
+            onToggle={() => setIvaExpanded((e) => !e)}
+          >
+            <RdoLine label="IVA Ventas (débito fiscal bruto)" value={ivaVentasBruto} indent={1} />
+            <RdoLine label="(-) Notas de Crédito (IVA)" value={-ivaNotasCredito} indent={1} />
+            <RdoLine label="IVA Ventas Neto" value={ivaVentas} indent={1} />
+            <RdoLine label="IVA Compras (crédito fiscal)" value={-ivaCompras} indent={1} />
+            <RdoLine label="Saldo IVA (a pagar / favor)" value={saldoIva} indent={1} bold />
+          </CollapsibleRow>
 
-              {/* Contribución Marginal */}
-              <div className="flex justify-between items-center py-2 bg-muted/30 px-3 rounded-md">
-                <span className="font-bold">Contribución Marginal</span>
-                <div className="flex items-center gap-3">
-                  <Badge variant={(totalVentas - totalVariables) >= 0 ? 'default' : 'destructive'}>
-                    {totalVentas > 0 ? (((totalVentas - totalVariables) / totalVentas) * 100).toFixed(1) : 0}%
-                  </Badge>
-                  <span className={`font-mono font-bold ${(totalVentas - totalVariables) < 0 ? 'text-destructive' : ''}`}>
-                    $ {(totalVentas - totalVariables).toLocaleString('es-AR')}
-                  </span>
-                </div>
-              </div>
+          <Separator className="my-3" />
 
-              <Separator className="my-3" />
-
-              {/* Costos Fijos */}
-              <SectionBlock title={RDO_SECTIONS.costos_fijos} lines={fijos} ventas={totalVentas} />
-
-              <Separator className="my-3" />
-
-              {/* Resultado Operativo */}
-              <div className="flex justify-between items-center py-3 bg-muted/30 px-3 rounded-md">
-                <span className="font-bold text-lg">Resultado Operativo</span>
-                <div className="flex items-center gap-3">
-                  <Badge variant={resultadoOperativo >= 0 ? 'default' : 'destructive'} className="text-sm">
-                    {margenOperativo.toFixed(1)}%
-                  </Badge>
-                  <span className={`font-mono font-bold text-lg ${resultadoOperativo < 0 ? 'text-destructive' : ''}`}>
-                    $ {resultadoOperativo.toLocaleString('es-AR')}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </>
-      )}
+          {/* Resultado Económico (bottom line) */}
+          <div className="flex justify-between items-center py-3 bg-primary/10 px-3 rounded-md border border-primary/20">
+            <span className="font-bold text-lg">Resultado Económico</span>
+            <div className="flex items-center gap-3">
+              <Badge variant={resultadoEconomico >= 0 ? 'default' : 'destructive'} className="text-sm">
+                {totalVentasNetas > 0 ? ((resultadoEconomico / totalVentasNetas) * 100).toFixed(1) : '0.0'}%
+              </Badge>
+              <span className={`font-mono font-bold text-lg ${resultadoEconomico < 0 ? 'text-destructive' : ''}`}>
+                {formatCurrency(resultadoEconomico)}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -69,14 +69,29 @@ export async function printRawBase64(
   port: number,
   dataBase64: string
 ): Promise<void> {
-  const res = await fetch(`${PRINT_BRIDGE_URL}/print`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ip, port, data: dataBase64 }),
-    signal: AbortSignal.timeout(10000),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${PRINT_BRIDGE_URL}/print`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip, port, data: dataBase64 }),
+      signal: AbortSignal.timeout(10000),
+    });
+  } catch (err) {
+    throw new Error(
+      err instanceof Error
+        ? `Print Bridge no disponible: ${err.message}`
+        : 'Print Bridge no disponible'
+    );
+  }
 
-  const result = await res.json();
+  let result: { success?: boolean; error?: string };
+  try {
+    result = await res.json();
+  } catch {
+    throw new Error(`Print Bridge respondió con estado ${res.status} (respuesta no válida)`);
+  }
+
   if (!result.success) {
     throw new Error(result.error || 'Error de impresión desconocido');
   }

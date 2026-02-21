@@ -364,7 +364,7 @@ export function useConveneMeeting() {
       supabase.functions.invoke('send-meeting-notification', {
         body: { meeting_id: meeting.id },
       }).catch((err) => {
-        console.error('Failed to send meeting notification:', err);
+        if (import.meta.env.DEV) console.error('Failed to send meeting notification:', err);
       });
       
       return meeting;
@@ -409,13 +409,12 @@ export function useUpdateConvokedMeeting() {
       
       if (error) throw error;
       
-      // Update participants if provided
       if (data.participantIds) {
-        // Delete existing and recreate
-        await supabase
+        const { error: delError } = await supabase
           .from('meeting_participants')
           .delete()
           .eq('meeting_id', meetingId);
+        if (delError) throw delError;
         
         const participantInserts = data.participantIds.map(userId => ({
           meeting_id: meetingId,
@@ -425,9 +424,10 @@ export function useUpdateConvokedMeeting() {
         }));
         
         if (participantInserts.length > 0) {
-          await supabase
+          const { error: insError } = await supabase
             .from('meeting_participants')
             .insert(participantInserts);
+          if (insError) throw insError;
         }
       }
       
@@ -524,19 +524,20 @@ export function useUpdateAttendance() {
       meetingId: string; 
       attendance: Record<string, boolean> 
     }) => {
-      // Update each participant
-      const updates = Object.entries(attendance).map(([userId, wasPresent]) =>
-        supabase
-          .from('meeting_participants')
-          .update({ 
-            was_present: wasPresent,
-            attended: wasPresent, // Keep legacy field in sync
-          })
-          .eq('meeting_id', meetingId)
-          .eq('user_id', userId)
+      const results = await Promise.all(
+        Object.entries(attendance).map(([userId, wasPresent]) =>
+          supabase
+            .from('meeting_participants')
+            .update({ 
+              was_present: wasPresent,
+              attended: wasPresent,
+            })
+            .eq('meeting_id', meetingId)
+            .eq('user_id', userId)
+        )
       );
-      
-      await Promise.all(updates);
+      const failed = results.filter(r => r.error);
+      if (failed.length > 0) throw new Error(`Error actualizando ${failed.length} asistencia(s)`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meeting-detail'] });
@@ -623,13 +624,12 @@ export function useDeleteAgreement() {
 
   return useMutation({
     mutationFn: async (agreementId: string) => {
-      // Delete assignees first
-      await supabase
+      const { error: assErr } = await supabase
         .from('meeting_agreement_assignees')
         .delete()
         .eq('agreement_id', agreementId);
+      if (assErr) throw assErr;
       
-      // Then delete agreement
       const { error } = await supabase
         .from('meeting_agreements')
         .delete()
@@ -673,18 +673,20 @@ export function useCloseMeeting() {
       if (mError) throw mError;
       
       // 2. Update attendance
-      const attendanceUpdates = Object.entries(attendance).map(([userId, wasPresent]) =>
-        supabase
-          .from('meeting_participants')
-          .update({ 
-            was_present: wasPresent,
-            attended: wasPresent,
-          })
-          .eq('meeting_id', meetingId)
-          .eq('user_id', userId)
+      const attendanceResults = await Promise.all(
+        Object.entries(attendance).map(([userId, wasPresent]) =>
+          supabase
+            .from('meeting_participants')
+            .update({ 
+              was_present: wasPresent,
+              attended: wasPresent,
+            })
+            .eq('meeting_id', meetingId)
+            .eq('user_id', userId)
+        )
       );
-      
-      await Promise.all(attendanceUpdates);
+      const attFailed = attendanceResults.filter(r => r.error);
+      if (attFailed.length > 0) throw new Error(`Error actualizando ${attFailed.length} asistencia(s)`);
       
       // 3. Create agreements if provided
       if (agreements && agreements.length > 0) {
@@ -709,9 +711,10 @@ export function useCloseMeeting() {
               user_id: userId,
             }));
             
-            await supabase
+            const { error: asError } = await supabase
               .from('meeting_agreement_assignees')
               .insert(assigneeInserts);
+            if (asError) throw asError;
           }
         }
       }
@@ -720,7 +723,7 @@ export function useCloseMeeting() {
       supabase.functions.invoke('send-meeting-minutes-notification', {
         body: { meeting_id: meetingId },
       }).catch((err) => {
-        console.error('Failed to send meeting minutes notification:', err);
+        if (import.meta.env.DEV) console.error('Failed to send meeting minutes notification:', err);
       });
     },
     onSuccess: () => {

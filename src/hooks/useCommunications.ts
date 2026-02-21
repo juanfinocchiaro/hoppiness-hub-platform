@@ -65,7 +65,7 @@ export function useUserCommunications() {
         .eq('is_active', true);
       
       if (branchError) {
-        console.error('Error fetching user branches:', branchError);
+        if (import.meta.env.DEV) console.error('Error fetching user branches:', branchError);
         throw branchError;
       }
       

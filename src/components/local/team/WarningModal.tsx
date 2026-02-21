@@ -141,7 +141,7 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
           issued_by_name: issuerProfile?.full_name,
         },
       }).catch((err) => {
-        console.error('Failed to send warning notification:', err);
+        if (import.meta.env.DEV) console.error('Failed to send warning notification:', err);
       });
       
       return data.id;

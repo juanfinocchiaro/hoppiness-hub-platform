@@ -391,18 +391,19 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
         if (error) throw error;
       }
 
-      // Batch DELETE records that need to be cleared
       if (recordsToDelete.length > 0) {
-        // Delete in a single query using OR conditions
-        for (const record of recordsToDelete) {
-          const { error } = await supabase
-            .from('employee_schedules')
-            .delete()
-            .eq('user_id', record.userId)
-            .eq('schedule_date', record.date)
-            .eq('branch_id', branchId);
-          if (error) throw error;
-        }
+        const deleteResults = await Promise.all(
+          recordsToDelete.map(record =>
+            supabase
+              .from('employee_schedules')
+              .delete()
+              .eq('user_id', record.userId)
+              .eq('schedule_date', record.date)
+              .eq('branch_id', branchId)
+          )
+        );
+        const failed = deleteResults.find(r => r.error);
+        if (failed?.error) throw failed.error;
       }
     },
     onSuccess: async (_, { notifyEmail, notifyCommunication }) => {
@@ -434,7 +435,7 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
       toast.success('Horarios publicados');
     },
     onError: (error: unknown) => {
-      console.error('Save schedule error:', error);
+      if (import.meta.env.DEV) console.error('Save schedule error:', error);
       
       let message = 'Error desconocido';
       if (error instanceof Error) {

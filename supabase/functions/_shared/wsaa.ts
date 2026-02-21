@@ -49,9 +49,16 @@ async function signTRA(traXml: string, certPem: string, keyPem: string): Promise
     normalizedCert = `-----BEGIN CERTIFICATE-----\n${normalizedCert}\n-----END CERTIFICATE-----`;
   }
 
-  // Parse key and cert with forge
-  const privateKey = forge.pki.privateKeyFromPem(normalizedKey);
-  const certificate = forge.pki.certificateFromPem(normalizedCert);
+  // deno-lint-ignore no-explicit-any
+  let privateKey: any;
+  // deno-lint-ignore no-explicit-any
+  let certificate: any;
+  try {
+    privateKey = forge.pki.privateKeyFromPem(normalizedKey);
+    certificate = forge.pki.certificateFromPem(normalizedCert);
+  } catch (parseErr: any) {
+    throw new Error(`Error al parsear certificado/clave privada: ${parseErr?.message || parseErr}`);
+  }
 
   // Create PKCS#7 signed data
   const p7 = forge.pkcs7.createSignedData();
@@ -85,7 +92,17 @@ async function callWSAA(cmsBase64: string, esProduccion: boolean): Promise<WSAAC
   </soapenv:Body>
 </soapenv:Envelope>`;
 
-  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "text/xml; charset=utf-8", SOAPAction: "" }, body: soap });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
+  let res: Response;
+  try {
+    res = await fetch(url, { method: "POST", headers: { "Content-Type": "text/xml; charset=utf-8", SOAPAction: "" }, body: soap, signal: controller.signal });
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e instanceof DOMException && e.name === "AbortError") throw new Error("WSAA timeout (30s)");
+    throw e;
+  }
+  clearTimeout(timeoutId);
   if (!res.ok) throw new Error(`WSAA HTTP ${res.status}: ${(await res.text()).substring(0, 500)}`);
 
   const text = await res.text();
@@ -117,7 +134,17 @@ export async function callWSFE(method: string, body: string, esProduccion: boole
   <soap:Header/><soap:Body><ar:${method}>${body}</ar:${method}></soap:Body>
 </soap:Envelope>`;
 
-  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "text/xml; charset=utf-8", SOAPAction: `http://ar.gov.afip.dif.FEV1/${method}` }, body: soap });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
+  let res: Response;
+  try {
+    res = await fetch(url, { method: "POST", headers: { "Content-Type": "text/xml; charset=utf-8", SOAPAction: `http://ar.gov.afip.dif.FEV1/${method}` }, body: soap, signal: controller.signal });
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e instanceof DOMException && e.name === "AbortError") throw new Error("WSFE timeout (30s)");
+    throw e;
+  }
+  clearTimeout(timeoutId);
   if (!res.ok) throw new Error(`WSFE HTTP ${res.status}: ${(await res.text()).substring(0, 500)}`);
   return await res.text();
 }
@@ -126,7 +153,10 @@ export async function getLastVoucher(creds: WSAACredentials, cuit: string, pv: n
   const body = `<ar:Auth><ar:Token>${creds.token}</ar:Token><ar:Sign>${creds.sign}</ar:Sign><ar:Cuit>${cuit.replace(/-/g, "")}</ar:Cuit></ar:Auth><ar:PtoVta>${pv}</ar:PtoVta><ar:CbteTipo>${tipo}</ar:CbteTipo>`;
   const resp = await callWSFE("FECompUltimoAutorizado", body, prod);
   const m = resp.match(/<CbteNro>(\d+)<\/CbteNro>/);
-  if (!m) { const e = resp.match(/<Msg>([\s\S]*?)<\/Msg>/); if (e) throw new Error(`WSFE: ${e[1]}`); return 0; }
+  if (!m) {
+    const e = resp.match(/<Msg>([\s\S]*?)<\/Msg>/);
+    throw new Error(e ? `WSFE: ${e[1]}` : "No se pudo obtener el último comprobante autorizado");
+  }
   return parseInt(m[1], 10);
 }
 
@@ -160,53 +190,61 @@ function buildCAEBody(creds: WSAACredentials, cuit: string, r: CAERequestParams)
 }
 
 function parseCAEResponse(resp: string): CAEResult {
-  // Log raw ARCA response for diagnostics (first 3000 chars)
-  console.log("ARCA raw response (first 3000):", resp.substring(0, 3000));
-
   const caeM = resp.match(/<CAE>(\d+)<\/CAE>/);
   const vtoM = resp.match(/<CAEFchVto>(\d+)<\/CAEFchVto>/);
   const resM = resp.match(/<Resultado>(\w)<\/Resultado>/);
-
-  // Parse <Err> blocks (real errors from ARCA)
-  const errMatches = [...resp.matchAll(/<Err>[\s\S]*?<Code>(\d+)<\/Code>[\s\S]*?<Msg>([\s\S]*?)<\/Msg>[\s\S]*?<\/Err>/g)];
-  const errors = errMatches.map(m => `[${m[1]}] ${m[2].trim()}`);
-
-  // Parse <Obs> blocks (observations/warnings per voucher)
-  const obsMatches = [...resp.matchAll(/<Obs>[\s\S]*?<Code>(\d+)<\/Code>[\s\S]*?<Msg>([\s\S]*?)<\/Msg>[\s\S]*?<\/Obs>/g)];
-  const observations = obsMatches.map(m => `[${m[1]}] ${m[2].trim()}`);
-
-  // Parse <Events> blocks (informational events like RG 5616 warning)
-  const evtMatches = [...resp.matchAll(/<Evt>[\s\S]*?<Code>(\d+)<\/Code>[\s\S]*?<Msg>([\s\S]*?)<\/Msg>[\s\S]*?<\/Evt>/g)];
-  const events = evtMatches.map(m => `[${m[1]}] ${m[2].trim()}`);
-
-  if (events.length > 0) console.log("ARCA Events (informational):", events.join(" | "));
-  if (observations.length > 0) console.log("ARCA Observations:", observations.join(" | "));
-  if (errors.length > 0) console.error("ARCA Errors:", errors.join(" | "));
-
   const resultado = resM?.[1] || "R";
+  console.log(`ARCA response resultado=${resultado}, length=${resp.length}`);
 
-  // Priority: Errors > Observations > Events
-  if (resultado === "R" && !caeM) {
-    const errorMsg = errors.length > 0
-      ? errors.join("; ")
-      : observations.length > 0
-        ? observations.join("; ")
-        : events.length > 0
-          ? events.join("; ")
-          : "Error desconocido";
-    throw new Error(`ARCA rechazó: ${errorMsg}`);
+  // Extract error messages from <Errors><Err><Msg> (real errors)
+  const errMsgs: string[] = [];
+  const errRe = /<Err>[\s\S]*?<Code>(\d+)<\/Code>[\s\S]*?<Msg>([\s\S]*?)<\/Msg>[\s\S]*?<\/Err>/g;
+  let em: RegExpExecArray | null;
+  while ((em = errRe.exec(resp)) !== null) {
+    errMsgs.push(`[${em[1]}] ${em[2]}`);
   }
 
-  if (!caeM || !vtoM) throw new Error(`Sin CAE en respuesta: ${resp.substring(0, 2000)}`);
+  // Extract observation messages from <Obs><Code>...<Msg> (rejection details)
+  const obsMsgs: string[] = [];
+  const obsRe = /<Obs>[\s\S]*?<Code>(\d+)<\/Code>[\s\S]*?<Msg>([\s\S]*?)<\/Msg>[\s\S]*?<\/Obs>/g;
+  let om: RegExpExecArray | null;
+  while ((om = obsRe.exec(resp)) !== null) {
+    obsMsgs.push(`[${om[1]}] ${om[2]}`);
+  }
+
+  // Extract event messages (informational like RG 5616)
+  const evtMsgs: string[] = [];
+  const evtRe = /<Evt>[\s\S]*?<Code>(\d+)<\/Code>[\s\S]*?<Msg>([\s\S]*?)<\/Msg>[\s\S]*?<\/Evt>/g;
+  let ev: RegExpExecArray | null;
+  while ((ev = evtRe.exec(resp)) !== null) {
+    evtMsgs.push(`[${ev[1]}] ${ev[2]}`);
+  }
+
+  // Build error text: prioritize Errors > Observations > Events
+  const errorText = errMsgs.length > 0
+    ? errMsgs.join(" | ")
+    : obsMsgs.length > 0
+      ? obsMsgs.join(" | ")
+      : evtMsgs.length > 0
+        ? evtMsgs.join(" | ")
+        : "Error desconocido";
+
+  if (resultado === "R" && !caeM) {
+    throw new Error(`ARCA rechazó: ${errorText}`);
+  }
+  if (!caeM || !vtoM) {
+    throw new Error(`Sin CAE: ${resp.substring(0, 3000)}`);
+  }
 
   const v = vtoM[1];
+  const allObs = [...errMsgs, ...obsMsgs, ...evtMsgs];
   return {
     cae: caeM[1],
     caeVto: `${v.substring(0, 4)}-${v.substring(4, 6)}-${v.substring(6, 8)}`,
     cbteDesde: parseInt(resp.match(/<CbteDesde>(\d+)/)?.[1] || "0"),
     cbteHasta: parseInt(resp.match(/<CbteHasta>(\d+)/)?.[1] || "0"),
     resultado,
-    observaciones: observations.length > 0 ? observations.join("; ") : undefined,
+    observaciones: allObs.length > 0 ? allObs.join(" | ") : undefined,
   };
 }
 

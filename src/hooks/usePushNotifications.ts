@@ -59,33 +59,39 @@ export function usePushNotifications(): UsePushNotificationsResult {
     },
   });
 
+  const { mutateAsync: saveSub } = saveMutation;
+
   const subscribe = useCallback(async () => {
     if (permission === 'unsupported') return;
 
-    const result = await Notification.requestPermission();
-    setPermission(result as PushPermission);
+    try {
+      const result = await Notification.requestPermission();
+      setPermission(result as PushPermission);
 
-    if (result !== 'granted') return;
+      if (result !== 'granted') return;
 
-    const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-    if (!vapidKey) {
-      console.warn('VITE_VAPID_PUBLIC_KEY not configured');
-      return;
+      const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+      if (!vapidKey) {
+        if (import.meta.env.DEV) console.warn('VITE_VAPID_PUBLIC_KEY not configured');
+        return;
+      }
+
+      const reg = await navigator.serviceWorker.ready;
+      let subscription = await (reg as any).pushManager.getSubscription();
+
+      if (!subscription) {
+        subscription = await (reg as any).pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: vapidKey,
+        });
+      }
+
+      await saveSub(subscription);
+      setIsSubscribed(true);
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('Push subscription error:', err);
     }
-
-    const reg = await navigator.serviceWorker.ready;
-    let subscription = await (reg as any).pushManager.getSubscription();
-
-    if (!subscription) {
-      subscription = await (reg as any).pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: vapidKey,
-      });
-    }
-
-    await saveMutation.mutateAsync(subscription);
-    setIsSubscribed(true);
-  }, [permission, saveMutation]);
+  }, [permission, saveSub]);
 
   return {
     permission,

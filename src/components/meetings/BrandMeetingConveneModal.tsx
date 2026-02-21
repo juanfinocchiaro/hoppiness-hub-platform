@@ -78,7 +78,7 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
         });
         setConflicts(result);
       } catch (error) {
-        console.error('Error checking conflicts:', error);
+        if (import.meta.env.DEV) console.error('Error checking conflicts:', error);
       } finally {
         setCheckingConflicts(false);
       }

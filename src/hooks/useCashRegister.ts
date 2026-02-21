@@ -62,6 +62,7 @@ export interface CashRegisterShift {
   difference: number | null;
   notes: string | null;
   status: 'open' | 'closed';
+  current_balance: number | null;
 }
 
 export interface CashRegisterMovement {
@@ -75,6 +76,8 @@ export interface CashRegisterMovement {
   order_id: string | null;
   recorded_by: string | null;
   created_at: string;
+  transfer_id: string | null;
+  source_register_id: string | null;
 }
 
 export const cashRegisterKeys = {
@@ -349,6 +352,7 @@ export function calculateExpectedCash(
   movements: CashRegisterMovement[]
 ): number {
   if (!shift) return 0;
+  if (shift.current_balance != null) return Number(shift.current_balance);
   let amount = Number(shift.opening_amount);
   for (const mov of movements) {
     const isCash =
@@ -359,4 +363,38 @@ export function calculateExpectedCash(
     else amount -= Number(mov.amount);
   }
   return amount;
+}
+
+export function useTransferBetweenRegisters(branchId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      sourceShiftId,
+      destShiftId,
+      amount,
+      concept,
+      userId,
+    }: {
+      sourceShiftId: string;
+      destShiftId: string | null;
+      amount: number;
+      concept: string;
+      userId: string;
+    }) => {
+      const { data, error } = await supabase.rpc('transfer_between_registers', {
+        p_source_shift_id: sourceShiftId,
+        p_dest_shift_id: destShiftId,
+        p_amount: amount,
+        p_concept: concept,
+        p_user_id: userId,
+        p_branch_id: branchId,
+      });
+      if (error) throw error;
+      return data as { transfer_id: string; withdrawal: any; deposit: any };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: cashRegisterKeys.all });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 }

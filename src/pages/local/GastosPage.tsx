@@ -1,212 +1,564 @@
-import { useState } from 'react';
+/**
+ * GastosPage — Módulo de Gastos completo
+ *
+ * Registro de gastos tanto desde caja (efectivo) como transferencias bancarias.
+ * Categorización alineada al RDO para alimentar automáticamente el resultado económico.
+ */
+import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { PageHeader } from '@/components/ui/page-header';
-import { DataToolbar } from '@/components/ui/data-table-pro';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
+import { es } from 'date-fns/locale';
+import {
+  Plus, Receipt, DollarSign, Search, Download, Trash2, Pencil,
+  Building2, Wallet, CreditCard, ArrowDownUp,
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Pencil, Trash2, Receipt, Download, Clock, Check, X } from 'lucide-react';
+import { PageHeader } from '@/components/ui/page-header';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { exportToExcel } from '@/lib/exportExcel';
-import { useGastos, useGastoMutations, GASTO_APPROVAL_THRESHOLD } from '@/hooks/useGastos';
-import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
-import { GastoFormModal } from '@/components/finanzas/GastoFormModal';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { EmptyState } from '@/components/ui/states';
-import { CATEGORIA_GASTO_OPTIONS } from '@/types/compra';
-import type { Gasto } from '@/types/compra';
+import { toast } from 'sonner';
+
+const fmtCurrency = (v: number) =>
+  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(v);
+
+const CATEGORIAS_GASTO = [
+  { value: 'comision_mp_point', label: 'Comisión MP Point', rdo: 'costos_variables' },
+  { value: 'comision_rappi', label: 'Comisión Rappi', rdo: 'costos_variables' },
+  { value: 'comision_pedidos_ya', label: 'Comisión Pedidos Ya', rdo: 'costos_variables' },
+  { value: 'pago_rappiboys', label: 'Pago a RappiBoys', rdo: 'costos_variables' },
+  { value: 'pago_cadetes', label: 'Cadetes terceros', rdo: 'costos_variables' },
+  { value: 'mantenimiento', label: 'Mantenimiento', rdo: 'costos_fijos' },
+  { value: 'uniformes', label: 'Uniformes', rdo: 'costos_fijos' },
+  { value: 'sueldos', label: 'Sueldos', rdo: 'costos_fijos' },
+  { value: 'cargas_sociales', label: 'Cargas sociales', rdo: 'costos_fijos' },
+  { value: 'comida_personal', label: 'Comida para el personal', rdo: 'costos_fijos' },
+  { value: 'software_gestion', label: 'Software de Gestión', rdo: 'costos_fijos' },
+  { value: 'estudio_contable', label: 'Estudio contable', rdo: 'costos_fijos' },
+  { value: 'bromatologia', label: 'Bromatología', rdo: 'costos_fijos' },
+  { value: 'alquiler', label: 'Alquiler', rdo: 'costos_fijos' },
+  { value: 'expensas', label: 'Expensas', rdo: 'costos_fijos' },
+  { value: 'gas', label: 'Gas', rdo: 'costos_fijos' },
+  { value: 'internet_telefonia', label: 'Internet y Telefonía', rdo: 'costos_fijos' },
+  { value: 'energia_electrica', label: 'Energía Eléctrica', rdo: 'costos_fijos' },
+  { value: 'otros', label: 'Otros', rdo: 'costos_fijos' },
+];
+
+const MEDIOS_PAGO_GASTO = [
+  { value: 'efectivo_caja', label: 'Efectivo (de caja)' },
+  { value: 'transferencia', label: 'Transferencia bancaria' },
+  { value: 'tarjeta', label: 'Tarjeta de débito/crédito' },
+  { value: 'mercadopago', label: 'MercadoPago' },
+  { value: 'cheque', label: 'Cheque' },
+];
+
+interface Gasto {
+  id: string;
+  fecha: string;
+  categoria_principal: string;
+  concepto: string;
+  monto: number;
+  medio_pago: string | null;
+  tipo_pago: string | null;
+  afecta_caja: boolean;
+  costo_transferencia: number;
+  observaciones: string | null;
+  proveedor_id: string | null;
+  estado: string | null;
+  created_at: string;
+}
 
 export default function GastosPage() {
   const { branchId } = useParams<{ branchId: string }>();
-  const { data: gastos, isLoading } = useGastos(branchId!);
-  const { softDelete, approve, reject } = useGastoMutations();
-  const { isFranquiciado, isSuperadmin } = useDynamicPermissions(branchId);
-  const canApproveGastos = isFranquiciado || isSuperadmin;
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const [editingGasto, setEditingGasto] = useState<Gasto | null>(null);
   const [search, setSearch] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Gasto | null>(null);
-  const [deleting, setDeleting] = useState<Gasto | null>(null);
+  const [filterCategoria, setFilterCategoria] = useState<string>('all');
+  const [periodo, setPeriodo] = useState(() => format(new Date(), 'yyyy-MM'));
 
-  const filtered = gastos?.filter((g) => {
-    const matchesSearch = g.concepto.toLowerCase().includes(search.toLowerCase()) ||
-      g.categoria_principal.toLowerCase().includes(search.toLowerCase());
-    const matchesFrom = !dateFrom || (g.fecha && g.fecha >= dateFrom);
-    const matchesTo = !dateTo || (g.fecha && g.fecha <= dateTo);
-    return matchesSearch && matchesFrom && matchesTo;
+  const periodoStart = startOfMonth(new Date(periodo + '-01'));
+  const periodoEnd = endOfMonth(new Date(periodo + '-01'));
+
+  const { data: gastos, isLoading } = useQuery({
+    queryKey: ['gastos', branchId, periodo],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('gastos')
+        .select('*')
+        .eq('branch_id', branchId!)
+        .gte('fecha', format(periodoStart, 'yyyy-MM-dd'))
+        .lte('fecha', format(periodoEnd, 'yyyy-MM-dd'))
+        .is('deleted_at', null)
+        .order('fecha', { ascending: false });
+      if (error) throw error;
+      return (data || []) as Gasto[];
+    },
+    enabled: !!branchId,
   });
 
-  const getCategoriaLabel = (key: string) =>
-    CATEGORIA_GASTO_OPTIONS.find(c => c.value === key)?.label || key;
-
-  const pendingApproval = gastos?.filter(g => g.estado === 'pendiente_aprobacion' && !g.deleted_at) || [];
-  const fmt = (n: number) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n);
-
-  const estadoBadge = (row: any) => {
-    const estado = row.estado;
-    if (estado === 'pendiente_aprobacion') return <Badge variant="outline" className="gap-1 border-amber-300 text-amber-700 bg-amber-50"><Clock className="w-3 h-3" />Esperando aprobación</Badge>;
-    if (estado === 'pagado') return <Badge variant="default">Pagado</Badge>;
-    if (estado === 'pendiente' && row.fecha_vencimiento && new Date(row.fecha_vencimiento) < new Date()) {
-      return <Badge variant="destructive">Vencido</Badge>;
+  const filteredGastos = useMemo(() => {
+    if (!gastos) return [];
+    let filtered = gastos;
+    if (filterCategoria !== 'all') {
+      filtered = filtered.filter(g => g.categoria_principal === filterCategoria);
     }
-    if (estado === 'pendiente') return <Badge variant="secondary">Pendiente</Badge>;
-    if (estado === 'parcial') return <Badge variant="secondary">Parcial</Badge>;
-    return <Badge variant="secondary">Pendiente</Badge>;
+    if (search) {
+      const q = search.toLowerCase();
+      filtered = filtered.filter(g =>
+        g.concepto.toLowerCase().includes(q) ||
+        g.categoria_principal.toLowerCase().includes(q)
+      );
+    }
+    return filtered;
+  }, [gastos, filterCategoria, search]);
+
+  const totals = useMemo(() => {
+    if (!filteredGastos.length) return { total: 0, efectivo: 0, transferencia: 0 };
+    return filteredGastos.reduce((acc, g) => ({
+      total: acc.total + Number(g.monto) + Number(g.costo_transferencia || 0),
+      efectivo: acc.efectivo + (g.afecta_caja ? Number(g.monto) : 0),
+      transferencia: acc.transferencia + (!g.afecta_caja ? Number(g.monto) : 0),
+    }), { total: 0, efectivo: 0, transferencia: 0 });
+  }, [filteredGastos]);
+
+  const deleteGasto = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('gastos')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['gastos', branchId] });
+      toast.success('Gasto eliminado');
+    },
+  });
+
+  const handleExport = () => {
+    if (!filteredGastos.length) return;
+    exportToExcel(
+      filteredGastos.map(g => ({
+        fecha: g.fecha,
+        categoria: CATEGORIAS_GASTO.find(c => c.value === g.categoria_principal)?.label || g.categoria_principal,
+        concepto: g.concepto,
+        monto: g.monto,
+        costo_transferencia: g.costo_transferencia || 0,
+        medio_pago: MEDIOS_PAGO_GASTO.find(m => m.value === g.tipo_pago)?.label || g.tipo_pago || '',
+        afecta_caja: g.afecta_caja ? 'Sí' : 'No',
+      })),
+      { fecha: 'Fecha', categoria: 'Categoría', concepto: 'Concepto', monto: 'Monto', costo_transferencia: 'Costo transf.', medio_pago: 'Medio', afecta_caja: 'Afecta caja' },
+      { filename: `gastos-${periodo}` },
+    );
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Caja Chica"
-        subtitle="Desembolsos pequeños sin factura: propinas, viáticos, imprevistos"
+        title="Gastos"
+        subtitle="Registro y seguimiento de gastos del local"
+        breadcrumb={[
+          { label: 'Dashboard', href: `/milocal/${branchId}` },
+          { label: 'Gastos' },
+        ]}
         actions={
-          <div className="flex gap-2">
-            {filtered && filtered.length > 0 && (
-              <Button variant="outline" onClick={() => exportToExcel(
-                filtered.map(g => ({
-                  fecha: g.fecha ? new Date(g.fecha + 'T12:00:00').toLocaleDateString('es-AR') : '-',
-                  categoria: getCategoriaLabel(g.categoria_principal),
-                  concepto: g.concepto,
-                  monto: g.monto,
-                  estado: g.estado || '-',
-                  vencimiento: g.fecha_vencimiento ? new Date(g.fecha_vencimiento + 'T12:00:00').toLocaleDateString('es-AR') : '-',
-                })),
-                { fecha: 'Fecha', categoria: 'Categoría', concepto: 'Concepto', monto: 'Monto', estado: 'Estado', vencimiento: 'Vencimiento' },
-                { filename: 'gastos' }
-              )}>
-                <Download className="w-4 h-4 mr-2" /> Excel
-              </Button>
-            )}
-            <Button onClick={() => { setEditing(null); setModalOpen(true); }}>
-              <Plus className="w-4 h-4 mr-2" /> Nuevo Gasto
-            </Button>
-          </div>
+          <Button onClick={() => { setEditingGasto(null); setShowForm(true); }}>
+            <Plus className="w-4 h-4 mr-2" /> Registrar gasto
+          </Button>
         }
       />
 
-      {/* Pending approval section */}
-      {canApproveGastos && pendingApproval.length > 0 && (
-        <Card className="border-amber-300 bg-amber-50/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2 text-amber-700">
-              <Clock className="w-4 h-4" />
-              Gastos pendientes de aprobación ({pendingApproval.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {pendingApproval.map(g => (
-              <div key={g.id} className="flex items-center justify-between p-3 bg-white rounded-lg border gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{g.concepto}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {getCategoriaLabel(g.categoria_principal)} · {g.fecha} · <span className="font-semibold text-amber-700">{fmt(g.monto)}</span>
-                  </p>
-                </div>
-                <div className="flex gap-2 shrink-0">
-                  <Button size="sm" variant="default" className="gap-1" onClick={() => approve.mutate(g.id)} disabled={approve.isPending}>
-                    <Check className="w-3.5 h-3.5" />Aprobar
-                  </Button>
-                  <Button size="sm" variant="destructive" className="gap-1" onClick={() => reject.mutate(g.id)} disabled={reject.isPending}>
-                    <X className="w-3.5 h-3.5" />Rechazar
-                  </Button>
-                </div>
+      {/* KPIs */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex items-center gap-2">
+              <Receipt className="w-5 h-5 text-red-500" />
+              <div>
+                <p className="text-xs text-muted-foreground">Total período</p>
+                <p className="text-lg font-bold">{fmtCurrency(totals.total)}</p>
               </div>
-            ))}
+            </div>
           </CardContent>
         </Card>
-      )}
-
-      <DataToolbar
-        searchValue={search}
-        onSearchChange={setSearch}
-        searchPlaceholder="Buscar por concepto o categoría..."
-        filters={<DateRangeFilter from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />}
-      />
-
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Categoría</TableHead>
-              <TableHead>Concepto</TableHead>
-              <TableHead className="text-right">Monto</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Vencimiento</TableHead>
-              <TableHead className="w-[80px]" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  {Array.from({ length: 7 }).map((_, j) => (
-                    <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : !filtered?.length ? (
-              <TableRow>
-                <TableCell colSpan={7} className="h-40">
-                  <EmptyState icon={Receipt} title="Sin gastos de caja chica" description="Registrá el primer gasto de caja chica del local" />
-                </TableCell>
-              </TableRow>
-            ) : (
-              filtered.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell className="text-sm">{new Date(row.fecha).toLocaleDateString('es-AR')}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{getCategoriaLabel(row.categoria_principal)}</Badge>
-                  </TableCell>
-                  <TableCell className="font-medium">{row.concepto}</TableCell>
-                  <TableCell className="text-right font-mono">$ {Number(row.monto).toLocaleString('es-AR')}</TableCell>
-                  <TableCell>{estadoBadge(row)}</TableCell>
-                  <TableCell className="text-sm">
-                    {row.fecha_vencimiento ? (
-                      <span className={new Date(row.fecha_vencimiento) < new Date() && row.estado !== 'pagado' ? 'text-destructive font-medium' : ''}>
-                        {new Date(row.fecha_vencimiento).toLocaleDateString('es-AR')}
-                      </span>
-                    ) : '-'}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1 justify-end">
-                      <Button variant="ghost" size="icon" onClick={() => { setEditing(row); setModalOpen(true); }}>
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setDeleting(row)}>
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex items-center gap-2">
+              <Wallet className="w-5 h-5 text-green-500" />
+              <div>
+                <p className="text-xs text-muted-foreground">Salió de caja</p>
+                <p className="text-lg font-bold">{fmtCurrency(totals.efectivo)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-blue-500" />
+              <div>
+                <p className="text-xs text-muted-foreground">Transferencias</p>
+                <p className="text-lg font-bold">{fmtCurrency(totals.transferencia)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <GastoFormModal
-        open={modalOpen}
-        onOpenChange={(open) => { setModalOpen(open); if (!open) setEditing(null); }}
-        branchId={branchId!}
-        gasto={editing}
-      />
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <Input
+          type="month"
+          value={periodo}
+          onChange={(e) => setPeriodo(e.target.value)}
+          className="w-40"
+        />
+        <Select value={filterCategoria} onValueChange={setFilterCategoria}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Categoría" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas las categorías</SelectItem>
+            {CATEGORIAS_GASTO.map(c => (
+              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Button variant="outline" size="sm" onClick={handleExport} disabled={!filteredGastos.length}>
+          <Download className="w-4 h-4 mr-1" /> Excel
+        </Button>
+      </div>
 
-      <ConfirmDialog
-        open={!!deleting}
-        onOpenChange={() => setDeleting(null)}
-        title="Eliminar gasto"
-        description={`¿Eliminar "${deleting?.concepto}"?`}
-        confirmLabel="Eliminar"
-        variant="destructive"
-        onConfirm={async () => {
-          if (deleting) await softDelete.mutateAsync(deleting.id);
-          setDeleting(null);
-        }}
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="p-4 space-y-3">
+              {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-12" />)}
+            </div>
+          ) : filteredGastos.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              <Receipt className="w-12 h-12 mx-auto mb-2 opacity-30" />
+              <p>No hay gastos registrados en este período</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Categoría</TableHead>
+                  <TableHead>Concepto</TableHead>
+                  <TableHead className="text-right">Monto</TableHead>
+                  <TableHead>Medio</TableHead>
+                  <TableHead className="text-center">Caja</TableHead>
+                  <TableHead className="w-16" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredGastos.map(g => (
+                  <TableRow key={g.id}>
+                    <TableCell className="text-sm">
+                      {format(new Date(g.fecha + 'T12:00:00'), 'dd/MM', { locale: es })}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {CATEGORIAS_GASTO.find(c => c.value === g.categoria_principal)?.label || g.categoria_principal}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm max-w-[200px] truncate">{g.concepto}</TableCell>
+                    <TableCell className="text-right tabular-nums font-medium">
+                      {fmtCurrency(Number(g.monto))}
+                      {Number(g.costo_transferencia) > 0 && (
+                        <span className="text-xs text-muted-foreground block">
+                          +{fmtCurrency(Number(g.costo_transferencia))} transf.
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {MEDIOS_PAGO_GASTO.find(m => m.value === g.tipo_pago)?.label || g.medio_pago || '-'}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant={g.afecta_caja ? 'default' : 'secondary'} className="text-xs">
+                        {g.afecta_caja ? 'Sí' : 'No'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => { setEditingGasto(g); setShowForm(true); }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive"
+                          onClick={() => deleteGasto.mutate(g.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <GastoFormModal
+        open={showForm}
+        onOpenChange={setShowForm}
+        branchId={branchId!}
+        editing={editingGasto}
       />
     </div>
+  );
+}
+
+function GastoFormModal({ open, onOpenChange, branchId, editing }: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  branchId: string;
+  editing: Gasto | null;
+}) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const [form, setForm] = useState({
+    fecha: format(new Date(), 'yyyy-MM-dd'),
+    categoria_principal: '',
+    concepto: '',
+    monto: '',
+    tipo_pago: 'efectivo_caja',
+    afecta_caja: true,
+    costo_transferencia: '',
+    observaciones: '',
+  });
+
+  useEffect(() => {
+    if (editing) {
+      setForm({
+        fecha: editing.fecha,
+        categoria_principal: editing.categoria_principal,
+        concepto: editing.concepto,
+        monto: String(editing.monto),
+        tipo_pago: editing.tipo_pago || 'efectivo_caja',
+        afecta_caja: editing.afecta_caja,
+        costo_transferencia: String(editing.costo_transferencia || 0),
+        observaciones: editing.observaciones || '',
+      });
+    } else {
+      setForm({
+        fecha: format(new Date(), 'yyyy-MM-dd'),
+        categoria_principal: '',
+        concepto: '',
+        monto: '',
+        tipo_pago: 'efectivo_caja',
+        afecta_caja: true,
+        costo_transferencia: '',
+        observaciones: '',
+      });
+    }
+  }, [editing]);
+
+  const set = (p: Partial<typeof form>) => setForm(prev => ({ ...prev, ...p }));
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        branch_id: branchId,
+        fecha: form.fecha,
+        periodo: form.fecha.substring(0, 7),
+        categoria_principal: form.categoria_principal,
+        concepto: form.concepto,
+        monto: parseFloat(form.monto),
+        tipo_pago: form.tipo_pago,
+        medio_pago: form.tipo_pago,
+        afecta_caja: form.afecta_caja,
+        costo_transferencia: form.costo_transferencia ? parseFloat(form.costo_transferencia) : 0,
+        observaciones: form.observaciones || null,
+        rdo_section: CATEGORIAS_GASTO.find(c => c.value === form.categoria_principal)?.rdo || 'costos_fijos',
+        created_by: user?.id,
+        estado: 'pagado',
+      };
+
+      if (editing) {
+        const { error } = await supabase
+          .from('gastos')
+          .update(payload)
+          .eq('id', editing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('gastos')
+          .insert(payload);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['gastos', branchId] });
+      toast.success(editing ? 'Gasto actualizado' : 'Gasto registrado');
+      onOpenChange(false);
+    },
+    onError: (err: Error) => {
+      toast.error('Error: ' + err.message);
+    },
+  });
+
+  const handleTipoPagoChange = (v: string) => {
+    set({
+      tipo_pago: v,
+      afecta_caja: v === 'efectivo_caja',
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{editing ? 'Editar gasto' : 'Registrar gasto'}</DialogTitle>
+          <DialogDescription>
+            {editing ? 'Modificá los datos del gasto' : 'Cargá un nuevo gasto. Si salió de caja, se registra como movimiento.'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Fecha</Label>
+              <Input type="date" value={form.fecha} onChange={(e) => set({ fecha: e.target.value })} />
+            </div>
+            <div>
+              <Label>Categoría</Label>
+              <Select value={form.categoria_principal} onValueChange={(v) => set({ categoria_principal: v })}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                <SelectContent>
+                  {CATEGORIAS_GASTO.map(c => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label>Concepto</Label>
+            <Input
+              placeholder="Ej: Pago a cadete, factura de gas..."
+              value={form.concepto}
+              onChange={(e) => set({ concepto: e.target.value })}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Monto</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={form.monto}
+                  onChange={(e) => set({ monto: e.target.value })}
+                  className="pl-7"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Medio de pago</Label>
+              <Select value={form.tipo_pago} onValueChange={handleTipoPagoChange}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {MEDIOS_PAGO_GASTO.map(m => (
+                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {form.tipo_pago === 'transferencia' && (
+            <div>
+              <Label>Costo de transferencia</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={form.costo_transferencia}
+                  onChange={(e) => set({ costo_transferencia: e.target.value })}
+                  className="pl-7"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Si la transferencia tuvo un costo asociado</p>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <Label>¿Afecta caja?</Label>
+              <p className="text-xs text-muted-foreground">
+                {form.afecta_caja ? 'La plata salió de la caja del local' : 'No salió plata de la caja (transferencia, etc.)'}
+              </p>
+            </div>
+            <Switch
+              checked={form.afecta_caja}
+              onCheckedChange={(v) => set({ afecta_caja: v })}
+            />
+          </div>
+
+          <div>
+            <Label>Observaciones (opcional)</Label>
+            <Textarea
+              placeholder="Detalles adicionales..."
+              value={form.observaciones}
+              onChange={(e) => set({ observaciones: e.target.value })}
+              rows={2}
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button
+            onClick={() => save.mutate()}
+            disabled={save.isPending || !form.categoria_principal || !form.concepto || !form.monto}
+          >
+            {save.isPending ? 'Guardando...' : editing ? 'Actualizar' : 'Registrar'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

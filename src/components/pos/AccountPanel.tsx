@@ -1,7 +1,8 @@
 /**
  * AccountPanel - Panel de cuenta con items + pagos ordenados cronológicamente + saldo
  */
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -10,7 +11,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { POSAlertDialogContent } from './POSDialog';
-import { Minus, Plus, Trash2, ShoppingBag, MessageSquare, X, Banknote, CreditCard, QrCode, ArrowRightLeft, ChefHat, PlusCircle, Pencil, ChevronRight, Store, Bike } from 'lucide-react';
+import { usePOSPortal } from './POSPortalContext';
+import { Minus, Plus, Trash2, ShoppingBag, MessageSquare, X, Banknote, CreditCard, QrCode, ArrowRightLeft, ChefHat, PlusCircle, Pencil, ChevronRight, Store, Bike, Loader2, Check, CircleDot } from 'lucide-react';
 import type { CartItem } from './ProductGrid';
 import type { LocalPayment, MetodoPago, OrderConfig } from '@/types/pos';
 import { cn } from '@/lib/utils';
@@ -51,6 +53,8 @@ type TimelineEntry =
   | { type: 'item'; index: number; item: CartItem; ts: number }
   | { type: 'payment'; payment: LocalPayment; ts: number };
 
+type SendingStage = 'creating' | 'invoicing' | 'printing' | 'done';
+
 interface AccountPanelProps {
   items: CartItem[];
   payments: LocalPayment[];
@@ -60,7 +64,10 @@ interface AccountPanelProps {
   onCancelOrder?: () => void;
   onRegisterPayment: () => void;
   onRemovePayment: (paymentId: string) => void;
-  onSendToKitchen: () => void;
+  onSendToKitchen: (onProgress?: (stage: string) => void) => Promise<void>;
+  onSendComplete: () => void;
+  willInvoice: boolean;
+  willPrint: boolean;
   disabled?: boolean;
   orderConfig?: OrderConfig;
   onEditConfig?: () => void;
@@ -123,6 +130,9 @@ export function AccountPanel({
   onRegisterPayment,
   onRemovePayment,
   onSendToKitchen,
+  onSendComplete,
+  willInvoice,
+  willPrint,
   disabled,
   orderConfig,
   onEditConfig,
@@ -130,9 +140,39 @@ export function AccountPanel({
   const totalItems = items.reduce((s, i) => s + i.subtotal, 0);
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
   const saldo = totalItems - totalPaid;
-  const canSend = saldo === 0 && items.length > 0;
+  const canSend = Math.abs(saldo) < 0.01 && items.length > 0;
 
   const [editingNoteIdx, setEditingNoteIdx] = useState<number | null>(null);
+
+  // Send dialog state
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [sendPhase, setSendPhase] = useState<'confirm' | 'progress'>('confirm');
+  const [currentStage, setCurrentStage] = useState<SendingStage | null>(null);
+  const sendInFlightRef = useRef(false);
+
+  const handleConfirmSend = useCallback(async () => {
+    if (sendInFlightRef.current) return;
+    sendInFlightRef.current = true;
+    setSendPhase('progress');
+    try {
+      await onSendToKitchen((stage) => setCurrentStage(stage as SendingStage));
+      setCurrentStage('done');
+      setTimeout(() => {
+        setSendDialogOpen(false);
+        setSendPhase('confirm');
+        setCurrentStage(null);
+        sendInFlightRef.current = false;
+        onSendComplete();
+      }, 800);
+    } catch (e: any) {
+      setSendDialogOpen(false);
+      setSendPhase('confirm');
+      setCurrentStage(null);
+      sendInFlightRef.current = false;
+      const { toast } = await import('sonner');
+      toast.error(e?.message ?? 'Error al registrar pedido');
+    }
+  }, [onSendToKitchen, onSendComplete]);
 
   // Build chronological timeline
   const timeline = useMemo<TimelineEntry[]>(() => {
@@ -170,25 +210,31 @@ export function AccountPanel({
       {/* Header */}
       <div className="px-3 py-2.5 border-b font-medium flex items-center justify-between">
         <span className="text-sm">Cuenta</span>
-        {(items.length > 0 || payments.length > 0) && onCancelOrder && (
+        {onCancelOrder && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-7 text-xs">
                 <X className="h-3.5 w-3.5 mr-1" />
-                Cancelar
+                {items.length > 0 || payments.length > 0 ? 'Cancelar' : 'Nueva venta'}
               </Button>
             </AlertDialogTrigger>
             <POSAlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>¿Cancelar pedido?</AlertDialogTitle>
+                <AlertDialogTitle>
+                  {items.length > 0 || payments.length > 0
+                    ? '¿Cancelar pedido?'
+                    : '¿Volver a la pantalla inicial?'}
+                </AlertDialogTitle>
                 <AlertDialogDescription>
-                  Se eliminarán todos los productos y pagos registrados. Esta acción no se puede deshacer.
+                  {items.length > 0 || payments.length > 0
+                    ? 'Se eliminarán todos los productos y pagos registrados. Esta acción no se puede deshacer.'
+                    : 'Se descartará la configuración actual y volverás a la pantalla inicial del POS.'}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Volver</AlertDialogCancel>
                 <AlertDialogAction onClick={onCancelOrder} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  Sí, cancelar pedido
+                  {items.length > 0 || payments.length > 0 ? 'Sí, cancelar pedido' : 'Sí, reiniciar'}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </POSAlertDialogContent>
@@ -271,8 +317,15 @@ export function AccountPanel({
           </Button>
         )}
 
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
+        <DialogPrimitive.Root
+          open={sendDialogOpen}
+          onOpenChange={(open) => {
+            if (!open && sendPhase === 'progress') return;
+            setSendDialogOpen(open);
+            if (!open) { setSendPhase('confirm'); setCurrentStage(null); }
+          }}
+        >
+          <DialogPrimitive.Trigger asChild>
             <Button
               className={cn(
                 'w-full hidden lg:flex h-14 text-base',
@@ -291,28 +344,143 @@ export function AccountPanel({
                 )}
               </div>
             </Button>
-          </AlertDialogTrigger>
+          </DialogPrimitive.Trigger>
           {canSend && (
-            <POSAlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>¿Enviar pedido a cocina?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {totalQty} items · $ {totalItems.toLocaleString('es-AR')}
-                  <br />
-                  Una vez enviado no se podrán agregar más items.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Volver</AlertDialogCancel>
-                <AlertDialogAction onClick={onSendToKitchen} className="bg-emerald-600 hover:bg-emerald-700">
-                  Sí, enviar a cocina
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </POSAlertDialogContent>
+            <SendDialogContent
+              phase={sendPhase}
+              currentStage={currentStage}
+              willInvoice={willInvoice}
+              willPrint={willPrint}
+              totalQty={totalQty}
+              totalItems={totalItems}
+              onCancel={() => setSendDialogOpen(false)}
+              onConfirm={handleConfirmSend}
+            />
           )}
-        </AlertDialog>
+        </DialogPrimitive.Root>
       </div>
     </div>
+  );
+}
+
+/* ── Send Dialog ────────────────────────────────────── */
+
+function SendDialogContent({
+  phase,
+  currentStage,
+  willInvoice,
+  willPrint,
+  totalQty,
+  totalItems,
+  onCancel,
+  onConfirm,
+}: {
+  phase: 'confirm' | 'progress';
+  currentStage: SendingStage | null;
+  willInvoice: boolean;
+  willPrint: boolean;
+  totalQty: number;
+  totalItems: number;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const containerRef = usePOSPortal();
+
+  const stages: { key: SendingStage; label: string; doneLabel: string }[] = [
+    { key: 'creating', label: 'Registrando pedido...', doneLabel: 'Pedido registrado' },
+    ...(willInvoice ? [{ key: 'invoicing' as const, label: 'Facturando...', doneLabel: 'Facturado' }] : []),
+    ...(willPrint ? [{ key: 'printing' as const, label: 'Imprimiendo...', doneLabel: 'Impreso' }] : []),
+  ];
+
+  const stageOrder = stages.map((s) => s.key);
+  const currentIdx = currentStage === 'done'
+    ? stageOrder.length
+    : currentStage
+      ? stageOrder.indexOf(currentStage)
+      : -1;
+
+  return (
+    <DialogPrimitive.Portal container={containerRef?.current ?? undefined}>
+      <DialogPrimitive.Overlay className="absolute inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+      <DialogPrimitive.Content
+        className="absolute left-[50%] top-[50%] z-50 grid w-full max-w-sm translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg"
+        onPointerDownOutside={(e) => { if (phase === 'progress') e.preventDefault(); }}
+        onEscapeKeyDown={(e) => { if (phase === 'progress') e.preventDefault(); }}
+        onInteractOutside={(e) => { if (phase === 'progress') e.preventDefault(); }}
+      >
+        {phase === 'confirm' ? (
+          <>
+            <div className="space-y-2">
+              <DialogPrimitive.Title className="text-lg font-semibold">¿Enviar pedido a cocina?</DialogPrimitive.Title>
+              <DialogPrimitive.Description className="text-sm text-muted-foreground">
+                {totalQty} items · $ {totalItems.toLocaleString('es-AR')}
+                <br />
+                Una vez enviado no se podrán agregar más items.
+              </DialogPrimitive.Description>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={onCancel}>Volver</Button>
+              <Button onClick={onConfirm} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                Sí, enviar a cocina
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="py-2">
+            <div className="space-y-0">
+              {stages.map((stage, i) => {
+                const isDone = currentIdx > i;
+                const isActive = currentIdx === i;
+                return (
+                  <div key={stage.key} className="flex items-start gap-3">
+                    {/* Vertical line + icon column */}
+                    <div className="flex flex-col items-center">
+                      <div className={cn(
+                        'h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-all duration-300',
+                        isDone && 'bg-emerald-100 text-emerald-600',
+                        isActive && 'bg-blue-100 text-blue-600',
+                        !isDone && !isActive && 'bg-muted text-muted-foreground',
+                      )}>
+                        {isDone ? (
+                          <Check className="h-4 w-4" />
+                        ) : isActive ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <CircleDot className="h-3.5 w-3.5" />
+                        )}
+                      </div>
+                      {i < stages.length - 1 && (
+                        <div className={cn(
+                          'w-0.5 h-5 transition-colors duration-300',
+                          isDone ? 'bg-emerald-300' : 'bg-muted',
+                        )} />
+                      )}
+                    </div>
+                    <span className={cn(
+                      'text-sm pt-1 transition-colors duration-300',
+                      isDone && 'text-emerald-700 font-medium',
+                      isActive && 'text-foreground font-medium',
+                      !isDone && !isActive && 'text-muted-foreground',
+                    )}>
+                      {isDone ? stage.doneLabel : isActive ? stage.label : stage.doneLabel}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {currentStage === 'done' && (
+              <div className="flex flex-col items-center gap-2 mt-6 animate-in fade-in zoom-in-95 duration-300">
+                <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <Check className="h-6 w-6 text-emerald-600" />
+                </div>
+                <span className="text-base font-semibold text-emerald-700">Pedido enviado</span>
+              </div>
+            )}
+          </div>
+        )}
+      </DialogPrimitive.Content>
+    </DialogPrimitive.Portal>
   );
 }
 

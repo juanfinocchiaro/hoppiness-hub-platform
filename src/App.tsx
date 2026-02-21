@@ -16,6 +16,7 @@ import ResetPassword from "./pages/ResetPassword";
 import RegistroStaff from "./pages/RegistroStaff";
 import Pedir from "./pages/Pedir";
 import PedirPage from "./pages/webapp/PedirPage";
+import TrackingPage from "./pages/webapp/TrackingPage";
 import Franquicias from "./pages/Franquicias";
 import Nosotros from "./pages/Nosotros";
 import Contacto from "./pages/Contacto";
@@ -42,16 +43,19 @@ import ProveedoresLocalPage from "./pages/local/ProveedoresLocalPage";
 import CuentaCorrienteProveedorPage from "./pages/local/CuentaCorrienteProveedorPage";
 import InsumosLocalPage from "./pages/local/InsumosLocalPage";
 import ComprasPage from "./pages/local/ComprasPage";
-import GastosPage from "./pages/local/GastosPage";
 import ConsumosPage from "./pages/local/ConsumosPage";
 import SociosPage from "./pages/local/SociosPage";
 import PeriodosPage from "./pages/local/PeriodosPage";
 import PLDashboardPage from "./pages/local/PLDashboardPage";
 import RdoLoaderPage from "./pages/local/RdoLoaderPage";
+import RdoFinancieroPage from "./pages/local/RdoFinancieroPage";
+import GastosPage from "./pages/local/GastosPage";
 import InversionesPage from "./pages/local/InversionesPage";
 import VentasMensualesLocalPage from "./pages/local/VentasMensualesLocalPage";
 import InspectionsLocalPage from "./pages/local/InspectionsLocalPage";
 import AfipConfigPage from "./pages/local/AfipConfigPage";
+import MercadoPagoConfigPage from "./pages/local/MercadoPagoConfigPage";
+import WebappConfigPage from "./pages/local/WebappConfigPage";
 
 // POS
 import POSPage from "./pages/pos/POSPage";
@@ -93,6 +97,7 @@ import MenuCartaPage from "./pages/admin/MenuCartaPage";
 import CentroCostosPage from "./pages/admin/CentroCostosPage";
 import PreparacionesPage from "./pages/admin/PreparacionesPage";
 import CategoriasCartaPage from "./pages/admin/CategoriasCartaPage";
+import ChannelPricingPage from "./pages/admin/ChannelPricingPage";
 
 // Mi Local - Comunicaciones
 import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
@@ -149,6 +154,7 @@ const App = () => (
             <Route path="/registro-staff" element={<RegistroStaff />} />
             <Route path="/fichaje/:branchCode" element={<FichajeEmpleado />} />
             <Route path="/pedir/:branchSlug" element={<PedirPage />} />
+            <Route path="/pedido/:trackingCode" element={<TrackingPage />} />
             
             {/* Mi Cuenta - con CuentaLayout usando WorkShell */}
             <Route path="/cuenta" element={<RequireAuth><CuentaLayout /></RequireAuth>}>
@@ -177,10 +183,10 @@ const App = () => (
             
             {/* Mi Local - /milocal */}
             <Route path="/milocal" element={<LocalRoute><BranchLayout /></LocalRoute>}>
-              <Route index element={null} />
+              <Route index element={<Navigate to="equipo" replace />} />
             </Route>
             <Route path="/milocal/:branchId" element={<LocalRoute><BranchLayout /></LocalRoute>}>
-              <Route index element={null} />
+              <Route index element={<Navigate to="equipo" replace />} />
               
               {/* Equipo */}
               <Route path="equipo" element={<TeamPage />} />
@@ -211,13 +217,15 @@ const App = () => (
               <Route path="finanzas/proveedores/:proveedorId" element={<CuentaCorrienteProveedorPage />} />
               <Route path="finanzas/insumos" element={<InsumosLocalPage />} />
               <Route path="finanzas/compras" element={<ComprasPage />} />
-              {/* finanzas/gastos route removed - expenses now handled in RegisterPage cajas */}
+              <Route path="finanzas/gastos" element={<GastosPage />} />
               <Route path="finanzas/ventas-mensuales" element={<VentasMensualesLocalPage />} />
               <Route path="finanzas/consumos" element={<ConsumosPage />} />
               <Route path="finanzas/socios" element={<SociosPage />} />
               <Route path="finanzas/periodos" element={<PeriodosPage />} />
               <Route path="finanzas/pl" element={<PLDashboardPage />} />
+              <Route path="finanzas/resultado-financiero" element={<RdoFinancieroPage />} />
               <Route path="finanzas/rdo-carga" element={<RdoLoaderPage />} />
+              <Route path="finanzas/rdo-multivista" element={<Navigate to="../ventas/historial" replace />} />
               <Route path="finanzas/inversiones" element={<InversionesPage />} />
               
               {/* Supervisiones */}
@@ -229,6 +237,8 @@ const App = () => (
               <Route path="config/estaciones" element={<KitchenStationsConfigPage />} />
               <Route path="config/impresion" element={<PrintConfigPage />} />
               <Route path="config/facturacion" element={<AfipConfigPage />} />
+              <Route path="config/mercadopago" element={<MercadoPagoConfigPage />} />
+              <Route path="config/webapp" element={<WebappConfigPage />} />
             </Route>
             
             {/* Mi Marca - /mimarca */}
@@ -278,6 +288,9 @@ const App = () => (
               
               {/* Centro de Costos */}
               <Route path="centro-costos" element={<CentroCostosPage />} />
+              
+              {/* Precios por Canal */}
+              <Route path="precios-canal" element={<ChannelPricingPage />} />
               
               {/* Configuración */}
               <Route path="reglamentos" element={<BrandRegulationsPage />} />
