@@ -213,9 +213,9 @@ export default function CuentaHome() {
                     Ver detalle
                   </Button>
                 )}
-                <Button variant="outline" size="sm" onClick={() => navigate('/cuenta/pedidos')}>
+                <Button variant="outline" size="sm" onClick={() => navigate('/pedir')}>
                   <ShoppingBag className="w-3.5 h-3.5 mr-1" />
-                  Mis pedidos
+                  Ir a la tienda
                 </Button>
               </div>
             </div>

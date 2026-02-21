@@ -83,19 +83,25 @@ export function UserMenuDropdown({ onMisPedidos, onMisDirecciones, onMiPerfil }:
           </p>
           <p className="text-xs text-muted-foreground truncate">{user.email}</p>
         </div>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => onMisPedidos ? onMisPedidos() : navigate('/cuenta/pedidos')}>
-          <Package className="w-4 h-4 mr-2" />
-          Mis pedidos
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onMisDirecciones ? onMisDirecciones() : navigate('/cuenta/direcciones')}>
-          <MapPin className="w-4 h-4 mr-2" />
-          Mis direcciones
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onMiPerfil ? onMiPerfil() : navigate('/cuenta/perfil')}>
-          <User className="w-4 h-4 mr-2" />
-          Mi perfil
-        </DropdownMenuItem>
+        {(onMisPedidos || onMisDirecciones || onMiPerfil) && <DropdownMenuSeparator />}
+        {onMisPedidos && (
+          <DropdownMenuItem onClick={onMisPedidos}>
+            <Package className="w-4 h-4 mr-2" />
+            Mis pedidos
+          </DropdownMenuItem>
+        )}
+        {onMisDirecciones && (
+          <DropdownMenuItem onClick={onMisDirecciones}>
+            <MapPin className="w-4 h-4 mr-2" />
+            Mis direcciones
+          </DropdownMenuItem>
+        )}
+        {onMiPerfil && (
+          <DropdownMenuItem onClick={onMiPerfil}>
+            <User className="w-4 h-4 mr-2" />
+            Mi perfil
+          </DropdownMenuItem>
+        )}
 
         {(canAccessLocal || canAccessBrand) && <DropdownMenuSeparator />}
         {canAccessLocal && (

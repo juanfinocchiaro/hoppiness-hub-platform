@@ -64,19 +64,6 @@ export function CuentaSidebar() {
         label="Inicio"
       />
       
-      {/* Mi Perfil - Always visible */}
-      <NavItemButton to="/cuenta/perfil" icon={User} label="Mi Perfil" />
-      
-      {/* Mis Pedidos - visible for all users */}
-      <NavSectionGroup
-        id="pedidos"
-        label="Mis Pedidos"
-        icon={ShoppingBag}
-        forceOpen={location.pathname.startsWith('/cuenta/pedidos') || location.pathname.startsWith('/cuenta/direcciones')}
-      >
-        <NavItemButton to="/cuenta/pedidos" icon={Receipt} label="Historial" />
-        <NavItemButton to="/cuenta/direcciones" icon={MapPin} label="Mis Direcciones" />
-      </NavSectionGroup>
       
       {/* Mi Trabajo - Only for operational staff */}
       {isOperationalStaff && (
