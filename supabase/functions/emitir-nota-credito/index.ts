@@ -270,8 +270,8 @@ Deno.serve(async (req) => {
             monId: "PES",
             monCotiz: 1,
             condicionIVAReceptorId: condicionIvaId,
-            iva: tipoOriginal === "A"
-              ? [{ id: 5, baseImp: neto, importe: iva }]
+            iva: neto > 0
+              ? [{ id: 5, baseImp: Number(neto), importe: Number(iva) }]
               : undefined,
             cbtesAsoc: [{
               tipo: ORIGINAL_CBTE_TIPO[tipoOriginal] || 11,
