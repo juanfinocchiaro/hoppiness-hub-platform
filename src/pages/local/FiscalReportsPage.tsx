@@ -36,7 +36,7 @@ import {
   useFiscalAuditReport,
   useZClosings,
 } from '@/hooks/useFiscalReports';
-import { usePrinting } from '@/hooks/usePrinting';
+
 import { usePrintConfig } from '@/hooks/usePrintConfig';
 import { useBranchPrinters } from '@/hooks/useBranchPrinters';
 import {
@@ -93,7 +93,6 @@ function InformeXCard({ branchId, branchData }: {
   const [previewData, setPreviewData] = useState<FiscalXData | null>(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
-  const printing = usePrinting(branchId);
   const { data: printConfig } = usePrintConfig(branchId);
   const { data: printers } = useBranchPrinters(branchId);
 
@@ -118,43 +117,20 @@ function InformeXCard({ branchId, branchData }: {
       ? (printers ?? []).find((p: any) => p.id === printConfig.ticket_printer_id && p.is_active)
       : null;
 
-    if (ticketPrinter && printing.bridgeStatus === 'connected') {
-      try {
-        const data = generateInformeX(previewData, branchData, ticketPrinter.paper_width);
-        const { printRawBase64 } = await import('@/lib/qz-print');
-        await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, data);
-        toast.success('Informe X impreso');
-      } catch (e: any) {
-        toast.error('Error de impresión: ' + e.message);
-      }
-    } else {
-      // Fallback window.print
-      const html = `<html><head><title>Informe X</title>
-        <style>body{font-family:monospace;max-width:400px;margin:20px auto;font-size:12px}.c{text-align:center}.b{font-weight:bold}.r{display:flex;justify-content:space-between}.line{border-top:1px dashed #000;margin:8px 0}@media print{body{margin:0}}</style></head><body>
-        <div class="c b">INFORME X</div>
-        <div class="c">Fecha: ${previewData.fecha} — Hora: ${previewData.hora}</div>
-        <div class="line"></div>
-        <div class="b">Comprobantes</div>
-        <div class="r"><span>Facturas B</span><span>${previewData.facturas_b}</span></div>
-        <div class="r"><span>Facturas C</span><span>${previewData.facturas_c}</span></div>
-        <div class="r"><span>NC B</span><span>${previewData.notas_credito_b}</span></div>
-        <div class="r"><span>NC C</span><span>${previewData.notas_credito_c}</span></div>
-        <div class="line"></div>
-        <div class="b">Totales</div>
-        <div class="r"><span>Subtotal neto</span><span>${fmtCurrency(previewData.subtotal_neto)}</span></div>
-        <div class="r"><span>Total IVA</span><span>${fmtCurrency(previewData.total_iva)}</span></div>
-        <div class="r b"><span>TOTAL VENTAS</span><span>${fmtCurrency(previewData.total_ventas)}</span></div>
-        <div class="line"></div>
-        <div class="b">Medios de Pago</div>
-        <div class="r"><span>Efectivo</span><span>${fmtCurrency(previewData.pago_efectivo)}</span></div>
-        <div class="r"><span>Débito</span><span>${fmtCurrency(previewData.pago_debito)}</span></div>
-        <div class="r"><span>Crédito</span><span>${fmtCurrency(previewData.pago_credito)}</span></div>
-        <div class="r"><span>MP / QR</span><span>${fmtCurrency(previewData.pago_qr)}</span></div>
-        <div class="r"><span>Transferencia</span><span>${fmtCurrency(previewData.pago_transferencia)}</span></div>
-      </body></html>`;
-      const w = window.open('', '_blank', 'width=450,height=600');
-      if (w) { w.document.write(html); w.document.close(); w.focus(); w.print(); }
-      toast.success('Informe X generado');
+    if (!ticketPrinter) {
+      toast.error('No hay impresora de tickets configurada', {
+        description: 'Andá a Configuración > Impresoras para configurarla.',
+      });
+      return;
+    }
+
+    try {
+      const data = generateInformeX(previewData, branchData, ticketPrinter.paper_width);
+      const { printRawBase64 } = await import('@/lib/qz-print');
+      await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, data);
+      toast.success('Informe X impreso');
+    } catch (e: any) {
+      toast.error('Error de impresión: ' + e.message);
     }
   };
 
@@ -267,7 +243,6 @@ function CierreZCard({ branchId, branchData, lastZ }: {
   const [previewData, setPreviewData] = useState<FiscalZData | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [existingZ, setExistingZ] = useState<FiscalZData | null>(null);
-  const printing = usePrinting(branchId);
   const { data: printConfig } = usePrintConfig(branchId);
   const { data: printers } = useBranchPrinters(branchId);
   const xReport = useFiscalXReport(branchId);
@@ -310,42 +285,21 @@ function CierreZCard({ branchId, branchData, lastZ }: {
     const ticketPrinter = printConfig?.ticket_printer_id
       ? (printers ?? []).find((p: any) => p.id === printConfig.ticket_printer_id && p.is_active)
       : null;
-    const d = zData as any;
 
-    if (ticketPrinter && printing.bridgeStatus === 'connected') {
-      try {
-        const data = generateCierreZ(zData, branchData, ticketPrinter.paper_width);
-        const { printRawBase64 } = await import('@/lib/qz-print');
-        await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, data);
-        toast.success('Cierre Z impreso');
-      } catch (e: any) {
-        toast.error('Error de impresión: ' + e.message);
-      }
-    } else {
-      const html = `<html><head><title>Cierre Z N° ${String(d.z_number).padStart(4,'0')}</title>
-        <style>body{font-family:monospace;max-width:400px;margin:20px auto;font-size:12px}.c{text-align:center}.b{font-weight:bold}.r{display:flex;justify-content:space-between}.line{border-top:1px dashed #000;margin:8px 0}@media print{body{margin:0}}</style></head><body>
-        <div class="c b">CIERRE Z N° ${String(d.z_number).padStart(4,'0')}</div>
-        <div class="line"></div>
-        <div class="b">Comprobantes: ${d.total_invoices}</div>
-        <div class="r"><span>Facturas B</span><span>${d.total_invoices_b}</span></div>
-        <div class="r"><span>Facturas C</span><span>${d.total_invoices_c}</span></div>
-        <div class="r"><span>NC B</span><span>${d.total_credit_notes_b}</span></div>
-        <div class="r"><span>NC C</span><span>${d.total_credit_notes_c}</span></div>
-        <div class="line"></div>
-        <div class="r b"><span>TOTAL VENTAS</span><span>${fmtCurrency(d.total_sales)}</span></div>
-        <div class="r"><span>Notas de Crédito</span><span>${fmtCurrency(d.total_credit_notes_amount)}</span></div>
-        <div class="r b"><span>NETO</span><span>${fmtCurrency(d.net_total)}</span></div>
-        <div class="line"></div>
-        <div class="b">Medios de Pago</div>
-        <div class="r"><span>Efectivo</span><span>${fmtCurrency(d.payment_cash)}</span></div>
-        <div class="r"><span>Débito</span><span>${fmtCurrency(d.payment_debit)}</span></div>
-        <div class="r"><span>Crédito</span><span>${fmtCurrency(d.payment_credit)}</span></div>
-        <div class="r"><span>MP / QR</span><span>${fmtCurrency(d.payment_qr)}</span></div>
-        <div class="r"><span>Transferencia</span><span>${fmtCurrency(d.payment_transfer)}</span></div>
-      </body></html>`;
-      const w = window.open('', '_blank', 'width=450,height=600');
-      if (w) { w.document.write(html); w.document.close(); w.focus(); w.print(); }
-      toast.success('Cierre Z generado');
+    if (!ticketPrinter) {
+      toast.error('No hay impresora de tickets configurada', {
+        description: 'Andá a Configuración > Impresoras para configurarla.',
+      });
+      return;
+    }
+
+    try {
+      const data = generateCierreZ(zData, branchData, ticketPrinter.paper_width);
+      const { printRawBase64 } = await import('@/lib/qz-print');
+      await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, data);
+      toast.success('Cierre Z impreso');
+    } catch (e: any) {
+      toast.error('Error de impresión: ' + e.message);
     }
   };
 
@@ -467,7 +421,6 @@ function AuditoriaCard({ branchId, branchData }: {
   const [toZ, setToZ] = useState('');
   const [previewData, setPreviewData] = useState<FiscalAuditData | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const printing = usePrinting(branchId);
   const { data: printConfig } = usePrintConfig(branchId);
   const { data: printers } = useBranchPrinters(branchId);
 
@@ -505,36 +458,20 @@ function AuditoriaCard({ branchId, branchData }: {
       ? (printers ?? []).find((p: any) => p.id === printConfig.ticket_printer_id && p.is_active)
       : null;
 
-    if (ticketPrinter && printing.bridgeStatus === 'connected') {
-      try {
-        const printData = generateInformeAuditoria(previewData, branchData, ticketPrinter.paper_width);
-        const { printRawBase64 } = await import('@/lib/qz-print');
-        await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, printData);
-        toast.success('Informe de auditoría impreso');
-      } catch (e: any) {
-        toast.error('Error de impresión: ' + e.message);
-      }
-    } else {
-      const jornadasHtml = previewData.jornadas?.map(j =>
-        `<div class="r"><span>${j.fecha} | Z ${String(j.z_number).padStart(4,'0')}</span><span>${fmtCurrency(j.total_sales)}</span></div>`
-      ).join('') || '';
-      const html = `<html><head><title>Auditoría</title>
-        <style>body{font-family:monospace;max-width:400px;margin:20px auto;font-size:12px}.c{text-align:center}.b{font-weight:bold}.r{display:flex;justify-content:space-between}.line{border-top:1px dashed #000;margin:8px 0}@media print{body{margin:0}}</style></head><body>
-        <div class="c b">INFORME DE AUDITORÍA</div>
-        <div class="c">Z ${previewData.desde_z} a Z ${previewData.hasta_z} — ${previewData.cantidad_jornadas} jornadas</div>
-        <div class="line"></div>
-        <div class="b">Resumen por Jornada</div>
-        ${jornadasHtml}
-        <div class="line"></div>
-        <div class="b">Totales del Período</div>
-        <div class="r"><span>Comprobantes</span><span>${previewData.total_comprobantes}</span></div>
-        <div class="r"><span>Ventas brutas</span><span>${fmtCurrency(previewData.total_ventas_brutas)}</span></div>
-        <div class="r"><span>Notas de crédito</span><span>${fmtCurrency(previewData.total_nc)}</span></div>
-        <div class="r b"><span>Total neto</span><span>${fmtCurrency(previewData.total_neto)}</span></div>
-      </body></html>`;
-      const w = window.open('', '_blank', 'width=450,height=600');
-      if (w) { w.document.write(html); w.document.close(); w.focus(); w.print(); }
-      toast.success('Informe de auditoría generado');
+    if (!ticketPrinter) {
+      toast.error('No hay impresora de tickets configurada', {
+        description: 'Andá a Configuración > Impresoras para configurarla.',
+      });
+      return;
+    }
+
+    try {
+      const printData = generateInformeAuditoria(previewData, branchData, ticketPrinter.paper_width);
+      const { printRawBase64 } = await import('@/lib/qz-print');
+      await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, printData);
+      toast.success('Informe de auditoría impreso');
+    } catch (e: any) {
+      toast.error('Error de impresión: ' + e.message);
     }
   };
 
@@ -655,7 +592,7 @@ function ReimprimirCard({ branchId, branchData }: {
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [printing2, setPrinting2] = useState<string | null>(null);
-  const printing = usePrinting(branchId);
+  
   const { data: printConfig } = usePrintConfig(branchId);
   const { data: printers } = useBranchPrinters(branchId);
 
@@ -747,60 +684,17 @@ function ReimprimirCard({ branchId, branchData }: {
         ? (printers ?? []).find((p: any) => p.id === printConfig.ticket_printer_id && p.is_active)
         : null;
 
-      if (ticketPrinter && printing.bridgeStatus === 'connected') {
-        const base64 = generateTicketCliente(ticketData as any, ticketPrinter.paper_width);
-        const { printRawBase64 } = await import('@/lib/qz-print');
-        await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, base64);
-        toast.success('Comprobante reimpreso');
-      } else {
-        // Fallback: generate a simple printable window
-        const tipoLabel = isNC ? `Nota de Crédito ${tipoLetra}` : `Factura ${tipoLetra}`;
-        const itemsHtml = (items || []).map((it: any) =>
-          `<tr><td>${it.cantidad}x</td><td>${it.nombre}</td><td style="text-align:right">$${(it.subtotal || 0).toLocaleString('es-AR')}</td></tr>`
-        ).join('');
-
-        const html = `
-          <html><head><title>${tipoLabel} ${facturaData.numero}</title>
-          <style>
-            body { font-family: Arial, sans-serif; max-width: 400px; margin: 20px auto; font-size: 13px; }
-            h2 { text-align: center; margin-bottom: 4px; }
-            .center { text-align: center; }
-            .line { border-top: 1px dashed #000; margin: 8px 0; }
-            table { width: 100%; border-collapse: collapse; }
-            td { padding: 2px 4px; }
-            .total { font-weight: bold; font-size: 16px; text-align: right; }
-            @media print { body { margin: 0; } }
-          </style></head><body>
-            <h2>${branchData?.razon_social || 'Hoppiness Club'}</h2>
-            <p class="center">${branchData?.direccion_fiscal || ''}</p>
-            <p class="center">CUIT: ${branchData?.cuit || ''}</p>
-            <div class="line"></div>
-            <h3 class="center">${tipoLabel}</h3>
-            <p class="center"><strong>${facturaData.numero}</strong></p>
-            <p class="center">Fecha: ${facturaData.fecha}</p>
-            ${factura.anulada ? '<p class="center" style="color:red;font-weight:bold">ANULADA</p>' : ''}
-            <div class="line"></div>
-            <p>Pedido #${pedido.numero_pedido} — ${pedido.tipo_servicio || ''}</p>
-            ${pedido.cliente_nombre ? `<p>Cliente: ${pedido.cliente_nombre}</p>` : ''}
-            <div class="line"></div>
-            <table>${itemsHtml}</table>
-            <div class="line"></div>
-            <p class="total">Total: $${(factura.total || 0).toLocaleString('es-AR')}</p>
-            ${facturaData.cae ? `<div class="line"></div><p class="center">CAE: ${facturaData.cae}</p><p class="center">Vto: ${facturaData.cae_vto}</p>` : ''}
-            <div class="line"></div>
-            <p class="center" style="font-size:11px">Pago: ${pago?.metodo || 'No especificado'}</p>
-          </body></html>
-        `;
-
-        const printWindow = window.open('', '_blank', 'width=450,height=600');
-        if (printWindow) {
-          printWindow.document.write(html);
-          printWindow.document.close();
-          printWindow.focus();
-          printWindow.print();
-        }
-        toast.success('Comprobante generado');
+      if (!ticketPrinter) {
+        toast.error('No hay impresora de tickets configurada', {
+          description: 'Andá a Configuración > Impresoras para configurarla.',
+        });
+        return;
       }
+
+      const base64 = generateTicketCliente(ticketData as any, ticketPrinter.paper_width);
+      const { printRawBase64 } = await import('@/lib/qz-print');
+      await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, base64);
+      toast.success('Comprobante reimpreso');
     } catch (e: any) {
       toast.error('Error al reimprimir: ' + (e.message || 'Error desconocido'));
     } finally {
