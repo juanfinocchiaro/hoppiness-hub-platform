@@ -22,6 +22,8 @@ import {
   User,
   AlertTriangle,
   BarChart3,
+  ShoppingBag,
+  Receipt,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -63,6 +65,16 @@ export function CuentaSidebar() {
       
       {/* Mi Perfil - Always visible */}
       <NavItemButton to="/cuenta/perfil" icon={User} label="Mi Perfil" />
+      
+      {/* Mis Pedidos - visible for all users */}
+      <NavSectionGroup
+        id="pedidos"
+        label="Mis Pedidos"
+        icon={ShoppingBag}
+        forceOpen={location.pathname.startsWith('/cuenta/pedidos')}
+      >
+        <NavItemButton to="/cuenta/pedidos" icon={Receipt} label="Historial" />
+      </NavSectionGroup>
       
       {/* Mi Trabajo - Only for operational staff */}
       {isOperationalStaff && (

@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Minus, Plus, Trash2, ShoppingBag, Loader2, ArrowLeft, CreditCard, Banknote, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 import type { useWebappCart } from '@/hooks/useWebappCart';
 
 interface DeliveryZone {
@@ -66,7 +67,22 @@ function FieldError({ error }: { error: string | null }) {
 
 export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEnabled, deliveryCosto = 0, initialStep }: Props) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const servicioLabel = cart.tipoServicio === 'retiro' ? 'Retiro en local' : cart.tipoServicio === 'delivery' ? 'Delivery' : 'Comer acá';
+
+  // Fetch profile for pre-fill when logged in
+  const { data: userProfile } = useQuery({
+    queryKey: ['webapp-profile-prefill', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name, phone, email')
+        .eq('id', user!.id)
+        .single();
+      return data;
+    },
+    enabled: !!user,
+  });
 
   const isDelivery = cart.tipoServicio === 'delivery';
   const { data: zones = [] } = usePublicDeliveryZones(branchId, isDelivery);
@@ -91,7 +107,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
 
   const selectedZone = zones.find(z => z.id === selectedZoneId);
 
-  // Checkout form state - pre-fill from localStorage
+  // Checkout form state - pre-fill from profile (if logged in) or localStorage
   const [nombre, setNombre] = useState(() => {
     try { return localStorage.getItem('hop_client_nombre') || ''; } catch { return ''; }
   });
@@ -104,6 +120,15 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   const [direccion, setDireccion] = useState(() => {
     try { return localStorage.getItem('hop_client_direccion') || ''; } catch { return ''; }
   });
+
+  // Pre-fill from profile when data loads (overrides localStorage if profile has data)
+  useEffect(() => {
+    if (userProfile) {
+      if (userProfile.full_name && !nombre) setNombre(userProfile.full_name);
+      if (userProfile.phone && !telefono) setTelefono(userProfile.phone);
+      if ((userProfile.email || user?.email) && !email) setEmail(userProfile.email || user?.email || '');
+    }
+  }, [userProfile]);
   const [piso, setPiso] = useState('');
   const [referencia, setReferencia] = useState('');
   const [notas, setNotas] = useState('');
