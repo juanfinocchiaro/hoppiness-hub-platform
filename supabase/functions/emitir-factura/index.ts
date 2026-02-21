@@ -136,13 +136,8 @@ Deno.serve(async (req) => {
 
     // 4. Calcular montos según tipo
     const esProduccion = !!config.es_produccion;
-    let neto = total;
-    let iva = 0;
-
-    if (tipo_factura === "A") {
-      neto = Math.round((total / 1.21) * 100) / 100;
-      iva = Math.round((total - neto) * 100) / 100;
-    }
+    const neto = Math.round((total / 1.21) * 100) / 100;
+    const iva = Math.round((total - neto) * 100) / 100;
 
     // 5. Fecha del comprobante
     const cbteFch = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -181,9 +176,7 @@ Deno.serve(async (req) => {
       MonId: "PES",
       MonCotiz: 1,
       CondicionIVAReceptorId: condicionIvaId,
-      ...(tipo_factura === "A"
-        ? { Iva: [{ Id: 5, BaseImp: neto, Importe: iva }] }
-        : {}),
+      Iva: [{ Id: 5, BaseImp: neto, Importe: iva }],
     };
 
     let cae: string;
@@ -266,9 +259,7 @@ Deno.serve(async (req) => {
             monId: "PES",
             monCotiz: 1,
             condicionIVAReceptorId: condicionIvaId,
-            iva: tipo_factura === "A"
-              ? [{ id: 5, baseImp: neto, importe: iva }]
-              : undefined,
+            iva: [{ id: 5, baseImp: neto, importe: iva }],
           },
           esProduccion
         );
