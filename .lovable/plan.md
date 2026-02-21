@@ -1,145 +1,76 @@
 
 
-# Fix de Navegacion Inline + 7 Bugs del CartSidePanel
+# Refactorizacion: Mis Pedidos, Direcciones y Perfil como experiencia de Tienda
 
-## Resumen
+## Problema
 
-La implementacion anterior creo los sheets (PerfilSheet, DireccionesSheet) y los conecto a PedirPage, pero hay problemas pendientes del prompt original mas 7 bugs criticos en el CartSidePanel de desktop.
+Actualmente "Mis Pedidos", "Mis Direcciones" y "Mi Perfil" existen en DOS lugares:
+1. Como **paginas dentro de Mi Cuenta** (`/cuenta/pedidos`, `/cuenta/direcciones`, `/cuenta/perfil`) con sidebar de sistema, tipografia de admin, layout de panel interno.
+2. Como **Sheets inline** dentro de `/pedir/:slug` (ya implementados: `MisPedidosSheet`, `DireccionesSheet`, `PerfilSheet`).
 
----
+El usuario ve la version de "Mi Cuenta" que rompe la fluidez. Estas 3 secciones son de **cliente final**, no de staff operativo. Solo "Mi Local" y "Mi Marca" son "sistemas".
 
-## Parte 1: Verificar y corregir Sheets inline
+## Solucion
 
-Los sheets ya existen y estan conectados en PedirPage. Verificar que los callbacks `onMiPerfil` y `onMisDirecciones` se pasan correctamente a traves de toda la cadena: PedirPage -> WebappMenuView -> WebappHeader -> UserMenuDropdown. Si hay algun eslabon roto, corregirlo.
-
-**Archivos**: `UserMenuDropdown.tsx`, `WebappHeader.tsx`, `WebappMenuView.tsx`, `PedirPage.tsx`
-
----
-
-## Parte 2: Landing - ya implementada
-
-El header transparente con scroll ya funciona en Index.tsx. Se verifica que no haya logo duplicado en el hero (ya fue removido).
+Eliminar las rutas de sistema (`/cuenta/pedidos`, `/cuenta/direcciones`) y que estas funcionalidades vivan exclusivamente como **Sheets inline** dentro del contexto de tienda. El perfil del cliente se maneja via el `PerfilSheet`. Mi Cuenta conserva el perfil de staff (con PIN, password, datos laborales) para empleados.
 
 ---
 
-## Parte 3: BranchLanding - ya usa WebappHeader
+## Cambios
 
-Verificado que BranchLanding.tsx ya importa y usa WebappHeader.
+### 1. CuentaSidebar: Eliminar secciones de cliente
 
----
+Remover de `CuentaSidebar.tsx`:
+- La seccion "MIS PEDIDOS" completa (Historial + Mis Direcciones)
+- El link "Mi Perfil" (el perfil de cliente se gestiona desde la tienda; el de staff ya esta en CuentaHome)
 
-## Parte 4: TrackingPage - ya usa WebappHeader
+Solo quedan: Inicio, Mi Trabajo, Solicitudes, Comparativo, Comunicados, Reglamento.
 
-Verificado que TrackingPage.tsx ya importa WebappHeader.
+### 2. App.tsx: Eliminar rutas de paginas de cliente
 
----
+Eliminar las rutas bajo `/cuenta`:
+- `<Route path="pedidos" ... />`
+- `<Route path="direcciones" ... />`
 
-## Parte 5: CuentaLayout - "Ir a la Tienda"
+Mantener `<Route path="perfil" ... />` porque CuentaPerfil tiene funcionalidades de staff (PIN de fichaje, cambio de password) que no estan en PerfilSheet.
 
-Ya tiene el boton con ShoppingBag. Verificar que funciona correctamente.
+### 3. UserMenuDropdown: Siempre abrir Sheets, nunca navegar a /cuenta
 
----
+Cambiar los fallbacks del `UserMenuDropdown`:
+- `onMisPedidos` fallback: ya no navega a `/cuenta/pedidos`. Si no se pasa callback, no muestra la opcion o navega a `/pedir` con un param.
+- `onMisDirecciones` fallback: idem.
+- `onMiPerfil` fallback: idem.
 
-## Parte 6: Paginas institucionales con carrito
+Como el `UserMenuDropdown` siempre recibe callbacks cuando esta dentro de PedirPage (que es el unico lugar donde se usa la tienda), esto ya funciona. Solo hay que asegurar que fuera de la tienda (ej: landing, nosotros) los items del dropdown no intenten navegar a `/cuenta/...`.
 
-Ya implementado en Nosotros.tsx. Verificar Franquicias.tsx y Contacto.tsx.
+**Solucion**: Si no hay callbacks, ocultar esas opciones del dropdown (ya que solo tienen sentido dentro de la tienda).
 
----
+### 4. CuentaHome: Quitar boton "Mis pedidos"
 
-## Bugs criticos del CartSidePanel (Parte 7)
+En `CuentaHome.tsx` hay un boton que navega a `/cuenta/pedidos`. Reemplazarlo con un link a `/pedir` (la tienda) o eliminarlo.
 
-### Bug 7A: "Ver estado" del banner no funciona en desktop
+### 5. Paginas institucionales (Landing, Nosotros, Franquicias, Contacto)
 
-**Problema**: El `useEffect` en CartSidePanel que escucha `externalTrackingCode` no se re-dispara si el valor no cambia.
+El `WebappHeader` en estas paginas NO pasa callbacks de Sheets. Entonces el `UserMenuDropdown` NO debe mostrar "Mis pedidos" / "Mis direcciones" / "Mi perfil" como opciones que naveguen a `/cuenta/...`.
 
-**Solucion**: Agregar un `trackingTrigger` counter en PedirPage que se incrementa cada vez que se llama `handleShowTracking`. Pasar ese trigger como prop a CartSidePanel y usarlo como dependencia del useEffect.
+**Dos opciones**:
+- **A)** Ocultar esas opciones cuando no hay callbacks (solucion simple)
+- **B)** Navegar a `/pedir` con params tipo `?action=pedidos` para que PedirPage abra el sheet automaticamente
 
-**Archivos**: `PedirPage.tsx`, `CartSidePanel.tsx`
-
-### Bug 7B: "Pedir algo mas" destruye el tracking sin retorno
-
-**Problema**: `handleNewOrder` borra `localStorage` y el trackingCode, perdiendo toda referencia al pedido activo.
-
-**Solucion**: Implementar un sistema de tabs con multiples pedidos activos:
-- Cambiar de un unico `trackingCode` a un array `activeOrders: string[]`
-- Agregar un `selectedTab: 'cart' | string` (string = trackingCode)
-- "Pedir algo mas" cambia a tab 'cart' sin borrar los pedidos activos
-- Los pedidos se remueven de tabs cuando llegan a estado terminal (entregado/cancelado)
-- Renderizar tabs en la parte superior del panel
-
-**Archivo**: `CartSidePanel.tsx`
-
-### Bug 7C: ActiveOrderBanner solo muestra UN pedido
-
-**Problema**: La query usa `.limit(1)`.
-
-**Solucion**: Quitar el `.limit(1)` y usar `.maybeSingle()` cambiado a select normal. Si hay multiples pedidos activos, mostrar "Tenes N pedidos activos -- Ver estado". Si hay uno solo, mantener el formato actual.
-
-**Archivo**: `ActiveOrderBanner.tsx`
-
-### Bug 7D: Posicionamiento fijo del side panel con `top-[114px]` hardcodeado
-
-**Problema**: El valor 114px no se ajusta cuando el header cambia de altura (con/sin banner, con/sin search bar).
-
-**Solucion**: Cambiar de layout `fixed` a un layout flex integrado. El side panel se convierte en un `aside` sticky dentro del layout flex principal de WebappMenuView, eliminando el posicionamiento fijo.
-
-**Archivos**: `CartSidePanel.tsx`, `WebappMenuView.tsx` (o `PedirPage.tsx`)
-
-### Bug 7E: Upsell aparece con carrito vacio
-
-**Problema**: Las sugerencias de "Queres agregar algo mas?" se muestran incluso cuando el carrito esta vacio despues de un pedido, lo cual es confuso.
-
-**Solucion**: Mover el bloque de upsell dentro de la condicion `cart.items.length > 0`. Si el carrito esta vacio y no hay tracking activo, mostrar el estado vacio limpio.
-
-**Archivo**: `CartSidePanel.tsx`
-
-### Bug 7F: "Ver estado" abre CartSheet mobile en desktop
-
-**Problema**: El `useEffect` en PedirPage que escucha `externalTrackingCode` siempre hace `setCartOpen(true)`, lo cual abre el CartSheet de mobile incluso en desktop.
-
-**Solucion**: Solo abrir CartSheet cuando no hay side panel visible (`!showSidePanel`).
-
-```typescript
-useEffect(() => {
-  if (externalTrackingCode && !showSidePanel) {
-    setCartOpen(true);
-  }
-}, [externalTrackingCode]);
-```
-
-**Archivo**: `PedirPage.tsx`
+Recomiendo **opcion A** por simplicidad: en paginas institucionales el dropdown solo muestra nombre, email, y links a Mi Local / Mi Marca / Cerrar sesion.
 
 ---
 
-## Resumen de archivos a modificar
+## Resumen de archivos
 
-| Archivo | Cambios |
-|---------|---------|
-| `CartSidePanel.tsx` | Sistema multi-pedido con tabs, fix upsell solo con items, cambiar de fixed a layout flex/sticky, trigger externo para tracking |
-| `PedirPage.tsx` | Agregar trackingTrigger counter, fix CartSheet solo en mobile, pasar trigger a CartSidePanel |
-| `ActiveOrderBanner.tsx` | Soportar multiples pedidos activos, quitar .limit(1) |
-| `WebappMenuView.tsx` | Ajustar layout para integrar side panel como flex child en vez de fixed |
-| `Franquicias.tsx` | Agregar showCart con lectura de localStorage |
-| `Contacto.tsx` | Agregar showCart con lectura de localStorage |
+| Archivo | Cambio |
+|---------|--------|
+| `src/components/layout/CuentaSidebar.tsx` | Eliminar seccion "MIS PEDIDOS" (Historial + Direcciones) y link "Mi Perfil" |
+| `src/App.tsx` | Eliminar rutas `/cuenta/pedidos` y `/cuenta/direcciones`, mantener `/cuenta/perfil` para staff |
+| `src/components/webapp/UserMenuDropdown.tsx` | Si no hay callbacks, ocultar "Mis pedidos", "Mis direcciones", "Mi perfil" del dropdown |
+| `src/pages/cuenta/CuentaHome.tsx` | Cambiar boton "Mis pedidos" para ir a `/pedir` en vez de `/cuenta/pedidos` |
 
-## Detalle tecnico del sistema de tabs
-
-```text
-Estado del CartSidePanel:
-  activeOrders: string[]        -- tracking codes de pedidos activos
-  selectedTab: 'cart' | string  -- 'cart' para carrito nuevo, o un trackingCode
-
-UI:
-  +--------------------------------------------+
-  |  [Carrito (2)]  [#64 Prep.]  [#65 Enviado] |  <-- tabs
-  +--------------------------------------------+
-  |  (contenido segun tab seleccionada)        |
-  +--------------------------------------------+
-
-Flujos:
-  - Pedido confirmado -> se agrega code a activeOrders, selectedTab = code
-  - "Pedir algo mas" -> selectedTab = 'cart' (no borra activeOrders)
-  - Pedido entregado/cancelado -> se remueve de activeOrders
-  - Click en tab -> cambia selectedTab
-```
+### Archivos que se conservan (no se eliminan)
+- `MisPedidosPage.tsx` y `MisDireccionesPage.tsx`: se desconectan de rutas pero pueden eliminarse si se prefiere limpieza total
+- `MisPedidosSheet.tsx`, `DireccionesSheet.tsx`, `PerfilSheet.tsx`: ya existen y funcionan correctamente dentro de PedirPage
 
