@@ -148,7 +148,22 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
         },
       });
 
-      if (orderErr) throw orderErr;
+      if (orderErr) {
+        // Extract the actual error message from the edge function response
+        let errorMsg = 'Error al crear el pedido';
+        try {
+          if (orderErr instanceof Error && 'context' in orderErr) {
+            const ctx = (orderErr as any).context;
+            if (ctx?.json) {
+              const body = await ctx.json();
+              errorMsg = body?.error || errorMsg;
+            }
+          } else if (typeof orderErr === 'object' && orderErr !== null && 'error' in (orderErr as any)) {
+            errorMsg = (orderErr as any).error;
+          }
+        } catch { /* ignore parse errors */ }
+        throw new Error(errorMsg);
+      }
       if (!orderData?.pedido_id) throw new Error('No se pudo crear el pedido');
 
       const { pedido_id, tracking_code, numero_pedido } = orderData;
