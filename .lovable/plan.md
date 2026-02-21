@@ -1,93 +1,126 @@
 
 
-## Plan: Notificaciones persistentes de pedidos WebApp
+## Plan: Rediseno Profesional de la WebApp de Pedidos
 
-### Problema
+Basado en el analisis de todas las referencias (DoorDash, Rappi, PedidosYa, BK, McDonald's) y el plan previamente aprobado, este es el plan completo de implementacion.
 
-Hoy los pedidos de la WebApp solo se ven dentro del POS (`POSPage.tsx`) en el componente `WebappOrdersPanel`. Si el cajero navega a otra seccion (Caja, Stock, Equipo, etc.), no hay ninguna indicacion de que llego un pedido nuevo. Si el pedido se autoaceptara en el futuro, tampoco habria registro visual de ese evento.
+### Resumen de cambios
 
-### Solucion propuesta
+Se va a transformar la WebApp de un layout mobile-only a un sistema responsivo profesional con 3 breakpoints claros, inspirado en DoorDash/Rappi.
 
-Crear un **indicador global persistente** que viva en el layout de Mi Local (no solo en el POS) y que sea imposible de ignorar:
+---
 
-```
-+------------------------------------------+
-| [Mi Local Layout]                        |
-|                                          |
-| +-- Banner flotante (si hay pendientes) -+
-| | 🔔 3 pedidos WebApp pendientes  [VER] ||
-| +----------------------------------------+
-|                                          |
-| [Sidebar]    [Contenido de la pagina]    |
-+------------------------------------------+
-```
+### 1. Selector de Locales (`src/pages/Pedir.tsx`)
 
-### Cambios especificos
+**Problemas actuales**: `opacity-70` en locales cerrados, `max-w-3xl` deja mucho espacio vacio, grilla solo 2 columnas.
 
-**1. Componente `WebappIncomingBanner`** (nuevo)
-- Banner sticky/flotante que aparece en CUALQUIER pagina dentro de Mi Local
-- Se monta en `BranchLayout.tsx` (el layout padre de todas las paginas del local)
-- Consulta pedidos con `origen = 'webapp'` y `estado = 'pendiente'` cada 10 segundos
-- Si hay pedidos pendientes:
-  - Muestra banner con contador y sonido de notificacion (opcional, con toggle)
-  - Boton "Ver pedidos" que navega al POS o abre un modal inline
-- Si no hay pedidos pendientes: el banner no se renderiza (0 impacto visual)
-- Auto-aceptados: si en el futuro se implementa autoaceptacion, al cambiar a `en_preparacion` automaticamente, el pedido deja de ser `pendiente` y desaparece del banner -- pero ya esta en la barra de cocina del POS como "Preparando"
+**Cambios**:
+- Quitar `opacity-70` de locales cerrados (usar solo badge de estado)
+- Cambiar `max-w-3xl` a `max-w-5xl`
+- Grilla responsiva: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`
 
-**2. Indicador en Sidebar**
-- En `LocalSidebar.tsx`, agregar un badge con el conteo de pedidos webapp pendientes al lado de "Punto de Venta" o como item separado
-- Asi, sin importar donde este el cajero, ve el numerito en la sidebar
+---
 
-**3. Sonido de notificacion**
-- Reproducir un sonido corto (beep/campana) cuando llega un pedido nuevo
-- Usar un ref para trackear el ultimo conteo conocido y solo sonar cuando sube
-- El audio se carga como un asset estatico pequenio (< 10KB)
+### 2. Landing del Local (`src/components/webapp/BranchLanding.tsx`)
 
-**4. Realtime (mejora de polling)**
-- Actualmente el `WebappOrdersPanel` usa polling cada 10s
-- Para el banner global, usar Supabase Realtime en la tabla `pedidos` filtrado por `branch_id` y `origen = 'webapp'` para deteccion instantanea
-- Esto elimina el delay de hasta 10 segundos
+**Problema**: No hay forma de volver a `/pedir`.
 
-### Flujo resultante
+**Cambios**:
+- Agregar boton "Volver" en el hero que navega a `/pedir`
+- Pasar `onBack` como prop desde `PedirPage.tsx`
 
-```
-Cajero en CUALQUIER pagina de Mi Local
-         |
-         v
-  Banner global: "2 pedidos WebApp pendientes [Ver]"
-  Sidebar: POS (2) <-- badge con conteo
-         |
-         v
-  Click "Ver" --> Navega al POS
-         |
-         v
-  WebappOrdersPanel: Acepta/Rechaza
-         |
-         v
-  Banner desaparece (0 pendientes)
+---
+
+### 3. Menu de Productos - Layout Responsivo (`src/components/webapp/WebappMenuView.tsx`)
+
+Este es el cambio principal. Layout inspirado en DoorDash imagen 789/792:
+
+```text
+MOBILE (<1024px)                    DESKTOP (>=1024px)
++---------------------+            +------+-----------------------+
+| [Header + Search]   |            | [Header full-width]         |
+| [Tabs categorias]   |            +------+-----------------------+
++---------------------+            | Side | Productos             |
+| Productos           |            | bar  | 2 cols horizontal     |
+| 2 cols grid         |            | cats | (texto izq, img der)  |
+|                     |            |      |                       |
++---------------------+            +------+-----------------------+
 ```
 
-### Archivos a crear
-- `src/components/local/WebappIncomingBanner.tsx` -- Banner flotante global
-- `src/hooks/useWebappPendingCount.ts` -- Hook compartido (realtime) para contar pedidos webapp pendientes
+**Cambios**:
+- Agregar sidebar de categorias visible solo en `lg:` (sticky, ~200px ancho)
+- Ocultar tabs horizontales en `lg:` (`lg:hidden`)
+- Contenedor principal `max-w-6xl mx-auto`
+- Grilla de productos adaptativa: `grid-cols-2` mobile, `md:grid-cols-3` tablet, en desktop 2 columnas de cards horizontales (estilo DoorDash)
+- Scroll-spy sincronizado entre sidebar y tabs
+
+---
+
+### 4. Cards de Producto (`src/components/webapp/ProductCard.tsx`)
+
+Inspirado en DoorDash imagen 788/789: cards horizontales con texto a la izquierda e imagen cuadrada a la derecha.
+
+**Cambios**:
+- **Mobile (grid)**: Mantener cards verticales compactas pero reducir aspect-ratio de imagen a `aspect-[3/2]`
+- **Desktop**: Nuevo layout horizontal estilo DoorDash: nombre (bold), descripcion (2 lineas max), precio a la izquierda. Imagen cuadrada ~100px a la derecha con bordes redondeados. Boton "+" discreto sobre la imagen.
+- Preparar estructura para futuros badges de promo (precio tachado, badge "%-OFF") -- se renderiza condicionalmente, hoy no hay datos
+
+---
+
+### 5. Detalle de Producto (`src/components/webapp/ProductCustomizeSheet.tsx`)
+
+Inspirado en DoorDash imagenes 790/793: modal centrado en desktop.
+
+**Cambios**:
+- **Mobile**: Mantener Sheet desde abajo (funciona bien)
+- **Desktop (lg+)**: Usar `Dialog` (modal centrado) con imagen arriba, opciones debajo, footer sticky con cantidad + "Agregar $X"
+- Crear wrapper que detecte viewport y renderice Sheet o Dialog segun corresponda
+
+---
+
+### 6. Carrito: Panel Lateral Desktop (`src/components/webapp/CartSidePanel.tsx` - NUEVO)
+
+Inspirado en DoorDash imagen 795 (carrito lateral derecho en checkout).
+
+**Nota**: Este componente se agrega como mejora futura opcional. Por ahora el foco esta en los puntos 1-5 que son los mas impactantes visualmente. Se puede implementar en una segunda iteracion si se desea.
+
+---
+
+### 7. Barra de Carrito (`src/components/webapp/CartBar.tsx`)
+
+**Cambio menor**: Ocultar en desktop cuando se implemente el CartSidePanel (futuro). Por ahora se mantiene.
+
+---
+
+### 8. Pagina del Pedido (`src/pages/webapp/PedirPage.tsx`)
+
+**Cambios**:
+- Pasar prop `onBack` a `BranchLanding` para navegar a `/pedir`
+
+---
 
 ### Archivos a modificar
-- `src/pages/local/BranchLayout.tsx` -- Montar el banner global
-- `src/components/layout/LocalSidebar.tsx` -- Agregar badge de conteo al item "Punto de Venta"
-- `src/components/pos/WebappOrdersPanel.tsx` -- Reutilizar el hook compartido en lugar de su propia query
 
-### Detalles tecnicos
+| Archivo | Tipo de cambio |
+|---------|---------------|
+| `src/pages/Pedir.tsx` | Quitar opacity, mejorar grilla, max-width |
+| `src/pages/webapp/PedirPage.tsx` | Pasar onBack a BranchLanding |
+| `src/components/webapp/BranchLanding.tsx` | Agregar boton volver |
+| `src/components/webapp/WebappMenuView.tsx` | Layout responsivo, sidebar desktop, max-width |
+| `src/components/webapp/ProductCard.tsx` | Cards estilo DoorDash horizontal para desktop |
+| `src/components/webapp/ProductCustomizeSheet.tsx` | Dialog en desktop, Sheet en mobile |
 
-**Hook `useWebappPendingCount`**:
-- Usa `supabase.channel()` para escuchar INSERT/UPDATE en `pedidos` donde `origen = 'webapp'`
-- Mantiene un conteo local que se sincroniza con una query inicial
-- Expone `{ count, orders, isLoading }` para que tanto el banner como la sidebar lo consuman
-- Detecta incrementos para disparar el sonido
+### Secuencia de implementacion
 
-**Migracion necesaria**: Habilitar realtime en la tabla `pedidos`:
-```sql
-ALTER PUBLICATION supabase_realtime ADD TABLE public.pedidos;
-```
+1. `Pedir.tsx` - Arreglos rapidos (opacity, grilla)
+2. `BranchLanding.tsx` + `PedirPage.tsx` - Boton volver
+3. `ProductCard.tsx` - Cards compactas estilo DoorDash
+4. `WebappMenuView.tsx` - Layout responsivo con sidebar desktop
+5. `ProductCustomizeSheet.tsx` - Dialog en desktop
 
-**Sonido**: Se usara `new Audio('/notification.mp3').play()` con un archivo corto. Si no se quiere agregar un asset, se puede generar un beep con Web Audio API (sin dependencias).
+### Preparacion para futuras mejoras
+
+- **Promociones**: Las cards quedan preparadas con espacio condicional para badge de descuento y precio tachado. Solo falta agregar `precio_promo` al tipo `WebappMenuItem` cuando se implemente.
+- **Tracking**: Ya esta implementado en `/pedido/:trackingCode` con realtime.
+- **CartSidePanel desktop**: La arquitectura queda lista para agregar un panel lateral de carrito en desktop en una segunda fase.
 
