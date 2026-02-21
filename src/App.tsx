@@ -141,7 +141,6 @@ const App = () => (
       <AuthProvider>
         <ImpersonationProvider>
           <AuthModalProvider>
-          <AuthModal />
           <Sonner />
           <FloatingOrderChat />
           <div className="pointer-events-none fixed bottom-2 right-2 z-[60] flex flex-col items-end gap-1">
@@ -149,6 +148,7 @@ const App = () => (
             <UserFingerprint />
           </div>
           <BrowserRouter>
+            <AuthModal />
             <Routes>
             {/* Rutas Públicas */}
             <Route path="/" element={<Index />} />
