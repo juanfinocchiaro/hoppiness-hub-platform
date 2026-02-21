@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { authenticateWSAA, requestCAE } from "../_shared/wsaa.ts";
+import { authenticateWSAA, requestCAE, getLastVoucher } from "../_shared/wsaa.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { data: nuevoNumero, error: rpcError } = await adminSupabase.rpc(
+    let { data: nuevoNumero, error: rpcError } = await adminSupabase.rpc(
       "obtener_proximo_numero_factura",
       { _branch_id: branch_id, _tipo: tipo_factura }
     );
@@ -217,6 +217,33 @@ Deno.serve(async (req) => {
           esProduccion
         );
 
+        // Consultar último comprobante autorizado en ARCA (fuente de verdad)
+        const lastAuthorized = await getLastVoucher(
+          credentials,
+          config.cuit,
+          config.punto_venta,
+          cbteTipo,
+          esProduccion
+        );
+        const arcaNumero = lastAuthorized + 1;
+
+        console.log(`DB numero: ${nuevoNumero}, ARCA ultimo autorizado: ${lastAuthorized}, usando: ${arcaNumero}`);
+
+        // Si el contador de la DB está desfasado, sincronizar
+        if (arcaNumero !== nuevoNumero) {
+          console.warn(`Desfase detectado: DB=${nuevoNumero}, ARCA=${arcaNumero}. Sincronizando DB...`);
+          const tipoCol = tipo_factura === "A" ? "ultimo_nro_factura_a" 
+            : tipo_factura === "B" ? "ultimo_nro_factura_b" 
+            : "ultimo_nro_factura_c";
+          await adminSupabase
+            .from("afip_config")
+            .update({ [tipoCol]: arcaNumero })
+            .eq("branch_id", branch_id);
+        }
+
+        // Usar el número real de ARCA
+        nuevoNumero = arcaNumero;
+
         // Solicitar CAE
         const result = await requestCAE(
           credentials,
@@ -227,8 +254,8 @@ Deno.serve(async (req) => {
             concepto: 1,
             docTipo: receptor_cuit ? 80 : 99,
             docNro: receptor_cuit ? parseInt(receptor_cuit.replace(/-/g, "")) : 0,
-            cbteDesde: nuevoNumero,
-            cbteHasta: nuevoNumero,
+            cbteDesde: arcaNumero,
+            cbteHasta: arcaNumero,
             cbteFch,
             impTotal: total,
             impTotConc: 0,
@@ -257,16 +284,16 @@ Deno.serve(async (req) => {
           Observaciones: result.observaciones,
         };
 
-        console.log(`Factura emitida: CAE=${cae}, Vto=${caeVencimiento}`);
+        console.log(`Factura emitida: CAE=${cae}, Vto=${caeVencimiento}, Nro=${arcaNumero}`);
       } catch (arcaError) {
         const errorMsg = arcaError instanceof Error ? arcaError.message : String(arcaError);
         console.error("Error ARCA al emitir factura:", errorMsg);
 
-        // Loguear error
+        // Loguear error (2000 chars para no truncar)
         await supabase.from("afip_errores_log").insert({
           branch_id,
           tipo_error: "emision_factura",
-          mensaje: errorMsg.substring(0, 500),
+          mensaje: errorMsg.substring(0, 2000),
           request_data: afipRequest,
         });
 
