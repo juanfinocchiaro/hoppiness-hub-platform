@@ -33,6 +33,7 @@ import { LocalSidebar } from '@/components/layout/LocalSidebar';
 import { PanelSwitcher } from '@/components/layout/PanelSwitcher';
 import ImpersonationSelector from '@/components/admin/ImpersonationSelector';
 import { ExternalLink } from '@/components/ui/ExternalLink';
+import { WebappIncomingBanner } from '@/components/local/WebappIncomingBanner';
 
 type Branch = Tables<'branches'>;
 
@@ -311,6 +312,9 @@ export default function BranchLayout() {
       footer={footer}
     >
       {renderContent()}
+
+      {/* Banner global de pedidos webapp pendientes */}
+      {branchId && <WebappIncomingBanner branchId={branchId} posEnabled={posEnabled} />}
 
       {/* Impersonation Selector Modal */}
       <ImpersonationSelector
