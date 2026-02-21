@@ -2164,11 +2164,13 @@ export type Database = {
         Row: {
           afip_request: Json | null
           afip_response: Json | null
+          anulada: boolean
           branch_id: string
           cae: string | null
           cae_vencimiento: string | null
           created_at: string
           emitido_por: string | null
+          factura_asociada_id: string | null
           fecha_emision: string
           id: string
           iva: number
@@ -2186,11 +2188,13 @@ export type Database = {
         Insert: {
           afip_request?: Json | null
           afip_response?: Json | null
+          anulada?: boolean
           branch_id: string
           cae?: string | null
           cae_vencimiento?: string | null
           created_at?: string
           emitido_por?: string | null
+          factura_asociada_id?: string | null
           fecha_emision?: string
           id?: string
           iva?: number
@@ -2208,11 +2212,13 @@ export type Database = {
         Update: {
           afip_request?: Json | null
           afip_response?: Json | null
+          anulada?: boolean
           branch_id?: string
           cae?: string | null
           cae_vencimiento?: string | null
           created_at?: string
           emitido_por?: string | null
+          factura_asociada_id?: string | null
           fecha_emision?: string
           id?: string
           iva?: number
@@ -2240,6 +2246,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facturas_emitidas_factura_asociada_id_fkey"
+            columns: ["factura_asociada_id"]
+            isOneToOne: false
+            referencedRelation: "facturas_emitidas"
             referencedColumns: ["id"]
           },
           {

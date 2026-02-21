@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ChevronDown, ChevronRight, Pencil, Printer, FileText, ChefHat, Truck, Wine } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, Printer, FileText, ChefHat, Truck, Wine, Ban, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,6 +9,9 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { PaymentEditModal } from '@/components/pos/PaymentEditModal';
 import type { PosOrder } from '@/hooks/pos/usePosOrderHistory';
@@ -21,6 +24,10 @@ interface Props {
   branchId?: string;
   hasOpenShift?: boolean;
   onReprint?: (order: PosOrder, type: ReprintType) => void;
+  onCancelOrder?: (order: PosOrder) => void;
+  onChangeInvoice?: (order: PosOrder) => void;
+  /** Set of category IDs that are tipo_impresion='vale' */
+  valeCategoryIds?: Set<string>;
 }
 
 const METODO_LABELS: Record<string, string> = {
@@ -59,7 +66,7 @@ function paymentSummary(pagos: PosOrder['pedido_pagos']) {
   return 'Dividido';
 }
 
-export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, onReprint }: Props) {
+export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, onReprint, onCancelOrder, onChangeInvoice, valeCategoryIds }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingOrder, setEditingOrder] = useState<PosOrder | null>(null);
   const isMobile = useIsMobile();
@@ -107,7 +114,8 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, o
           <TableBody>
             {orders.map(order => {
               const isExpanded = expandedId === order.id;
-              const hasInvoice = order.facturas_emitidas?.length > 0;
+              const activeInvoice = order.facturas_emitidas?.find(f => !f.anulada);
+              const hasActiveInvoice = !!activeInvoice;
               return (
                 <>
                   <TableRow
@@ -121,7 +129,7 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, o
                     <TableCell className="font-medium tabular-nums">
                       <span className="flex items-center gap-1">
                         {order.numero_pedido}
-                        {hasInvoice && <FileText className="w-3.5 h-3.5 text-primary" />}
+                        {hasActiveInvoice && <FileText className="w-3.5 h-3.5 text-primary" />}
                       </span>
                     </TableCell>
                     <TableCell className="text-sm">
@@ -149,6 +157,9 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, o
                           canEdit={!!hasOpenShift && !!branchId}
                           onEdit={() => setEditingOrder(order)}
                           onReprint={onReprint}
+                          onCancelOrder={onCancelOrder}
+                          onChangeInvoice={onChangeInvoice}
+                          valeCategoryIds={valeCategoryIds}
                         />
                       </TableCell>
                     </TableRow>
@@ -174,135 +185,241 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, o
   );
 }
 
-function OrderDetail({ order, canEdit, onEdit, onReprint }: {
+/* ─── Reprint button with disabled state + tooltip ─── */
+function ReprintButton({ label, icon: Icon, enabled, disabledReason, onClick }: {
+  label: string;
+  icon: React.ElementType;
+  enabled: boolean;
+  disabledReason?: string;
+  onClick: () => void;
+}) {
+  const btn = (
+    <Button
+      variant="outline"
+      size="sm"
+      className={`h-8 text-xs ${!enabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+      onClick={(e) => { e.stopPropagation(); if (enabled) onClick(); }}
+      disabled={!enabled}
+    >
+      <Icon className="h-3 w-3 mr-1" />
+      {label}
+    </Button>
+  );
+
+  if (!enabled && disabledReason) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span>{btn}</span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="text-xs">
+            {disabledReason}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return btn;
+}
+
+function OrderDetail({ order, canEdit, onEdit, onReprint, onCancelOrder, onChangeInvoice, valeCategoryIds }: {
   order: PosOrder;
   canEdit?: boolean;
   onEdit?: () => void;
   onReprint?: (order: PosOrder, type: ReprintType) => void;
+  onCancelOrder?: (order: PosOrder) => void;
+  onChangeInvoice?: (order: PosOrder) => void;
+  valeCategoryIds?: Set<string>;
 }) {
-  const factura = order.facturas_emitidas?.[0];
-  const pvStr = factura ? String(factura.punto_venta).padStart(5, '0') : '';
-  const numStr = factura ? String(factura.numero_comprobante).padStart(8, '0') : '';
-  const isDelivery = order.tipo_servicio === 'delivery';
+  const activeInvoice = order.facturas_emitidas?.find(f => !f.anulada);
+  const cancelledInvoices = order.facturas_emitidas?.filter(f => f.anulada) || [];
+  const creditNotes = order.facturas_emitidas?.filter(f =>
+    f.tipo_comprobante.startsWith('NC_')
+  ) || [];
 
-  // Check if order has vale items (we check by looking for items - in absence of category info, show always)
-  const hasValeItems = true; // Will be filtered in the reprint handler based on categorias
+  const hasActiveInvoice = !!activeInvoice;
+  const isDelivery = order.tipo_servicio === 'delivery';
+  const isCancelled = order.estado === 'cancelado';
+
+  // Check if order has vale items
+  const hasValeItems = valeCategoryIds && valeCategoryIds.size > 0
+    ? order.pedido_items?.some(item => item.categoria_carta_id && valeCategoryIds.has(item.categoria_carta_id))
+    : true; // If no category data, show enabled by default
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-      {/* Items */}
-      <div>
-        <p className="font-medium mb-1">Items</p>
-        <ul className="space-y-0.5">
-          {order.pedido_items?.map(item => (
-            <li key={item.id} className="flex justify-between">
-              <span>{item.nombre} x{item.cantidad}</span>
-              <span className="tabular-nums">{fmt(item.subtotal)}</span>
-            </li>
-          ))}
-        </ul>
-        {order.descuento && order.descuento > 0 && (
-          <div className="flex justify-between mt-1 text-destructive">
-            <span>Descuento</span>
-            <span>-{fmt(order.descuento)}</span>
+    <div className="space-y-4 text-sm">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Items */}
+        <div>
+          <p className="font-medium mb-1">Items</p>
+          <ul className="space-y-0.5">
+            {order.pedido_items?.map(item => (
+              <li key={item.id} className="flex justify-between">
+                <span>{item.nombre} x{item.cantidad}</span>
+                <span className="tabular-nums">{fmt(item.subtotal)}</span>
+              </li>
+            ))}
+          </ul>
+          {order.descuento && order.descuento > 0 && (
+            <div className="flex justify-between mt-1 text-destructive">
+              <span>Descuento</span>
+              <span>-{fmt(order.descuento)}</span>
+            </div>
+          )}
+          <div className="flex justify-between mt-1 font-medium border-t pt-1">
+            <span>Total</span>
+            <span>{fmt(order.total)}</span>
           </div>
-        )}
-        <div className="flex justify-between mt-1 font-medium border-t pt-1">
-          <span>Total</span>
-          <span>{fmt(order.total)}</span>
         </div>
-      </div>
 
-      {/* Payments + Actions */}
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <p className="font-medium">Pagos</p>
-          {canEdit && onEdit && (
-            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onEdit}>
-              <Pencil className="h-3 w-3 mr-1" />
-              Editar pago
-            </Button>
+        {/* Payments + Invoice Info */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <p className="font-medium">Pagos</p>
+            {canEdit && onEdit && !isCancelled && (
+              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onEdit}>
+                <Pencil className="h-3 w-3 mr-1" />
+                Editar pago
+              </Button>
+            )}
+          </div>
+          <ul className="space-y-0.5">
+            {order.pedido_pagos?.map(pago => (
+              <li key={pago.id} className="flex justify-between">
+                <span>{METODO_LABELS[pago.metodo] || pago.metodo}</span>
+                <span className="tabular-nums">{fmt(pago.monto)}</span>
+              </li>
+            ))}
+          </ul>
+
+          {/* Active invoice info */}
+          {activeInvoice && (
+            <div className="mt-3 pt-2 border-t space-y-1">
+              <p className="font-medium flex items-center gap-1">
+                <FileText className="h-3.5 w-3.5 text-primary" />
+                Factura {activeInvoice.tipo_comprobante} — N° {String(activeInvoice.punto_venta).padStart(5, '0')}-{String(activeInvoice.numero_comprobante).padStart(8, '0')}
+              </p>
+              {activeInvoice.cae && <p className="text-muted-foreground text-xs">CAE: {activeInvoice.cae}</p>}
+              <p className="font-medium">{fmt(activeInvoice.total)}</p>
+            </div>
+          )}
+
+          {/* Cancelled invoices / Credit Notes */}
+          {cancelledInvoices.length > 0 && (
+            <div className="mt-2 space-y-1">
+              {cancelledInvoices.map(f => (
+                <div key={f.id} className="text-xs text-muted-foreground line-through">
+                  Factura {f.tipo_comprobante} {String(f.punto_venta).padStart(5, '0')}-{String(f.numero_comprobante).padStart(8, '0')} (anulada)
+                </div>
+              ))}
+            </div>
+          )}
+          {creditNotes.length > 0 && (
+            <div className="mt-1 space-y-1">
+              {creditNotes.map(nc => (
+                <div key={nc.id} className="text-xs text-orange-600 dark:text-orange-400">
+                  {nc.tipo_comprobante.replace('_', ' ')} {String(nc.punto_venta).padStart(5, '0')}-{String(nc.numero_comprobante).padStart(8, '0')}
+                  {nc.cae && ` — CAE: ${nc.cae}`}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {isMobileInfo(order) && (
+            <div className="mt-2 text-muted-foreground space-y-0.5">
+              {order.canal_venta && <p>Canal: {CANAL_LABELS[order.canal_venta] || order.canal_venta}</p>}
+              {order.tipo_servicio && <p>Servicio: {SERVICIO_LABELS[order.tipo_servicio] || order.tipo_servicio}</p>}
+              {order.cliente_nombre && <p>Cliente: {order.cliente_nombre}</p>}
+            </div>
           )}
         </div>
-        <ul className="space-y-0.5">
-          {order.pedido_pagos?.map(pago => (
-            <li key={pago.id} className="flex justify-between">
-              <span>{METODO_LABELS[pago.metodo] || pago.metodo}</span>
-              <span className="tabular-nums">{fmt(pago.monto)}</span>
-            </li>
-          ))}
-        </ul>
-
-        {/* Invoice info */}
-        {factura && (
-          <div className="mt-3 pt-2 border-t space-y-1">
-            <p className="font-medium flex items-center gap-1">
-              <FileText className="h-3.5 w-3.5 text-primary" />
-              Factura {factura.tipo_comprobante} — N° {pvStr}-{numStr}
-            </p>
-            {factura.cae && <p className="text-muted-foreground text-xs">CAE: {factura.cae}</p>}
-            <p className="font-medium">{fmt(factura.total)}</p>
-          </div>
-        )}
-
-        {isMobileInfo(order) && (
-          <div className="mt-2 text-muted-foreground space-y-0.5">
-            {order.canal_venta && <p>Canal: {CANAL_LABELS[order.canal_venta] || order.canal_venta}</p>}
-            {order.tipo_servicio && <p>Servicio: {SERVICIO_LABELS[order.tipo_servicio] || order.tipo_servicio}</p>}
-            {order.cliente_nombre && <p>Cliente: {order.cliente_nombre}</p>}
-          </div>
-        )}
-
-        {/* Reprint actions */}
-        {onReprint && (
-          <div className="mt-3 pt-2 border-t">
-            <p className="font-medium mb-2 flex items-center gap-1">
-              <Printer className="h-3.5 w-3.5" />
-              Reimprimir
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs"
-                onClick={(e) => { e.stopPropagation(); onReprint(order, factura ? 'factura' : 'ticket'); }}
-              >
-                <FileText className="h-3 w-3 mr-1" />
-                {factura ? 'Factura' : 'Ticket cliente'}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs"
-                onClick={(e) => { e.stopPropagation(); onReprint(order, 'comanda'); }}
-              >
-                <ChefHat className="h-3 w-3 mr-1" />
-                Comanda
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs"
-                onClick={(e) => { e.stopPropagation(); onReprint(order, 'vale'); }}
-              >
-                <Wine className="h-3 w-3 mr-1" />
-                Vales
-              </Button>
-              {isDelivery && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs"
-                  onClick={(e) => { e.stopPropagation(); onReprint(order, 'delivery'); }}
-                >
-                  <Truck className="h-3 w-3 mr-1" />
-                  Delivery
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* ─── Reprint Section ─── */}
+      {onReprint && (
+        <div className="pt-3 border-t">
+          <p className="font-medium mb-2 flex items-center gap-1 text-xs text-muted-foreground uppercase tracking-wide">
+            <Printer className="h-3.5 w-3.5" />
+            Reimprimir
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <ReprintButton
+              label="Ticket cliente"
+              icon={FileText}
+              enabled={true}
+              onClick={() => onReprint(order, 'ticket')}
+            />
+            <ReprintButton
+              label={hasActiveInvoice ? 'Factura' : 'Factura'}
+              icon={FileText}
+              enabled={hasActiveInvoice}
+              disabledReason="Sin factura emitida"
+              onClick={() => onReprint(order, 'factura')}
+            />
+            <ReprintButton
+              label="Comanda"
+              icon={ChefHat}
+              enabled={true}
+              onClick={() => onReprint(order, 'comanda')}
+            />
+            <ReprintButton
+              label="Vales"
+              icon={Wine}
+              enabled={hasValeItems}
+              disabledReason="Sin items de tipo vale"
+              onClick={() => onReprint(order, 'vale')}
+            />
+            <ReprintButton
+              label="Delivery"
+              icon={Truck}
+              enabled={isDelivery}
+              disabledReason="Solo para pedidos delivery"
+              onClick={() => onReprint(order, 'delivery')}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ─── Actions Section ─── */}
+      {!isCancelled && (onCancelOrder || onChangeInvoice) && (
+        <div className="pt-3 border-t">
+          <p className="font-medium mb-2 flex items-center gap-1 text-xs text-muted-foreground uppercase tracking-wide">
+            Acciones
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {onChangeInvoice && hasActiveInvoice && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={(e) => { e.stopPropagation(); onChangeInvoice(order); }}
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Cambiar facturación
+              </Button>
+            )}
+            {onCancelOrder && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+                onClick={(e) => { e.stopPropagation(); onCancelOrder(order); }}
+              >
+                <Ban className="h-3 w-3 mr-1" />
+                Anular pedido
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {isCancelled && (
+        <div className="pt-3 border-t">
+          <Badge variant="destructive" className="text-xs">Pedido anulado</Badge>
+        </div>
+      )}
     </div>
   );
 }

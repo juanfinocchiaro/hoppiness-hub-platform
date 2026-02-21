@@ -130,24 +130,36 @@ export async function getLastVoucher(creds: WSAACredentials, cuit: string, pv: n
   return parseInt(m[1], 10);
 }
 
-export async function requestCAE(
-  creds: WSAACredentials, cuit: string,
-  r: { puntoVenta: number; cbteTipo: number; concepto: number; docTipo: number; docNro: number; cbteDesde: number; cbteHasta: number; cbteFch: string; impTotal: number; impTotConc: number; impNeto: number; impOpEx: number; impIVA: number; impTrib: number; monId: string; monCotiz: number; condicionIVAReceptorId?: number; iva?: { id: number; baseImp: number; importe: number }[] },
-  prod: boolean
-): Promise<{ cae: string; caeVto: string; cbteDesde: number; cbteHasta: number; resultado: string; observaciones?: string }> {
+export interface CAERequestParams {
+  puntoVenta: number; cbteTipo: number; concepto: number; docTipo: number; docNro: number;
+  cbteDesde: number; cbteHasta: number; cbteFch: string;
+  impTotal: number; impTotConc: number; impNeto: number; impOpEx: number; impIVA: number; impTrib: number;
+  monId: string; monCotiz: number; condicionIVAReceptorId?: number;
+  iva?: { id: number; baseImp: number; importe: number }[];
+  cbtesAsoc?: { tipo: number; ptoVta: number; nro: number; cuit: string; cbteFch: string }[];
+}
+
+export interface CAEResult {
+  cae: string; caeVto: string; cbteDesde: number; cbteHasta: number; resultado: string; observaciones?: string;
+}
+
+function buildCAEBody(creds: WSAACredentials, cuit: string, r: CAERequestParams): string {
   const c = cuit.replace(/-/g, "");
   const ivaXml = r.iva?.length ? `<ar:Iva>${r.iva.map(i => `<ar:AlicIva><ar:Id>${i.id}</ar:Id><ar:BaseImp>${i.baseImp.toFixed(2)}</ar:BaseImp><ar:Importe>${i.importe.toFixed(2)}</ar:Importe></ar:AlicIva>`).join("")}</ar:Iva>` : "";
   const condIvaXml = r.condicionIVAReceptorId ? `<ar:CondicionIVAReceptorId>${r.condicionIVAReceptorId}</ar:CondicionIVAReceptorId>` : "";
-  const body = `<ar:Auth><ar:Token>${creds.token}</ar:Token><ar:Sign>${creds.sign}</ar:Sign><ar:Cuit>${c}</ar:Cuit></ar:Auth>
+  const assocXml = r.cbtesAsoc?.length ? `<ar:CbtesAsoc>${r.cbtesAsoc.map(a => `<ar:CbteAsoc><ar:Tipo>${a.tipo}</ar:Tipo><ar:PtoVta>${a.ptoVta}</ar:PtoVta><ar:Nro>${a.nro}</ar:Nro><ar:Cuit>${a.cuit}</ar:Cuit><ar:CbteFch>${a.cbteFch}</ar:CbteFch></ar:CbteAsoc>`).join("")}</ar:CbtesAsoc>` : "";
+
+  return `<ar:Auth><ar:Token>${creds.token}</ar:Token><ar:Sign>${creds.sign}</ar:Sign><ar:Cuit>${c}</ar:Cuit></ar:Auth>
     <ar:FeCAEReq><ar:FeCabReq><ar:CantReg>1</ar:CantReg><ar:PtoVta>${r.puntoVenta}</ar:PtoVta><ar:CbteTipo>${r.cbteTipo}</ar:CbteTipo></ar:FeCabReq>
     <ar:FeDetReq><ar:FECAEDetRequest><ar:Concepto>${r.concepto}</ar:Concepto><ar:DocTipo>${r.docTipo}</ar:DocTipo><ar:DocNro>${r.docNro}</ar:DocNro>
     <ar:CbteDesde>${r.cbteDesde}</ar:CbteDesde><ar:CbteHasta>${r.cbteHasta}</ar:CbteHasta><ar:CbteFch>${r.cbteFch}</ar:CbteFch>
     <ar:ImpTotal>${r.impTotal.toFixed(2)}</ar:ImpTotal><ar:ImpTotConc>${r.impTotConc.toFixed(2)}</ar:ImpTotConc><ar:ImpNeto>${r.impNeto.toFixed(2)}</ar:ImpNeto>
     <ar:ImpOpEx>${r.impOpEx.toFixed(2)}</ar:ImpOpEx><ar:ImpIVA>${r.impIVA.toFixed(2)}</ar:ImpIVA><ar:ImpTrib>${r.impTrib.toFixed(2)}</ar:ImpTrib>
-    <ar:MonId>${r.monId}</ar:MonId><ar:MonCotiz>${r.monCotiz}</ar:MonCotiz>${condIvaXml}${ivaXml}
+    <ar:MonId>${r.monId}</ar:MonId><ar:MonCotiz>${r.monCotiz}</ar:MonCotiz>${condIvaXml}${assocXml}${ivaXml}
     </ar:FECAEDetRequest></ar:FeDetReq></ar:FeCAEReq>`;
+}
 
-  const resp = await callWSFE("FECAESolicitar", body, prod);
+function parseCAEResponse(resp: string): CAEResult {
   const caeM = resp.match(/<CAE>(\d+)<\/CAE>/), vtoM = resp.match(/<CAEFchVto>(\d+)<\/CAEFchVto>/);
   const resM = resp.match(/<Resultado>(\w)<\/Resultado>/), errM = resp.match(/<Msg>([\s\S]*?)<\/Msg>/), obsM = resp.match(/<Obs>([\s\S]*?)<\/Obs>/);
   const resultado = resM?.[1] || "R";
@@ -155,4 +167,19 @@ export async function requestCAE(
   if (!caeM || !vtoM) throw new Error(`Sin CAE: ${resp.substring(0, 1000)}`);
   const v = vtoM[1];
   return { cae: caeM[1], caeVto: `${v.substring(0,4)}-${v.substring(4,6)}-${v.substring(6,8)}`, cbteDesde: parseInt(resp.match(/<CbteDesde>(\d+)/)?.[1]||"0"), cbteHasta: parseInt(resp.match(/<CbteHasta>(\d+)/)?.[1]||"0"), resultado, observaciones: obsM?.[1] };
+}
+
+export async function requestCAE(
+  creds: WSAACredentials, cuit: string, r: CAERequestParams, prod: boolean
+): Promise<CAEResult> {
+  const body = buildCAEBody(creds, cuit, r);
+  const resp = await callWSFE("FECAESolicitar", body, prod);
+  return parseCAEResponse(resp);
+}
+
+/** Same as requestCAE but explicitly named for credit notes with CbtesAsoc */
+export async function requestCAEWithAssoc(
+  creds: WSAACredentials, cuit: string, r: CAERequestParams, prod: boolean
+): Promise<CAEResult> {
+  return requestCAE(creds, cuit, r, prod);
 }

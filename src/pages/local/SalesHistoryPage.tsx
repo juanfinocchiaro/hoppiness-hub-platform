@@ -25,14 +25,16 @@ import { useClosuresByDateRange, getShiftLabel } from '@/hooks/useShiftClosures'
 import { PageHeader } from '@/components/ui/page-header';
 import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
 import { ShiftClosureModal } from '@/components/local/closure/ShiftClosureModal';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { usePosEnabled } from '@/hooks/usePosEnabled';
 import { usePosOrderHistory, DEFAULT_FILTERS, type OrderFilters, type PosOrder } from '@/hooks/pos/usePosOrderHistory';
 import { OrderHistoryFilters } from '@/components/pos/OrderHistoryFilters';
 import { OrderHistoryTable, type ReprintType } from '@/components/pos/OrderHistoryTable';
 import { OrderHeatmapChart } from '@/components/pos/OrderHeatmapChart';
-import { useAfipConfig } from '@/hooks/useAfipConfig';
+import { CancelOrderDialog } from '@/components/pos/CancelOrderDialog';
+import { ChangeInvoiceModal, type ChangeInvoiceData } from '@/components/pos/ChangeInvoiceModal';
+import { useAfipConfig, useEmitirFactura } from '@/hooks/useAfipConfig';
 import { usePrinting } from '@/hooks/usePrinting';
 import { usePrintConfig } from '@/hooks/usePrintConfig';
 import { useBranchPrinters } from '@/hooks/useBranchPrinters';
@@ -89,6 +91,11 @@ function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: {
 }) {
   const [filters, setFilters] = useState<OrderFilters>(DEFAULT_FILTERS);
   const { orders, totals, isLoading } = usePosOrderHistory(branchId, parseInt(daysBack), filters);
+  const queryClient = useQueryClient();
+
+  // Cancel/Change invoice state
+  const [cancellingOrder, setCancellingOrder] = useState<PosOrder | null>(null);
+  const [changingInvoiceOrder, setChangingInvoiceOrder] = useState<PosOrder | null>(null);
 
   // Printing & ARCA for reprint
   const { data: afipConfig } = useAfipConfig(branchId);
@@ -96,6 +103,105 @@ function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: {
   const { data: printConfig } = usePrintConfig(branchId);
   const { data: printersData } = useBranchPrinters(branchId);
   const allPrinters = printersData ?? [];
+  const emitirFactura = useEmitirFactura();
+
+  // Fetch vale category IDs
+  const { data: valeCategoryIds } = useQuery({
+    queryKey: ['vale-category-ids'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('menu_categorias' as any)
+        .select('id, tipo_impresion')
+        .eq('activo', true);
+      return new Set(
+        ((data as any[]) ?? []).filter((c: any) => c.tipo_impresion === 'vale').map((c: any) => c.id as string)
+      );
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const invalidateOrders = () => {
+    queryClient.invalidateQueries({ queryKey: ['pos-order-history', branchId] });
+  };
+
+  // ─── Cancel Order Handler ───
+  const handleCancelOrder = useCallback(async () => {
+    if (!cancellingOrder) return;
+    const order = cancellingOrder;
+    const activeInvoice = order.facturas_emitidas?.find(f => !f.anulada);
+
+    try {
+      // If there's an active invoice, emit credit note first
+      if (activeInvoice) {
+        const { data, error } = await supabase.functions.invoke('emitir-nota-credito', {
+          body: { factura_id: activeInvoice.id, branch_id: branchId },
+        });
+        if (error) throw new Error(error.message || 'Error al emitir nota de crédito');
+        if (!data?.success) throw new Error(data?.error || 'Error al emitir nota de crédito');
+        toast.success(`Nota de crédito ${data.tipo} emitida: N° ${data.numero}`);
+      }
+
+      // Mark order as cancelled
+      const { error: updateError } = await supabase
+        .from('pedidos')
+        .update({ estado: 'cancelado' })
+        .eq('id', order.id);
+      if (updateError) throw updateError;
+
+      toast.success(`Pedido #${order.numero_pedido} anulado`);
+      invalidateOrders();
+      setCancellingOrder(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      toast.error('Error al anular pedido', { description: msg });
+    }
+  }, [cancellingOrder, branchId]);
+
+  // ─── Change Invoice Handler ───
+  const handleChangeInvoice = useCallback(async (data: ChangeInvoiceData) => {
+    if (!changingInvoiceOrder) return;
+    const order = changingInvoiceOrder;
+    const activeInvoice = order.facturas_emitidas?.find(f => !f.anulada);
+
+    if (!activeInvoice) {
+      toast.error('No hay factura activa para cambiar');
+      return;
+    }
+
+    try {
+      // 1. Emit credit note for original
+      const { data: ncData, error: ncError } = await supabase.functions.invoke('emitir-nota-credito', {
+        body: { factura_id: activeInvoice.id, branch_id: branchId },
+      });
+      if (ncError) throw new Error(ncError.message || 'Error al emitir nota de crédito');
+      if (!ncData?.success) throw new Error(ncData?.error || 'Error al emitir nota de crédito');
+      toast.success(`NC ${ncData.tipo} emitida: N° ${ncData.numero}`);
+
+      // 2. Emit new invoice with corrected data
+      const items = order.pedido_items.map(i => ({
+        descripcion: i.nombre,
+        cantidad: i.cantidad,
+        precio_unitario: i.precio_unitario,
+      }));
+
+      await emitirFactura.mutateAsync({
+        branch_id: branchId,
+        pedido_id: order.id,
+        tipo_factura: data.tipo_factura,
+        receptor_cuit: data.receptor_cuit || undefined,
+        receptor_razon_social: data.receptor_razon_social || undefined,
+        receptor_condicion_iva: data.receptor_condicion_iva || undefined,
+        items,
+        total: order.total,
+      });
+
+      invalidateOrders();
+      setChangingInvoiceOrder(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      toast.error('Error al cambiar facturación', { description: msg });
+    }
+  }, [changingInvoiceOrder, branchId, emitirFactura]);
 
   const handleReprint = useCallback(async (order: PosOrder, type: ReprintType) => {
     if (printing.bridgeStatus !== 'connected') {
@@ -162,15 +268,7 @@ function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: {
           const printer = valePrinter || ticketPrinter;
           const { printRawBase64 } = await import('@/lib/qz-print');
 
-          // Fetch categories to filter only 'vale' items
-          const { data: catData } = await supabase
-            .from('menu_categorias')
-            .select('id, tipo_impresion')
-            .eq('activo', true);
-          const valeCatIds = new Set(
-            (catData ?? []).filter(c => c.tipo_impresion === 'vale').map(c => c.id)
-          );
-
+          const valeCatIds = valeCategoryIds || new Set<string>();
           const valeItems = printableOrder.items.filter(item =>
             item.categoria_carta_id && valeCatIds.has(item.categoria_carta_id)
           );
@@ -204,9 +302,9 @@ function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: {
           break;
         }
         case 'factura': {
-          const factura = order.facturas_emitidas?.[0];
+          const factura = order.facturas_emitidas?.find(f => !f.anulada);
           if (!factura) {
-            toast.error('Este pedido no tiene factura asociada');
+            toast.error('Este pedido no tiene factura activa');
             return;
           }
           await printing.printFiscalTicket({
@@ -232,7 +330,7 @@ function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: {
       const msg = err instanceof Error ? err.message : 'Error desconocido';
       toast.error('Error al reimprimir', { description: msg });
     }
-  }, [afipConfig, printing, printConfig, allPrinters, branchName]);
+  }, [afipConfig, printing, printConfig, allPrinters, branchName, valeCategoryIds]);
 
   const handleExport = () => {
     if (!orders.length) return;
@@ -253,56 +351,91 @@ function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: {
     );
   };
 
+  const changingInvoiceFactura = changingInvoiceOrder?.facturas_emitidas?.find(f => !f.anulada);
+
   return (
-    <Tabs defaultValue="pedidos" className="space-y-4">
-      <TabsList>
-        <TabsTrigger value="pedidos">Pedidos</TabsTrigger>
-        <TabsTrigger value="heatmap">Mapa de calor</TabsTrigger>
-      </TabsList>
+    <>
+      <Tabs defaultValue="pedidos" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="pedidos">Pedidos</TabsTrigger>
+          <TabsTrigger value="heatmap">Mapa de calor</TabsTrigger>
+        </TabsList>
 
-      <TabsContent value="pedidos" className="space-y-4">
-        <OrderHistoryFilters
-          daysBack={daysBack}
-          onDaysBackChange={setDaysBack}
-          filters={filters}
-          onFiltersChange={setFilters}
-          onExport={handleExport}
-          hasData={orders.length > 0}
-        />
+        <TabsContent value="pedidos" className="space-y-4">
+          <OrderHistoryFilters
+            daysBack={daysBack}
+            onDaysBackChange={setDaysBack}
+            filters={filters}
+            onFiltersChange={setFilters}
+            onExport={handleExport}
+            hasData={orders.length > 0}
+          />
 
-        {/* KPIs */}
-        {!isLoading && (
-          <div className="flex flex-wrap gap-4 text-sm">
-            <div className="flex items-center gap-1.5">
-              <DollarSign className="w-4 h-4 text-primary" />
-              <span className="font-medium">{fmtCurrency(totals.totalVendido)}</span>
+          {/* KPIs */}
+          {!isLoading && (
+            <div className="flex flex-wrap gap-4 text-sm">
+              <div className="flex items-center gap-1.5">
+                <DollarSign className="w-4 h-4 text-primary" />
+                <span className="font-medium">{fmtCurrency(totals.totalVendido)}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <ShoppingBag className="w-4 h-4 text-muted-foreground" />
+                <span>{totals.cantidad} pedidos</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                <span>Ticket prom: {fmtCurrency(totals.ticketPromedio)}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <ShoppingBag className="w-4 h-4 text-muted-foreground" />
-              <span>{totals.cantidad} pedidos</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <TrendingUp className="w-4 h-4 text-muted-foreground" />
-              <span>Ticket prom: {fmtCurrency(totals.ticketPromedio)}</span>
-            </div>
+          )}
+
+          <OrderHistoryTable
+            orders={orders}
+            isLoading={isLoading}
+            branchId={branchId}
+            hasOpenShift
+            onReprint={handleReprint}
+            onCancelOrder={(order) => setCancellingOrder(order)}
+            onChangeInvoice={(order) => setChangingInvoiceOrder(order)}
+            valeCategoryIds={valeCategoryIds}
+          />
+        </TabsContent>
+
+        <TabsContent value="heatmap" className="space-y-4">
+          <div className="flex gap-2 items-center">
+            <Select value={daysBack} onValueChange={setDaysBack}>
+              <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {RANGE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
-        )}
+          <OrderHeatmapChart branchId={branchId} daysBack={parseInt(daysBack)} />
+        </TabsContent>
+      </Tabs>
 
-        <OrderHistoryTable orders={orders} isLoading={isLoading} branchId={branchId} hasOpenShift onReprint={handleReprint} />
-      </TabsContent>
+      {/* Cancel Order Dialog */}
+      {cancellingOrder && (
+        <CancelOrderDialog
+          open={!!cancellingOrder}
+          onOpenChange={(v) => { if (!v) setCancellingOrder(null); }}
+          order={cancellingOrder}
+          onConfirm={handleCancelOrder}
+        />
+      )}
 
-      <TabsContent value="heatmap" className="space-y-4">
-        <div className="flex gap-2 items-center">
-          <Select value={daysBack} onValueChange={setDaysBack}>
-            <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {RANGE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <OrderHeatmapChart branchId={branchId} daysBack={parseInt(daysBack)} />
-      </TabsContent>
-    </Tabs>
+      {/* Change Invoice Modal */}
+      {changingInvoiceOrder && changingInvoiceFactura && (
+        <ChangeInvoiceModal
+          open={!!changingInvoiceOrder}
+          onOpenChange={(v) => { if (!v) setChangingInvoiceOrder(null); }}
+          facturaOriginal={changingInvoiceFactura}
+          pedidoId={changingInvoiceOrder.id}
+          branchId={branchId}
+          onConfirm={handleChangeInvoice}
+        />
+      )}
+    </>
   );
 }
 
