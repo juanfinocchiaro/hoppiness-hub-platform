@@ -1,97 +1,125 @@
 
 
-# Auditoria del Dashboard de Mi Local (Manantiales)
-
-## Problemas Encontrados
-
-### 1. Orden de turnos invertido (Noche antes de Mediodia)
-**Severidad: Media**
-
-En la base de datos, los turnos "Noche" y "Mediodia" tienen el mismo `sort_order = 2`. Esto causa que el orden sea indeterminado y aparezca "Noche" primero. Logicamente, Mediodia deberia aparecer antes que Noche.
-
-**Solucion:** Corregir los valores de `sort_order` en la tabla `branch_shifts` para Manantiales: Mediodia = 2, Noche = 3. Revisar si otras sucursales tienen el mismo problema.
+# Auditoria y Correcciones: 4 Problemas del Dashboard y Modulos del Local
 
 ---
 
-### 2. "Comunicados sin leer" siempre muestra 0 (hardcodeado)
-**Severidad: Alta**
+## Problema 1: Panel "Tienda Online" desordenado
 
-En el hook `usePendingItems` (linea 142), el valor `unreadComms` esta hardcodeado a `0`:
+**Diagnostico:** La pagina `WebappConfigPage.tsx` tiene toda la configuracion en cards separadas sin jerarquia clara. Los servicios (Retiro, Delivery, Comer aca) son toggles planos sin posibilidad de expandir configuraciones individuales. Los horarios son un unico rango por servicio (no por dia de semana). La config de Delivery esta en una card separada, los tiempos de preparacion en otra, y los horarios en otra. No queda claro que toggle afecta que.
 
+**Solucion: Redisenar con servicios expandibles**
+
+Cada servicio se convierte en una seccion Collapsible que al activarse muestra:
+- Toggle on/off del servicio
+- Al expandir: tiempos de preparacion propios del servicio
+- Horarios POR DIA DE SEMANA (Lunes a Domingo), cada uno con toggle activo/inactivo + hora desde/hasta
+- Para Delivery ademas: radio, costo, pedido minimo
+
+La estructura `service_schedules` en la DB (JSONB) se amplia de:
 ```text
-return {
-  pendingRequests: pendingRequests || 0,
-  unreadComms: 0,  // <-- HARDCODED, nunca se calcula
-  pendingSignatures,
-  total: ...
-};
+{ retiro: { from: "10:00", to: "23:00", enabled: true } }
+```
+a:
+```text
+{
+  retiro: {
+    enabled: true,
+    prep_time: 15,
+    days: {
+      lunes: { enabled: true, from: "11:00", to: "23:00" },
+      martes: { enabled: true, from: "11:00", to: "23:00" },
+      ...
+      domingo: { enabled: true, from: "11:00", to: "15:00" }
+    }
+  },
+  delivery: {
+    enabled: true,
+    prep_time: 40,
+    radio_km: 5,
+    costo: 500,
+    pedido_minimo: 3000,
+    days: { ... }
+  },
+  comer_aca: {
+    enabled: true,
+    prep_time: 15,
+    days: { ... }
+  }
+}
 ```
 
-No se hace ninguna consulta a la tabla `communications` / `communication_reads` para calcular los comunicados sin leer del equipo.
+La seccion "Recepcion de pedidos" (auto/manual, auto-accept, auto-print) se mantiene como card separada al final.
 
-**Solucion:** Consultar la tabla `communications` y `communication_reads` para contar cuantos comunicados no fueron leidos por los empleados de la sucursal.
+No se necesita migracion SQL ya que `service_schedules` es JSONB y puede cambiar de estructura sin alterar la tabla. Se mantiene retrocompatibilidad con el formato anterior.
 
----
-
-### 3. Calculo incorrecto del badge "Pendientes" (total)
-**Severidad: Media**
-
-La formula del total en linea 144 es inconsistente:
-
-```text
-total: (pendingRequests || 0) + (pendingSignatures > 0 ? 1 : 0)
-```
-
-Esto suma las solicitudes pendientes (1) + 1 si hay **alguna** firma pendiente, dando total = 2 en la screenshot. Pero no refleja la cantidad real de items pendientes. Deberia sumar los 3 contadores: solicitudes + comunicados sin leer + firmas pendientes.
-
-**Solucion:** Cambiar la formula a: `pendingRequests + unreadComms + pendingSignatures`.
+### Archivos a modificar:
+- `src/pages/local/WebappConfigPage.tsx` - Rediseno completo del layout
 
 ---
 
-### 4. Boton "Cargar" no visible
-**Severidad: Baja**
+## Problema 2: Disponibilidad de productos en Tienda Online y POS
 
-El boton "Cargar" solo se muestra si `local.canEnterSales && !posEnabled`. Si el POS esta habilitado para Manantiales, el boton no aparece (correcto), pero tampoco hay indicacion visual de que las ventas se cargan via POS. Esto podria confundir al encargado.
+**Diagnostico:** Actualmente no hay mecanismo visible para apagar/prender productos de la tienda online desde el panel del local. Tampoco hay un toggle de disponibilidad en el POS que mueva productos a una categoria "Apagados".
 
-**Nota:** Este comportamiento es probablemente correcto si el local usa POS. No requiere cambio.
+**Nota:** Este es un desarrollo significativo que requiere su propio ciclo. Se recomienda implementar en una segunda fase, ya que implica:
+- Agregar columna `disponible` a `items_carta` o tabla de disponibilidad por sucursal
+- UI para toggle en el panel del local
+- Logica en el POS para filtrar/categorizar items apagados
+- Logica en la WebApp publica para ocultar items no disponibles
 
----
-
-### 5. StockAlertCard no visible
-**Severidad: Informativa**
-
-El componente `StockAlertCard` se renderiza pero solo aparece si hay items criticos o bajos. Si no hay alertas, no muestra nada (correcto por diseno).
+**Por ahora: no incluir en esta iteracion**, ya que los otros 3 puntos son correcciones criticas.
 
 ---
 
-## Plan de Implementacion
+## Problema 3: Reportes Fiscales - Reimprimir no funciona
 
-### Paso 1: Corregir sort_order de turnos en la DB
-Ejecutar migracion SQL para corregir el orden de los turnos en `branch_shifts` para todas las sucursales donde Mediodia y Noche tengan el mismo sort_order.
+**Diagnostico:** El `ReimprimirCard` en `FiscalReportsPage.tsx` (lineas 547-671) lista los comprobantes correctamente, pero NO tiene boton de reimprimir por cada fila. Solo muestra la informacion del comprobante sin accion posible. Falta un boton `<Printer>` por cada resultado que genere y envie el ticket a la impresora.
 
-### Paso 2: Implementar calculo real de comunicados sin leer
-Modificar `usePendingItems` en `ManagerDashboard.tsx` para:
-- Consultar `communications` enviados a la sucursal
-- Cruzar con `communication_reads` para contar los no leidos por el equipo
-- Asignar el resultado a `unreadComms`
+**Solucion:**
 
-### Paso 3: Corregir formula del badge total de Pendientes
-Cambiar la formula para sumar todos los contadores reales: `pendingRequests + unreadComms + pendingSignatures`.
+Agregar un boton de impresion por cada comprobante en la lista de resultados. Al hacer clic:
+1. Obtener los datos completos del pedido asociado (`pedido_items`, pagos, etc.)
+2. Generar el ticket fiscal usando `generateTicketCliente` de `escpos.ts`
+3. Enviarlo a la impresora de tickets configurada via Print Bridge
+
+### Archivos a modificar:
+- `src/pages/local/FiscalReportsPage.tsx` - Agregar boton reimprimir por fila en `ReimprimirCard`
 
 ---
 
-## Detalle Tecnico
+## Problema 4: Dashboard - Fichajes y Ventas no se muestran
 
-### Migracion SQL (Paso 1)
-```text
--- Corregir sort_order para que Mediodia=2 y Noche=3
-UPDATE branch_shifts SET sort_order = 2 WHERE name = 'Mediodía' AND sort_order != 2;
-UPDATE branch_shifts SET sort_order = 3 WHERE name = 'Noche';
-```
+### 4a. Fichajes: "Equipo Ahora" muestra 0 pero hay empleados fichados
 
-### Cambios en ManagerDashboard.tsx (Pasos 2 y 3)
-En el hook `usePendingItems`:
-- Agregar query para contar comunicados sin leer por empleados de la sucursal
-- Calcular `unreadComms` con datos reales de `communications` + `communication_reads`
-- Actualizar formula: `total: pendingRequests + unreadComms + pendingSignatures`
+**Diagnostico:** En `ManagerDashboard.tsx`, el hook `useCurrentlyWorking` (linea 76) filtra con `v.type === 'entrada'`, pero la tabla `clock_entries` usa `entry_type = 'clock_in'` / `'clock_out'`. La condicion nunca matchea, por eso siempre muestra "Nadie fichado".
+
+**Solucion:** Cambiar la comparacion en linea 76 de `'entrada'` a `'clock_in'`.
+
+### 4b. Ventas Hoy: muestra $0 pero hay ventas POS
+
+**Diagnostico:** El dashboard usa `useTodayClosures` (shift_closures) para mostrar ventas. Pero cuando el POS esta habilitado, las ventas estan en la tabla `pedidos`, no en `shift_closures`. Hoy (2026-02-21) hay pedidos entregados por $15,800 pero no hay shift_closures para hoy, por eso muestra $0.
+
+El componente `ManagerDashboard` recibe `posEnabled` como prop pero NO lo usa para cambiar la fuente de datos de "Ventas Hoy".
+
+**Solucion:** Cuando `posEnabled = true`, en vez de mostrar cards de turnos (mediodia/noche), mostrar un resumen de ventas del dia desde la tabla `pedidos` (pedidos entregados/listos de hoy). Incluir:
+- Total vendido hoy (suma de pedidos no cancelados)
+- Cantidad de pedidos
+- Ticket promedio
+- Link a historial de ventas
+
+### Archivos a modificar:
+- `src/components/local/ManagerDashboard.tsx` - Fix `'entrada'` -> `'clock_in'` y agregar vista POS para ventas
+
+---
+
+## Resumen de cambios
+
+| Archivo | Cambio |
+|---------|--------|
+| `WebappConfigPage.tsx` | Rediseno con servicios expandibles y horarios por dia |
+| `FiscalReportsPage.tsx` | Boton reimprimir por fila en ReimprimirCard |
+| `ManagerDashboard.tsx` | Fix fichajes (`clock_in`), ventas POS en tiempo real |
+
+No se requieren migraciones SQL ya que todos los cambios son en la capa de UI/hooks.
 
