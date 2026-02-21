@@ -408,6 +408,7 @@ export type Database = {
           city: string
           clock_code: string | null
           closing_time: string | null
+          cover_image_url: string | null
           created_at: string
           email: string | null
           enforce_labor_law: boolean
@@ -436,6 +437,7 @@ export type Database = {
           city: string
           clock_code?: string | null
           closing_time?: string | null
+          cover_image_url?: string | null
           created_at?: string
           email?: string | null
           enforce_labor_law?: boolean
@@ -464,6 +466,7 @@ export type Database = {
           city?: string
           clock_code?: string | null
           closing_time?: string | null
+          cover_image_url?: string | null
           created_at?: string
           email?: string | null
           enforce_labor_law?: boolean
@@ -3791,7 +3794,9 @@ export type Database = {
           nombre_corto: string | null
           orden: number | null
           precio_base: number
+          precio_promo: number | null
           precio_referencia: number | null
+          promo_etiqueta: string | null
           rdo_category_code: string | null
           tipo: string
           updated_at: string | null
@@ -3817,7 +3822,9 @@ export type Database = {
           nombre_corto?: string | null
           orden?: number | null
           precio_base?: number
+          precio_promo?: number | null
           precio_referencia?: number | null
+          promo_etiqueta?: string | null
           rdo_category_code?: string | null
           tipo?: string
           updated_at?: string | null
@@ -3843,7 +3850,9 @@ export type Database = {
           nombre_corto?: string | null
           orden?: number | null
           precio_base?: number
+          precio_promo?: number | null
           precio_referencia?: number | null
+          promo_etiqueta?: string | null
           rdo_category_code?: string | null
           tipo?: string
           updated_at?: string | null
@@ -7947,6 +7956,7 @@ export type Database = {
           address: string | null
           city: string | null
           closing_time: string | null
+          cover_image_url: string | null
           id: string | null
           is_active: boolean | null
           is_open: boolean | null
@@ -7961,6 +7971,7 @@ export type Database = {
           address?: string | null
           city?: string | null
           closing_time?: string | null
+          cover_image_url?: string | null
           id?: string | null
           is_active?: boolean | null
           is_open?: boolean | null
@@ -7975,6 +7986,7 @@ export type Database = {
           address?: string | null
           city?: string | null
           closing_time?: string | null
+          cover_image_url?: string | null
           id?: string | null
           is_active?: boolean | null
           is_open?: boolean | null

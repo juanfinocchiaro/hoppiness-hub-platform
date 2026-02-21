@@ -15,6 +15,26 @@ function formatPrice(n: number) {
   return `$${n.toLocaleString('es-AR')}`;
 }
 
+function PromoBadge({ label }: { label: string }) {
+  return (
+    <span className="absolute top-2 left-2 z-10 bg-accent text-accent-foreground text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm uppercase tracking-wide">
+      {label}
+    </span>
+  );
+}
+
+function PriceDisplay({ base, promo }: { base: number; promo: number | null }) {
+  if (promo != null && promo < base) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <span className="text-sm font-bold text-accent">{formatPrice(promo)}</span>
+        <span className="text-xs text-muted-foreground line-through">{formatPrice(base)}</span>
+      </div>
+    );
+  }
+  return <p className="text-sm font-bold text-primary">{formatPrice(base)}</p>;
+}
+
 function QtyControls({ qty, onQuickAdd, onIncrement, onDecrement, size = 'sm' }: {
   qty: number;
   onQuickAdd: () => void;
@@ -57,16 +77,22 @@ function QtyControls({ qty, onQuickAdd, onIncrement, onDecrement, size = 'sm' }:
 }
 
 export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecrement, layout = 'list' }: Props) {
-  // Desktop horizontal card (DoorDash style)
+  const effectivePrice = item.precio_promo != null && item.precio_promo < item.precio_base ? item.precio_promo : item.precio_base;
+
+  // Desktop horizontal card
   if (layout === 'desktop') {
     return (
       <div
-        className="flex items-start gap-3 p-4 rounded-xl bg-card border border-border hover:border-primary/20 hover:shadow-sm transition-all cursor-pointer active:scale-[0.99]"
+        className="flex items-start gap-3 p-4 rounded-xl bg-card border border-border hover:border-primary/20 hover:shadow-sm transition-all cursor-pointer active:scale-[0.99] relative"
         onClick={onTap}
       >
-        {/* Text content */}
         <div className="flex-1 min-w-0 flex flex-col justify-between self-stretch">
           <div>
+            {item.promo_etiqueta && (
+              <span className="inline-block bg-accent text-accent-foreground text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide mb-1">
+                {item.promo_etiqueta}
+              </span>
+            )}
             <h3 className="font-bold text-sm text-foreground leading-tight line-clamp-2">
               {item.nombre_corto || item.nombre}
             </h3>
@@ -75,22 +101,16 @@ export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecre
             )}
           </div>
           <div className="flex items-center justify-between mt-2">
-            <p className="text-sm font-bold text-primary">{formatPrice(item.precio_base)}</p>
+            <PriceDisplay base={item.precio_base} promo={item.precio_promo} />
             <div onClick={e => e.stopPropagation()}>
               <QtyControls qty={qty} onQuickAdd={onQuickAdd} onIncrement={onIncrement} onDecrement={onDecrement} size="sm" />
             </div>
           </div>
         </div>
 
-        {/* Image */}
         {item.imagen_url ? (
-          <div className="w-[100px] h-[100px] rounded-lg overflow-hidden shrink-0 bg-muted">
-            <img
-              src={item.imagen_url}
-              alt={item.nombre}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
+          <div className="w-[100px] h-[100px] rounded-lg overflow-hidden shrink-0 bg-muted relative">
+            <img src={item.imagen_url} alt={item.nombre} className="w-full h-full object-cover" loading="lazy" />
           </div>
         ) : (
           <div className="w-[100px] h-[100px] rounded-lg shrink-0 bg-muted flex items-center justify-center">
@@ -101,21 +121,17 @@ export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecre
     );
   }
 
-  // Grid layout (mobile/tablet)
+  // Grid layout
   if (layout === 'grid') {
     return (
       <div
-        className="flex flex-col rounded-2xl bg-card border border-border overflow-hidden hover:shadow-md transition-shadow cursor-pointer active:scale-[0.98]"
+        className="flex flex-col rounded-2xl bg-card border border-border overflow-hidden hover:shadow-md transition-shadow cursor-pointer active:scale-[0.98] relative"
         onClick={onTap}
       >
+        {item.promo_etiqueta && <PromoBadge label={item.promo_etiqueta} />}
         {item.imagen_url ? (
           <div className="aspect-[3/2] w-full overflow-hidden bg-muted">
-            <img
-              src={item.imagen_url}
-              alt={item.nombre}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
+            <img src={item.imagen_url} alt={item.nombre} className="w-full h-full object-cover" loading="lazy" />
           </div>
         ) : (
           <div className="aspect-[3/2] w-full bg-muted flex items-center justify-center">
@@ -131,7 +147,7 @@ export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecre
             <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{item.descripcion}</p>
           )}
           <div className="flex items-center justify-between mt-auto pt-2">
-            <p className="text-sm font-bold text-primary">{formatPrice(item.precio_base)}</p>
+            <PriceDisplay base={item.precio_base} promo={item.precio_promo} />
             <div onClick={e => e.stopPropagation()}>
               <QtyControls qty={qty} onQuickAdd={onQuickAdd} onIncrement={onIncrement} onDecrement={onDecrement} />
             </div>
@@ -141,26 +157,28 @@ export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecre
     );
   }
 
-  // List layout (mobile)
+  // List layout
   return (
     <div
-      className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/20 transition-colors cursor-pointer active:scale-[0.98]"
+      className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/20 transition-colors cursor-pointer active:scale-[0.98] relative"
       onClick={onTap}
     >
-      {item.imagen_url ? (
-        <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0 bg-muted">
-          <img
-            src={item.imagen_url}
-            alt={item.nombre}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        </div>
-      ) : (
-        <div className="w-20 h-20 rounded-xl shrink-0 bg-muted flex items-center justify-center">
-          <span className="text-3xl">🍔</span>
-        </div>
-      )}
+      <div className="relative shrink-0">
+        {item.promo_etiqueta && (
+          <span className="absolute -top-1 -left-1 z-10 bg-accent text-accent-foreground text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
+            {item.promo_etiqueta}
+          </span>
+        )}
+        {item.imagen_url ? (
+          <div className="w-20 h-20 rounded-xl overflow-hidden bg-muted">
+            <img src={item.imagen_url} alt={item.nombre} className="w-full h-full object-cover" loading="lazy" />
+          </div>
+        ) : (
+          <div className="w-20 h-20 rounded-xl bg-muted flex items-center justify-center">
+            <span className="text-3xl">🍔</span>
+          </div>
+        )}
+      </div>
 
       <div className="flex-1 min-w-0">
         <h3 className="font-bold text-sm text-foreground leading-tight line-clamp-2">
@@ -169,7 +187,9 @@ export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecre
         {item.descripcion && (
           <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{item.descripcion}</p>
         )}
-        <p className="text-sm font-bold text-primary mt-1">{formatPrice(item.precio_base)}</p>
+        <div className="mt-1">
+          <PriceDisplay base={item.precio_base} promo={item.precio_promo} />
+        </div>
       </div>
 
       <div className="shrink-0" onClick={e => e.stopPropagation()}>

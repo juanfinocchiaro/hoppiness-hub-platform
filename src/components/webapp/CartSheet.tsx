@@ -91,16 +91,25 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
 
   const selectedZone = zones.find(z => z.id === selectedZoneId);
 
-  // Checkout form state
-  const [nombre, setNombre] = useState('');
-  const [telefono, setTelefono] = useState('');
-  const [email, setEmail] = useState('');
-  const [direccion, setDireccion] = useState('');
+  // Checkout form state - pre-fill from localStorage
+  const [nombre, setNombre] = useState(() => {
+    try { return localStorage.getItem('hop_client_nombre') || ''; } catch { return ''; }
+  });
+  const [telefono, setTelefono] = useState(() => {
+    try { return localStorage.getItem('hop_client_telefono') || ''; } catch { return ''; }
+  });
+  const [email, setEmail] = useState(() => {
+    try { return localStorage.getItem('hop_client_email') || ''; } catch { return ''; }
+  });
+  const [direccion, setDireccion] = useState(() => {
+    try { return localStorage.getItem('hop_client_direccion') || ''; } catch { return ''; }
+  });
   const [piso, setPiso] = useState('');
   const [referencia, setReferencia] = useState('');
   const [notas, setNotas] = useState('');
   const [metodoPago, setMetodoPago] = useState<MetodoPago>(mpEnabled ? 'mercadopago' : 'efectivo');
   const [pagaCon, setPagaCon] = useState<string>('');
+  const [showMpConfirm, setShowMpConfirm] = useState(false);
 
   const costoEnvio = isDelivery
     ? (hasZones && selectedZone ? selectedZone.costo_envio : deliveryCosto)
@@ -140,6 +149,21 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
     // Mark all fields as touched to show errors
     setTouched({ nombre: true, telefono: true, email: true, direccion: true });
     if (!branchId || !canSubmit) return;
+
+    // Show MP confirmation dialog before proceeding
+    if (metodoPago === 'mercadopago' && !showMpConfirm) {
+      setShowMpConfirm(true);
+      return;
+    }
+
+    // Save client data to localStorage for pre-fill
+    try {
+      localStorage.setItem('hop_client_nombre', nombre.trim());
+      localStorage.setItem('hop_client_telefono', telefono.trim());
+      if (email.trim()) localStorage.setItem('hop_client_email', email.trim());
+      if (direccion.trim()) localStorage.setItem('hop_client_direccion', direccion.trim());
+    } catch { /* ignore */ }
+
     setSubmitting(true);
     try {
       const orderItems = cart.items.map(item => ({
@@ -634,7 +658,16 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
             </div>
 
             {/* Confirm button */}
-            <div className="border-t px-5 py-4 bg-background shrink-0">
+            <div className="border-t px-5 py-4 bg-background shrink-0 space-y-3">
+              {/* MercadoPago pre-redirect confirmation */}
+              {showMpConfirm && metodoPago === 'mercadopago' && (
+                <div className="rounded-xl bg-blue-50 border border-blue-200 p-3 space-y-2">
+                  <p className="text-sm font-semibold text-blue-900">Te vamos a llevar a MercadoPago</p>
+                  <p className="text-xs text-blue-700">
+                    Vas a completar el pago de forma segura en MercadoPago. Una vez confirmado, volvés acá para seguir el estado de tu pedido.
+                  </p>
+                </div>
+              )}
               <Button
                 size="lg"
                 className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-base"
@@ -643,7 +676,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
               >
                 {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {metodoPago === 'mercadopago'
-                  ? `Pagar ${formatPrice(totalConEnvio)}`
+                  ? (showMpConfirm ? `Ir a MercadoPago · ${formatPrice(totalConEnvio)}` : `Pagar ${formatPrice(totalConEnvio)}`)
                   : `Confirmar pedido ${formatPrice(totalConEnvio)}`}
               </Button>
             </div>

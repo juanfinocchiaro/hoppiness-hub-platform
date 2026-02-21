@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWebappConfig, useWebappMenuItems } from '@/hooks/useWebappMenu';
@@ -17,6 +17,7 @@ import type { TipoServicioWebapp, WebappMenuItem } from '@/types/webapp';
 
 export default function PedirPage() {
   const { branchSlug } = useParams<{ branchSlug: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data, isLoading, error } = useWebappConfig(branchSlug);
   const { data: menuItems, isLoading: menuLoading } = useWebappMenuItems(data?.branch?.id);
   const { data: mpStatus } = useMercadoPagoStatus(data?.branch?.id);
@@ -37,7 +38,6 @@ export default function PedirPage() {
   useEffect(() => {
     if (!data?.config) return;
     if (storeIsOpen && step === 'landing') {
-      // Auto-select default service and skip to menu
       const config = data.config;
       if (config.retiro_habilitado) {
         cart.setTipoServicio('retiro');
@@ -50,6 +50,19 @@ export default function PedirPage() {
     }
   }, [data?.config, storeIsOpen]);
   const [customizeItem, setCustomizeItem] = useState<WebappMenuItem | null>(null);
+
+  // Deep linking: auto-open product from ?item= query param
+  useEffect(() => {
+    const itemId = searchParams.get('item');
+    if (itemId && menuItems && menuItems.length > 0 && !customizeItem) {
+      const found = menuItems.find(i => i.id === itemId);
+      if (found) {
+        setCustomizeItem(found);
+        // Clear the param so it doesn't re-open on navigation
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [searchParams, menuItems, customizeItem]);
 
   if (isLoading) {
     return (
@@ -103,6 +116,8 @@ export default function PedirPage() {
   };
 
   const handleProductClick = (item: WebappMenuItem) => {
+    // Update URL for deep linking (shareable product link)
+    setSearchParams({ item: item.id }, { replace: true });
     setCustomizeItem(item);
   };
 
@@ -184,10 +199,15 @@ export default function PedirPage() {
 
           <ProductCustomizeSheet
             item={customizeItem}
-            onClose={() => setCustomizeItem(null)}
+            onClose={() => {
+              setCustomizeItem(null);
+              // Clear deep link param
+              if (searchParams.has('item')) setSearchParams({}, { replace: true });
+            }}
             onAdd={(cartItem) => {
               cart.addItem(cartItem);
               setCustomizeItem(null);
+              if (searchParams.has('item')) setSearchParams({}, { replace: true });
             }}
           />
         </>
