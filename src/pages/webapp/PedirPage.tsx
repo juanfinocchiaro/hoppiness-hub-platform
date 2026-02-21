@@ -157,6 +157,8 @@ export default function PedirPage() {
               cart={cart}
               costoEnvio={costoEnvio}
               onContinue={handleContinueFromSidePanel}
+              suggestedItems={menuItems || []}
+              onAddSuggested={(item) => cart.quickAdd(item.id, item.nombre, item.precio_base, item.imagen_url)}
             />
           )}
 
