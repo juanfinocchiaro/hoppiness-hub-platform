@@ -30,7 +30,7 @@ export function useWebappCart() {
   const [items, setItems] = useState<CartItem[]>(initial.current.items);
   const [tipoServicio, setTipoServicio] = useState<TipoServicioWebapp>(initial.current.tipoServicio);
 
-  /** Load reorder items from localStorage (set by MisPedidosPage) */
+  /** Load reorder items from localStorage (set by MisPedidosSheet) */
   const loadReorderItems = useCallback((menuItems: Array<{ id: string; nombre: string; precio_base: number; imagen_url: string | null }>) => {
     try {
       const raw = localStorage.getItem('hoppiness_reorder');

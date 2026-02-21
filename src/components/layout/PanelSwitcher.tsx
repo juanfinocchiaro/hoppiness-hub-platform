@@ -1,5 +1,5 @@
 /**
- * PanelSwitcher - Navegación directa entre paneles (Mi Cuenta, Mi Local, Mi Marca)
+ * PanelSwitcher - Navegación directa entre paneles (Mi Trabajo, Mi Local, Mi Marca)
  * 
  * Renderiza links a los paneles disponibles excepto el actual.
  * Se usa en el footer de todos los sidebars para navegación de 1 click.
@@ -7,7 +7,7 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
-import { User, Store, Building2 } from 'lucide-react';
+import { Briefcase, Store, Building2 } from 'lucide-react';
 
 export type PanelType = 'cuenta' | 'local' | 'marca';
 
@@ -41,8 +41,8 @@ export function PanelSwitcher({ currentPanel, localBranchId }: PanelSwitcherProp
         {showCuenta && (
           <Link to="/cuenta">
             <Button variant="ghost" className="w-full justify-start" size="sm">
-              <User className="w-4 h-4 mr-3" />
-              Mi Cuenta
+              <Briefcase className="w-4 h-4 mr-3" />
+              Mi Trabajo
             </Button>
           </Link>
         )}

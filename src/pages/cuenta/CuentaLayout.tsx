@@ -1,13 +1,15 @@
 /**
- * CuentaLayout - Panel "Mi Cuenta" usando WorkShell unificado
+ * CuentaLayout - Panel "Mi Trabajo" (staff) usando WorkShell unificado
  * 
- * Mismo layout que Mi Local y Mi Marca para navegación consistente.
+ * Clients without roles are redirected to the store.
+ * Staff sees "Mi Trabajo" as the panel title.
  */
-import { Outlet, useNavigate, Link } from 'react-router-dom';
+import { Outlet, useNavigate, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
 import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
+import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { WorkShell } from '@/components/layout/WorkShell';
@@ -22,12 +24,18 @@ export default function CuentaLayout() {
   const { user, signOut, loading: authLoading } = useAuth();
   const effectiveUser = useEffectiveUser();
   const { loading: permLoading, accessibleBranches } = useRoleLandingV2();
+  const { branchRoles, brandRole } = usePermissionsWithImpersonation();
   const { canImpersonate, isImpersonating } = useImpersonation();
   const navigate = useNavigate();
   const [showImpersonationSelector, setShowImpersonationSelector] = useState(false);
   
+  const isStaff = branchRoles.length > 0 || !!brandRole;
+  const isOperationalStaff = branchRoles.length > 0 && 
+    !branchRoles.every(r => r.local_role === 'franquiciado');
+  const panelTitle = isOperationalStaff ? 'Mi Trabajo' : 'Mi Cuenta';
+  
   // Get display name for mobile header
-  const displayName = effectiveUser.full_name?.split(' ')[0] || 'Mi Cuenta';
+  const displayName = effectiveUser.full_name?.split(' ')[0] || panelTitle;
   
   // Redirect if not authenticated
   useEffect(() => {
@@ -42,6 +50,11 @@ export default function CuentaLayout() {
 
   if (!user) {
     return null;
+  }
+
+  // Clients without any role don't belong in WorkShell — redirect to store
+  if (!isStaff) {
+    return <Navigate to="/pedir" replace />;
   }
 
   // Get first accessible branch ID for PanelSwitcher
@@ -94,7 +107,7 @@ export default function CuentaLayout() {
     <>
       <WorkShell
         mode="cuenta"
-        title="Mi Cuenta"
+        title={panelTitle}
         mobileTitle={displayName}
         sidebar={<CuentaSidebar />}
         footer={footer}

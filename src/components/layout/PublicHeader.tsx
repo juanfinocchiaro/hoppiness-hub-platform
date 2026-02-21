@@ -26,6 +26,9 @@ export function PublicHeader() {
   const effectiveUser = useEffectiveUser();
   const { canAccessLocalPanel, canAccessBrandPanel, loading: roleLoading } = usePermissionsWithImpersonation();
   const canUseMiCuenta = !!user;
+  const isStaff = canAccessLocalPanel || canAccessBrandPanel;
+  const cuentaLink = isStaff ? '/cuenta' : '/pedir';
+  const cuentaLabel = isStaff ? 'Mi Trabajo' : 'Mi Cuenta';
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const { openAuthModal } = useAuthModal();
@@ -142,9 +145,9 @@ export function PublicHeader() {
                 
                 {canUseMiCuenta && (
                   <DropdownMenuItem asChild>
-                    <Link to="/cuenta" className="cursor-pointer">
+                    <Link to={cuentaLink} className="cursor-pointer">
                       <Package className="w-4 h-4 mr-2" />
-                      Mi Cuenta
+                      {cuentaLabel}
                     </Link>
                   </DropdownMenuItem>
                 )}
@@ -265,7 +268,7 @@ export function PublicHeader() {
                     </div>
                     
                     {canUseMiCuenta && (
-                      <Link to="/cuenta" onClick={() => setOpen(false)}>
+                      <Link to={cuentaLink} onClick={() => setOpen(false)}>
                         <Button 
                           variant="ghost" 
                           className={`w-full justify-start text-primary-foreground hover:bg-primary-foreground/10 ${
@@ -273,7 +276,7 @@ export function PublicHeader() {
                           }`}
                         >
                           <Package className="w-4 h-4 mr-2" />
-                          Mi Cuenta
+                          {cuentaLabel}
                         </Button>
                       </Link>
                     )}

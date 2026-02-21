@@ -128,22 +128,28 @@ export default function CuentaHome() {
     enabled: !!user,
   });
 
-  // Fetch branch name for last order
-  const { data: lastOrderBranch } = useQuery({
-    queryKey: ['branch-name', lastOrder?.branch_id],
+  // Fetch branch name + slug for last order
+  const { data: lastOrderBranchData } = useQuery({
+    queryKey: ['branch-name-slug', lastOrder?.branch_id],
     queryFn: async () => {
       const { data } = await supabase
         .from('branches')
-        .select('name')
+        .select('name, slug')
         .eq('id', lastOrder!.branch_id)
         .single();
-      return data?.name || '';
+      return data || { name: '', slug: null };
     },
     enabled: !!lastOrder?.branch_id,
   });
+  const lastOrderBranch = lastOrderBranchData?.name || '';
+  const lastOrderSlug = lastOrderBranchData?.slug;
 
   const displayName = effectiveUser.full_name || profile?.full_name?.split(' ')[0] || 'Usuario';
   const hasLocalRoles = branchPinData && branchPinData.filter((r: any) => r.local_role).length > 0;
+  
+  const isOperationalStaff = branchRoles.length > 0 && 
+    !branchRoles.every(r => r.local_role === 'franquiciado');
+  const subtitleText = isOperationalStaff ? 'Tu espacio de trabajo' : 'Bienvenido a tu cuenta';
 
   const estadoLabels: Record<string, string> = {
     pendiente: '⏳ Pendiente',
@@ -163,7 +169,7 @@ export default function CuentaHome() {
       
       <PageHeader 
         title={`Hola, ${displayName.split(' ')[0]}! 👋`}
-        subtitle="Bienvenido a tu cuenta"
+        subtitle={subtitleText}
       />
 
       {/* Urgent Banner */}
@@ -208,8 +214,8 @@ export default function CuentaHome() {
             <div className="flex items-center justify-between pt-1">
               <span className="font-bold text-sm">${lastOrder.total?.toLocaleString('es-AR')}</span>
               <div className="flex gap-2">
-                {lastOrder.webapp_tracking_code && (
-                  <Button variant="outline" size="sm" onClick={() => navigate(`/pedido/${lastOrder.webapp_tracking_code}`)}>
+                {lastOrder.webapp_tracking_code && lastOrderSlug && (
+                  <Button variant="outline" size="sm" onClick={() => navigate(`/pedir/${lastOrderSlug}?tracking=${lastOrder.webapp_tracking_code}`)}>
                     Ver detalle
                   </Button>
                 )}

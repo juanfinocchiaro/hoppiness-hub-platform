@@ -1,9 +1,9 @@
 /**
  * UserMenuDropdown — Avatar/user menu in the store header.
  * Shows profile, orders, addresses for everyone.
- * Shows Mi Local / Mi Marca links for staff/admins.
+ * Shows Mi Trabajo / Mi Local / Mi Marca links for staff/admins.
  */
-import { User, Package, MapPin, LogOut, LogIn, Store, Building2 } from 'lucide-react';
+import { User, Package, MapPin, LogOut, Store, Building2, Briefcase } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useAuthModal } from '@/contexts/AuthModalContext';
@@ -45,9 +45,12 @@ export function UserMenuDropdown({ onMisPedidos, onMisDirecciones, onMiPerfil }:
     staleTime: 60000,
   });
 
-  const canAccessLocal = !!roles?.local_role || !!roles?.brand_role;
+  const hasLocalRole = !!roles?.local_role;
+  const canAccessLocal = hasLocalRole || !!roles?.brand_role;
   const canAccessBrand = !!roles?.brand_role;
   const firstBranchId = roles?.branch_ids?.[0];
+  // Staff without Mi Local/Mi Marca access still has "Mi Trabajo" (/cuenta)
+  const showMiTrabajo = hasLocalRole && !canAccessBrand && !firstBranchId;
 
   const initials = user?.user_metadata?.full_name
     ? user.user_metadata.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
@@ -103,7 +106,13 @@ export function UserMenuDropdown({ onMisPedidos, onMisDirecciones, onMiPerfil }:
           </DropdownMenuItem>
         )}
 
-        {(canAccessLocal || canAccessBrand) && <DropdownMenuSeparator />}
+        {(canAccessLocal || canAccessBrand || showMiTrabajo) && <DropdownMenuSeparator />}
+        {showMiTrabajo && (
+          <DropdownMenuItem onClick={() => navigate('/cuenta')}>
+            <Briefcase className="w-4 h-4 mr-2" />
+            Ir a Mi Trabajo
+          </DropdownMenuItem>
+        )}
         {canAccessLocal && (
           <DropdownMenuItem onClick={() => navigate(firstBranchId ? `/milocal/${firstBranchId}` : '/milocal')}>
             <Store className="w-4 h-4 mr-2" />

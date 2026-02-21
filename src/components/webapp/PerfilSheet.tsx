@@ -1,5 +1,6 @@
 /**
- * PerfilSheet — Inline profile editor within the store (no navigation away)
+ * PerfilSheet — Single unified profile editor (inline, no navigation away).
+ * Includes personal data, birth date, and password change.
  */
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,9 +11,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Save, Loader2, User, Mail } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Save, Loader2, User, Mail, Lock, Eye, EyeOff, Calendar as CalendarIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -25,13 +31,21 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [birthDate, setBirthDate] = useState<Date | undefined>(undefined);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  // Password section
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPasswords, setShowPasswords] = useState(false);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile-sheet', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('full_name, phone, avatar_url')
+        .select('full_name, phone, avatar_url, birth_date')
         .eq('id', user!.id)
         .maybeSingle();
       if (error) throw error;
@@ -44,6 +58,8 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
     if (profile) {
       setFullName(profile.full_name || '');
       setPhone(profile.phone || '');
+      setAvatarUrl(profile.avatar_url || null);
+      setBirthDate(profile.birth_date ? new Date(profile.birth_date) : undefined);
     }
   }, [profile]);
 
@@ -51,17 +67,49 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
     mutationFn: async () => {
       const { error } = await supabase
         .from('profiles')
-        .update({ full_name: fullName, phone, updated_at: new Date().toISOString() })
+        .update({
+          full_name: fullName,
+          phone,
+          birth_date: birthDate ? format(birthDate, 'yyyy-MM-dd') : null,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', user!.id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile-sheet'] });
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
       toast.success('Perfil actualizado');
       onOpenChange(false);
     },
     onError: () => toast.error('Error al actualizar'),
   });
+
+  const changePassword = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Contraseña actualizada');
+      setNewPassword('');
+      setConfirmPassword('');
+      setShowPasswordSection(false);
+    },
+    onError: () => toast.error('Error al cambiar la contraseña'),
+  });
+
+  const handlePasswordSubmit = () => {
+    if (newPassword.length < 6) {
+      toast.error('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error('Las contraseñas no coinciden');
+      return;
+    }
+    changePassword.mutate();
+  };
 
   const initials = fullName
     ? fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
@@ -69,7 +117,7 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md">
+      <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Mi Perfil</SheetTitle>
         </SheetHeader>
@@ -83,8 +131,9 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
             {/* Avatar */}
             <div className="flex items-center gap-4">
               <Avatar className="w-16 h-16">
+                <AvatarImage src={avatarUrl || undefined} alt={fullName} />
                 <AvatarFallback className="text-lg bg-primary/10 text-primary">
-                  {initials}
+                  {fullName ? initials : <User className="w-6 h-6" />}
                 </AvatarFallback>
               </Avatar>
               <div>
@@ -128,6 +177,40 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
               />
             </div>
 
+            {/* Birth date */}
+            <div className="space-y-2">
+              <Label>Fecha de nacimiento</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !birthDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {birthDate
+                      ? format(birthDate, "d 'de' MMMM, yyyy", { locale: es })
+                      : "Seleccionar fecha..."}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={birthDate}
+                    onSelect={setBirthDate}
+                    disabled={(date) => date > new Date() || date < new Date("1920-01-01")}
+                    initialFocus
+                    captionLayout="dropdown-buttons"
+                    fromYear={1920}
+                    toYear={new Date().getFullYear()}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
             <Button
               className="w-full"
               onClick={() => updateProfile.mutate()}
@@ -140,6 +223,90 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
               )}
               Guardar cambios
             </Button>
+
+            <Separator />
+
+            {/* Password section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Seguridad</span>
+                </div>
+                {!showPasswordSection && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPasswordSection(true)}
+                  >
+                    Cambiar contraseña
+                  </Button>
+                )}
+              </div>
+
+              {showPasswordSection && (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="sheet-new-pw">Nueva contraseña</Label>
+                    <div className="relative">
+                      <Input
+                        id="sheet-new-pw"
+                        type={showPasswords ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={e => setNewPassword(e.target.value)}
+                        placeholder="Mínimo 6 caracteres"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3"
+                        onClick={() => setShowPasswords(!showPasswords)}
+                      >
+                        {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="sheet-confirm-pw">Confirmar contraseña</Label>
+                    <Input
+                      id="sheet-confirm-pw"
+                      type={showPasswords ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      placeholder="Repetir contraseña"
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      className="flex-1"
+                      onClick={() => {
+                        setShowPasswordSection(false);
+                        setNewPassword('');
+                        setConfirmPassword('');
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      onClick={handlePasswordSubmit}
+                      disabled={changePassword.isPending || !newPassword || !confirmPassword}
+                    >
+                      {changePassword.isPending ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Lock className="w-4 h-4 mr-2" />
+                      )}
+                      Guardar
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </SheetContent>

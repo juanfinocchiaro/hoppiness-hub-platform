@@ -1,10 +1,8 @@
 /**
- * CuentaSidebar - Navegación para Mi Cuenta
+ * CuentaSidebar - Navegación para Mi Trabajo (staff)
  * 
- * Estructura adaptativa:
- * - Staff: Mi Trabajo (Horario, Fichajes, Coachings, Reuniones)
- * - Clientes (futuro): Mis Pedidos
- * - Común: Comunicados, Reglamento
+ * All work-related items grouped under "Mi Trabajo".
+ * Clients are redirected to the store and never see this sidebar.
  */
 import { useLocation } from 'react-router-dom';
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
@@ -19,12 +17,8 @@ import {
   FileCheck,
   CalendarDays,
   DollarSign,
-  User,
   AlertTriangle,
   BarChart3,
-  ShoppingBag,
-  Receipt,
-  MapPin,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -49,23 +43,23 @@ export function CuentaSidebar() {
   const isOperationalStaff = isStaff && !isOnlyFranquiciado;
   
   // Check active section for auto-expand
-  const trabajoPaths = ['/cuenta/horario', '/cuenta/fichajes', '/cuenta/coachings', '/cuenta/reuniones', '/cuenta/apercibimientos'];
+  const trabajoPaths = [
+    '/cuenta/horario', '/cuenta/fichajes', '/cuenta/coachings', 
+    '/cuenta/reuniones', '/cuenta/apercibimientos',
+    '/cuenta/solicitudes', '/cuenta/adelantos',
+    '/cuenta/comunicados', '/cuenta/reglamento',
+  ];
   const isTrabajoActive = trabajoPaths.some(p => location.pathname.startsWith(p));
-  
-  const solicitudesPaths = ['/cuenta/solicitudes', '/cuenta/adelantos'];
-  const isSolicitudesActive = solicitudesPaths.some(p => location.pathname.startsWith(p));
 
   return (
     <WorkSidebarNav>
-      {/* Dashboard - Always visible */}
       <NavDashboardLink
         to="/cuenta"
         icon={Home}
         label="Inicio"
       />
       
-      
-      {/* Mi Trabajo - Only for operational staff */}
+      {/* Mi Trabajo — all work-related items in one group */}
       {isOperationalStaff && (
         <NavSectionGroup
           id="trabajo"
@@ -79,33 +73,15 @@ export function CuentaSidebar() {
           <NavItemButton to="/cuenta/coachings" icon={ClipboardList} label="Coachings" />
           <NavItemButton to="/cuenta/apercibimientos" icon={AlertTriangle} label="Apercibimientos" />
           <NavItemButton to="/cuenta/reuniones" icon={Users} label="Reuniones" />
-        </NavSectionGroup>
-      )}
-      
-      {/* Solicitudes - Only for operational staff */}
-      {isOperationalStaff && (
-        <NavSectionGroup
-          id="solicitudes"
-          label="Solicitudes"
-          icon={CalendarDays}
-          forceOpen={isSolicitudesActive}
-        >
-          <NavItemButton to="/cuenta/solicitudes" icon={Calendar} label="Días Libres" />
+          <NavItemButton to="/cuenta/solicitudes" icon={CalendarDays} label="Días Libres" />
           <NavItemButton to="/cuenta/adelantos" icon={DollarSign} label="Adelantos" />
+          <NavItemButton to="/cuenta/comunicados" icon={MessageSquare} label="Comunicados" />
+          <NavItemButton to="/cuenta/reglamento" icon={FileCheck} label="Reglamento" />
         </NavSectionGroup>
       )}
       
-      {/* Comparativo - For multi-branch users (franquiciados) */}
-      {hasMultipleBranches && isOnlyFranquiciado && (
-        <NavDashboardLink
-          to="/cuenta/comparativo"
-          icon={BarChart3}
-          label="Comparativo"
-        />
-      )}
-      
-      {/* Comunicados - For all staff */}
-      {isStaff && (
+      {/* Comunicados for staff that isn't operational (e.g. only franquiciado) */}
+      {isStaff && !isOperationalStaff && (
         <NavDashboardLink
           to="/cuenta/comunicados"
           icon={MessageSquare}
@@ -113,12 +89,12 @@ export function CuentaSidebar() {
         />
       )}
       
-      {/* Reglamento - Only for operational staff */}
-      {isOperationalStaff && (
+      {/* Comparativo - For multi-branch franquiciados */}
+      {hasMultipleBranches && isOnlyFranquiciado && (
         <NavDashboardLink
-          to="/cuenta/reglamento"
-          icon={FileCheck}
-          label="Reglamento"
+          to="/cuenta/comparativo"
+          icon={BarChart3}
+          label="Comparativo"
         />
       )}
     </WorkSidebarNav>

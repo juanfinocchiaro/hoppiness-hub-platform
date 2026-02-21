@@ -10,6 +10,7 @@ export type AvatarType =
   | 'coordinador'
   | 'informes'
   | 'contador_marca'
+  | 'community_manager'
   | 'franquiciado'
   | 'encargado'
   | 'contador_local'
@@ -36,6 +37,7 @@ export function useRoleLandingV2() {
     isCoordinador,
     isInformes,
     isContadorMarca,
+    isCommunityManager,
     isFranquiciado,
     isEncargado,
     isContadorLocal,
@@ -81,6 +83,15 @@ export function useRoleLandingV2() {
       };
     }
 
+    if (isCommunityManager) {
+      return {
+        type: 'community_manager',
+        label: 'Community Manager',
+        landingPath: '/mimarca',
+        description: 'Comunicaciones y canales',
+      };
+    }
+
     // Roles locales
     if (isFranquiciado) {
       const firstBranch = accessibleBranches[0]?.id;
@@ -117,7 +128,7 @@ export function useRoleLandingV2() {
         type: 'cajero',
         label: 'Cajero',
         landingPath: '/cuenta',
-        description: 'Mi Cuenta',
+        description: 'Mi Trabajo',
       };
     }
 
@@ -126,16 +137,16 @@ export function useRoleLandingV2() {
         type: 'empleado',
         label: 'Empleado',
         landingPath: '/cuenta',
-        description: 'Mi Cuenta',
+        description: 'Mi Trabajo',
       };
     }
 
-    // Sin rol asignado
+    // Sin rol asignado — clientes van a la tienda
     return {
       type: 'guest',
       label: 'Usuario',
-      landingPath: '/cuenta',
-      description: 'Mi Cuenta',
+      landingPath: '/pedir',
+      description: 'Tienda',
     };
   };
 
@@ -149,7 +160,7 @@ export function useRoleLandingV2() {
     accessibleBranches,
     isOperationalRole: ['cajero', 'empleado'].includes(avatarInfo.type),
     isManagementRole: ['encargado', 'franquiciado'].includes(avatarInfo.type),
-    isBrandRole: ['superadmin', 'coordinador', 'informes', 'contador_marca'].includes(avatarInfo.type),
+    isBrandRole: ['superadmin', 'coordinador', 'informes', 'contador_marca', 'community_manager'].includes(avatarInfo.type),
   };
 }
 

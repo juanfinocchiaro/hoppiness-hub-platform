@@ -80,11 +80,22 @@ export default function PedirPage() {
       const found = menuItems.find(i => i.id === itemId);
       if (found) {
         setCustomizeItem(found);
-        // Clear the param so it doesn't re-open on navigation
         setSearchParams({}, { replace: true });
       }
     }
   }, [searchParams, menuItems, customizeItem]);
+
+  // Deep linking: auto-open tracking from ?tracking= query param
+  useEffect(() => {
+    const trackingParam = searchParams.get('tracking');
+    if (trackingParam) {
+      setExternalTrackingCode(trackingParam);
+      setTrackingTrigger(prev => prev + 1);
+      const next = new URLSearchParams(searchParams);
+      next.delete('tracking');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams]);
 
   // Open CartSheet on mobile ONLY when side panel is not visible (Bug 7F fix)
   useEffect(() => {

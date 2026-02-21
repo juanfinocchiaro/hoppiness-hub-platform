@@ -108,7 +108,6 @@ import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
 // Mi Cuenta
 import CuentaLayout from "./pages/cuenta/CuentaLayout";
 import CuentaHome from "./pages/cuenta/CuentaHome";
-import CuentaPerfil from "./pages/cuenta/CuentaPerfil";
 import MiHorarioPage from "./pages/cuenta/MiHorarioPage";
 import MisFichajesPage from "./pages/cuenta/MisFichajesPage";
 import MisCoachingsPage from "./pages/cuenta/MisCoachingsPage";
@@ -162,10 +161,9 @@ const App = () => (
             <Route path="/pedir/:branchSlug" element={<PedirPage />} />
             <Route path="/pedido/:trackingCode" element={<TrackingPage />} />
             
-            {/* Mi Cuenta - con CuentaLayout usando WorkShell */}
+            {/* Mi Trabajo — staff panel using WorkShell (clients redirect to /pedir) */}
             <Route path="/cuenta" element={<RequireAuth><CuentaLayout /></RequireAuth>}>
               <Route index element={<CuentaHome />} />
-              <Route path="perfil" element={<CuentaPerfil />} />
               <Route path="horario" element={<MiHorarioPage />} />
               <Route path="fichajes" element={<MisFichajesPage />} />
               <Route path="coachings" element={<MisCoachingsPage />} />

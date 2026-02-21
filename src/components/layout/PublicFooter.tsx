@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Instagram } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 
@@ -24,7 +25,9 @@ function SpotifyIcon({ className }: { className?: string }) {
 
 export function PublicFooter() {
   const { user } = useAuth();
+  const { canAccessLocalPanel, canAccessBrandPanel } = usePermissionsWithImpersonation();
   const { openAuthModal } = useAuthModal();
+  const isStaff = canAccessLocalPanel || canAccessBrandPanel;
 
   return (
     <footer className="bg-foreground text-background py-12 px-4">
@@ -59,7 +62,9 @@ export function PublicFooter() {
               <Link to="/contacto?asunto=empleo" className="block text-background/70 hover:text-background">Trabajá con nosotros</Link>
               <Link to="/contacto?asunto=proveedor" className="block text-background/70 hover:text-background">Proveedores</Link>
               {user ? (
-                <Link to="/cuenta" className="block text-background/70 hover:text-background">Mi Cuenta</Link>
+                <Link to={isStaff ? '/cuenta' : '/pedir'} className="block text-background/70 hover:text-background">
+                  {isStaff ? 'Mi Trabajo' : 'Mi Cuenta'}
+                </Link>
               ) : (
                 <button onClick={() => openAuthModal()} className="block text-background/70 hover:text-background text-sm text-left">Ingresar</button>
               )}
