@@ -125,6 +125,7 @@ export default function PedirPage() {
             cart={cart}
             onProductClick={handleProductClick}
             onBack={() => setStep('landing')}
+            onServiceChange={(tipo) => cart.setTipoServicio(tipo)}
             cartPanelVisible={showSidePanel}
           />
 

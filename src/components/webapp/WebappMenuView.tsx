@@ -16,10 +16,11 @@ interface Props {
   cart: ReturnType<typeof useWebappCart>;
   onProductClick: (item: WebappMenuItem) => void;
   onBack: () => void;
+  onServiceChange?: (tipo: TipoServicioWebapp) => void;
   cartPanelVisible?: boolean;
 }
 
-export function WebappMenuView({ branch, config, items, loading, tipoServicio, cart, onProductClick, onBack, cartPanelVisible }: Props) {
+export function WebappMenuView({ branch, config, items, loading, tipoServicio, cart, onProductClick, onBack, onServiceChange, cartPanelVisible }: Props) {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -75,6 +76,12 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
     categoryRefs.current[catName]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  const servicioOptions = [
+    config.retiro_habilitado && { key: 'retiro' as TipoServicioWebapp, label: 'Retiro', icon: '🛒', tiempo: config.tiempo_estimado_retiro_min },
+    config.delivery_habilitado && { key: 'delivery' as TipoServicioWebapp, label: 'Delivery', icon: '🛵', tiempo: config.tiempo_estimado_delivery_min },
+    config.comer_aca_habilitado && { key: 'comer_aca' as TipoServicioWebapp, label: 'Comer acá', icon: '🍽', tiempo: null },
+  ].filter(Boolean) as { key: TipoServicioWebapp; label: string; icon: string; tiempo: number | null }[];
+
   const servicioLabel = tipoServicio === 'retiro' ? '🛒 Retiro en local' : tipoServicio === 'delivery' ? '🛵 Delivery' : '🍽 Comer acá';
 
   const tiempoEstimado = tipoServicio === 'delivery'
@@ -109,10 +116,29 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
             <img src={logoHoppiness} alt="" className="w-8 h-8 rounded-full object-contain" />
             <div className="flex-1 min-w-0">
               <p className="font-bold text-sm truncate text-foreground">{branch.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {servicioLabel}
-                {tiempoEstimado && <> · ~{tiempoEstimado} min</>}
-              </p>
+              {servicioOptions.length > 1 && onServiceChange ? (
+                <div className="flex gap-1 mt-1">
+                  {servicioOptions.map(opt => (
+                    <button
+                      key={opt.key}
+                      onClick={() => onServiceChange(opt.key)}
+                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full transition-colors ${
+                        tipoServicio === opt.key
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                      }`}
+                    >
+                      {opt.icon} {opt.label}
+                      {opt.tiempo && <span className="opacity-70"> ~{opt.tiempo}′</span>}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  {servicioLabel}
+                  {tiempoEstimado && <> · ~{tiempoEstimado} min</>}
+                </p>
+              )}
             </div>
             {/* View toggle - only on mobile */}
             <button
@@ -236,7 +262,7 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
 
                   {/* Desktop: horizontal cards */}
                   <div className="hidden lg:block px-4 py-3">
-                    <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
+                    <div className={`grid gap-3 ${cartPanelVisible ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-3'}`}>
                       {cat.items.map(item => renderProductCard(item, 'desktop'))}
                     </div>
                   </div>

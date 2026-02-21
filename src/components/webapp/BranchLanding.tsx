@@ -15,6 +15,13 @@ function formatPrice(n: number) {
   return `$${n.toLocaleString('es-AR')}`;
 }
 
+function formatTime(time: string | null): string {
+  if (!time) return '';
+  // Remove seconds: "12:00:00" → "12:00"
+  const parts = time.split(':');
+  return `${parts[0]}:${parts[1]}`;
+}
+
 export function BranchLanding({ branch, config, onSelectService, onViewMenu, onBack }: Props) {
   const isOpen = config.estado === 'abierto';
   const isPaused = config.estado === 'pausado';
@@ -48,7 +55,7 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
             <span className="flex items-center gap-2 text-sm font-semibold bg-green-50 text-green-700 border border-green-200 px-4 py-1.5 rounded-full">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
               Abierto
-              {branch.closing_time && <span className="text-green-600/70">· Cierra {branch.closing_time}</span>}
+              {branch.closing_time && <span className="text-green-600/70">· Cierra {formatTime(branch.closing_time)}</span>}
             </span>
           )}
           {isPaused && (
@@ -61,7 +68,7 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
             <span className="flex items-center gap-2 text-sm font-semibold bg-muted text-muted-foreground border px-4 py-1.5 rounded-full">
               <span className="w-2 h-2 rounded-full bg-red-400" />
               Cerrado
-              {branch.opening_time && <span>· Abre {branch.opening_time}</span>}
+              {branch.opening_time && <span>· Abre {formatTime(branch.opening_time)}</span>}
             </span>
           )}
         </div>

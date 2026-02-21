@@ -86,16 +86,16 @@ export default function Pedir() {
 
       {/* Header */}
       <header className="bg-primary text-primary-foreground">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5">
-            <img src={logoHoppiness} alt="Hoppiness Club" className="w-9 h-9 rounded-full object-contain" />
-            <span className="font-black font-brand text-base hidden sm:inline tracking-tight">HOPPINESS CLUB</span>
-          </Link>
+        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
           <Link to="/">
-            <Button variant="ghost" size="sm" className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10">
+            <Button variant="ghost" size="sm" className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10 -ml-2">
               <ArrowLeft className="w-4 h-4 mr-1" />
               Volver
             </Button>
+          </Link>
+          <Link to="/" className="flex items-center gap-2.5 ml-auto">
+            <img src={logoHoppiness} alt="Hoppiness Club" className="w-9 h-9 rounded-full object-contain" />
+            <span className="font-black font-brand text-base hidden sm:inline tracking-tight">HOPPINESS CLUB</span>
           </Link>
         </div>
       </header>
