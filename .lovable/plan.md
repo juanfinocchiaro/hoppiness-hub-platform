@@ -1,31 +1,37 @@
 
-
-# Fix: Modal de producto cortado cuando hay muchos modificadores
+# Fix: Error de check constraint en barrios de delivery
 
 ## Problema
 
-En desktop, el `DialogContent` tiene `max-h-[90vh]` pero no tiene una altura explicita. El div interno usa `h-full` que no se resuelve correctamente sin una altura definida en el padre. Cuando hay muchos extras/removibles (como Victoria con 6 removibles), el contenido empuja el footer (boton "Agregar al carrito") fuera del area visible.
+Al hacer click en "Regenerar", el sistema intenta insertar barrios con `status: 'assigned'`, pero la tabla `branch_delivery_neighborhoods` tiene un CHECK constraint que solo permite estos valores:
 
-## Causa raiz
+- `enabled`
+- `blocked_security`
+- `blocked_conflict`
 
-El `DialogContent` de Radix usa `grid` por defecto. Aunque se pasa `flex flex-col`, la combinacion de `max-h` sin `h` explicito hace que el `h-full` del hijo no se calcule bien. El area scrollable (`flex-1 overflow-y-auto`) no se limita y el footer se sale del viewport.
+El valor `'assigned'` no esta en la lista permitida, por eso falla con el error "violates check constraint branch_delivery_neighborhoods_status_check".
 
-## Cambio
+## Cambios
 
-### `src/components/webapp/ProductCustomizeSheet.tsx`
+### `src/hooks/useDeliveryConfig.ts`
 
-Linea 335 - Cambiar las clases del `DialogContent` en desktop:
+Reemplazar todas las ocurrencias de `'assigned'` por `'enabled'`:
 
-**Antes:**
-```
-max-w-lg p-0 overflow-hidden max-h-[90vh] flex flex-col
-```
+1. **Linea 150** - Tipo del parametro status en `useUpdateNeighborhoodStatus`: cambiar `'assigned'` por `'enabled'`
+2. **Linea 196** - Tipo del array toInsert: cambiar `'assigned'` por `'enabled'`
+3. **Linea 208** - Valor insertado en regenerar: cambiar `'assigned'` por `'enabled'`
+4. **Linea 333** - Query de busqueda en `useDeliveryQuote`: cambiar `.eq('status', 'assigned')` por `.eq('status', 'enabled')`
 
-**Despues:**
-```
-max-w-lg p-0 overflow-hidden max-h-[90vh] h-[90vh] flex flex-col
-```
+### `src/pages/admin/BranchDeliveryDetailPage.tsx`
 
-Agregar `h-[90vh]` para que el contenedor tenga una altura definida. Esto permite que `h-full` del hijo funcione y que `flex-1 overflow-y-auto` del area de contenido se limite correctamente, manteniendo el footer siempre visible al fondo.
+Reemplazar filtros y acciones que usan `'assigned'`:
 
-Cambio de 1 linea. El footer con el boton "Agregar al carrito" y el selector de cantidad sera siempre visible, independientemente de cuantos extras/removibles tenga el producto.
+1. **Linea 82** - Filtro de conteo: `n.status === 'assigned'` por `n.status === 'enabled'`
+2. **Linea 84** - Filtro de asignados: `n.status === 'assigned'` por `n.status === 'enabled'`
+3. **Linea 132** - Accion de desbloquear: `status: 'assigned'` por `status: 'enabled'`
+
+### `src/pages/local/LocalDeliveryZonesPage.tsx`
+
+1. **Linea 47** - Filtro de habilitados: ya usa `'enabled'`, no necesita cambio (correcto)
+
+Total: ~7 lineas cambiadas, mismo string reemplazado en cada caso.
