@@ -1,28 +1,41 @@
 
 
-# Agregar horario de hoy en las cards de /pedir
+# Fix: Grupos opcionales no aparecen
 
-## Problema
-Los cambios de horario se hicieron en `BranchLanding.tsx` (pagina individual del local), pero la pagina `/pedir` usa un componente `BranchCard` distinto dentro de `Pedir.tsx` que no muestra el horario de hoy.
+## Causa raiz
+
+El hook `useWebappItemOptionalGroups` consulta columnas que no existen en la tabla `item_carta_grupo_opcional_items`:
+
+- **`precio_extra`** -- No existe. La tabla tiene `costo_unitario` (costo interno, no precio de venta)
+- **`orden`** -- No existe. La tabla no tiene columna de orden
+
+Esto hace que la query de Supabase falle silenciosamente y retorne array vacio, por lo que nunca se renderizan las opciones de bebida.
+
+## Datos confirmados
+
+- El item "Combo hamburguesa Ultrabacon" (id `e570bb5d...`) tiene 1 grupo opcional: "Bebida a eleccion" (no obligatorio, max_selecciones null)
+- Ese grupo tiene 9 opciones (aguas, gaseosas) -- todas con `precio_extra = 0` (incluidas en el combo)
+- La tabla `item_carta_grupo_opcional_items` tiene columnas: `id, grupo_id, insumo_id, preparacion_id, cantidad, costo_unitario, created_at`
 
 ## Cambio
 
-### `src/pages/Pedir.tsx` - Componente `BranchCard`
+### `src/hooks/useWebappMenu.ts` - funcion `useWebappItemOptionalGroups`
 
-Reutilizar las funciones `getTodayIdx`, `getTodayHours` y `formatTime` que ya existen en `BranchLanding.tsx` (o duplicarlas localmente ya que son funciones puras simples).
+Corregir la query de opciones (linea 128):
 
-Agregar debajo del badge de estado (linea ~228) una linea con el horario de hoy extraido de `branch.public_hours`:
-
+**Antes:**
 ```
-Manantiales          [Abierto]
-Direccion...
-Hoy: 11:30 - 00:00              <-- NUEVO
-Servicios disponibles: Retiro, Delivery
+.select('id, grupo_id, insumo_id, preparacion_id, precio_extra, orden, insumos(id, nombre), preparaciones(id, nombre)')
+.order('orden')
 ```
 
-- Si `public_hours` existe y tiene datos para hoy: mostrar "Hoy: HH:MM - HH:MM"
-- Si hoy esta cerrado: mostrar "Hoy: Cerrado"
-- Si no hay `public_hours`: no mostrar nada (igual que ahora)
+**Despues:**
+```
+.select('id, grupo_id, insumo_id, preparacion_id, costo_unitario, insumos(id, nombre), preparaciones(id, nombre)')
+```
 
-Cambio puntual: agregar ~10 lineas despues del badge de estado y antes de la direccion, con un texto `text-xs text-muted-foreground` mostrando el horario.
+- Reemplazar `precio_extra` por `costo_unitario` en el select (pero no usarlo como precio al cliente -- estas opciones son sin cargo adicional)
+- Eliminar `orden` del select y del `.order()` (no existe esa columna)
+- En el map, poner `precio_extra: 0` fijo ya que las opciones de grupo no tienen recargo (estan incluidas en el precio del combo)
 
+Cambio de 3 lineas, sin impacto en ningun otro archivo.
