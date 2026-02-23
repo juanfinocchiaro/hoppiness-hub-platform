@@ -1,141 +1,135 @@
 
+# Fix: Opcionales de bebida, categorias ocultas y horarios del local
 
-# Plan Consolidado: 7 Partes del Prompt Final
+## 3 problemas identificados
 
-Este plan implementa todas las mejoras del documento que subiste, en orden. Incluye migraciones SQL, cambios en edge functions, y modificaciones en la webapp y el admin.
+### Problema 1: Ultracheese no muestra opciones de bebida
+El combo Ultracheese tiene un grupo opcional "Bebida a eleccion" en la tabla `item_carta_grupo_opcional` con 9 opciones de bebida (agua, gaseosas, etc.) en `item_carta_grupo_opcional_items`. Pero el codigo actual de la webapp solo consulta `item_extra_asignaciones` (extras) e `item_removibles` (removibles). **Nunca consulta los grupos opcionales**, por eso no aparecen las bebidas.
 
----
+### Problema 2: EXTRAS/MODIFICADORES visible en la webapp
+La categoria "EXTRAS/MODIFICADORES" tiene `visible_en_carta = false` en `menu_categorias`. Pero `useWebappMenuItems` no filtra por ese campo, asi que los 10 items extra aparecen como una categoria visible en la tienda online.
 
-## PARTE 1: Migraciones SQL
-
-### 1A. Seed de barrios
-Los 485 barrios ya estan cargados en la base. No se necesita ejecutar el seed.
-
-### 1B. Migrar delivery a asignacion exclusiva
-- Vaciar `branch_delivery_neighborhoods` (actualmente tiene datos con status `enabled` y `blocked_security`)
-- Cambiar constraint de status a solo `assigned` y `blocked_security`
-- Default a `assigned`
-- Eliminar columna `conflict_with_branch_id`
-- Crear indice unico para que un barrio solo pueda estar `assigned` a un local
-
-### 1C. Columnas de delivery en pedidos
-- Agregar `delivery_address TEXT` y `delivery_neighborhood TEXT` a `pedidos`
-
-### 1D. Tabla `branch_item_availability`
-- Crear tabla con columnas: `branch_id`, `item_carta_id`, `available`, `available_webapp`, `available_salon`, `out_of_stock`
-- RLS: lectura publica, escritura para admins de marca, update para staff local
-- Seed inicial: una fila por cada combinacion branch x item activo
+### Problema 3: Horario del dia no se muestra al llegar al local
+La card de info del local (BranchLanding) muestra "Abierto - Cierra XX:XX" pero no muestra el horario completo del dia de hoy. El horario semanal solo aparece cuando el local esta cerrado. El usuario quiere ver el horario de hoy siempre, con un "Ver mas" para expandir la semana.
 
 ---
 
-## PARTE 2: Edge Function `calculate-delivery`
+## Cambios
 
-**Archivo**: `supabase/functions/calculate-delivery/index.ts`
+### Archivo 1: `src/hooks/useWebappMenu.ts`
 
-- Agregar `suggested_branch` a la interface de respuesta
-- Agregar reasons: `assigned_other_branch`, `not_assigned`
-- Reemplazar paso 4 (blocklist) por logica de exclusividad territorial:
-  1. Buscar barrio por nombre en `city_neighborhoods`
-  2. Verificar bloqueo de seguridad
-  3. Verificar asignacion exclusiva: si esta asignado a otro local, devolver `suggested_branch` con datos del local correcto
-  4. Si no esta asignado a ningun local, devolver `not_assigned`
-- Actualizar funcion `unavailable` para incluir `suggested_branch: null`
+**A) Nuevo hook `useWebappItemOptionalGroups`**
+
+Consulta `item_carta_grupo_opcional` para un item, y luego `item_carta_grupo_opcional_items` con joins a `insumos` y `preparaciones` para obtener nombres. Retorna la estructura:
+
+```typescript
+{
+  id: string;
+  nombre: string;           // "Bebida a eleccion"
+  es_obligatorio: boolean;
+  max_selecciones: number | null;
+  opciones: {
+    id: string;
+    nombre: string;          // "Gaseosa Pepsi Original Lata 354ml"
+    precio_extra: number;    // 0 para opciones incluidas
+  }[];
+}[]
+```
+
+- Usa `precio_extra` del insumo/preparacion (actualmente NULL para todas las bebidas = $0 = incluido)
+- Si `precio_extra` es NULL, se muestra como $0 (sin recargo)
+
+**B) Filtrar categorias ocultas en `useWebappMenuItems`**
+
+Agregar filtro en la query de items: excluir items cuya categoria tenga `visible_en_carta = false`. Esto se logra consultando primero las categorias ocultas:
+
+```typescript
+// Obtener IDs de categorias ocultas
+const { data: hiddenCats } = await supabase
+  .from('menu_categorias')
+  .select('id')
+  .eq('visible_en_carta', false);
+
+const hiddenCatIds = (hiddenCats || []).map(c => c.id);
+
+// En la query principal, excluir items de esas categorias
+if (hiddenCatIds.length > 0) {
+  query = query.not('categoria_carta_id', 'in', `(${hiddenCatIds.join(',')})`);
+}
+```
+
+### Archivo 2: `src/components/webapp/ProductCustomizeSheet.tsx`
+
+**A) Importar y usar `useWebappItemOptionalGroups`**
+
+Agregar la consulta de grupos opcionales y renderizar una seccion por grupo:
+
+- Titulo: nombre del grupo (ej: "Bebida a eleccion")
+- Subtitulo: "Obligatorio" o "Opcional" + "Elegi 1" / "Elegi hasta N"
+- Si `max_selecciones === 1`: renderizar **radio buttons** (circulos)
+- Si `max_selecciones > 1` o null: renderizar **checkboxes** (cuadrados)
+- Mostrar precio solo si `precio_extra > 0`
+- Bloquear "Agregar al carrito" si hay grupos obligatorios sin seleccion
+
+**B) Estado para selecciones de grupos opcionales**
+
+Nuevo state:
+```typescript
+const [groupSelections, setGroupSelections] = useState<Record<string, CartItemModifier[]>>({});
+```
+
+Logica de toggle que respeta `max_selecciones`:
+- Si max=1: reemplaza la seleccion anterior
+- Si max=N: agrega hasta N, luego ignora
+
+Las selecciones de grupos se agregan como extras adicionales en `handleAdd`.
+
+**C) Validacion de grupos obligatorios**
+
+```typescript
+const missingRequired = (optionalGroups || [])
+  .filter(g => g.es_obligatorio && !(groupSelections[g.id]?.length > 0));
+```
+
+Si hay grupos obligatorios sin seleccion, el boton se deshabilita y muestra "Selecciona [nombre grupo]".
+
+### Archivo 3: `src/components/webapp/BranchLanding.tsx`
+
+**Reemplazar la seccion de status badge** para incluir horario de hoy:
+
+- Extraer el dia actual de `public_hours` (array donde index 0=Lunes, 6=Domingo)
+- Mostrar siempre: "Hoy: [apertura] - [cierre]" debajo del badge de estado
+- Agregar boton "Ver horarios" que expande/colapsa la tabla semanal (usando `useState`)
+- La tabla semanal (`WeeklySchedule`) se muestra siempre que este expandida, no solo cuando el local esta cerrado
+
+Estructura visual:
+```
+[Badge: Abierto]
+Hoy: 11:30 - 00:00
+[Ver horarios ▼]  ← click expande la semana
+```
+
+### Archivo 4: `src/types/webapp.ts`
+
+Agregar tipo para modificadores de grupo opcional en CartItem:
+
+```typescript
+export interface CartItemGroupSelection {
+  grupoId: string;
+  grupoNombre: string;
+  opcionId: string;
+  opcionNombre: string;
+  precio: number;
+}
+```
 
 ---
 
-## PARTE 3: Webapp - Sugerencia de local alternativo
+## Resumen
 
-### 3A. `src/components/webapp/DeliveryUnavailable.tsx`
-- Reescribir con soporte para `reason` y `suggestedBranch`
-- Si `reason === 'assigned_other_branch'` y hay `suggestedBranch`: mostrar card amber con boton "Pedir desde [Nombre]" que navega a `/pedir/[slug]`
-- Caso generico: mantener card roja actual con opciones de retiro/cambiar direccion
-
-### 3B. `src/hooks/useDeliveryConfig.ts`
-- Actualizar tipo de retorno de `useCalculateDelivery` para incluir `suggested_branch` y los nuevos reasons
-- Cambiar `'enabled'` a `'assigned'` en `useUpdateNeighborhoodStatus` y `useRegenerateBranchNeighborhoods`
-- Agregar hook `useNeighborhoodAssignments(neighborhoodIds)` para verificar asignaciones cruzadas
-
-### 3C. `src/components/webapp/CartSheet.tsx`
-- Agregar `suggested_branch` al state de `deliveryCalc`
-- Pasar `reason` y `suggestedBranch` al componente `DeliveryUnavailable`
-
-### 3D. `src/components/webapp/CheckoutInlineView.tsx`
-- Mismo cambio que CartSheet: agregar `suggested_branch` al state y pasarlo a `DeliveryUnavailable`
-
----
-
-## PARTE 4: Admin delivery - Asignacion exclusiva
-
-### 4A. `src/pages/admin/BranchDeliveryDetailPage.tsx`
-- Eliminar todas las referencias a `blocked_conflict`
-- Cambiar `'enabled'` a `'assigned'` en conteos y filtros
-- Usar `useNeighborhoodAssignments` para detectar barrios asignados a otros locales
-- Mostrar badge "Asignado a [Nombre Local]" (amber) para barrios de otro local
-- No mostrar boton de accion para barrios asignados a otro local
-- `handleUnblock` pasa a usar status `'assigned'` en vez de `'enabled'`
-
----
-
-## PARTE 5: Extras y Removibles - Tablas correctas
-
-### 5A. `src/hooks/useWebappMenu.ts`
-- Reescribir `useWebappItemExtras`: consultar `item_extra_asignaciones` + `items_carta` (precio real de venta via `precio_base`)
-- Reescribir `useWebappItemRemovables`: consultar `item_removibles` con `nombre_display`, `insumos`, `preparaciones`
-
-### 5B. `src/components/webapp/ProductCustomizeSheet.tsx`
-- Eliminar logica de grupos opcionales (`es_obligatorio`, `max_selecciones`, `missingRequired`)
-- Simplificar `toggleExtra` a toggle simple sin logica de grupos
-- Renderizar extras como lista plana con nombre y precio real
-- Renderizar removibles usando `comp.nombre` directo (ya mapeado en el hook)
-- Boton "Agregar" siempre habilitado (sin validacion de selecciones obligatorias)
-- Limpiar import de `AlertCircle`
-
----
-
-## PARTE 6: Disponibilidad de productos por local
-
-### 6A. `src/hooks/useWebappMenu.ts` - `useWebappMenuItems`
-- Primero consultar `branch_item_availability` filtrando por `available=true`, `available_webapp=true`, `out_of_stock=false`
-- Luego consultar `items_carta` solo con los IDs disponibles
-- Fallback: si no hay filas en `branch_item_availability`, usar query original sin filtro
-
-### 6B. `src/hooks/useItemsCarta.ts`
-- Agregar parametro opcional `branchId` a `useItemsCarta`
-- Si se pasa `branchId`, filtrar por `branch_item_availability` con `available_salon=true`
-- Fallback si no hay filas: mostrar todo
-- Actualizar queryKey a incluir `branchId`
-- No romper callers existentes (sin argumento = sin filtro)
-
----
-
-## PARTE 7: Fix build errors
-
-### `src/components/ui/page-header.tsx`
-- Cambiar tipo de `icon` de `ReactNode` a `ReactNode | React.ComponentType`
-- Simplificar render: `typeof icon === 'function' ? createElement(icon, { className: 'w-6 h-6' }) : icon`
-- Eliminar checks de `isValidElement` y `$$typeof` que causan errores TS
-
----
-
-## Resumen de archivos a modificar
-
-| Archivo | Partes |
+| Archivo | Cambio |
 |---|---|
-| SQL Migration | 1B, 1C, 1D |
-| `supabase/functions/calculate-delivery/index.ts` | 2 |
-| `src/components/webapp/DeliveryUnavailable.tsx` | 3A |
-| `src/hooks/useDeliveryConfig.ts` | 3B, 4 |
-| `src/components/webapp/CartSheet.tsx` | 3C |
-| `src/components/webapp/CheckoutInlineView.tsx` | 3D |
-| `src/pages/admin/BranchDeliveryDetailPage.tsx` | 4A |
-| `src/hooks/useWebappMenu.ts` | 5A, 6A |
-| `src/components/webapp/ProductCustomizeSheet.tsx` | 5B |
-| `src/hooks/useItemsCarta.ts` | 6B |
-| `src/components/ui/page-header.tsx` | 7 |
-
-## Archivos que NO se tocan
-- `DeliveryPage.tsx` (despacho POS)
-- `WebappConfigPage.tsx`
-- `UserMenuDropdown.tsx`
-- No se crea UI de gestion de disponibilidad por local (solo tabla + filtros backend)
-
+| `src/hooks/useWebappMenu.ts` | Nuevo hook `useWebappItemOptionalGroups`; filtrar categorias con `visible_en_carta=false` |
+| `src/components/webapp/ProductCustomizeSheet.tsx` | Renderizar grupos opcionales con radio/checkbox; validar obligatorios; integrar selecciones al carrito |
+| `src/components/webapp/BranchLanding.tsx` | Mostrar horario de hoy siempre; "Ver horarios" expandible para la semana |
+| `src/types/webapp.ts` | Tipo `CartItemGroupSelection` |
