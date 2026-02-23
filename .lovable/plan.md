@@ -1,41 +1,31 @@
 
 
-# Fix: Grupos opcionales no aparecen
+# Fix: Modal de producto cortado cuando hay muchos modificadores
+
+## Problema
+
+En desktop, el `DialogContent` tiene `max-h-[90vh]` pero no tiene una altura explicita. El div interno usa `h-full` que no se resuelve correctamente sin una altura definida en el padre. Cuando hay muchos extras/removibles (como Victoria con 6 removibles), el contenido empuja el footer (boton "Agregar al carrito") fuera del area visible.
 
 ## Causa raiz
 
-El hook `useWebappItemOptionalGroups` consulta columnas que no existen en la tabla `item_carta_grupo_opcional_items`:
-
-- **`precio_extra`** -- No existe. La tabla tiene `costo_unitario` (costo interno, no precio de venta)
-- **`orden`** -- No existe. La tabla no tiene columna de orden
-
-Esto hace que la query de Supabase falle silenciosamente y retorne array vacio, por lo que nunca se renderizan las opciones de bebida.
-
-## Datos confirmados
-
-- El item "Combo hamburguesa Ultrabacon" (id `e570bb5d...`) tiene 1 grupo opcional: "Bebida a eleccion" (no obligatorio, max_selecciones null)
-- Ese grupo tiene 9 opciones (aguas, gaseosas) -- todas con `precio_extra = 0` (incluidas en el combo)
-- La tabla `item_carta_grupo_opcional_items` tiene columnas: `id, grupo_id, insumo_id, preparacion_id, cantidad, costo_unitario, created_at`
+El `DialogContent` de Radix usa `grid` por defecto. Aunque se pasa `flex flex-col`, la combinacion de `max-h` sin `h` explicito hace que el `h-full` del hijo no se calcule bien. El area scrollable (`flex-1 overflow-y-auto`) no se limita y el footer se sale del viewport.
 
 ## Cambio
 
-### `src/hooks/useWebappMenu.ts` - funcion `useWebappItemOptionalGroups`
+### `src/components/webapp/ProductCustomizeSheet.tsx`
 
-Corregir la query de opciones (linea 128):
+Linea 335 - Cambiar las clases del `DialogContent` en desktop:
 
 **Antes:**
 ```
-.select('id, grupo_id, insumo_id, preparacion_id, precio_extra, orden, insumos(id, nombre), preparaciones(id, nombre)')
-.order('orden')
+max-w-lg p-0 overflow-hidden max-h-[90vh] flex flex-col
 ```
 
 **Despues:**
 ```
-.select('id, grupo_id, insumo_id, preparacion_id, costo_unitario, insumos(id, nombre), preparaciones(id, nombre)')
+max-w-lg p-0 overflow-hidden max-h-[90vh] h-[90vh] flex flex-col
 ```
 
-- Reemplazar `precio_extra` por `costo_unitario` en el select (pero no usarlo como precio al cliente -- estas opciones son sin cargo adicional)
-- Eliminar `orden` del select y del `.order()` (no existe esa columna)
-- En el map, poner `precio_extra: 0` fijo ya que las opciones de grupo no tienen recargo (estan incluidas en el precio del combo)
+Agregar `h-[90vh]` para que el contenedor tenga una altura definida. Esto permite que `h-full` del hijo funcione y que `flex-1 overflow-y-auto` del area de contenido se limite correctamente, manteniendo el footer siempre visible al fondo.
 
-Cambio de 3 lineas, sin impacto en ningun otro archivo.
+Cambio de 1 linea. El footer con el boton "Agregar al carrito" y el selector de cantidad sera siempre visible, independientemente de cuantos extras/removibles tenga el producto.
