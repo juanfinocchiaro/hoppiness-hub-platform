@@ -1,76 +1,52 @@
 
 
-# Refactorizacion: Mis Pedidos, Direcciones y Perfil como experiencia de Tienda
+# Fix: Navegacion "Nuestros Clubes" causa recarga completa
 
 ## Problema
 
-Actualmente "Mis Pedidos", "Mis Direcciones" y "Mi Perfil" existen en DOS lugares:
-1. Como **paginas dentro de Mi Cuenta** (`/cuenta/pedidos`, `/cuenta/direcciones`, `/cuenta/perfil`) con sidebar de sistema, tipografia de admin, layout de panel interno.
-2. Como **Sheets inline** dentro de `/pedir/:slug` (ya implementados: `MisPedidosSheet`, `DireccionesSheet`, `PerfilSheet`).
+En `AppHeader.tsx`, el link "Nuestros Clubes" usa `<a href="/#clubes">` (HTML nativo) en vez de React Router. Cuando estas en cualquier pagina que NO sea Home (Contacto, Nosotros, Franquicias), al hacer click se produce una **recarga completa del navegador** en vez de una transicion SPA fluida.
 
-El usuario ve la version de "Mi Cuenta" que rompe la fluidez. Estas 3 secciones son de **cliente final**, no de staff operativo. Solo "Mi Local" y "Mi Marca" son "sistemas".
+Esto causa:
+- Descarga completa de la app de nuevo
+- Re-render de toda la landing (hero, 6 fotos de locales, menu showcase, premios, medios, reviews)
+- Congelamiento visible de 2-3 segundos
 
 ## Solucion
 
-Eliminar las rutas de sistema (`/cuenta/pedidos`, `/cuenta/direcciones`) y que estas funcionalidades vivan exclusivamente como **Sheets inline** dentro del contexto de tienda. El perfil del cliente se maneja via el `PerfilSheet`. Mi Cuenta conserva el perfil de staff (con PIN, password, datos laborales) para empleados.
+Cambiar el `<a href>` por navegacion React Router. El `PublicLayout` ya tiene logica para detectar `/#clubes` y hacer scroll automatico al elemento.
 
----
+## Cambio
 
-## Cambios
+**Archivo**: `src/components/layout/AppHeader.tsx`
 
-### 1. CuentaSidebar: Eliminar secciones de cliente
+En la funcion `PublicCenter` (linea ~131-143), reemplazar el `<a>` por `Link` de React Router:
 
-Remover de `CuentaSidebar.tsx`:
-- La seccion "MIS PEDIDOS" completa (Historial + Mis Direcciones)
-- El link "Mi Perfil" (el perfil de cliente se gestiona desde la tienda; el de staff ya esta en CuentaHome)
+```tsx
+// ANTES (linea 133):
+<a key={item.to} href={isHome ? '#clubes' : '/#clubes'}>
 
-Solo quedan: Inicio, Mi Trabajo, Solicitudes, Comparativo, Comunicados, Reglamento.
+// DESPUES:
+<Link key={item.to} to={isHome ? '#clubes' : '/#clubes'}>
+  ...
+</Link>
+```
 
-### 2. App.tsx: Eliminar rutas de paginas de cliente
+Y lo mismo en `PublicMobileMenu` (linea ~199):
 
-Eliminar las rutas bajo `/cuenta`:
-- `<Route path="pedidos" ... />`
-- `<Route path="direcciones" ... />`
+```tsx
+// ANTES:
+<a href={isHome ? '#clubes' : '/#clubes'} onClick={() => setOpen(false)}>
 
-Mantener `<Route path="perfil" ... />` porque CuentaPerfil tiene funcionalidades de staff (PIN de fichaje, cambio de password) que no estan en PerfilSheet.
+// DESPUES:
+<Link to={isHome ? '#clubes' : '/#clubes'} onClick={() => setOpen(false)}>
+```
 
-### 3. UserMenuDropdown: Siempre abrir Sheets, nunca navegar a /cuenta
+Ademas, cuando `isHome` es true y se hace click en `#clubes`, hay que hacer scroll manual ya que React Router no cambia el pathname y no dispara el useEffect de PublicLayout. Para esto se agrega un `onClick` que haga `scrollIntoView` directamente cuando ya estamos en Home.
 
-Cambiar los fallbacks del `UserMenuDropdown`:
-- `onMisPedidos` fallback: ya no navega a `/cuenta/pedidos`. Si no se pasa callback, no muestra la opcion o navega a `/pedir` con un param.
-- `onMisDirecciones` fallback: idem.
-- `onMiPerfil` fallback: idem.
-
-Como el `UserMenuDropdown` siempre recibe callbacks cuando esta dentro de PedirPage (que es el unico lugar donde se usa la tienda), esto ya funciona. Solo hay que asegurar que fuera de la tienda (ej: landing, nosotros) los items del dropdown no intenten navegar a `/cuenta/...`.
-
-**Solucion**: Si no hay callbacks, ocultar esas opciones del dropdown (ya que solo tienen sentido dentro de la tienda).
-
-### 4. CuentaHome: Quitar boton "Mis pedidos"
-
-En `CuentaHome.tsx` hay un boton que navega a `/cuenta/pedidos`. Reemplazarlo con un link a `/pedir` (la tienda) o eliminarlo.
-
-### 5. Paginas institucionales (Landing, Nosotros, Franquicias, Contacto)
-
-El `WebappHeader` en estas paginas NO pasa callbacks de Sheets. Entonces el `UserMenuDropdown` NO debe mostrar "Mis pedidos" / "Mis direcciones" / "Mi perfil" como opciones que naveguen a `/cuenta/...`.
-
-**Dos opciones**:
-- **A)** Ocultar esas opciones cuando no hay callbacks (solucion simple)
-- **B)** Navegar a `/pedir` con params tipo `?action=pedidos` para que PedirPage abra el sheet automaticamente
-
-Recomiendo **opcion A** por simplicidad: en paginas institucionales el dropdown solo muestra nombre, email, y links a Mi Local / Mi Marca / Cerrar sesion.
-
----
-
-## Resumen de archivos
+### Detalle tecnico
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/components/layout/CuentaSidebar.tsx` | Eliminar seccion "MIS PEDIDOS" (Historial + Direcciones) y link "Mi Perfil" |
-| `src/App.tsx` | Eliminar rutas `/cuenta/pedidos` y `/cuenta/direcciones`, mantener `/cuenta/perfil` para staff |
-| `src/components/webapp/UserMenuDropdown.tsx` | Si no hay callbacks, ocultar "Mis pedidos", "Mis direcciones", "Mi perfil" del dropdown |
-| `src/pages/cuenta/CuentaHome.tsx` | Cambiar boton "Mis pedidos" para ir a `/pedir` en vez de `/cuenta/pedidos` |
+| `src/components/layout/AppHeader.tsx` | Reemplazar `<a href>` por `<Link to>` en PublicCenter y PublicMobileMenu para "Nuestros Clubes". Agregar onClick con scrollIntoView para el caso isHome. |
 
-### Archivos que se conservan (no se eliminan)
-- `MisPedidosPage.tsx` y `MisDireccionesPage.tsx`: se desconectan de rutas pero pueden eliminarse si se prefiere limpieza total
-- `MisPedidosSheet.tsx`, `DireccionesSheet.tsx`, `PerfilSheet.tsx`: ya existen y funcionan correctamente dentro de PedirPage
-
+Un solo archivo, dos cambios puntuales.
