@@ -228,6 +228,132 @@ export type Database = {
           },
         ]
       }
+      branch_delivery_config: {
+        Row: {
+          branch_id: string
+          created_at: string | null
+          default_radius_km: number
+          delivery_enabled: boolean
+          id: string
+          radius_override_by: string | null
+          radius_override_km: number | null
+          radius_override_until: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string | null
+          default_radius_km?: number
+          delivery_enabled?: boolean
+          id?: string
+          radius_override_by?: string | null
+          radius_override_km?: number | null
+          radius_override_until?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string | null
+          default_radius_km?: number
+          delivery_enabled?: boolean
+          id?: string
+          radius_override_by?: string | null
+          radius_override_km?: number | null
+          radius_override_until?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_delivery_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_delivery_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branch_delivery_neighborhoods: {
+        Row: {
+          block_reason: string | null
+          branch_id: string
+          conflict_with_branch_id: string | null
+          created_at: string | null
+          decided_by: string
+          distance_km: number | null
+          id: string
+          neighborhood_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          block_reason?: string | null
+          branch_id: string
+          conflict_with_branch_id?: string | null
+          created_at?: string | null
+          decided_by?: string
+          distance_km?: number | null
+          id?: string
+          neighborhood_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          block_reason?: string | null
+          branch_id?: string
+          conflict_with_branch_id?: string | null
+          created_at?: string | null
+          decided_by?: string
+          distance_km?: number | null
+          id?: string
+          neighborhood_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_delivery_neighborhoods_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_delivery_neighborhoods_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_delivery_neighborhoods_conflict_with_branch_id_fkey"
+            columns: ["conflict_with_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_delivery_neighborhoods_conflict_with_branch_id_fkey"
+            columns: ["conflict_with_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_delivery_neighborhoods_neighborhood_id_fkey"
+            columns: ["neighborhood_id"]
+            isOneToOne: false
+            referencedRelation: "city_neighborhoods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branch_inspections: {
         Row: {
           action_items: Json | null
@@ -1091,6 +1217,36 @@ export type Database = {
         }
         Relationships: []
       }
+      city_neighborhoods: {
+        Row: {
+          centroid_lat: number
+          centroid_lng: number
+          city: string
+          created_at: string | null
+          id: string
+          name: string
+          source: string | null
+        }
+        Insert: {
+          centroid_lat: number
+          centroid_lng: number
+          city?: string
+          created_at?: string | null
+          id?: string
+          name: string
+          source?: string | null
+        }
+        Update: {
+          centroid_lat?: number
+          centroid_lng?: number
+          city?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          source?: string | null
+        }
+        Relationships: []
+      }
       cliente_direcciones: {
         Row: {
           ciudad: string | null
@@ -1788,6 +1944,96 @@ export type Database = {
           },
         ]
       }
+      delivery_pricing_config: {
+        Row: {
+          base_distance_km: number
+          base_price: number
+          brand_id: string
+          created_at: string | null
+          estimated_speed_kmh: number
+          google_api_key_encrypted: string | null
+          id: string
+          max_allowed_radius_km: number
+          prep_time_minutes: number
+          price_per_extra_km: number
+          time_disclaimer: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          base_distance_km?: number
+          base_price?: number
+          brand_id?: string
+          created_at?: string | null
+          estimated_speed_kmh?: number
+          google_api_key_encrypted?: string | null
+          id?: string
+          max_allowed_radius_km?: number
+          prep_time_minutes?: number
+          price_per_extra_km?: number
+          time_disclaimer?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          base_distance_km?: number
+          base_price?: number
+          brand_id?: string
+          created_at?: string | null
+          estimated_speed_kmh?: number
+          google_api_key_encrypted?: string | null
+          id?: string
+          max_allowed_radius_km?: number
+          prep_time_minutes?: number
+          price_per_extra_km?: number
+          time_disclaimer?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      delivery_radius_overrides_log: {
+        Row: {
+          action: string
+          branch_id: string
+          created_at: string | null
+          id: string
+          new_km: number | null
+          performed_by: string | null
+          previous_km: number | null
+        }
+        Insert: {
+          action: string
+          branch_id: string
+          created_at?: string | null
+          id?: string
+          new_km?: number | null
+          performed_by?: string | null
+          previous_km?: number | null
+        }
+        Update: {
+          action?: string
+          branch_id?: string
+          created_at?: string | null
+          id?: string
+          new_km?: number | null
+          performed_by?: string | null
+          previous_km?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_radius_overrides_log_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_radius_overrides_log_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_zones: {
         Row: {
           barrios: string[] | null
@@ -1841,238 +2087,6 @@ export type Database = {
           },
           {
             foreignKeyName: "delivery_zones_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches_public"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      delivery_pricing_config: {
-        Row: {
-          id: string
-          brand_id: string
-          base_distance_km: number
-          base_price: number
-          price_per_extra_km: number
-          max_allowed_radius_km: number
-          estimated_speed_kmh: number
-          prep_time_minutes: number
-          time_disclaimer: string | null
-          google_api_key_encrypted: string | null
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          brand_id?: string
-          base_distance_km?: number
-          base_price?: number
-          price_per_extra_km?: number
-          max_allowed_radius_km?: number
-          estimated_speed_kmh?: number
-          prep_time_minutes?: number
-          time_disclaimer?: string | null
-          google_api_key_encrypted?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          brand_id?: string
-          base_distance_km?: number
-          base_price?: number
-          price_per_extra_km?: number
-          max_allowed_radius_km?: number
-          estimated_speed_kmh?: number
-          prep_time_minutes?: number
-          time_disclaimer?: string | null
-          google_api_key_encrypted?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      branch_delivery_config: {
-        Row: {
-          id: string
-          branch_id: string
-          default_radius_km: number
-          radius_override_km: number | null
-          radius_override_until: string | null
-          radius_override_by: string | null
-          delivery_enabled: boolean
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          branch_id: string
-          default_radius_km?: number
-          radius_override_km?: number | null
-          radius_override_until?: string | null
-          radius_override_by?: string | null
-          delivery_enabled?: boolean
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          branch_id?: string
-          default_radius_km?: number
-          radius_override_km?: number | null
-          radius_override_until?: string | null
-          radius_override_by?: string | null
-          delivery_enabled?: boolean
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "branch_delivery_config_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: true
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "branch_delivery_config_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: true
-            referencedRelation: "branches_public"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      city_neighborhoods: {
-        Row: {
-          id: string
-          name: string
-          city: string
-          centroid_lat: number
-          centroid_lng: number
-          source: string | null
-          created_at: string | null
-        }
-        Insert: {
-          id?: string
-          name: string
-          city?: string
-          centroid_lat: number
-          centroid_lng: number
-          source?: string | null
-          created_at?: string | null
-        }
-        Update: {
-          id?: string
-          name?: string
-          city?: string
-          centroid_lat?: number
-          centroid_lng?: number
-          source?: string | null
-          created_at?: string | null
-        }
-        Relationships: []
-      }
-      branch_delivery_neighborhoods: {
-        Row: {
-          id: string
-          branch_id: string
-          neighborhood_id: string
-          status: string
-          distance_km: number | null
-          decided_by: string
-          conflict_with_branch_id: string | null
-          block_reason: string | null
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          branch_id: string
-          neighborhood_id: string
-          status?: string
-          distance_km?: number | null
-          decided_by?: string
-          conflict_with_branch_id?: string | null
-          block_reason?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          branch_id?: string
-          neighborhood_id?: string
-          status?: string
-          distance_km?: number | null
-          decided_by?: string
-          conflict_with_branch_id?: string | null
-          block_reason?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "branch_delivery_neighborhoods_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "branch_delivery_neighborhoods_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "branch_delivery_neighborhoods_neighborhood_id_fkey"
-            columns: ["neighborhood_id"]
-            isOneToOne: false
-            referencedRelation: "city_neighborhoods"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      delivery_radius_overrides_log: {
-        Row: {
-          id: string
-          branch_id: string
-          previous_km: number | null
-          new_km: number | null
-          action: string
-          performed_by: string | null
-          created_at: string | null
-        }
-        Insert: {
-          id?: string
-          branch_id: string
-          previous_km?: number | null
-          new_km?: number | null
-          action: string
-          performed_by?: string | null
-          created_at?: string | null
-        }
-        Update: {
-          id?: string
-          branch_id?: string
-          previous_km?: number | null
-          new_km?: number | null
-          action?: string
-          performed_by?: string | null
-          created_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "delivery_radius_overrides_log_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "delivery_radius_overrides_log_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches_public"
@@ -5589,10 +5603,10 @@ export type Database = {
           costo_delivery: number | null
           created_at: string | null
           created_by: string | null
-          delivery_zone_id: string | null
+          delivery_distance_km: number | null
           delivery_lat: number | null
           delivery_lng: number | null
-          delivery_distance_km: number | null
+          delivery_zone_id: string | null
           descuento: number | null
           descuento_motivo: string | null
           direccion_entrega: string | null
@@ -5637,10 +5651,10 @@ export type Database = {
           costo_delivery?: number | null
           created_at?: string | null
           created_by?: string | null
-          delivery_zone_id?: string | null
+          delivery_distance_km?: number | null
           delivery_lat?: number | null
           delivery_lng?: number | null
-          delivery_distance_km?: number | null
+          delivery_zone_id?: string | null
           descuento?: number | null
           descuento_motivo?: string | null
           direccion_entrega?: string | null
@@ -5685,10 +5699,10 @@ export type Database = {
           costo_delivery?: number | null
           created_at?: string | null
           created_by?: string | null
-          delivery_zone_id?: string | null
+          delivery_distance_km?: number | null
           delivery_lat?: number | null
           delivery_lng?: number | null
-          delivery_distance_km?: number | null
+          delivery_zone_id?: string | null
           descuento?: number | null
           descuento_motivo?: string | null
           direccion_entrega?: string | null
@@ -8793,6 +8807,10 @@ export type Database = {
       }
       has_financial_access: { Args: { p_branch_id: string }; Returns: boolean }
       has_hr_access: { Args: { p_branch_id: string }; Returns: boolean }
+      has_open_shift_at_branch: {
+        Args: { p_branch_id: string; p_user_id: string }
+        Returns: boolean
+      }
       insert_factura_completa: {
         Args: { p_factura: Json; p_items: Json }
         Returns: string
@@ -8809,11 +8827,19 @@ export type Database = {
         Args: { _branch_id: string; _exclude_user_id?: string; _pin: string }
         Returns: boolean
       }
+      is_clocked_in_at_branch: {
+        Args: { p_branch_id: string; p_user_id: string }
+        Returns: boolean
+      }
       is_financial_for_branch: {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
       }
       is_financial_manager: { Args: { user_uuid: string }; Returns: boolean }
+      is_franquiciado_or_contador_for_branch: {
+        Args: { p_branch_id: string; p_user_id: string }
+        Returns: boolean
+      }
       is_hr_for_branch: {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
