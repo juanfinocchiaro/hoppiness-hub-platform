@@ -28,7 +28,7 @@ class DeliveryPageErrorBoundary extends Component<{ children: ReactNode }, { has
     if (this.state.hasError) {
       return (
         <div className="space-y-6">
-          <PageHeader title="Delivery" subtitle="Configuración global de delivery" icon={Truck} />
+          <PageHeader title="Delivery" subtitle="Configuración global de delivery" icon={<Truck className="w-6 h-6" />} />
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground">
               Ocurrió un error al cargar esta página. Revisá la consola del navegador o intentá de nuevo.
@@ -303,7 +303,7 @@ function DeliveryConfigPageContent() {
       <PageHeader
         title="Delivery"
         subtitle="Configuración global de delivery para toda la red"
-        icon={Truck}
+        icon={<Truck className="w-6 h-6" />}
       />
       <DeliveryPricingForm />
       <BranchDeliveryOverviewList />

@@ -20,6 +20,12 @@ interface CalcDeliveryRequest {
   neighborhood_name?: string;
 }
 
+interface SuggestedBranch {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 interface CalcDeliveryResponse {
   available: boolean;
   cost: number | null;
@@ -27,7 +33,8 @@ interface CalcDeliveryResponse {
   duration_min: number | null;
   estimated_delivery_min: number | null;
   disclaimer: string | null;
-  reason?: "out_of_radius" | "blocked_zone" | "delivery_disabled";
+  reason?: "out_of_radius" | "blocked_zone" | "delivery_disabled" | "assigned_other_branch" | "not_assigned";
+  suggested_branch?: SuggestedBranch | null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -84,18 +91,57 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // 4. Check neighborhood blocklist
+    // 4. Exclusive territory check via neighborhood
     if (body.neighborhood_name) {
-      const { data: blocked } = await supabase
-        .from("branch_delivery_neighborhoods")
-        .select("status, neighborhood_id, city_neighborhoods!inner(name)")
-        .eq("branch_id", body.branch_id)
-        .eq("city_neighborhoods.name", body.neighborhood_name)
-        .in("status", ["blocked_security", "blocked_conflict"])
-        .limit(1);
+      // Find the neighborhood in city_neighborhoods
+      const { data: hood } = await supabase
+        .from("city_neighborhoods")
+        .select("id, name")
+        .eq("name", body.neighborhood_name)
+        .limit(1)
+        .maybeSingle();
 
-      if (blocked && blocked.length > 0) {
-        return json(200, unavailable("blocked_zone"));
+      if (hood) {
+        // Check if blocked for security
+        const { data: securityBlock } = await supabase
+          .from("branch_delivery_neighborhoods")
+          .select("id")
+          .eq("branch_id", body.branch_id)
+          .eq("neighborhood_id", hood.id)
+          .eq("status", "blocked_security")
+          .limit(1);
+
+        if (securityBlock && securityBlock.length > 0) {
+          return json(200, unavailable("blocked_zone"));
+        }
+
+        // Check exclusive assignment: is this neighborhood assigned to ANOTHER branch?
+        const { data: assignedTo } = await supabase
+          .from("branch_delivery_neighborhoods")
+          .select("branch_id, branches!inner(id, name, slug)")
+          .eq("neighborhood_id", hood.id)
+          .eq("status", "assigned")
+          .limit(1)
+          .maybeSingle();
+
+        if (assignedTo) {
+          const assignedBranch = assignedTo.branches as any;
+          if (assignedBranch.id !== body.branch_id) {
+            // Assigned to another branch → suggest it
+            return json(200, {
+              ...unavailable("assigned_other_branch"),
+              suggested_branch: {
+                id: assignedBranch.id,
+                name: assignedBranch.name,
+                slug: assignedBranch.slug,
+              },
+            });
+          }
+          // Assigned to this branch → proceed normally
+        } else {
+          // Not assigned to any branch
+          // Don't block, just proceed with radius check
+        }
       }
     }
 
@@ -146,6 +192,7 @@ Deno.serve(async (req: Request) => {
         duration_min: Math.ceil(estimatedDuration),
         estimated_delivery_min: totalTime,
         disclaimer: pricingConfig.time_disclaimer,
+        suggested_branch: null,
       } satisfies CalcDeliveryResponse);
     }
 
@@ -170,6 +217,7 @@ Deno.serve(async (req: Request) => {
       duration_min: durationMin,
       estimated_delivery_min: estimatedDeliveryMin,
       disclaimer: pricingConfig.time_disclaimer,
+      suggested_branch: null,
     } satisfies CalcDeliveryResponse);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
@@ -186,6 +234,7 @@ function unavailable(reason: CalcDeliveryResponse["reason"]): CalcDeliveryRespon
     estimated_delivery_min: null,
     disclaimer: null,
     reason,
+    suggested_branch: null,
   };
 }
 

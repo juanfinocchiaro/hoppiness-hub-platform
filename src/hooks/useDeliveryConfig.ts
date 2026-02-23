@@ -147,7 +147,7 @@ export function useUpdateNeighborhoodStatus() {
   return useMutation({
     mutationFn: async ({ id, status, blockReason }: {
       id: string;
-      status: 'enabled' | 'blocked_security' | 'blocked_conflict';
+      status: 'assigned' | 'blocked_security';
       blockReason?: string;
     }) => {
       const { error } = await supabase
@@ -193,7 +193,7 @@ export function useRegenerateBranchNeighborhoods() {
       });
 
       const existingByNeighborhood = new Map((existing ?? []).map((r) => [r.neighborhood_id, r]));
-      const toInsert: Array<{ branch_id: string; neighborhood_id: string; status: 'enabled'; distance_km: number; decided_by: 'auto' }> = [];
+      const toInsert: Array<{ branch_id: string; neighborhood_id: string; status: 'assigned'; distance_km: number; decided_by: 'auto' }> = [];
       const toUpdateDistance: Array<{ id: string; distance_km: number }> = [];
 
       for (const n of withinRadius) {
@@ -205,7 +205,7 @@ export function useRegenerateBranchNeighborhoods() {
           toInsert.push({
             branch_id: branchId,
             neighborhood_id: n.id,
-            status: 'enabled',
+            status: 'assigned',
             distance_km,
             decided_by: 'auto',
           });
@@ -312,9 +312,29 @@ export function useCalculateDelivery() {
         duration_min: number | null;
         estimated_delivery_min: number | null;
         disclaimer: string | null;
-        reason?: 'out_of_radius' | 'blocked_zone' | 'delivery_disabled';
+        reason?: 'out_of_radius' | 'blocked_zone' | 'delivery_disabled' | 'assigned_other_branch' | 'not_assigned';
+        suggested_branch?: { id: string; name: string; slug: string } | null;
       };
     },
+  });
+}
+
+// ─── Neighborhood Assignments (cross-branch) ───────────────
+
+export function useNeighborhoodAssignments(neighborhoodIds: string[]) {
+  return useQuery({
+    queryKey: ['neighborhood-assignments', neighborhoodIds],
+    queryFn: async () => {
+      if (neighborhoodIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('branch_delivery_neighborhoods')
+        .select('neighborhood_id, branch_id, status, branches!inner(id, name, slug)')
+        .in('neighborhood_id', neighborhoodIds)
+        .eq('status', 'assigned');
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: neighborhoodIds.length > 0,
   });
 }
 

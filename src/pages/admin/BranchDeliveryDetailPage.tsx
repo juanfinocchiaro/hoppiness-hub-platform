@@ -79,9 +79,9 @@ function BranchDeliveryDetailContent() {
 
   const maxRadius = pricingConfig?.max_allowed_radius_km ?? 10;
   const currentRadius = radius ?? config.default_radius_km;
-  const enabledCount = neighborhoods.filter((n: any) => n.status === 'enabled').length;
-  const blockedCount = neighborhoods.filter((n: any) => n.status.startsWith('blocked')).length;
-  const enabledNeighborhoods = neighborhoods.filter((n: any) => n.status === 'enabled');
+  const assignedCount = neighborhoods.filter((n: any) => n.status === 'assigned').length;
+  const blockedCount = neighborhoods.filter((n: any) => n.status === 'blocked_security').length;
+  const assignedNeighborhoods = neighborhoods.filter((n: any) => n.status === 'assigned');
 
   const sortedNeighborhoods = [...neighborhoods].sort((a: any, b: any) => {
     if (neighborhoodSort === 'distance') {
@@ -129,7 +129,7 @@ function BranchDeliveryDetailContent() {
   };
 
   const handleUnblock = (id: string) => {
-    updateNeighborhood.mutate({ id, status: 'enabled' });
+    updateNeighborhood.mutate({ id, status: 'assigned' });
   };
 
   const handleRegenerate = () => {
@@ -155,8 +155,8 @@ function BranchDeliveryDetailContent() {
         </Link>
         <PageHeader
           title={`${branch.name} — Zonas de Delivery`}
-          subtitle={`Radio: ${currentRadius} km · ${enabledCount} habilitados · ${blockedCount} bloqueados`}
-          icon={MapPin}
+          subtitle={`Radio: ${currentRadius} km · ${assignedCount} asignados · ${blockedCount} bloqueados`}
+          icon={<MapPin className="w-6 h-6" />}
         />
       </div>
 
@@ -212,7 +212,7 @@ function BranchDeliveryDetailContent() {
             <div>
               <CardTitle className="text-base">Barrios dentro del radio</CardTitle>
               <CardDescription>
-                {enabledCount} habilitados, {blockedCount} bloqueados
+                {assignedCount} asignados, {blockedCount} bloqueados
               </CardDescription>
             </div>
             <Button
@@ -258,7 +258,7 @@ function BranchDeliveryDetailContent() {
               <div className="space-y-2">
               {sortedNeighborhoods.map((n: any) => {
                 const hood = n.city_neighborhoods;
-                const isBlocked = n.status.startsWith('blocked');
+                const isBlocked = n.status === 'blocked_security';
                 return (
                   <Fragment key={n.id}>
                   <div
@@ -291,12 +291,6 @@ function BranchDeliveryDetailContent() {
                           {n.block_reason || 'Bloqueado'}
                         </Badge>
                       )}
-                      {n.status === 'blocked_conflict' && (
-                        <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">
-                          <AlertTriangle className="mr-1 h-3 w-3" />
-                          Conflicto
-                        </Badge>
-                      )}
                       {/* Acciones solo dentro del detalle expandido */}
                     </div>
                   </div>
@@ -304,7 +298,7 @@ function BranchDeliveryDetailContent() {
                   {selectedNeighborhood?.id === n.id && (() => {
                     const sh = selectedNeighborhood;
                     const h = sh.city_neighborhoods;
-                    const isBl = sh.status?.startsWith('blocked');
+                    const isBl = sh.status === 'blocked_security';
                     const lat = h?.centroid_lat != null && h?.centroid_lng != null ? Number(h.centroid_lat) : null;
                     const lng = h?.centroid_lng != null && h?.centroid_lat != null ? Number(h.centroid_lng) : null;
                     const mapsUrl = lat != null && lng != null ? `https://www.google.com/maps?q=${lat},${lng}` : null;
@@ -317,11 +311,10 @@ function BranchDeliveryDetailContent() {
                             <span className="text-muted-foreground">Estado:</span>{' '}
                             {isBl ? (
                               <Badge variant="destructive" className="text-xs ml-1">
-                                {sh.status === 'blocked_security' && (sh.block_reason || 'Bloqueado')}
-                                {sh.status === 'blocked_conflict' && 'Conflicto'}
+                                {sh.block_reason || 'Bloqueado'}
                               </Badge>
                             ) : (
-                              <Badge variant="secondary" className="text-xs ml-1 bg-green-600 text-white">Habilitado</Badge>
+                              <Badge variant="secondary" className="text-xs ml-1 bg-green-600 text-white">Asignado</Badge>
                             )}
                           </p>
                           <p><span className="text-muted-foreground">Decidido por:</span> {sh.decided_by === 'brand_admin' ? 'Marca' : 'Automático'}</p>

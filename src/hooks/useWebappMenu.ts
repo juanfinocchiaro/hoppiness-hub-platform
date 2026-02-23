@@ -6,7 +6,6 @@ export function useWebappConfig(branchSlug: string | undefined) {
   return useQuery({
     queryKey: ['webapp-config', branchSlug],
     queryFn: async () => {
-      // Get branch by slug
       const { data: branch, error: branchErr } = await supabase
         .from('branches')
         .select('id, name, address, city, slug, opening_time, closing_time, public_hours, latitude, longitude')
@@ -15,7 +14,6 @@ export function useWebappConfig(branchSlug: string | undefined) {
         .single();
       if (branchErr) throw branchErr;
 
-      // Get webapp config
       const { data: config, error: configErr } = await supabase
         .from('webapp_config' as any)
         .select('*, webapp_activa')
@@ -29,11 +27,29 @@ export function useWebappConfig(branchSlug: string | undefined) {
   });
 }
 
+// ── PARTE 6A: Filtrado por disponibilidad de local ──────────
 export function useWebappMenuItems(branchId: string | undefined) {
   return useQuery({
     queryKey: ['webapp-menu-items', branchId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // 1. Check if branch_item_availability has rows for this branch
+      const { data: availability, error: avErr } = await supabase
+        .from('branch_item_availability' as any)
+        .select('item_carta_id')
+        .eq('branch_id', branchId!)
+        .eq('available', true)
+        .eq('available_webapp', true)
+        .eq('out_of_stock', false);
+
+      if (avErr) throw avErr;
+
+      const hasAvailabilityRows = availability && availability.length > 0;
+      const availableIds = hasAvailabilityRows
+        ? (availability as any[]).map((a: any) => a.item_carta_id)
+        : null;
+
+      // 2. Query items_carta, filtered by availability if rows exist
+      let query = supabase
         .from('items_carta')
         .select(`
           id, nombre, nombre_corto, descripcion, imagen_url,
@@ -46,6 +62,12 @@ export function useWebappMenuItems(branchId: string | undefined) {
         .is('deleted_at', null)
         .eq('disponible_webapp', true)
         .order('orden');
+
+      if (availableIds) {
+        query = query.in('id', availableIds);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
 
       return (data || []).map((item: any) => ({
@@ -58,45 +80,56 @@ export function useWebappMenuItems(branchId: string | undefined) {
   });
 }
 
+// ── PARTE 5A: Extras desde item_extra_asignaciones → items_carta ──
 export function useWebappItemExtras(itemId: string | undefined) {
   return useQuery({
     queryKey: ['webapp-item-extras', itemId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('item_carta_grupo_opcional' as any)
-        .select(`
-          id, nombre, orden, es_obligatorio, max_selecciones,
-          items:item_carta_grupo_opcional_items(
-            id, cantidad, costo_unitario,
-            insumos(id, nombre, costo_por_unidad_base),
-            preparaciones(id, nombre, costo_calculado)
-          )
-        `)
-        .eq('item_carta_id', itemId!)
-        .order('orden');
+      // Get extra assignments from correct table
+      const { data: asignaciones, error: errAsig } = await supabase
+        .from('item_extra_asignaciones' as any)
+        .select('extra_id')
+        .eq('item_carta_id', itemId!);
+      if (errAsig) throw errAsig;
+
+      const extraIds = (asignaciones || []).map((a: any) => a.extra_id);
+      if (extraIds.length === 0) return [];
+
+      // Get the actual items_carta (tipo='extra') with real sale prices
+      const { data: extras, error } = await supabase
+        .from('items_carta')
+        .select('id, nombre, precio_base, imagen_url')
+        .in('id', extraIds)
+        .eq('activo', true)
+        .is('deleted_at', null);
       if (error) throw error;
-      return data as any[];
+
+      return (extras || []).map((e: any) => ({
+        id: e.id,
+        nombre: e.nombre,
+        precio: e.precio_base, // Precio REAL de venta
+        imagen_url: e.imagen_url,
+      }));
     },
     enabled: !!itemId,
   });
 }
 
+// ── PARTE 5A: Removibles desde item_removibles ──────────────
 export function useWebappItemRemovables(itemId: string | undefined) {
   return useQuery({
     queryKey: ['webapp-item-removables', itemId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('item_carta_composicion' as any)
-        .select(`
-          id, cantidad, orden, es_removible,
-          insumos:insumo_id(id, nombre),
-          preparaciones:preparacion_id(id, nombre)
-        `)
+        .from('item_removibles' as any)
+        .select('id, nombre_display, activo, insumo_id, preparacion_id, insumos(id, nombre), preparaciones(id, nombre)')
         .eq('item_carta_id', itemId!)
-        .eq('es_removible', true)
-        .order('orden');
+        .eq('activo', true);
       if (error) throw error;
-      return (data ?? []) as any[];
+      return (data ?? []).map((r: any) => ({
+        ...r,
+        nombre: r.nombre_display || r.insumos?.nombre || r.preparaciones?.nombre || 'Ingrediente',
+      }));
     },
     enabled: !!itemId,
   });

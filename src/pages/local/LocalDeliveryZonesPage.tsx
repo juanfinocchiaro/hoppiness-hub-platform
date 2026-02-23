@@ -52,7 +52,7 @@ export default function LocalDeliveryZonesPage() {
       <PageHeader
         title="Zonas de Delivery"
         subtitle="Configuración definida por la marca para tu local"
-        icon={MapPin}
+        icon={<MapPin className="w-6 h-6" />}
       />
 
       {/* Pricing formula */}

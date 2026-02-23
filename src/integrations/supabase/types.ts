@@ -283,7 +283,6 @@ export type Database = {
         Row: {
           block_reason: string | null
           branch_id: string
-          conflict_with_branch_id: string | null
           created_at: string | null
           decided_by: string
           distance_km: number | null
@@ -295,7 +294,6 @@ export type Database = {
         Insert: {
           block_reason?: string | null
           branch_id: string
-          conflict_with_branch_id?: string | null
           created_at?: string | null
           decided_by?: string
           distance_km?: number | null
@@ -307,7 +305,6 @@ export type Database = {
         Update: {
           block_reason?: string | null
           branch_id?: string
-          conflict_with_branch_id?: string | null
           created_at?: string | null
           decided_by?: string
           distance_km?: number | null
@@ -327,20 +324,6 @@ export type Database = {
           {
             foreignKeyName: "branch_delivery_neighborhoods_branch_id_fkey"
             columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "branch_delivery_neighborhoods_conflict_with_branch_id_fkey"
-            columns: ["conflict_with_branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "branch_delivery_neighborhoods_conflict_with_branch_id_fkey"
-            columns: ["conflict_with_branch_id"]
             isOneToOne: false
             referencedRelation: "branches_public"
             referencedColumns: ["id"]
@@ -416,6 +399,71 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branch_item_availability: {
+        Row: {
+          available: boolean
+          available_salon: boolean
+          available_webapp: boolean
+          branch_id: string
+          created_at: string
+          id: string
+          item_carta_id: string
+          out_of_stock: boolean
+          updated_at: string
+        }
+        Insert: {
+          available?: boolean
+          available_salon?: boolean
+          available_webapp?: boolean
+          branch_id: string
+          created_at?: string
+          id?: string
+          item_carta_id: string
+          out_of_stock?: boolean
+          updated_at?: string
+        }
+        Update: {
+          available?: boolean
+          available_salon?: boolean
+          available_webapp?: boolean
+          branch_id?: string
+          created_at?: string
+          id?: string
+          item_carta_id?: string
+          out_of_stock?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_item_availability_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_item_availability_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_item_availability_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "items_carta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_item_availability_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "webapp_menu_items"
             referencedColumns: ["id"]
           },
         ]
@@ -5603,9 +5651,11 @@ export type Database = {
           costo_delivery: number | null
           created_at: string | null
           created_by: string | null
+          delivery_address: string | null
           delivery_distance_km: number | null
           delivery_lat: number | null
           delivery_lng: number | null
+          delivery_neighborhood: string | null
           delivery_zone_id: string | null
           descuento: number | null
           descuento_motivo: string | null
@@ -5651,9 +5701,11 @@ export type Database = {
           costo_delivery?: number | null
           created_at?: string | null
           created_by?: string | null
+          delivery_address?: string | null
           delivery_distance_km?: number | null
           delivery_lat?: number | null
           delivery_lng?: number | null
+          delivery_neighborhood?: string | null
           delivery_zone_id?: string | null
           descuento?: number | null
           descuento_motivo?: string | null
@@ -5699,9 +5751,11 @@ export type Database = {
           costo_delivery?: number | null
           created_at?: string | null
           created_by?: string | null
+          delivery_address?: string | null
           delivery_distance_km?: number | null
           delivery_lat?: number | null
           delivery_lng?: number | null
+          delivery_neighborhood?: string | null
           delivery_zone_id?: string | null
           descuento?: number | null
           descuento_motivo?: string | null
