@@ -131,7 +131,8 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
 
         {/* Optional groups (e.g. "Bebida a elección") */}
         {optionalGroups && optionalGroups.length > 0 && optionalGroups.map(group => {
-          const isRadio = group.max_selecciones === 1;
+          const effectiveMax = group.max_selecciones ?? 1;
+          const isRadio = effectiveMax === 1;
           const currentSelections = groupSelections[group.id] || [];
           const isMissing = group.es_obligatorio && currentSelections.length === 0;
 
@@ -145,7 +146,7 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
                     : 'bg-muted text-muted-foreground'
                 }`}>
                   {group.es_obligatorio ? 'Obligatorio' : 'Opcional'}
-                  {group.max_selecciones === 1 ? ' · Elegí 1' : group.max_selecciones ? ` · Hasta ${group.max_selecciones}` : ''}
+                  {effectiveMax === 1 ? ' · Elegí 1' : ` · Hasta ${effectiveMax}`}
                 </span>
               </div>
               <div className="space-y-1.5">
@@ -157,7 +158,7 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
                       onClick={() => handleGroupSelect(
                         group.id,
                         { id: option.id, nombre: option.nombre, precio: option.precio_extra, tipo: 'extra' },
-                        group.max_selecciones
+                        effectiveMax
                       )}
                       className={`
                         w-full flex items-center justify-between p-3 rounded-lg border text-left transition-colors
