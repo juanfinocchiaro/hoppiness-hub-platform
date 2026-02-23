@@ -79,9 +79,9 @@ function BranchDeliveryDetailContent() {
 
   const maxRadius = pricingConfig?.max_allowed_radius_km ?? 10;
   const currentRadius = radius ?? config.default_radius_km;
-  const assignedCount = neighborhoods.filter((n: any) => n.status === 'assigned').length;
+  const assignedCount = neighborhoods.filter((n: any) => n.status === 'enabled').length;
   const blockedCount = neighborhoods.filter((n: any) => n.status === 'blocked_security').length;
-  const assignedNeighborhoods = neighborhoods.filter((n: any) => n.status === 'assigned');
+  const assignedNeighborhoods = neighborhoods.filter((n: any) => n.status === 'enabled');
 
   const sortedNeighborhoods = [...neighborhoods].sort((a: any, b: any) => {
     if (neighborhoodSort === 'distance') {
@@ -129,7 +129,7 @@ function BranchDeliveryDetailContent() {
   };
 
   const handleUnblock = (id: string) => {
-    updateNeighborhood.mutate({ id, status: 'assigned' });
+    updateNeighborhood.mutate({ id, status: 'enabled' });
   };
 
   const handleRegenerate = () => {
