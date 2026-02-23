@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Truck, MapPin, Save, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Loader2, Truck, MapPin, Save, ExternalLink, AlertTriangle, DollarSign, Settings2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
   useDeliveryPricingConfig,
@@ -17,23 +17,17 @@ import {
 } from '@/hooks/useDeliveryConfig';
 import { RequireBrandPermission } from '@/components/guards';
 
+/* ─── Error Boundary ────────────────────────────────────── */
+
 class DeliveryPageErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
   state = { hasError: false };
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
+  static getDerivedStateFromError() { return { hasError: true }; }
   render() {
     if (this.state.hasError) {
       return (
         <div className="space-y-6">
           <PageHeader title="Delivery" subtitle="Configuración global de delivery" icon={<Truck className="w-6 h-6" />} />
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              Ocurrió un error al cargar esta página. Revisá la consola del navegador o intentá de nuevo.
-            </CardContent>
-          </Card>
+          <Card><CardContent className="py-12 text-center text-muted-foreground">Ocurrió un error al cargar esta página.</CardContent></Card>
         </div>
       );
     }
@@ -41,19 +35,13 @@ class DeliveryPageErrorBoundary extends Component<{ children: ReactNode }, { has
   }
 }
 
+/* ─── Pricing Form ──────────────────────────────────────── */
+
 function DeliveryPricingForm() {
   const { data: config, isLoading, isError } = useDeliveryPricingConfig();
   const updateConfig = useUpdateDeliveryPricingConfig();
 
-  const [form, setForm] = useState<{
-    base_distance_km: string;
-    base_price: string;
-    price_per_extra_km: string;
-    max_allowed_radius_km: string;
-    estimated_speed_kmh: string;
-    prep_time_minutes: string;
-    time_disclaimer: string;
-  } | null>(null);
+  const [form, setForm] = useState<Record<string, string> | null>(null);
 
   const values = form ?? {
     base_distance_km: String(config?.base_distance_km ?? 2.5),
@@ -89,23 +77,10 @@ function DeliveryPricingForm() {
   };
 
   if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
-    );
+    return <Card><CardContent className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></CardContent></Card>;
   }
-
   if (isError) {
-    return (
-      <Card>
-        <CardContent className="py-12 text-center text-muted-foreground">
-          No se pudo cargar la configuración de pricing. Revisá que la migración de delivery esté aplicada.
-        </CardContent>
-      </Card>
-    );
+    return <Card><CardContent className="py-12 text-center text-muted-foreground">No se pudo cargar la configuración de pricing.</CardContent></Card>;
   }
 
   return (
@@ -115,86 +90,61 @@ function DeliveryPricingForm() {
           <Truck className="h-5 w-5" />
           Fórmula de Pricing
         </CardTitle>
-        <CardDescription>
-          Define cómo se calcula el costo de envío para todos los locales de la red.
-        </CardDescription>
+        <CardDescription>Cómo se calcula el costo de envío para todos los locales.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label>Distancia base incluida (km)</Label>
-            <Input
-              type="number"
-              step="0.5"
-              min="0"
-              value={values.base_distance_km}
-              onChange={(e) => setField('base_distance_km', e.target.value)}
-            />
+        {/* Section: Costos */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Costos</p>
           </div>
-          <div className="space-y-2">
-            <Label>Costo base ($)</Label>
-            <Input
-              type="number"
-              step="100"
-              min="0"
-              value={values.base_price}
-              onChange={(e) => setField('base_price', e.target.value)}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Distancia base (km)</Label>
+              <Input type="number" step="0.5" min="0" value={values.base_distance_km} onChange={(e) => setField('base_distance_km', e.target.value)} className="h-9" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Costo base ($)</Label>
+              <Input type="number" step="100" min="0" value={values.base_price} onChange={(e) => setField('base_price', e.target.value)} className="h-9" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">$/km excedente</Label>
+              <Input type="number" step="100" min="0" value={values.price_per_extra_km} onChange={(e) => setField('price_per_extra_km', e.target.value)} className="h-9" />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label>Costo por km excedente ($)</Label>
-            <Input
-              type="number"
-              step="100"
-              min="0"
-              value={values.price_per_extra_km}
-              onChange={(e) => setField('price_per_extra_km', e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="rounded-lg bg-muted/50 p-4 text-sm">
-          <p className="font-medium mb-1">Ejemplo de cálculo</p>
-          <p className="text-muted-foreground">
-            Un cliente a {exampleDistance} km paga: ${basePrice.toLocaleString()} + ({exampleDistance} - {baseDist}) × ${perKm.toLocaleString()} = <span className="font-semibold text-foreground">${Math.round(exampleCost).toLocaleString()}</span>
+          {/* Inline example */}
+          <p className="text-xs text-muted-foreground mt-2">
+            Ej: cliente a {exampleDistance} km → ${basePrice.toLocaleString()} + ({exampleDistance} − {baseDist}) × ${perKm.toLocaleString()} = <span className="font-semibold text-foreground">${Math.round(exampleCost).toLocaleString()}</span>
           </p>
         </div>
 
         <Separator />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label>Radio máximo permitido (km)</Label>
-            <Input
-              type="number"
-              step="0.5"
-              min="1"
-              value={values.max_allowed_radius_km}
-              onChange={(e) => setField('max_allowed_radius_km', e.target.value)}
-            />
+        {/* Section: Operación */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Settings2 className="h-4 w-4 text-muted-foreground" />
+            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Operación</p>
           </div>
-          <div className="space-y-2">
-            <Label>Velocidad estimada (km/h)</Label>
-            <Input
-              type="number"
-              min="5"
-              value={values.estimated_speed_kmh}
-              onChange={(e) => setField('estimated_speed_kmh', e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Tiempo preparación (min)</Label>
-            <Input
-              type="number"
-              min="0"
-              value={values.prep_time_minutes}
-              onChange={(e) => setField('prep_time_minutes', e.target.value)}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Radio máximo (km)</Label>
+              <Input type="number" step="0.5" min="1" value={values.max_allowed_radius_km} onChange={(e) => setField('max_allowed_radius_km', e.target.value)} className="h-9" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Velocidad (km/h)</Label>
+              <Input type="number" min="5" value={values.estimated_speed_kmh} onChange={(e) => setField('estimated_speed_kmh', e.target.value)} className="h-9" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Preparación (min)</Label>
+              <Input type="number" min="0" value={values.prep_time_minutes} onChange={(e) => setField('prep_time_minutes', e.target.value)} className="h-9" />
+            </div>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label>Mensaje al cliente (disclaimer)</Label>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Disclaimer al cliente</Label>
           <Textarea
             value={values.time_disclaimer}
             onChange={(e) => setField('time_disclaimer', e.target.value)}
@@ -204,7 +154,7 @@ function DeliveryPricingForm() {
         </div>
 
         <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={updateConfig.isPending}>
+          <Button onClick={handleSave} disabled={updateConfig.isPending} size="sm">
             {updateConfig.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             <Save className="mr-2 h-4 w-4" />
             Guardar
@@ -215,28 +165,19 @@ function DeliveryPricingForm() {
   );
 }
 
+/* ─── Branch List ───────────────────────────────────────── */
+
 function BranchDeliveryOverviewList() {
   const { data: configs, isLoading, isError } = useAllBranchDeliveryConfigs();
 
   if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
-    );
+    return <Card><CardContent className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></CardContent></Card>;
   }
-
   if (isError || !configs || configs.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center text-muted-foreground">
-          {isError
-            ? 'No se pudo cargar la lista de locales. Revisá que la migración de delivery esté aplicada.'
-            : 'No hay locales con delivery configurado.'}
-        </CardContent>
-      </Card>
+      <Card><CardContent className="py-12 text-center text-muted-foreground">
+        {isError ? 'No se pudo cargar la lista de locales.' : 'No hay locales con delivery configurado.'}
+      </CardContent></Card>
     );
   }
 
@@ -245,13 +186,11 @@ function BranchDeliveryOverviewList() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MapPin className="h-5 w-5" />
-          Cobertura por Local
+          Locales
         </CardTitle>
-        <CardDescription>
-          Configuración de delivery y radio de cobertura de cada local.
-        </CardDescription>
+        <CardDescription>Cobertura y estado de delivery por local.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="divide-y divide-border">
         {configs.map((cfg: any) => {
           const branch = cfg.branches;
           const isOverridden = cfg.radius_override_km != null &&
@@ -259,33 +198,26 @@ function BranchDeliveryOverviewList() {
           const effectiveRadius = isOverridden ? cfg.radius_override_km : cfg.default_radius_km;
 
           return (
-            <div
-              key={cfg.id}
-              className="flex items-center justify-between rounded-lg border p-4"
-            >
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{branch?.name ?? 'Local'}</span>
-                  {cfg.delivery_enabled ? (
-                    <Badge variant="default" className="bg-green-600 text-xs">Activo</Badge>
-                  ) : (
-                    <Badge variant="secondary" className="text-xs">Inactivo</Badge>
-                  )}
-                  {isOverridden && (
-                    <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">
-                      <AlertTriangle className="mr-1 h-3 w-3" />
-                      Radio reducido
-                    </Badge>
-                  )}
+            <div key={cfg.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0 gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                {/* Status dot */}
+                <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${cfg.delivery_enabled ? 'bg-green-500' : 'bg-muted-foreground/30'}`} />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{branch?.name ?? 'Local'}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {effectiveRadius} km
+                    {isOverridden && (
+                      <span className="text-orange-500 ml-1">
+                        <AlertTriangle className="inline h-3 w-3 mr-0.5 -mt-0.5" />
+                        reducido
+                      </span>
+                    )}
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Radio default: {cfg.default_radius_km} km
-                  {isOverridden && ` · Actual: ${effectiveRadius} km`}
-                </p>
               </div>
               <Link to={`/mimarca/delivery/${branch?.id}`}>
-                <Button variant="outline" size="sm">
-                  Ver detalle
+                <Button variant="ghost" size="sm" className="h-7 text-xs">
+                  Detalle
                   <ExternalLink className="ml-1 h-3 w-3" />
                 </Button>
               </Link>
@@ -296,6 +228,8 @@ function BranchDeliveryOverviewList() {
     </Card>
   );
 }
+
+/* ─── Page ──────────────────────────────────────────────── */
 
 function DeliveryConfigPageContent() {
   return (

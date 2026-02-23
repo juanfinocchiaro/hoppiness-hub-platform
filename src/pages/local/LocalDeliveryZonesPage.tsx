@@ -2,8 +2,10 @@ import { useOutletContext } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Loader2, MapPin, CheckCircle2, Ban, ShieldAlert, Info, Truck } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Loader2, MapPin, CheckCircle2, Ban, Info, Truck, Search } from 'lucide-react';
+import { useState, useMemo } from 'react';
 import {
   useDeliveryPricingConfig,
   useBranchDeliveryConfig,
@@ -19,26 +21,35 @@ export default function LocalDeliveryZonesPage() {
   const { data: config, isLoading: configLoading } = useBranchDeliveryConfig(branchId);
   const { data: neighborhoods = [], isLoading: neighLoading } = useBranchNeighborhoods(branchId);
 
-  if (!branchId) {
+  const [search, setSearch] = useState('');
+  const [tab, setTab] = useState('all');
+
+  const enabledNeighborhoods = useMemo(
+    () => neighborhoods.filter((n: any) => n.status === 'enabled'),
+    [neighborhoods]
+  );
+  const blockedNeighborhoods = useMemo(
+    () => neighborhoods.filter((n: any) => typeof n.status === 'string' && n.status.startsWith('blocked')),
+    [neighborhoods]
+  );
+
+  const filteredList = useMemo(() => {
+    let list = neighborhoods;
+    if (tab === 'enabled') list = enabledNeighborhoods;
+    else if (tab === 'blocked') list = blockedNeighborhoods;
+
+    if (!search.trim()) return list;
+    const q = search.toLowerCase();
+    return list.filter((n: any) => (n.city_neighborhoods?.name ?? '').toLowerCase().includes(q));
+  }, [tab, neighborhoods, enabledNeighborhoods, blockedNeighborhoods, search]);
+
+  if (!branchId || pricingLoading || configLoading || neighLoading) {
     return (
       <div className="flex items-center justify-center py-24">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
-
-  const isLoading = pricingLoading || configLoading || neighLoading;
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  const enabledNeighborhoods = neighborhoods.filter((n: { status?: string }) => n.status === 'enabled');
-  const blockedNeighborhoods = neighborhoods.filter((n: { status?: string }) => typeof n.status === 'string' && n.status.startsWith('blocked'));
 
   const effectiveRadius = config
     ? (config.radius_override_km != null &&
@@ -58,30 +69,29 @@ export default function LocalDeliveryZonesPage() {
       {/* Pricing formula */}
       {pricingConfig && (
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Truck className="h-4 w-4" />
               Fórmula vigente
             </CardTitle>
-            <CardDescription>Definida por la marca</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-3 gap-3">
               <div className="rounded-lg bg-muted/50 p-3 text-center">
-                <p className="text-muted-foreground">Base</p>
-                <p className="text-lg font-semibold">
+                <p className="text-xs text-muted-foreground mb-0.5">Base</p>
+                <p className="text-sm font-semibold">
                   {pricingConfig.base_distance_km} km → ${pricingConfig.base_price.toLocaleString()}
                 </p>
               </div>
               <div className="rounded-lg bg-muted/50 p-3 text-center">
-                <p className="text-muted-foreground">Excedente</p>
-                <p className="text-lg font-semibold">
+                <p className="text-xs text-muted-foreground mb-0.5">Excedente</p>
+                <p className="text-sm font-semibold">
                   ${pricingConfig.price_per_extra_km.toLocaleString()}/km
                 </p>
               </div>
               <div className="rounded-lg bg-muted/50 p-3 text-center">
-                <p className="text-muted-foreground">Radio</p>
-                <p className="text-lg font-semibold">
+                <p className="text-xs text-muted-foreground mb-0.5">Radio</p>
+                <p className="text-sm font-semibold">
                   {effectiveRadius ?? '—'} km
                 </p>
               </div>
@@ -90,66 +100,81 @@ export default function LocalDeliveryZonesPage() {
         </Card>
       )}
 
-      {/* Enabled neighborhoods */}
+      {/* Neighborhoods */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Barrios habilitados ({enabledNeighborhoods.length})</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Barrios ({neighborhoods.length})</CardTitle>
+          <CardDescription>
+            {enabledNeighborhoods.length} habilitados · {blockedNeighborhoods.length} bloqueados
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          {enabledNeighborhoods.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              No hay barrios habilitados para delivery.
-            </p>
-          ) : (
-            <div className="space-y-1.5">
-              {enabledNeighborhoods.map((n: any) => (
-                <div key={n.id} className="flex items-center gap-2 text-sm rounded-md px-2 py-1.5 hover:bg-muted/50">
-                  <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-                  <span>{n.city_neighborhoods?.name ?? '—'}</span>
-                  {n.distance_km != null && (
-                    <span className="text-xs text-muted-foreground ml-auto">
-                      {n.distance_km} km
-                    </span>
+        <CardContent className="space-y-3">
+          <Tabs value={tab} onValueChange={setTab}>
+            <div className="flex items-center gap-3 flex-wrap">
+              <TabsList>
+                <TabsTrigger value="all" className="text-xs">Todos</TabsTrigger>
+                <TabsTrigger value="enabled" className="text-xs">
+                  <CheckCircle2 className="mr-1 h-3 w-3" />
+                  Habilitados ({enabledNeighborhoods.length})
+                </TabsTrigger>
+                <TabsTrigger value="blocked" className="text-xs">
+                  <Ban className="mr-1 h-3 w-3" />
+                  Bloqueados ({blockedNeighborhoods.length})
+                </TabsTrigger>
+              </TabsList>
+              <div className="relative flex-1 min-w-[160px] max-w-xs">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar barrio..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="h-8 pl-8 text-sm"
+                />
+              </div>
+            </div>
+
+            {['all', 'enabled', 'blocked'].map((tabValue) => (
+              <TabsContent key={tabValue} value={tabValue} className="mt-3">
+                <div className="max-h-[380px] overflow-y-auto rounded-lg border divide-y divide-border">
+                  {filteredList.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">
+                      {search ? 'Sin resultados' : 'No hay barrios en esta categoría'}
+                    </p>
+                  ) : (
+                    filteredList.map((n: any) => {
+                      const isBlocked = typeof n.status === 'string' && n.status.startsWith('blocked');
+                      return (
+                        <div key={n.id} className="flex items-center gap-3 px-3 py-2">
+                          {isBlocked ? (
+                            <Ban className="h-4 w-4 text-destructive shrink-0" />
+                          ) : (
+                            <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                          )}
+                          <span className="text-sm truncate flex-1">{n.city_neighborhoods?.name ?? '—'}</span>
+                          {n.distance_km != null && (
+                            <span className="text-xs text-muted-foreground tabular-nums shrink-0">{n.distance_km} km</span>
+                          )}
+                          {isBlocked && n.block_reason && (
+                            <Badge variant="outline" className="text-xs border-destructive/30 text-destructive shrink-0">
+                              {n.block_reason}
+                            </Badge>
+                          )}
+                        </div>
+                      );
+                    })
                   )}
                 </div>
-              ))}
-            </div>
-          )}
+              </TabsContent>
+            ))}
+          </Tabs>
         </CardContent>
       </Card>
 
-      {/* Blocked neighborhoods */}
-      {blockedNeighborhoods.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base text-red-600">
-              Barrios bloqueados ({blockedNeighborhoods.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1.5">
-              {blockedNeighborhoods.map((n: any) => (
-                <div key={n.id} className="flex items-center gap-2 text-sm rounded-md px-2 py-1.5">
-                  <Ban className="h-4 w-4 text-red-500 shrink-0" />
-                  <span>{n.city_neighborhoods?.name ?? '—'}</span>
-                  {n.block_reason && (
-                    <Badge variant="outline" className="text-xs ml-auto">
-                      {n.block_reason}
-                    </Badge>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Info message */}
+      {/* Info */}
       <div className="flex items-start gap-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 p-4 text-sm text-blue-800 dark:text-blue-300">
         <Info className="h-5 w-5 shrink-0 mt-0.5" />
         <p>
           Para modificar zonas, precios o el radio de cobertura, contactá a la marca.
-          Podés ajustar el radio temporalmente desde el panel de operación (Dashboard).
         </p>
       </div>
     </div>

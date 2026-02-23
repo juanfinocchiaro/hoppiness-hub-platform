@@ -15,8 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, MapPin, ArrowLeft, RefreshCw, ShieldAlert, CheckCircle2, AlertTriangle, Ban, ArrowUpDown, ArrowDownAZ, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
-import { useState, Fragment } from 'react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Loader2, MapPin, ArrowLeft, RefreshCw, ShieldAlert, CheckCircle2, Ban, Search } from 'lucide-react';
+import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import {
   useBranchDeliveryConfig,
@@ -29,7 +35,116 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { RequireBrandPermission } from '@/components/guards';
-import { StaticBranchMap } from '@/components/webapp/StaticBranchMap';
+
+/* ─── Block Popover ─────────────────────────────────────── */
+
+function BlockPopover({
+  neighborhoodId,
+  onBlock,
+  isPending,
+}: {
+  neighborhoodId: string;
+  onBlock: (id: string, reason: string) => void;
+  isPending: boolean;
+}) {
+  const [reason, setReason] = useState('Zona de riesgo');
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10">
+          Bloquear
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-3 space-y-3" align="end">
+        <p className="text-sm font-medium">Motivo del bloqueo</p>
+        <Select value={reason} onValueChange={setReason}>
+          <SelectTrigger className="h-8 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Zona de riesgo">Zona de riesgo</SelectItem>
+            <SelectItem value="Sin acceso vial">Sin acceso vial</SelectItem>
+            <SelectItem value="Fuera de cobertura real">Fuera de cobertura real</SelectItem>
+            <SelectItem value="Otro motivo">Otro motivo</SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setOpen(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="h-7 text-xs"
+            disabled={isPending}
+            onClick={() => {
+              onBlock(neighborhoodId, reason);
+              setOpen(false);
+            }}
+          >
+            {isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+            Confirmar
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/* ─── Neighborhood Row ──────────────────────────────────── */
+
+function NeighborhoodRow({
+  n,
+  onBlock,
+  onUnblock,
+  isPending,
+}: {
+  n: any;
+  onBlock: (id: string, reason: string) => void;
+  onUnblock: (id: string) => void;
+  isPending: boolean;
+}) {
+  const hood = n.city_neighborhoods;
+  const isBlocked = n.status === 'blocked_security';
+
+  return (
+    <div className="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-muted/50 group">
+      {isBlocked ? (
+        <Ban className="h-4 w-4 text-destructive shrink-0" />
+      ) : (
+        <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+      )}
+      <span className="text-sm font-medium truncate flex-1">{hood?.name ?? '—'}</span>
+      {n.distance_km != null && (
+        <span className="text-xs text-muted-foreground tabular-nums shrink-0">{n.distance_km} km</span>
+      )}
+      {isBlocked && n.block_reason && (
+        <Badge variant="outline" className="text-xs border-destructive/30 text-destructive shrink-0 hidden sm:inline-flex">
+          {n.block_reason}
+        </Badge>
+      )}
+      <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        {isBlocked ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950/20"
+            onClick={() => onUnblock(n.id)}
+            disabled={isPending}
+          >
+            Habilitar
+          </Button>
+        ) : (
+          <BlockPopover neighborhoodId={n.id} onBlock={onBlock} isPending={isPending} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main Content ──────────────────────────────────────── */
 
 function BranchDeliveryDetailContent() {
   const { branchId } = useParams<{ branchId: string }>();
@@ -54,12 +169,26 @@ function BranchDeliveryDetailContent() {
   const regenerate = useRegenerateBranchNeighborhoods();
 
   const [radius, setRadius] = useState<number | null>(null);
-  const [blockNeighborhoodId, setBlockNeighborhoodId] = useState('');
-  const [blockReason, setBlockReason] = useState('Zona de riesgo');
-  const [neighborhoodSort, setNeighborhoodSort] = useState<'distance' | 'alpha'>('distance');
-  const [selectedNeighborhood, setSelectedNeighborhood] = useState<any | null>(null);
+  const [search, setSearch] = useState('');
+  const [tab, setTab] = useState('enabled');
 
   const isLoading = branchLoading || configLoading || neighLoading;
+
+  const enabledNeighborhoods = useMemo(
+    () => neighborhoods.filter((n: any) => n.status === 'enabled'),
+    [neighborhoods]
+  );
+  const blockedNeighborhoods = useMemo(
+    () => neighborhoods.filter((n: any) => n.status === 'blocked_security'),
+    [neighborhoods]
+  );
+
+  const filteredList = useMemo(() => {
+    const list = tab === 'enabled' ? enabledNeighborhoods : blockedNeighborhoods;
+    if (!search.trim()) return list;
+    const q = search.toLowerCase();
+    return list.filter((n: any) => (n.city_neighborhoods?.name ?? '').toLowerCase().includes(q));
+  }, [tab, enabledNeighborhoods, blockedNeighborhoods, search]);
 
   if (isLoading) {
     return (
@@ -79,20 +208,6 @@ function BranchDeliveryDetailContent() {
 
   const maxRadius = pricingConfig?.max_allowed_radius_km ?? 10;
   const currentRadius = radius ?? config.default_radius_km;
-  const assignedCount = neighborhoods.filter((n: any) => n.status === 'enabled').length;
-  const blockedCount = neighborhoods.filter((n: any) => n.status === 'blocked_security').length;
-  const assignedNeighborhoods = neighborhoods.filter((n: any) => n.status === 'enabled');
-
-  const sortedNeighborhoods = [...neighborhoods].sort((a: any, b: any) => {
-    if (neighborhoodSort === 'distance') {
-      const da = a.distance_km ?? Infinity;
-      const db = b.distance_km ?? Infinity;
-      return da - db;
-    }
-    const na = (a.city_neighborhoods?.name ?? '').toLowerCase();
-    const nb = (b.city_neighborhoods?.name ?? '').toLowerCase();
-    return na.localeCompare(nb);
-  });
 
   const handleSaveRadius = () => {
     if (radius == null) return;
@@ -118,14 +233,8 @@ function BranchDeliveryDetailContent() {
     updateConfig.mutate({ branchId: branch.id, values: { delivery_enabled: enabled } });
   };
 
-  const handleBlockNeighborhood = () => {
-    if (!blockNeighborhoodId) return;
-    updateNeighborhood.mutate({
-      id: blockNeighborhoodId,
-      status: 'blocked_security',
-      blockReason,
-    });
-    setBlockNeighborhoodId('');
+  const handleBlock = (id: string, reason: string) => {
+    updateNeighborhood.mutate({ id, status: 'blocked_security', blockReason: reason });
   };
 
   const handleUnblock = (id: string) => {
@@ -147,6 +256,7 @@ function BranchDeliveryDetailContent() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center gap-3">
         <Link to="/mimarca/delivery">
           <Button variant="ghost" size="icon">
@@ -154,35 +264,28 @@ function BranchDeliveryDetailContent() {
           </Button>
         </Link>
         <PageHeader
-          title={`${branch.name} — Zonas de Delivery`}
-          subtitle={`Radio: ${currentRadius} km · ${assignedCount} asignados · ${blockedCount} bloqueados`}
+          title={`${branch.name} — Delivery`}
+          subtitle={`Radio: ${currentRadius} km · ${enabledNeighborhoods.length} habilitados · ${blockedNeighborhoods.length} bloqueados`}
           icon={<MapPin className="w-6 h-6" />}
         />
       </div>
 
-      {/* Toggle + Radio */}
+      {/* Config card */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Configuración del Local</CardTitle>
+          <CardTitle className="text-base">Configuración</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
               <Label>Delivery habilitado</Label>
-              <p className="text-sm text-muted-foreground">
-                Habilitar o deshabilitar el delivery para este local
-              </p>
+              <p className="text-sm text-muted-foreground">Activar o desactivar delivery para este local</p>
             </div>
-            <Switch
-              checked={config.delivery_enabled}
-              onCheckedChange={handleToggleEnabled}
-            />
+            <Switch checked={config.delivery_enabled} onCheckedChange={handleToggleEnabled} />
           </div>
-
           <Separator />
-
           <div className="space-y-4">
-            <Label>Radio default: {currentRadius} km (máx {maxRadius} km)</Label>
+            <Label>Radio: {currentRadius} km (máx {maxRadius} km)</Label>
             <Slider
               value={[currentRadius]}
               onValueChange={([v]) => setRadius(v)}
@@ -205,15 +308,13 @@ function BranchDeliveryDetailContent() {
         </CardContent>
       </Card>
 
-      {/* Neighborhoods */}
+      {/* Neighborhoods card */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
-              <CardTitle className="text-base">Barrios dentro del radio</CardTitle>
-              <CardDescription>
-                {assignedCount} asignados, {blockedCount} bloqueados
-              </CardDescription>
+              <CardTitle className="text-base">Barrios</CardTitle>
+              <CardDescription>{neighborhoods.length} barrios en total</CardDescription>
             </div>
             <Button
               variant="outline"
@@ -230,173 +331,81 @@ function BranchDeliveryDetailContent() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           {neighborhoods.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
+            <p className="text-sm text-muted-foreground py-8 text-center">
               No hay barrios asignados. Hacé click en "Regenerar" para detectar barrios dentro del radio.
             </p>
           ) : (
             <>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-sm text-muted-foreground">Ordenar:</span>
-                <Select value={neighborhoodSort} onValueChange={(v: 'distance' | 'alpha') => setNeighborhoodSort(v)}>
-                  <SelectTrigger className="w-[180px] h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="distance" className="flex items-center gap-2">
-                      <ArrowUpDown className="h-3.5 w-3.5" />
-                      Por distancia
-                    </SelectItem>
-                    <SelectItem value="alpha" className="flex items-center gap-2">
-                      <ArrowDownAZ className="h-3.5 w-3.5" />
-                      Alfabético
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-              {sortedNeighborhoods.map((n: any) => {
-                const hood = n.city_neighborhoods;
-                const isBlocked = n.status === 'blocked_security';
-                return (
-                  <Fragment key={n.id}>
-                  <div
-                    className="flex items-center justify-between rounded-md border px-3 py-2"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setSelectedNeighborhood((prev: any) => prev?.id === n.id ? null : n)}
-                      className="flex flex-1 min-w-0 items-center gap-2 text-left cursor-pointer hover:bg-muted/50 rounded -ml-1 pl-1 py-1 -my-1 transition-colors"
-                    >
-                      {isBlocked ? (
-                        <Ban className="h-4 w-4 text-red-500 shrink-0" />
-                      ) : (
-                        <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-                      )}
-                      <span className="text-sm font-medium truncate">{hood?.name ?? '—'}</span>
-                      {n.distance_km != null && (
-                        <span className="text-xs text-muted-foreground shrink-0">({n.distance_km} km)</span>
-                      )}
-                      {selectedNeighborhood?.id === n.id ? (
-                        <ChevronUp className="h-4 w-4 shrink-0 ml-auto text-muted-foreground" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4 shrink-0 ml-auto text-muted-foreground" />
-                      )}
-                    </button>
-                    <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
-                      {n.status === 'blocked_security' && (
-                        <Badge variant="destructive" className="text-xs">
-                          <ShieldAlert className="mr-1 h-3 w-3" />
-                          {n.block_reason || 'Bloqueado'}
-                        </Badge>
-                      )}
-                      {/* Acciones solo dentro del detalle expandido */}
-                    </div>
+              {/* Tabs + Search */}
+              <Tabs value={tab} onValueChange={setTab}>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <TabsList>
+                    <TabsTrigger value="enabled" className="text-xs">
+                      <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+                      Habilitados ({enabledNeighborhoods.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="blocked" className="text-xs">
+                      <Ban className="mr-1.5 h-3.5 w-3.5" />
+                      Bloqueados ({blockedNeighborhoods.length})
+                    </TabsTrigger>
+                  </TabsList>
+                  <div className="relative flex-1 min-w-[180px] max-w-xs">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar barrio..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="h-8 pl-8 text-sm"
+                    />
                   </div>
-                  {/* Inline detalle + mapa */}
-                  {selectedNeighborhood?.id === n.id && (() => {
-                    const sh = selectedNeighborhood;
-                    const h = sh.city_neighborhoods;
-                    const isBl = sh.status === 'blocked_security';
-                    const lat = h?.centroid_lat != null && h?.centroid_lng != null ? Number(h.centroid_lat) : null;
-                    const lng = h?.centroid_lng != null && h?.centroid_lat != null ? Number(h.centroid_lng) : null;
-                    const mapsUrl = lat != null && lng != null ? `https://www.google.com/maps?q=${lat},${lng}` : null;
-                    return (
-                      <div className="rounded-md border border-t-0 bg-muted/30 px-3 py-3 space-y-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                          {h?.city && <p><span className="text-muted-foreground">Ciudad:</span> {h.city}</p>}
-                          {sh.distance_km != null && <p><span className="text-muted-foreground">Distancia:</span> {sh.distance_km} km</p>}
-                          <p>
-                            <span className="text-muted-foreground">Estado:</span>{' '}
-                            {isBl ? (
-                              <Badge variant="destructive" className="text-xs ml-1">
-                                {sh.block_reason || 'Bloqueado'}
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary" className="text-xs ml-1 bg-green-600 text-white">Asignado</Badge>
-                            )}
-                          </p>
-                          <p><span className="text-muted-foreground">Decidido por:</span> {sh.decided_by === 'brand_admin' ? 'Marca' : 'Automático'}</p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 pt-1 border-t">
-                          {isBl ? (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              className="bg-green-600 hover:bg-green-700"
-                              onClick={() => handleUnblock(sh.id)}
-                              disabled={updateNeighborhood.isPending}
-                            >
-                              Habilitar barrio
-                            </Button>
-                          ) : blockNeighborhoodId === sh.id ? (
-                            <div className="w-full space-y-3 rounded-md border border-red-200 bg-red-50/50 dark:bg-red-950/20 p-3">
-                              <Label className="text-sm font-medium">Motivo del bloqueo</Label>
-                              <Select value={blockReason} onValueChange={setBlockReason}>
-                                <SelectTrigger className="w-full max-w-xs">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Zona de riesgo">Zona de riesgo</SelectItem>
-                                  <SelectItem value="Sin acceso vial">Sin acceso vial</SelectItem>
-                                  <SelectItem value="Fuera de cobertura real">Fuera de cobertura real</SelectItem>
-                                  <SelectItem value="Otro motivo">Otro motivo</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setBlockNeighborhoodId('')}
-                                >
-                                  Cancelar
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={handleBlockNeighborhood}
-                                  disabled={updateNeighborhood.isPending}
-                                >
-                                  {updateNeighborhood.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                  Confirmar bloqueo
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => setBlockNeighborhoodId(sh.id)}
-                              disabled={updateNeighborhood.isPending}
-                            >
-                              Bloquear barrio
-                            </Button>
-                          )}
-                        </div>
-                        {lat != null && lng != null && mapsUrl && (
-                          <StaticBranchMap
-                            latitude={lat}
-                            longitude={lng}
-                            mapsUrl={mapsUrl}
-                            height={200}
-                            linkLabel="Ver en mapa"
-                            className="w-full"
-                          />
-                        )}
-                      </div>
-                    );
-                  })()}
-                  </Fragment>
-                );
-              })}
-            </div>
+                </div>
+
+                <TabsContent value="enabled" className="mt-3">
+                  <div className="max-h-[420px] overflow-y-auto rounded-lg border divide-y divide-border">
+                    {filteredList.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-6">
+                        {search ? 'Sin resultados' : 'No hay barrios habilitados'}
+                      </p>
+                    ) : (
+                      filteredList.map((n: any) => (
+                        <NeighborhoodRow
+                          key={n.id}
+                          n={n}
+                          onBlock={handleBlock}
+                          onUnblock={handleUnblock}
+                          isPending={updateNeighborhood.isPending}
+                        />
+                      ))
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="blocked" className="mt-3">
+                  <div className="max-h-[420px] overflow-y-auto rounded-lg border divide-y divide-border">
+                    {filteredList.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-6">
+                        {search ? 'Sin resultados' : 'No hay barrios bloqueados'}
+                      </p>
+                    ) : (
+                      filteredList.map((n: any) => (
+                        <NeighborhoodRow
+                          key={n.id}
+                          n={n}
+                          onBlock={handleBlock}
+                          onUnblock={handleUnblock}
+                          isPending={updateNeighborhood.isPending}
+                        />
+                      ))
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
             </>
           )}
-
         </CardContent>
       </Card>
-
     </div>
   );
 }
