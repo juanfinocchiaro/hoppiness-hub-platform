@@ -37,6 +37,8 @@ export interface CreatePedidoParams {
   propina?: number;
   /** Configuración de canal, tipo servicio y cliente (Fase 1) */
   orderConfig?: OrderConfig;
+  /** Override estado inicial (e.g. 'pendiente_pago' for Point Smart payments) */
+  estadoInicial?: 'pendiente' | 'pendiente_pago';
 }
 
 export function useOrders(branchId: string) {
@@ -77,7 +79,8 @@ export function useCreatePedido(branchId: string) {
 
       const subtotal = params.items.reduce((s, i) => s + i.subtotal, 0);
       const descuento = params.descuento ?? 0;
-      const totalOrder = subtotal - descuento;
+      const costoDelivery = params.orderConfig?.costoDelivery ?? 0;
+      const totalOrder = subtotal - descuento + costoDelivery;
       const propina = params.propina ?? 0;
       const totalToPay = totalOrder + propina;
 
@@ -88,13 +91,20 @@ export function useCreatePedido(branchId: string) {
         branch_id: branchId,
         numero_pedido: numeroPedido,
         tipo,
-        estado: 'pendiente',
+        estado: params.estadoInicial ?? 'pendiente',
         subtotal,
         descuento,
         total: totalOrder,
         propina,
         created_by: user.id,
       };
+
+      if (costoDelivery > 0) insertPayload.costo_delivery = costoDelivery;
+
+      const descuentoPlataforma = cfg?.descuentoPlataforma ?? 0;
+      const descuentoRestaurante = cfg?.descuentoRestaurante ?? 0;
+      if (descuentoPlataforma > 0) insertPayload.descuento_plataforma = descuentoPlataforma;
+      if (descuentoRestaurante > 0) insertPayload.descuento_restaurante = descuentoRestaurante;
 
       if (cfg) {
         if (cfg.numeroLlamador) insertPayload.numero_llamador = parseInt(cfg.numeroLlamador, 10);
@@ -134,19 +144,23 @@ export function useCreatePedido(branchId: string) {
         if (errItem) throw errItem;
       }
 
+      // pendiente_pago orders skip payment insertion (webhook handles it)
+      const isPendientePago = params.estadoInicial === 'pendiente_pago';
       const useSplit = params.payments && params.payments.length > 0;
-      if (!useSplit && !params.metodoPago) {
+      if (!isPendientePago && !useSplit && !params.metodoPago) {
         throw new Error('Se requiere un método de pago');
       }
-      const paymentRows = useSplit
-        ? params.payments!
-        : [
-            {
-              method: params.metodoPago!,
-              amount: totalToPay,
-              montoRecibido: params.montoRecibido ?? totalToPay,
-            },
-          ];
+      const paymentRows = isPendientePago
+        ? []
+        : useSplit
+          ? params.payments!
+          : [
+              {
+                method: params.metodoPago!,
+                amount: totalToPay,
+                montoRecibido: params.montoRecibido ?? totalToPay,
+              },
+            ];
 
       for (const row of paymentRows) {
         const montoRecibido = row.montoRecibido ?? row.amount;

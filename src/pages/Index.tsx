@@ -118,10 +118,10 @@ export default function Index() {
         <div className="container mx-auto max-w-4xl text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Music className="w-8 h-8 text-accent" />
-            <h2 className="text-3xl font-black font-brand">Modo Hoppi</h2>
+            <h2 className="text-3xl font-black font-brand">MODO HOPPI</h2>
           </div>
           <p className="text-background/70 mb-6 text-lg">
-            La música que suena en nuestros clubes
+            LA MÚSICA QUE SUENA EN NUESTROS CLUBES
           </p>
           <a 
             href="https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M" 
@@ -143,10 +143,10 @@ export default function Index() {
         <div className="container mx-auto max-w-3xl text-center">
           <Store className="w-10 h-10 mx-auto mb-4 text-accent" />
           <h2 className="text-3xl md:text-4xl font-black font-brand mb-4">
-            ¿Querés tu propio Hoppiness?
+            ¿QUERÉS TU PROPIO HOPPINESS?
           </h2>
           <p className="text-primary-foreground/80 text-lg mb-6">
-            Conocé nuestro modelo de franquicias. Recupero en 18-24 meses. Recetas y fábricas propias.
+            CONOCÉ NUESTRO MODELO DE FRANQUICIAS. RECUPERO EN 18-24 MESES. RECETAS Y FÁBRICAS PROPIAS.
           </p>
           <Link to="/franquicias">
             <Button size="lg" className="bg-white text-primary hover:bg-white/90 text-lg px-8">

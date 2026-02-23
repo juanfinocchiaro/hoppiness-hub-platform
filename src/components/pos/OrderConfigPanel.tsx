@@ -71,6 +71,15 @@ function ConfigSummaryLine({ config }: { config: OrderConfig }) {
   const details: string[] = [];
   if (config.numeroLlamador) details.push(`#${config.numeroLlamador}`);
   if (config.referenciaApp && config.canalVenta === 'apps') details.push(config.referenciaApp);
+  if ((config.costoDelivery ?? 0) > 0) {
+    details.push(`Envío $${(config.costoDelivery ?? 0).toLocaleString('es-AR')}`);
+  }
+  if ((config.descuentoPlataforma ?? 0) > 0) {
+    details.push(`Desc.plat -$${(config.descuentoPlataforma ?? 0).toLocaleString('es-AR')}`);
+  }
+  if ((config.descuentoRestaurante ?? 0) > 0) {
+    details.push(`Desc.rest -$${(config.descuentoRestaurante ?? 0).toLocaleString('es-AR')}`);
+  }
   if (config.clienteNombre && !config.clienteNombre.startsWith('Llamador #')) {
     details.push(config.clienteNombre);
   } else if (config.clienteNombre) {
@@ -267,6 +276,20 @@ export function ConfigForm({
               </div>
             </div>
           )}
+
+          {/* Descuento restaurante — siempre disponible para promos propias */}
+          <div className="space-y-2">
+            <Label className="text-xs">Descuento del restaurante ($)</Label>
+            <Input
+              type="number"
+              min={0}
+              step={100}
+              placeholder="0"
+              value={config.descuentoRestaurante ?? 0}
+              onChange={(e) => set({ descuentoRestaurante: Math.max(0, Number(e.target.value) || 0) })}
+              className="h-9"
+            />
+          </div>
         </>
       )}
 
@@ -311,6 +334,42 @@ export function ConfigForm({
                 className="h-9"
               />
             )}
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs">Costo envío cobrado al cliente ($)</Label>
+            <Input
+              type="number"
+              min={0}
+              step={100}
+              placeholder="0"
+              value={config.costoDelivery ?? 0}
+              onChange={(e) => set({ costoDelivery: Math.max(0, Number(e.target.value) || 0) })}
+              className="h-9"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs">Descuento de plataforma ($)</Label>
+            <Input
+              type="number"
+              min={0}
+              step={100}
+              placeholder="0"
+              value={config.descuentoPlataforma ?? 0}
+              onChange={(e) => set({ descuentoPlataforma: Math.max(0, Number(e.target.value) || 0) })}
+              className="h-9"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs">Descuento del restaurante ($)</Label>
+            <Input
+              type="number"
+              min={0}
+              step={100}
+              placeholder="0"
+              value={config.descuentoRestaurante ?? 0}
+              onChange={(e) => set({ descuentoRestaurante: Math.max(0, Number(e.target.value) || 0) })}
+              className="h-9"
+            />
           </div>
         </>
       )}

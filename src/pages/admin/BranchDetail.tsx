@@ -1,24 +1,33 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, MapPin, Settings, Users } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { ArrowLeft, Archive, MapPin, RotateCcw, Settings, Users } from 'lucide-react';
+import { toast } from 'sonner';
 import BranchEditPanel from '@/components/admin/BranchEditPanel';
 import BranchTeamTab from '@/components/admin/BranchTeamTab';
 
-type PublicStatus = 'active' | 'coming_soon' | 'hidden';
+type PublicStatus = 'active' | 'coming_soon' | 'hidden' | 'archived';
 
-const statusConfig: Record<PublicStatus, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
+const statusConfig: Record<PublicStatus, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
   active: { label: 'Activo', variant: 'default' },
   coming_soon: { label: 'Próximamente', variant: 'secondary' },
   hidden: { label: 'Oculto', variant: 'outline' },
+  archived: { label: 'Archivado', variant: 'destructive' },
 };
 
 export default function BranchDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const qc = useQueryClient();
+  const [archiving, setArchiving] = useState(false);
 
   const { data: branch, isLoading, refetch } = useQuery({
     queryKey: ['branch-detail', slug],
@@ -33,6 +42,40 @@ export default function BranchDetail() {
     },
     enabled: !!slug,
   });
+
+  const handleArchive = async () => {
+    if (!branch) return;
+    setArchiving(true);
+    const { error } = await supabase
+      .from('branches')
+      .update({ public_status: 'archived', is_active: false } as any)
+      .eq('id', branch.id);
+    setArchiving(false);
+    if (error) {
+      toast.error('Error al archivar la sucursal');
+    } else {
+      toast.success('Sucursal archivada');
+      refetch();
+      qc.invalidateQueries({ queryKey: ['branches'] });
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!branch) return;
+    setArchiving(true);
+    const { error } = await supabase
+      .from('branches')
+      .update({ public_status: 'hidden', is_active: true } as any)
+      .eq('id', branch.id);
+    setArchiving(false);
+    if (error) {
+      toast.error('Error al restaurar la sucursal');
+    } else {
+      toast.success('Sucursal restaurada (estado: Oculto). Cambiá el estado a Activo cuando esté lista.');
+      refetch();
+      qc.invalidateQueries({ queryKey: ['branches'] });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -60,6 +103,7 @@ export default function BranchDetail() {
 
   const publicStatus = ((branch as any).public_status as PublicStatus) || 'active';
   const config = statusConfig[publicStatus] || statusConfig.active;
+  const isArchived = publicStatus === 'archived';
 
   return (
     <div className="space-y-6">
@@ -78,10 +122,51 @@ export default function BranchDetail() {
             <span>{branch.address}, {branch.city}</span>
           </div>
         </div>
-        <Badge variant={config.variant}>
-          {config.label}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant={config.variant}>
+            {config.label}
+          </Badge>
+          {isArchived ? (
+            <Button variant="outline" size="sm" onClick={handleRestore} disabled={archiving}>
+              <RotateCcw className="h-4 w-4 mr-1" />
+              {archiving ? 'Restaurando...' : 'Restaurar'}
+            </Button>
+          ) : (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                  <Archive className="h-4 w-4 mr-1" />
+                  Archivar
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Archivar sucursal "{branch.name}"?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    La sucursal dejará de aparecer en la tienda, selectores y listados públicos. Los datos históricos (ventas, RDO, equipo) se mantienen accesibles desde reportes. Podés restaurarla en cualquier momento.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleArchive}
+                    disabled={archiving}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {archiving ? 'Archivando...' : 'Sí, archivar sucursal'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
       </div>
+
+      {isArchived && (
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3 text-sm text-destructive">
+          Esta sucursal está archivada. No es visible para clientes ni aparece en selectores. Los datos históricos se mantienen.
+        </div>
+      )}
 
       {/* Tabs */}
       <Tabs defaultValue="info" className="w-full">

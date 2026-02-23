@@ -33,7 +33,7 @@ interface CalcDeliveryResponse {
   duration_min: number | null;
   estimated_delivery_min: number | null;
   disclaimer: string | null;
-  reason?: "out_of_radius" | "blocked_zone" | "delivery_disabled" | "assigned_other_branch" | "not_assigned";
+  reason?: "out_of_radius" | "blocked_zone" | "delivery_disabled" | "outside_hours" | "assigned_other_branch" | "not_assigned";
   suggested_branch?: SuggestedBranch | null;
 }
 
@@ -78,6 +78,29 @@ Deno.serve(async (req: Request) => {
 
     if (!branchConfig.delivery_enabled) {
       return json(200, unavailable("delivery_disabled"));
+    }
+
+    // 2b. Check delivery hours (franjas horarias)
+    if (branchConfig.delivery_hours) {
+      const now = new Date();
+      const dayOfWeek = String(now.getDay());
+      const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      const dayWindows = (branchConfig.delivery_hours as Record<string, Array<{ opens: string; closes: string }>>)[dayOfWeek];
+
+      if (!dayWindows || dayWindows.length === 0) {
+        return json(200, unavailable("outside_hours"));
+      }
+
+      const inWindow = dayWindows.some((w) => {
+        if (w.closes < w.opens) {
+          return currentTime >= w.opens || currentTime <= w.closes;
+        }
+        return currentTime >= w.opens && currentTime <= w.closes;
+      });
+
+      if (!inWindow) {
+        return json(200, unavailable("outside_hours"));
+      }
     }
 
     // 3. Compute effective radius (check override expiry)

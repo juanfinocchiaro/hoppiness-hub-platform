@@ -1,4 +1,4 @@
-import { MapPinOff, ArrowRight } from 'lucide-react';
+import { MapPinOff, ArrowRight, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
@@ -43,6 +43,27 @@ export function DeliveryUnavailable({ onSwitchToPickup, onChangeAddress, reason,
           </Button>
           <Button variant="outline" size="sm" onClick={onChangeAddress}>
             Cambiar dirección
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (reason === 'outside_hours') {
+    return (
+      <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 p-4 space-y-3 text-center">
+        <div className="flex justify-center">
+          <Clock className="h-8 w-8 text-amber-500" />
+        </div>
+        <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+          Delivery no disponible en este horario
+        </p>
+        <p className="text-xs text-amber-600 dark:text-amber-500">
+          Podés elegir retiro en local o intentar más tarde.
+        </p>
+        <div className="flex flex-col gap-2">
+          <Button variant="default" size="sm" onClick={onSwitchToPickup}>
+            Elegir Retiro en local
           </Button>
         </div>
       </div>

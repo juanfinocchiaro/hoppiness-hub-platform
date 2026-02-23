@@ -43,7 +43,7 @@ export function SumateSection() {
             SUMATE A HOPPINESS
           </h2>
           <p className="text-lg text-muted-foreground">
-            Hay muchas formas de ser parte de la familia
+            HAY MUCHAS FORMAS DE SER PARTE DE LA FAMILIA
           </p>
         </div>
 

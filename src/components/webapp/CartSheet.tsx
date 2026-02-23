@@ -16,6 +16,7 @@ import type { useWebappCart } from '@/hooks/useWebappCart';
 import { AddressAutocomplete, type AddressResult } from './AddressAutocomplete';
 import { DeliveryCostDisplay, DeliveryCostLoading } from './DeliveryCostDisplay';
 import { DeliveryUnavailable } from './DeliveryUnavailable';
+import { PromoCodeInput } from './PromoCodeInput';
 import { useCalculateDelivery } from '@/hooks/useDeliveryConfig';
 
 function useGoogleMapsApiKey() {
@@ -182,11 +183,13 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   const [metodoPago, setMetodoPago] = useState<MetodoPago>(mpEnabled ? 'mercadopago' : 'efectivo');
   const [pagaCon, setPagaCon] = useState<string>('');
   const [showMpConfirm, setShowMpConfirm] = useState(false);
+  const [promoCode, setPromoCode] = useState<{ codigoId: string; codigoText: string; descuento: number } | null>(null);
 
   const costoEnvio = isDelivery && deliveryCalc?.available && deliveryCalc.cost != null
     ? deliveryCalc.cost
     : 0;
-  const totalConEnvio = cart.totalPrecio + costoEnvio;
+  const promoDescuento = promoCode?.descuento ?? 0;
+  const totalConEnvio = Math.max(0, cart.totalPrecio + costoEnvio - promoDescuento);
   const deliveryAvailable = !isDelivery || (deliveryCalc?.available === true);
 
   // Inline validation errors
@@ -264,6 +267,8 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
           delivery_lng: deliveryAddress?.lng ?? null,
           delivery_cost_calculated: costoEnvio > 0 ? costoEnvio : null,
           delivery_distance_km: deliveryCalc?.distance_km ?? null,
+          codigo_descuento_id: promoCode?.codigoId ?? null,
+          descuento_codigo: promoDescuento > 0 ? promoDescuento : null,
           items: orderItems,
         },
       });
@@ -727,6 +732,16 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                 )}
               </div>
 
+              {/* Promo code */}
+              <PromoCodeInput
+                branchId={branchId}
+                subtotal={cart.totalPrecio}
+                onApply={(descuento, codigoId, codigoText) => setPromoCode({ codigoId, codigoText, descuento })}
+                onRemove={() => setPromoCode(null)}
+                appliedCode={promoCode?.codigoText ?? null}
+                appliedDiscount={promoDescuento}
+              />
+
               {/* Order summary */}
               <div className="space-y-2 rounded-xl border p-3 bg-muted/30">
                 <h3 className="text-sm font-bold text-foreground">Resumen</h3>
@@ -748,6 +763,12 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                     <div className="flex justify-between text-xs">
                       <span className="text-muted-foreground">Envío</span>
                       <span>{formatPrice(costoEnvio)}</span>
+                    </div>
+                  )}
+                  {promoDescuento > 0 && (
+                    <div className="flex justify-between text-xs text-green-600">
+                      <span>Descuento ({promoCode?.codigoText})</span>
+                      <span>-{formatPrice(promoDescuento)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm font-bold pt-1">

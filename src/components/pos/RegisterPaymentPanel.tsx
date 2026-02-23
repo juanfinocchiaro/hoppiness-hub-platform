@@ -13,9 +13,11 @@ import { POSDialogContent } from './POSDialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Banknote, CreditCard, QrCode, ArrowRightLeft } from 'lucide-react';
+import { Banknote, CreditCard, QrCode, ArrowRightLeft, Smartphone } from 'lucide-react';
 import type { MetodoPago, LocalPayment } from '@/types/pos';
 import { cn } from '@/lib/utils';
+import { useMercadoPagoConfig } from '@/hooks/useMercadoPagoConfig';
+import { useParams } from 'react-router-dom';
 
 const METODOS: { value: MetodoPago; label: string; icon: React.ComponentType<{ className?: string }>; selectedStyle: string }[] = [
   { value: 'efectivo', label: 'Efectivo', icon: Banknote, selectedStyle: 'border-emerald-500 bg-emerald-500/10 text-emerald-700' },
@@ -42,9 +44,15 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   saldoPendiente: number;
   onRegister: (payment: LocalPayment) => void;
+  /** Triggers Point Smart payment flow instead of manual registration */
+  onPointSmartPayment?: (amount: number) => void;
 }
 
-export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onRegister }: Props) {
+export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onRegister, onPointSmartPayment }: Props) {
+  const { branchId } = useParams<{ branchId: string }>();
+  const { data: mpConfig } = useMercadoPagoConfig(branchId);
+  const hasPointSmart = !!mpConfig?.device_id && mpConfig.estado_conexion === 'conectado';
+
   const [metodo, setMetodo] = useState<MetodoPago>('efectivo');
   const [monto, setMonto] = useState('');
   const [montoRecibido, setMontoRecibido] = useState('');
@@ -190,6 +198,26 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
             </>
           )}
         </div>
+        {/* Point Smart shortcut */}
+        {hasPointSmart && onPointSmartPayment && (
+          <button
+            type="button"
+            onClick={() => {
+              onOpenChange(false);
+              onPointSmartPayment(saldoPendiente);
+            }}
+            className="w-full flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-blue-300 bg-blue-50 hover:bg-blue-100 hover:border-blue-400 transition-colors text-left"
+          >
+            <Smartphone className="h-8 w-8 text-blue-600 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-blue-800">Cobrar con Point Smart</p>
+              <p className="text-xs text-blue-600">
+                El Point Smart cobra tarjeta, QR o contactless. Se concilia automáticamente.
+              </p>
+            </div>
+          </button>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar

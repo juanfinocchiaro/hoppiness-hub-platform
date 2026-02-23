@@ -4,13 +4,15 @@ import { Input } from '@/components/ui/input';
 import { ProductCard } from './ProductCard';
 import { Loader2 } from 'lucide-react';
 import { ActiveOrderBanner } from './ActiveOrderBanner';
+import { ActivePromosBanner } from './ActivePromosBanner';
+import { EmailConfirmBanner } from '@/components/auth/EmailConfirmBanner';
 import { WebappHeader } from './WebappHeader';
 import { useScrollDirection } from '@/hooks/useScrollDirection';
 import type { WebappMenuItem, TipoServicioWebapp } from '@/types/webapp';
 import type { useWebappCart } from '@/hooks/useWebappCart';
 
 interface Props {
-  branch: { name: string };
+  branch: { name: string; id?: string };
   config: any;
   items: WebappMenuItem[];
   loading: boolean;
@@ -191,8 +193,10 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
             </div>
           </div>
 
-          {/* Active order banner */}
+          {/* Email confirm + Active order + Promos banners */}
+          <EmailConfirmBanner />
           {onShowTracking && <ActiveOrderBanner onShowTracking={onShowTracking} />}
+          <ActivePromosBanner branchId={branch.id} />
 
           {/* Category tabs - mobile only */}
           {!search && categories.length > 1 && (

@@ -357,11 +357,11 @@ export default function Franquicias() {
             className="w-20 h-20 mx-auto mb-6"
           />
           <h2 className="text-4xl md:text-5xl font-black text-white mb-4 font-brand">
-            ¿Listo para ser parte del<br />
-            <span className="text-accent">Culto al Sabor</span>?
+            ¿LISTO PARA SER PARTE DEL<br />
+            <span className="text-accent">CULTO AL SABOR</span>?
           </h2>
           <p className="text-xl text-white/90 mb-8">
-            Completá el formulario y un asesor se contactará en menos de 24 horas.
+            COMPLETÁ EL FORMULARIO Y UN ASESOR SE CONTACTARÁ EN MENOS DE 24 HORAS.
           </p>
           <a href="#formulario-franquicia">
             <Button size="lg" className="bg-white text-primary hover:bg-white/90 text-xl px-10 py-7 h-auto shadow-lg">

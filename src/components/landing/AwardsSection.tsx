@@ -4,7 +4,7 @@ const awards = [
   { year: '2022', title: 'Mejor Hamburguesa Clásica', event: 'Circuito Gastronómico' },
   { year: '2024', title: 'Mejor Hamburguesa Clásica', event: 'Circuito Gastronómico' },
   { year: '2024', title: 'Mejor Hamburguesa Gourmet', event: 'Circuito Gastronómico' },
-  { year: '2025', title: 'Mejor Hamburguesería', event: 'Circuito Gastronómico' },
+  { year: '2024', title: 'Mejor Hamburguesería', event: 'Circuito Gastronómico' },
 ];
 
 export function AwardsSection() {

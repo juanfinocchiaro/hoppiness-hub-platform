@@ -33,6 +33,12 @@ export interface OrderConfig {
   receptorRazonSocial: string;
   /** Email para envío de factura (opcional) */
   receptorEmail: string;
+  /** Costo de envío cobrado al cliente */
+  costoDelivery?: number;
+  /** Descuento aplicado por la plataforma (Rappi/PeYa/etc.) */
+  descuentoPlataforma?: number;
+  /** Descuento aplicado por el restaurante (promos propias) */
+  descuentoRestaurante?: number;
 }
 
 export const DEFAULT_ORDER_CONFIG: OrderConfig = {
@@ -48,12 +54,20 @@ export const DEFAULT_ORDER_CONFIG: OrderConfig = {
   receptorCuit: '',
   receptorRazonSocial: '',
   receptorEmail: '',
+  costoDelivery: 0,
+  descuentoPlataforma: 0,
+  descuentoRestaurante: 0,
 };
 
 export type PedidoEstado =
+  | 'pendiente_pago'
   | 'pendiente'
+  | 'confirmado'
   | 'en_preparacion'
   | 'listo'
+  | 'listo_retiro'
+  | 'listo_mesa'
+  | 'listo_envio'
   | 'en_camino'
   | 'entregado'
   | 'cancelado';

@@ -102,6 +102,8 @@ import ConceptosServicioPage from "./pages/admin/ConceptosServicioPage";
 import MenuCartaPage from "./pages/admin/MenuCartaPage";
 import CentroCostosPage from "./pages/admin/CentroCostosPage";
 import PreparacionesPage from "./pages/admin/PreparacionesPage";
+import PromocionesPage from "./pages/admin/PromocionesPage";
+import CodigosDescuentoPage from "./pages/admin/CodigosDescuentoPage";
 import CategoriasCartaPage from "./pages/admin/CategoriasCartaPage";
 import ChannelPricingPage from "./pages/admin/ChannelPricingPage";
 import DeliveryConfigPage from "./pages/admin/DeliveryConfigPage";
@@ -298,6 +300,10 @@ const App = () => (
               {/* Carta */}
               <Route path="carta" element={<MenuCartaPage />} />
               <Route path="categorias-carta" element={<CategoriasCartaPage />} />
+              
+              {/* Promociones y Códigos */}
+              <Route path="promociones" element={<PromocionesPage />} />
+              <Route path="codigos-descuento" element={<CodigosDescuentoPage />} />
               
               {/* Centro de Costos */}
               <Route path="centro-costos" element={<CentroCostosPage />} />

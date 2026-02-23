@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useWebappConfig, useWebappMenuItems } from '@/hooks/useWebappMenu';
 import { useWebappCart } from '@/hooks/useWebappCart';
 import { useMercadoPagoStatus } from '@/hooks/useMercadoPagoConfig';
+import { useActivePromoItems } from '@/hooks/usePromociones';
 import { BranchLanding } from '@/components/webapp/BranchLanding';
 import { WebappMenuView } from '@/components/webapp/WebappMenuView';
 import { CartBar } from '@/components/webapp/CartBar';
@@ -19,8 +20,22 @@ export default function PedirPage() {
   const { branchSlug } = useParams<{ branchSlug: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data, isLoading, error } = useWebappConfig(branchSlug);
-  const { data: menuItems, isLoading: menuLoading } = useWebappMenuItems(data?.branch?.id);
+  const { data: rawMenuItems, isLoading: menuLoading } = useWebappMenuItems(data?.branch?.id);
   const { data: mpStatus } = useMercadoPagoStatus(data?.branch?.id);
+  const { data: promoItems = [] } = useActivePromoItems(data?.branch?.id, 'webapp');
+
+  // Overlay active promo prices onto menu items
+  const menuItems = rawMenuItems?.map(item => {
+    const promoMatch = promoItems.find(pi => pi.item_carta_id === item.id);
+    if (promoMatch && promoMatch.precio_promo < Number(item.precio_base)) {
+      return {
+        ...item,
+        precio_promo: promoMatch.precio_promo,
+        promo_etiqueta: item.promo_etiqueta || 'PROMO',
+      };
+    }
+    return item;
+  });
   const cart = useWebappCart();
   const navigate = useNavigate();
   const mpEnabled = mpStatus?.estado_conexion === 'conectado';

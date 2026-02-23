@@ -16,8 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 
 export function UserMenuDropdown() {
   const { user, signOut } = useAuth();
@@ -25,26 +24,11 @@ export function UserMenuDropdown() {
   const location = useLocation();
   const { openAuthModal } = useAuthModal();
   const { openMisPedidos, openDirecciones, openPerfil } = useAccountSheets();
+  const { canAccessLocalPanel, canAccessBrandPanel, accessibleBranches } = usePermissionsWithImpersonation();
 
-  const { data: roles } = useQuery({
-    queryKey: ['user-menu-roles', user?.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('user_roles_v2')
-        .select('brand_role, local_role, branch_ids')
-        .eq('user_id', user!.id)
-        .eq('is_active', true)
-        .maybeSingle();
-      return data;
-    },
-    enabled: !!user,
-    staleTime: 60000,
-  });
-
-  const hasLocalRole = !!roles?.local_role;
-  const canAccessLocal = hasLocalRole || !!roles?.brand_role;
-  const canAccessBrand = !!roles?.brand_role;
-  const firstBranchId = roles?.branch_ids?.[0];
+  const canAccessLocal = canAccessLocalPanel;
+  const canAccessBrand = canAccessBrandPanel;
+  const firstBranchId = accessibleBranches[0]?.id;
   const showMiTrabajo = canAccessLocal || canAccessBrand;
 
   const isInStore = location.pathname.startsWith('/pedir');

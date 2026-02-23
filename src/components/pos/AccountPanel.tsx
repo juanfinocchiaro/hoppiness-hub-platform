@@ -137,7 +137,12 @@ export function AccountPanel({
   orderConfig,
   onEditConfig,
 }: AccountPanelProps) {
-  const totalItems = items.reduce((s, i) => s + i.subtotal, 0);
+  const subtotalItems = items.reduce((s, i) => s + i.subtotal, 0);
+  const costoEnvio = orderConfig?.canalVenta === 'apps' ? (orderConfig?.costoDelivery ?? 0) : 0;
+  const descPlataforma = orderConfig?.descuentoPlataforma ?? 0;
+  const descRestaurante = orderConfig?.descuentoRestaurante ?? 0;
+  const totalDescuentos = descPlataforma + descRestaurante;
+  const totalItems = subtotalItems + costoEnvio - totalDescuentos;
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
   const saldo = totalItems - totalPaid;
   const canSend = Math.abs(saldo) < 0.01 && items.length > 0;
@@ -285,9 +290,33 @@ export function AccountPanel({
           <>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Total pedido</span>
-                <span className="font-medium tabular-nums">$ {totalItems.toLocaleString('es-AR')}</span>
+                <span className="text-muted-foreground">{costoEnvio > 0 ? 'Subtotal' : 'Total pedido'}</span>
+                <span className="font-medium tabular-nums">$ {subtotalItems.toLocaleString('es-AR')}</span>
               </div>
+              {costoEnvio > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Envío</span>
+                  <span className="font-medium tabular-nums">$ {costoEnvio.toLocaleString('es-AR')}</span>
+                </div>
+              )}
+              {descPlataforma > 0 && (
+                <div className="flex justify-between text-orange-600">
+                  <span>Desc. plataforma</span>
+                  <span className="font-medium tabular-nums">- $ {descPlataforma.toLocaleString('es-AR')}</span>
+                </div>
+              )}
+              {descRestaurante > 0 && (
+                <div className="flex justify-between text-orange-600">
+                  <span>Desc. restaurante</span>
+                  <span className="font-medium tabular-nums">- $ {descRestaurante.toLocaleString('es-AR')}</span>
+                </div>
+              )}
+              {(costoEnvio > 0 || totalDescuentos > 0) && (
+                <div className="flex justify-between pt-0.5 border-t">
+                  <span className="text-muted-foreground font-medium">Total pedido</span>
+                  <span className="font-semibold tabular-nums">$ {totalItems.toLocaleString('es-AR')}</span>
+                </div>
+              )}
               {payments.length > 0 && (
                 <div className="flex justify-between text-emerald-600">
                   <span>Pagado</span>

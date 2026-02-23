@@ -6,9 +6,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Trash2, ShoppingCart, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { Plus, Trash2, ShoppingCart, ChevronDown, ChevronUp, Download, FileUp, FileText, Loader2 } from 'lucide-react';
 import { exportToExcel } from '@/lib/exportExcel';
 import { useFacturas, useFacturaMutations } from '@/hooks/useCompras';
+import { useUploadFacturaPdf } from '@/hooks/useProveedorDocumentos';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { CompraFormModal } from '@/components/finanzas/CompraFormModal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -31,6 +32,8 @@ export default function ComprasPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [deleting, setDeleting] = useState<FacturaProveedor | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const uploadPdf = useUploadFacturaPdf();
+  const [uploadingFacturaId, setUploadingFacturaId] = useState<string | null>(null);
 
   const filtered = facturas?.filter((f: any) => {
     const matchesSearch = f.proveedores?.razon_social?.toLowerCase().includes(search.toLowerCase()) ||
@@ -140,6 +143,41 @@ export default function ComprasPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1 justify-end" onClick={e => e.stopPropagation()}>
+                          {(row as any).factura_pdf_url ? (
+                            <Button variant="ghost" size="icon" asChild>
+                              <a href={(row as any).factura_pdf_url} target="_blank" rel="noopener noreferrer" title="Ver PDF">
+                                <FileText className="w-4 h-4 text-red-500" />
+                              </a>
+                            </Button>
+                          ) : !isCanon ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Adjuntar PDF"
+                              disabled={uploadPdf.isPending && uploadingFacturaId === row.id}
+                              onClick={() => {
+                                const input = document.createElement('input');
+                                input.type = 'file';
+                                input.accept = 'application/pdf';
+                                input.onchange = (ev) => {
+                                  const file = (ev.target as HTMLInputElement).files?.[0];
+                                  if (file) {
+                                    setUploadingFacturaId(row.id);
+                                    uploadPdf.mutate({ facturaId: row.id, file }, {
+                                      onSettled: () => setUploadingFacturaId(null),
+                                    });
+                                  }
+                                };
+                                input.click();
+                              }}
+                            >
+                              {uploadPdf.isPending && uploadingFacturaId === row.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <FileUp className="w-4 h-4 text-muted-foreground" />
+                              )}
+                            </Button>
+                          ) : null}
                           {!isCanon && (
                             <Button variant="ghost" size="icon" onClick={() => setDeleting(row)}>
                               <Trash2 className="w-4 h-4 text-destructive" />

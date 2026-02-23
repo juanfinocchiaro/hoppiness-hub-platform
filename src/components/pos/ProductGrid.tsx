@@ -10,8 +10,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Search, X, Star } from 'lucide-react';
+import { Search, X, Star, Tag } from 'lucide-react';
 import { toast } from 'sonner';
+import { useActivePromoItems, type PromocionItem } from '@/hooks/usePromociones';
 
 export interface CartItemExtra {
   id: string;
@@ -45,6 +46,7 @@ interface ProductGridProps {
   cart?: CartItem[];
   branchId?: string;
   disabled?: boolean;
+  promoChannel?: string;
 }
 
 function getInitials(name: string) {
@@ -56,9 +58,16 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disabled }: ProductGridProps) {
+export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disabled, promoChannel }: ProductGridProps) {
   const { data: items, isLoading } = useItemsCarta();
   const { data: frequentIds } = useFrequentItems(branchId);
+  const { data: promoItems = [] } = useActivePromoItems(branchId, promoChannel);
+
+  const promoMap = useMemo(() => {
+    const m = new Map<string, PromocionItem>();
+    promoItems.forEach(pi => m.set(pi.item_carta_id, pi));
+    return m;
+  }, [promoItems]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -210,22 +219,35 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
     });
   }, [queryClient, disabled]);
 
+  const [promoConfirmItem, setPromoConfirmItem] = useState<any>(null);
+
   const handleProductClick = (item: any) => {
     if (disabled) {
       toast('Iniciá la venta primero', { description: 'Configurá el canal y servicio antes de agregar productos' });
       return;
     }
 
-    const precio = item.precio_base ?? 0;
+    const promo = promoMap.get(item.id);
+    if (promo && promo.precio_promo < Number(item.precio_base ?? 0)) {
+      setPromoConfirmItem(item);
+      return;
+    }
+
+    addItemToCart(item);
+  };
+
+  const addItemToCart = (item: any, usePromoPrice = false) => {
+    const promoMatch = promoMap.get(item.id);
+    const precio = usePromoPrice && promoMatch ? promoMatch.precio_promo : (item.precio_base ?? 0);
     const nombre = item.nombre_corto ?? item.nombre;
     const precioRef = item.precio_referencia ? Number(item.precio_referencia) : undefined;
 
     if (onSelectItem) {
-      onSelectItem(item);
+      onSelectItem(usePromoPrice && promoMatch ? { ...item, precio_base: promoMatch.precio_promo } : item);
     } else {
       onAddItem({
         item_carta_id: item.id,
-        nombre,
+        nombre: usePromoPrice ? `${nombre} (PROMO)` : nombre,
         cantidad: 1,
         precio_unitario: precio,
         subtotal: precio,
@@ -235,7 +257,6 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
     }
   };
 
-  // Enter shortcut: if single search result, add it
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && filteredItems.length === 1) {
       handleProductClick(filteredItems[0]);
@@ -334,6 +355,7 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
                     qty={cartQtyMap.get(item.id) || 0}
                     onClick={handleProductClick}
                     onHover={handlePrefetch}
+                    promoPrice={promoMap.get(item.id)?.precio_promo}
                   />
                 ))}
               </div>
@@ -361,6 +383,7 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
                     qty={cartQtyMap.get(item.id) || 0}
                     onClick={handleProductClick}
                     onHover={handlePrefetch}
+                    promoPrice={promoMap.get(item.id)?.precio_promo}
                   />
                     ))}
                   </div>
@@ -370,16 +393,47 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
           )}
         </div>
       </ScrollArea>
+
+      {/* Promo apply confirmation */}
+      {promoConfirmItem && (() => {
+        const pi = promoMap.get(promoConfirmItem.id)!;
+        const nombre = promoConfirmItem.nombre_corto ?? promoConfirmItem.nombre;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setPromoConfirmItem(null)}>
+            <div className="bg-card rounded-xl shadow-xl p-5 max-w-xs w-full space-y-3" onClick={e => e.stopPropagation()}>
+              <h4 className="font-semibold text-sm">Aplicar promoción?</h4>
+              <p className="text-sm text-muted-foreground">
+                <strong>{nombre}</strong>: ${Number(promoConfirmItem.precio_base).toLocaleString('es-AR')} → <span className="text-green-600 font-bold">${pi.precio_promo.toLocaleString('es-AR')}</span>
+              </p>
+              <div className="flex gap-2">
+                <button
+                  className="flex-1 py-2 text-sm rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition-colors"
+                  onClick={() => { addItemToCart(promoConfirmItem, true); setPromoConfirmItem(null); }}
+                >
+                  Sí, con promo
+                </button>
+                <button
+                  className="flex-1 py-2 text-sm rounded-lg bg-muted text-foreground font-medium hover:bg-muted/80 transition-colors"
+                  onClick={() => { addItemToCart(promoConfirmItem, false); setPromoConfirmItem(null); }}
+                >
+                  Precio normal
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
 
 /* Extracted product card with badge + promo support */
-function ProductCard({ item, qty, onClick, onHover }: { item: any; qty: number; onClick: (item: any) => void; onHover?: (id: string) => void }) {
+function ProductCard({ item, qty, onClick, onHover, promoPrice }: { item: any; qty: number; onClick: (item: any) => void; onHover?: (id: string) => void; promoPrice?: number }) {
   const precio = item.precio_base ?? 0;
   const precioRef = item.precio_referencia ? Number(item.precio_referencia) : null;
   const hasDiscount = precioRef != null && precioRef > precio;
   const discountPct = hasDiscount ? Math.round(((precioRef! - precio) / precioRef!) * 100) : 0;
+  const hasPromo = promoPrice != null && promoPrice < precio;
   const nombre = item.nombre_corto ?? item.nombre;
   const imagenUrl = item.imagen_url;
   const inCart = qty > 0;
@@ -392,7 +446,9 @@ function ProductCard({ item, qty, onClick, onHover }: { item: any; qty: number; 
         'group relative flex flex-col rounded-lg border bg-card overflow-hidden text-left transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30',
         inCart
           ? 'border-primary hover:border-primary'
-          : 'hover:border-primary/50'
+          : hasPromo
+            ? 'border-green-400/60 hover:border-green-500'
+            : 'hover:border-primary/50'
       )}
     >
       {/* Quantity badge */}
@@ -401,8 +457,14 @@ function ProductCard({ item, qty, onClick, onHover }: { item: any; qty: number; 
           {qty}
         </span>
       )}
+      {/* Promo badge */}
+      {hasPromo && !inCart && (
+        <span className="absolute top-1.5 left-1.5 z-20 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-green-600 text-white text-[10px] font-bold shadow-sm">
+          <Tag className="w-2.5 h-2.5" /> PROMO
+        </span>
+      )}
       {/* Discount badge */}
-      {hasDiscount && !inCart && (
+      {hasDiscount && !inCart && !hasPromo && (
         <span className="absolute top-1.5 right-1.5 z-20 px-1.5 py-0.5 rounded-md bg-destructive text-destructive-foreground text-[10px] font-bold shadow-sm">
           -{discountPct}%
         </span>
@@ -425,7 +487,16 @@ function ProductCard({ item, qty, onClick, onHover }: { item: any; qty: number; 
       {/* Info */}
       <div className="p-2.5 flex flex-col gap-0.5">
         <span className="text-sm font-medium line-clamp-2 leading-tight">{nombre}</span>
-        {hasDiscount ? (
+        {hasPromo ? (
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-muted-foreground line-through">
+              $ {precio.toLocaleString('es-AR')}
+            </span>
+            <span className="text-xs text-green-600 font-bold">
+              $ {promoPrice!.toLocaleString('es-AR')}
+            </span>
+          </div>
+        ) : hasDiscount ? (
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] text-muted-foreground line-through">
               $ {precioRef!.toLocaleString('es-AR')}

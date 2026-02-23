@@ -5,7 +5,7 @@
  */
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Loader2, CreditCard, Banknote, MapPin } from 'lucide-react';
+import { ArrowLeft, Loader2, CreditCard, Banknote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,7 @@ import type { useWebappCart } from '@/hooks/useWebappCart';
 import { AddressAutocomplete, type AddressResult } from './AddressAutocomplete';
 import { DeliveryCostDisplay, DeliveryCostLoading } from './DeliveryCostDisplay';
 import { DeliveryUnavailable } from './DeliveryUnavailable';
+import { PromoCodeInput } from './PromoCodeInput';
 import { useCalculateDelivery } from '@/hooks/useDeliveryConfig';
 
 function formatPrice(n: number) {
@@ -117,6 +118,7 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
   const [notas, setNotas] = useState('');
   const [metodoPago, setMetodoPago] = useState<MetodoPago>(mpEnabled ? 'mercadopago' : 'efectivo');
   const [pagaCon, setPagaCon] = useState<string>('');
+  const [promoCode, setPromoCode] = useState<{ codigoId: string; codigoText: string; descuento: number } | null>(null);
 
   // Profile prefill
   useEffect(() => {
@@ -159,7 +161,8 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
   };
 
   const costoEnvio = isDelivery && deliveryCalc?.available && deliveryCalc.cost != null ? deliveryCalc.cost : 0;
-  const totalConEnvio = cart.totalPrecio + costoEnvio;
+  const promoDescuento = promoCode?.descuento ?? 0;
+  const totalConEnvio = Math.max(0, cart.totalPrecio + costoEnvio - promoDescuento);
   const deliveryAvailable = !isDelivery || (deliveryCalc?.available === true);
 
   // Validation
@@ -234,6 +237,8 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
           delivery_lng: deliveryAddress?.lng ?? null,
           delivery_cost_calculated: costoEnvio > 0 ? costoEnvio : null,
           delivery_distance_km: deliveryCalc?.distance_km ?? null,
+          codigo_descuento_id: promoCode?.codigoId ?? null,
+          descuento_codigo: promoDescuento > 0 ? promoDescuento : null,
           items: orderItems,
         },
       });
@@ -450,6 +455,16 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
           )}
         </div>
 
+        {/* Promo code */}
+        <PromoCodeInput
+          branchId={branchId}
+          subtotal={cart.totalPrecio}
+          onApply={(descuento, codigoId, codigoText) => setPromoCode({ codigoId, codigoText, descuento })}
+          onRemove={() => setPromoCode(null)}
+          appliedCode={promoCode?.codigoText ?? null}
+          appliedDiscount={promoDescuento}
+        />
+
         {/* Order summary */}
         <div className="rounded-lg border p-3 bg-muted/30 space-y-1.5">
           <h3 className="text-xs font-bold">Resumen</h3>
@@ -471,6 +486,12 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
               <div className="flex justify-between text-[11px]">
                 <span className="text-muted-foreground">Envío</span>
                 <span>{formatPrice(costoEnvio)}</span>
+              </div>
+            )}
+            {promoDescuento > 0 && (
+              <div className="flex justify-between text-[11px] text-green-600">
+                <span>Descuento ({promoCode?.codigoText})</span>
+                <span>-{formatPrice(promoDescuento)}</span>
               </div>
             )}
             <div className="flex justify-between text-xs font-bold pt-1">

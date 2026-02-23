@@ -42,7 +42,7 @@ export function WhyHoppinessSection() {
           ¿POR QUÉ ELEGIR HOPPINESS?
         </h2>
         <p className="text-center text-muted-foreground mb-12 text-lg max-w-2xl mx-auto">
-          Un modelo de negocio probado con todo lo que necesitás para triunfar
+          UN MODELO DE NEGOCIO PROBADO CON TODO LO QUE NECESITÁS PARA TRIUNFAR
         </p>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">

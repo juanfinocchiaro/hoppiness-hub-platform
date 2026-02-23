@@ -220,6 +220,10 @@ Deno.serve(async (req) => {
     const autoAccept = config.auto_accept_orders === true ||
       config.recepcion_modo === "auto";
 
+    // Orders with MercadoPago start in pendiente_pago (invisible to kitchen)
+    // until webhook confirms payment. Cash orders go straight to kitchen.
+    const isMpPayment = body.metodo_pago === "mercadopago";
+
     // ── Estimated time ──────────────────────────────────────────
     let tiempoEstimado: number | null = null;
     if (body.tipo_servicio === "delivery") {
@@ -238,12 +242,18 @@ Deno.serve(async (req) => {
     const pagoEstado =
       body.metodo_pago === "mercadopago" ? "pendiente" : "pendiente_entrega";
 
+    const estadoInicial = isMpPayment
+      ? "pendiente_pago"
+      : autoAccept
+        ? "en_preparacion"
+        : "pendiente";
+
     const { error: pedidoErr } = await supabase.from("pedidos").insert({
       id: pedidoId,
       branch_id: body.branch_id,
       numero_pedido: numeroPedido as number,
       tipo: "webapp",
-      estado: autoAccept ? "en_preparacion" : "pendiente",
+      estado: estadoInicial,
       canal_venta: "webapp",
       tipo_servicio: body.tipo_servicio === "retiro" ? "takeaway" : body.tipo_servicio,
       subtotal,
@@ -266,7 +276,7 @@ Deno.serve(async (req) => {
       tiempo_prometido: tiempoEstimado
         ? new Date(Date.now() + tiempoEstimado * 60_000).toISOString()
         : null,
-      tiempo_inicio_prep: autoAccept ? now : null,
+      tiempo_inicio_prep: !isMpPayment && autoAccept ? now : null,
       origen: "webapp",
       cliente_user_id: clienteUserId,
     } as any);
@@ -346,7 +356,7 @@ Deno.serve(async (req) => {
       pedido_id: pedidoId,
       tracking_code: trackingCode,
       numero_pedido: numeroPedido,
-      estado: autoAccept ? "en_preparacion" : "pendiente",
+      estado: estadoInicial,
       tiempo_estimado_min: tiempoEstimado,
     });
   } catch (err: unknown) {

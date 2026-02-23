@@ -13,6 +13,8 @@ export interface MercadoPagoConfig {
   collector_id: string | null;
   ultimo_test: string | null;
   ultimo_test_ok: boolean | null;
+  device_id: string | null;
+  device_name: string | null;
 }
 
 /**
@@ -50,6 +52,25 @@ export function useMercadoPagoStatus(branchId: string | undefined) {
         .maybeSingle();
       if (error) return null;
       return data as { estado_conexion: string } | null;
+    },
+    enabled: !!branchId,
+  });
+}
+
+export function usePointDevices(branchId: string | undefined) {
+  return useQuery({
+    queryKey: ['mp-point-devices', branchId],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('mp-point-devices', {
+        body: { branch_id: branchId },
+      });
+      if (error) throw error;
+      return (data?.devices ?? []) as Array<{
+        id: string;
+        pos_id: number | null;
+        operating_mode: string;
+        external_pos_id: string | null;
+      }>;
     },
     enabled: !!branchId,
   });
@@ -130,5 +151,44 @@ export function useMercadoPagoConfigMutations(branchId: string | undefined) {
     },
   });
 
-  return { upsert, testConnection, disconnect };
+  const saveDevice = useMutation({
+    mutationFn: async (values: { device_id: string; device_name: string }) => {
+      if (!branchId) throw new Error('branch_id requerido');
+      const { error } = await (supabase.from as any)('mercadopago_config')
+        .update({
+          device_id: values.device_id,
+          device_name: values.device_name,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('branch_id', branchId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['mp-config', branchId] });
+      toast.success('Dispositivo Point Smart vinculado');
+    },
+    onError: (err: Error) => {
+      toast.error('Error al vincular dispositivo', { description: err.message });
+    },
+  });
+
+  const removeDevice = useMutation({
+    mutationFn: async () => {
+      if (!branchId) throw new Error('branch_id requerido');
+      const { error } = await (supabase.from as any)('mercadopago_config')
+        .update({
+          device_id: null,
+          device_name: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('branch_id', branchId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['mp-config', branchId] });
+      toast.success('Dispositivo desvinculado');
+    },
+  });
+
+  return { upsert, testConnection, disconnect, saveDevice, removeDevice };
 }

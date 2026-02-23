@@ -33,6 +33,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Banknote, ChefHat, PlusCircle, ShoppingBag } from 'lucide-react';
 import { PendingOrdersBar } from '@/components/pos/PendingOrdersBar';
 import { WebappOrdersPanel } from '@/components/pos/WebappOrdersPanel';
+import { PointPaymentModal } from '@/components/pos/PointPaymentModal';
+import { useMercadoPagoConfig } from '@/hooks/useMercadoPagoConfig';
 
 /* Inline cash open form - shown when no register is open */
 function InlineCashOpen({ branchId, onOpened }: { branchId: string; onOpened: () => void }) {
@@ -129,6 +131,13 @@ export default function POSPage() {
   const [showPaymentPanel, setShowPaymentPanel] = useState(false);
   const [modifiersItem, setModifiersItem] = useState<any | null>(null);
   const configRef = useRef<HTMLDivElement>(null);
+
+  // Point Smart payment state
+  const [pointPaymentOpen, setPointPaymentOpen] = useState(false);
+  const [pointPedidoId, setPointPedidoId] = useState<string | null>(null);
+  const [pointAmount, setPointAmount] = useState(0);
+  const { data: mpConfig } = useMercadoPagoConfig(branchId);
+  const hasPointSmart = !!mpConfig?.device_id && mpConfig.estado_conexion === 'conectado';
 
   const shiftStatus = useShiftStatus(branchId);
   const createPedido = useCreatePedido(branchId!);
@@ -233,8 +242,8 @@ export default function POSPage() {
       if (orderConfig.tipoServicio === 'comer_aca' && !orderConfig.numeroLlamador) {
         return 'Ingresá el número de llamador';
       }
-      if (orderConfig.tipoServicio === 'takeaway' && !orderConfig.clienteNombre?.trim()) {
-        return 'Ingresá el nombre o número de llamador';
+      if (orderConfig.tipoServicio === 'takeaway' && !orderConfig.clienteNombre?.trim() && !orderConfig.numeroLlamador) {
+        return 'Ingresá el nombre del cliente o un número de llamador';
       }
       if (orderConfig.tipoServicio === 'delivery') {
         if (!orderConfig.clienteNombre?.trim() || !orderConfig.clienteTelefono?.trim()) {
@@ -242,11 +251,6 @@ export default function POSPage() {
         }
         if (!orderConfig.clienteDireccion?.trim()) return 'Ingresá la dirección de entrega';
       }
-    } else {
-      if (!orderConfig.clienteNombre?.trim() || !orderConfig.clienteTelefono?.trim()) {
-        return 'Nombre y teléfono son requeridos';
-      }
-      if (!orderConfig.clienteDireccion?.trim()) return 'Ingresá la dirección de entrega';
     }
     // Validate invoice fields — required only for Factura A
     if (orderConfig.tipoFactura === 'A') {
@@ -264,6 +268,66 @@ export default function POSPage() {
       return;
     }
     setShowPaymentPanel(true);
+  };
+
+  // Point Smart: create order as pendiente_pago, then open PointPaymentModal
+  const handlePointSmartPayment = async (amount: number) => {
+    if (!branchId || cart.length === 0) return;
+
+    const err = validateOrderConfig();
+    if (err) {
+      toast.error(err);
+      return;
+    }
+
+    try {
+      const items = cart.map((c) => ({
+        item_carta_id: c.item_carta_id,
+        nombre: c.nombre,
+        cantidad: c.cantidad,
+        precio_unitario: c.precio_unitario,
+        subtotal: c.subtotal,
+        notas: c.notas,
+        estacion: 'armado' as const,
+        precio_referencia: c.precio_referencia,
+        categoria_carta_id: c.categoria_carta_id,
+      }));
+
+      const pedido = await createPedido.mutateAsync({
+        items,
+        payments: [],
+        orderConfig,
+        estadoInicial: 'pendiente_pago',
+      });
+
+      setPointPedidoId(pedido.id);
+      setPointAmount(amount);
+      setPointPaymentOpen(true);
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Error al crear el pedido');
+    }
+  };
+
+  const handlePointPaymentConfirmed = (payment: { metodo: string; monto: number; mp_payment_id: string }) => {
+    toast.success('Pago confirmado', {
+      description: `El pedido ya está en cocina`,
+    });
+    resetAll();
+  };
+
+  const handlePointPaymentCancelled = async () => {
+    // Cancel the order that was created in pendiente_pago
+    if (pointPedidoId) {
+      try {
+        await supabase
+          .from('pedidos')
+          .update({ estado: 'cancelado' })
+          .eq('id', pointPedidoId);
+      } catch {
+        // best-effort
+      }
+    }
+    setPointPedidoId(null);
   };
 
   const formatMetodoPago = (method?: string) => {
@@ -422,8 +486,9 @@ export default function POSPage() {
           precio_unitario: c.precio_unitario,
           subtotal: c.subtotal,
         })),
-        total: subtotal,
-        descuento: 0,
+        total: totalToPay,
+        descuento: descuentos,
+        costo_delivery: costoEnvio > 0 ? costoEnvio : undefined,
         cliente_telefono: orderConfig.clienteTelefono ?? null,
         cliente_direccion: orderConfig.clienteDireccion ?? null,
       };
@@ -463,8 +528,11 @@ export default function POSPage() {
   }, []);
 
   const subtotal = cart.reduce((s, i) => s + i.subtotal, 0);
+  const costoEnvio = (orderConfig.tipoServicio === 'delivery' || orderConfig.canalVenta === 'apps') ? (orderConfig.costoDelivery ?? 0) : 0;
+  const descuentos = (orderConfig.descuentoPlataforma ?? 0) + (orderConfig.descuentoRestaurante ?? 0);
+  const totalToPay = subtotal + costoEnvio - descuentos;
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
-  const saldo = subtotal - totalPaid;
+  const saldo = totalToPay - totalPaid;
   const canSend = Math.abs(saldo) < 0.01 && cart.length > 0;
 
   // Show full-page "Abrir Caja" when cash register is closed
@@ -504,7 +572,20 @@ export default function POSPage() {
               </div>
             </div>
           ) : (
-            <ProductGrid onAddItem={addItem} onSelectItem={handleSelectItem} cart={cart} branchId={branchId} disabled={!configConfirmed} />
+            <ProductGrid
+              onAddItem={addItem}
+              onSelectItem={handleSelectItem}
+              cart={cart}
+              branchId={branchId}
+              disabled={!configConfirmed}
+              promoChannel={
+                orderConfig.canalVenta === 'apps'
+                  ? orderConfig.canalApp ?? undefined
+                  : orderConfig.canalVenta === 'mostrador'
+                    ? 'salon'
+                    : undefined
+              }
+            />
           )}
         </div>
 
@@ -557,7 +638,7 @@ export default function POSPage() {
         <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden border-t bg-background px-4 py-3 flex items-center justify-between gap-3 shadow-lg">
           <div className="text-sm">
             <span className="text-muted-foreground">{cart.reduce((s, i) => s + i.cantidad, 0)} items</span>
-            <span className="ml-2 font-semibold text-foreground">$ {subtotal.toLocaleString('es-AR')}</span>
+            <span className="ml-2 font-semibold text-foreground">$ {totalToPay.toLocaleString('es-AR')}</span>
             {totalPaid > 0 && (
               <span className="ml-2 text-xs text-green-600">pagado $ {totalPaid.toLocaleString('es-AR')}</span>
             )}
@@ -592,7 +673,21 @@ export default function POSPage() {
         onOpenChange={setShowPaymentPanel}
         saldoPendiente={saldo}
         onRegister={registerPayment}
+        onPointSmartPayment={hasPointSmart ? handlePointSmartPayment : undefined}
       />
+
+      {/* Point Smart payment modal */}
+      {pointPedidoId && (
+        <PointPaymentModal
+          open={pointPaymentOpen}
+          onOpenChange={setPointPaymentOpen}
+          pedidoId={pointPedidoId}
+          branchId={branchId!}
+          amount={pointAmount}
+          onConfirmed={handlePointPaymentConfirmed}
+          onCancelled={handlePointPaymentCancelled}
+        />
+      )}
 
       <ModifiersModal
         open={!!modifiersItem}

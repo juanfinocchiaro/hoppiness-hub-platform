@@ -4,7 +4,6 @@ import { ArrowRight } from 'lucide-react';
 
 import clasicasImg from '@/assets/menu/clasicas.webp';
 import originalesImg from '@/assets/menu/originales.webp';
-import masSaborImg from '@/assets/menu/mas-sabor.webp';
 import veggiesImg from '@/assets/menu/veggies.webp';
 import ultrasmashImg from '@/assets/menu/ultrasmash.webp';
 
@@ -20,12 +19,6 @@ const categories = [
     image: originalesImg,
     products: ['Argenta', 'Royal', 'Provoleta'],
     description: 'Combinaciones únicas de autor.',
-  },
-  {
-    name: 'Más Sabor',
-    image: masSaborImg,
-    products: ['Baconator', 'Carolina', 'Django'],
-    description: 'Triples. Para los que quieren más.',
   },
   {
     name: 'Veggies',
@@ -54,7 +47,7 @@ export function MenuShowcaseSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-10">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           {categories.map((cat) => (
             <Link
               key={cat.name}

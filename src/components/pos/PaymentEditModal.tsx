@@ -10,12 +10,14 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Banknote, CreditCard, QrCode, ArrowRightLeft, Plus, Trash2, Loader2 } from 'lucide-react';
+import { Banknote, CreditCard, QrCode, ArrowRightLeft, Plus, Trash2, Loader2, Smartphone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { MetodoPago } from '@/types/pos';
+import { useMercadoPagoConfig } from '@/hooks/useMercadoPagoConfig';
+import { PointPaymentModal } from './PointPaymentModal';
 
 const METODOS: { value: MetodoPago; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { value: 'efectivo', label: 'Efectivo', icon: Banknote },
@@ -46,6 +48,12 @@ export function PaymentEditModal({ open, onOpenChange, pedidoId, pedidoTotal, br
   const [motivo, setMotivo] = useState('');
   const [saving, setSaving] = useState(false);
   const qc = useQueryClient();
+
+  // Point Smart
+  const { data: mpConfig } = useMercadoPagoConfig(branchId);
+  const hasPointSmart = !!mpConfig?.device_id && mpConfig.estado_conexion === 'conectado';
+  const [pointPaymentOpen, setPointPaymentOpen] = useState(false);
+  const [pointAmount, setPointAmount] = useState(0);
 
   // Initialize rows from current payments when opening
   useEffect(() => {
@@ -252,6 +260,26 @@ export function PaymentEditModal({ open, onOpenChange, pedidoId, pedidoTotal, br
             />
           </div>
         </div>
+        {/* Point Smart cobro option */}
+        {hasPointSmart && !isBalanced && totalPaid < pedidoTotal && (
+          <button
+            type="button"
+            onClick={() => {
+              setPointAmount(pedidoTotal - totalPaid);
+              setPointPaymentOpen(true);
+            }}
+            className="w-full flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-blue-300 bg-blue-50 hover:bg-blue-100 hover:border-blue-400 transition-colors text-left"
+          >
+            <Smartphone className="h-6 w-6 text-blue-600 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-blue-800">
+                Cobrar $ {(pedidoTotal - totalPaid).toLocaleString('es-AR')} con Point Smart
+              </p>
+              <p className="text-xs text-blue-600">Tarjeta, QR o contactless con conciliación automática</p>
+            </div>
+          </button>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
@@ -262,6 +290,23 @@ export function PaymentEditModal({ open, onOpenChange, pedidoId, pedidoTotal, br
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Point Smart modal for collecting remaining amount */}
+      <PointPaymentModal
+        open={pointPaymentOpen}
+        onOpenChange={setPointPaymentOpen}
+        pedidoId={pedidoId}
+        branchId={branchId}
+        amount={pointAmount}
+        onConfirmed={(payment) => {
+          // Payment was inserted by webhook, just close and refresh
+          toast.success('Pago conciliado automáticamente');
+          qc.invalidateQueries({ queryKey: ['pos-order-history'] });
+          setPointPaymentOpen(false);
+          onOpenChange(false);
+        }}
+        onCancelled={() => setPointPaymentOpen(false)}
+      />
     </Dialog>
   );
 }

@@ -11,15 +11,15 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { DollarSign, CheckCircle, XCircle, Loader2, Unplug, Eye, EyeOff, ExternalLink } from 'lucide-react';
+import { DollarSign, CheckCircle, XCircle, Loader2, Unplug, Eye, EyeOff, ExternalLink, Smartphone, Link2, Unlink } from 'lucide-react';
 import { PageHeader } from '@/components/ui/page-header';
-import { useMercadoPagoConfig, useMercadoPagoConfigMutations } from '@/hooks/useMercadoPagoConfig';
+import { useMercadoPagoConfig, useMercadoPagoConfigMutations, usePointDevices } from '@/hooks/useMercadoPagoConfig';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function MercadoPagoConfigPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const { data: config, isLoading } = useMercadoPagoConfig(branchId);
-  const { upsert, testConnection, disconnect } = useMercadoPagoConfigMutations(branchId);
+  const { upsert, testConnection, disconnect, saveDevice, removeDevice } = useMercadoPagoConfigMutations(branchId);
 
   const [accessToken, setAccessToken] = useState('');
   const [publicKey, setPublicKey] = useState('');
@@ -196,6 +196,11 @@ export default function MercadoPagoConfigPage() {
             </CardContent>
           </Card>
 
+          {/* Point Smart Device */}
+          {isConnected && (
+            <PointSmartSection branchId={branchId!} config={config!} saveDevice={saveDevice} removeDevice={removeDevice} />
+          )}
+
           {/* Usage Info */}
           <Card>
             <CardHeader>
@@ -204,20 +209,131 @@ export default function MercadoPagoConfigPage() {
             <CardContent className="text-sm text-muted-foreground space-y-3">
               <div>
                 <p className="font-medium text-foreground">Tienda Online (WebApp)</p>
-                <p>Los clientes podrán pagar sus pedidos online con MercadoPago Checkout Pro. El pedido se crea automáticamente al confirmarse el pago.</p>
+                <p>Los clientes podrán pagar sus pedidos online con MercadoPago Checkout Pro. El pedido no llega a cocina hasta que el pago se confirme.</p>
               </div>
               <div>
-                <p className="font-medium text-foreground">Punto de Venta (QR)</p>
-                <p>Podés usar MercadoPago QR como método de pago en el POS. El cobro se registra manualmente.</p>
+                <p className="font-medium text-foreground">Point Smart (POS)</p>
+                <p>Enviá el cobro desde el POS al Point Smart. El cliente paga con tarjeta, QR o contactless. El pago se concilia automáticamente.</p>
               </div>
               <div>
-                <p className="font-medium text-foreground">Notificaciones</p>
-                <p>Los pagos se confirman automáticamente vía webhook. El estado del pedido se actualiza en tiempo real.</p>
+                <p className="font-medium text-foreground">Conciliación automática</p>
+                <p>Los pagos se confirman vía webhook. El pedido solo llega a cocina cuando MercadoPago confirma el cobro.</p>
               </div>
             </CardContent>
           </Card>
         </>
       )}
     </div>
+  );
+}
+
+/* ── Point Smart Device Section ────────────────────────── */
+
+function PointSmartSection({
+  branchId,
+  config,
+  saveDevice,
+  removeDevice,
+}: {
+  branchId: string;
+  config: { device_id: string | null; device_name: string | null };
+  saveDevice: { mutate: (v: { device_id: string; device_name: string }) => void; isPending: boolean };
+  removeDevice: { mutate: () => void; isPending: boolean };
+}) {
+  const { data: devices, isLoading, refetch } = usePointDevices(branchId);
+
+  const hasDevice = !!config.device_id;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Smartphone className="w-5 h-5" />
+          Point Smart
+        </CardTitle>
+        <CardDescription>
+          Vinculá tu dispositivo Point Smart para cobrar desde el POS con conciliación automática.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {hasDevice ? (
+          <div className="flex items-center justify-between p-3 rounded-lg border bg-emerald-50 border-emerald-200">
+            <div className="flex items-center gap-3">
+              <Smartphone className="h-8 w-8 text-emerald-600" />
+              <div>
+                <p className="font-medium text-sm">{config.device_name || 'Point Smart'}</p>
+                <p className="text-xs text-muted-foreground font-mono">{config.device_id}</p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              onClick={() => removeDevice.mutate()}
+              disabled={removeDevice.isPending}
+            >
+              <Unlink className="h-4 w-4 mr-1" />
+              Desvincular
+            </Button>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">
+              No hay dispositivo vinculado. Buscá los dispositivos disponibles en tu cuenta de MercadoPago.
+            </p>
+
+            <Button
+              variant="outline"
+              onClick={() => refetch()}
+              disabled={isLoading}
+            >
+              {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Buscar dispositivos
+            </Button>
+
+            {devices && devices.length === 0 && (
+              <p className="text-sm text-amber-600">
+                No se encontraron dispositivos. Asegurate de que el Point Smart esté encendido y vinculado a tu cuenta de MercadoPago.
+              </p>
+            )}
+
+            {devices && devices.length > 0 && (
+              <div className="space-y-2">
+                {devices.map((d) => (
+                  <div
+                    key={d.id}
+                    className="flex items-center justify-between p-3 rounded-lg border hover:border-primary transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Smartphone className="h-6 w-6 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium font-mono">{d.id}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Modo: {d.operating_mode}
+                          {d.pos_id ? ` · POS ID: ${d.pos_id}` : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        saveDevice.mutate({
+                          device_id: d.id,
+                          device_name: `Point Smart (${d.id.slice(-6)})`,
+                        })
+                      }
+                      disabled={saveDevice.isPending}
+                    >
+                      <Link2 className="h-4 w-4 mr-1" />
+                      Vincular
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

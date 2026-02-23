@@ -7,12 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Loader2, LogIn, UserPlus } from 'lucide-react';
+import { Loader2, LogIn, Mail, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 import { z } from 'zod';
 import { useAuthModal } from '@/contexts/AuthModalContext';
+import { TurnstileWidget } from './TurnstileWidget';
 
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'Mínimo 6 caracteres');
@@ -35,11 +36,19 @@ export function AuthModal() {
   const [fullName, setFullName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState('');
+  const [signupSuccess, setSignupSuccess] = useState(false);
+
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || '';
 
   const resetForm = () => {
     setEmail('');
     setPassword('');
     setFullName('');
+    setCaptchaToken('');
+    setSignupSuccess(false);
+    setIsSubmitting(false);
+    setGoogleLoading(false);
   };
 
   const handleSuccess = () => {
@@ -90,19 +99,25 @@ export function AuthModal() {
       return;
     }
 
+    if (turnstileSiteKey && !captchaToken) {
+      toast.error('Completá la verificación de seguridad');
+      return;
+    }
+
     setIsSubmitting(true);
-    const { error } = await signUp(email, password, fullName);
+    const { error } = await signUp(email, password, fullName, captchaToken || undefined);
     setIsSubmitting(false);
 
     if (error) {
+      setCaptchaToken('');
       if (error.message.includes('already registered')) {
         toast.error('Este email ya está registrado');
       } else {
         toast.error(error.message);
       }
     } else {
-      toast.success('Cuenta creada exitosamente');
-      handleSuccess();
+      setSignupSuccess(true);
+      toast.success('Cuenta creada. Revisá tu email para confirmar.');
     }
   };
 
@@ -209,52 +224,78 @@ export function AuthModal() {
               </TabsContent>
 
               <TabsContent value="signup" className="mt-0">
-                <form onSubmit={handleSignup} className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="modal-signup-name" className="text-sm">Nombre completo</Label>
-                    <Input
-                      id="modal-signup-name"
-                      type="text"
-                      placeholder="Juan Pérez"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="h-10 rounded-xl"
-                      required
-                    />
+                {signupSuccess ? (
+                  <div className="text-center py-4 space-y-3">
+                    <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto">
+                      <Mail className="w-6 h-6 text-emerald-600" />
+                    </div>
+                    <h3 className="font-semibold text-lg">Revisá tu email</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Te enviamos un link de confirmación a <strong>{email}</strong>. Confirmá tu cuenta para acceder a todas las funciones.
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-xl"
+                      onClick={() => { resetForm(); closeAuthModal(); onSuccess?.(); }}
+                    >
+                      Entendido
+                    </Button>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="modal-signup-email" className="text-sm">Email</Label>
-                    <Input
-                      id="modal-signup-email"
-                      type="email"
-                      placeholder="tu@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="h-10 rounded-xl"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="modal-signup-password" className="text-sm">Contraseña</Label>
-                    <Input
-                      id="modal-signup-password"
-                      type="password"
-                      placeholder="Mínimo 6 caracteres"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="h-10 rounded-xl"
-                      required
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full h-10 rounded-xl font-semibold"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <UserPlus className="w-4 h-4 mr-2" />}
-                    Crear cuenta
-                  </Button>
-                </form>
+                ) : (
+                  <form onSubmit={handleSignup} className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="modal-signup-name" className="text-sm">Nombre completo</Label>
+                      <Input
+                        id="modal-signup-name"
+                        type="text"
+                        placeholder="Juan Pérez"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="h-10 rounded-xl"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="modal-signup-email" className="text-sm">Email</Label>
+                      <Input
+                        id="modal-signup-email"
+                        type="email"
+                        placeholder="tu@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="h-10 rounded-xl"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="modal-signup-password" className="text-sm">Contraseña</Label>
+                      <Input
+                        id="modal-signup-password"
+                        type="password"
+                        placeholder="Mínimo 6 caracteres"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="h-10 rounded-xl"
+                        required
+                      />
+                    </div>
+                    {turnstileSiteKey && (
+                      <TurnstileWidget
+                        siteKey={turnstileSiteKey}
+                        onVerify={setCaptchaToken}
+                        onExpire={() => setCaptchaToken('')}
+                      />
+                    )}
+                    <Button
+                      type="submit"
+                      className="w-full h-10 rounded-xl font-semibold"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <UserPlus className="w-4 h-4 mr-2" />}
+                      Crear cuenta
+                    </Button>
+                  </form>
+                )}
               </TabsContent>
             </Tabs>
           </div>

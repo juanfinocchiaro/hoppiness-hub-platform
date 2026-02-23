@@ -94,6 +94,7 @@ export function useUpdateBranchDeliveryConfig() {
         radius_override_km?: number | null;
         radius_override_until?: string | null;
         radius_override_by?: string | null;
+        delivery_hours?: Record<string, Array<{ opens: string; closes: string }>> | null;
       };
     }) => {
       const { error } = await supabase

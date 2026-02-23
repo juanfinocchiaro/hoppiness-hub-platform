@@ -21,8 +21,8 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Loader2, MapPin, ArrowLeft, RefreshCw, ShieldAlert, CheckCircle2, Ban, Search } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { Loader2, MapPin, ArrowLeft, RefreshCw, ShieldAlert, CheckCircle2, Ban, Search, Plus, Trash2, Clock } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
   useBranchDeliveryConfig,
@@ -144,6 +144,137 @@ function NeighborhoodRow({
   );
 }
 
+/* ─── Delivery Hours Editor ─────────────────────────────── */
+
+type TimeWindow = { opens: string; closes: string };
+type DeliveryHours = Record<string, TimeWindow[]>;
+
+const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const DIAS_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+function DeliveryHoursEditor({
+  value,
+  onChange,
+  onSave,
+  saving,
+}: {
+  value: DeliveryHours | null;
+  onChange: (hours: DeliveryHours | null) => void;
+  onSave: () => void;
+  saving: boolean;
+}) {
+  const hours = value ?? {};
+  const hasCustomHours = Object.keys(hours).length > 0;
+
+  const toggleDay = useCallback((day: string) => {
+    const next = { ...hours };
+    if (next[day]) {
+      delete next[day];
+    } else {
+      next[day] = [{ opens: '19:00', closes: '23:30' }];
+    }
+    onChange(Object.keys(next).length > 0 ? next : null);
+  }, [hours, onChange]);
+
+  const addWindow = useCallback((day: string) => {
+    const next = { ...hours };
+    next[day] = [...(next[day] || []), { opens: '12:00', closes: '15:00' }];
+    onChange(next);
+  }, [hours, onChange]);
+
+  const removeWindow = useCallback((day: string, idx: number) => {
+    const next = { ...hours };
+    next[day] = next[day].filter((_, i) => i !== idx);
+    if (next[day].length === 0) delete next[day];
+    onChange(Object.keys(next).length > 0 ? next : null);
+  }, [hours, onChange]);
+
+  const updateWindow = useCallback((day: string, idx: number, field: 'opens' | 'closes', val: string) => {
+    const next = { ...hours };
+    next[day] = next[day].map((w, i) => i === idx ? { ...w, [field]: val } : w);
+    onChange(next);
+  }, [hours, onChange]);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Clock className="w-4 h-4" /> Horarios de Delivery
+        </CardTitle>
+        <CardDescription>
+          {hasCustomHours
+            ? 'Franjas horarias configuradas. Delivery solo disponible en estos horarios.'
+            : 'Sin configurar — delivery usa el horario general del local.'}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {DIAS.map((dia, i) => {
+          const dayKey = String(i);
+          const dayWindows = hours[dayKey];
+          const isActive = !!dayWindows;
+
+          return (
+            <div key={i} className="flex items-start gap-3 py-1.5">
+              <div className="w-20 shrink-0 pt-1">
+                <button
+                  onClick={() => toggleDay(dayKey)}
+                  className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-colors w-full ${
+                    isActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  }`}
+                >
+                  {DIAS_SHORT[i]}
+                </button>
+              </div>
+              <div className="flex-1 space-y-1.5">
+                {isActive ? (
+                  <>
+                    {dayWindows.map((w, wi) => (
+                      <div key={wi} className="flex items-center gap-2">
+                        <Input
+                          type="time"
+                          value={w.opens}
+                          onChange={e => updateWindow(dayKey, wi, 'opens', e.target.value)}
+                          className="h-8 w-28 text-xs"
+                        />
+                        <span className="text-xs text-muted-foreground">a</span>
+                        <Input
+                          type="time"
+                          value={w.closes}
+                          onChange={e => updateWindow(dayKey, wi, 'closes', e.target.value)}
+                          className="h-8 w-28 text-xs"
+                        />
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeWindow(dayKey, wi)}>
+                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground" onClick={() => addWindow(dayKey)}>
+                      <Plus className="w-3 h-3" /> Agregar franja
+                    </Button>
+                  </>
+                ) : (
+                  <p className="text-xs text-muted-foreground pt-1">Sin delivery</p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        <Separator />
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">
+            {hasCustomHours ? 'Se usarán estos horarios para delivery.' : 'Dejá vacío para usar el horario del local.'}
+          </p>
+          <Button size="sm" onClick={onSave} disabled={saving}>
+            {saving && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+            Guardar horarios
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ─── Main Content ──────────────────────────────────────── */
 
 function BranchDeliveryDetailContent() {
@@ -171,6 +302,17 @@ function BranchDeliveryDetailContent() {
   const [radius, setRadius] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState('enabled');
+  const [deliveryHours, setDeliveryHours] = useState<DeliveryHours | null | undefined>(undefined);
+
+  const currentDeliveryHours = deliveryHours !== undefined ? deliveryHours : (config?.delivery_hours as DeliveryHours | null ?? null);
+
+  const handleSaveHours = () => {
+    if (!branch) return;
+    updateConfig.mutate(
+      { branchId: branch.id, values: { delivery_hours: currentDeliveryHours } as any },
+      { onSuccess: () => toast.success('Horarios de delivery actualizados') }
+    );
+  };
 
   const isLoading = branchLoading || configLoading || neighLoading;
 
@@ -307,6 +449,14 @@ function BranchDeliveryDetailContent() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Delivery hours */}
+      <DeliveryHoursEditor
+        value={currentDeliveryHours}
+        onChange={(h) => setDeliveryHours(h)}
+        onSave={handleSaveHours}
+        saving={updateConfig.isPending}
+      />
 
       {/* Neighborhoods card */}
       <Card>

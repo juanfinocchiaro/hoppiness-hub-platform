@@ -9,7 +9,7 @@ const timeline = [
   { year: '2022', text: 'Primer premio: Mejor Hamburguesa Clásica de Córdoba.', highlight: true },
   { year: '2023', text: 'Expansión: Manantiales y Villa Allende. Inauguramos centro de producción.', highlight: false },
   { year: '2024', text: 'Doble campeones: Mejor Clásica y Mejor Gourmet.', highlight: true },
-  { year: '2025', text: 'Mejor Hamburguesería de Córdoba. Expansión: General Paz y Villa Carlos Paz.', highlight: true },
+  { year: '2024', text: 'Mejor Hamburguesería de Córdoba. Expansión: General Paz y Villa Carlos Paz.', highlight: true },
   { year: '2026', text: 'Shopping Pocito. Y seguimos creciendo...', highlight: false },
 ];
 

@@ -70,7 +70,7 @@ export default function Nosotros() {
             NUESTRA HISTORIA
           </h1>
           <p className="text-xl text-white/90 max-w-2xl mx-auto">
-            Desde 2018 creando el culto al sabor
+            DESDE 2018 CREANDO EL CULTO AL SABOR
           </p>
         </div>
       </section>
@@ -213,7 +213,7 @@ export default function Nosotros() {
             ¿QUERÉS SER PARTE?
           </h2>
           <p className="text-xl text-primary-foreground/90 mb-8">
-            Sumate al culto al sabor como cliente o como franquiciado
+            SUMATE AL CULTO AL SABOR COMO CLIENTE O COMO FRANQUICIADO
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/pedir">
@@ -226,7 +226,7 @@ export default function Nosotros() {
               </Button>
             </Link>
             <Link to="/franquicias">
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+              <Button size="lg" className="bg-white text-primary hover:bg-white/90">
                 <Users className="w-5 h-5 mr-2" />
                 Franquicias
               </Button>

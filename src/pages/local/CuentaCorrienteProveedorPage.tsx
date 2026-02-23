@@ -18,6 +18,7 @@ import { useProveedores } from '@/hooks/useProveedores';
 import { usePagoProveedorMutations, useFacturaById } from '@/hooks/useCompras';
 import { PagoProveedorModal } from '@/components/finanzas/PagoProveedorModal';
 import { ProveedorFormModal } from '@/components/finanzas/ProveedorFormModal';
+import { ProveedorDocumentos } from '@/components/finanzas/ProveedorDocumentos';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/states';
 
@@ -213,6 +214,15 @@ export default function CuentaCorrienteProveedorPage() {
                 <span><strong>Cuenta Corriente:</strong> {proveedor.permite_cuenta_corriente ? `Sí (${proveedor.dias_pago_habitual || '-'} días)` : 'No'}</span>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Documentos del proveedor */}
+      {proveedorId && (
+        <Card>
+          <CardContent className="pt-6">
+            <ProveedorDocumentos proveedorId={proveedorId} />
           </CardContent>
         </Card>
       )}
