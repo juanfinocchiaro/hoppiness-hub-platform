@@ -130,7 +130,16 @@ function PublicCenter({ isTransparent, title }: { isTransparent: boolean; title?
             : 'hover:bg-muted text-muted-foreground';
           if (item.anchor) {
             return (
-              <a key={item.to} href={isHome ? '#clubes' : '/#clubes'}>
+              <Link
+                key={item.to}
+                to={isHome ? '#clubes' : '/#clubes'}
+                onClick={(e) => {
+                  if (isHome) {
+                    e.preventDefault();
+                    document.getElementById('clubes')?.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+              >
                 <Button
                   variant="ghost"
                   size="sm"
@@ -138,7 +147,7 @@ function PublicCenter({ isTransparent, title }: { isTransparent: boolean; title?
                 >
                   {item.label}
                 </Button>
-              </a>
+              </Link>
             );
           }
           return (
@@ -196,7 +205,16 @@ function PublicMobileMenu() {
                 Pedí Online
               </Button>
             </Link>
-            <a href={isHome ? '#clubes' : '/#clubes'} onClick={() => setOpen(false)}>
+            <Link
+              to={isHome ? '#clubes' : '/#clubes'}
+              onClick={(e) => {
+                setOpen(false);
+                if (isHome) {
+                  e.preventDefault();
+                  document.getElementById('clubes')?.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+            >
               <Button
                 variant="ghost"
                 className={`w-full justify-start ${isHome ? 'bg-accent/15 text-accent-foreground font-semibold border-l-2 border-accent' : ''}`}
@@ -204,7 +222,7 @@ function PublicMobileMenu() {
                 <StoreIcon className="w-4 h-4 mr-2" />
                 Nuestros Clubes
               </Button>
-            </a>
+            </Link>
             {publicNavItems.filter(i => !i.anchor).map(item => {
               const active = location.pathname.startsWith(item.to);
               return (
