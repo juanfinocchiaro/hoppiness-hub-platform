@@ -48,7 +48,15 @@ export function useWebappMenuItems(branchId: string | undefined) {
         ? (availability as any[]).map((a: any) => a.item_carta_id)
         : null;
 
-      // 2. Query items_carta, filtered by availability if rows exist
+      // 2. Get hidden category IDs (visible_en_carta = false)
+      const { data: hiddenCats } = await supabase
+        .from('menu_categorias' as any)
+        .select('id')
+        .eq('visible_en_carta', false);
+
+      const hiddenCatIds = (hiddenCats || []).map((c: any) => c.id);
+
+      // 3. Query items_carta, filtered by availability if rows exist
       let query = supabase
         .from('items_carta')
         .select(`
@@ -67,6 +75,11 @@ export function useWebappMenuItems(branchId: string | undefined) {
         query = query.in('id', availableIds);
       }
 
+      // Exclude items from hidden categories
+      if (hiddenCatIds.length > 0) {
+        query = query.not('categoria_carta_id', 'in', `(${hiddenCatIds.join(',')})`);
+      }
+
       const { data, error } = await query;
       if (error) throw error;
 
@@ -77,6 +90,61 @@ export function useWebappMenuItems(branchId: string | undefined) {
       })) as WebappMenuItem[];
     },
     enabled: !!branchId,
+  });
+}
+
+// ── Grupos opcionales (bebidas en combos, etc.) ──────────
+export interface OptionalGroupOption {
+  id: string;
+  nombre: string;
+  precio_extra: number;
+}
+
+export interface OptionalGroup {
+  id: string;
+  nombre: string;
+  es_obligatorio: boolean;
+  max_selecciones: number | null;
+  opciones: OptionalGroupOption[];
+}
+
+export function useWebappItemOptionalGroups(itemId: string | undefined) {
+  return useQuery({
+    queryKey: ['webapp-item-optional-groups', itemId],
+    queryFn: async () => {
+      // 1. Get groups for this item
+      const { data: groups, error: gErr } = await supabase
+        .from('item_carta_grupo_opcional' as any)
+        .select('id, nombre, es_obligatorio, max_selecciones, orden')
+        .eq('item_carta_id', itemId!)
+        .order('orden');
+      if (gErr) throw gErr;
+      if (!groups || groups.length === 0) return [];
+
+      // 2. Get options for all groups
+      const groupIds = (groups as any[]).map((g: any) => g.id);
+      const { data: options, error: oErr } = await supabase
+        .from('item_carta_grupo_opcional_items' as any)
+        .select('id, grupo_id, insumo_id, preparacion_id, precio_extra, orden, insumos(id, nombre), preparaciones(id, nombre)')
+        .in('grupo_id', groupIds)
+        .order('orden');
+      if (oErr) throw oErr;
+
+      return (groups as any[]).map((g: any) => ({
+        id: g.id,
+        nombre: g.nombre,
+        es_obligatorio: g.es_obligatorio ?? false,
+        max_selecciones: g.max_selecciones,
+        opciones: ((options || []) as any[])
+          .filter((o: any) => o.grupo_id === g.id)
+          .map((o: any) => ({
+            id: o.id,
+            nombre: o.insumos?.nombre || o.preparaciones?.nombre || 'Opción',
+            precio_extra: o.precio_extra ?? 0,
+          })),
+      })) as OptionalGroup[];
+    },
+    enabled: !!itemId,
   });
 }
 

@@ -4,8 +4,8 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Minus, Plus, ShoppingCart } from 'lucide-react';
-import { useWebappItemExtras, useWebappItemRemovables } from '@/hooks/useWebappMenu';
+import { Minus, Plus, ShoppingCart, AlertCircle } from 'lucide-react';
+import { useWebappItemExtras, useWebappItemRemovables, useWebappItemOptionalGroups } from '@/hooks/useWebappMenu';
 import type { WebappMenuItem, CartItem, CartItemModifier } from '@/types/webapp';
 
 interface Props {
@@ -35,11 +35,22 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
   const [extras, setExtras] = useState<CartItemModifier[]>([]);
   const [removidos, setRemovidos] = useState<string[]>([]);
   const [notas, setNotas] = useState('');
+  const [groupSelections, setGroupSelections] = useState<Record<string, CartItemModifier[]>>({});
+
   const { data: extrasList } = useWebappItemExtras(item.id);
   const { data: removables } = useWebappItemRemovables(item.id);
+  const { data: optionalGroups } = useWebappItemOptionalGroups(item.id);
 
-  const extrasTotal = extras.reduce((s, e) => s + e.precio, 0);
+  // Extras total includes both direct extras and group selections
+  const groupExtras = Object.values(groupSelections).flat();
+  const allExtras = [...extras, ...groupExtras];
+  const extrasTotal = allExtras.reduce((s, e) => s + e.precio, 0);
   const total = (item.precio_base + extrasTotal) * cantidad;
+
+  // Validation: check mandatory groups
+  const missingRequired = (optionalGroups || [])
+    .filter(g => g.es_obligatorio && !(groupSelections[g.id]?.length > 0));
+  const canAdd = missingRequired.length === 0;
 
   const toggleExtra = (extra: CartItemModifier) => {
     setExtras(prev => {
@@ -55,20 +66,43 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
     );
   };
 
+  const handleGroupSelect = (groupId: string, option: CartItemModifier, maxSelections: number | null) => {
+    setGroupSelections(prev => {
+      const current = prev[groupId] || [];
+      const exists = current.find(e => e.id === option.id);
+
+      if (exists) {
+        // Deselect
+        return { ...prev, [groupId]: current.filter(e => e.id !== option.id) };
+      }
+
+      if (maxSelections === 1) {
+        // Radio: replace
+        return { ...prev, [groupId]: [option] };
+      }
+
+      // Checkbox: add up to max
+      if (maxSelections && current.length >= maxSelections) return prev;
+      return { ...prev, [groupId]: [...current, option] };
+    });
+  };
+
   const handleAdd = () => {
+    if (!canAdd) return;
     onAdd({
       itemId: item.id,
       nombre: item.nombre,
       imagen_url: item.imagen_url,
       precioUnitario: item.precio_base,
       cantidad,
-      extras,
+      extras: allExtras,
       removidos,
       notas,
     });
     setCantidad(1);
     setExtras([]);
     setRemovidos([]);
+    setGroupSelections({});
     setNotas('');
   };
 
@@ -94,6 +128,63 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
           )}
           <p className="text-lg font-bold text-primary mt-2">{formatPrice(item.precio_base)}</p>
         </div>
+
+        {/* Optional groups (e.g. "Bebida a elección") */}
+        {optionalGroups && optionalGroups.length > 0 && optionalGroups.map(group => {
+          const isRadio = group.max_selecciones === 1;
+          const currentSelections = groupSelections[group.id] || [];
+          const isMissing = group.es_obligatorio && currentSelections.length === 0;
+
+          return (
+            <div key={group.id}>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-bold text-foreground">{group.nombre}</h3>
+                <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                  group.es_obligatorio
+                    ? isMissing ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'
+                    : 'bg-muted text-muted-foreground'
+                }`}>
+                  {group.es_obligatorio ? 'Obligatorio' : 'Opcional'}
+                  {group.max_selecciones === 1 ? ' · Elegí 1' : group.max_selecciones ? ` · Hasta ${group.max_selecciones}` : ''}
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {group.opciones.map(option => {
+                  const isSelected = currentSelections.some(s => s.id === option.id);
+                  return (
+                    <button
+                      key={option.id}
+                      onClick={() => handleGroupSelect(
+                        group.id,
+                        { id: option.id, nombre: option.nombre, precio: option.precio_extra, tipo: 'extra' },
+                        group.max_selecciones
+                      )}
+                      className={`
+                        w-full flex items-center justify-between p-3 rounded-lg border text-left transition-colors
+                        ${isSelected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}
+                      `}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`w-5 h-5 ${isRadio ? 'rounded-full' : 'rounded'} border-2 flex items-center justify-center transition-colors
+                          ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground/30'}`}>
+                          {isSelected && (
+                            isRadio
+                              ? <span className="w-2 h-2 rounded-full bg-primary-foreground" />
+                              : <span className="text-primary-foreground text-xs">✓</span>
+                          )}
+                        </div>
+                        <span className="text-sm">{option.nombre}</span>
+                      </div>
+                      {option.precio_extra > 0 && (
+                        <span className="text-xs text-muted-foreground">+{formatPrice(option.precio_extra)}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
 
         {/* Extras - flat list from item_extra_asignaciones */}
         {extrasList && extrasList.length > 0 && (
@@ -178,7 +269,7 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
               <span>Base</span>
               <span>{formatPrice(item.precio_base)}</span>
             </div>
-            {extras.map(e => (
+            {allExtras.map(e => (
               <div key={e.id} className="flex justify-between">
                 <span>+ {e.nombre}</span>
                 <span>{formatPrice(e.precio)}</span>
@@ -209,10 +300,17 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
             </button>
           </div>
         </div>
+        {!canAdd && missingRequired.length > 0 && (
+          <div className="flex items-center gap-1.5 text-xs text-destructive mb-2">
+            <AlertCircle className="w-3.5 h-3.5" />
+            <span>Seleccioná: {missingRequired.map(g => g.nombre).join(', ')}</span>
+          </div>
+        )}
         <Button
           size="lg"
           className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-base gap-2"
           onClick={handleAdd}
+          disabled={!canAdd}
         >
           <ShoppingCart className="w-4 h-4" />
           Agregar al carrito · {formatPrice(total)}

@@ -1,4 +1,5 @@
-import { MapPin, Clock, Truck, ShoppingBag, Pause } from 'lucide-react';
+import { useState } from 'react';
+import { MapPin, Clock, Truck, ShoppingBag, Pause, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { WebappConfig, TipoServicioWebapp } from '@/types/webapp';
 import { WebappHeader } from './WebappHeader';
@@ -34,16 +35,28 @@ function formatTime(time: string | null): string {
 const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DAY_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
+function getTodayIdx() {
+  const today = new Date().getDay();
+  return today === 0 ? 6 : today - 1;
+}
+
+function getTodayHours(publicHours: any) {
+  if (!publicHours || !Array.isArray(publicHours) || publicHours.length === 0) return null;
+  const idx = getTodayIdx();
+  const day = publicHours[idx];
+  if (!day) return null;
+  const open = day?.open || day?.apertura;
+  const close = day?.close || day?.cierre;
+  const isClosed = day?.closed || day?.cerrado || (!open && !close);
+  return { open, close, isClosed };
+}
+
 function WeeklySchedule({ publicHours }: { publicHours: any }) {
   if (!publicHours || !Array.isArray(publicHours) || publicHours.length === 0) return null;
-
-  const today = new Date().getDay();
-  // JS Sunday=0, our array Monday=0
-  const todayIdx = today === 0 ? 6 : today - 1;
+  const todayIdx = getTodayIdx();
 
   return (
-    <div className="w-full space-y-1.5">
-      <h3 className="text-xs font-bold text-foreground mb-2">Horarios de la semana</h3>
+    <div className="w-full space-y-1.5 mt-2">
       {publicHours.map((day: any, idx: number) => {
         const isToday = idx === todayIdx;
         const label = DAY_SHORT[idx] || `Día ${idx + 1}`;
@@ -68,12 +81,14 @@ function WeeklySchedule({ publicHours }: { publicHours: any }) {
 }
 
 export function BranchLanding({ branch, config, onSelectService, onViewMenu, onBack }: Props) {
+  const [showWeek, setShowWeek] = useState(false);
   const isOpen = config.estado === 'abierto';
   const isPaused = config.estado === 'pausado';
   const hasCoords = branch.latitude && branch.longitude;
   const mapsUrl = hasCoords
     ? `https://maps.google.com/?q=${branch.latitude},${branch.longitude}`
     : `https://maps.google.com/?q=${encodeURIComponent(branch.address + ', ' + branch.city)}`;
+  const todayHours = getTodayHours(branch.public_hours);
 
   return (
     <div className="flex-1 flex flex-col bg-background">
@@ -97,26 +112,52 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
         </a>
 
         {/* Status badge */}
-        <div className="mt-3 inline-flex">
-          {isOpen && (
-            <span className="flex items-center gap-2 text-sm font-semibold bg-green-50 text-green-700 border border-green-200 px-4 py-1.5 rounded-full">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              Abierto
-              {branch.closing_time && <span className="text-green-600/70">· Cierra {formatTime(branch.closing_time)}</span>}
-            </span>
+        <div className="mt-3 flex flex-col items-center gap-1.5">
+          <div className="inline-flex">
+            {isOpen && (
+              <span className="flex items-center gap-2 text-sm font-semibold bg-green-50 text-green-700 border border-green-200 px-4 py-1.5 rounded-full">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                Abierto
+              </span>
+            )}
+            {isPaused && (
+              <span className="flex items-center gap-2 text-sm font-semibold bg-amber-50 text-amber-700 border border-amber-200 px-4 py-1.5 rounded-full">
+                <Pause className="w-3.5 h-3.5" />
+                Pausado temporalmente
+              </span>
+            )}
+            {!isOpen && !isPaused && (
+              <span className="flex items-center gap-2 text-sm font-semibold bg-muted text-muted-foreground border px-4 py-1.5 rounded-full">
+                <span className="w-2 h-2 rounded-full bg-red-400" />
+                Cerrado
+                {branch.opening_time && <span>· Abre {formatTime(branch.opening_time)}</span>}
+              </span>
+            )}
+          </div>
+
+          {/* Today's hours */}
+          {todayHours && (
+            <p className="text-xs text-muted-foreground">
+              Hoy: {todayHours.isClosed ? 'Cerrado' : `${formatTime(todayHours.open)} - ${formatTime(todayHours.close)}`}
+            </p>
           )}
-          {isPaused && (
-            <span className="flex items-center gap-2 text-sm font-semibold bg-amber-50 text-amber-700 border border-amber-200 px-4 py-1.5 rounded-full">
-              <Pause className="w-3.5 h-3.5" />
-              Pausado temporalmente
-            </span>
-          )}
-          {!isOpen && !isPaused && (
-            <span className="flex items-center gap-2 text-sm font-semibold bg-muted text-muted-foreground border px-4 py-1.5 rounded-full">
-              <span className="w-2 h-2 rounded-full bg-red-400" />
-              Cerrado
-              {branch.opening_time && <span>· Abre {formatTime(branch.opening_time)}</span>}
-            </span>
+
+          {/* Toggle weekly schedule */}
+          {branch.public_hours && Array.isArray(branch.public_hours) && branch.public_hours.length > 0 && (
+            <>
+              <button
+                onClick={() => setShowWeek(v => !v)}
+                className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+              >
+                {showWeek ? 'Ocultar horarios' : 'Ver horarios'}
+                {showWeek ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+              {showWeek && (
+                <div className="w-full max-w-xs mx-auto">
+                  <WeeklySchedule publicHours={branch.public_hours} />
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -134,17 +175,13 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
         )}
       </div>
 
-      {/* Service selection — servicios que el local tiene activo */}
+      {/* Service selection */}
       <div className="flex-1 flex flex-col items-center px-6 py-8 max-w-lg mx-auto w-full">
         {isOpen ? (
           <div className="w-full bg-card rounded-2xl shadow-sm border p-5 space-y-4">
             <div className="text-center space-y-1">
-              <h3 className="text-base font-bold text-foreground">
-                Servicios disponibles
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                ¿Cómo querés tu pedido?
-              </p>
+              <h3 className="text-base font-bold text-foreground">Servicios disponibles</h3>
+              <p className="text-sm text-muted-foreground">¿Cómo querés tu pedido?</p>
             </div>
 
             {config.retiro_habilitado && (
@@ -210,9 +247,6 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
                 Este local no está recibiendo pedidos en este momento.
               </p>
             )}
-
-            {/* Weekly schedule when closed */}
-            <WeeklySchedule publicHours={branch.public_hours} />
 
             <Button variant="outline" onClick={onViewMenu} className="w-full">
               Ver menú igualmente
