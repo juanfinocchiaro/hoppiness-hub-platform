@@ -59,6 +59,14 @@ export interface CartItem {
   notas: string;
 }
 
+export interface CartItemGroupSelection {
+  grupoId: string;
+  grupoNombre: string;
+  opcionId: string;
+  opcionNombre: string;
+  precio: number;
+}
+
 export interface WebappCart {
   tipoServicio: TipoServicioWebapp;
   items: CartItem[];
