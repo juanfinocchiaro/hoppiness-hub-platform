@@ -125,9 +125,8 @@ export function useWebappItemOptionalGroups(itemId: string | undefined) {
       const groupIds = (groups as any[]).map((g: any) => g.id);
       const { data: options, error: oErr } = await supabase
         .from('item_carta_grupo_opcional_items' as any)
-        .select('id, grupo_id, insumo_id, preparacion_id, precio_extra, orden, insumos(id, nombre), preparaciones(id, nombre)')
-        .in('grupo_id', groupIds)
-        .order('orden');
+        .select('id, grupo_id, insumo_id, preparacion_id, costo_unitario, insumos(id, nombre), preparaciones(id, nombre)')
+        .in('grupo_id', groupIds);
       if (oErr) throw oErr;
 
       return (groups as any[]).map((g: any) => ({
@@ -140,7 +139,7 @@ export function useWebappItemOptionalGroups(itemId: string | undefined) {
           .map((o: any) => ({
             id: o.id,
             nombre: o.insumos?.nombre || o.preparaciones?.nombre || 'Opción',
-            precio_extra: o.precio_extra ?? 0,
+            precio_extra: 0,
           })),
       })) as OptionalGroup[];
     },
