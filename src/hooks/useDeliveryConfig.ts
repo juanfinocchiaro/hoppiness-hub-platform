@@ -147,7 +147,7 @@ export function useUpdateNeighborhoodStatus() {
   return useMutation({
     mutationFn: async ({ id, status, blockReason }: {
       id: string;
-      status: 'assigned' | 'blocked_security';
+      status: 'enabled' | 'blocked_security';
       blockReason?: string;
     }) => {
       const { error } = await supabase
@@ -193,7 +193,7 @@ export function useRegenerateBranchNeighborhoods() {
       });
 
       const existingByNeighborhood = new Map((existing ?? []).map((r) => [r.neighborhood_id, r]));
-      const toInsert: Array<{ branch_id: string; neighborhood_id: string; status: 'assigned'; distance_km: number; decided_by: 'auto' }> = [];
+      const toInsert: Array<{ branch_id: string; neighborhood_id: string; status: 'enabled'; distance_km: number; decided_by: 'auto' }> = [];
       const toUpdateDistance: Array<{ id: string; distance_km: number }> = [];
 
       for (const n of withinRadius) {
@@ -205,7 +205,7 @@ export function useRegenerateBranchNeighborhoods() {
           toInsert.push({
             branch_id: branchId,
             neighborhood_id: n.id,
-            status: 'assigned',
+            status: 'enabled',
             distance_km,
             decided_by: 'auto',
           });
@@ -330,7 +330,7 @@ export function useNeighborhoodAssignments(neighborhoodIds: string[]) {
         .from('branch_delivery_neighborhoods')
         .select('neighborhood_id, branch_id, status, branches!inner(id, name, slug)')
         .in('neighborhood_id', neighborhoodIds)
-        .eq('status', 'assigned');
+        .eq('status', 'enabled');
       if (error) throw error;
       return data ?? [];
     },
