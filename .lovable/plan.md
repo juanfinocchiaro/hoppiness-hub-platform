@@ -1,37 +1,43 @@
 
-# Fix: Error de check constraint en barrios de delivery
+# Fix: Grupos opcionales permiten seleccionar multiples cuando deberian limitar a 1
 
 ## Problema
 
-Al hacer click en "Regenerar", el sistema intenta insertar barrios con `status: 'assigned'`, pero la tabla `branch_delivery_neighborhoods` tiene un CHECK constraint que solo permite estos valores:
+El grupo "Bebida a eleccion" de la Ultracheese tiene `max_selecciones = null` en la base de datos. El codigo actual interpreta `null` como "sin limite", permitiendo tildar todas las bebidas. El comportamiento correcto es que si `max_selecciones` es `null`, se trate como `1` (elegir una sola opcion).
 
-- `enabled`
-- `blocked_security`
-- `blocked_conflict`
+## Solucion
 
-El valor `'assigned'` no esta en la lista permitida, por eso falla con el error "violates check constraint branch_delivery_neighborhoods_status_check".
+### Opcion elegida: Corregir en el frontend
 
-## Cambios
+En `src/components/webapp/ProductCustomizeSheet.tsx`, normalizar `max_selecciones` null a 1 al momento de usarlo.
 
-### `src/hooks/useDeliveryConfig.ts`
+### Cambios
 
-Reemplazar todas las ocurrencias de `'assigned'` por `'enabled'`:
+**`src/components/webapp/ProductCustomizeSheet.tsx`**
 
-1. **Linea 150** - Tipo del parametro status en `useUpdateNeighborhoodStatus`: cambiar `'assigned'` por `'enabled'`
-2. **Linea 196** - Tipo del array toInsert: cambiar `'assigned'` por `'enabled'`
-3. **Linea 208** - Valor insertado en regenerar: cambiar `'assigned'` por `'enabled'`
-4. **Linea 333** - Query de busqueda en `useDeliveryQuote`: cambiar `.eq('status', 'assigned')` por `.eq('status', 'enabled')`
+1. **Linea 134** - Donde se determina si es radio: cambiar la logica para que `null` tambien sea tratado como 1:
 
-### `src/pages/admin/BranchDeliveryDetailPage.tsx`
+   Antes:
+   ```
+   const isRadio = group.max_selecciones === 1;
+   ```
+   Despues:
+   ```
+   const effectiveMax = group.max_selecciones ?? 1;
+   const isRadio = effectiveMax === 1;
+   ```
 
-Reemplazar filtros y acciones que usan `'assigned'`:
+2. **Linea 148** - Actualizar el texto del badge para usar `effectiveMax` en vez de `group.max_selecciones`.
 
-1. **Linea 82** - Filtro de conteo: `n.status === 'assigned'` por `n.status === 'enabled'`
-2. **Linea 84** - Filtro de asignados: `n.status === 'assigned'` por `n.status === 'enabled'`
-3. **Linea 132** - Accion de desbloquear: `status: 'assigned'` por `status: 'enabled'`
+3. **Linea 160** - Pasar `effectiveMax` en vez de `group.max_selecciones` a `handleGroupSelect`:
 
-### `src/pages/local/LocalDeliveryZonesPage.tsx`
+   Antes:
+   ```
+   group.max_selecciones
+   ```
+   Despues:
+   ```
+   effectiveMax
+   ```
 
-1. **Linea 47** - Filtro de habilitados: ya usa `'enabled'`, no necesita cambio (correcto)
-
-Total: ~7 lineas cambiadas, mismo string reemplazado en cada caso.
+Con esto, cuando `max_selecciones` es `null`, el grupo se comporta como radio (elegir 1), mostrando el texto "Elegi 1" y reemplazando la seleccion anterior al elegir otra opcion.
