@@ -5,6 +5,7 @@ import { ProductCard } from './ProductCard';
 import { Loader2 } from 'lucide-react';
 import { ActiveOrderBanner } from './ActiveOrderBanner';
 import { WebappHeader } from './WebappHeader';
+import { useScrollDirection } from '@/hooks/useScrollDirection';
 import type { WebappMenuItem, TipoServicioWebapp } from '@/types/webapp';
 import type { useWebappCart } from '@/hooks/useWebappCart';
 
@@ -18,20 +19,19 @@ interface Props {
   onProductClick: (item: WebappMenuItem) => void;
   onBack: () => void;
   onServiceChange?: (tipo: TipoServicioWebapp) => void;
-  cartPanelVisible?: boolean;
   onShowTracking?: (trackingCode: string) => void;
-  onMisPedidos?: () => void;
-  onMisDirecciones?: () => void;
-  onMiPerfil?: () => void;
+  onOpenCart?: () => void;
+  hasCartItems?: boolean;
 }
 
-export function WebappMenuView({ branch, config, items, loading, tipoServicio, cart, onProductClick, onBack, onServiceChange, cartPanelVisible, onShowTracking, onMisPedidos, onMisDirecciones, onMiPerfil }: Props) {
+export function WebappMenuView({ branch, config, items, loading, tipoServicio, cart, onProductClick, onBack, onServiceChange, onShowTracking, onOpenCart, hasCartItems }: Props) {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchExpanded, setSearchExpanded] = useState(false);
   const categoryRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const tabsRef = useRef<HTMLDivElement>(null);
+  const scrollDir = useScrollDirection(15);
 
   // Popular items — first 4 items as "Destacados" (fallback until real order data exists)
   const popularItems = useMemo(() => {
@@ -96,10 +96,9 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
   const servicioOptions = [
     config.retiro_habilitado && { key: 'retiro' as TipoServicioWebapp, label: 'Retiro', icon: '🛒', tiempo: config.tiempo_estimado_retiro_min },
     config.delivery_habilitado && { key: 'delivery' as TipoServicioWebapp, label: 'Delivery', icon: '🛵', tiempo: config.tiempo_estimado_delivery_min },
-    config.comer_aca_habilitado && { key: 'comer_aca' as TipoServicioWebapp, label: 'Comer acá', icon: '🍽', tiempo: null },
   ].filter(Boolean) as { key: TipoServicioWebapp; label: string; icon: string; tiempo: number | null }[];
 
-  const servicioLabel = tipoServicio === 'retiro' ? '🛒 Retiro en local' : tipoServicio === 'delivery' ? '🛵 Delivery' : '🍽 Comer acá';
+  const servicioLabel = tipoServicio === 'retiro' ? '🛒 Retiro en local' : '🛵 Delivery';
 
   const tiempoEstimado = tipoServicio === 'delivery'
     ? config.tiempo_estimado_delivery_min
@@ -136,9 +135,9 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
         onBack={onBack}
         showSearch
         onSearchToggle={() => setSearchExpanded(v => !v)}
-        onMisPedidos={onMisPedidos}
-        onMisDirecciones={onMisDirecciones}
-        onMiPerfil={onMiPerfil}
+        showCart={!!onOpenCart}
+        cartCount={cart.totalItems}
+        onCartClick={onOpenCart}
         extraActions={
           <button
             onClick={() => setViewMode(v => v === 'grid' ? 'list' : 'grid')}
@@ -149,79 +148,84 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
           </button>
         }
       >
-        {/* Service toggle pills — only if multiple services available */}
-        {servicioOptions.length > 1 && onServiceChange && (
-          <div className="flex gap-1 px-4 pb-2">
-            {servicioOptions.map(opt => (
-              <button
-                key={opt.key}
-                onClick={() => onServiceChange(opt.key)}
-                className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full transition-colors ${
-                  tipoServicio === opt.key
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                }`}
-              >
-                {opt.icon} {opt.label}
-                {opt.tiempo && <span className="opacity-70"> ~{opt.tiempo}′</span>}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Collapsible sub-header on mobile: hides on scroll-down, re-shows on scroll-up */}
+        <div className={`overflow-hidden transition-all duration-300 lg:max-h-none ${
+          scrollDir === 'down' ? 'max-h-0 lg:max-h-none' : 'max-h-60'
+        }`}>
+          {/* Service toggle pills — only if multiple services available */}
+          {servicioOptions.length > 1 && onServiceChange && (
+            <div className="flex gap-1 px-4 pb-2">
+              {servicioOptions.map(opt => (
+                <button
+                  key={opt.key}
+                  onClick={() => onServiceChange(opt.key)}
+                  className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full transition-colors ${
+                    tipoServicio === opt.key
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  }`}
+                >
+                  {opt.icon} {opt.label}
+                  {opt.tiempo && <span className="opacity-70"> ~{opt.tiempo}′</span>}
+                </button>
+              ))}
+            </div>
+          )}
 
-        {/* Search bar — collapsible on mobile, always visible on desktop */}
-        <div className={`px-4 pb-3 ${searchExpanded ? '' : 'hidden lg:block'}`}>
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar en el menú..."
-              className="pl-9 pr-8 bg-muted border-border text-foreground placeholder:text-muted-foreground h-9 text-sm"
-              autoFocus={searchExpanded}
-            />
-            {search && (
-              <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2">
-                <X className="w-4 h-4 text-muted-foreground" />
-              </button>
-            )}
+          {/* Search bar — collapsible on mobile, always visible on desktop */}
+          <div className={`px-4 pb-3 ${searchExpanded ? '' : 'hidden lg:block'}`}>
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Buscar en el menú..."
+                className="pl-9 pr-8 bg-muted border-border text-foreground placeholder:text-muted-foreground h-9 text-sm"
+                autoFocus={searchExpanded}
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2">
+                  <X className="w-4 h-4 text-muted-foreground" />
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Active order banner */}
+          {onShowTracking && <ActiveOrderBanner onShowTracking={onShowTracking} />}
+
+          {/* Category tabs - mobile only */}
+          {!search && categories.length > 1 && (
+            <div
+              ref={tabsRef}
+              className="flex gap-1 overflow-x-auto px-4 pb-2 scrollbar-none xl:hidden"
+            >
+              {categories.map(cat => (
+                <button
+                  key={cat.nombre}
+                  onClick={() => scrollToCategory(cat.nombre)}
+                  className={`
+                    whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold transition-colors shrink-0
+                    ${activeCategory === cat.nombre
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }
+                  `}
+                >
+                  {cat.nombre}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-
-        {/* Active order banner */}
-        {onShowTracking && <ActiveOrderBanner onShowTracking={onShowTracking} />}
-
-        {/* Category tabs - mobile only */}
-        {!search && categories.length > 1 && (
-          <div
-            ref={tabsRef}
-            className="flex gap-1 overflow-x-auto px-4 pb-2 scrollbar-none lg:hidden"
-          >
-            {categories.map(cat => (
-              <button
-                key={cat.nombre}
-                onClick={() => scrollToCategory(cat.nombre)}
-                className={`
-                  whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold transition-colors shrink-0
-                  ${activeCategory === cat.nombre
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                  }
-                `}
-              >
-                {cat.nombre}
-              </button>
-            ))}
-          </div>
-        )}
       </WebappHeader>
 
-      {/* Main content: sidebar (desktop) + products */}
-      <main className="flex-1 pb-24 lg:pb-8">
+      {/* Main content: sidebar (desktop) + products — extra bottom padding when cart bar is visible */}
+      <main className={`flex-1 ${hasCartItems ? 'pb-24' : 'pb-24 lg:pb-8'}`}>
         <div className="max-w-6xl mx-auto flex">
           {/* Desktop sidebar categories */}
           {!search && categories.length > 1 && (
-            <aside className="hidden lg:block w-[200px] shrink-0 sticky top-[120px] self-start max-h-[calc(100vh-140px)] overflow-y-auto border-r">
+            <aside className="hidden xl:block w-[200px] shrink-0 sticky top-[120px] self-start max-h-[calc(100vh-140px)] overflow-y-auto border-r">
               <nav className="py-4 pr-2">
                 {popularItems.length > 0 && (
                   <button
@@ -320,7 +324,7 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
                       </div>
                     </div>
                     <div className="hidden lg:block px-4 py-3">
-                      <div className={`grid gap-3 ${cartPanelVisible ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-3'}`}>
+                      <div className="grid gap-3 grid-cols-2 xl:grid-cols-3">
                         {popularItems.map(item => renderProductCard(item, 'desktop'))}
                       </div>
                     </div>
@@ -359,7 +363,7 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
 
                     {/* Desktop: horizontal cards */}
                     <div className="hidden lg:block px-4 py-3">
-                      <div className={`grid gap-3 ${cartPanelVisible ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-3'}`}>
+                      <div className="grid gap-3 grid-cols-2 xl:grid-cols-3">
                         {cat.items.map(item => renderProductCard(item, 'desktop'))}
                       </div>
                     </div>

@@ -16,16 +16,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import type { useWebappCart } from '@/hooks/useWebappCart';
-
-interface DeliveryZone {
-  id: string;
-  nombre: string;
-  costo_envio: number;
-  pedido_minimo: number;
-  tiempo_estimado_min: number;
-  barrios: string[];
-  descripcion: string | null;
-}
+import { AddressAutocomplete, type AddressResult } from './AddressAutocomplete';
+import { DeliveryCostDisplay, DeliveryCostLoading } from './DeliveryCostDisplay';
+import { DeliveryUnavailable } from './DeliveryUnavailable';
+import { useCalculateDelivery } from '@/hooks/useDeliveryConfig';
 
 function formatPrice(n: number) {
   return `$${n.toLocaleString('es-AR')}`;
@@ -63,22 +57,27 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
     enabled: !!user,
   });
 
-  // Delivery zones
-  const { data: zones = [] } = useQuery({
-    queryKey: ['delivery-zones-public', branchId],
+  // Dynamic delivery
+  const { data: googleApiKey } = useQuery({
+    queryKey: ['google-maps-api-key'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('delivery_zones' as any)
-        .select('id, nombre, costo_envio, pedido_minimo, tiempo_estimado_min, barrios, descripcion')
-        .eq('branch_id', branchId)
-        .eq('is_active', true)
-        .order('orden', { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as unknown as DeliveryZone[];
+      const { data, error } = await supabase.functions.invoke('google-maps-key');
+      if (error) return null;
+      return data?.apiKey as string | null;
     },
-    enabled: isDelivery,
+    staleTime: Infinity,
   });
-  const hasZones = zones.length > 0;
+  const calculateDelivery = useCalculateDelivery();
+  const [deliveryAddress, setDeliveryAddress] = useState<AddressResult | null>(null);
+  const [deliveryCalc, setDeliveryCalc] = useState<{
+    available: boolean;
+    cost: number | null;
+    distance_km: number | null;
+    estimated_delivery_min: number | null;
+    disclaimer: string | null;
+    reason?: string;
+  } | null>(null);
+  const [calcLoading, setCalcLoading] = useState(false);
 
   // Saved addresses
   const { data: savedAddresses = [] } = useQuery({
@@ -97,7 +96,6 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
 
   // Form state
   const [submitting, setSubmitting] = useState(false);
-  const [selectedZoneId, setSelectedZoneId] = useState<string>('');
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [showMpConfirm, setShowMpConfirm] = useState(false);
 
@@ -128,15 +126,40 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
     }
   }, [userProfile]);
 
+  // Calculate delivery cost when address is selected
   useEffect(() => {
-    if (hasZones && !selectedZoneId) setSelectedZoneId(zones[0].id);
-  }, [hasZones, zones, selectedZoneId]);
+    if (!deliveryAddress || !branchId) {
+      setDeliveryCalc(null);
+      return;
+    }
+    setCalcLoading(true);
+    calculateDelivery.mutateAsync({
+      branch_id: branchId,
+      customer_lat: deliveryAddress.lat,
+      customer_lng: deliveryAddress.lng,
+      neighborhood_name: deliveryAddress.neighborhood_name,
+    }).then((result) => {
+      setDeliveryCalc(result);
+    }).catch(() => {
+      setDeliveryCalc(null);
+    }).finally(() => {
+      setCalcLoading(false);
+    });
+  }, [deliveryAddress, branchId]);
 
-  const selectedZone = zones.find(z => z.id === selectedZoneId);
-  const costoEnvio = isDelivery ? (hasZones && selectedZone ? selectedZone.costo_envio : propCostoEnvio) : 0;
-  const pedidoMinimo = isDelivery && hasZones && selectedZone ? selectedZone.pedido_minimo : 0;
+  const handleAddressSelect = (result: AddressResult | null) => {
+    setDeliveryAddress(result);
+    if (result) {
+      setDireccion(result.formatted_address);
+    } else {
+      setDireccion('');
+      setDeliveryCalc(null);
+    }
+  };
+
+  const costoEnvio = isDelivery && deliveryCalc?.available && deliveryCalc.cost != null ? deliveryCalc.cost : 0;
   const totalConEnvio = cart.totalPrecio + costoEnvio;
-  const meetsMinimum = pedidoMinimo <= 0 || cart.totalPrecio >= pedidoMinimo;
+  const deliveryAvailable = !isDelivery || (deliveryCalc?.available === true);
 
   // Validation
   const errors = useMemo(() => {
@@ -151,7 +174,7 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
   }, [nombre, telefono, email, direccion, isDelivery]);
 
   const hasErrors = Object.values(errors).some(e => e !== null);
-  const canSubmit = !hasErrors && (!isDelivery || !hasZones || !!selectedZoneId) && meetsMinimum && (metodoPago === 'efectivo' || mpEnabled);
+  const canSubmit = !hasErrors && deliveryAvailable && (!isDelivery || !!deliveryAddress) && (metodoPago === 'efectivo' || mpEnabled);
 
   const handleBlur = (field: string) => setTouched(prev => ({ ...prev, [field]: true }));
 
@@ -205,7 +228,11 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
           cliente_notas: notas.trim() || null,
           metodo_pago: metodoPago,
           paga_con: metodoPago === 'efectivo' && pagaCon ? parseInt(pagaCon) : null,
-          delivery_zone_id: isDelivery && hasZones && selectedZoneId ? selectedZoneId : null,
+          delivery_zone_id: null,
+          delivery_lat: deliveryAddress?.lat ?? null,
+          delivery_lng: deliveryAddress?.lng ?? null,
+          delivery_cost_calculated: costoEnvio > 0 ? costoEnvio : null,
+          delivery_distance_km: deliveryCalc?.distance_km ?? null,
           items: orderItems,
         },
       });
@@ -311,23 +338,37 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
         {isDelivery && (
           <div className="space-y-2">
             <h3 className="text-xs font-bold text-foreground">Dirección de entrega</h3>
-            {hasZones && (
-              <div className="space-y-1">
-                <Label className="text-xs flex items-center gap-1"><MapPin className="w-3 h-3" /> Zona *</Label>
-                <Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
-                  <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Seleccioná tu zona" /></SelectTrigger>
-                  <SelectContent>
-                    {zones.map(z => (
-                      <SelectItem key={z.id} value={z.id}>
-                        {z.nombre} · {z.costo_envio > 0 ? `$${z.costo_envio}` : 'Gratis'}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {!meetsMinimum && <p className="text-xs text-destructive">Pedido mínimo: ${pedidoMinimo}</p>}
-              </div>
+
+            <AddressAutocomplete
+              apiKey={googleApiKey ?? null}
+              onSelect={handleAddressSelect}
+              selectedAddress={deliveryAddress}
+            />
+
+            {calcLoading && <DeliveryCostLoading />}
+            {deliveryCalc && deliveryCalc.available && deliveryCalc.cost != null && (
+              <DeliveryCostDisplay
+                cost={deliveryCalc.cost}
+                distanceKm={deliveryCalc.distance_km!}
+                estimatedDeliveryMin={deliveryCalc.estimated_delivery_min!}
+                disclaimer={deliveryCalc.disclaimer}
+              />
             )}
-            {savedAddresses.length > 0 && (
+            {deliveryCalc && !deliveryCalc.available && (
+              <DeliveryUnavailable
+                onSwitchToPickup={() => {
+                  cart.setTipoServicio('retiro');
+                  setDeliveryAddress(null);
+                  setDeliveryCalc(null);
+                }}
+                onChangeAddress={() => {
+                  setDeliveryAddress(null);
+                  setDeliveryCalc(null);
+                }}
+              />
+            )}
+
+            {savedAddresses.length > 0 && !deliveryAddress && (
               <Select value="" onValueChange={(id) => {
                 const addr = savedAddresses.find(a => a.id === id);
                 if (addr) { setDireccion(addr.direccion); setPiso(addr.piso || ''); setReferencia(addr.referencia || ''); }
@@ -338,12 +379,7 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
                 </SelectContent>
               </Select>
             )}
-            <div>
-              <Label className="text-xs">Dirección *</Label>
-              <Input value={direccion} onChange={e => setDireccion(e.target.value)} onBlur={() => handleBlur('direccion')}
-                placeholder="Av. Colón 1234" className={`mt-1 h-8 text-sm ${touched.direccion && errors.direccion ? 'border-destructive' : ''}`} />
-              {touched.direccion && <FieldError error={errors.direccion} />}
-            </div>
+
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label className="text-xs">Piso / Depto</Label>

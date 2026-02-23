@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
+import { useIsClockedInAtBranch } from '@/hooks/useIsClockedInAtBranch';
 import { useEmbedMode } from '@/hooks/useEmbedMode';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { Button } from '@/components/ui/button';
@@ -19,20 +20,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  LogOut,
   Store,
   Home,
   AlertCircle,
   Eye,
+  LogIn,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import ManagerDashboard from '@/components/local/ManagerDashboard';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { WorkShell } from '@/components/layout/WorkShell';
 import { LocalSidebar } from '@/components/layout/LocalSidebar';
-import { PanelSwitcher } from '@/components/layout/PanelSwitcher';
 import ImpersonationSelector from '@/components/admin/ImpersonationSelector';
-import { ExternalLink } from '@/components/ui/ExternalLink';
 import { WebappIncomingBanner } from '@/components/local/WebappIncomingBanner';
 
 type Branch = Tables<'branches'>;
@@ -52,6 +51,7 @@ export default function BranchLayout() {
   const [showImpersonationSelector, setShowImpersonationSelector] = useState(false);
 
   const { accessibleBranches, loading: permLoading, local: lp } = permissions;
+  const { isClockedIn, isLoading: clockLoading } = useIsClockedInAtBranch(branchId ?? undefined);
 
   const { data: posConfig } = useQuery({
     queryKey: ['pos-config', branchId],
@@ -153,6 +153,44 @@ export default function BranchLayout() {
     return <HoppinessLoader fullScreen size="lg" />;
   }
 
+  // Cajero: solo puede ver el panel Local si está fichado en este branch
+  if (
+    canAccessLocal &&
+    branchId &&
+    selectedBranch &&
+    permissions.isCajero &&
+    !clockLoading &&
+    !isClockedIn
+  ) {
+    const fichajePath = selectedBranch.clock_code ? `/fichaje/${selectedBranch.clock_code}` : null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
+        <div className="text-center space-y-6 max-w-md">
+          <div className="h-20 w-20 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto">
+            <LogIn className="h-10 w-10 text-amber-600 dark:text-amber-400" />
+          </div>
+          <h1 className="text-xl font-bold">Debés fichar para acceder al Panel Local</h1>
+          <p className="text-muted-foreground">
+            Para usar el panel de tu local tenés que registrar tu entrada. Escaneá el QR del local o
+            usá el link de fichaje.
+          </p>
+          {fichajePath ? (
+            <Button asChild>
+              <Link to={fichajePath}>Ir a fichar</Link>
+            </Button>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Contactá a tu encargado para obtener el link de fichaje.
+            </p>
+          )}
+          <Button variant="ghost" asChild>
+            <Link to="/cuenta">Volver a Mi Cuenta</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (!canAccessLocal) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -204,7 +242,16 @@ export default function BranchLayout() {
   }
 
   const renderContent = () => {
-    if (!selectedBranch) return null;
+    if (!selectedBranch) {
+      if (branchId && (permLoading || accessibleBranches.length === 0)) {
+        return (
+          <div className="flex items-center justify-center py-24">
+            <HoppinessLoader />
+          </div>
+        );
+      }
+      return null;
+    }
 
     const isDashboard = location.pathname === `/milocal/${branchId}`;
     if (isDashboard) {
@@ -214,59 +261,79 @@ export default function BranchLayout() {
     return <Outlet context={{ branch: selectedBranch, permissions: lp }} />;
   };
 
-  // Footer: bloques Contexto (sucursal + Ver como), Cambiar a, Acciones
-  const footer = (
-    <>
-      {/* Bloque Contexto: Sucursal + Ver como */}
-      <div className="space-y-2">
-        <Select 
-          value={branchId} 
-          onValueChange={handleBranchChange}
-          disabled={accessibleBranches.length <= 1}
-        >
-          <SelectTrigger className="w-full">
-            <div className="flex items-center gap-2">
-              <Store className="w-4 h-4 text-primary" />
-              <SelectValue placeholder="Seleccionar local" />
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            {accessibleBranches.map(branch => (
-              <SelectItem key={branch.id} value={branch.id}>
-                {branch.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {canImpersonate && (
-          <Button
-            variant={isImpersonating ? 'secondary' : 'ghost'}
-            className={`w-full justify-start ${isImpersonating ? 'bg-amber-100 text-amber-900 hover:bg-amber-200' : ''}`}
-            onClick={() => setShowImpersonationSelector(true)}
-          >
-            <Eye className="w-4 h-4 mr-3" />
-            Ver como...
-          </Button>
+  const branchSelectorBlock =
+    selectedBranch && accessibleBranches.length > 0 ? (
+      <div>
+        {accessibleBranches.length > 1 ? (
+          <Select value={branchId} onValueChange={handleBranchChange}>
+            <SelectTrigger className="w-full">
+              <div className="flex items-center gap-2">
+                <Store className="w-4 h-4 text-primary shrink-0" />
+                <SelectValue placeholder="Seleccionar local" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {accessibleBranches.map(branch => (
+                <SelectItem key={branch.id} value={branch.id}>
+                  {branch.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/40 text-sm font-medium text-foreground">
+            <Store className="w-4 h-4 text-primary shrink-0" />
+            <span className="truncate">{selectedBranch.name}</span>
+          </div>
         )}
       </div>
+    ) : null;
 
-      {/* Bloque Cambiar a */}
-      <PanelSwitcher currentPanel="local" localBranchId={branchId} />
+  const footer = canImpersonate ? (
+    <Button
+      variant={isImpersonating ? 'secondary' : 'ghost'}
+      className={`w-full justify-start ${isImpersonating ? 'bg-amber-100 text-amber-900 hover:bg-amber-200' : ''}`}
+      onClick={() => setShowImpersonationSelector(true)}
+    >
+      <Eye className="w-4 h-4 mr-3" />
+      Ver como...
+    </Button>
+  ) : undefined;
 
-      {/* Bloque Acciones: Volver al Inicio, Salir */}
-      <div className="pt-4 border-t space-y-1">
-        <ExternalLink to="/">
-          <Button variant="ghost" className="w-full justify-start text-muted-foreground">
-            <Home className="w-4 h-4 mr-3" />
-            Volver al Inicio
-          </Button>
-        </ExternalLink>
-        <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={signOut}>
-          <LogOut className="w-4 h-4 mr-3" />
-          Salir
-        </Button>
-      </div>
-    </>
+  const sidebarNav = branchId ? (
+    <LocalSidebar
+      branchId={branchId}
+      posEnabled={posEnabled}
+      permissions={{
+        canViewDashboard: lp.canViewDashboard,
+        canViewTeam: lp.canViewTeam,
+        canEditSchedules: lp.canEditSchedules,
+        canViewAllClockIns: lp.canViewAllClockIns,
+        canDoCoaching: lp.canDoCoaching,
+        canViewCoaching: lp.canViewCoaching,
+        canConfigPrinters: lp.canConfigPrinters,
+        canViewWarnings: lp.canViewWarnings,
+        canViewPurchaseHistory: lp.canViewPurchaseHistory,
+        canViewSuppliers: lp.canViewSuppliers,
+        canUploadInvoice: lp.canUploadInvoice,
+        canViewLocalPnL: lp.canViewLocalPnL,
+        canViewSalaryAdvances: lp.canViewSalaryAdvances,
+        canViewPayroll: lp.canViewPayroll,
+        canViewGastos: lp.canViewGastos,
+        canViewConsumos: lp.canViewConsumos,
+        canViewPeriodos: lp.canViewPeriodos,
+        canViewVentasMensualesLocal: lp.canViewVentasMensualesLocal,
+        canViewSocios: lp.canViewSocios,
+        canViewLocalCommunications: lp.canViewLocalCommunications,
+        canViewClosures: lp.canViewClosures,
+        canCloseShifts: lp.canCloseShifts,
+        canViewStock: lp.canViewStock,
+        isFranquiciado: permissions.isFranquiciado,
+        isContadorLocal: permissions.isContadorLocal,
+      }}
+    />
+  ) : (
+    <></>
   );
 
   return (
@@ -274,41 +341,8 @@ export default function BranchLayout() {
       mode="local"
       title="Mi Local"
       mobileTitle={selectedBranch?.name || 'Mi Local'}
-      sidebar={
-        branchId ? (
-            <LocalSidebar
-              branchId={branchId}
-              posEnabled={posEnabled}
-              permissions={{
-                canViewDashboard: lp.canViewDashboard,
-                canViewTeam: lp.canViewTeam,
-                canEditSchedules: lp.canEditSchedules,
-                canViewAllClockIns: lp.canViewAllClockIns,
-                canDoCoaching: lp.canDoCoaching,
-                canViewCoaching: lp.canViewCoaching,
-                canConfigPrinters: lp.canConfigPrinters,
-                canViewWarnings: lp.canViewWarnings,
-                canViewPurchaseHistory: lp.canViewPurchaseHistory,
-                canViewSuppliers: lp.canViewSuppliers,
-                canUploadInvoice: lp.canUploadInvoice,
-                canViewLocalPnL: lp.canViewLocalPnL,
-                canViewSalaryAdvances: lp.canViewSalaryAdvances,
-                canViewPayroll: lp.canViewPayroll,
-                canViewGastos: lp.canViewGastos,
-                canViewConsumos: lp.canViewConsumos,
-                canViewPeriodos: lp.canViewPeriodos,
-                canViewVentasMensualesLocal: lp.canViewVentasMensualesLocal,
-                canViewSocios: lp.canViewSocios,
-                canViewLocalCommunications: lp.canViewLocalCommunications,
-                canViewClosures: lp.canViewClosures,
-                canCloseShifts: lp.canCloseShifts,
-                canViewStock: lp.canViewStock,
-                isFranquiciado: permissions.isFranquiciado,
-                isContadorLocal: permissions.isContadorLocal,
-            }}
-          />
-        ) : null
-      }
+      sidebarContext={branchSelectorBlock}
+      sidebarNav={sidebarNav}
       footer={footer}
     >
       {renderContent()}

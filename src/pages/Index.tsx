@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { 
@@ -9,9 +8,8 @@ import {
   Store
 } from 'lucide-react';
 import { SEO } from '@/components/SEO';
-import { MobileOrderFAB } from '@/components/layout/PublicHeader';
+import { MobileOrderFAB } from '@/components/ui/MobileOrderFAB';
 import { PublicFooter } from '@/components/layout/PublicFooter';
-import { WebappHeader } from '@/components/webapp/WebappHeader';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 import { 
   AwardsSection, 
@@ -24,19 +22,10 @@ import fotoHero from '@/assets/foto-hero.jpg';
 
 
 export default function Index() {
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 300);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
   return (
     <div className="min-h-screen bg-background">
       <SEO path="/" />
       <ImpersonationBanner />
-      <WebappHeader title="HOPPINESS CLUB" showNavMenu variant="transparent" scrolled={scrolled} />
 
       {/* Hero Section - Full height, header overlays */}
       <section className="relative h-[85vh] min-h-[600px] flex items-end pb-16">

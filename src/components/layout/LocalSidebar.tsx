@@ -10,7 +10,7 @@ import {
   AlertTriangle, UserCheck, Calendar, Wallet, Truck, Package,
   TrendingUp, BarChart3, CalendarDays, Handshake, Calculator,
   FileInput, Building2, ChefHat, Printer, Flame, SlidersHorizontal,
-  Globe, Store,
+  Globe, Store, MapPin,
 } from 'lucide-react';
 import {
   WorkSidebarNav,
@@ -307,6 +307,7 @@ export function LocalSidebar({ branchId, posEnabled = false, permissions }: Loca
           {posEnabled && (
             <NavItemButton to={`${basePath}/config/mercadopago`} icon={DollarSign} label="MercadoPago" />
           )}
+          <NavItemButton to={`${basePath}/config/delivery`} icon={MapPin} label="Zonas de Delivery" />
         </NavSectionGroup>
       )}
     </WorkSidebarNav>

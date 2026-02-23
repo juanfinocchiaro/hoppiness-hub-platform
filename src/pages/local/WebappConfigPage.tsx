@@ -12,9 +12,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { PageHeader } from '@/components/ui/page-header';
-import { Globe, ExternalLink, Loader2, Truck, ShoppingBag, Utensils, Clock, MapPin, DollarSign, ChevronDown } from 'lucide-react';
+import { Globe, ExternalLink, Loader2, Truck, ShoppingBag, Clock, MapPin, DollarSign, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
-import { DeliveryZonesManager } from '@/components/local/DeliveryZonesManager';
+
 
 const DAYS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'] as const;
 const DAY_LABELS: Record<string, string> = {
@@ -534,16 +534,7 @@ export default function WebappConfigPage() {
                 onChange={(s) => updateService('delivery', s)}
                 isDelivery
               />
-              {services.delivery?.enabled && branchId && (
-                <DeliveryZonesManager branchId={branchId} />
-              )}
-              <ServiceSection
-                serviceKey="comer_aca"
-                label="Comer en el local"
-                icon={Utensils}
-                schedule={services.comer_aca}
-                onChange={(s) => updateService('comer_aca', s)}
-              />
+              {/* Comer acá no se ofrece en la webapp; se mantiene en backend por compatibilidad */}
             </CardContent>
           </Card>
 

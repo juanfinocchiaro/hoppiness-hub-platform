@@ -41,6 +41,7 @@ import { useGenerateZClosing } from '@/hooks/useFiscalReports';
 import { CoachingPendingCard } from '@/components/coaching';
 import { MeetingPendingCard } from '@/components/meetings/MeetingPendingCard';
 import { StockAlertCard } from '@/components/stock/StockAlertCard';
+import { DeliveryRadiusControl } from '@/components/local/DeliveryRadiusControl';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -537,6 +538,11 @@ export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboar
 
    {/* STOCK ALERTS */}
    <StockAlertCard branchId={branch.id} />
+
+   {/* DELIVERY RADIUS CONTROL */}
+   {local.canOperateDelivery && (
+     <DeliveryRadiusControl branchId={branch.id} />
+   )}
 
    {/* COACHING DEL MES - Solo para quienes pueden hacer coaching */}
    {local.canDoCoaching && (

@@ -1,7 +1,8 @@
-import { MapPin, Clock, Truck, ShoppingBag, UtensilsCrossed, Pause, Navigation } from 'lucide-react';
+import { MapPin, Clock, Truck, ShoppingBag, Pause } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { WebappConfig, TipoServicioWebapp } from '@/types/webapp';
 import { WebappHeader } from './WebappHeader';
+import { StaticBranchMap } from './StaticBranchMap';
 
 interface Props {
   branch: {
@@ -119,36 +120,32 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
           )}
         </div>
 
-        {/* Mini map */}
+        {/* Map with Hoppiness pin */}
         {hasCoords && (
-          <div className="mt-4 max-w-sm mx-auto">
-            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="block">
-              <div className="w-full h-32 rounded-xl overflow-hidden border shadow-sm relative group">
-                <img
-                  src={`https://maps.googleapis.com/maps/api/staticmap?center=${branch.latitude},${branch.longitude}&zoom=15&size=400x160&scale=2&markers=color:red%7C${branch.latitude},${branch.longitude}&style=feature:poi%7Cvisibility:off&key=`}
-                  alt="Ubicación del local"
-                  className="w-full h-full object-cover"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                />
-                <div className="absolute inset-0 bg-primary/5 flex items-center justify-center">
-                  <div className="bg-background/90 backdrop-blur-sm rounded-full px-3 py-1.5 flex items-center gap-1.5 text-xs font-semibold text-primary shadow-sm group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    <Navigation className="w-3 h-3" />
-                    Cómo llegar
-                  </div>
-                </div>
-              </div>
-            </a>
+          <div className="mt-4 max-w-sm mx-auto w-full">
+            <StaticBranchMap
+              latitude={branch.latitude!}
+              longitude={branch.longitude!}
+              mapsUrl={mapsUrl}
+              height={160}
+              linkLabel="Cómo llegar"
+            />
           </div>
         )}
       </div>
 
-      {/* Service selection */}
+      {/* Service selection — servicios que el local tiene activo */}
       <div className="flex-1 flex flex-col items-center px-6 py-8 max-w-lg mx-auto w-full">
         {isOpen ? (
-          <div className="w-full bg-card rounded-2xl shadow-sm border p-5 space-y-3">
-            <p className="text-center text-sm font-bold text-foreground">
-              ¿Cómo querés tu pedido?
-            </p>
+          <div className="w-full bg-card rounded-2xl shadow-sm border p-5 space-y-4">
+            <div className="text-center space-y-1">
+              <h3 className="text-base font-bold text-foreground">
+                Servicios disponibles
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                ¿Cómo querés tu pedido?
+              </p>
+            </div>
 
             {config.retiro_habilitado && (
               <button
@@ -193,21 +190,6 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
                     <Clock className="w-3 h-3" />
                     ~{config.tiempo_estimado_delivery_min} min
                   </div>
-                </div>
-              </button>
-            )}
-
-            {config.comer_aca_habilitado && (
-              <button
-                onClick={() => onSelectService('comer_aca')}
-                className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-left group"
-              >
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors shrink-0">
-                  <UtensilsCrossed className="w-5 h-5 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-foreground">Comer acá</p>
-                  <p className="text-xs text-muted-foreground">Pido desde la mesa</p>
                 </div>
               </button>
             )}

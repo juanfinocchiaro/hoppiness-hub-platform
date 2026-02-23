@@ -1,9 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Loader2, MapPin, Clock, Truck, ShoppingBag, Pause } from 'lucide-react';
+import { Loader2, MapPin, Pause } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { WebappHeader } from '@/components/webapp/WebappHeader';
+import { StaticBranchMap } from '@/components/webapp/StaticBranchMap';
 import { SEO } from '@/components/SEO';
 
 interface BranchWithWebapp {
@@ -14,6 +15,11 @@ interface BranchWithWebapp {
   slug: string | null;
   public_status: string | null;
   cover_image_url: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  opening_time: string | null;
+  closing_time: string | null;
+  public_hours: Record<string, { opens?: string; closes?: string; closed?: boolean }> | null;
   webapp_activa: boolean;
   estado: string;
   delivery_habilitado: boolean;
@@ -23,13 +29,46 @@ interface BranchWithWebapp {
   tiempo_delivery: number | null;
 }
 
+/** Returns true if current time is within branch opening hours (for branches without webapp). */
+function isBranchOpenBySchedule(branch: Pick<BranchWithWebapp, 'opening_time' | 'closing_time' | 'public_hours'>): boolean {
+  const now = new Date();
+  const dayKey = now.getDay().toString(); // 0=Sun .. 6=Sat
+  const toMinutes = (t: string) => {
+    const parts = (t || '').trim().split(':');
+    const h = parseInt(parts[0] || '0', 10);
+    const m = parseInt(parts[1] || '0', 10);
+    return h * 60 + m;
+  };
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+
+  const ph = branch.public_hours?.[dayKey];
+  if (ph && typeof ph === 'object') {
+    if (ph.closed) return false;
+    const opens = ph.opens ?? branch.opening_time ?? '09:00';
+    const closes = ph.closes ?? branch.closing_time ?? '23:00';
+    const openMin = toMinutes(opens);
+    let closeMin = toMinutes(closes);
+    if (closeMin <= openMin) closeMin += 24 * 60; // overnight
+    const nowMinNorm = nowMin < openMin ? nowMin + 24 * 60 : nowMin;
+    return nowMinNorm >= openMin && nowMinNorm < closeMin;
+  }
+
+  const opens = branch.opening_time ?? '09:00';
+  const closes = branch.closing_time ?? '23:00';
+  const openMin = toMinutes(opens);
+  let closeMin = toMinutes(closes);
+  if (closeMin <= openMin) closeMin += 24 * 60;
+  const nowMinNorm = nowMin < openMin ? nowMin + 24 * 60 : nowMin;
+  return nowMinNorm >= openMin && nowMinNorm < closeMin;
+}
+
 function useBranchesForPedir() {
   return useQuery({
     queryKey: ['branches-pedir'],
     queryFn: async () => {
       const { data: branches, error: bErr } = await supabase
         .from('branches_public')
-        .select('id, name, address, city, slug, public_status, cover_image_url')
+        .select('id, name, address, city, slug, public_status, cover_image_url, latitude, longitude, opening_time, closing_time, public_hours')
         .in('public_status', ['active', 'coming_soon'])
         .order('name');
       if (bErr) throw bErr;
@@ -53,6 +92,11 @@ function useBranchesForPedir() {
           return {
             ...b,
             cover_image_url: b.cover_image_url ?? null,
+            latitude: b.latitude ?? null,
+            longitude: b.longitude ?? null,
+            opening_time: b.opening_time ?? null,
+            closing_time: b.closing_time ?? null,
+            public_hours: b.public_hours ?? null,
             webapp_activa: cfg?.webapp_activa === true,
             estado: cfg?.estado ?? 'cerrado',
             delivery_habilitado: cfg?.delivery_habilitado ?? false,
@@ -63,8 +107,10 @@ function useBranchesForPedir() {
           };
         })
         .sort((a, b) => {
-          if (a.estado === 'abierto' && b.estado !== 'abierto') return -1;
-          if (a.estado !== 'abierto' && b.estado === 'abierto') return 1;
+          const aOpen = a.webapp_activa ? a.estado === 'abierto' : isBranchOpenBySchedule(a);
+          const bOpen = b.webapp_activa ? b.estado === 'abierto' : isBranchOpenBySchedule(b);
+          if (aOpen && !bOpen) return -1;
+          if (!aOpen && bOpen) return 1;
           return a.name.localeCompare(b.name);
         });
     },
@@ -122,77 +168,89 @@ function BranchCard({ branch }: { branch: BranchWithWebapp }) {
   const isOpen = branch.estado === 'abierto';
   const isPaused = branch.estado === 'pausado';
   const isClosed = !isOpen && !isPaused;
+  const openBySchedule = isBranchOpenBySchedule(branch);
+  const hasCoords = branch.latitude != null && branch.longitude != null;
+  const mapsUrl = hasCoords
+    ? `https://maps.google.com/?q=${branch.latitude},${branch.longitude}`
+    : `https://maps.google.com/?q=${encodeURIComponent(branch.address + ', ' + branch.city)}`;
 
   return (
     <div className="rounded-2xl bg-card border shadow-sm overflow-hidden transition-shadow hover:shadow-md">
-      {/* Cover image */}
-      {branch.cover_image_url ? (
-        <div className="aspect-[16/7] w-full overflow-hidden bg-muted">
-          <img
-            src={branch.cover_image_url}
-            alt={branch.name}
-            className="w-full h-full object-cover"
-            loading="lazy"
+      {hasCoords && (
+        <div className="px-4 pt-2">
+          <StaticBranchMap
+            latitude={branch.latitude!}
+            longitude={branch.longitude!}
+            mapsUrl={mapsUrl}
+            height={100}
+            linkLabel="Cómo llegar"
           />
-        </div>
-      ) : (
-        <div className="aspect-[16/7] w-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-          <span className="text-4xl">🍔</span>
         </div>
       )}
       <div className="p-5 space-y-3">
-        {/* Name + status */}
         <div className="flex items-start justify-between gap-2">
           <h2 className="font-black text-lg text-foreground leading-tight">{branch.name}</h2>
-          {isOpen && (
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 px-2.5 py-1 rounded-full shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              Abierto
-            </span>
-          )}
-          {isPaused && (
-            <span className="flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full shrink-0">
-              <Pause className="w-3 h-3" />
-              Pausado
-            </span>
-          )}
-          {isClosed && (
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground bg-muted px-2.5 py-1 rounded-full shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50" />
-              Cerrado
+          {hasWebapp ? (
+            <>
+              {isOpen && (
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 px-2.5 py-1 rounded-full shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                  Abierto
+                </span>
+              )}
+              {isPaused && (
+                <span className="flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full shrink-0">
+                  <Pause className="w-3 h-3" />
+                  Pausado
+                </span>
+              )}
+              {isClosed && (
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground bg-muted px-2.5 py-1 rounded-full shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50" />
+                  Cerrado
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground bg-muted/80 px-2.5 py-1 rounded-full shrink-0">
+              {openBySchedule ? (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                  Abierto
+                </>
+              ) : (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50" />
+                  Fuera de horario
+                </>
+              )}
             </span>
           )}
         </div>
 
-        {/* Address */}
         <p className="text-muted-foreground text-sm flex items-center gap-1.5">
           <MapPin className="w-3.5 h-3.5 shrink-0" />
           {branch.address}, {branch.city}
         </p>
 
-        {/* Service info pills */}
-        {hasWebapp && isOpen && (
-          <div className="flex flex-wrap gap-2">
-            {branch.retiro_habilitado && branch.tiempo_retiro && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-full">
-                <ShoppingBag className="w-3 h-3" />
-                Retiro ~{branch.tiempo_retiro} min
-              </span>
-            )}
-            {branch.delivery_habilitado && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-full">
-                <Truck className="w-3 h-3" />
-                Delivery ~{branch.tiempo_delivery ?? '?'} min
-                {branch.delivery_costo != null && branch.delivery_costo > 0 && (
-                  <> · {formatPrice(branch.delivery_costo)}</>
-                )}
-              </span>
-            )}
-          </div>
+        {hasWebapp && isOpen && (() => {
+          const services: string[] = [];
+          if (branch.retiro_habilitado) services.push('Retiro');
+          if (branch.delivery_habilitado) services.push('Delivery');
+          if (services.length === 0) return null;
+          return (
+            <p className="text-xs text-muted-foreground">
+              Servicios disponibles: {services.join(', ')}
+            </p>
+          );
+        })()}
+        {!hasWebapp && (
+          <p className="text-xs text-muted-foreground">
+            Disponible por Mas Delivery
+          </p>
         )}
       </div>
 
-      {/* CTA */}
       <div className="px-5 pb-5">
         {hasWebapp ? (
           <Link to={`/pedir/${branch.slug}`}>

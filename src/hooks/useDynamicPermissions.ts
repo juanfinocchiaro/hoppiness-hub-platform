@@ -84,6 +84,10 @@ export function useDynamicPermissions(currentBranchId?: string): DynamicPermissi
       canViewMeetings: getPermission('brand.viewMeetings', brandRole, false),
       canCreateMeetings: getPermission('brand.createMeetings', brandRole, false),
       
+      // Delivery
+      canManageDeliveryPricing: permissions.brand.canManageDeliveryPricing,
+      canManageDeliveryZones: permissions.brand.canManageDeliveryZones,
+
       // Configuración
       canEditBrandConfig: getPermission('brand.editConfig', brandRole, permissions.brand.canEditBrandConfig),
       canManageChannels: permissions.brand.canManageChannels,
@@ -156,6 +160,7 @@ export function useDynamicPermissions(currentBranchId?: string): DynamicPermissi
       canAccessPOS: permissions.local.canAccessPOS,
       canViewKitchen: permissions.local.canViewKitchen,
       canAssignDelivery: permissions.local.canAssignDelivery,
+      canOperateDelivery: permissions.local.canOperateDelivery,
       canOpenRegister: permissions.local.canOpenRegister,
       canCloseRegister: permissions.local.canCloseRegister,
       

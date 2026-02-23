@@ -95,7 +95,7 @@ export function BrandSidebar() {
   const isLocalesActive = p.includes('/mimarca/locales');
   const isMenuEngActive = p.includes('/mimarca/finanzas/insumos') || p.includes('/mimarca/finanzas/proveedores') || p.includes('/mimarca/recetas') || p.includes('/mimarca/carta') || p.includes('/mimarca/categorias-carta') || p === '/mimarca/centro-costos' || p.includes('/mimarca/precios-canal');
   const isGestionRedActive = p.includes('/mimarca/supervisiones') || p.includes('/mimarca/coaching') || p.includes('/mimarca/comunicados') || p.includes('/mimarca/reuniones');
-  const isModeloOpActive = p.includes('/mimarca/finanzas/conceptos-servicio') || p.includes('/mimarca/configuracion/calendario') || p.includes('/mimarca/reglamentos') || p.includes('/mimarca/configuracion/cierres');
+  const isModeloOpActive = p.includes('/mimarca/finanzas/conceptos-servicio') || p.includes('/mimarca/configuracion/calendario') || p.includes('/mimarca/reglamentos') || p.includes('/mimarca/configuracion/cierres') || p.includes('/mimarca/delivery');
   const isFinanzasActive = p.includes('/mimarca/finanzas/ventas-mensuales') || p.includes('/mimarca/finanzas/canon') || p.includes('/mimarca/informes');
   const isAdminActive = p.includes('/mimarca/mensajes') || p.includes('/mimarca/equipo-central') || p.includes('/mimarca/usuarios') || p.includes('/mimarca/configuracion/permisos') || p.includes('/mimarca/auditoria');
 
@@ -103,7 +103,7 @@ export function BrandSidebar() {
   const canSeeLocales = bp.canViewLocales;
   const canSeeMenuEng = bp.canViewInsumos || bp.canViewProveedoresMarca;
   const canSeeGestionRed = bp.canCoachManagers || bp.canViewCoaching || bp.canManageMessages || bp.canViewMeetings;
-  const canSeeModeloOp = bp.canEditBrandConfig || bp.canViewConceptosServicio || isSuperadmin;
+  const canSeeModeloOp = bp.canEditBrandConfig || bp.canViewConceptosServicio || bp.canManageDeliveryZones || isSuperadmin;
   const canSeeFinanzas = bp.canViewVentasMensuales || bp.canViewCanon || bp.canViewPnL;
   const canSeeAdmin = bp.canViewContactMessages || bp.canViewCentralTeam || bp.canSearchUsers || isSuperadmin;
 
@@ -148,6 +148,7 @@ export function BrandSidebar() {
         <NavItemButton to="/mimarca/configuracion/calendario" icon={CalendarDays} label="Calendario Laboral" />
         <NavItemButton to="/mimarca/reglamentos" icon={FileText} label="Reglamentos" />
         <NavItemButton to="/mimarca/configuracion/cierres" icon={FileText} label="Cierre de Turno" />
+        {bp.canManageDeliveryZones && <NavItemButton to="/mimarca/delivery" icon={Truck} label="Delivery" />}
       </NavSectionGroup>
     ) : null,
 

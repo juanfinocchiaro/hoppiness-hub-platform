@@ -48,7 +48,11 @@ export function usePermissionsWithImpersonation(currentBranchId?: string): Dynam
     const isEmpleado = localRole === 'empleado';
 
     const canAccessBrandPanel = !!brandRole;
-    const canAccessLocalPanel = branchRoles.length > 0;
+    const canAccessLocalPanel =
+      isSuperadmin ||
+      branchRoles.some((r) =>
+        ['franquiciado', 'encargado', 'contador_local', 'cajero'].includes(r.local_role)
+      );
 
     const hasAccessToBranch = (branchId: string): boolean => {
       if (isSuperadmin) return true;
@@ -119,6 +123,8 @@ export function usePermissionsWithImpersonation(currentBranchId?: string): Dynam
         canViewCoaching: isSuperadmin || isCoordinador,
         canViewMeetings: isSuperadmin || isCoordinador,
         canCreateMeetings: isSuperadmin || isCoordinador,
+        canManageDeliveryPricing: isSuperadmin,
+        canManageDeliveryZones: isSuperadmin || isCoordinador,
         canEditBrandConfig: isSuperadmin,
         canManageChannels: isSuperadmin || isCoordinador,
         canManageIntegrations: isSuperadmin,
@@ -159,6 +165,7 @@ export function usePermissionsWithImpersonation(currentBranchId?: string): Dynam
         canAccessPOS: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
         canViewKitchen: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
         canAssignDelivery: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
+        canOperateDelivery: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero),
         canOpenRegister: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
         canCloseRegister: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
         canViewSalesReports: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado),

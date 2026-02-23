@@ -2,7 +2,7 @@
  * Tipos para la WebApp pública de pedidos
  */
 
-export type TipoServicioWebapp = 'retiro' | 'delivery' | 'comer_aca';
+export type TipoServicioWebapp = 'retiro' | 'delivery';
 
 export interface WebappConfig {
   id: string;

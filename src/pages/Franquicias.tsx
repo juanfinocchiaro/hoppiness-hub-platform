@@ -26,8 +26,7 @@ import {
   Factory
 } from 'lucide-react';
 import { SEO } from '@/components/SEO';
-import { PublicHeader, MobileOrderFAB } from '@/components/layout/PublicHeader';
-import { WebappHeader } from '@/components/webapp/WebappHeader';
+import { MobileOrderFAB } from '@/components/ui/MobileOrderFAB';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import { FranchiseFormSection } from '@/components/landing';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
@@ -125,7 +124,6 @@ export default function Franquicias() {
         path="/franquicias"
       />
       <ImpersonationBanner />
-      <WebappHeader title="Franquicias" showBack onBack={() => window.history.back()} showNavMenu />
 
       {/* Hero Section */}
       <section className="relative min-h-[70vh] flex items-center">

@@ -1848,6 +1848,238 @@ export type Database = {
           },
         ]
       }
+      delivery_pricing_config: {
+        Row: {
+          id: string
+          brand_id: string
+          base_distance_km: number
+          base_price: number
+          price_per_extra_km: number
+          max_allowed_radius_km: number
+          estimated_speed_kmh: number
+          prep_time_minutes: number
+          time_disclaimer: string | null
+          google_api_key_encrypted: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          brand_id?: string
+          base_distance_km?: number
+          base_price?: number
+          price_per_extra_km?: number
+          max_allowed_radius_km?: number
+          estimated_speed_kmh?: number
+          prep_time_minutes?: number
+          time_disclaimer?: string | null
+          google_api_key_encrypted?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          brand_id?: string
+          base_distance_km?: number
+          base_price?: number
+          price_per_extra_km?: number
+          max_allowed_radius_km?: number
+          estimated_speed_kmh?: number
+          prep_time_minutes?: number
+          time_disclaimer?: string | null
+          google_api_key_encrypted?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      branch_delivery_config: {
+        Row: {
+          id: string
+          branch_id: string
+          default_radius_km: number
+          radius_override_km: number | null
+          radius_override_until: string | null
+          radius_override_by: string | null
+          delivery_enabled: boolean
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          branch_id: string
+          default_radius_km?: number
+          radius_override_km?: number | null
+          radius_override_until?: string | null
+          radius_override_by?: string | null
+          delivery_enabled?: boolean
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          branch_id?: string
+          default_radius_km?: number
+          radius_override_km?: number | null
+          radius_override_until?: string | null
+          radius_override_by?: string | null
+          delivery_enabled?: boolean
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_delivery_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_delivery_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      city_neighborhoods: {
+        Row: {
+          id: string
+          name: string
+          city: string
+          centroid_lat: number
+          centroid_lng: number
+          source: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          city?: string
+          centroid_lat: number
+          centroid_lng: number
+          source?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          city?: string
+          centroid_lat?: number
+          centroid_lng?: number
+          source?: string | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      branch_delivery_neighborhoods: {
+        Row: {
+          id: string
+          branch_id: string
+          neighborhood_id: string
+          status: string
+          distance_km: number | null
+          decided_by: string
+          conflict_with_branch_id: string | null
+          block_reason: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          branch_id: string
+          neighborhood_id: string
+          status?: string
+          distance_km?: number | null
+          decided_by?: string
+          conflict_with_branch_id?: string | null
+          block_reason?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          branch_id?: string
+          neighborhood_id?: string
+          status?: string
+          distance_km?: number | null
+          decided_by?: string
+          conflict_with_branch_id?: string | null
+          block_reason?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_delivery_neighborhoods_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_delivery_neighborhoods_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_delivery_neighborhoods_neighborhood_id_fkey"
+            columns: ["neighborhood_id"]
+            isOneToOne: false
+            referencedRelation: "city_neighborhoods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_radius_overrides_log: {
+        Row: {
+          id: string
+          branch_id: string
+          previous_km: number | null
+          new_km: number | null
+          action: string
+          performed_by: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          branch_id: string
+          previous_km?: number | null
+          new_km?: number | null
+          action: string
+          performed_by?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          branch_id?: string
+          previous_km?: number | null
+          new_km?: number | null
+          action?: string
+          performed_by?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_radius_overrides_log_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_radius_overrides_log_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       devoluciones: {
         Row: {
           branch_id: string
@@ -5358,6 +5590,9 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           delivery_zone_id: string | null
+          delivery_lat: number | null
+          delivery_lng: number | null
+          delivery_distance_km: number | null
           descuento: number | null
           descuento_motivo: string | null
           direccion_entrega: string | null
@@ -5403,6 +5638,9 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           delivery_zone_id?: string | null
+          delivery_lat?: number | null
+          delivery_lng?: number | null
+          delivery_distance_km?: number | null
           descuento?: number | null
           descuento_motivo?: string | null
           direccion_entrega?: string | null
@@ -5448,6 +5686,9 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           delivery_zone_id?: string | null
+          delivery_lat?: number | null
+          delivery_lng?: number | null
+          delivery_distance_km?: number | null
           descuento?: number | null
           descuento_motivo?: string | null
           direccion_entrega?: string | null
@@ -8076,7 +8317,9 @@ export type Database = {
           id: string | null
           is_active: boolean | null
           is_open: boolean | null
+          latitude: number | null
           local_open_state: boolean | null
+          longitude: number | null
           name: string | null
           opening_time: string | null
           public_hours: Json | null
@@ -8091,7 +8334,9 @@ export type Database = {
           id?: string | null
           is_active?: boolean | null
           is_open?: boolean | null
+          latitude?: number | null
           local_open_state?: boolean | null
+          longitude?: number | null
           name?: string | null
           opening_time?: string | null
           public_hours?: Json | null
@@ -8106,7 +8351,9 @@ export type Database = {
           id?: string | null
           is_active?: boolean | null
           is_open?: boolean | null
+          latitude?: number | null
           local_open_state?: boolean | null
+          longitude?: number | null
           name?: string | null
           opening_time?: string | null
           public_hours?: Json | null

@@ -19,7 +19,8 @@ function loadCart(): { items: CartItem[]; tipoServicio: TipoServicioWebapp } {
       localStorage.removeItem(CART_STORAGE_KEY);
       return { items: [], tipoServicio: 'retiro' };
     }
-    return { items: parsed.items || [], tipoServicio: parsed.tipoServicio || 'retiro' };
+    const tipo = parsed.tipoServicio === 'delivery' ? 'delivery' : 'retiro';
+    return { items: parsed.items || [], tipoServicio: tipo };
   } catch {
     return { items: [], tipoServicio: 'retiro' };
   }

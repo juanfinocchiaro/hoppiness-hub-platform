@@ -7,8 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Lock, Loader2, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { PublicHeader } from '@/components/layout/PublicHeader';
-import { PublicFooter } from '@/components/layout/PublicFooter';
+import { AuthLayout } from '@/components/layout/AuthLayout';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -146,55 +145,44 @@ export default function ResetPassword() {
   // Loading state while checking session
   if (isValidSession === null) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <PublicHeader />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-muted-foreground">Verificando link...</p>
-          </div>
-        </main>
-        <PublicFooter />
-      </div>
+      <AuthLayout>
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Verificando link...</p>
+        </div>
+      </AuthLayout>
     );
   }
 
   // Invalid or expired link
   if (isValidSession === false) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <PublicHeader />
-        <main className="flex-1 flex items-center justify-center px-4 py-12">
-          <Card className="w-full max-w-md">
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-destructive">
-                Link inválido o expirado
-              </CardTitle>
-              <CardDescription>
-                El link de recuperación ya no es válido. Por favor, solicitá uno nuevo.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button 
-                className="w-full" 
-                onClick={() => navigate('/olvide-password')}
-              >
-                Solicitar nuevo link
-              </Button>
-            </CardContent>
-          </Card>
-        </main>
-        <PublicFooter />
-      </div>
+      <AuthLayout>
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold text-destructive">
+              Link inválido o expirado
+            </CardTitle>
+            <CardDescription>
+              El link de recuperación ya no es válido. Por favor, solicitá uno nuevo.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              className="w-full"
+              onClick={() => navigate('/olvide-password')}
+            >
+              Solicitar nuevo link
+            </Button>
+          </CardContent>
+        </Card>
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <PublicHeader />
-      
-      <main className="flex-1 flex items-center justify-center px-4 py-12">
-        <Card className="w-full max-w-md">
+    <AuthLayout>
+      <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold">
               {success ? '¡Listo!' : 'Nueva contraseña'}
@@ -280,9 +268,6 @@ export default function ResetPassword() {
             )}
           </CardContent>
         </Card>
-      </main>
-      
-      <PublicFooter />
-    </div>
+    </AuthLayout>
   );
 }

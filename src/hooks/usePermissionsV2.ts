@@ -131,6 +131,10 @@ export interface PermissionsV2 {
     canViewMeetings: boolean;
     canCreateMeetings: boolean;
     
+    // Delivery
+    canManageDeliveryPricing: boolean;
+    canManageDeliveryZones: boolean;
+
     // Configuración
     canEditBrandConfig: boolean;
     canManageChannels: boolean;
@@ -189,6 +193,7 @@ export interface PermissionsV2 {
     canAccessPOS: boolean;
     canViewKitchen: boolean;
     canAssignDelivery: boolean;
+    canOperateDelivery: boolean;
     canOpenRegister: boolean;
     canCloseRegister: boolean;
     
@@ -269,24 +274,42 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     gcTime: 5 * 60 * 1000,
   });
   
-  // Query para obtener roles por sucursal (desde user_branch_roles - NUEVA TABLA)
-  const { 
-    data: branchRolesData = [], 
+  // Query para obtener roles por sucursal (desde user_branch_roles; fallback a user_roles_v2 si vacío)
+  const {
+    data: branchRolesData = [],
     isLoading: loadingBranchRoles,
     refetch: refetchBranchRoles
   } = useQuery({
     queryKey: ['user-branch-roles', user?.id],
-    queryFn: async () => {
+    queryFn: async (): Promise<UserBranchRole[]> => {
       if (!user?.id) return [];
-      
-      const { data, error } = await supabase
+
+      const { data: ubrData, error: ubrError } = await supabase
         .from('user_branch_roles')
         .select('branch_id, local_role')
         .eq('user_id', user.id)
         .eq('is_active', true);
-      
-      if (error) throw error;
-      return (data || []) as UserBranchRole[];
+
+      if (ubrError) throw ubrError;
+      const fromUbr = (ubrData || []) as UserBranchRole[];
+      if (fromUbr.length > 0) return fromUbr;
+
+      // Fallback: si no hay filas en user_branch_roles, usar user_roles_v2 (branch_ids + local_role)
+      const { data: urv2, error: urv2Error } = await supabase
+        .from('user_roles_v2')
+        .select('branch_ids, local_role')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .not('branch_ids', 'is', null)
+        .not('local_role', 'is', null)
+        .maybeSingle();
+
+      if (urv2Error || !urv2?.branch_ids?.length || !urv2.local_role) return [];
+
+      return urv2.branch_ids.map((branch_id: string) => ({
+        branch_id,
+        local_role: urv2.local_role as LocalRole,
+      }));
     },
     enabled: !!user?.id,
     staleTime: 30 * 1000,
@@ -364,9 +387,13 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
   const isCajero = localRole === 'cajero';
   const isEmpleado = localRole === 'empleado';
   
-  // Acceso a paneles
+  // Acceso a paneles (Local solo para franquiciado, encargado, contador_local, cajero; empleados no)
   const canAccessBrandPanel = !!brandRole;
-  const canAccessLocalPanel = branchRolesData.length > 0;
+  const canAccessLocalPanel =
+    isSuperadmin ||
+    branchRolesData.some((r) =>
+      ['franquiciado', 'encargado', 'contador_local', 'cajero'].includes(r.local_role)
+    );
   
   // Verificar acceso a sucursal específica
   const hasAccessToBranch = (branchId: string): boolean => {
@@ -432,6 +459,10 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     canViewMeetings: isSuperadmin || isCoordinador,
     canCreateMeetings: isSuperadmin || isCoordinador,
     
+    // Delivery
+    canManageDeliveryPricing: isSuperadmin,
+    canManageDeliveryZones: isSuperadmin || isCoordinador,
+
     // Configuración
     canEditBrandConfig: isSuperadmin,
     canManageChannels: isSuperadmin || isCoordinador || isCommunityManager,
@@ -492,6 +523,7 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     canAccessPOS: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
     canViewKitchen: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
     canAssignDelivery: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
+    canOperateDelivery: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isFranquiciado || isCajero),
     canOpenRegister: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
     canCloseRegister: hasCurrentBranchAccess && (isSuperadmin || isEncargado || isCajero),
     

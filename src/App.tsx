@@ -5,7 +5,9 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
 import { AuthModalProvider } from "@/contexts/AuthModalContext";
+import { AccountSheetsProvider } from "@/contexts/AccountSheetsContext";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { PublicLayout } from "@/components/layout/PublicLayout";
 import { AdminRoute, LocalRoute, RequireQRAccess, RequireAuth } from "@/components/guards";
 import UserFingerprint from "@/components/ui/UserFingerprint";
 import VersionBadge from "@/components/ui/VersionBadge";
@@ -59,6 +61,7 @@ import InspectionsLocalPage from "./pages/local/InspectionsLocalPage";
 import AfipConfigPage from "./pages/local/AfipConfigPage";
 import MercadoPagoConfigPage from "./pages/local/MercadoPagoConfigPage";
 import WebappConfigPage from "./pages/local/WebappConfigPage";
+import LocalDeliveryZonesPage from "./pages/local/LocalDeliveryZonesPage";
 
 // POS
 import POSPage from "./pages/pos/POSPage";
@@ -101,6 +104,8 @@ import CentroCostosPage from "./pages/admin/CentroCostosPage";
 import PreparacionesPage from "./pages/admin/PreparacionesPage";
 import CategoriasCartaPage from "./pages/admin/CategoriasCartaPage";
 import ChannelPricingPage from "./pages/admin/ChannelPricingPage";
+import DeliveryConfigPage from "./pages/admin/DeliveryConfigPage";
+import BranchDeliveryDetailPage from "./pages/admin/BranchDeliveryDetailPage";
 
 // Mi Local - Comunicaciones
 import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
@@ -145,17 +150,20 @@ const App = () => (
             <UserFingerprint />
           </div>
           <BrowserRouter>
+            <AccountSheetsProvider>
             <AuthModal />
             <Routes>
-            {/* Rutas Públicas */}
-            <Route path="/" element={<Index />} />
+            {/* Rutas Públicas con header transparente unificado */}
+            <Route path="/" element={<PublicLayout />}>
+              <Route index element={<Index />} />
+              <Route path="nosotros" element={<Nosotros />} />
+              <Route path="franquicias" element={<Franquicias />} />
+              <Route path="contacto" element={<Contacto />} />
+            </Route>
             <Route path="/ingresar" element={<Ingresar />} />
             <Route path="/olvide-password" element={<OlvidePassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/pedir" element={<Pedir />} />
-            <Route path="/franquicias" element={<Franquicias />} />
-            <Route path="/nosotros" element={<Nosotros />} />
-            <Route path="/contacto" element={<Contacto />} />
             <Route path="/registro-staff" element={<RegistroStaff />} />
             <Route path="/fichaje/:branchCode" element={<FichajeEmpleado />} />
             <Route path="/pedir/:branchSlug" element={<PedirPage />} />
@@ -243,6 +251,7 @@ const App = () => (
               <Route path="config/facturacion" element={<AfipConfigPage />} />
               <Route path="config/mercadopago" element={<MercadoPagoConfigPage />} />
               <Route path="config/webapp" element={<WebappConfigPage />} />
+              <Route path="config/delivery" element={<LocalDeliveryZonesPage />} />
             </Route>
             
             {/* Mi Marca - /mimarca */}
@@ -296,6 +305,10 @@ const App = () => (
               {/* Precios por Canal */}
               <Route path="precios-canal" element={<ChannelPricingPage />} />
               
+              {/* Delivery */}
+              <Route path="delivery" element={<DeliveryConfigPage />} />
+              <Route path="delivery/:branchId" element={<BranchDeliveryDetailPage />} />
+              
               {/* Configuración */}
               <Route path="reglamentos" element={<BrandRegulationsPage />} />
               <Route path="configuracion/calendario" element={<LaborCalendarPage />} />
@@ -305,6 +318,7 @@ const App = () => (
             
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </AccountSheetsProvider>
           </BrowserRouter>
         </AuthModalProvider>
         </ImpersonationProvider>

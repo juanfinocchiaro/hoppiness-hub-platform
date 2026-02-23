@@ -7,8 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ArrowLeft, Mail, Loader2, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { PublicHeader } from '@/components/layout/PublicHeader';
-import { PublicFooter } from '@/components/layout/PublicFooter';
+import { AuthLayout } from '@/components/layout/AuthLayout';
 
 export default function OlvidePassword() {
   const [email, setEmail] = useState('');
@@ -44,11 +43,8 @@ export default function OlvidePassword() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <PublicHeader />
-      
-      <main className="flex-1 flex items-center justify-center px-4 py-12">
-        <Card className="w-full max-w-md">
+    <AuthLayout>
+      <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold">
               {sent ? 'Revisá tu email' : 'Recuperar contraseña'}
@@ -128,9 +124,6 @@ export default function OlvidePassword() {
             )}
           </CardContent>
         </Card>
-      </main>
-      
-      <PublicFooter />
-    </div>
+    </AuthLayout>
   );
 }

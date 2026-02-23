@@ -206,7 +206,14 @@ export function useOpenShift(branchId: string) {
       queryClient.invalidateQueries({ queryKey: cashRegisterKeys.shifts(branchId) });
       toast.success('Caja abierta');
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      const msg = e?.message ?? '';
+      if (/row-level security|policy|violates/.test(msg)) {
+        toast.error('Para abrir la caja tenés que fichar primero en el local.');
+      } else {
+        toast.error(msg || 'Error al abrir caja');
+      }
+    },
   });
 }
 

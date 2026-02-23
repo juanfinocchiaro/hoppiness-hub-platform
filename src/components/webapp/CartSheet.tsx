@@ -13,31 +13,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import type { useWebappCart } from '@/hooks/useWebappCart';
+import { AddressAutocomplete, type AddressResult } from './AddressAutocomplete';
+import { DeliveryCostDisplay, DeliveryCostLoading } from './DeliveryCostDisplay';
+import { DeliveryUnavailable } from './DeliveryUnavailable';
+import { useCalculateDelivery } from '@/hooks/useDeliveryConfig';
 
-interface DeliveryZone {
-  id: string;
-  nombre: string;
-  costo_envio: number;
-  pedido_minimo: number;
-  tiempo_estimado_min: number;
-  barrios: string[];
-  descripcion: string | null;
-}
-
-function usePublicDeliveryZones(branchId: string | undefined, enabled: boolean) {
+function useGoogleMapsApiKey() {
   return useQuery({
-    queryKey: ['delivery-zones-public', branchId],
+    queryKey: ['google-maps-api-key'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('delivery_zones' as any)
-        .select('id, nombre, costo_envio, pedido_minimo, tiempo_estimado_min, barrios, descripcion')
-        .eq('branch_id', branchId!)
-        .eq('is_active', true)
-        .order('orden', { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as unknown as DeliveryZone[];
+      const { data, error } = await supabase.functions.invoke('google-maps-key');
+      if (error) return null;
+      return data?.apiKey as string | null;
     },
-    enabled: !!branchId && enabled,
+    staleTime: Infinity,
   });
 }
 
@@ -85,8 +74,20 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   });
 
   const isDelivery = cart.tipoServicio === 'delivery';
-  const { data: zones = [] } = usePublicDeliveryZones(branchId, isDelivery);
-  const hasZones = zones.length > 0;
+  const { data: googleApiKey } = useGoogleMapsApiKey();
+  const calculateDelivery = useCalculateDelivery();
+
+  // Dynamic delivery state
+  const [deliveryAddress, setDeliveryAddress] = useState<AddressResult | null>(null);
+  const [deliveryCalc, setDeliveryCalc] = useState<{
+    available: boolean;
+    cost: number | null;
+    distance_km: number | null;
+    estimated_delivery_min: number | null;
+    disclaimer: string | null;
+    reason?: string;
+  } | null>(null);
+  const [calcLoading, setCalcLoading] = useState(false);
 
   // Fetch saved addresses for logged-in users
   const { data: savedAddresses = [] } = useQuery({
@@ -112,7 +113,6 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
     }
   }, [open, initialStep]);
 
-  // React to external tracking code (e.g. from ActiveOrderBanner or MisPedidosSheet)
   useEffect(() => {
     if (externalTrackingCode) {
       setTrackingCode(externalTrackingCode);
@@ -120,16 +120,38 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
     }
   }, [externalTrackingCode]);
   const [submitting, setSubmitting] = useState(false);
-  const [selectedZoneId, setSelectedZoneId] = useState<string>('');
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
+  // Calculate delivery cost when address is selected
   useEffect(() => {
-    if (hasZones && !selectedZoneId) {
-      setSelectedZoneId(zones[0].id);
+    if (!deliveryAddress || !branchId) {
+      setDeliveryCalc(null);
+      return;
     }
-  }, [hasZones, zones, selectedZoneId]);
+    setCalcLoading(true);
+    calculateDelivery.mutateAsync({
+      branch_id: branchId,
+      customer_lat: deliveryAddress.lat,
+      customer_lng: deliveryAddress.lng,
+      neighborhood_name: deliveryAddress.neighborhood_name,
+    }).then((result) => {
+      setDeliveryCalc(result);
+    }).catch(() => {
+      setDeliveryCalc(null);
+    }).finally(() => {
+      setCalcLoading(false);
+    });
+  }, [deliveryAddress, branchId]);
 
-  const selectedZone = zones.find(z => z.id === selectedZoneId);
+  const handleAddressSelect = (result: AddressResult | null) => {
+    setDeliveryAddress(result);
+    if (result) {
+      setDireccion(result.formatted_address);
+    } else {
+      setDireccion('');
+      setDeliveryCalc(null);
+    }
+  };
 
   // Checkout form state - pre-fill from profile (if logged in) or localStorage
   const [nombre, setNombre] = useState(() => {
@@ -160,13 +182,11 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   const [pagaCon, setPagaCon] = useState<string>('');
   const [showMpConfirm, setShowMpConfirm] = useState(false);
 
-  const costoEnvio = isDelivery
-    ? (hasZones && selectedZone ? selectedZone.costo_envio : deliveryCosto)
+  const costoEnvio = isDelivery && deliveryCalc?.available && deliveryCalc.cost != null
+    ? deliveryCalc.cost
     : 0;
-  const pedidoMinimo = isDelivery && hasZones && selectedZone ? selectedZone.pedido_minimo : 0;
   const totalConEnvio = cart.totalPrecio + costoEnvio;
-
-  const meetsMinimum = pedidoMinimo <= 0 || cart.totalPrecio >= pedidoMinimo;
+  const deliveryAvailable = !isDelivery || (deliveryCalc?.available === true);
 
   // Inline validation errors
   const errors = useMemo(() => {
@@ -184,8 +204,8 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
 
   const canSubmit =
     !hasErrors &&
-    (!isDelivery || !hasZones || !!selectedZoneId) &&
-    meetsMinimum &&
+    deliveryAvailable &&
+    (!isDelivery || !!deliveryAddress) &&
     (metodoPago === 'efectivo' || mpEnabled);
 
   const handleBlur = (field: string) => setTouched(prev => ({ ...prev, [field]: true }));
@@ -238,7 +258,11 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
           cliente_notas: notas.trim() || null,
           metodo_pago: metodoPago,
           paga_con: metodoPago === 'efectivo' && pagaCon ? parseInt(pagaCon) : null,
-          delivery_zone_id: isDelivery && hasZones && selectedZoneId ? selectedZoneId : null,
+          delivery_zone_id: null,
+          delivery_lat: deliveryAddress?.lat ?? null,
+          delivery_lng: deliveryAddress?.lng ?? null,
+          delivery_cost_calculated: costoEnvio > 0 ? costoEnvio : null,
+          delivery_distance_km: deliveryCalc?.distance_km ?? null,
           items: orderItems,
         },
       });
@@ -519,52 +543,44 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                 </div>
               </div>
 
-              {/* Delivery address + zone */}
+              {/* Delivery address + dynamic cost */}
               {isDelivery && (
                 <div className="space-y-3">
                   <h3 className="text-sm font-bold text-foreground">Dirección de entrega</h3>
 
-                  {hasZones && (
-                    <div className="space-y-1.5">
-                      <Label className="text-xs flex items-center gap-1">
-                        <MapPin className="w-3 h-3" /> Zona de delivery *
-                      </Label>
-                      <Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccioná tu zona" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {zones.map(z => (
-                            <SelectItem key={z.id} value={z.id}>
-                              <div className="flex justify-between items-center gap-3 w-full">
-                                <span>{z.nombre}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {z.costo_envio > 0 ? `$${z.costo_envio}` : 'Gratis'}
-                                  {z.tiempo_estimado_min ? ` · ${z.tiempo_estimado_min} min` : ''}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {selectedZone?.descripcion && (
-                        <p className="text-xs text-muted-foreground">{selectedZone.descripcion}</p>
-                      )}
-                      {selectedZone?.barrios && selectedZone.barrios.length > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          Barrios: {selectedZone.barrios.join(', ')}
-                        </p>
-                      )}
-                      {!meetsMinimum && (
-                        <p className="text-xs text-destructive">
-                          Pedido mínimo para esta zona: ${pedidoMinimo}
-                        </p>
-                      )}
-                    </div>
+                  {/* Google Places Autocomplete */}
+                  <AddressAutocomplete
+                    apiKey={googleApiKey ?? null}
+                    onSelect={handleAddressSelect}
+                    selectedAddress={deliveryAddress}
+                  />
+
+                  {/* Dynamic delivery cost display */}
+                  {calcLoading && <DeliveryCostLoading />}
+                  {deliveryCalc && deliveryCalc.available && deliveryCalc.cost != null && (
+                    <DeliveryCostDisplay
+                      cost={deliveryCalc.cost}
+                      distanceKm={deliveryCalc.distance_km!}
+                      estimatedDeliveryMin={deliveryCalc.estimated_delivery_min!}
+                      disclaimer={deliveryCalc.disclaimer}
+                    />
+                  )}
+                  {deliveryCalc && !deliveryCalc.available && (
+                    <DeliveryUnavailable
+                      onSwitchToPickup={() => {
+                        cart.setTipoServicio('retiro');
+                        setDeliveryAddress(null);
+                        setDeliveryCalc(null);
+                      }}
+                      onChangeAddress={() => {
+                        setDeliveryAddress(null);
+                        setDeliveryCalc(null);
+                      }}
+                    />
                   )}
 
                   {/* Saved addresses picker */}
-                  {savedAddresses.length > 0 && (
+                  {savedAddresses.length > 0 && !deliveryAddress && (
                     <div className="space-y-1.5">
                       <Label className="text-xs">Dirección guardada</Label>
                       <Select
@@ -593,18 +609,6 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                   )}
 
                   <div className="space-y-2">
-                    <div>
-                      <Label htmlFor="checkout-dir" className="text-xs">Dirección *</Label>
-                      <Input
-                        id="checkout-dir"
-                        value={direccion}
-                        onChange={e => setDireccion(e.target.value)}
-                        onBlur={() => handleBlur('direccion')}
-                        placeholder="Av. Colón 1234"
-                        className={`mt-1 ${touched.direccion && errors.direccion ? 'border-destructive' : ''}`}
-                      />
-                      {touched.direccion && <FieldError error={errors.direccion} />}
-                    </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <Label htmlFor="checkout-piso" className="text-xs">Piso / Depto</Label>

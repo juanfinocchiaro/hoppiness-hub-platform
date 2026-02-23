@@ -1,11 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Instagram } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
-import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
-import { useAuthModal } from '@/contexts/AuthModalContext';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 
-// TikTok icon (not available in lucide-react)
 function TikTokIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -14,7 +10,6 @@ function TikTokIcon({ className }: { className?: string }) {
   );
 }
 
-// Spotify icon
 function SpotifyIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -24,16 +19,10 @@ function SpotifyIcon({ className }: { className?: string }) {
 }
 
 export function PublicFooter() {
-  const { user } = useAuth();
-  const { canAccessLocalPanel, canAccessBrandPanel } = usePermissionsWithImpersonation();
-  const { openAuthModal } = useAuthModal();
-  const isStaff = canAccessLocalPanel || canAccessBrandPanel;
-
   return (
     <footer className="bg-foreground text-background py-12 px-4">
       <div className="container mx-auto max-w-6xl">
         <div className="grid md:grid-cols-4 gap-8 mb-8">
-          {/* Logo y descripción */}
           <div>
             <img src={logoHoppiness} alt="Hoppiness Club" className="w-16 h-16 mb-4" />
             <p className="text-background/70 text-sm">
@@ -41,7 +30,6 @@ export function PublicFooter() {
             </p>
           </div>
 
-          {/* Enlaces principales */}
           <div>
             <h4 className="font-bold mb-4 font-brand">ENLACES</h4>
             <div className="space-y-2 text-sm">
@@ -54,48 +42,40 @@ export function PublicFooter() {
               <Link to="/contacto" className="block text-background/70 hover:text-background">Contacto</Link>
             </div>
           </div>
-          {/* Sumate */}
+
           <div>
             <h4 className="font-bold mb-4 font-brand">SUMATE</h4>
             <div className="space-y-2 text-sm">
               <Link to="/franquicias" className="block text-background/70 hover:text-background">Abrí tu Franquicia</Link>
               <Link to="/contacto?asunto=empleo" className="block text-background/70 hover:text-background">Trabajá con nosotros</Link>
               <Link to="/contacto?asunto=proveedor" className="block text-background/70 hover:text-background">Proveedores</Link>
-              {user ? (
-                <Link to={isStaff ? '/cuenta' : '/pedir'} className="block text-background/70 hover:text-background">
-                  {isStaff ? 'Mi Trabajo' : 'Mi Cuenta'}
-                </Link>
-              ) : (
-                <button onClick={() => openAuthModal()} className="block text-background/70 hover:text-background text-sm text-left">Ingresar</button>
-              )}
             </div>
           </div>
 
-          {/* Redes sociales */}
           <div>
             <h4 className="font-bold mb-4 font-brand">SEGUINOS</h4>
             <div className="space-y-3">
-              <a 
-                href="https://instagram.com/hoppinessclub" 
-                target="_blank" 
+              <a
+                href="https://instagram.com/hoppinessclub"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-background/70 hover:text-background text-sm"
               >
                 <Instagram className="w-5 h-5" />
                 @hoppinessclub
               </a>
-              <a 
-                href="https://tiktok.com/@hoppinessclub" 
-                target="_blank" 
+              <a
+                href="https://tiktok.com/@hoppinessclub"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-background/70 hover:text-background text-sm"
               >
                 <TikTokIcon className="w-5 h-5" />
                 @hoppinessclub
               </a>
-              <a 
-                href="https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M" 
-                target="_blank" 
+              <a
+                href="https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-background/70 hover:text-background text-sm"
               >
@@ -109,7 +89,6 @@ export function PublicFooter() {
           </div>
         </div>
 
-        {/* Bottom */}
         <div className="border-t border-background/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-background/50 text-sm">
           <p>© {new Date().getFullYear()} Hoppiness Club. Todos los derechos reservados.</p>
         </div>

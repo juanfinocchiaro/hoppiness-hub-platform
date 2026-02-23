@@ -9,10 +9,7 @@ import { BranchLanding } from '@/components/webapp/BranchLanding';
 import { WebappMenuView } from '@/components/webapp/WebappMenuView';
 import { CartBar } from '@/components/webapp/CartBar';
 import { CartSheet } from '@/components/webapp/CartSheet';
-import { CartSidePanel } from '@/components/webapp/CartSidePanel';
 import { MisPedidosSheet } from '@/components/webapp/MisPedidosSheet';
-import { PerfilSheet } from '@/components/webapp/PerfilSheet';
-import { DireccionesSheet } from '@/components/webapp/DireccionesSheet';
 import { ProductCustomizeSheet } from '@/components/webapp/ProductCustomizeSheet';
 import { SEO } from '@/components/SEO';
 import { Loader2 } from 'lucide-react';
@@ -42,35 +39,14 @@ export default function PedirPage() {
     }
   }, [menuItems]);
 
-  // Skip landing when store is open — go straight to menu
-  const storeIsOpen = data?.config?.estado === 'abierto';
-  const hasOnlyOneService = data?.config
-    ? [data.config.retiro_habilitado, data.config.delivery_habilitado, data.config.comer_aca_habilitado].filter(Boolean).length === 1
-    : false;
   const [step, setStep] = useState<'landing' | 'menu'>('landing');
   const [cartOpen, setCartOpen] = useState(false);
   const [cartInitialStep, setCartInitialStep] = useState<'cart' | 'checkout'>('cart');
   const [externalTrackingCode, setExternalTrackingCode] = useState<string | null>(null);
   const [trackingTrigger, setTrackingTrigger] = useState(0);
   const [misPedidosOpen, setMisPedidosOpen] = useState(false);
-  const [perfilOpen, setPerfilOpen] = useState(false);
-  const [direccionesOpen, setDireccionesOpen] = useState(false);
 
-  // Auto-skip landing when store is open
-  useEffect(() => {
-    if (!data?.config) return;
-    if (storeIsOpen && step === 'landing') {
-      const config = data.config;
-      if (config.retiro_habilitado) {
-        cart.setTipoServicio('retiro');
-      } else if (config.delivery_habilitado) {
-        cart.setTipoServicio('delivery');
-      } else if (config.comer_aca_habilitado) {
-        cart.setTipoServicio('comer_aca');
-      }
-      setStep('menu');
-    }
-  }, [data?.config, storeIsOpen]);
+  // Always show landing first so user can choose service (Retiro/Delivery/Comer acá) before menu
   const [customizeItem, setCustomizeItem] = useState<WebappMenuItem | null>(null);
 
   // Deep linking: auto-open product from ?item= query param
@@ -97,12 +73,22 @@ export default function PedirPage() {
     }
   }, [searchParams]);
 
-  // Open CartSheet on mobile ONLY when side panel is not visible (Bug 7F fix)
+  // Open CartSheet when user wants to view tracking (e.g. "Ver estado" or ?tracking=)
   useEffect(() => {
-    if (externalTrackingCode && !showSidePanel) {
+    if (externalTrackingCode) {
       setCartOpen(true);
     }
   }, [externalTrackingCode, trackingTrigger]);
+
+  // Auto-open cart sheet when user adds first item ("abrirse al estar llenandolo")
+  const prevCartCount = useRef(cart.totalItems);
+  useEffect(() => {
+    if (cart.totalItems >= 1 && prevCartCount.current === 0) {
+      setCartInitialStep('cart');
+      setCartOpen(true);
+    }
+    prevCartCount.current = cart.totalItems;
+  }, [cart.totalItems]);
 
   if (isLoading) {
     return (
@@ -178,8 +164,6 @@ export default function PedirPage() {
 
   const isDelivery = cart.tipoServicio === 'delivery';
   const costoEnvio = isDelivery ? (config.delivery_costo ?? 0) : 0;
-  const hasActiveTracking = !!localStorage.getItem('hoppiness_last_tracking') || !!externalTrackingCode;
-  const showSidePanel = step === 'menu';
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -210,30 +194,16 @@ export default function PedirPage() {
               onProductClick={handleProductClick}
               onBack={() => setStep('landing')}
               onServiceChange={(tipo) => cart.setTipoServicio(tipo)}
-              cartPanelVisible={showSidePanel}
               onShowTracking={(code) => {
                 setExternalTrackingCode(code);
                 setTrackingTrigger(prev => prev + 1);
               }}
-              onMisPedidos={() => setMisPedidosOpen(true)}
-              onMisDirecciones={() => setDireccionesOpen(true)}
-              onMiPerfil={() => setPerfilOpen(true)}
-            />
-            {/* Desktop side cart panel — sticky alongside menu */}
-            <CartSidePanel
-              cart={cart}
-              costoEnvio={costoEnvio}
-              branchId={branch.id}
-              branchName={branch.name}
-              mpEnabled={mpEnabled}
-              suggestedItems={menuItems || []}
-              onAddSuggested={(item) => cart.quickAdd(item.id, item.nombre, item.precio_base, item.imagen_url)}
-              externalTrackingCode={externalTrackingCode}
-              trackingTrigger={trackingTrigger}
+              onOpenCart={handleOpenCartMobile}
+              hasCartItems={cart.totalItems > 0}
             />
           </div>
 
-          {/* Mobile cart bar */}
+          {/* Cart bar (mobile + desktop) — opens CartSheet */}
           {cart.totalItems > 0 && (
             <CartBar
               totalItems={cart.totalItems}
@@ -260,9 +230,6 @@ export default function PedirPage() {
             onShowTracking={handleMisPedidosTrack}
             currentBranchSlug={branchSlug}
           />
-
-          <PerfilSheet open={perfilOpen} onOpenChange={setPerfilOpen} />
-          <DireccionesSheet open={direccionesOpen} onOpenChange={setDireccionesOpen} />
 
           <ProductCustomizeSheet
             item={customizeItem}

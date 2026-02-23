@@ -49,8 +49,8 @@ export function RequireBrandPermission({
     return <>{children}</>;
   }
 
-  // Verificar el permiso específico
-  const hasPermission = brand[permission];
+  // Verificar el permiso específico (defensivo por si brand o la clave no existen)
+  const hasPermission = brand?.[permission] === true;
 
   if (!hasPermission) {
     return (

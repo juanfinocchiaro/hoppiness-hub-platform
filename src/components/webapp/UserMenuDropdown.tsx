@@ -1,12 +1,13 @@
 /**
- * UserMenuDropdown — Avatar/user menu in the store header.
- * Shows profile, orders, addresses for everyone.
- * Shows Mi Trabajo / Mi Local / Mi Marca links for staff/admins.
+ * UserMenuDropdown — Unified avatar/user menu used across the entire app.
+ * Structure: identity → personal (pedidos, direcciones, perfil) → La Tienda →
+ * work panels (Mi Trabajo, Mi Local, Mi Marca) when user has roles → Cerrar sesión last.
  */
-import { User, Package, MapPin, LogOut, Store, Building2, Briefcase } from 'lucide-react';
+import { User, Package, MapPin, LogOut, Store, Building2, Briefcase, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthModal } from '@/contexts/AuthModalContext';
+import { useAccountSheets } from '@/contexts/AccountSheetsContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,18 +19,13 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-interface UserMenuDropdownProps {
-  onMisPedidos?: () => void;
-  onMisDirecciones?: () => void;
-  onMiPerfil?: () => void;
-}
-
-export function UserMenuDropdown({ onMisPedidos, onMisDirecciones, onMiPerfil }: UserMenuDropdownProps = {}) {
+export function UserMenuDropdown() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { openAuthModal } = useAuthModal();
+  const { openMisPedidos, openDirecciones, openPerfil } = useAccountSheets();
 
-  // Check roles for staff links
   const { data: roles } = useQuery({
     queryKey: ['user-menu-roles', user?.id],
     queryFn: async () => {
@@ -49,8 +45,9 @@ export function UserMenuDropdown({ onMisPedidos, onMisDirecciones, onMiPerfil }:
   const canAccessLocal = hasLocalRole || !!roles?.brand_role;
   const canAccessBrand = !!roles?.brand_role;
   const firstBranchId = roles?.branch_ids?.[0];
-  // Staff without Mi Local/Mi Marca access still has "Mi Trabajo" (/cuenta)
-  const showMiTrabajo = hasLocalRole && !canAccessBrand && !firstBranchId;
+  const showMiTrabajo = canAccessLocal || canAccessBrand;
+
+  const isInStore = location.pathname.startsWith('/pedir');
 
   const initials = user?.user_metadata?.full_name
     ? user.user_metadata.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
@@ -86,43 +83,46 @@ export function UserMenuDropdown({ onMisPedidos, onMisDirecciones, onMiPerfil }:
           </p>
           <p className="text-xs text-muted-foreground truncate">{user.email}</p>
         </div>
-        {(onMisPedidos || onMisDirecciones || onMiPerfil) && <DropdownMenuSeparator />}
-        {onMisPedidos && (
-          <DropdownMenuItem onClick={onMisPedidos}>
-            <Package className="w-4 h-4 mr-2" />
-            Mis pedidos
-          </DropdownMenuItem>
-        )}
-        {onMisDirecciones && (
-          <DropdownMenuItem onClick={onMisDirecciones}>
-            <MapPin className="w-4 h-4 mr-2" />
-            Mis direcciones
-          </DropdownMenuItem>
-        )}
-        {onMiPerfil && (
-          <DropdownMenuItem onClick={onMiPerfil}>
-            <User className="w-4 h-4 mr-2" />
-            Mi perfil
+
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={openMisPedidos}>
+          <Package className="w-4 h-4 mr-2" />
+          Mis pedidos
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={openDirecciones}>
+          <MapPin className="w-4 h-4 mr-2" />
+          Mis direcciones
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={openPerfil}>
+          <User className="w-4 h-4 mr-2" />
+          Mi perfil
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+        {!isInStore && (
+          <DropdownMenuItem onClick={() => navigate('/pedir')}>
+            <ShoppingBag className="w-4 h-4 mr-2" />
+            La Tienda
           </DropdownMenuItem>
         )}
 
-        {(canAccessLocal || canAccessBrand || showMiTrabajo) && <DropdownMenuSeparator />}
+        {(showMiTrabajo || canAccessLocal || canAccessBrand) && <DropdownMenuSeparator />}
         {showMiTrabajo && (
           <DropdownMenuItem onClick={() => navigate('/cuenta')}>
             <Briefcase className="w-4 h-4 mr-2" />
-            Ir a Mi Trabajo
+            Mi Trabajo
           </DropdownMenuItem>
         )}
         {canAccessLocal && (
           <DropdownMenuItem onClick={() => navigate(firstBranchId ? `/milocal/${firstBranchId}` : '/milocal')}>
             <Store className="w-4 h-4 mr-2" />
-            Ir a Mi Local
+            Mi Local
           </DropdownMenuItem>
         )}
         {canAccessBrand && (
           <DropdownMenuItem onClick={() => navigate('/mimarca')}>
             <Building2 className="w-4 h-4 mr-2" />
-            Ir a Mi Marca
+            Mi Marca
           </DropdownMenuItem>
         )}
 

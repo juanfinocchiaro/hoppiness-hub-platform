@@ -33,6 +33,10 @@ interface CreateWebappOrderBody {
   cliente_notas?: string | null;
   metodo_pago: "mercadopago" | "efectivo";
   delivery_zone_id?: string | null;
+  delivery_lat?: number | null;
+  delivery_lng?: number | null;
+  delivery_cost_calculated?: number | null;
+  delivery_distance_km?: number | null;
   items: OrderItemInput[];
 }
 
@@ -100,6 +104,8 @@ Deno.serve(async (req) => {
       !body.cliente_direccion?.trim()
     )
       return json(400, { error: "La dirección es requerida para delivery" });
+    if (body.tipo_servicio === "comer_aca")
+      return json(400, { error: "Comer acá no disponible por web" });
 
     // ── Verify branch & webapp config ───────────────────────────
     const { data: config, error: cfgErr } = await supabase
@@ -123,8 +129,6 @@ Deno.serve(async (req) => {
       return json(400, { error: "Delivery no disponible en este local" });
     if (body.tipo_servicio === "retiro" && !config.retiro_habilitado)
       return json(400, { error: "Retiro no disponible en este local" });
-    if (body.tipo_servicio === "comer_aca" && !config.comer_aca_habilitado)
-      return json(400, { error: "Comer acá no disponible en este local" });
 
     // ── Resolve item prices & station server-side ───────────────
     const itemIds = body.items.map((i) => i.item_carta_id);
@@ -156,14 +160,17 @@ Deno.serve(async (req) => {
       subtotal += (item.precio_unitario + extrasTotal) * item.cantidad;
     }
 
-    // ── Resolve delivery cost from zone or flat rate ────────────
+    // ── Resolve delivery cost ──────────────────────────────────
     let costoDelivery = 0;
     let deliveryZoneId: string | null = null;
     let tiempoEstimadoZona: number | null = null;
 
     if (body.tipo_servicio === "delivery") {
-      if (body.delivery_zone_id) {
-        // Look up zone
+      if (body.delivery_cost_calculated != null && body.delivery_lat != null) {
+        // Dynamic pricing: cost pre-calculated by calculate-delivery edge function
+        costoDelivery = body.delivery_cost_calculated;
+      } else if (body.delivery_zone_id) {
+        // Legacy zone-based pricing
         const { data: zone, error: zoneErr } = await supabase
           .from("delivery_zones")
           .select("id, costo_envio, pedido_minimo, tiempo_estimado_min, is_active")
@@ -186,7 +193,6 @@ Deno.serve(async (req) => {
           });
         }
       } else {
-        // Fallback: flat rate from config
         costoDelivery = config.delivery_costo ?? 0;
 
         if (
@@ -253,6 +259,9 @@ Deno.serve(async (req) => {
       direccion_entrega: body.cliente_direccion ?? null,
       cliente_notas: body.cliente_notas ?? null,
       delivery_zone_id: deliveryZoneId,
+      delivery_lat: body.delivery_lat ?? null,
+      delivery_lng: body.delivery_lng ?? null,
+      delivery_distance_km: body.delivery_distance_km ?? null,
       webapp_tracking_code: trackingCode,
       tiempo_prometido: tiempoEstimado
         ? new Date(Date.now() + tiempoEstimado * 60_000).toISOString()
