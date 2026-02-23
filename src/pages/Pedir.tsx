@@ -163,8 +163,21 @@ export default function Pedir() {
   );
 }
 
+function getTodayHoursLabel(publicHours: Record<string, { opens?: string; closes?: string; closed?: boolean }> | null): string | null {
+  if (!publicHours) return null;
+  const jsDay = new Date().getDay(); // 0=Sun
+  const idx = jsDay === 0 ? 6 : jsDay - 1; // 0=Mon..6=Sun
+  const day = publicHours[String(idx)];
+  if (!day) return null;
+  if (day.closed) return 'Hoy: Cerrado';
+  const fmt = (t?: string) => (t || '').replace(/^(\d{1,2}:\d{2})(:\d{2})?$/, '$1');
+  if (day.opens && day.closes) return `Hoy: ${fmt(day.opens)} - ${fmt(day.closes)}`;
+  return null;
+}
+
 function BranchCard({ branch }: { branch: BranchWithWebapp }) {
   const hasWebapp = branch.webapp_activa && branch.slug;
+  const todayLabel = getTodayHoursLabel(branch.public_hours);
   const isOpen = branch.estado === 'abierto';
   const isPaused = branch.estado === 'pausado';
   const isClosed = !isOpen && !isPaused;
@@ -227,6 +240,10 @@ function BranchCard({ branch }: { branch: BranchWithWebapp }) {
             </span>
           )}
         </div>
+
+        {todayLabel && (
+          <p className="text-xs text-muted-foreground font-medium">{todayLabel}</p>
+        )}
 
         <p className="text-muted-foreground text-sm flex items-center gap-1.5">
           <MapPin className="w-3.5 h-3.5 shrink-0" />
