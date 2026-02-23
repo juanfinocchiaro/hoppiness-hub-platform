@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import { ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { ReactNode, isValidElement, createElement } from 'react';
+import { ReactNode, createElement } from 'react';
 
 interface BreadcrumbItem {
   label: string;
@@ -11,7 +11,7 @@ interface BreadcrumbItem {
 interface PageHeaderProps {
   title: string;
   subtitle?: string;
-  icon?: ReactNode;
+  icon?: ReactNode | React.ComponentType<any>;
   breadcrumb?: BreadcrumbItem[];
   actions?: ReactNode;
   variant?: 'default' | 'compact';
@@ -66,11 +66,9 @@ export function PageHeader({
           >
             {icon && (
             <span className="shrink-0">
-              {isValidElement(icon)
-                ? icon
-                : typeof icon === 'function' || (typeof icon === 'object' && icon !== null && '$$typeof' in icon)
-                  ? createElement(icon as React.ComponentType)
-                  : icon}
+              {typeof icon === 'function'
+                ? createElement(icon, { className: 'w-6 h-6' })
+                : icon}
             </span>
           )}
             {title}

@@ -2,12 +2,43 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export function useItemsCarta() {
+export function useItemsCarta(branchId?: string) {
   return useQuery({
-    queryKey: ['items-carta'],
+    queryKey: ['items-carta', branchId ?? 'all'],
     refetchOnMount: 'always',
     staleTime: 0,
     queryFn: async () => {
+      // If branchId provided, filter by branch_item_availability
+      if (branchId) {
+        const { data: availability } = await supabase
+          .from('branch_item_availability' as any)
+          .select('item_carta_id')
+          .eq('branch_id', branchId)
+          .eq('available', true)
+          .eq('available_salon', true)
+          .eq('out_of_stock', false);
+
+        const hasRows = availability && availability.length > 0;
+
+        if (hasRows) {
+          const ids = (availability as any[]).map((a: any) => a.item_carta_id);
+          const { data, error } = await supabase
+            .from('items_carta')
+            .select(`
+              *,
+              menu_categorias:categoria_carta_id(id, nombre, orden),
+              rdo_categories:rdo_category_code(code, name)
+            `)
+            .eq('activo', true)
+            .is('deleted_at', null)
+            .in('id', ids)
+            .order('orden');
+          if (error) throw error;
+          return data;
+        }
+        // Fallback: no availability rows → show all
+      }
+
       const { data, error } = await supabase
         .from('items_carta')
         .select(`

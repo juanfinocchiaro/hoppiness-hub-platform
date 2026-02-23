@@ -86,6 +86,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
     estimated_delivery_min: number | null;
     disclaimer: string | null;
     reason?: string;
+    suggested_branch?: { id: string; name: string; slug: string } | null;
   } | null>(null);
   const [calcLoading, setCalcLoading] = useState(false);
 
@@ -576,6 +577,8 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                         setDeliveryAddress(null);
                         setDeliveryCalc(null);
                       }}
+                      reason={deliveryCalc.reason}
+                      suggestedBranch={deliveryCalc.suggested_branch}
                     />
                   )}
 

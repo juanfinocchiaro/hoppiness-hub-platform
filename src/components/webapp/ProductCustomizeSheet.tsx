@@ -4,7 +4,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Minus, Plus, ShoppingCart, AlertCircle } from 'lucide-react';
+import { Minus, Plus, ShoppingCart } from 'lucide-react';
 import { useWebappItemExtras, useWebappItemRemovables } from '@/hooks/useWebappMenu';
 import type { WebappMenuItem, CartItem, CartItemModifier } from '@/types/webapp';
 
@@ -35,30 +35,16 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
   const [extras, setExtras] = useState<CartItemModifier[]>([]);
   const [removidos, setRemovidos] = useState<string[]>([]);
   const [notas, setNotas] = useState('');
-  const { data: gruposOpcionales } = useWebappItemExtras(item.id);
+  const { data: extrasList } = useWebappItemExtras(item.id);
   const { data: removables } = useWebappItemRemovables(item.id);
 
   const extrasTotal = extras.reduce((s, e) => s + e.precio, 0);
   const total = (item.precio_base + extrasTotal) * cantidad;
 
-  const toggleExtra = (extra: CartItemModifier, grupoId: string, maxSel: number | null) => {
+  const toggleExtra = (extra: CartItemModifier) => {
     setExtras(prev => {
       const exists = prev.find(e => e.id === extra.id);
       if (exists) return prev.filter(e => e.id !== extra.id);
-      // If max_selecciones is set, enforce it within this group
-      if (maxSel && maxSel > 0) {
-        const grupoExtras = prev.filter(e => {
-          // Find which group this extra belongs to
-          const grupo = gruposOpcionales?.find((g: any) =>
-            g.items?.some((i: any) => i.id === e.id)
-          );
-          return grupo?.id === grupoId;
-        });
-        if (grupoExtras.length >= maxSel) {
-          // Remove oldest in group, add new
-          return [...prev.filter(e => e.id !== grupoExtras[0].id), extra];
-        }
-      }
       return [...prev, extra];
     });
   };
@@ -69,21 +55,7 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
     );
   };
 
-  // Calculate missing required selections
-  const missingRequired = (gruposOpcionales || [])
-    .filter((g: any) => g.es_obligatorio)
-    .filter((g: any) => {
-      const maxSel = g.max_selecciones || 1;
-      const selected = extras.filter(e =>
-        g.items?.some((i: any) => i.id === e.id)
-      ).length;
-      return selected < maxSel;
-    });
-
-  const canAdd = missingRequired.length === 0;
-
   const handleAdd = () => {
-    if (!canAdd) return;
     onAdd({
       itemId: item.id,
       nombre: item.nombre,
@@ -123,83 +95,46 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
           <p className="text-lg font-bold text-primary mt-2">{formatPrice(item.precio_base)}</p>
         </div>
 
-        {/* Extras groups */}
-        {gruposOpcionales && gruposOpcionales.length > 0 && (
-          <div className="space-y-4">
-            {gruposOpcionales.map((grupo: any) => {
-              const maxSel = grupo.max_selecciones || null;
-              const isRequired = grupo.es_obligatorio;
-              const selectedCount = extras.filter(e =>
-                grupo.items?.some((i: any) => i.id === e.id)
-              ).length;
-              const isFulfilled = !isRequired || selectedCount >= (maxSel || 1);
-
-              return (
-                <div key={grupo.id}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-sm font-bold text-foreground">{grupo.nombre}</h3>
-                    {isRequired ? (
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        isFulfilled
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-destructive/10 text-destructive'
-                      }`}>
-                        Obligatorio
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                        Opcional
-                      </span>
+        {/* Extras - flat list from item_extra_asignaciones */}
+        {extrasList && extrasList.length > 0 && (
+          <div>
+            <h3 className="text-sm font-bold text-foreground mb-2">Extras</h3>
+            <div className="space-y-1.5">
+              {extrasList.map((extra: any) => {
+                const isSelected = extras.some(e => e.id === extra.id);
+                return (
+                  <button
+                    key={extra.id}
+                    onClick={() => toggleExtra({ id: extra.id, nombre: extra.nombre, precio: extra.precio, tipo: 'extra' })}
+                    className={`
+                      w-full flex items-center justify-between p-3 rounded-lg border text-left transition-colors
+                      ${isSelected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}
+                    `}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors
+                        ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground/30'}`}>
+                        {isSelected && <span className="text-primary-foreground text-xs">✓</span>}
+                      </div>
+                      <span className="text-sm">{extra.nombre}</span>
+                    </div>
+                    {extra.precio > 0 && (
+                      <span className="text-xs text-muted-foreground">+{formatPrice(extra.precio)}</span>
                     )}
-                    {maxSel && (
-                      <span className="text-[10px] text-muted-foreground">
-                        {selectedCount}/{maxSel}
-                      </span>
-                    )}
-                  </div>
-                  <div className="space-y-1.5">
-                    {(grupo.items || []).map((opcion: any) => {
-                      const nombre = opcion.insumos?.nombre || opcion.preparaciones?.nombre || 'Extra';
-                      const precio = opcion.costo_unitario || opcion.insumos?.costo_por_unidad_base || 0;
-                      const extraId = opcion.id;
-                      const isSelected = extras.some(e => e.id === extraId);
-
-                      return (
-                        <button
-                          key={extraId}
-                          onClick={() => toggleExtra({ id: extraId, nombre, precio, tipo: 'extra' }, grupo.id, maxSel)}
-                          className={`
-                            w-full flex items-center justify-between p-3 rounded-lg border text-left transition-colors
-                            ${isSelected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}
-                          `}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors
-                              ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground/30'}`}>
-                              {isSelected && <span className="text-primary-foreground text-xs">✓</span>}
-                            </div>
-                            <span className="text-sm">{nombre}</span>
-                          </div>
-                          {precio > 0 && (
-                            <span className="text-xs text-muted-foreground">+{formatPrice(precio)}</span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 
-        {/* Removables */}
+        {/* Removables - from item_removibles */}
         {removables && removables.length > 0 && (
           <div>
             <h3 className="text-sm font-bold text-foreground mb-2">¿Querés sacar algo?</h3>
             <div className="space-y-2">
               {removables.map((comp: any) => {
-                const nombre = comp.insumos?.nombre || comp.preparaciones?.nombre || 'Ingrediente';
+                const nombre = comp.nombre;
                 const isRemoved = removidos.includes(nombre);
                 return (
                   <div
@@ -237,7 +172,6 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
 
       {/* Footer */}
       <div className="border-t px-5 py-4 bg-background shrink-0">
-        {/* Price breakdown when extras selected */}
         {extrasTotal > 0 && (
           <div className="text-xs text-muted-foreground mb-2 space-y-0.5">
             <div className="flex justify-between">
@@ -279,13 +213,9 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
           size="lg"
           className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-base gap-2"
           onClick={handleAdd}
-          disabled={!canAdd}
         >
           <ShoppingCart className="w-4 h-4" />
-          {canAdd
-            ? `Agregar al carrito · ${formatPrice(total)}`
-            : `Completá ${missingRequired.length} selección${missingRequired.length > 1 ? 'es' : ''}`
-          }
+          Agregar al carrito · {formatPrice(total)}
         </Button>
       </div>
     </div>
@@ -301,7 +231,6 @@ export function ProductCustomizeSheet({ item, onClose, onAdd }: Props) {
     if (!open) onClose();
   };
 
-  // Desktop: Dialog modal
   if (isDesktop) {
     return (
       <Dialog open={!!item} onOpenChange={handleOpenChange}>
@@ -312,7 +241,6 @@ export function ProductCustomizeSheet({ item, onClose, onAdd }: Props) {
     );
   }
 
-  // Mobile: Sheet from bottom
   return (
     <Sheet open={!!item} onOpenChange={handleOpenChange}>
       <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl px-0 flex flex-col">
