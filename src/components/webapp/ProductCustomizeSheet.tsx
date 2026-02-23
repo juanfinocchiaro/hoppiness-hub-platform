@@ -332,7 +332,7 @@ export function ProductCustomizeSheet({ item, onClose, onAdd }: Props) {
   if (isDesktop) {
     return (
       <Dialog open={!!item} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-lg p-0 overflow-hidden max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-lg p-0 overflow-hidden max-h-[90vh] h-[90vh] flex flex-col">
           <ProductDetailContent item={item} onAdd={onAdd} onClose={onClose} />
         </DialogContent>
       </Dialog>
