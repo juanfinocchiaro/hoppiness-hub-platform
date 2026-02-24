@@ -10,8 +10,6 @@ import { AccountSheetsProvider } from "@/contexts/AccountSheetsContext";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { AdminRoute, LocalRoute, RequireQRAccess, RequireAuth } from "@/components/guards";
-import UserFingerprint from "@/components/ui/UserFingerprint";
-import VersionBadge from "@/components/ui/VersionBadge";
 import { FloatingOrderChat } from "@/components/webapp/FloatingOrderChat";
 import { Loader2 } from "lucide-react";
 
@@ -157,10 +155,6 @@ const App = () => (
         <ImpersonationProvider>
           <AuthModalProvider>
           <Sonner />
-          <div className="pointer-events-none fixed bottom-2 right-2 z-[60] flex flex-col items-end gap-1">
-            <VersionBadge />
-            <UserFingerprint />
-          </div>
           <BrowserRouter>
             <AccountSheetsProvider>
             <FloatingOrderChat />
