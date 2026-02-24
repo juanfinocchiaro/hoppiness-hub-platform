@@ -20,7 +20,7 @@ interface BranchWithWebapp {
   opening_time: string | null;
   closing_time: string | null;
   public_hours: Record<string, { opens?: string; closes?: string; closed?: boolean }> | null;
-  google_place_id: string | null;
+  
   webapp_activa: boolean;
   estado: string;
   delivery_habilitado: boolean;
@@ -78,7 +78,7 @@ function useBranchesForPedir() {
     queryFn: async () => {
       const { data: branches, error: bErr } = await supabase
         .from('branches_public')
-        .select('id, name, address, city, slug, public_status, cover_image_url, latitude, longitude, opening_time, closing_time, public_hours, google_place_id')
+        .select('id, name, address, city, slug, public_status, cover_image_url, latitude, longitude, opening_time, closing_time, public_hours')
         .in('public_status', ['active', 'coming_soon'])
         .order('name');
       if (bErr) throw bErr;
@@ -194,9 +194,7 @@ function BranchCard({ branch }: { branch: BranchWithWebapp }) {
   const isClosed = !isOpen && !isPaused;
   const openBySchedule = isBranchOpenBySchedule(branch);
   const hasCoords = branch.latitude != null && branch.longitude != null;
-  const mapsUrl = branch.google_place_id
-    ? `https://www.google.com/maps/place/?q=place_id:${branch.google_place_id}`
-    : hasCoords
+  const mapsUrl = hasCoords
       ? `https://maps.google.com/?q=${branch.latitude},${branch.longitude}`
       : `https://maps.google.com/?q=${encodeURIComponent(branch.address + ', ' + branch.city)}`;
 

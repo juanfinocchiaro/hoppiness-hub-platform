@@ -23,7 +23,7 @@ const timelineEvents = [
   { year: '2021', title: 'Sponsor oficial', subtitle: 'Anfitriones del lanzamiento', isAward: false },
   { year: '2022', title: 'Campeones', subtitle: 'Mejor Clásica', isAward: true },
   { year: '2024', title: 'Doble campeones', subtitle: 'Mejor Clásica + Gourmet', isAward: true },
-  { year: '2025', title: 'Mejor Hamburguesería', subtitle: 'de Córdoba', isAward: true },
+  { year: '2024', title: 'Mejor Hamburguesería', subtitle: 'de Córdoba', isAward: true },
 ];
 
 const coveringMedia = ['Circuito Gastronómico', 'InfoNegocios', 'La Voz del Interior'];

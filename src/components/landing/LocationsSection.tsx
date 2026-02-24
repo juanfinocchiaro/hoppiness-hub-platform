@@ -60,7 +60,8 @@ interface BranchPublic {
   closing_time: string | null;
   public_status: PublicStatus;
   public_hours: PublicHours | null;
-  google_place_id: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 const DAYS_FULL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -127,7 +128,7 @@ export function LocationsSection() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('branches_public')
-        .select('id, name, address, city, opening_time, closing_time, public_status, public_hours, google_place_id')
+        .select('id, name, address, city, opening_time, closing_time, public_status, public_hours, latitude, longitude')
         .order('name');
       
       if (error) throw error;
@@ -140,8 +141,8 @@ export function LocationsSection() {
   const comingSoonBranches = branches?.filter(b => b.public_status === 'coming_soon') || [];
 
   const getGoogleMapsUrl = (branch: BranchPublic) => {
-    if (branch.google_place_id) {
-      return `https://www.google.com/maps/place/?q=place_id:${branch.google_place_id}`;
+    if (branch.latitude != null && branch.longitude != null) {
+      return `https://maps.google.com/?q=${branch.latitude},${branch.longitude}`;
     }
     return `https://maps.google.com/?q=Hoppiness+${encodeURIComponent(branch.name)}+${encodeURIComponent(branch.city)}`;
   };
