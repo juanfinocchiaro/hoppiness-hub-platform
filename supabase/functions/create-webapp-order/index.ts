@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
     const itemIds = body.items.map((i) => i.item_carta_id);
     const { data: cartaItems, error: itemsErr } = await supabase
       .from("items_carta")
-      .select("id, nombre, precio_base, kitchen_station_id, disponible_webapp, kitchen_stations(name)")
+      .select("id, nombre, precio_base, categoria_carta_id, kitchen_station_id, disponible_webapp, kitchen_stations(name)")
       .in("id", itemIds);
 
     if (itemsErr)
@@ -143,6 +143,27 @@ Deno.serve(async (req) => {
     const cartaMap = new Map(
       (cartaItems ?? []).map((ci: any) => [ci.id, ci]),
     );
+
+    // Fetch active promo prices for these items
+    const { data: promoItems } = await supabase
+      .from("promocion_items")
+      .select("item_carta_id, precio_promo, promocion_id, promociones!inner(activa, canales, fecha_inicio, fecha_fin)")
+      .in("item_carta_id", itemIds);
+
+    const promoMap = new Map<string, number>();
+    for (const pi of promoItems ?? []) {
+      const promo = (pi as any).promociones;
+      if (!promo?.activa) continue;
+      const canales: string[] = promo.canales ?? [];
+      if (canales.length > 0 && !canales.includes("webapp")) continue;
+      const now = new Date().toISOString().slice(0, 10);
+      if (promo.fecha_inicio && now < promo.fecha_inicio) continue;
+      if (promo.fecha_fin && now > promo.fecha_fin) continue;
+      const existing = promoMap.get(pi.item_carta_id);
+      if (existing == null || pi.precio_promo < existing) {
+        promoMap.set(pi.item_carta_id, pi.precio_promo);
+      }
+    }
 
     // Validate all items exist and are webapp-enabled
     for (const item of body.items) {
@@ -153,11 +174,13 @@ Deno.serve(async (req) => {
         return json(400, { error: `"${ci.nombre}" no está disponible para pedidos online` });
     }
 
-    // ── Calculate totals server-side ────────────────────────────
+    // ── Calculate totals server-side (using server prices) ─────
     let subtotal = 0;
     for (const item of body.items) {
+      const ci = cartaMap.get(item.item_carta_id)!;
+      const serverPrice = promoMap.get(item.item_carta_id) ?? ci.precio_base;
       const extrasTotal = (item.extras ?? []).reduce((s, e) => s + e.precio, 0);
-      subtotal += (item.precio_unitario + extrasTotal) * item.cantidad;
+      subtotal += (serverPrice + extrasTotal) * item.cantidad;
     }
 
     // ── Resolve delivery cost ──────────────────────────────────
@@ -166,9 +189,17 @@ Deno.serve(async (req) => {
     let tiempoEstimadoZona: number | null = null;
 
     if (body.tipo_servicio === "delivery") {
-      if (body.delivery_cost_calculated != null && body.delivery_lat != null) {
-        // Dynamic pricing: cost pre-calculated by calculate-delivery edge function
-        costoDelivery = body.delivery_cost_calculated;
+      if (body.delivery_lat != null && body.delivery_lng != null) {
+        // Re-calculate delivery cost server-side (never trust client value)
+        const { data: calcResult, error: calcErr } = await supabase.functions.invoke(
+          "calculate-delivery",
+          { body: { branch_id: body.branch_id, lat: body.delivery_lat, lng: body.delivery_lng } },
+        );
+        if (!calcErr && calcResult?.available && calcResult?.cost != null) {
+          costoDelivery = calcResult.cost;
+        } else if (body.delivery_cost_calculated != null) {
+          costoDelivery = body.delivery_cost_calculated;
+        }
       } else if (body.delivery_zone_id) {
         // Legacy zone-based pricing
         const { data: zone, error: zoneErr } = await supabase
@@ -224,14 +255,24 @@ Deno.serve(async (req) => {
     // until webhook confirms payment. Cash orders go straight to kitchen.
     const isMpPayment = body.metodo_pago === "mercadopago";
 
-    // ── Estimated time ──────────────────────────────────────────
+    // ── Estimated time (dynamic, queue-aware) ──────────────────
     let tiempoEstimado: number | null = null;
-    if (body.tipo_servicio === "delivery") {
-      tiempoEstimado = tiempoEstimadoZona ?? config.prep_time_delivery ?? config.tiempo_estimado_delivery_min ?? 40;
-    } else if (body.tipo_servicio === "retiro") {
-      tiempoEstimado = config.prep_time_retiro ?? config.tiempo_estimado_retiro_min ?? 15;
-    } else {
+    if (body.tipo_servicio === "comer_aca") {
       tiempoEstimado = config.prep_time_comer_aca ?? 15;
+    } else {
+      const tipoServ = body.tipo_servicio === "delivery" ? "delivery" : "retiro";
+      const { data: dynamicData } = await supabase.rpc("get_dynamic_prep_time", {
+        p_branch_id: body.branch_id,
+        p_tipo_servicio: tipoServ,
+      });
+      const dynamicRow = Array.isArray(dynamicData) && dynamicData[0] ? dynamicData[0] : null;
+      if (dynamicRow) {
+        tiempoEstimado = tiempoEstimadoZona ?? dynamicRow.prep_time_min;
+      } else if (body.tipo_servicio === "delivery") {
+        tiempoEstimado = tiempoEstimadoZona ?? config.prep_time_delivery ?? config.tiempo_estimado_delivery_min ?? 40;
+      } else {
+        tiempoEstimado = config.prep_time_retiro ?? config.tiempo_estimado_retiro_min ?? 15;
+      }
     }
 
     // ── Insert pedido ───────────────────────────────────────────
@@ -289,13 +330,14 @@ Deno.serve(async (req) => {
     // ── Insert pedido_items ─────────────────────────────────────
     for (const item of body.items) {
       const ci = cartaMap.get(item.item_carta_id)!;
+      const serverPrice = promoMap.get(item.item_carta_id) ?? ci.precio_base;
       const stationName =
         (ci.kitchen_stations as any)?.name ?? "armado";
       const extrasTotal = (item.extras ?? []).reduce(
         (s: number, e: { precio: number }) => s + e.precio,
         0,
       );
-      const lineSubtotal = (item.precio_unitario + extrasTotal) * item.cantidad;
+      const lineSubtotal = (serverPrice + extrasTotal) * item.cantidad;
 
       const { data: insertedItem, error: itemErr } = await supabase
         .from("pedido_items")
@@ -304,7 +346,7 @@ Deno.serve(async (req) => {
           item_carta_id: item.item_carta_id,
           nombre: item.nombre,
           cantidad: item.cantidad,
-          precio_unitario: item.precio_unitario,
+          precio_unitario: serverPrice,
           subtotal: lineSubtotal,
           estacion: stationName,
           notas: item.notas ?? null,
@@ -348,7 +390,11 @@ Deno.serve(async (req) => {
         const { error: modErr } = await supabase
           .from("pedido_item_modificadores")
           .insert(modifiers as any);
-        if (modErr) console.error("Modifier insert error:", modErr);
+        if (modErr) {
+          console.error("Modifier insert error:", modErr);
+          await supabase.from("pedidos").delete().eq("id", pedidoId);
+          return json(500, { error: "Error al guardar modificadores del pedido" });
+        }
       }
     }
 

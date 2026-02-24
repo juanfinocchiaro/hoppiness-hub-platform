@@ -60,9 +60,66 @@ interface BranchPublic {
   closing_time: string | null;
   public_status: PublicStatus;
   public_hours: PublicHours | null;
+  google_place_id: string | null;
 }
 
 const DAYS_FULL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+function formatTimeSimple(time: string) { return time; }
+
+function getHoursForDay(publicHours: PublicHours | null, openingTime?: string | null, closingTime?: string | null) {
+  const today = new Date().getDay().toString();
+  if (publicHours && publicHours[today]) {
+    const dayHours = publicHours[today];
+    if (dayHours.closed) return 'Cerrado';
+    return `${dayHours.opens}-${dayHours.closes}`;
+  }
+  if (openingTime && closingTime) {
+    const fmt = (t: string) => { const [h, m] = t.split(':'); return m === '00' ? h : `${h}:${m}`; };
+    return `${fmt(openingTime)}-${fmt(closingTime)}`;
+  }
+  return 'Consultar';
+}
+
+function HoursPopover({ branch }: { branch: BranchPublic }) {
+  const publicHours = branch.public_hours;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors">
+          <Clock className="w-4 h-4" />
+          <span>Hoy: {getHoursForDay(publicHours, branch.opening_time, branch.closing_time)}</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-3" align="end">
+        <div className="text-sm font-medium mb-2">Horarios de atención</div>
+        <div className="space-y-1 text-sm">
+          {[1, 2, 3, 4, 5, 6, 0].map((day) => {
+            const dayKey = day.toString();
+            const dayHours = publicHours?.[dayKey];
+            const isToday = new Date().getDay() === day;
+            return (
+              <div
+                key={day}
+                className={`flex justify-between py-1 ${isToday ? 'font-medium text-primary' : 'text-muted-foreground'}`}
+              >
+                <span>{DAYS_FULL[day]}</span>
+                <span>
+                  {dayHours?.closed
+                    ? 'Cerrado'
+                    : dayHours
+                      ? `${formatTimeSimple(dayHours.opens)}-${formatTimeSimple(dayHours.closes)}`
+                      : getHoursForDay(null, branch.opening_time, branch.closing_time)
+                  }
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export function LocationsSection() {
   const { data: branches, isLoading } = useQuery({
@@ -70,7 +127,7 @@ export function LocationsSection() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('branches_public')
-        .select('id, name, address, city, opening_time, closing_time, public_status, public_hours')
+        .select('id, name, address, city, opening_time, closing_time, public_status, public_hours, google_place_id')
         .order('name');
       
       if (error) throw error;
@@ -82,70 +139,14 @@ export function LocationsSection() {
   const activeBranches = branches?.filter(b => b.public_status === 'active') || [];
   const comingSoonBranches = branches?.filter(b => b.public_status === 'coming_soon') || [];
 
-  const formatTime = (time: string) => time;
-
-  const getTodayHours = (publicHours: PublicHours | null, openingTime?: string | null, closingTime?: string | null) => {
-    const today = new Date().getDay().toString();
-    if (publicHours && publicHours[today]) {
-      const dayHours = publicHours[today];
-      if (dayHours.closed) return 'Cerrado';
-      return `${formatTime(dayHours.opens)}-${formatTime(dayHours.closes)}`;
+  const getGoogleMapsUrl = (branch: BranchPublic) => {
+    if (branch.google_place_id) {
+      return `https://www.google.com/maps/place/?q=place_id:${branch.google_place_id}`;
     }
-    if (openingTime && closingTime) {
-      const formatSimple = (t: string) => {
-        const [h, m] = t.split(':');
-        return m === '00' ? h : `${h}:${m}`;
-      };
-      return `${formatSimple(openingTime)}-${formatSimple(closingTime)}`;
-    }
-    return '19:30-00:00';
-  };
-
-  const getGoogleMapsUrl = (name: string, city: string) => {
-    return `https://maps.google.com/?q=Hoppiness+${encodeURIComponent(name)}+${encodeURIComponent(city)}`;
+    return `https://maps.google.com/?q=Hoppiness+${encodeURIComponent(branch.name)}+${encodeURIComponent(branch.city)}`;
   };
 
   const totalCount = (activeBranches?.length || 0) + (comingSoonBranches?.length || 0);
-
-  const HoursPopover = ({ branch }: { branch: BranchPublic }) => {
-    const publicHours = branch.public_hours;
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors">
-            <Clock className="w-4 h-4" />
-            <span>Hoy: {getTodayHours(publicHours, branch.opening_time, branch.closing_time)}</span>
-          </button>
-        </PopoverTrigger>
-        <PopoverContent className="w-64 p-3" align="end">
-          <div className="text-sm font-medium mb-2">Horarios de atención</div>
-          <div className="space-y-1 text-sm">
-            {[1, 2, 3, 4, 5, 6, 0].map((day) => {
-              const dayKey = day.toString();
-              const dayHours = publicHours?.[dayKey];
-              const isToday = new Date().getDay() === day;
-              return (
-                <div 
-                  key={day} 
-                  className={`flex justify-between py-1 ${isToday ? 'font-medium text-primary' : 'text-muted-foreground'}`}
-                >
-                  <span>{DAYS_FULL[day]}</span>
-                  <span>
-                    {dayHours?.closed 
-                      ? 'Cerrado' 
-                      : dayHours 
-                        ? `${formatTime(dayHours.opens)}-${formatTime(dayHours.closes)}`
-                        : getTodayHours(null, branch.opening_time, branch.closing_time)
-                    }
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </PopoverContent>
-      </Popover>
-    );
-  };
 
   return (
     <section className="py-20 px-4">
@@ -204,7 +205,7 @@ export function LocationsSection() {
                       </p>
                       <div className="flex items-center gap-3">
                         <a 
-                          href={getGoogleMapsUrl(branch.name, branch.city)}
+                          href={getGoogleMapsUrl(branch)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-sm text-primary hover:underline inline-flex items-center gap-1"

@@ -8,7 +8,7 @@ export function useWebappConfig(branchSlug: string | undefined) {
     queryFn: async () => {
       const { data: branch, error: branchErr } = await supabase
         .from('branches')
-        .select('id, name, address, city, slug, opening_time, closing_time, public_hours, latitude, longitude')
+        .select('id, name, address, city, slug, opening_time, closing_time, public_hours, latitude, longitude, google_place_id')
         .eq('slug', branchSlug!)
         .eq('is_active', true)
         .single();
@@ -139,7 +139,7 @@ export function useWebappItemOptionalGroups(itemId: string | undefined) {
           .map((o: any) => ({
             id: o.id,
             nombre: o.insumos?.nombre || o.preparaciones?.nombre || 'Opción',
-            precio_extra: 0,
+            precio_extra: o.costo_unitario ?? 0,
           })),
       })) as OptionalGroup[];
     },

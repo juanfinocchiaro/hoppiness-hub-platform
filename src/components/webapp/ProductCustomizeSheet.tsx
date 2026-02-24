@@ -45,7 +45,8 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
   const groupExtras = Object.values(groupSelections).flat();
   const allExtras = [...extras, ...groupExtras];
   const extrasTotal = allExtras.reduce((s, e) => s + e.precio, 0);
-  const total = (item.precio_base + extrasTotal) * cantidad;
+  const effectivePrice = (item.precio_promo != null && item.precio_promo < item.precio_base) ? item.precio_promo : item.precio_base;
+  const total = (effectivePrice + extrasTotal) * cantidad;
 
   // Validation: check mandatory groups
   const missingRequired = (optionalGroups || [])
@@ -93,7 +94,7 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
       itemId: item.id,
       nombre: item.nombre,
       imagen_url: item.imagen_url,
-      precioUnitario: item.precio_base,
+      precioUnitario: effectivePrice,
       cantidad,
       extras: allExtras,
       removidos,
@@ -126,7 +127,16 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
           {item.descripcion && (
             <p className="text-sm text-muted-foreground mt-1">{item.descripcion}</p>
           )}
-          <p className="text-lg font-bold text-primary mt-2">{formatPrice(item.precio_base)}</p>
+          <div className="mt-2">
+            {item.precio_promo != null && item.precio_promo < item.precio_base ? (
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-bold text-accent">{formatPrice(item.precio_promo)}</span>
+                <span className="text-sm text-muted-foreground line-through">{formatPrice(item.precio_base)}</span>
+              </div>
+            ) : (
+              <p className="text-lg font-bold text-primary">{formatPrice(item.precio_base)}</p>
+            )}
+          </div>
         </div>
 
         {/* Optional groups (e.g. "Bebida a elección") */}
@@ -268,7 +278,7 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
           <div className="text-xs text-muted-foreground mb-2 space-y-0.5">
             <div className="flex justify-between">
               <span>Base</span>
-              <span>{formatPrice(item.precio_base)}</span>
+              <span>{formatPrice(effectivePrice)}</span>
             </div>
             {allExtras.map(e => (
               <div key={e.id} className="flex justify-between">

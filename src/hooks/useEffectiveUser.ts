@@ -1,13 +1,18 @@
 /**
- * useEffectiveUser - Retorna el usuario efectivo para visualización y operaciones
- * 
+ * useEffectiveUser - Retorna el usuario efectivo para visualización y queries de lectura
+ *
  * En modo normal: retorna datos de useAuth
  * En modo impersonación: retorna datos del targetUser
- * 
- * IMPORTANTE: Este hook debe usarse para TODO lo relacionado con el usuario actual:
- * - Queries (lecturas)
- * - Mutations (escrituras)
- * - Visualización de nombre/email
+ *
+ * USO CORRECTO:
+ * - Queries de lectura (SELECT) que filtran por user_id → useEffectiveUser().id
+ * - Visualización de nombre/email/avatar → useEffectiveUser()
+ *
+ * NO usar para:
+ * - Mutations (INSERT/UPDATE/DELETE) que requieren user_id = auth.uid() en RLS
+ *   → usar useAuth().user.id en su lugar
+ * - Creación de registros donde importa quién lo hizo (created_by, published_by)
+ *   → usar useAuth().user.id en su lugar
  */
 import { useAuth } from './useAuth';
 import { useImpersonation } from '@/contexts/ImpersonationContext';

@@ -127,6 +127,31 @@ Deno.serve(async (req) => {
       timeline.push({ estado: "cancelado", timestamp: null });
     }
 
+    // Delivery tracking (cadete GPS)
+    let deliveryTracking = null;
+    if (pedido.tipo_servicio === "delivery") {
+      const { data: dt } = await supabase
+        .from("delivery_tracking")
+        .select(
+          "cadete_lat, cadete_lng, store_lat, store_lng, dest_lat, dest_lng, tracking_started_at, tracking_completed_at",
+        )
+        .eq("pedido_id", pedido.id)
+        .maybeSingle();
+
+      if (dt) {
+        deliveryTracking = {
+          active: !!dt.tracking_started_at && !dt.tracking_completed_at,
+          cadete_lat: dt.cadete_lat,
+          cadete_lng: dt.cadete_lng,
+          store_lat: dt.store_lat,
+          store_lng: dt.store_lng,
+          dest_lat: dt.dest_lat,
+          dest_lng: dt.dest_lng,
+          completed: !!dt.tracking_completed_at,
+        };
+      }
+    }
+
     return json(200, {
       pedido: {
         id: pedido.id,
@@ -156,6 +181,7 @@ Deno.serve(async (req) => {
       })),
       branch: branch ?? null,
       timeline,
+      delivery_tracking: deliveryTracking,
     });
   } catch (err: unknown) {
     console.error("webapp-order-tracking error:", err);

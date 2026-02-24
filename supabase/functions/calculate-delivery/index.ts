@@ -57,7 +57,7 @@ Deno.serve(async (req: Request) => {
     // 1. Fetch branch lat/lng
     const { data: branch, error: branchErr } = await supabase
       .from("branches")
-      .select("id, latitude, longitude")
+      .select("id, latitude, longitude, city")
       .eq("id", body.branch_id)
       .single();
 
@@ -80,9 +80,9 @@ Deno.serve(async (req: Request) => {
       return json(200, unavailable("delivery_disabled"));
     }
 
-    // 2b. Check delivery hours (franjas horarias)
+    // 2b. Check delivery hours (franjas horarias) — use Argentina timezone
     if (branchConfig.delivery_hours) {
-      const now = new Date();
+      const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" }));
       const dayOfWeek = String(now.getDay());
       const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
       const dayWindows = (branchConfig.delivery_hours as Record<string, Array<{ opens: string; closes: string }>>)[dayOfWeek];
@@ -121,6 +121,7 @@ Deno.serve(async (req: Request) => {
         .from("city_neighborhoods")
         .select("id, name")
         .eq("name", body.neighborhood_name)
+        .eq("city", branch.city)
         .limit(1)
         .maybeSingle();
 
@@ -143,7 +144,7 @@ Deno.serve(async (req: Request) => {
           .from("branch_delivery_neighborhoods")
           .select("branch_id, branches!inner(id, name, slug)")
           .eq("neighborhood_id", hood.id)
-          .eq("status", "assigned")
+          .eq("status", "enabled")
           .limit(1)
           .maybeSingle();
 
@@ -168,12 +169,22 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // 5. Fetch pricing config
-    const { data: pricingConfig } = await supabase
-      .from("delivery_pricing_config")
-      .select("*")
-      .limit(1)
+    // 5. Fetch pricing config (scoped to brand via branch)
+    const { data: branchForBrand } = await supabase
+      .from("branches")
+      .select("brand_id")
+      .eq("id", body.branch_id)
       .single();
+
+    let pricingQuery = supabase
+      .from("delivery_pricing_config")
+      .select("*");
+
+    if (branchForBrand?.brand_id) {
+      pricingQuery = pricingQuery.eq("brand_id", branchForBrand.brand_id);
+    }
+
+    const { data: pricingConfig } = await pricingQuery.limit(1).maybeSingle();
 
     if (!pricingConfig) {
       return json(500, { error: "Delivery pricing not configured" });
@@ -191,6 +202,15 @@ Deno.serve(async (req: Request) => {
       { lat: body.customer_lat, lng: body.customer_lng }
     );
 
+    // 6b. Get dynamic prep time (queue-aware)
+    const { data: dynamicPrepData } = await supabase.rpc("get_dynamic_prep_time", {
+      p_branch_id: body.branch_id,
+      p_tipo_servicio: "delivery",
+    });
+    const dynamicPrepMin = Array.isArray(dynamicPrepData) && dynamicPrepData[0]
+      ? dynamicPrepData[0].prep_time_min
+      : pricingConfig.prep_time_minutes;
+
     if (!routeResult) {
       // Fallback: use haversine when Google Routes fails
       const haversineDist = haversineDistance(
@@ -206,7 +226,7 @@ Deno.serve(async (req: Request) => {
 
       const estimatedDuration = (haversineDist / pricingConfig.estimated_speed_kmh) * 60;
       const cost = calculateCost(pricingConfig, haversineDist);
-      const totalTime = Math.ceil(estimatedDuration + pricingConfig.prep_time_minutes);
+      const totalTime = Math.ceil(estimatedDuration) + dynamicPrepMin;
 
       return json(200, {
         available: true,
@@ -230,8 +250,8 @@ Deno.serve(async (req: Request) => {
     // 8. Calculate cost
     const cost = calculateCost(pricingConfig, distanceKm);
 
-    // 9. Calculate total delivery time
-    const estimatedDeliveryMin = durationMin + pricingConfig.prep_time_minutes;
+    // 9. Calculate total delivery time (driving + dynamic prep)
+    const estimatedDeliveryMin = durationMin + dynamicPrepMin;
 
     return json(200, {
       available: true,

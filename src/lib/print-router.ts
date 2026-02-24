@@ -9,6 +9,7 @@ import {
   generateComandaDelivery,
   generateVale,
   generateArcaQrBitmap,
+  generateTrackingQrBitmap,
   type PrintableOrder,
   type PrintableItem,
   type TicketClienteData,
@@ -47,7 +48,7 @@ export interface PaymentPrintData {
  * Datos de factura ya emitida para integrar en el ticket.
  */
 export interface FacturaPrintData {
-  tipo: 'A' | 'B';
+  tipo: 'A' | 'B' | 'C';
   codigo: string;
   numero: string;
   fecha: string;
@@ -97,6 +98,7 @@ export async function buildPrintJobs(
   esSalon: boolean,
   payment?: PaymentPrintData,
   factura?: FacturaPrintData | null,
+  trackingToken?: string,
 ): Promise<PrintJob[]> {
   const jobs: PrintJob[] = [];
 
@@ -184,9 +186,17 @@ export async function buildPrintJobs(
 
       if (comandaItems.length > 0) {
         const comandaOrder = { ...order, items: comandaItems };
-        const isDelivery = order.tipo_servicio === 'delivery' || order.canal_venta === 'rappi' || order.canal_venta === 'pedidos_ya' || order.canal_venta === 'mp_delivery';
+        const isDelivery = order.tipo_servicio === 'delivery' || order.canal_venta === 'rappi' || order.canal_venta === 'pedidos_ya' || order.canal_venta === 'mp_delivery' || order.canal_venta === 'masdelivery';
+
+        let trackingQrBitmap: string | undefined;
+        if (isDelivery && trackingToken) {
+          try {
+            trackingQrBitmap = await generateTrackingQrBitmap(trackingToken);
+          } catch { /* QR generation failed — print without it */ }
+        }
+
         const data = isDelivery
-          ? generateComandaDelivery(comandaOrder, branchName, printer.paper_width)
+          ? generateComandaDelivery(comandaOrder, branchName, printer.paper_width, trackingQrBitmap)
           : generateComandaCompleta(comandaOrder, branchName, printer.paper_width);
         jobs.push({
           type: 'comanda',

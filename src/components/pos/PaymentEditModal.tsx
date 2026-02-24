@@ -113,26 +113,25 @@ export function PaymentEditModal({ open, onOpenChange, pedidoId, pedidoTotal, br
       const cashAfter = rows.filter(r => r.metodo === 'efectivo').reduce((s, r) => s + r.monto, 0);
       const cashDelta = cashAfter - cashBefore;
 
-      // Delete old payments and insert new ones
+      // Delete old payments and insert new ones (batch)
       const { error: delErr } = await supabase
         .from('pedido_pagos')
         .delete()
         .eq('pedido_id', pedidoId);
       if (delErr) throw delErr;
 
-      for (const row of rows) {
-        const { error: insErr } = await supabase
-          .from('pedido_pagos')
-          .insert({
-            pedido_id: pedidoId,
-            metodo: row.metodo,
-            monto: row.monto,
-            monto_recibido: row.monto,
-            vuelto: 0,
-            created_by: user.id,
-          });
-        if (insErr) throw insErr;
-      }
+      const insertRows = rows.map(row => ({
+        pedido_id: pedidoId,
+        metodo: row.metodo,
+        monto: row.monto,
+        monto_recibido: row.monto,
+        vuelto: 0,
+        created_by: user.id,
+      }));
+      const { error: insErr } = await supabase
+        .from('pedido_pagos')
+        .insert(insertRows);
+      if (insErr) throw insErr;
 
       // Audit record
       const { error: auditErr } = await supabase

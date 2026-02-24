@@ -121,6 +121,19 @@ function InlineCashOpen({ branchId, onOpened }: { branchId: string; onOpened: ()
 
 export default function POSPage() {
   const { branchId } = useParams<{ branchId: string }>();
+
+  if (!branchId) {
+    return (
+      <div className="flex items-center justify-center h-screen text-muted-foreground">
+        Local no encontrado. Seleccioná un local desde el menú lateral.
+      </div>
+    );
+  }
+
+  return <POSPageContent branchId={branchId} />;
+}
+
+function POSPageContent({ branchId }: { branchId: string }) {
   const {
     cart, setCart,
     payments, setPayments,
@@ -140,30 +153,30 @@ export default function POSPage() {
   const hasPointSmart = !!mpConfig?.device_id && mpConfig.estado_conexion === 'conectado';
 
   const shiftStatus = useShiftStatus(branchId);
-  const createPedido = useCreatePedido(branchId!);
-  const { data: kitchenPedidos } = useKitchen(branchId!);
+  const createPedido = useCreatePedido(branchId);
+  const { data: kitchenPedidos } = useKitchen(branchId);
 
   // ARCA invoicing
   const { data: afipConfig } = useAfipConfig(branchId);
   const emitirFactura = useEmitirFactura();
 
   // Printing integration
-  const printing = usePrinting(branchId!);
-  const { data: printConfig } = usePrintConfig(branchId!);
-  const { data: printersData } = useBranchPrinters(branchId!);
+  const printing = usePrinting(branchId);
+  const { data: printConfig } = usePrintConfig(branchId);
+  const { data: printersData } = useBranchPrinters(branchId);
   const allPrinters = printersData ?? [];
 
   const { data: branchInfo } = useQuery({
     queryKey: ['branch-name', branchId],
     queryFn: async () => {
-      const { data } = await supabase.from('branches').select('name').eq('id', branchId!).single();
+      const { data } = await supabase.from('branches').select('name').eq('id', branchId).single();
       return data;
     },
     enabled: !!branchId,
   });
 
   const { data: menuCategorias } = useQuery({
-    queryKey: ['menu-categorias-print'],
+    queryKey: ['menu-categorias-print', branchId],
     queryFn: async () => {
       const { data } = await supabase
         .from('menu_categorias')
@@ -176,10 +189,10 @@ export default function POSPage() {
   // Cart management
   const addItem = useCallback((item: CartItem) => {
     setCart((prev) => {
-      const hasNoMods = !item.notas && (!item.extras || item.extras.length === 0) && (!item.removibles || item.removibles.length === 0);
+      const hasNoMods = !item.notas && (!item.extras || item.extras.length === 0) && (!item.removibles || item.removibles.length === 0) && (!item.opcionales || item.opcionales.length === 0);
       if (hasNoMods) {
         const idx = prev.findIndex(
-          (i) => i.item_carta_id === item.item_carta_id && !i.notas && (!i.extras || i.extras.length === 0) && (!i.removibles || i.removibles.length === 0)
+          (i) => i.item_carta_id === item.item_carta_id && !i.notas && (!i.extras || i.extras.length === 0) && (!i.removibles || i.removibles.length === 0) && (!i.opcionales || i.opcionales.length === 0)
         );
         if (idx >= 0) {
           const copy = [...prev];
@@ -527,13 +540,14 @@ export default function POSPage() {
     setConfigConfirmed(false);
   }, []);
 
+  const isAppsChannel = orderConfig.canalVenta === 'apps';
   const subtotal = cart.reduce((s, i) => s + i.subtotal, 0);
-  const costoEnvio = (orderConfig.tipoServicio === 'delivery' || orderConfig.canalVenta === 'apps') ? (orderConfig.costoDelivery ?? 0) : 0;
+  const costoEnvio = (orderConfig.tipoServicio === 'delivery' || isAppsChannel) ? (orderConfig.costoDelivery ?? 0) : 0;
   const descuentos = (orderConfig.descuentoPlataforma ?? 0) + (orderConfig.descuentoRestaurante ?? 0);
   const totalToPay = subtotal + costoEnvio - descuentos;
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
-  const saldo = totalToPay - totalPaid;
-  const canSend = Math.abs(saldo) < 0.01 && cart.length > 0;
+  const saldo = isAppsChannel ? 0 : totalToPay - totalPaid;
+  const canSend = isAppsChannel ? cart.length > 0 : (Math.abs(totalToPay - totalPaid) < 0.01 && cart.length > 0);
 
   // Show full-page "Abrir Caja" when cash register is closed
   if (!shiftStatus.loading && !shiftStatus.hasCashOpen) {
@@ -627,6 +641,7 @@ export default function POSPage() {
                 disabled={createPedido.isPending}
                 orderConfig={orderConfig}
                 onEditConfig={handleEditConfig}
+                onUpdateOrderConfig={(partial) => setOrderConfig((prev) => ({ ...prev, ...partial }))}
               />
             </>
           )}
@@ -639,7 +654,7 @@ export default function POSPage() {
           <div className="text-sm">
             <span className="text-muted-foreground">{cart.reduce((s, i) => s + i.cantidad, 0)} items</span>
             <span className="ml-2 font-semibold text-foreground">$ {totalToPay.toLocaleString('es-AR')}</span>
-            {totalPaid > 0 && (
+            {!isAppsChannel && totalPaid > 0 && (
               <span className="ml-2 text-xs text-green-600">pagado $ {totalPaid.toLocaleString('es-AR')}</span>
             )}
           </div>
@@ -653,7 +668,7 @@ export default function POSPage() {
               <ChefHat className="h-4 w-4 mr-2" />
               Enviar
             </Button>
-          ) : (
+          ) : !isAppsChannel ? (
             <Button
               size="lg"
               onClick={handleOpenPayment}
@@ -663,7 +678,7 @@ export default function POSPage() {
               <PlusCircle className="h-4 w-4 mr-2" />
               Pagar
             </Button>
-          )}
+          ) : null}
         </div>
       )}
 

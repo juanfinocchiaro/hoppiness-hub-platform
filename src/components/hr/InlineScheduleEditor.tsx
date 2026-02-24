@@ -35,7 +35,7 @@ import { useHolidays } from '@/hooks/useHolidays';
 import { useMonthlySchedules, type ScheduleEntry, type DaySchedule } from '@/hooks/useSchedules';
 import { sendBulkScheduleNotifications } from '@/hooks/useScheduleNotifications';
 import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
-import { useEffectiveUser } from '@/hooks/useEffectiveUser';
+import { useAuth } from '@/hooks/useAuth';
 import { type ScheduleValue } from './ScheduleCellPopover';
 import { SaveScheduleDialog } from './SaveScheduleDialog';
 import { useScheduleSelection, SelectionToolbar } from './schedule-selection';
@@ -138,7 +138,8 @@ export default function InlineScheduleEditor({ branchId, readOnly: propReadOnly 
   const { data: workPositions = [] } = useWorkPositions();
   
   const queryClient = useQueryClient();
-  const { id: currentUserId } = useEffectiveUser();
+  const { user } = useAuth();
+  const currentUserId = user?.id ?? null;
 
   const { local } = useDynamicPermissions(branchId);
   const canManageSchedules = !propReadOnly && local.canEditSchedules;

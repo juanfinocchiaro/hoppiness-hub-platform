@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import type { useWebappCart } from '@/hooks/useWebappCart';
+import type { DeliveryCalcResult } from '@/types/webapp';
 import { AddressAutocomplete, type AddressResult } from './AddressAutocomplete';
 import { DeliveryCostDisplay, DeliveryCostLoading } from './DeliveryCostDisplay';
 import { DeliveryUnavailable } from './DeliveryUnavailable';
@@ -41,6 +42,8 @@ interface Props {
   deliveryCosto?: number;
   initialStep?: Step;
   externalTrackingCode?: string | null;
+  prevalidatedAddress?: AddressResult | null;
+  prevalidatedCalc?: DeliveryCalcResult | null;
 }
 
 type Step = 'cart' | 'checkout' | 'tracking';
@@ -56,7 +59,7 @@ function FieldError({ error }: { error: string | null }) {
   return <p className="text-xs text-destructive mt-1">{error}</p>;
 }
 
-export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEnabled, deliveryCosto = 0, initialStep, externalTrackingCode }: Props) {
+export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEnabled, deliveryCosto = 0, initialStep, externalTrackingCode, prevalidatedAddress, prevalidatedCalc }: Props) {
   const { user } = useAuth();
   const servicioLabel = cart.tipoServicio === 'retiro' ? 'Retiro en local' : cart.tipoServicio === 'delivery' ? 'Delivery' : 'Comer acá';
 
@@ -78,17 +81,9 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   const { data: googleApiKey } = useGoogleMapsApiKey();
   const calculateDelivery = useCalculateDelivery();
 
-  // Dynamic delivery state
-  const [deliveryAddress, setDeliveryAddress] = useState<AddressResult | null>(null);
-  const [deliveryCalc, setDeliveryCalc] = useState<{
-    available: boolean;
-    cost: number | null;
-    distance_km: number | null;
-    estimated_delivery_min: number | null;
-    disclaimer: string | null;
-    reason?: string;
-    suggested_branch?: { id: string; name: string; slug: string } | null;
-  } | null>(null);
+  // Dynamic delivery state — seed from pre-validated values
+  const [deliveryAddress, setDeliveryAddress] = useState<AddressResult | null>(prevalidatedAddress ?? null);
+  const [deliveryCalc, setDeliveryCalc] = useState<DeliveryCalcResult | null>(prevalidatedCalc ?? null);
   const [calcLoading, setCalcLoading] = useState(false);
 
   // Fetch saved addresses for logged-in users
@@ -177,6 +172,17 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
       if ((userProfile.email || user?.email) && !email) setEmail(userProfile.email || user?.email || '');
     }
   }, [userProfile]);
+  // Sync pre-validated delivery address when props change
+  useEffect(() => {
+    if (prevalidatedAddress && prevalidatedCalc) {
+      setDeliveryAddress(prevalidatedAddress);
+      setDeliveryCalc(prevalidatedCalc);
+      if (prevalidatedAddress.formatted_address) {
+        setDireccion(prevalidatedAddress.formatted_address);
+      }
+    }
+  }, [prevalidatedAddress, prevalidatedCalc]);
+
   const [piso, setPiso] = useState('');
   const [referencia, setReferencia] = useState('');
   const [notas, setNotas] = useState('');
@@ -554,66 +560,96 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                 <div className="space-y-3">
                   <h3 className="text-sm font-bold text-foreground">Dirección de entrega</h3>
 
-                  {/* Google Places Autocomplete */}
-                  <AddressAutocomplete
-                    apiKey={googleApiKey ?? null}
-                    onSelect={handleAddressSelect}
-                    selectedAddress={deliveryAddress}
-                  />
-
-                  {/* Dynamic delivery cost display */}
-                  {calcLoading && <DeliveryCostLoading />}
-                  {deliveryCalc && deliveryCalc.available && deliveryCalc.cost != null && (
-                    <DeliveryCostDisplay
-                      cost={deliveryCalc.cost}
-                      distanceKm={deliveryCalc.distance_km!}
-                      estimatedDeliveryMin={deliveryCalc.estimated_delivery_min!}
-                      disclaimer={deliveryCalc.disclaimer}
-                    />
-                  )}
-                  {deliveryCalc && !deliveryCalc.available && (
-                    <DeliveryUnavailable
-                      onSwitchToPickup={() => {
-                        cart.setTipoServicio('retiro');
-                        setDeliveryAddress(null);
-                        setDeliveryCalc(null);
-                      }}
-                      onChangeAddress={() => {
-                        setDeliveryAddress(null);
-                        setDeliveryCalc(null);
-                      }}
-                      reason={deliveryCalc.reason}
-                      suggestedBranch={deliveryCalc.suggested_branch}
-                    />
-                  )}
-
-                  {/* Saved addresses picker */}
-                  {savedAddresses.length > 0 && !deliveryAddress && (
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Dirección guardada</Label>
-                      <Select
-                        value=""
-                        onValueChange={(addrId) => {
-                          const addr = savedAddresses.find(a => a.id === addrId);
-                          if (addr) {
-                            setDireccion(addr.direccion);
-                            setPiso(addr.piso || '');
-                            setReferencia(addr.referencia || '');
-                          }
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar dirección guardada" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {savedAddresses.map(a => (
-                            <SelectItem key={a.id} value={a.id}>
-                              {a.etiqueta} — {a.direccion}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  {/* Pre-validated address summary or full autocomplete */}
+                  {deliveryAddress && deliveryCalc?.available ? (
+                    <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm">
+                          <MapPin className="h-4 w-4 text-green-600 shrink-0" />
+                          <span className="font-medium truncate">{deliveryAddress.formatted_address}</span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setDeliveryAddress(null);
+                            setDeliveryCalc(null);
+                            setDireccion('');
+                          }}
+                          className="text-xs text-primary hover:underline shrink-0 ml-2"
+                        >
+                          Cambiar
+                        </button>
+                      </div>
+                      {deliveryCalc.cost != null && (
+                        <DeliveryCostDisplay
+                          cost={deliveryCalc.cost}
+                          distanceKm={deliveryCalc.distance_km!}
+                          estimatedDeliveryMin={deliveryCalc.estimated_delivery_min!}
+                          disclaimer={deliveryCalc.disclaimer}
+                        />
+                      )}
                     </div>
+                  ) : (
+                    <>
+                      <AddressAutocomplete
+                        apiKey={googleApiKey ?? null}
+                        onSelect={handleAddressSelect}
+                        selectedAddress={deliveryAddress}
+                      />
+
+                      {calcLoading && <DeliveryCostLoading />}
+                      {deliveryCalc && deliveryCalc.available && deliveryCalc.cost != null && (
+                        <DeliveryCostDisplay
+                          cost={deliveryCalc.cost}
+                          distanceKm={deliveryCalc.distance_km!}
+                          estimatedDeliveryMin={deliveryCalc.estimated_delivery_min!}
+                          disclaimer={deliveryCalc.disclaimer}
+                        />
+                      )}
+                      {deliveryCalc && !deliveryCalc.available && (
+                        <DeliveryUnavailable
+                          onSwitchToPickup={() => {
+                            cart.setTipoServicio('retiro');
+                            setDeliveryAddress(null);
+                            setDeliveryCalc(null);
+                          }}
+                          onChangeAddress={() => {
+                            setDeliveryAddress(null);
+                            setDeliveryCalc(null);
+                          }}
+                          reason={deliveryCalc.reason}
+                          suggestedBranch={deliveryCalc.suggested_branch}
+                        />
+                      )}
+
+                      {/* Saved addresses picker */}
+                      {savedAddresses.length > 0 && !deliveryAddress && (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Dirección guardada</Label>
+                          <Select
+                            value=""
+                            onValueChange={(addrId) => {
+                              const addr = savedAddresses.find(a => a.id === addrId);
+                              if (addr) {
+                                setDireccion(addr.direccion);
+                                setPiso(addr.piso || '');
+                                setReferencia(addr.referencia || '');
+                              }
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccionar dirección guardada" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {savedAddresses.map(a => (
+                                <SelectItem key={a.id} value={a.id}>
+                                  {a.etiqueta} — {a.direccion}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   <div className="space-y-2">

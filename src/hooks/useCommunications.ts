@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
 interface Communication {
@@ -188,7 +189,7 @@ export function useConfirmCommunication() {
 
 export function useCreateCommunication() {
   const queryClient = useQueryClient();
-  const { id: userId } = useEffectiveUser();
+  const { user } = useAuth();
   
   return useMutation({
     mutationFn: async (data: {
@@ -199,13 +200,13 @@ export function useCreateCommunication() {
       target_roles?: string[];
       expires_at?: string;
     }) => {
-      if (!userId) throw new Error('Not authenticated');
+      if (!user?.id) throw new Error('Not authenticated');
       
       const { error } = await supabase
         .from('communications')
         .insert({
           ...data,
-          created_by: userId,
+          created_by: user.id,
         });
       
       if (error) throw error;

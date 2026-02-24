@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useEffectiveUser } from '@/hooks/useEffectiveUser';
+import { useAuth } from '@/hooks/useAuth';
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { toast } from 'sonner';
 import { format, addDays, subDays } from 'date-fns';
@@ -33,7 +33,8 @@ interface RequestDayOffModalProps {
 }
 
 export default function RequestDayOffModal({ branchId, trigger }: RequestDayOffModalProps) {
-  const { id: userId } = useEffectiveUser();
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const { branchRoles } = usePermissionsWithImpersonation();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);

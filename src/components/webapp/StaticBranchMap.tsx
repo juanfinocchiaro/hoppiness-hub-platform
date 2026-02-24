@@ -2,7 +2,7 @@
  * Static map showing branch location using OpenStreetMap (no API key).
  * Renders an embed map with a centered Hoppiness pin overlay.
  */
-import { MapPin } from 'lucide-react';
+import logoHoppiness from '@/assets/logo-hoppiness.png';
 
 interface StaticBranchMapProps {
   latitude: number;
@@ -45,12 +45,14 @@ export function StaticBranchMap({
         loading="lazy"
         referrerPolicy="no-referrer-when-downgrade"
       />
-      {/* Centered Hoppiness pin overlay */}
+      {/* Centered Hoppiness logo overlay */}
       <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-        <div className="relative -mt-8">
-          <div className="w-10 h-10 rounded-full bg-primary border-2 border-white shadow-md flex items-center justify-center">
-            <MapPin className="w-5 h-5 text-primary-foreground" strokeWidth={2.5} />
-          </div>
+        <div className="relative -mt-8 w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-md">
+          <img
+            src={logoHoppiness}
+            alt="Hoppiness Club"
+            className="w-full h-full object-cover"
+          />
         </div>
       </div>
       {/* Click-through link */}

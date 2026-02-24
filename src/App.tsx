@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -12,121 +13,130 @@ import { AdminRoute, LocalRoute, RequireQRAccess, RequireAuth } from "@/componen
 import UserFingerprint from "@/components/ui/UserFingerprint";
 import VersionBadge from "@/components/ui/VersionBadge";
 import { FloatingOrderChat } from "@/components/webapp/FloatingOrderChat";
+import { Loader2 } from "lucide-react";
 
-// Páginas públicas
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[50vh]">
+      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+    </div>
+  );
+}
+
+// Páginas públicas — eagerly loaded (landing / auth)
 import Index from "./pages/Index";
 import Ingresar from "./pages/Ingresar";
-import OlvidePassword from "./pages/OlvidePassword";
-import ResetPassword from "./pages/ResetPassword";
-import RegistroStaff from "./pages/RegistroStaff";
 import Pedir from "./pages/Pedir";
-import PedirPage from "./pages/webapp/PedirPage";
-import TrackingPage from "./pages/webapp/TrackingPage";
-import Franquicias from "./pages/Franquicias";
-import Nosotros from "./pages/Nosotros";
-import Contacto from "./pages/Contacto";
+import NotFound from "./pages/NotFound";
 
-import FichajeEmpleado from "./pages/FichajeEmpleado";
+// Lazy-loaded pages
+const OlvidePassword = lazy(() => import("./pages/OlvidePassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const RegistroStaff = lazy(() => import("./pages/RegistroStaff"));
+const PedirPage = lazy(() => import("./pages/webapp/PedirPage"));
+const TrackingPage = lazy(() => import("./pages/webapp/TrackingPage"));
+const CadeteTrackingPage = lazy(() => import("./pages/webapp/CadeteTrackingPage"));
+const Franquicias = lazy(() => import("./pages/Franquicias"));
+const Nosotros = lazy(() => import("./pages/Nosotros"));
+const Contacto = lazy(() => import("./pages/Contacto"));
+const FichajeEmpleado = lazy(() => import("./pages/FichajeEmpleado"));
 
 // Mi Local
-import BranchLayout from "./pages/local/BranchLayout";
-import TeamPage from "./pages/local/TeamPage";
-import ClockInsPage from "./pages/local/ClockInsPage";
-import SchedulesPage from "./pages/local/SchedulesPage";
-import RequestsPage from "./pages/local/RequestsPage";
-
-import AdvancesPage from "./pages/local/AdvancesPage";
-import WarningsPage from "./pages/local/WarningsPage";
-import RegulationsPage from "./pages/local/RegulationsPage";
-import FichajeQRDisplay from "./pages/local/FichajeQRDisplay";
-import ShiftConfigPage from "./pages/local/ShiftConfigPage";
-import CoachingPage from "./pages/local/CoachingPage";
-import LiquidacionPage from "./pages/local/LiquidacionPage";
-import MeetingsPage from "./pages/local/MeetingsPage";
-import SalesHistoryPage from "./pages/local/SalesHistoryPage";
-import ProveedoresLocalPage from "./pages/local/ProveedoresLocalPage";
-import CuentaCorrienteProveedorPage from "./pages/local/CuentaCorrienteProveedorPage";
-import InsumosLocalPage from "./pages/local/InsumosLocalPage";
-import ComprasPage from "./pages/local/ComprasPage";
-import ConsumosPage from "./pages/local/ConsumosPage";
-import SociosPage from "./pages/local/SociosPage";
-import PeriodosPage from "./pages/local/PeriodosPage";
-import PLDashboardPage from "./pages/local/PLDashboardPage";
-import RdoLoaderPage from "./pages/local/RdoLoaderPage";
-import RdoFinancieroPage from "./pages/local/RdoFinancieroPage";
-import GastosPage from "./pages/local/GastosPage";
-import InversionesPage from "./pages/local/InversionesPage";
-import VentasMensualesLocalPage from "./pages/local/VentasMensualesLocalPage";
-import InspectionsLocalPage from "./pages/local/InspectionsLocalPage";
-import AfipConfigPage from "./pages/local/AfipConfigPage";
-import MercadoPagoConfigPage from "./pages/local/MercadoPagoConfigPage";
-import WebappConfigPage from "./pages/local/WebappConfigPage";
-import LocalDeliveryZonesPage from "./pages/local/LocalDeliveryZonesPage";
+const BranchLayout = lazy(() => import("./pages/local/BranchLayout"));
+const TeamPage = lazy(() => import("./pages/local/TeamPage"));
+const ClockInsPage = lazy(() => import("./pages/local/ClockInsPage"));
+const SchedulesPage = lazy(() => import("./pages/local/SchedulesPage"));
+const RequestsPage = lazy(() => import("./pages/local/RequestsPage"));
+const AdvancesPage = lazy(() => import("./pages/local/AdvancesPage"));
+const WarningsPage = lazy(() => import("./pages/local/WarningsPage"));
+const RegulationsPage = lazy(() => import("./pages/local/RegulationsPage"));
+const FichajeQRDisplay = lazy(() => import("./pages/local/FichajeQRDisplay"));
+const ShiftConfigPage = lazy(() => import("./pages/local/ShiftConfigPage"));
+const CoachingPage = lazy(() => import("./pages/local/CoachingPage"));
+const LiquidacionPage = lazy(() => import("./pages/local/LiquidacionPage"));
+const MeetingsPage = lazy(() => import("./pages/local/MeetingsPage"));
+const SalesHistoryPage = lazy(() => import("./pages/local/SalesHistoryPage"));
+const ProveedoresLocalPage = lazy(() => import("./pages/local/ProveedoresLocalPage"));
+const CuentaCorrienteProveedorPage = lazy(() => import("./pages/local/CuentaCorrienteProveedorPage"));
+const InsumosLocalPage = lazy(() => import("./pages/local/InsumosLocalPage"));
+const ComprasPage = lazy(() => import("./pages/local/ComprasPage"));
+const ConsumosPage = lazy(() => import("./pages/local/ConsumosPage"));
+const SociosPage = lazy(() => import("./pages/local/SociosPage"));
+const PeriodosPage = lazy(() => import("./pages/local/PeriodosPage"));
+const PLDashboardPage = lazy(() => import("./pages/local/PLDashboardPage"));
+const RdoLoaderPage = lazy(() => import("./pages/local/RdoLoaderPage"));
+const RdoFinancieroPage = lazy(() => import("./pages/local/RdoFinancieroPage"));
+const GastosPage = lazy(() => import("./pages/local/GastosPage"));
+const InversionesPage = lazy(() => import("./pages/local/InversionesPage"));
+const VentasMensualesLocalPage = lazy(() => import("./pages/local/VentasMensualesLocalPage"));
+const InspectionsLocalPage = lazy(() => import("./pages/local/InspectionsLocalPage"));
+const AfipConfigPage = lazy(() => import("./pages/local/AfipConfigPage"));
+const MercadoPagoConfigPage = lazy(() => import("./pages/local/MercadoPagoConfigPage"));
+const WebappConfigPage = lazy(() => import("./pages/local/WebappConfigPage"));
+const LocalDeliveryZonesPage = lazy(() => import("./pages/local/LocalDeliveryZonesPage"));
 
 // POS
-import POSPage from "./pages/pos/POSPage";
-import KitchenPage from "./pages/pos/KitchenPage";
-import DeliveryPage from "./pages/pos/DeliveryPage";
-import StockPage from "./pages/pos/StockPage";
-import RegisterPage from "./pages/pos/RegisterPage";
-import CierreTurnoPage from "./pages/local/CierreTurnoPage";
-import PrintersConfigPage from "./pages/local/PrintersConfigPage";
-import KitchenStationsConfigPage from "./pages/local/KitchenStationsConfigPage";
-import PrintConfigPage from "./pages/local/PrintConfigPage";
+const POSPage = lazy(() => import("./pages/pos/POSPage"));
+const KitchenPage = lazy(() => import("./pages/pos/KitchenPage"));
+const DeliveryPage = lazy(() => import("./pages/pos/DeliveryPage"));
+const StockPage = lazy(() => import("./pages/pos/StockPage"));
+const RegisterPage = lazy(() => import("./pages/pos/RegisterPage"));
+const CierreTurnoPage = lazy(() => import("./pages/local/CierreTurnoPage"));
+const PrintersConfigPage = lazy(() => import("./pages/local/PrintersConfigPage"));
+const KitchenStationsConfigPage = lazy(() => import("./pages/local/KitchenStationsConfigPage"));
+const PrintConfigPage = lazy(() => import("./pages/local/PrintConfigPage"));
 
 // Mi Marca
-import BrandLayout from "./pages/admin/BrandLayout";
-import BrandHome from "./pages/admin/BrandHome";
-import BranchDetail from "./pages/admin/BranchDetail";
-import UsersPage from "./pages/admin/UsersPage";
-import CentralTeam from "./pages/admin/CentralTeam";
-import CommunicationsPage from "./pages/admin/CommunicationsPage";
-import BrandRegulationsPage from "./pages/admin/BrandRegulationsPage";
-import ClosureConfigPage from "./pages/admin/ClosureConfigPage";
-import ContactMessagesPage from "./pages/admin/ContactMessagesPage";
-import PermissionsConfigPage from "./pages/admin/PermissionsConfigPage";
-import CoachingManagersPage from "./pages/admin/CoachingManagersPage";
-import CoachingNetworkPage from "./pages/admin/CoachingNetworkPage";
-import LaborCalendarPage from "./pages/admin/LaborCalendarPage";
-import BrandMeetingsPage from "./pages/admin/BrandMeetingsPage";
-import InspectionsPage from "./pages/admin/InspectionsPage";
-import NewInspectionPage from "./pages/admin/NewInspectionPage";
-import InspectionDetailPage from "./pages/admin/InspectionDetailPage";
-import ProveedoresPage from "./pages/admin/ProveedoresPage";
-import InsumosPage from "./pages/admin/InsumosPage";
-import CanonPage from "./pages/admin/CanonPage";
-import VentasMensualesMarcaPage from "./pages/admin/VentasMensualesMarcaPage";
-import ReportsPage from "./pages/admin/ReportsPage";
-import AuditLogPage from "./pages/admin/AuditLogPage";
-import ConceptosServicioPage from "./pages/admin/ConceptosServicioPage";
-import MenuCartaPage from "./pages/admin/MenuCartaPage";
-import CentroCostosPage from "./pages/admin/CentroCostosPage";
-import PreparacionesPage from "./pages/admin/PreparacionesPage";
-import PromocionesPage from "./pages/admin/PromocionesPage";
-import CodigosDescuentoPage from "./pages/admin/CodigosDescuentoPage";
-import CategoriasCartaPage from "./pages/admin/CategoriasCartaPage";
-import ChannelPricingPage from "./pages/admin/ChannelPricingPage";
-import DeliveryConfigPage from "./pages/admin/DeliveryConfigPage";
-import BranchDeliveryDetailPage from "./pages/admin/BranchDeliveryDetailPage";
+const BrandLayout = lazy(() => import("./pages/admin/BrandLayout"));
+const BrandHome = lazy(() => import("./pages/admin/BrandHome"));
+const BranchDetail = lazy(() => import("./pages/admin/BranchDetail"));
+const UsersPage = lazy(() => import("./pages/admin/UsersPage"));
+const CentralTeam = lazy(() => import("./pages/admin/CentralTeam"));
+const CommunicationsPage = lazy(() => import("./pages/admin/CommunicationsPage"));
+const BrandRegulationsPage = lazy(() => import("./pages/admin/BrandRegulationsPage"));
+const ClosureConfigPage = lazy(() => import("./pages/admin/ClosureConfigPage"));
+const ContactMessagesPage = lazy(() => import("./pages/admin/ContactMessagesPage"));
+const PermissionsConfigPage = lazy(() => import("./pages/admin/PermissionsConfigPage"));
+const CoachingManagersPage = lazy(() => import("./pages/admin/CoachingManagersPage"));
+const CoachingNetworkPage = lazy(() => import("./pages/admin/CoachingNetworkPage"));
+const LaborCalendarPage = lazy(() => import("./pages/admin/LaborCalendarPage"));
+const BrandMeetingsPage = lazy(() => import("./pages/admin/BrandMeetingsPage"));
+const InspectionsPage = lazy(() => import("./pages/admin/InspectionsPage"));
+const NewInspectionPage = lazy(() => import("./pages/admin/NewInspectionPage"));
+const InspectionDetailPage = lazy(() => import("./pages/admin/InspectionDetailPage"));
+const ProveedoresPage = lazy(() => import("./pages/admin/ProveedoresPage"));
+const InsumosPage = lazy(() => import("./pages/admin/InsumosPage"));
+const CanonPage = lazy(() => import("./pages/admin/CanonPage"));
+const VentasMensualesMarcaPage = lazy(() => import("./pages/admin/VentasMensualesMarcaPage"));
+const ReportsPage = lazy(() => import("./pages/admin/ReportsPage"));
+const AuditLogPage = lazy(() => import("./pages/admin/AuditLogPage"));
+const ConceptosServicioPage = lazy(() => import("./pages/admin/ConceptosServicioPage"));
+const MenuCartaPage = lazy(() => import("./pages/admin/MenuCartaPage"));
+const CentroCostosPage = lazy(() => import("./pages/admin/CentroCostosPage"));
+const PreparacionesPage = lazy(() => import("./pages/admin/PreparacionesPage"));
+const PromocionesPage = lazy(() => import("./pages/admin/PromocionesPage"));
+const CodigosDescuentoPage = lazy(() => import("./pages/admin/CodigosDescuentoPage"));
+const CategoriasCartaPage = lazy(() => import("./pages/admin/CategoriasCartaPage"));
+const ChannelPricingPage = lazy(() => import("./pages/admin/ChannelPricingPage"));
+const DeliveryConfigPage = lazy(() => import("./pages/admin/DeliveryConfigPage"));
+const BranchDeliveryDetailPage = lazy(() => import("./pages/admin/BranchDeliveryDetailPage"));
 
 // Mi Local - Comunicaciones
-import LocalCommunicationsPage from "./pages/local/LocalCommunicationsPage";
+const LocalCommunicationsPage = lazy(() => import("./pages/local/LocalCommunicationsPage"));
 
 // Mi Cuenta
-import CuentaLayout from "./pages/cuenta/CuentaLayout";
-import CuentaHome from "./pages/cuenta/CuentaHome";
-import MiHorarioPage from "./pages/cuenta/MiHorarioPage";
-import MisFichajesPage from "./pages/cuenta/MisFichajesPage";
-import MisCoachingsPage from "./pages/cuenta/MisCoachingsPage";
-import MisReunionesPage from "./pages/cuenta/MisReunionesPage";
-import MisSolicitudesPage from "./pages/cuenta/MisSolicitudesPage";
-import MisAdelantosPage from "./pages/cuenta/MisAdelantosPage";
-import MisComunicadosPage from "./pages/cuenta/MisComunicadosPage";
-import MiReglamentoPage from "./pages/cuenta/MiReglamentoPage";
-import MisApercibimientosPage from "./pages/cuenta/MisApercibimientosPage";
-import BranchComparisonPage from "./pages/cuenta/BranchComparisonPage";
-
-import NotFound from "./pages/NotFound";
+const CuentaLayout = lazy(() => import("./pages/cuenta/CuentaLayout"));
+const CuentaHome = lazy(() => import("./pages/cuenta/CuentaHome"));
+const MiHorarioPage = lazy(() => import("./pages/cuenta/MiHorarioPage"));
+const MisFichajesPage = lazy(() => import("./pages/cuenta/MisFichajesPage"));
+const MisCoachingsPage = lazy(() => import("./pages/cuenta/MisCoachingsPage"));
+const MisReunionesPage = lazy(() => import("./pages/cuenta/MisReunionesPage"));
+const MisSolicitudesPage = lazy(() => import("./pages/cuenta/MisSolicitudesPage"));
+const MisAdelantosPage = lazy(() => import("./pages/cuenta/MisAdelantosPage"));
+const MisComunicadosPage = lazy(() => import("./pages/cuenta/MisComunicadosPage"));
+const MiReglamentoPage = lazy(() => import("./pages/cuenta/MiReglamentoPage"));
+const MisApercibimientosPage = lazy(() => import("./pages/cuenta/MisApercibimientosPage"));
+const BranchComparisonPage = lazy(() => import("./pages/cuenta/BranchComparisonPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -146,14 +156,15 @@ const App = () => (
         <ImpersonationProvider>
           <AuthModalProvider>
           <Sonner />
-          <FloatingOrderChat />
           <div className="pointer-events-none fixed bottom-2 right-2 z-[60] flex flex-col items-end gap-1">
             <VersionBadge />
             <UserFingerprint />
           </div>
           <BrowserRouter>
             <AccountSheetsProvider>
+            <FloatingOrderChat />
             <AuthModal />
+            <Suspense fallback={<PageLoader />}>
             <Routes>
             {/* Rutas Públicas con header transparente unificado */}
             <Route path="/" element={<PublicLayout />}>
@@ -170,6 +181,7 @@ const App = () => (
             <Route path="/fichaje/:branchCode" element={<FichajeEmpleado />} />
             <Route path="/pedir/:branchSlug" element={<PedirPage />} />
             <Route path="/pedido/:trackingCode" element={<TrackingPage />} />
+            <Route path="/rastreo/:token" element={<CadeteTrackingPage />} />
             
             {/* Mi Trabajo — staff panel using WorkShell (clients redirect to /pedir) */}
             <Route path="/cuenta" element={<RequireAuth><CuentaLayout /></RequireAuth>}>
@@ -324,6 +336,7 @@ const App = () => (
             
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
             </AccountSheetsProvider>
           </BrowserRouter>
         </AuthModalProvider>

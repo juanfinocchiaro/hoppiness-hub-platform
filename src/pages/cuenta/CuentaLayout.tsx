@@ -48,7 +48,7 @@ export default function CuentaLayout() {
     return null;
   }
 
-  if (!isStaff) {
+  if (!isStaff && !isImpersonating) {
     return <Navigate to="/pedir" replace />;
   }
 

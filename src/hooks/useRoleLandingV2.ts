@@ -1,10 +1,13 @@
 /**
  * useRoleLandingV2 - Determina landing y accesos basado en roles fijos
+ *
+ * Durante impersonación, los accesos de navegación (canAccessAdmin, canAccessLocal)
+ * usan los permisos REALES del superadmin para evitar redirects involuntarios.
+ * El avatarInfo refleja el usuario impersonado para mostrar su rol en la UI.
  */
 import { usePermissionsWithImpersonation } from './usePermissionsWithImpersonation';
 import type { BrandRole, LocalRole } from './usePermissionsV2';
 
-// Alineado con los roles reales de la DB: brand_role_type y local_role_type
 export type AvatarType = 
   | 'superadmin'
   | 'coordinador'
@@ -26,6 +29,7 @@ export interface AvatarInfo {
 }
 
 export function useRoleLandingV2() {
+  const perms = usePermissionsWithImpersonation();
   const {
     loading,
     brandRole,
@@ -43,10 +47,23 @@ export function useRoleLandingV2() {
     isContadorLocal,
     isCajero,
     isEmpleado,
-  } = usePermissionsWithImpersonation();
+    isViewingAs,
+    realUserPermissions,
+  } = perms;
+
+  // Access decisions use REAL permissions during impersonation to prevent
+  // the superadmin from being redirected away from the current page.
+  const realCanAccessAdmin = isViewingAs && realUserPermissions
+    ? realUserPermissions.canAccessBrandPanel
+    : canAccessBrandPanel;
+  const realCanAccessLocal = isViewingAs && realUserPermissions
+    ? realUserPermissions.canAccessLocalPanel
+    : canAccessLocalPanel;
+  const realAccessibleBranches = isViewingAs && realUserPermissions
+    ? realUserPermissions.accessibleBranches
+    : accessibleBranches;
 
   const getAvatarInfo = (): AvatarInfo => {
-    // Roles de marca
     if (isSuperadmin) {
       return {
         type: 'superadmin',
@@ -92,7 +109,6 @@ export function useRoleLandingV2() {
       };
     }
 
-    // Roles locales
     if (isFranquiciado) {
       const firstBranch = accessibleBranches[0]?.id;
       return {
@@ -141,7 +157,6 @@ export function useRoleLandingV2() {
       };
     }
 
-    // Sin rol asignado — clientes van a la tienda
     return {
       type: 'guest',
       label: 'Usuario',
@@ -155,9 +170,9 @@ export function useRoleLandingV2() {
   return {
     avatarInfo,
     loading,
-    canAccessAdmin: canAccessBrandPanel,
-    canAccessLocal: canAccessLocalPanel,
-    accessibleBranches,
+    canAccessAdmin: realCanAccessAdmin,
+    canAccessLocal: realCanAccessLocal,
+    accessibleBranches: realAccessibleBranches,
     isOperationalRole: ['cajero', 'empleado'].includes(avatarInfo.type),
     isManagementRole: ['encargado', 'franquiciado'].includes(avatarInfo.type),
     isBrandRole: ['superadmin', 'coordinador', 'informes', 'contador_marca', 'community_manager'].includes(avatarInfo.type),

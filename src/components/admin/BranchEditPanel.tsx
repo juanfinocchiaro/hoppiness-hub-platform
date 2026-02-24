@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Save, Loader2, MapPin, X, CheckCircle2, Globe, Eye, EyeOff, CalendarClock, ShoppingCart } from 'lucide-react';
+import { Save, Loader2, MapPin, CheckCircle2, Globe, Eye, EyeOff, CalendarClock, ShoppingCart, ExternalLink } from 'lucide-react';
 import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import type { Tables } from '@/integrations/supabase/types';
 import BranchLocationMap from '@/components/maps/BranchLocationMap';
@@ -60,6 +60,7 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
   const [email, setEmail] = useState(branch.email || '');
   const [latitude, setLatitude] = useState((branch as any).latitude?.toString() || '');
   const [longitude, setLongitude] = useState((branch as any).longitude?.toString() || '');
+  const [googlePlaceId, setGooglePlaceId] = useState((branch as any).google_place_id || '');
   
   // Estado público (nuevo sistema)
   const [publicStatus, setPublicStatus] = useState<PublicStatus>(
@@ -73,6 +74,21 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
   
   // Mapa (on-demand)
   const [showMap, setShowMap] = useState(false);
+
+  // Reset form when branch changes (prevents stale data from previous branch)
+  useEffect(() => {
+    setName(branch.name || '');
+    setAddress(branch.address || '');
+    setCity(branch.city || '');
+    setPhone(branch.phone || '');
+    setEmail(branch.email || '');
+    setLatitude((branch as any).latitude?.toString() || '');
+    setLongitude((branch as any).longitude?.toString() || '');
+    setGooglePlaceId((branch as any).google_place_id || '');
+    setPublicStatus(((branch as any).public_status as PublicStatus) || 'active');
+    setPublicHours((branch as any).public_hours || null);
+    setShowMap(false);
+  }, [branch.id]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -89,8 +105,9 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
           is_active: publicStatus !== 'hidden',
           public_status: publicStatus,
           public_hours: publicHours,
-          latitude: latitude ? parseFloat(latitude) : null,
-          longitude: longitude ? parseFloat(longitude) : null,
+          latitude: latitude && !isNaN(parseFloat(latitude)) ? parseFloat(latitude) : null,
+          longitude: longitude && !isNaN(parseFloat(longitude)) ? parseFloat(longitude) : null,
+          google_place_id: googlePlaceId.trim() || null,
         } as any)
         .eq('id', branch.id);
 
@@ -158,9 +175,19 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="address">Dirección *</Label>
+          <Input
+            id="address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Dirección completa"
+          />
+        </div>
+
+        <div className="space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Label htmlFor="address">Dirección *</Label>
+              <Label>Ubicación en mapa</Label>
               {latitude && longitude && (
                 <span className="flex items-center gap-1 text-xs text-primary">
                   <CheckCircle2 className="h-3.5 w-3.5" />
@@ -181,33 +208,52 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
               </Button>
             )}
           </div>
-          <Input
-            id="address"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder="Dirección completa"
-          />
+
           {showMap && (
-            <div className="space-y-2 mt-2">
+            <div className="space-y-3 p-4 rounded-lg border bg-muted/30">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="google-place-id">Google Place ID</Label>
+                  <a
+                    href="https://developers.google.com/maps/documentation/places/web-service/place-id#find-id"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Cómo obtenerlo
+                  </a>
+                </div>
+                <Input
+                  id="google-place-id"
+                  value={googlePlaceId}
+                  onChange={(e) => setGooglePlaceId(e.target.value)}
+                  placeholder="Ej: ChIJN1t_tDeuEmsRUsoyG83frY4"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Los links de "Cómo llegar" abrirán el perfil de Google My Business del local.
+                </p>
+              </div>
+
               <BranchLocationMap
-                address={address}
-                city={city}
+                placeId={googlePlaceId}
                 latitude={latitude}
                 longitude={longitude}
-                onLocationChange={(lat, lng) => {
+                onLocated={(lat, lng) => {
                   setLatitude(lat);
                   setLongitude(lng);
                 }}
               />
+
               <Button
                 type="button"
-                variant="ghost"
+                variant="default"
                 size="sm"
                 onClick={() => setShowMap(false)}
                 className="gap-1.5"
               >
-                <X className="h-3 w-3" />
-                Cerrar mapa
+                <Save className="h-3 w-3" />
+                Guardar ubicación
               </Button>
             </div>
           )}

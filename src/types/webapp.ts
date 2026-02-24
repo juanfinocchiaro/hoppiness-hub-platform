@@ -11,13 +11,17 @@ export interface WebappConfig {
   estado: 'abierto' | 'pausado' | 'cerrado';
   delivery_habilitado: boolean;
   delivery_radio_km: number;
-  delivery_costo: number;
-  delivery_pedido_minimo: number;
+  delivery_costo: number | null;
+  delivery_pedido_minimo: number | null;
   retiro_habilitado: boolean;
   comer_aca_habilitado: boolean;
   recepcion_modo: 'auto' | 'manual';
+  auto_accept_orders?: boolean;
   tiempo_estimado_retiro_min: number;
   tiempo_estimado_delivery_min: number;
+  prep_time_retiro?: number | null;
+  prep_time_delivery?: number | null;
+  prep_time_comer_aca?: number | null;
   horarios: any[];
   mensaje_pausa: string | null;
 }
@@ -76,4 +80,15 @@ export interface WebappCart {
   clienteDireccion: string;
   clientePiso: string;
   clienteReferencia: string;
+}
+
+export interface DeliveryCalcResult {
+  available: boolean;
+  cost: number | null;
+  distance_km: number | null;
+  duration_min: number | null;
+  estimated_delivery_min: number | null;
+  disclaimer: string | null;
+  reason?: string;
+  suggested_branch?: { id: string; name: string; slug: string } | null;
 }

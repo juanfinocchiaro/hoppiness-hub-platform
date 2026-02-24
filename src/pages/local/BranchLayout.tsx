@@ -71,13 +71,14 @@ export default function BranchLayout() {
   });
   const posEnabled = posConfig?.pos_enabled ?? false;
 
-  // Redirect if not authenticated or no access
+  // Redirect if not authenticated or no access (skip during impersonation)
   useEffect(() => {
     if (!authLoading && !permLoading) {
       if (!user) {
         navigate('/ingresar');
         return;
       }
+      if (permissions.isViewingAs) return;
       if (!canAccessLocal) {
         navigate('/cuenta');
         return;
@@ -87,21 +88,23 @@ export default function BranchLayout() {
         return;
       }
     }
-  }, [user, authLoading, permLoading, canAccessLocal, accessibleBranches, permissions.isSuperadmin, navigate]);
+  }, [user, authLoading, permLoading, canAccessLocal, accessibleBranches, permissions.isSuperadmin, permissions.isViewingAs, navigate]);
 
-  // Set selected branch from URL or default
+  // Set selected branch from URL or default.
+  // During impersonation we also fetch the branch directly so the superadmin
+  // can view any branch regardless of the impersonated user's access list.
   useEffect(() => {
     if (branchId && accessibleBranches.length > 0) {
       const branch = accessibleBranches.find(b => b.id === branchId);
       if (branch) {
         setSelectedBranch(branch);
-      } else if (!permissions.isSuperadmin) {
+      } else if (!permissions.isSuperadmin && !permissions.isViewingAs) {
         navigate('/milocal');
       }
     } else if (!branchId && accessibleBranches.length > 0) {
       navigate(`/milocal/${accessibleBranches[0].id}`);
     }
-  }, [branchId, accessibleBranches, permissions.isSuperadmin, navigate]);
+  }, [branchId, accessibleBranches, permissions.isSuperadmin, permissions.isViewingAs, navigate]);
 
   // Realtime subscription for branch status updates
   useEffect(() => {
@@ -129,14 +132,15 @@ export default function BranchLayout() {
     };
   }, [branchId]);
 
-  // Redirect empleados a Mi Cuenta
+  // Redirect empleados a Mi Cuenta (skip during impersonation)
   useEffect(() => {
     if (!selectedBranch || !branchId) return;
+    if (permissions.isViewingAs) return;
     
     if (permissions.isEmpleado) {
       navigate('/cuenta');
     }
-  }, [selectedBranch, branchId, permissions.isEmpleado, navigate]);
+  }, [selectedBranch, branchId, permissions.isEmpleado, permissions.isViewingAs, navigate]);
 
   const handleBranchChange = (newBranchId: string) => {
     const pathParts = location.pathname.split('/');
@@ -154,7 +158,9 @@ export default function BranchLayout() {
   }
 
   // Cajero: solo puede ver el panel Local si está fichado en este branch
+  // Skip during impersonation — the real user is a superadmin
   if (
+    !permissions.isViewingAs &&
     canAccessLocal &&
     branchId &&
     selectedBranch &&

@@ -12,11 +12,21 @@ export function usePosClosureData(
   return useQuery({
     queryKey: ['pos-closure-data', branchId, fecha, turno],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('pedidos')
         .select('*, pedido_items(*), pedido_pagos(*)')
         .eq('branch_id', branchId)
-        .eq('estado', 'entregado');
+        .in('estado', ['entregado', 'completado', 'listo'])
+        .gte('created_at', `${fecha}T00:00:00`)
+        .lt('created_at', `${fecha}T23:59:59`);
+
+      if (turno === 'noche') {
+        query = query.gte('created_at', `${fecha}T18:00:00`);
+      } else if (turno === 'mediodia') {
+        query = query.lt('created_at', `${fecha}T18:00:00`);
+      }
+
+      const { data } = await query;
       return data ?? [];
     },
     enabled: !!branchId && !!fecha && !!turno,

@@ -45,6 +45,8 @@ class EscPosBuilder {
 
   init() {
     this.buffer.push(...CMD.INIT);
+    // Select WPC1252 code page for proper Spanish character rendering (ñ, á, é, etc.)
+    this.buffer.push(ESC, 0x74, 0x10);
     return this;
   }
 
@@ -88,9 +90,11 @@ class EscPosBuilder {
   }
 
   columns(left: string, right: string, width = 42) {
-    const space = width - left.length - right.length;
+    const maxLeft = width - right.length - 1;
+    const truncLeft = left.length > maxLeft ? left.substring(0, maxLeft) : left;
+    const space = width - truncLeft.length - right.length;
     const padding = space > 0 ? ' '.repeat(space) : ' ';
-    return this.line(left + padding + right);
+    return this.line(truncLeft + padding + right);
   }
 
   /**
@@ -446,7 +450,8 @@ export function generateComandaDelivery(
     hora_entrega?: string | null;
   },
   branchName: string,
-  paperWidth: number = 80
+  paperWidth: number = 80,
+  trackingQrBitmap?: string,
 ): string {
   const cols = paperWidth === 80 ? 42 : 32;
   const b = new EscPosBuilder();
@@ -504,8 +509,19 @@ export function generateComandaDelivery(
   }
 
   b.alignCenter()
-    .line(`Items: ${order.items.reduce((s, i) => s + i.cantidad, 0)}`)
-    .feed(1).cut();
+    .line(`Items: ${order.items.reduce((s, i) => s + i.cantidad, 0)}`);
+
+  // QR de rastreo para cadete (solo canal propio)
+  if (trackingQrBitmap) {
+    b.feed(1).separator('-', cols);
+    b.alignCenter()
+      .boldOn().line('ESCANEA PARA RASTREO').boldOff()
+      .feed(1);
+    b.printBitmap(trackingQrBitmap);
+    b.feed(1);
+  }
+
+  b.feed(1).cut();
 
   return b.toBase64();
 }
@@ -1058,6 +1074,26 @@ export async function generateArcaQrBitmap(
 
   const jsonB64 = btoa(JSON.stringify(qrData));
   const url = `https://www.afip.gob.ar/fe/qr/?p=${jsonB64}`;
+
+  const dataUrl = await QRCode.toDataURL(url, {
+    width: 200,
+    margin: 1,
+    errorCorrectionLevel: 'M',
+  });
+
+  return dataUrl.replace(/^data:image\/png;base64,/, '');
+}
+
+// ─── QR DELIVERY TRACKING ────────────────────────────────────
+/**
+ * Genera un PNG base64 con el QR para rastreo de delivery.
+ * El QR codifica la URL pública de rastreo del cadete.
+ */
+export async function generateTrackingQrBitmap(trackingToken: string): Promise<string> {
+  const baseUrl = typeof window !== 'undefined'
+    ? window.location.origin
+    : 'https://hoppinessclub.com';
+  const url = `${baseUrl}/rastreo/${trackingToken}`;
 
   const dataUrl = await QRCode.toDataURL(url, {
     width: 200,

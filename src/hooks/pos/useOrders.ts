@@ -3,6 +3,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import type { OrderConfig } from '@/types/pos';
 
 export interface PedidoItemInput {
@@ -78,7 +79,9 @@ export function useCreatePedido(branchId: string) {
       const numeroPedido = (numero as number) ?? 1;
 
       const subtotal = params.items.reduce((s, i) => s + i.subtotal, 0);
-      const descuento = params.descuento ?? 0;
+      const descuentoPlat = params.orderConfig?.descuentoPlataforma ?? 0;
+      const descuentoRest = params.orderConfig?.descuentoRestaurante ?? 0;
+      const descuento = params.descuento ?? (descuentoPlat + descuentoRest);
       const costoDelivery = params.orderConfig?.costoDelivery ?? 0;
       const totalOrder = subtotal - descuento + costoDelivery;
       const propina = params.propina ?? 0;
@@ -128,29 +131,30 @@ export function useCreatePedido(branchId: string) {
       if (errPedido) throw errPedido;
       if (!pedido) throw new Error('No se creó el pedido');
 
-      for (const it of params.items) {
-        const { error: errItem } = await supabase.from('pedido_items').insert({
-          pedido_id: pedido.id,
-          item_carta_id: it.item_carta_id,
-          nombre: it.nombre,
-          cantidad: it.cantidad,
-          precio_unitario: it.precio_unitario,
-          subtotal: it.subtotal,
-          notas: it.notas ?? null,
-          estacion: it.estacion ?? 'armado',
-          precio_referencia: it.precio_referencia ?? null,
-          categoria_carta_id: it.categoria_carta_id ?? null,
-        } as any);
-        if (errItem) throw errItem;
-      }
+      const itemRows = params.items.map(it => ({
+        pedido_id: pedido.id,
+        item_carta_id: it.item_carta_id,
+        nombre: it.nombre,
+        cantidad: it.cantidad,
+        precio_unitario: it.precio_unitario,
+        subtotal: it.subtotal,
+        notas: it.notas ?? null,
+        estacion: it.estacion ?? 'armado',
+        precio_referencia: it.precio_referencia ?? null,
+        categoria_carta_id: it.categoria_carta_id ?? null,
+      }));
+      const { error: errItems } = await supabase.from('pedido_items').insert(itemRows as any);
+      if (errItems) throw errItems;
 
+      // Apps orders: payment handled by platform, no manual payment needed
+      const isAppsOrder = cfg?.canalVenta === 'apps';
       // pendiente_pago orders skip payment insertion (webhook handles it)
       const isPendientePago = params.estadoInicial === 'pendiente_pago';
       const useSplit = params.payments && params.payments.length > 0;
-      if (!isPendientePago && !useSplit && !params.metodoPago) {
+      if (!isPendientePago && !isAppsOrder && !useSplit && !params.metodoPago) {
         throw new Error('Se requiere un método de pago');
       }
-      const paymentRows = isPendientePago
+      const paymentRows = (isPendientePago || isAppsOrder)
         ? []
         : useSplit
           ? params.payments!
@@ -162,17 +166,19 @@ export function useCreatePedido(branchId: string) {
               },
             ];
 
-      for (const row of paymentRows) {
-        const montoRecibido = row.montoRecibido ?? row.amount;
-        const vuelto = montoRecibido - row.amount;
-        const { error: errPago } = await supabase.from('pedido_pagos').insert({
-          pedido_id: pedido.id,
-          metodo: row.method,
-          monto: row.amount,
-          monto_recibido: montoRecibido,
-          vuelto: vuelto,
-          created_by: user.id,
+      if (paymentRows.length > 0) {
+        const pagoRows = paymentRows.map(row => {
+          const montoRecibido = row.montoRecibido ?? row.amount;
+          return {
+            pedido_id: pedido.id,
+            metodo: row.method,
+            monto: row.amount,
+            monto_recibido: montoRecibido,
+            vuelto: montoRecibido - row.amount,
+            created_by: user.id,
+          };
         });
+        const { error: errPago } = await supabase.from('pedido_pagos').insert(pagoRows);
         if (errPago) throw errPago;
       }
 
@@ -213,7 +219,10 @@ export function useCreatePedido(branchId: string) {
             order_id: pedido.id,
             recorded_by: user.id,
           });
-          if (errMov) console.error('Error registrando movimiento de caja:', errMov);
+          if (errMov) {
+            console.error('Error registrando movimiento de caja:', errMov);
+            toast.warning('Pedido creado pero no se registró en caja. Ajustá manualmente.');
+          }
         }
       }
 

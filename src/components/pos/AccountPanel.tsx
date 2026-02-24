@@ -55,6 +55,12 @@ type TimelineEntry =
 
 type SendingStage = 'creating' | 'invoicing' | 'printing' | 'done';
 
+const APP_LABELS: Record<string, string> = {
+  rappi: 'Rappi',
+  pedidos_ya: 'PedidosYa',
+  mp_delivery: 'MP Delivery',
+};
+
 interface AccountPanelProps {
   items: CartItem[];
   payments: LocalPayment[];
@@ -71,6 +77,7 @@ interface AccountPanelProps {
   disabled?: boolean;
   orderConfig?: OrderConfig;
   onEditConfig?: () => void;
+  onUpdateOrderConfig?: (partial: Partial<OrderConfig>) => void;
 }
 
 /* ── Config Summary Header ─────────────────────────── */
@@ -136,16 +143,19 @@ export function AccountPanel({
   disabled,
   orderConfig,
   onEditConfig,
+  onUpdateOrderConfig,
 }: AccountPanelProps) {
   const subtotalItems = items.reduce((s, i) => s + i.subtotal, 0);
-  const costoEnvio = orderConfig?.canalVenta === 'apps' ? (orderConfig?.costoDelivery ?? 0) : 0;
+  const isApps = orderConfig?.canalVenta === 'apps';
+  const isDelivery = orderConfig?.tipoServicio === 'delivery';
+  const costoEnvio = (isApps || isDelivery) ? (orderConfig?.costoDelivery ?? 0) : 0;
   const descPlataforma = orderConfig?.descuentoPlataforma ?? 0;
   const descRestaurante = orderConfig?.descuentoRestaurante ?? 0;
   const totalDescuentos = descPlataforma + descRestaurante;
   const totalItems = subtotalItems + costoEnvio - totalDescuentos;
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
-  const saldo = totalItems - totalPaid;
-  const canSend = Math.abs(saldo) < 0.01 && items.length > 0;
+  const saldo = isApps ? 0 : totalItems - totalPaid;
+  const canSend = isApps ? items.length > 0 : (Math.abs(totalItems - totalPaid) < 0.01 && items.length > 0);
 
   const [editingNoteIdx, setEditingNoteIdx] = useState<number | null>(null);
 
@@ -196,14 +206,17 @@ export function AccountPanel({
   const totalQty = items.reduce((s, i) => s + i.cantidad, 0);
   let sendLabel = 'Agrega productos';
   let sendDisabled = true;
-  if (items.length > 0 && payments.length === 0) {
+  if (isApps && items.length > 0) {
+    sendLabel = 'Enviar a cocina';
+    sendDisabled = false;
+  } else if (items.length > 0 && payments.length === 0) {
     sendLabel = `Cobra $ ${totalItems.toLocaleString('es-AR')} para enviar`;
     sendDisabled = true;
   } else if (items.length > 0 && saldo > 0) {
     sendLabel = `Faltan $ ${saldo.toLocaleString('es-AR')} por cobrar`;
     sendDisabled = true;
   } else if (canSend) {
-    sendLabel = `Enviar a cocina`;
+    sendLabel = 'Enviar a cocina';
     sendDisabled = false;
   }
 
@@ -290,42 +303,93 @@ export function AccountPanel({
           <>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">{costoEnvio > 0 ? 'Subtotal' : 'Total pedido'}</span>
+                <span className="text-muted-foreground">{(costoEnvio > 0 || totalDescuentos > 0 || isApps) ? 'Subtotal' : 'Total pedido'}</span>
                 <span className="font-medium tabular-nums">$ {subtotalItems.toLocaleString('es-AR')}</span>
               </div>
-              {costoEnvio > 0 && (
+
+              {/* Editable delivery amounts for apps */}
+              {isApps && onUpdateOrderConfig && (
+                <>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground text-xs shrink-0">Envío</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={100}
+                      value={orderConfig?.costoDelivery ?? 0}
+                      onChange={(e) => onUpdateOrderConfig({ costoDelivery: Math.max(0, Number(e.target.value) || 0) })}
+                      className="h-7 w-28 text-xs text-right tabular-nums"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-orange-600 text-xs shrink-0">Desc. plataforma</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={100}
+                      value={orderConfig?.descuentoPlataforma ?? 0}
+                      onChange={(e) => onUpdateOrderConfig({ descuentoPlataforma: Math.max(0, Number(e.target.value) || 0) })}
+                      className="h-7 w-28 text-xs text-right tabular-nums"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-orange-600 text-xs shrink-0">Desc. restaurante</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={100}
+                      value={orderConfig?.descuentoRestaurante ?? 0}
+                      onChange={(e) => onUpdateOrderConfig({ descuentoRestaurante: Math.max(0, Number(e.target.value) || 0) })}
+                      className="h-7 w-28 text-xs text-right tabular-nums"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Static delivery amounts for non-apps */}
+              {!isApps && costoEnvio > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Envío</span>
                   <span className="font-medium tabular-nums">$ {costoEnvio.toLocaleString('es-AR')}</span>
                 </div>
               )}
-              {descPlataforma > 0 && (
+              {!isApps && descPlataforma > 0 && (
                 <div className="flex justify-between text-orange-600">
                   <span>Desc. plataforma</span>
                   <span className="font-medium tabular-nums">- $ {descPlataforma.toLocaleString('es-AR')}</span>
                 </div>
               )}
-              {descRestaurante > 0 && (
+              {!isApps && descRestaurante > 0 && (
                 <div className="flex justify-between text-orange-600">
                   <span>Desc. restaurante</span>
                   <span className="font-medium tabular-nums">- $ {descRestaurante.toLocaleString('es-AR')}</span>
                 </div>
               )}
-              {(costoEnvio > 0 || totalDescuentos > 0) && (
+
+              {(costoEnvio > 0 || totalDescuentos > 0 || isApps) && (
                 <div className="flex justify-between pt-0.5 border-t">
                   <span className="text-muted-foreground font-medium">Total pedido</span>
                   <span className="font-semibold tabular-nums">$ {totalItems.toLocaleString('es-AR')}</span>
                 </div>
               )}
-              {payments.length > 0 && (
+
+              {/* For apps: show "Cobrado por [App]" indicator */}
+              {isApps && (
+                <div className="rounded-lg px-3 py-2 flex justify-between items-center text-sm font-bold bg-sky-50 text-sky-800 border border-sky-200">
+                  <span>Cobrado por {APP_LABELS[orderConfig?.canalApp ?? ''] ?? 'App'}</span>
+                  <span className="tabular-nums">$ {totalItems.toLocaleString('es-AR')}</span>
+                </div>
+              )}
+
+              {/* For non-apps: show paid amount and saldo */}
+              {!isApps && payments.length > 0 && (
                 <div className="flex justify-between text-emerald-600">
                   <span>Pagado</span>
                   <span className="font-medium tabular-nums">- $ {totalPaid.toLocaleString('es-AR')}</span>
                 </div>
               )}
             </div>
-            {/* Saldo area with contextual background */}
-            {payments.length > 0 && (
+            {!isApps && payments.length > 0 && (
               <div className={cn(
                 'rounded-lg px-3 py-2 flex justify-between items-center text-sm font-bold',
                 saldo > 0
@@ -339,7 +403,7 @@ export function AccountPanel({
           </>
         )}
 
-        {items.length > 0 && saldo > 0 && (
+        {!isApps && items.length > 0 && saldo > 0 && (
           <Button variant="outline" className="w-full" onClick={onRegisterPayment} disabled={disabled}>
             <PlusCircle className="h-4 w-4 mr-2" />
             Registrar pago

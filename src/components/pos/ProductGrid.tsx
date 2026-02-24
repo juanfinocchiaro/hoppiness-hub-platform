@@ -26,6 +26,13 @@ export interface CartItemRemovible {
   nombre: string;
 }
 
+export interface CartItemOpcional {
+  grupoId: string;
+  grupoNombre: string;
+  itemId: string;
+  nombre: string;
+}
+
 export interface CartItem {
   item_carta_id: string;
   nombre: string;
@@ -35,6 +42,7 @@ export interface CartItem {
   notas?: string;
   extras?: CartItemExtra[];
   removibles?: CartItemRemovible[];
+  opcionales?: CartItemOpcional[];
   precio_referencia?: number;
   categoria_carta_id?: string | null;
   createdAt?: number;

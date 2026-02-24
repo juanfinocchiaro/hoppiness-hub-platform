@@ -35,6 +35,48 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    // Verify webhook signature if secret is configured
+    const mpWebhookSecret = Deno.env.get("MP_WEBHOOK_SECRET");
+    if (mpWebhookSecret) {
+      const xSignature = req.headers.get("x-signature");
+      const xRequestId = req.headers.get("x-request-id");
+      if (!xSignature || !xRequestId) {
+        return new Response(JSON.stringify({ error: "Missing signature" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const parts = Object.fromEntries(
+        xSignature.split(",").map((p: string) => {
+          const [k, v] = p.split("=");
+          return [k.trim(), v?.trim()];
+        }),
+      );
+      const ts = parts["ts"];
+      const hash = parts["v1"];
+      const url = new URL(req.url);
+      const dataId = url.searchParams.get("data.id") ?? "";
+      const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
+      const key = await crypto.subtle.importKey(
+        "raw",
+        new TextEncoder().encode(mpWebhookSecret),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"],
+      );
+      const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(manifest));
+      const computed = Array.from(new Uint8Array(sig))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+      if (computed !== hash) {
+        console.error("Webhook signature mismatch");
+        return new Response(JSON.stringify({ error: "Invalid signature" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const body = await req.json();
 
     if (
@@ -56,33 +98,70 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: configs } = await supabase
-      .from("mercadopago_config")
-      .select("branch_id, access_token")
-      .eq("estado_conexion", "conectado");
+    // Try to resolve branch from external_reference (pedido_id) first to avoid N+1
+    let matchedBranchId: string | null = null;
+    let paymentData: Record<string, unknown> | null = null;
+    let matchedToken: string | null = null;
 
-    if (!configs?.length) {
-      return new Response(
-        JSON.stringify({ error: "No connected branches" }),
-        {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+    const extRef = body.data?.external_reference;
+    if (extRef) {
+      const { data: pedido } = await supabase
+        .from("pedidos")
+        .select("branch_id")
+        .eq("id", extRef)
+        .maybeSingle();
+      if (pedido?.branch_id) {
+        const { data: cfg } = await supabase
+          .from("mercadopago_config")
+          .select("branch_id, access_token")
+          .eq("branch_id", pedido.branch_id)
+          .eq("estado_conexion", "conectado")
+          .single();
+        if (cfg?.access_token) {
+          matchedBranchId = cfg.branch_id;
+          matchedToken = cfg.access_token;
+        }
+      }
     }
 
-    let paymentData: Record<string, unknown> | null = null;
-    let matchedBranchId: string | null = null;
+    // Fallback: iterate connected branches
+    if (!matchedToken) {
+      const { data: configs } = await supabase
+        .from("mercadopago_config")
+        .select("branch_id, access_token")
+        .eq("estado_conexion", "conectado");
 
-    for (const cfg of configs) {
+      if (!configs?.length) {
+        return new Response(
+          JSON.stringify({ error: "No connected branches" }),
+          {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      for (const cfg of configs) {
+        const res = await fetch(
+          `https://api.mercadopago.com/v1/payments/${paymentId}`,
+          { headers: { Authorization: `Bearer ${cfg.access_token}` } },
+        );
+        if (res.ok) {
+          paymentData = await res.json();
+          matchedBranchId = cfg.branch_id;
+          break;
+        }
+      }
+    }
+
+    // Fetch payment data if we found the branch via fast path
+    if (matchedToken && !paymentData) {
       const res = await fetch(
         `https://api.mercadopago.com/v1/payments/${paymentId}`,
-        { headers: { Authorization: `Bearer ${cfg.access_token}` } },
+        { headers: { Authorization: `Bearer ${matchedToken}` } },
       );
       if (res.ok) {
         paymentData = await res.json();
-        matchedBranchId = cfg.branch_id;
-        break;
       }
     }
 
@@ -140,7 +219,6 @@ Deno.serve(async (req) => {
 
           // Transition pendiente_pago -> pendiente (makes order visible to kitchen)
           if (pedido.estado === "pendiente_pago") {
-            // Check if webapp auto-accept is enabled
             if (pedido.origen === "webapp") {
               const { data: wconfig } = await supabase
                 .from("webapp_config")
@@ -167,6 +245,32 @@ Deno.serve(async (req) => {
             .eq("id", externalReference)
             .eq("branch_id", matchedBranchId);
         }
+      }
+    }
+
+    // Handle refunds, chargebacks, and rejections
+    if (externalReference && (status === "refunded" || status === "charged_back")) {
+      await supabase
+        .from("pedidos")
+        .update({ pago_estado: "reembolsado" })
+        .eq("id", externalReference)
+        .eq("branch_id", matchedBranchId);
+    }
+
+    if (externalReference && (status === "rejected" || status === "cancelled")) {
+      const { data: pedido } = await supabase
+        .from("pedidos")
+        .select("estado")
+        .eq("id", externalReference)
+        .eq("branch_id", matchedBranchId)
+        .single();
+
+      if (pedido?.estado === "pendiente_pago") {
+        await supabase
+          .from("pedidos")
+          .update({ pago_estado: "rechazado", estado: "cancelado" })
+          .eq("id", externalReference)
+          .eq("branch_id", matchedBranchId);
       }
     }
 

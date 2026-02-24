@@ -1,8 +1,8 @@
 /**
  * RequireBranchAccess - Guard que valida acceso a una sucursal específica
- * 
- * Usa usePermissionsWithImpersonation para considerar impersonación.
- * Muestra NoAccessState si el usuario no tiene acceso a la sucursal.
+ *
+ * During impersonation the REAL user's permissions are used for the access
+ * decision so the superadmin is never blocked from viewing a branch.
  */
 import { ReactNode } from 'react';
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
@@ -20,19 +20,22 @@ export function RequireBranchAccess({
   children,
   fallbackPath = '/cuenta',
 }: RequireBranchAccessProps) {
-  const { loading, hasAccessToBranch, isSuperadmin, canAccessLocalPanel } = 
+  const { loading, hasAccessToBranch, isSuperadmin, canAccessLocalPanel, isViewingAs, realUserPermissions } = 
     usePermissionsWithImpersonation(branchId);
 
   if (loading) {
     return <HoppinessLoader fullScreen size="lg" />;
   }
 
-  // Superadmins siempre tienen acceso
+  // During impersonation the real user is a superadmin — always allow
+  if (isViewingAs && realUserPermissions?.isSuperadmin) {
+    return <>{children}</>;
+  }
+
   if (isSuperadmin) {
     return <>{children}</>;
   }
 
-  // Verificar acceso específico a la sucursal
   const hasAccess = hasAccessToBranch(branchId);
 
   if (!hasAccess) {

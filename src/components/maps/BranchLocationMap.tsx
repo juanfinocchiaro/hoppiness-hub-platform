@@ -2,23 +2,21 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   GoogleMap,
   useJsApiLoader,
-  Marker,
+  OverlayView,
 } from '@react-google-maps/api';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { RefreshCw, Search, MapPin } from 'lucide-react';
+import { RefreshCw, MapPin, Navigation } from 'lucide-react';
 import { devWarn } from '@/lib/errorHandler';
 import { toast } from 'sonner';
+import logoHoppiness from '@/assets/logo-hoppiness.png';
 
 const libraries: ("places")[] = ['places'];
 
 interface BranchLocationMapProps {
-  address: string;
-  city: string;
+  placeId: string;
   latitude: string;
   longitude: string;
-  onLocationChange: (lat: string, lng: string) => void;
-  readOnly?: boolean;
+  onLocated: (lat: string, lng: string) => void;
 }
 
 const mapContainerStyle = {
@@ -26,7 +24,6 @@ const mapContainerStyle = {
   height: '250px',
 };
 
-// Default to Córdoba, Argentina
 const defaultCenter = {
   lat: -31.4201,
   lng: -64.1888,
@@ -42,24 +39,20 @@ const mapOptions: google.maps.MapOptions = {
 
 function BranchLocationMapInner({
   apiKey,
-  address,
-  city,
+  placeId,
   latitude,
   longitude,
-  onLocationChange,
-  readOnly = false,
+  onLocated,
 }: BranchLocationMapProps & { apiKey: string }) {
   const mapRef = useRef<google.maps.Map | null>(null);
-  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const [markerPosition, setMarkerPosition] = useState<google.maps.LatLngLiteral | null>(null);
-  const [geocoding, setGeocoding] = useState(false);
+  const [locating, setLocating] = useState(false);
 
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: apiKey,
     libraries,
   });
 
-  // Initialize marker position from props
   useEffect(() => {
     if (latitude && longitude) {
       const lat = parseFloat(latitude);
@@ -68,80 +61,64 @@ function BranchLocationMapInner({
         setMarkerPosition({ lat, lng });
       }
     }
-  }, []);
-
-  // Initialize geocoder when map loads
-  useEffect(() => {
-    if (isLoaded && !geocoderRef.current) {
-      geocoderRef.current = new google.maps.Geocoder();
-    }
-  }, [isLoaded]);
+  }, [latitude, longitude]);
 
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
-    
-    // If we have a marker, center on it
     if (markerPosition) {
       map.setCenter(markerPosition);
       map.setZoom(16);
     }
   }, [markerPosition]);
 
-  const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
-    if (readOnly || !e.latLng) return;
-    
-    const lat = e.latLng.lat();
-    const lng = e.latLng.lng();
-    setMarkerPosition({ lat, lng });
-    onLocationChange(lat.toFixed(7), lng.toFixed(7));
-  }, [readOnly, onLocationChange]);
+  const sanitizePlaceId = (raw: string) =>
+    raw.trim().replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '');
 
-  const handleMarkerDragEnd = useCallback((e: google.maps.MapMouseEvent) => {
-    if (!e.latLng) return;
-    
-    const lat = e.latLng.lat();
-    const lng = e.latLng.lng();
-    setMarkerPosition({ lat, lng });
-    onLocationChange(lat.toFixed(7), lng.toFixed(7));
-  }, [onLocationChange]);
-
-  const geocodeAddress = useCallback(async () => {
-    if (!geocoderRef.current || !address) {
-      toast.error('Ingresá una dirección primero');
+  const locateByPlaceId = useCallback(() => {
+    const cleanId = sanitizePlaceId(placeId);
+    if (!mapRef.current || !cleanId) {
+      toast.error('Ingresá un Google Place ID primero');
       return;
     }
 
-    const fullAddress = city ? `${address}, ${city}, Argentina` : `${address}, Argentina`;
-    setGeocoding(true);
+    setLocating(true);
+    const service = new google.maps.places.PlacesService(mapRef.current);
 
-    try {
-      geocoderRef.current.geocode({ address: fullAddress }, (results, status) => {
-        setGeocoding(false);
-        
-        if (status === 'OK' && results && results[0]) {
-          const location = results[0].geometry.location;
-          const lat = location.lat();
-          const lng = location.lng();
-          
+    service.getDetails(
+      { placeId: cleanId, fields: ['geometry', 'name'] },
+      (place, status) => {
+        setLocating(false);
+
+        if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+
           setMarkerPosition({ lat, lng });
-          onLocationChange(lat.toFixed(7), lng.toFixed(7));
-          
-          // Center map on result
+          onLocated(lat.toFixed(7), lng.toFixed(7));
+
           if (mapRef.current) {
             mapRef.current.setCenter({ lat, lng });
             mapRef.current.setZoom(16);
           }
-          
-          toast.success('Ubicación encontrada');
+
+          const nameHint = place.name ? ` (${place.name})` : '';
+          toast.success(`Ubicación encontrada${nameHint}`);
         } else {
-          toast.error('No se pudo encontrar la dirección. Probá con más detalles.');
+          devWarn('PlacesService.getDetails failed', { status, placeId: cleanId });
+
+          const statusMessages: Record<string, string> = {
+            INVALID_REQUEST: 'El Place ID tiene un formato inválido.',
+            NOT_FOUND: 'No se encontró el Place ID. Verificá que sea correcto.',
+            OVER_QUERY_LIMIT: 'Se superó el límite de consultas. Intentá en unos minutos.',
+            REQUEST_DENIED: 'La API de Places no está habilitada en la API Key. Habilitá "Places API" en Google Cloud Console.',
+            ZERO_RESULTS: 'No se encontraron resultados para ese Place ID.',
+          };
+          const msg = statusMessages[status] || `Error al buscar el Place ID (${status}).`;
+          toast.error(msg);
         }
-      });
-    } catch (error) {
-      setGeocoding(false);
-      toast.error('Error al buscar la dirección');
-    }
-  }, [address, city, onLocationChange]);
+      },
+    );
+  }, [placeId, onLocated]);
 
   const center = markerPosition || defaultCenter;
   const zoom = markerPosition ? 16 : 12;
@@ -164,25 +141,23 @@ function BranchLocationMapInner({
 
   return (
     <div className="space-y-2">
-      {!readOnly && (
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={geocodeAddress}
-            disabled={geocoding || !address}
-            className="gap-1.5"
-          >
-            {geocoding ? (
-              <RefreshCw className="h-3 w-3 animate-spin" />
-            ) : (
-              <Search className="h-3 w-3" />
-            )}
-            Buscar dirección en mapa
-          </Button>
-        </div>
-      )}
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={locateByPlaceId}
+          disabled={locating || !placeId.trim()}
+          className="gap-1.5"
+        >
+          {locating ? (
+            <RefreshCw className="h-3 w-3 animate-spin" />
+          ) : (
+            <Navigation className="h-3 w-3" />
+          )}
+          Ubicar
+        </Button>
+      </div>
 
       <div className="rounded-lg overflow-hidden border">
         <GoogleMap
@@ -191,38 +166,24 @@ function BranchLocationMapInner({
           zoom={zoom}
           options={mapOptions}
           onLoad={onMapLoad}
-          onClick={handleMapClick}
         >
           {markerPosition && (
-            <Marker
+            <OverlayView
               position={markerPosition}
-              draggable={!readOnly}
-              onDragEnd={handleMarkerDragEnd}
-              animation={google.maps.Animation.DROP}
-              icon={{
-                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                  <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="#1d4ed8" stroke="white" stroke-width="1.5">
-                    <path d="M3 21h18M5 21V7l8-4 8 4v14M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4"/>
-                  </svg>
-                `),
-                scaledSize: new google.maps.Size(36, 36),
-                anchor: new google.maps.Point(18, 36),
-              }}
-            />
+              mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+              getPixelPositionOffset={() => ({ x: -20, y: -20 })}
+            >
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-lg">
+                <img src={logoHoppiness} alt="Hoppiness Club" className="w-full h-full object-cover" />
+              </div>
+            </OverlayView>
           )}
         </GoogleMap>
       </div>
-
-      {!readOnly && (
-        <p className="text-xs text-muted-foreground">
-          Buscá la dirección o hacé click en el mapa para ubicar la sucursal. Podés arrastrar el marcador para ajustar.
-        </p>
-      )}
     </div>
   );
 }
 
-// Wrapper that fetches API key with retry logic
 export default function BranchLocationMap(props: BranchLocationMapProps) {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [loadingKey, setLoadingKey] = useState(true);

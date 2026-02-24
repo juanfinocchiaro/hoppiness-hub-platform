@@ -36,8 +36,8 @@ Deno.serve(async (req) => {
     );
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -52,6 +52,34 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'Missing printer_ip or data_base64' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // SSRF protection: reject private/reserved IP ranges
+    const ipParts = printer_ip.split('.').map(Number);
+    const isPrivateIp =
+      printer_ip === 'localhost' ||
+      printer_ip === '127.0.0.1' ||
+      printer_ip.startsWith('0.') ||
+      (ipParts[0] === 10) ||
+      (ipParts[0] === 172 && ipParts[1] >= 16 && ipParts[1] <= 31) ||
+      (ipParts[0] === 192 && ipParts[1] === 168) ||
+      (ipParts[0] === 169 && ipParts[1] === 254);
+
+    if (isPrivateIp) {
+      // Verify printer is registered in DB for this user's branches
+      const { data: registeredPrinter } = await supabase
+        .from('branch_printers')
+        .select('id')
+        .eq('ip_address', printer_ip)
+        .limit(1)
+        .maybeSingle();
+
+      if (!registeredPrinter) {
+        return new Response(
+          JSON.stringify({ error: 'Printer IP not registered. Add it in Configuration > Printers.' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Decode base64 to bytes

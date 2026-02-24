@@ -8,6 +8,7 @@ import { ActivePromosBanner } from './ActivePromosBanner';
 import { EmailConfirmBanner } from '@/components/auth/EmailConfirmBanner';
 import { WebappHeader } from './WebappHeader';
 import { useScrollDirection } from '@/hooks/useScrollDirection';
+import { useDynamicPrepTime } from '@/hooks/useDeliveryConfig';
 import type { WebappMenuItem, TipoServicioWebapp } from '@/types/webapp';
 import type { useWebappCart } from '@/hooks/useWebappCart';
 
@@ -95,38 +96,47 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
     categoryRefs.current[catName]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  // Dynamic ETA
+  const { data: retiroEta } = useDynamicPrepTime(branch.id, 'retiro');
+  const { data: deliveryEta } = useDynamicPrepTime(branch.id, 'delivery');
+
+  const currentEta = tipoServicio === 'delivery' ? deliveryEta : retiroEta;
+
   const servicioOptions = [
-    config.retiro_habilitado && { key: 'retiro' as TipoServicioWebapp, label: 'Retiro', icon: '🛒', tiempo: config.tiempo_estimado_retiro_min },
-    config.delivery_habilitado && { key: 'delivery' as TipoServicioWebapp, label: 'Delivery', icon: '🛵', tiempo: config.tiempo_estimado_delivery_min },
+    config.retiro_habilitado && { key: 'retiro' as TipoServicioWebapp, label: 'Retiro', icon: '🛒', tiempo: retiroEta?.prep_time_min ?? config.tiempo_estimado_retiro_min },
+    config.delivery_habilitado && { key: 'delivery' as TipoServicioWebapp, label: 'Delivery', icon: '🛵', tiempo: deliveryEta?.prep_time_min ?? config.tiempo_estimado_delivery_min },
   ].filter(Boolean) as { key: TipoServicioWebapp; label: string; icon: string; tiempo: number | null }[];
 
   const servicioLabel = tipoServicio === 'retiro' ? '🛒 Retiro en local' : '🛵 Delivery';
 
-  const tiempoEstimado = tipoServicio === 'delivery'
-    ? config.tiempo_estimado_delivery_min
-    : config.tiempo_estimado_retiro_min;
+  const tiempoEstimado = currentEta?.prep_time_min ??
+    (tipoServicio === 'delivery' ? config.tiempo_estimado_delivery_min : config.tiempo_estimado_retiro_min);
+  const highDemand = (currentEta?.active_orders ?? 0) >= 5;
 
-  // Build subtitle for header
   const headerSubtitle = [
     servicioLabel,
     tiempoEstimado ? `~${tiempoEstimado} min` : null,
+    highDemand ? '(alta demanda)' : null,
   ].filter(Boolean).join(' · ');
 
-  const renderProductCard = (item: WebappMenuItem, layout: 'grid' | 'list' | 'desktop') => (
-    <ProductCard
-      key={item.id}
-      item={item}
-      qty={cart.getItemQty(item.id)}
-      layout={layout}
-      onTap={() => onProductClick(item)}
-      onQuickAdd={() => cart.quickAdd(item.id, item.nombre, item.precio_base, item.imagen_url)}
-      onIncrement={() => cart.quickAdd(item.id, item.nombre, item.precio_base, item.imagen_url)}
-      onDecrement={() => {
-        const entry = cart.items.find(i => i.itemId === item.id);
-        if (entry) cart.updateQuantity(entry.cartId, entry.cantidad - 1);
-      }}
-    />
-  );
+  const renderProductCard = (item: WebappMenuItem, layout: 'grid' | 'list' | 'desktop') => {
+    const price = (item.precio_promo != null && item.precio_promo < item.precio_base) ? item.precio_promo : item.precio_base;
+    return (
+      <ProductCard
+        key={item.id}
+        item={item}
+        qty={cart.getItemQty(item.id)}
+        layout={layout}
+        onTap={() => onProductClick(item)}
+        onQuickAdd={() => cart.quickAdd(item.id, item.nombre, price, item.imagen_url)}
+        onIncrement={() => cart.quickAdd(item.id, item.nombre, price, item.imagen_url)}
+        onDecrement={() => {
+          const entry = cart.items.find(i => i.itemId === item.id);
+          if (entry) cart.updateQuantity(entry.cartId, entry.cantidad - 1);
+        }}
+      />
+    );
+  };
 
   return (
     <div className="flex flex-col flex-1 min-w-0 min-h-screen">

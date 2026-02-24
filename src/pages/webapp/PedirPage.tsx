@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useWebappConfig, useWebappMenuItems } from '@/hooks/useWebappMenu';
 import { useWebappCart } from '@/hooks/useWebappCart';
 import { useMercadoPagoStatus } from '@/hooks/useMercadoPagoConfig';
@@ -14,7 +16,8 @@ import { MisPedidosSheet } from '@/components/webapp/MisPedidosSheet';
 import { ProductCustomizeSheet } from '@/components/webapp/ProductCustomizeSheet';
 import { SEO } from '@/components/SEO';
 import { Loader2 } from 'lucide-react';
-import type { TipoServicioWebapp, WebappMenuItem } from '@/types/webapp';
+import type { TipoServicioWebapp, WebappMenuItem, DeliveryCalcResult } from '@/types/webapp';
+import type { AddressResult } from '@/components/webapp/AddressAutocomplete';
 
 export default function PedirPage() {
   const { branchSlug } = useParams<{ branchSlug: string }>();
@@ -40,6 +43,34 @@ export default function PedirPage() {
   const navigate = useNavigate();
   const mpEnabled = mpStatus?.estado_conexion === 'conectado';
   const reorderChecked = useRef(false);
+
+  // Google Maps API key (shared between BranchLanding and CartSheet)
+  const { data: googleApiKey } = useQuery({
+    queryKey: ['google-maps-api-key'],
+    queryFn: async () => {
+      const { data: d, error } = await supabase.functions.invoke('google-maps-key');
+      if (error) return null;
+      return d?.apiKey as string | null;
+    },
+    staleTime: Infinity,
+  });
+
+  // Lifted delivery address state (set by BranchLanding, consumed by CartSheet)
+  const [prevalidatedAddress, setPrevalidatedAddress] = useState<AddressResult | null>(() => {
+    try {
+      const stored = localStorage.getItem('hop_delivery_address');
+      return stored ? JSON.parse(stored) : null;
+    } catch { return null; }
+  });
+  const [prevalidatedCalc, setPrevalidatedCalc] = useState<DeliveryCalcResult | null>(null);
+
+  const handleDeliveryValidated = (address: AddressResult, calc: DeliveryCalcResult) => {
+    setPrevalidatedAddress(address);
+    setPrevalidatedCalc(calc);
+    try {
+      localStorage.setItem('hop_delivery_address', JSON.stringify(address));
+    } catch { /* ignore */ }
+  };
 
   // Check for reorder items when menu loads
   useEffect(() => {
@@ -195,6 +226,10 @@ export default function PedirPage() {
           onSelectService={handleSelectService}
           onViewMenu={() => setStep('menu')}
           onBack={() => navigate('/pedir')}
+          branchId={branch.id}
+          googleApiKey={googleApiKey}
+          onDeliveryValidated={handleDeliveryValidated}
+          initialDeliveryAddress={prevalidatedAddress}
         />
       ) : (
         <>
@@ -237,6 +272,8 @@ export default function PedirPage() {
             deliveryCosto={costoEnvio}
             initialStep={cartInitialStep}
             externalTrackingCode={externalTrackingCode}
+            prevalidatedAddress={prevalidatedAddress}
+            prevalidatedCalc={prevalidatedCalc}
           />
 
           <MisPedidosSheet

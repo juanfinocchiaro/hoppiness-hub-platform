@@ -20,6 +20,7 @@ interface BranchWithWebapp {
   opening_time: string | null;
   closing_time: string | null;
   public_hours: Record<string, { opens?: string; closes?: string; closed?: boolean }> | null;
+  google_place_id: string | null;
   webapp_activa: boolean;
   estado: string;
   delivery_habilitado: boolean;
@@ -29,10 +30,16 @@ interface BranchWithWebapp {
   tiempo_delivery: number | null;
 }
 
+/** Monday-based index: 0=Mon..6=Sun — canonical for public_hours keys */
+function getMondayBasedDayIdx(): number {
+  const jsDay = new Date().getDay();
+  return jsDay === 0 ? 6 : jsDay - 1;
+}
+
 /** Returns true if current time is within branch opening hours (for branches without webapp). */
 function isBranchOpenBySchedule(branch: Pick<BranchWithWebapp, 'opening_time' | 'closing_time' | 'public_hours'>): boolean {
   const now = new Date();
-  const dayKey = now.getDay().toString(); // 0=Sun .. 6=Sat
+  const dayKey = String(getMondayBasedDayIdx());
   const toMinutes = (t: string) => {
     const parts = (t || '').trim().split(':');
     const h = parseInt(parts[0] || '0', 10);
@@ -41,14 +48,17 @@ function isBranchOpenBySchedule(branch: Pick<BranchWithWebapp, 'opening_time' | 
   };
   const nowMin = now.getHours() * 60 + now.getMinutes();
 
-  const ph = branch.public_hours?.[dayKey];
+  // Support both Record and Array formats
+  const ph = Array.isArray(branch.public_hours)
+    ? branch.public_hours[getMondayBasedDayIdx()]
+    : branch.public_hours?.[dayKey];
   if (ph && typeof ph === 'object') {
-    if (ph.closed) return false;
-    const opens = ph.opens ?? branch.opening_time ?? '09:00';
-    const closes = ph.closes ?? branch.closing_time ?? '23:00';
+    if (ph.closed || (ph as any).cerrado) return false;
+    const opens = ph.opens ?? (ph as any).open ?? (ph as any).apertura ?? branch.opening_time ?? '09:00';
+    const closes = ph.closes ?? (ph as any).close ?? (ph as any).cierre ?? branch.closing_time ?? '23:00';
     const openMin = toMinutes(opens);
     let closeMin = toMinutes(closes);
-    if (closeMin <= openMin) closeMin += 24 * 60; // overnight
+    if (closeMin <= openMin) closeMin += 24 * 60;
     const nowMinNorm = nowMin < openMin ? nowMin + 24 * 60 : nowMin;
     return nowMinNorm >= openMin && nowMinNorm < closeMin;
   }
@@ -68,7 +78,7 @@ function useBranchesForPedir() {
     queryFn: async () => {
       const { data: branches, error: bErr } = await supabase
         .from('branches_public')
-        .select('id, name, address, city, slug, public_status, cover_image_url, latitude, longitude, opening_time, closing_time, public_hours')
+        .select('id, name, address, city, slug, public_status, cover_image_url, latitude, longitude, opening_time, closing_time, public_hours, google_place_id')
         .in('public_status', ['active', 'coming_soon'])
         .order('name');
       if (bErr) throw bErr;
@@ -86,7 +96,7 @@ function useBranchesForPedir() {
       }
 
       return (branches || [])
-        .filter((b: any) => b.public_status === 'active' && b.name !== 'Muy Pronto')
+        .filter((b: any) => b.public_status === 'active')
         .map((b: any): BranchWithWebapp => {
           const cfg = configMap[b.id];
           return {
@@ -163,15 +173,16 @@ export default function Pedir() {
   );
 }
 
-function getTodayHoursLabel(publicHours: Record<string, { opens?: string; closes?: string; closed?: boolean }> | null): string | null {
+function getTodayHoursLabel(publicHours: Record<string, any> | any[] | null): string | null {
   if (!publicHours) return null;
-  const jsDay = new Date().getDay(); // 0=Sun
-  const idx = jsDay === 0 ? 6 : jsDay - 1; // 0=Mon..6=Sun
-  const day = publicHours[String(idx)];
+  const idx = getMondayBasedDayIdx();
+  const day = Array.isArray(publicHours) ? publicHours[idx] : publicHours[String(idx)];
   if (!day) return null;
-  if (day.closed) return 'Hoy: Cerrado';
+  if (day.closed || day.cerrado) return 'Hoy: Cerrado';
+  const opens = day.opens ?? day.open ?? day.apertura;
+  const closes = day.closes ?? day.close ?? day.cierre;
   const fmt = (t?: string) => (t || '').replace(/^(\d{1,2}:\d{2})(:\d{2})?$/, '$1');
-  if (day.opens && day.closes) return `Hoy: ${fmt(day.opens)} - ${fmt(day.closes)}`;
+  if (opens && closes) return `Hoy: ${fmt(opens)} - ${fmt(closes)}`;
   return null;
 }
 
@@ -183,9 +194,11 @@ function BranchCard({ branch }: { branch: BranchWithWebapp }) {
   const isClosed = !isOpen && !isPaused;
   const openBySchedule = isBranchOpenBySchedule(branch);
   const hasCoords = branch.latitude != null && branch.longitude != null;
-  const mapsUrl = hasCoords
-    ? `https://maps.google.com/?q=${branch.latitude},${branch.longitude}`
-    : `https://maps.google.com/?q=${encodeURIComponent(branch.address + ', ' + branch.city)}`;
+  const mapsUrl = branch.google_place_id
+    ? `https://www.google.com/maps/place/?q=place_id:${branch.google_place_id}`
+    : hasCoords
+      ? `https://maps.google.com/?q=${branch.latitude},${branch.longitude}`
+      : `https://maps.google.com/?q=${encodeURIComponent(branch.address + ', ' + branch.city)}`;
 
   return (
     <div className="rounded-2xl bg-card border shadow-sm overflow-hidden transition-shadow hover:shadow-md">

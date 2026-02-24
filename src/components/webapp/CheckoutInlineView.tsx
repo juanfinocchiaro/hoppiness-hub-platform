@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import type { useWebappCart } from '@/hooks/useWebappCart';
+import type { DeliveryCalcResult } from '@/types/webapp';
 import { AddressAutocomplete, type AddressResult } from './AddressAutocomplete';
 import { DeliveryCostDisplay, DeliveryCostLoading } from './DeliveryCostDisplay';
 import { DeliveryUnavailable } from './DeliveryUnavailable';
@@ -41,9 +42,11 @@ interface Props {
   costoEnvio: number;
   onBack: () => void;
   onConfirmed: (trackingCode: string) => void;
+  prevalidatedAddress?: AddressResult | null;
+  prevalidatedCalc?: DeliveryCalcResult | null;
 }
 
-export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, costoEnvio: propCostoEnvio, onBack, onConfirmed }: Props) {
+export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, costoEnvio: propCostoEnvio, onBack, onConfirmed, prevalidatedAddress, prevalidatedCalc }: Props) {
   const { user } = useAuth();
   const isDelivery = cart.tipoServicio === 'delivery';
   const servicioLabel = cart.tipoServicio === 'retiro' ? 'Retiro en local' : cart.tipoServicio === 'delivery' ? 'Delivery' : 'Comer acá';
@@ -69,16 +72,8 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
     staleTime: Infinity,
   });
   const calculateDelivery = useCalculateDelivery();
-  const [deliveryAddress, setDeliveryAddress] = useState<AddressResult | null>(null);
-  const [deliveryCalc, setDeliveryCalc] = useState<{
-    available: boolean;
-    cost: number | null;
-    distance_km: number | null;
-    estimated_delivery_min: number | null;
-    disclaimer: string | null;
-    reason?: string;
-    suggested_branch?: { id: string; name: string; slug: string } | null;
-  } | null>(null);
+  const [deliveryAddress, setDeliveryAddress] = useState<AddressResult | null>(prevalidatedAddress ?? null);
+  const [deliveryCalc, setDeliveryCalc] = useState<DeliveryCalcResult | null>(prevalidatedCalc ?? null);
   const [calcLoading, setCalcLoading] = useState(false);
 
   // Saved addresses
@@ -119,6 +114,17 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
   const [metodoPago, setMetodoPago] = useState<MetodoPago>(mpEnabled ? 'mercadopago' : 'efectivo');
   const [pagaCon, setPagaCon] = useState<string>('');
   const [promoCode, setPromoCode] = useState<{ codigoId: string; codigoText: string; descuento: number } | null>(null);
+
+  // Sync pre-validated delivery address when props change
+  useEffect(() => {
+    if (prevalidatedAddress && prevalidatedCalc) {
+      setDeliveryAddress(prevalidatedAddress);
+      setDeliveryCalc(prevalidatedCalc);
+      if (prevalidatedAddress.formatted_address) {
+        setDireccion(prevalidatedAddress.formatted_address);
+      }
+    }
+  }, [prevalidatedAddress, prevalidatedCalc]);
 
   // Profile prefill
   useEffect(() => {
@@ -345,47 +351,75 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
           <div className="space-y-2">
             <h3 className="text-xs font-bold text-foreground">Dirección de entrega</h3>
 
-            <AddressAutocomplete
-              apiKey={googleApiKey ?? null}
-              onSelect={handleAddressSelect}
-              selectedAddress={deliveryAddress}
-            />
+            {deliveryAddress && deliveryCalc?.available ? (
+              <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900 p-2.5 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium truncate">{deliveryAddress.formatted_address}</span>
+                  <button
+                    onClick={() => {
+                      setDeliveryAddress(null);
+                      setDeliveryCalc(null);
+                      setDireccion('');
+                    }}
+                    className="text-[10px] text-primary hover:underline shrink-0 ml-2"
+                  >
+                    Cambiar
+                  </button>
+                </div>
+                {deliveryCalc.cost != null && (
+                  <DeliveryCostDisplay
+                    cost={deliveryCalc.cost}
+                    distanceKm={deliveryCalc.distance_km!}
+                    estimatedDeliveryMin={deliveryCalc.estimated_delivery_min!}
+                    disclaimer={deliveryCalc.disclaimer}
+                  />
+                )}
+              </div>
+            ) : (
+              <>
+                <AddressAutocomplete
+                  apiKey={googleApiKey ?? null}
+                  onSelect={handleAddressSelect}
+                  selectedAddress={deliveryAddress}
+                />
 
-            {calcLoading && <DeliveryCostLoading />}
-            {deliveryCalc && deliveryCalc.available && deliveryCalc.cost != null && (
-              <DeliveryCostDisplay
-                cost={deliveryCalc.cost}
-                distanceKm={deliveryCalc.distance_km!}
-                estimatedDeliveryMin={deliveryCalc.estimated_delivery_min!}
-                disclaimer={deliveryCalc.disclaimer}
-              />
-            )}
-            {deliveryCalc && !deliveryCalc.available && (
-              <DeliveryUnavailable
-                onSwitchToPickup={() => {
-                  cart.setTipoServicio('retiro');
-                  setDeliveryAddress(null);
-                  setDeliveryCalc(null);
-                }}
-                onChangeAddress={() => {
-                  setDeliveryAddress(null);
-                  setDeliveryCalc(null);
-                }}
-                reason={deliveryCalc.reason}
-                suggestedBranch={deliveryCalc.suggested_branch}
-              />
-            )}
+                {calcLoading && <DeliveryCostLoading />}
+                {deliveryCalc && deliveryCalc.available && deliveryCalc.cost != null && (
+                  <DeliveryCostDisplay
+                    cost={deliveryCalc.cost}
+                    distanceKm={deliveryCalc.distance_km!}
+                    estimatedDeliveryMin={deliveryCalc.estimated_delivery_min!}
+                    disclaimer={deliveryCalc.disclaimer}
+                  />
+                )}
+                {deliveryCalc && !deliveryCalc.available && (
+                  <DeliveryUnavailable
+                    onSwitchToPickup={() => {
+                      cart.setTipoServicio('retiro');
+                      setDeliveryAddress(null);
+                      setDeliveryCalc(null);
+                    }}
+                    onChangeAddress={() => {
+                      setDeliveryAddress(null);
+                      setDeliveryCalc(null);
+                    }}
+                    reason={deliveryCalc.reason}
+                    suggestedBranch={deliveryCalc.suggested_branch}
+                  />
+                )}
 
-            {savedAddresses.length > 0 && !deliveryAddress && (
-              <Select value="" onValueChange={(id) => {
-                const addr = savedAddresses.find(a => a.id === id);
-                if (addr) { setDireccion(addr.direccion); setPiso(addr.piso || ''); setReferencia(addr.referencia || ''); }
-              }}>
-                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Dirección guardada" /></SelectTrigger>
-                <SelectContent>
-                  {savedAddresses.map(a => <SelectItem key={a.id} value={a.id}>{a.etiqueta} — {a.direccion}</SelectItem>)}
-                </SelectContent>
-              </Select>
+                {savedAddresses.length > 0 && !deliveryAddress && (
+                  <Select value="" onValueChange={(id) => {
+                    const addr = savedAddresses.find(a => a.id === id);
+                    if (addr) { setDireccion(addr.direccion); setPiso(addr.piso || ''); setReferencia(addr.referencia || ''); }
+                  }}>
+                    <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Dirección guardada" /></SelectTrigger>
+                    <SelectContent>
+                      {savedAddresses.map(a => <SelectItem key={a.id} value={a.id}>{a.etiqueta} — {a.direccion}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
+              </>
             )}
 
             <div className="grid grid-cols-2 gap-2">

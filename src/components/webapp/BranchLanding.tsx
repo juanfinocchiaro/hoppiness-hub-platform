@@ -1,9 +1,15 @@
-import { useState } from 'react';
-import { MapPin, Clock, Truck, ShoppingBag, Pause, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { MapPin, Clock, Truck, ShoppingBag, Pause, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { WebappConfig, TipoServicioWebapp } from '@/types/webapp';
 import { WebappHeader } from './WebappHeader';
 import { StaticBranchMap } from './StaticBranchMap';
+import { AddressAutocomplete, type AddressResult } from './AddressAutocomplete';
+import { DeliveryCostDisplay, DeliveryCostLoading } from './DeliveryCostDisplay';
+import { DeliveryUnavailable } from './DeliveryUnavailable';
+import { useDynamicPrepTime } from '@/hooks/useDeliveryConfig';
+import { useCalculateDelivery } from '@/hooks/useDeliveryConfig';
+import type { DeliveryCalcResult } from '@/types/webapp';
 
 interface Props {
   branch: {
@@ -15,11 +21,17 @@ interface Props {
     latitude?: number | null;
     longitude?: number | null;
     public_hours?: any;
+    id?: string;
+    google_place_id?: string | null;
   };
   config: WebappConfig;
   onSelectService: (tipo: TipoServicioWebapp) => void;
   onViewMenu: () => void;
   onBack?: () => void;
+  branchId?: string;
+  googleApiKey?: string | null;
+  onDeliveryValidated?: (address: AddressResult, calc: DeliveryCalcResult) => void;
+  initialDeliveryAddress?: AddressResult | null;
 }
 
 function formatPrice(n: number) {
@@ -41,27 +53,29 @@ function getTodayIdx() {
 }
 
 function getTodayHours(publicHours: any) {
-  if (!publicHours || !Array.isArray(publicHours) || publicHours.length === 0) return null;
+  if (!publicHours) return null;
   const idx = getTodayIdx();
-  const day = publicHours[idx];
+  const day = Array.isArray(publicHours) ? publicHours[idx] : publicHours[String(idx)];
   if (!day) return null;
-  const open = day?.open || day?.apertura;
-  const close = day?.close || day?.cierre;
+  const open = day?.opens || day?.open || day?.apertura;
+  const close = day?.closes || day?.close || day?.cierre;
   const isClosed = day?.closed || day?.cerrado || (!open && !close);
   return { open, close, isClosed };
 }
 
 function WeeklySchedule({ publicHours }: { publicHours: any }) {
-  if (!publicHours || !Array.isArray(publicHours) || publicHours.length === 0) return null;
+  if (!publicHours) return null;
+  const asArray = Array.isArray(publicHours) ? publicHours : DAY_NAMES.map((_, i) => publicHours[String(i)]).filter(Boolean);
+  if (asArray.length === 0) return null;
   const todayIdx = getTodayIdx();
 
   return (
     <div className="w-full space-y-1.5 mt-2">
-      {publicHours.map((day: any, idx: number) => {
+      {asArray.map((day: any, idx: number) => {
         const isToday = idx === todayIdx;
         const label = DAY_SHORT[idx] || `Día ${idx + 1}`;
-        const open = day?.open || day?.apertura;
-        const close = day?.close || day?.cierre;
+        const open = day?.opens || day?.open || day?.apertura;
+        const close = day?.closes || day?.close || day?.cierre;
         const isClosed = day?.closed || day?.cerrado || (!open && !close);
 
         return (
@@ -80,15 +94,71 @@ function WeeklySchedule({ publicHours }: { publicHours: any }) {
   );
 }
 
-export function BranchLanding({ branch, config, onSelectService, onViewMenu, onBack }: Props) {
+export function BranchLanding({ branch, config, onSelectService, onViewMenu, onBack, branchId, googleApiKey, onDeliveryValidated, initialDeliveryAddress }: Props) {
   const [showWeek, setShowWeek] = useState(false);
+  const resolvedBranchId = branchId || branch.id;
   const isOpen = config.estado === 'abierto';
   const isPaused = config.estado === 'pausado';
-  const hasCoords = branch.latitude && branch.longitude;
-  const mapsUrl = hasCoords
-    ? `https://maps.google.com/?q=${branch.latitude},${branch.longitude}`
-    : `https://maps.google.com/?q=${encodeURIComponent(branch.address + ', ' + branch.city)}`;
+  const hasCoords = branch.latitude != null && branch.longitude != null;
+  const mapsUrl = branch.google_place_id
+    ? `https://www.google.com/maps/place/?q=place_id:${branch.google_place_id}`
+    : hasCoords
+      ? `https://maps.google.com/?q=${branch.latitude},${branch.longitude}`
+      : `https://maps.google.com/?q=${encodeURIComponent(branch.address + ', ' + branch.city)}`;
   const todayHours = getTodayHours(branch.public_hours);
+
+  // Dynamic ETA
+  const { data: retiroEta } = useDynamicPrepTime(resolvedBranchId, 'retiro');
+  const { data: deliveryEta } = useDynamicPrepTime(resolvedBranchId, 'delivery');
+  const retiroTime = retiroEta?.prep_time_min ?? config.tiempo_estimado_retiro_min;
+  const deliveryTime = deliveryEta?.prep_time_min ?? config.tiempo_estimado_delivery_min;
+  const retiroHighDemand = (retiroEta?.active_orders ?? 0) >= 5;
+  const deliveryHighDemand = (deliveryEta?.active_orders ?? 0) >= 5;
+
+  // Delivery address pre-validation
+  const [showAddressInput, setShowAddressInput] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState<AddressResult | null>(initialDeliveryAddress ?? null);
+  const [deliveryCalc, setDeliveryCalc] = useState<DeliveryCalcResult | null>(null);
+  const [calcLoading, setCalcLoading] = useState(false);
+  const calculateDelivery = useCalculateDelivery();
+
+  useEffect(() => {
+    if (!deliveryAddress || !resolvedBranchId) {
+      setDeliveryCalc(null);
+      return;
+    }
+    setCalcLoading(true);
+    calculateDelivery.mutateAsync({
+      branch_id: resolvedBranchId,
+      customer_lat: deliveryAddress.lat,
+      customer_lng: deliveryAddress.lng,
+      neighborhood_name: deliveryAddress.neighborhood_name,
+    }).then((result) => {
+      setDeliveryCalc(result);
+    }).catch(() => {
+      setDeliveryCalc(null);
+    }).finally(() => {
+      setCalcLoading(false);
+    });
+  }, [deliveryAddress, resolvedBranchId]);
+
+  const handleDeliveryClick = () => {
+    setShowAddressInput(true);
+  };
+
+  const handleAddressSelect = (result: AddressResult | null) => {
+    setDeliveryAddress(result);
+    if (!result) {
+      setDeliveryCalc(null);
+    }
+  };
+
+  const handleProceedToMenu = () => {
+    if (deliveryAddress && deliveryCalc?.available) {
+      onDeliveryValidated?.(deliveryAddress, deliveryCalc);
+      onSelectService('delivery');
+    }
+  };
 
   return (
     <div className="flex-1 flex flex-col bg-background">
@@ -143,7 +213,7 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
           )}
 
           {/* Toggle weekly schedule */}
-          {branch.public_hours && Array.isArray(branch.public_hours) && branch.public_hours.length > 0 && (
+          {branch.public_hours && (
             <>
               <button
                 onClick={() => setShowWeek(v => !v)}
@@ -199,15 +269,18 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
                 <div className="text-right shrink-0">
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Clock className="w-3 h-3" />
-                    ~{config.tiempo_estimado_retiro_min} min
+                    ~{retiroTime} min
                   </div>
+                  {retiroHighDemand && (
+                    <p className="text-[10px] text-amber-600 font-medium mt-0.5">Alta demanda</p>
+                  )}
                 </div>
               </button>
             )}
 
-            {config.delivery_habilitado && (
+            {config.delivery_habilitado && !showAddressInput && (
               <button
-                onClick={() => onSelectService('delivery')}
+                onClick={handleDeliveryClick}
                 className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-border hover:border-accent/50 hover:bg-accent/5 transition-all text-left group"
               >
                 <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 transition-colors shrink-0">
@@ -217,18 +290,83 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
                   <p className="font-bold text-foreground">Delivery</p>
                   <p className="text-xs text-muted-foreground">
                     Que me lo traigan
-                    {config.delivery_costo != null && config.delivery_costo > 0 && (
-                      <> · Envío {formatPrice(config.delivery_costo)}</>
-                    )}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Clock className="w-3 h-3" />
-                    ~{config.tiempo_estimado_delivery_min} min
+                    ~{deliveryTime} min
                   </div>
+                  {deliveryHighDemand && (
+                    <p className="text-[10px] text-amber-600 font-medium mt-0.5">Alta demanda</p>
+                  )}
                 </div>
               </button>
+            )}
+
+            {/* Delivery address pre-validation */}
+            {config.delivery_habilitado && showAddressInput && (
+              <div className="w-full rounded-xl border-2 border-accent/50 bg-accent/5 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Truck className="w-5 h-5 text-accent" />
+                  <p className="font-bold text-foreground text-sm">Delivery</p>
+                </div>
+
+                <AddressAutocomplete
+                  apiKey={googleApiKey ?? null}
+                  onSelect={handleAddressSelect}
+                  selectedAddress={deliveryAddress}
+                />
+
+                {calcLoading && <DeliveryCostLoading />}
+
+                {deliveryCalc && deliveryCalc.available && deliveryCalc.cost != null && (
+                  <>
+                    <DeliveryCostDisplay
+                      cost={deliveryCalc.cost}
+                      distanceKm={deliveryCalc.distance_km!}
+                      estimatedDeliveryMin={deliveryCalc.estimated_delivery_min!}
+                      disclaimer={deliveryCalc.disclaimer}
+                    />
+                    <Button
+                      size="lg"
+                      className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-bold gap-2"
+                      onClick={handleProceedToMenu}
+                    >
+                      Ver menú
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </>
+                )}
+
+                {deliveryCalc && !deliveryCalc.available && (
+                  <DeliveryUnavailable
+                    onSwitchToPickup={() => {
+                      setShowAddressInput(false);
+                      setDeliveryAddress(null);
+                      setDeliveryCalc(null);
+                      onSelectService('retiro');
+                    }}
+                    onChangeAddress={() => {
+                      setDeliveryAddress(null);
+                      setDeliveryCalc(null);
+                    }}
+                    reason={deliveryCalc.reason}
+                    suggestedBranch={deliveryCalc.suggested_branch}
+                  />
+                )}
+
+                <button
+                  onClick={() => {
+                    setShowAddressInput(false);
+                    setDeliveryAddress(null);
+                    setDeliveryCalc(null);
+                  }}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors w-full text-center"
+                >
+                  Cancelar
+                </button>
+              </div>
             )}
 
             {config.delivery_pedido_minimo != null && config.delivery_pedido_minimo > 0 && config.delivery_habilitado && (

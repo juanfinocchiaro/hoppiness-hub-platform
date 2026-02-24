@@ -274,7 +274,7 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     gcTime: 5 * 60 * 1000,
   });
   
-  // Query para obtener roles por sucursal (desde user_branch_roles; fallback a user_roles_v2 si vacío)
+  // Query para obtener roles por sucursal via SECURITY DEFINER RPC (bypassa RLS)
   const {
     data: branchRolesData = [],
     isLoading: loadingBranchRoles,
@@ -284,17 +284,29 @@ export function usePermissionsV2(currentBranchId?: string): PermissionsV2 {
     queryFn: async (): Promise<UserBranchRole[]> => {
       if (!user?.id) return [];
 
+      // Use SECURITY DEFINER function to avoid RLS recursion issues
+      const { data: rpcData, error: rpcError } = await supabase
+        .rpc('get_user_branches', { _user_id: user.id });
+
+      if (!rpcError && rpcData && rpcData.length > 0) {
+        return (rpcData as { branch_id: string; local_role: string }[]).map(r => ({
+          branch_id: r.branch_id,
+          local_role: r.local_role as LocalRole,
+        }));
+      }
+
+      // Fallback to direct table query
       const { data: ubrData, error: ubrError } = await supabase
         .from('user_branch_roles')
         .select('branch_id, local_role')
         .eq('user_id', user.id)
         .eq('is_active', true);
 
-      if (ubrError) throw ubrError;
-      const fromUbr = (ubrData || []) as UserBranchRole[];
-      if (fromUbr.length > 0) return fromUbr;
+      if (!ubrError && ubrData && ubrData.length > 0) {
+        return ubrData as UserBranchRole[];
+      }
 
-      // Fallback: si no hay filas en user_branch_roles, usar user_roles_v2 (branch_ids + local_role)
+      // Last resort fallback: user_roles_v2 (legacy)
       const { data: urv2, error: urv2Error } = await supabase
         .from('user_roles_v2')
         .select('branch_ids, local_role')

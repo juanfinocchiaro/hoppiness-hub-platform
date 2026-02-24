@@ -1,6 +1,7 @@
 /**
  * RequireQRAccess - Guard para el QR de fichaje
- * Solo permite acceso a superadmin, franquiciado y encargado
+ * Solo permite acceso a superadmin, franquiciado y encargado.
+ * During impersonation, uses the REAL user's permissions for access decisions.
  */
 import { Navigate, useParams } from 'react-router-dom';
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
@@ -17,21 +18,26 @@ export function RequireQRAccess({ children }: RequireQRAccessProps) {
     isSuperadmin, 
     isFranquiciado,
     isEncargado,
-    hasAccessToBranch
+    hasAccessToBranch,
+    isViewingAs,
+    realUserPermissions,
   } = usePermissionsWithImpersonation(branchId);
 
   if (loading) {
     return <HoppinessLoader fullScreen size="lg" />;
   }
 
-  // Solo superadmin, franquiciado y encargado pueden ver el QR
+  // During impersonation the real user is a superadmin — always allow
+  if (isViewingAs && realUserPermissions?.isSuperadmin) {
+    return <>{children}</>;
+  }
+
   const canViewQR = isSuperadmin || isFranquiciado || isEncargado;
 
   if (!canViewQR) {
     return <Navigate to="/cuenta" replace />;
   }
 
-  // Verificar acceso a esta branch específica
   if (!isSuperadmin && branchId && !hasAccessToBranch(branchId)) {
     return <Navigate to="/cuenta" replace />;
   }

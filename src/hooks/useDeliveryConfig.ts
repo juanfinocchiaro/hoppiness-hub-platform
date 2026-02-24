@@ -292,6 +292,36 @@ export function useDeliveryRadiusOverride() {
   });
 }
 
+// ─── Dynamic Prep Time (queue-aware ETA) ────────────────────
+
+export interface DynamicPrepTime {
+  prep_time_min: number;
+  active_orders: number;
+  base_prep_time: number;
+}
+
+export function useDynamicPrepTime(branchId: string | undefined, tipoServicio: 'delivery' | 'retiro') {
+  return useQuery<DynamicPrepTime>({
+    queryKey: ['dynamic-prep-time', branchId, tipoServicio],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_dynamic_prep_time', {
+        p_branch_id: branchId!,
+        p_tipo_servicio: tipoServicio,
+      });
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      return row ?? {
+        prep_time_min: tipoServicio === 'delivery' ? 40 : 15,
+        active_orders: 0,
+        base_prep_time: tipoServicio === 'delivery' ? 40 : 15,
+      };
+    },
+    enabled: !!branchId,
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+}
+
 // ─── Calculate Delivery (client-side call) ──────────────────
 
 export function useCalculateDelivery() {

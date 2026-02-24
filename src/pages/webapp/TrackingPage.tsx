@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, CheckCircle2, Clock, Flame, Package, Truck, PartyPopper, XCircle, MessageCircle, Send, Utensils } from 'lucide-react';
@@ -7,6 +7,21 @@ import { SEO } from '@/components/SEO';
 import { OrderChat } from '@/components/webapp/OrderChat';
 import { PostPurchaseSignup } from '@/components/webapp/PostPurchaseSignup';
 import { WebappHeader } from '@/components/webapp/WebappHeader';
+
+const DeliveryTrackingMap = lazy(() =>
+  import('@/components/webapp/DeliveryTrackingMap').then(m => ({ default: m.DeliveryTrackingMap }))
+);
+
+interface DeliveryTrackingData {
+  active: boolean;
+  cadete_lat: number | null;
+  cadete_lng: number | null;
+  store_lat: number | null;
+  store_lng: number | null;
+  dest_lat: number | null;
+  dest_lng: number | null;
+  completed: boolean;
+}
 
 interface TrackingData {
   pedido: {
@@ -33,6 +48,7 @@ interface TrackingData {
   }>;
   branch: { name: string; address: string | null; city: string | null; phone: string | null } | null;
   timeline: Array<{ estado: string; timestamp: string | null }>;
+  delivery_tracking: DeliveryTrackingData | null;
 }
 
 /** Returns the ordered list of timeline steps based on service type */
@@ -127,6 +143,38 @@ export default function TrackingPage() {
     return () => { supabase.removeChannel(channel); };
   }, [trackingCode]);
 
+  // Realtime: subscribe to delivery_tracking position updates
+  useEffect(() => {
+    if (!data?.pedido?.id || !data?.delivery_tracking) return;
+
+    const channel = supabase
+      .channel(`delivery-pos-${data.pedido.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'delivery_tracking',
+        filter: `pedido_id=eq.${data.pedido.id}`,
+      }, (payload: any) => {
+        const row = payload.new;
+        setData(prev => prev ? {
+          ...prev,
+          delivery_tracking: {
+            active: !!row.tracking_started_at && !row.tracking_completed_at,
+            cadete_lat: row.cadete_lat ? Number(row.cadete_lat) : null,
+            cadete_lng: row.cadete_lng ? Number(row.cadete_lng) : null,
+            store_lat: prev.delivery_tracking?.store_lat ?? null,
+            store_lng: prev.delivery_tracking?.store_lng ?? null,
+            dest_lat: prev.delivery_tracking?.dest_lat ?? null,
+            dest_lng: prev.delivery_tracking?.dest_lng ?? null,
+            completed: !!row.tracking_completed_at,
+          },
+        } : prev);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [data?.pedido?.id, !!data?.delivery_tracking]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -150,7 +198,7 @@ export default function TrackingPage() {
     );
   }
 
-  const { pedido, items, branch, timeline } = data;
+  const { pedido, items, branch, timeline, delivery_tracking: dt } = data;
   const tipoServicio = pedido.tipo_servicio;
   const currentCfg = getEstadoConfig(pedido.estado, tipoServicio);
   const isFinal = pedido.estado === 'entregado' || pedido.estado === 'cancelado';
@@ -186,6 +234,36 @@ export default function TrackingPage() {
             <p className="text-sm text-muted-foreground">Tiempo estimado</p>
             <p className="text-2xl font-black text-accent mt-1">
               {tiempoRestante > 0 ? `~${tiempoRestante} min` : 'En cualquier momento'}
+            </p>
+          </div>
+        )}
+
+        {/* Delivery tracking map */}
+        {dt && dt.active && dt.store_lat != null && dt.store_lng != null && dt.dest_lat != null && dt.dest_lng != null && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-bold flex items-center gap-2">
+              <Truck className="w-4 h-4" /> Seguí tu pedido en vivo
+            </h3>
+            <Suspense fallback={<div className="h-[280px] rounded-xl bg-muted animate-pulse" />}>
+              <DeliveryTrackingMap
+                storeLat={Number(dt.store_lat)}
+                storeLng={Number(dt.store_lng)}
+                destLat={Number(dt.dest_lat)}
+                destLng={Number(dt.dest_lng)}
+                cadeteLat={dt.cadete_lat != null ? Number(dt.cadete_lat) : null}
+                cadeteLng={dt.cadete_lng != null ? Number(dt.cadete_lng) : null}
+                trackingActive={dt.active}
+                branchName={branch?.name}
+              />
+            </Suspense>
+          </div>
+        )}
+
+        {dt && dt.completed && (
+          <div className="bg-green-50 dark:bg-green-950/30 rounded-xl p-4 text-center">
+            <CheckCircle2 className="w-8 h-8 text-green-600 mx-auto mb-2" />
+            <p className="text-sm font-semibold text-green-700 dark:text-green-400">
+              Tu pedido fue entregado
             </p>
           </div>
         )}
