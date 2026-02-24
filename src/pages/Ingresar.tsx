@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
-import { lovable } from '@/integrations/lovable';
+import { useGooglePopupAuth } from '@/hooks/useGooglePopupAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,7 +26,7 @@ export default function Ingresar() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const { signInWithGooglePopup, loading: googleLoading } = useGooglePopupAuth();
 
   // Redirigir usuarios autenticados a su landing ideal según su rol
   useEffect(() => {
@@ -149,16 +149,7 @@ export default function Ingresar() {
               <Button
                 variant="outline"
                 className="w-full h-12 rounded-xl text-base font-medium mb-4 gap-3"
-                onClick={async () => {
-                  setGoogleLoading(true);
-                  try {
-                    const result = await lovable.auth.signInWithOAuth('google', {
-                      redirect_uri: window.location.origin,
-                    });
-                    if (result.error) toast.error('Error al iniciar sesión con Google');
-                  } catch { toast.error('Error al iniciar sesión'); }
-                  finally { setGoogleLoading(false); }
-                }}
+                onClick={signInWithGooglePopup}
                 disabled={googleLoading}
               >
                 {googleLoading ? (
