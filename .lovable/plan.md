@@ -1,34 +1,31 @@
 
 
-## Plan: Corregir 3 problemas
+## Plan: Mostrar POCITO + Reemplazar fotos por mapas en la landing
 
-### Problema 1: Año 2025 en timeline
-En `MediaSection.tsx`, el último evento del timeline dice `year: '2025'` con título "Mejor Hamburguesería". Debe decir `year: '2024'`.
+### Problema 1: POCITO no aparece
+La sucursal POCITO tiene `is_active = false` en la base de datos. La vista `branches_public` filtra por `is_active = true`, por lo que POCITO queda excluida. Su `public_status` ya es `coming_soon`, que es correcto.
 
-**Archivo**: `src/components/landing/MediaSection.tsx` linea 33
-- Cambiar `{ year: '2025', title: 'Mejor Hamburguesería', subtitle: 'de Córdoba', isAward: true }` a `{ year: '2024', ... }`
+**Solución**: Migración SQL para poner `is_active = true` en la sucursal POCITO.
 
----
+```sql
+UPDATE branches SET is_active = true WHERE id = '2eff63ad-b4af-4777-ae59-447e8f001b66';
+```
 
-### Problema 2 y 3: "0 locales" y "No hay locales disponibles"
-**Causa raíz**: Las queries a `branches_public` solicitan la columna `google_place_id`, pero esa columna **no existe en la vista** `branches_public` (sí existe en la tabla `branches`). Esto genera un error de PostgreSQL que hace que la query devuelva vacío silenciosamente.
+### Problema 2: Reemplazar fotos por mapas (como en /pedir pero mas grandes)
 
-Los logs de la base de datos lo confirman: `column branches_public.google_place_id does not exist`.
+**Archivo**: `src/components/landing/LocationsSection.tsx`
 
-**Solución**: Eliminar `google_place_id` del SELECT de ambas queries, y construir la URL de Google Maps usando latitud/longitud (que sí están en la vista) o el nombre del local.
+Cambios:
+- Eliminar imports de fotos (`localMan`, `localNvc`, `localGp`, `localVa`, `localVcp`)
+- Eliminar el objeto `BRANCH_PHOTOS` y la función `getBranchPhoto`
+- Importar `StaticBranchMap` desde `@/components/webapp/StaticBranchMap`
+- En cada card de sucursal activa: reemplazar el bloque `{photo && <div>...<img>...</div>}` por un `StaticBranchMap` con `height={192}` (equivalente a h-48) cuando la sucursal tenga coordenadas
+- En cada card de sucursal "coming_soon" (como POCITO): mostrar también el mapa si tiene coordenadas, con un padding similar al de /pedir
+- Eliminar el link "Ver en Maps" del contenido ya que el mapa ya tiene su propio "Cómo llegar"
 
-**Archivos a modificar**:
-
-1. **`src/components/landing/LocationsSection.tsx`** (linea 130)
-   - Quitar `google_place_id` del `.select(...)`
-   - Quitar `google_place_id` de la interfaz `BranchPublic`
-   - Ajustar `getGoogleMapsUrl` para no depender de `google_place_id` (usar lat/lng o nombre)
-
-2. **`src/pages/Pedir.tsx`** (linea 81)
-   - Quitar `google_place_id` del `.select(...)`
-   - Quitar `google_place_id` de la interfaz `PedirBranch`
-   - Ajustar `mapsUrl` para usar lat/lng o nombre
-
-### Detalle tecnico
-La vista `branches_public` expone: `id, name, address, city, slug, opening_time, closing_time, public_status, public_hours, cover_image_url, latitude, longitude, is_active, is_open, local_open_state`. No incluye `google_place_id`. La solución es simplemente dejar de pedir esa columna y usar `latitude`/`longitude` para los links de Google Maps, que funcionan igual de bien.
+### Resultado esperado
+- 5 sucursales activas + POCITO como "Próximamente" = 6 cards
+- Cada card muestra un mapa de OpenStreetMap con el pin de Hoppiness en vez de foto
+- El mapa tiene ~192px de alto (igual que las fotos actuales)
+- Click en el mapa abre Google Maps
 
