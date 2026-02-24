@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { fromUntyped } from '@/lib/supabase-helpers';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 
@@ -21,8 +22,7 @@ export function useProveedorDocumentos(proveedorId: string | undefined) {
   return useQuery({
     queryKey: ['proveedor-documentos', proveedorId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('proveedor_documentos')
+      const { data, error } = await fromUntyped('proveedor_documentos')
         .select('*')
         .eq('proveedor_id', proveedorId!)
         .is('deleted_at', null)
@@ -68,8 +68,7 @@ export function useUploadProveedorDoc() {
         .from(BUCKET)
         .getPublicUrl(storagePath);
 
-      const { data: doc, error: dbError } = await supabase
-        .from('proveedor_documentos')
+      const { data: doc, error: dbError } = await fromUntyped('proveedor_documentos')
         .insert({
           proveedor_id: proveedorId,
           nombre_archivo: file.name,
@@ -78,7 +77,7 @@ export function useUploadProveedorDoc() {
           tipo,
           file_size_bytes: file.size,
           uploaded_by: user?.id,
-        } as any)
+        })
         .select()
         .single();
 
@@ -98,8 +97,7 @@ export function useDeleteProveedorDoc() {
 
   return useMutation({
     mutationFn: async ({ docId, proveedorId }: { docId: string; proveedorId: string }) => {
-      const { error } = await supabase
-        .from('proveedor_documentos')
+      const { error } = await fromUntyped('proveedor_documentos')
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', docId);
       if (error) throw error;
@@ -143,9 +141,8 @@ export function useUploadFacturaPdf() {
         .from(BUCKET)
         .getPublicUrl(storagePath);
 
-      const { error: dbError } = await supabase
-        .from('facturas_proveedores')
-        .update({ factura_pdf_url: urlData.publicUrl } as any)
+      const { error: dbError } = await fromUntyped('facturas_proveedores')
+        .update({ factura_pdf_url: urlData.publicUrl })
         .eq('id', facturaId);
 
       if (dbError) throw dbError;

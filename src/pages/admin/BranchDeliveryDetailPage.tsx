@@ -304,7 +304,7 @@ function BranchDeliveryDetailContent() {
   const [tab, setTab] = useState('enabled');
   const [deliveryHours, setDeliveryHours] = useState<DeliveryHours | null | undefined>(undefined);
 
-  const currentDeliveryHours = deliveryHours !== undefined ? deliveryHours : (config?.delivery_hours as DeliveryHours | null ?? null);
+  const currentDeliveryHours = deliveryHours !== undefined ? deliveryHours : ((config as any)?.delivery_hours as DeliveryHours | null ?? null);
 
   const handleSaveHours = () => {
     if (!branch) return;

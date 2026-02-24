@@ -18,7 +18,7 @@ import {
   type Promocion, type PromocionFormData,
 } from '@/hooks/usePromociones';
 import { useItemsCarta } from '@/hooks/useItemsCarta';
-import { supabase } from '@/integrations/supabase/client';
+import { fromUntyped } from '@/lib/supabase-helpers';
 
 const TIPO_LABELS: Record<string, string> = {
   descuento_porcentaje: '% Descuento',
@@ -196,8 +196,7 @@ export default function PromocionesPage() {
     setItemSearch('');
 
     // Load existing promo items
-    const { data } = await supabase
-      .from('promocion_items')
+    const { data } = await fromUntyped('promocion_items')
       .select('*, items_carta!inner(nombre, imagen_url, precio_base)')
       .eq('promocion_id', promo.id);
     setPromoItems((data || []).map((d: any) => ({

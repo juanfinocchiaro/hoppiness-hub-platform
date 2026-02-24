@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { fromUntyped } from '@/lib/supabase-helpers';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 
@@ -25,13 +25,12 @@ export function useCodigosDescuento() {
   return useQuery({
     queryKey: ['codigos-descuento'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('codigos_descuento')
+      const { data, error } = await fromUntyped('codigos_descuento')
         .select('*')
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data as unknown as CodigoDescuento[];
+      return data as CodigoDescuento[];
     },
   });
 }
@@ -41,8 +40,7 @@ export function useValidateCode(branchId: string | undefined) {
 
   return useMutation({
     mutationFn: async ({ codigo, subtotal }: { codigo: string; subtotal: number }) => {
-      const { data, error } = await supabase
-        .from('codigos_descuento')
+      const { data, error } = await fromUntyped('codigos_descuento')
         .select('*')
         .ilike('codigo', codigo.trim())
         .eq('activo', true)
@@ -52,7 +50,7 @@ export function useValidateCode(branchId: string | undefined) {
       if (error) throw error;
       if (!data) throw new Error('Código no válido');
 
-      const code = data as unknown as CodigoDescuento;
+      const code = data as CodigoDescuento;
       const today = new Date().toISOString().slice(0, 10);
 
       if (code.fecha_inicio && today < code.fecha_inicio) throw new Error('Este código aún no está activo');
@@ -68,8 +66,7 @@ export function useValidateCode(branchId: string | undefined) {
 
       if (code.uso_unico_por_usuario) {
         if (!user) throw new Error('Iniciá sesión para usar este código');
-        const { count } = await supabase
-          .from('codigos_descuento_usos')
+        const { count } = await fromUntyped('codigos_descuento_usos')
           .select('id', { count: 'exact', head: true })
           .eq('codigo_id', code.id)
           .eq('user_id', user.id);
@@ -94,9 +91,8 @@ export function useCodigoDescuentoMutations() {
 
   const create = useMutation({
     mutationFn: async (data: CodigoDescuentoFormData) => {
-      const { data: result, error } = await supabase
-        .from('codigos_descuento')
-        .insert({ ...data, created_by: user?.id } as any)
+      const { data: result, error } = await fromUntyped('codigos_descuento')
+        .insert({ ...data, created_by: user?.id })
         .select()
         .single();
       if (error) throw error;
@@ -111,9 +107,8 @@ export function useCodigoDescuentoMutations() {
 
   const update = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<CodigoDescuentoFormData> }) => {
-      const { error } = await supabase
-        .from('codigos_descuento')
-        .update({ ...data, updated_at: new Date().toISOString() } as any)
+      const { error } = await fromUntyped('codigos_descuento')
+        .update({ ...data, updated_at: new Date().toISOString() })
         .eq('id', id);
       if (error) throw error;
     },
@@ -126,9 +121,8 @@ export function useCodigoDescuentoMutations() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('codigos_descuento')
-        .update({ deleted_at: new Date().toISOString() } as any)
+      const { error } = await fromUntyped('codigos_descuento')
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', id);
       if (error) throw error;
     },

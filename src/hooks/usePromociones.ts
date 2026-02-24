@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { fromUntyped } from '@/lib/supabase-helpers';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 
@@ -42,13 +42,12 @@ export function usePromociones() {
   return useQuery({
     queryKey: ['promociones'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('promociones')
+      const { data, error } = await fromUntyped('promociones')
         .select('*')
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data as unknown as Promocion[]).map(p => ({
+      return (data as Promocion[]).map(p => ({
         ...p,
         canales: p.canales ?? ['webapp', 'salon', 'rappi', 'pedidos_ya'],
       }));
@@ -61,8 +60,7 @@ export function usePromocionItems(promoId: string | undefined) {
   return useQuery({
     queryKey: ['promocion-items', promoId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('promocion_items')
+      const { data, error } = await fromUntyped('promocion_items')
         .select('*, items_carta!inner(nombre, imagen_url, precio_base)')
         .eq('promocion_id', promoId!);
       if (error) throw error;
@@ -86,8 +84,7 @@ export function useActivePromos(branchId: string | undefined, canal?: string) {
   return useQuery({
     queryKey: ['active-promos', branchId, canal],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('promociones')
+      const { data, error } = await fromUntyped('promociones')
         .select('*')
         .eq('activa', true)
         .is('deleted_at', null);
@@ -98,7 +95,7 @@ export function useActivePromos(branchId: string | undefined, canal?: string) {
       const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
       const today = now.toISOString().slice(0, 10);
 
-      return (data as unknown as Promocion[]).filter((p) => {
+      return (data as Promocion[]).filter((p) => {
         if (p.branch_ids.length > 0 && (!branchId || !p.branch_ids.includes(branchId))) return false;
         if (canal && p.canales && !p.canales.includes(canal)) return false;
         if (!p.dias_semana.includes(currentDay)) return false;
@@ -126,8 +123,7 @@ export function useActivePromoItems(branchId: string | undefined, canal?: string
     queryKey: ['active-promo-items', promoIds],
     queryFn: async () => {
       if (promoIds.length === 0) return [];
-      const { data, error } = await supabase
-        .from('promocion_items')
+      const { data, error } = await fromUntyped('promocion_items')
         .select('*, items_carta!inner(nombre, imagen_url, precio_base)')
         .in('promocion_id', promoIds);
       if (error) throw error;
@@ -160,17 +156,15 @@ export function usePromocionMutations() {
   const create = useMutation({
     mutationFn: async (data: PromocionFormData & { items?: Array<{ item_carta_id: string; precio_promo: number }> }) => {
       const { items, ...promoData } = data;
-      const { data: result, error } = await supabase
-        .from('promociones')
-        .insert({ ...promoData, created_by: user?.id } as any)
+      const { data: result, error } = await fromUntyped('promociones')
+        .insert({ ...promoData, created_by: user?.id })
         .select()
         .single();
       if (error) throw error;
 
       if (items && items.length > 0) {
-        const { error: itemsErr } = await supabase
-          .from('promocion_items')
-          .insert(items.map(i => ({ ...i, promocion_id: result.id })) as any);
+        const { error: itemsErr } = await fromUntyped('promocion_items')
+          .insert(items.map(i => ({ ...i, promocion_id: result.id })));
         if (itemsErr) throw itemsErr;
       }
 
@@ -189,18 +183,16 @@ export function usePromocionMutations() {
       data: Partial<PromocionFormData>;
       items?: Array<{ item_carta_id: string; precio_promo: number }>;
     }) => {
-      const { error } = await supabase
-        .from('promociones')
-        .update({ ...data, updated_at: new Date().toISOString() } as any)
+      const { error } = await fromUntyped('promociones')
+        .update({ ...data, updated_at: new Date().toISOString() })
         .eq('id', id);
       if (error) throw error;
 
       if (items !== undefined) {
-        await supabase.from('promocion_items').delete().eq('promocion_id', id);
+        await fromUntyped('promocion_items').delete().eq('promocion_id', id);
         if (items.length > 0) {
-          const { error: itemsErr } = await supabase
-            .from('promocion_items')
-            .insert(items.map(i => ({ ...i, promocion_id: id })) as any);
+          const { error: itemsErr } = await fromUntyped('promocion_items')
+            .insert(items.map(i => ({ ...i, promocion_id: id })));
           if (itemsErr) throw itemsErr;
         }
       }
@@ -214,9 +206,8 @@ export function usePromocionMutations() {
 
   const toggleActive = useMutation({
     mutationFn: async ({ id, activa }: { id: string; activa: boolean }) => {
-      const { error } = await supabase
-        .from('promociones')
-        .update({ activa, updated_at: new Date().toISOString() } as any)
+      const { error } = await fromUntyped('promociones')
+        .update({ activa, updated_at: new Date().toISOString() })
         .eq('id', id);
       if (error) throw error;
     },
@@ -228,9 +219,8 @@ export function usePromocionMutations() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('promociones')
-        .update({ deleted_at: new Date().toISOString() } as any)
+      const { error } = await fromUntyped('promociones')
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', id);
       if (error) throw error;
     },

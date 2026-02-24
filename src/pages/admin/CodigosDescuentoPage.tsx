@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/states';
-import { Plus, Trash2, Pencil, Copy } from 'lucide-react';
+import { Plus, Trash2, Pencil, Copy, Ticket } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCodigosDescuento, useCodigoDescuentoMutations, type CodigoDescuento, type CodigoDescuentoFormData } from '@/hooks/useCodigosDescuento';
 
