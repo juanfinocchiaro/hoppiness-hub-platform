@@ -219,7 +219,7 @@ export function usePrinting(branchId: string) {
           .eq('id', pedido.branch_id)
           .single();
 
-        const { data: tracking, error: trackingErr } = await supabase
+        const { data: tracking, error: trackingErr } = await (supabase as any)
           .from('delivery_tracking')
           .insert({
             pedido_id: pedidoId,
