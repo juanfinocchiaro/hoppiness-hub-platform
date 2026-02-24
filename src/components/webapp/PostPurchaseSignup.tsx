@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { lovable } from '@/integrations/lovable';
+import { useGooglePopupAuth } from '@/hooks/useGooglePopupAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { UserPlus, X } from 'lucide-react';
@@ -18,7 +18,7 @@ interface Props {
 export function PostPurchaseSignup({ trackingCode }: Props) {
   const { user } = useAuth();
   const [dismissed, setDismissed] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const { signInWithGooglePopup, loading } = useGooglePopupAuth();
 
   // When user logs in (e.g. after Google OAuth redirect), link guest orders
   useEffect(() => {
@@ -31,20 +31,8 @@ export function PostPurchaseSignup({ trackingCode }: Props) {
   // Don't show if already logged in or dismissed
   if (user || dismissed) return null;
 
-  const handleGoogle = async () => {
-    setLoading(true);
-    try {
-      const result = await lovable.auth.signInWithOAuth('google', {
-        redirect_uri: `${window.location.origin}/pedido/${trackingCode}`,
-      });
-      if (result.error) {
-        toast.error('Error al iniciar sesión con Google');
-      }
-    } catch {
-      toast.error('Error al iniciar sesión');
-    } finally {
-      setLoading(false);
-    }
+  const handleGoogle = () => {
+    signInWithGooglePopup();
   };
 
   return (

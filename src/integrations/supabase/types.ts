@@ -587,6 +587,7 @@ export type Database = {
           email: string | null
           enforce_labor_law: boolean
           expense_pin_threshold: number | null
+          google_place_id: string | null
           id: string
           is_active: boolean
           is_open: boolean | null
@@ -616,6 +617,7 @@ export type Database = {
           email?: string | null
           enforce_labor_law?: boolean
           expense_pin_threshold?: number | null
+          google_place_id?: string | null
           id?: string
           is_active?: boolean
           is_open?: boolean | null
@@ -645,6 +647,7 @@ export type Database = {
           email?: string | null
           enforce_labor_law?: boolean
           expense_pin_threshold?: number | null
+          google_place_id?: string | null
           id?: string
           is_active?: boolean
           is_open?: boolean | null
@@ -5001,6 +5004,8 @@ export type Database = {
           branch_id: string
           collector_id: string | null
           created_at: string
+          device_id: string | null
+          device_name: string | null
           estado_conexion: string
           id: string
           public_key: string
@@ -5014,6 +5019,8 @@ export type Database = {
           branch_id: string
           collector_id?: string | null
           created_at?: string
+          device_id?: string | null
+          device_name?: string | null
           estado_conexion?: string
           id?: string
           public_key?: string
@@ -5027,6 +5034,8 @@ export type Database = {
           branch_id?: string
           collector_id?: string | null
           created_at?: string
+          device_id?: string | null
+          device_name?: string | null
           estado_conexion?: string
           id?: string
           public_key?: string
@@ -5533,6 +5542,8 @@ export type Database = {
       }
       pedido_pagos: {
         Row: {
+          conciliado: boolean | null
+          conciliado_at: string | null
           created_at: string | null
           created_by: string | null
           id: string
@@ -5547,6 +5558,8 @@ export type Database = {
           vuelto: number | null
         }
         Insert: {
+          conciliado?: boolean | null
+          conciliado_at?: string | null
           created_at?: string | null
           created_by?: string | null
           id?: string
@@ -5561,6 +5574,8 @@ export type Database = {
           vuelto?: number | null
         }
         Update: {
+          conciliado?: boolean | null
+          conciliado_at?: string | null
           created_at?: string | null
           created_by?: string | null
           id?: string
@@ -5667,6 +5682,7 @@ export type Database = {
           factura_razon_social: string | null
           factura_vencimiento_cae: string | null
           id: string
+          mp_payment_intent_id: string | null
           numero_llamador: number | null
           numero_pedido: number
           origen: string | null
@@ -5717,6 +5733,7 @@ export type Database = {
           factura_razon_social?: string | null
           factura_vencimiento_cae?: string | null
           id?: string
+          mp_payment_intent_id?: string | null
           numero_llamador?: number | null
           numero_pedido: number
           origen?: string | null
@@ -5767,6 +5784,7 @@ export type Database = {
           factura_razon_social?: string | null
           factura_vencimiento_cae?: string | null
           id?: string
+          mp_payment_intent_id?: string | null
           numero_llamador?: number | null
           numero_pedido?: number
           origen?: string | null
@@ -8775,6 +8793,14 @@ export type Database = {
           perfect_shifts: number
           precision_pct: number
           total_shifts: number
+        }[]
+      }
+      get_dynamic_prep_time: {
+        Args: { p_branch_id: string; p_tipo_servicio?: string }
+        Returns: {
+          active_orders: number
+          base_prep_time: number
+          prep_time_min: number
         }[]
       }
       get_fiscal_audit_report: {

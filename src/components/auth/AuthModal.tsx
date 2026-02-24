@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { lovable } from '@/integrations/lovable';
+import { useGooglePopupAuth } from '@/hooks/useGooglePopupAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,7 +35,12 @@ export function AuthModal() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const handleGoogleSuccess = () => {
+    resetForm();
+    closeAuthModal();
+    onSuccess?.();
+  };
+  const { signInWithGooglePopup, loading: googleLoading } = useGooglePopupAuth(handleGoogleSuccess);
   const [captchaToken, setCaptchaToken] = useState('');
   const [signupSuccess, setSignupSuccess] = useState(false);
 
@@ -48,7 +53,7 @@ export function AuthModal() {
     setCaptchaToken('');
     setSignupSuccess(false);
     setIsSubmitting(false);
-    setGoogleLoading(false);
+    // googleLoading is managed by useGooglePopupAuth hook
   };
 
   const handleSuccess = () => {
@@ -136,16 +141,7 @@ export function AuthModal() {
             <Button
               variant="outline"
               className="w-full h-11 rounded-xl text-sm font-medium mb-3 gap-3"
-              onClick={async () => {
-                setGoogleLoading(true);
-                try {
-                  const result = await lovable.auth.signInWithOAuth('google', {
-                    redirect_uri: window.location.origin,
-                  });
-                  if (result.error) toast.error('Error al iniciar sesión con Google');
-                } catch { toast.error('Error al iniciar sesión'); }
-                finally { setGoogleLoading(false); }
-              }}
+              onClick={signInWithGooglePopup}
               disabled={googleLoading}
             >
               {googleLoading ? (

@@ -26,6 +26,7 @@ function PageLoader() {
 // Páginas públicas — eagerly loaded (landing / auth)
 import Index from "./pages/Index";
 import Ingresar from "./pages/Ingresar";
+import AuthPopup from "./pages/AuthPopup";
 import Pedir from "./pages/Pedir";
 import NotFound from "./pages/NotFound";
 
@@ -174,6 +175,7 @@ const App = () => (
               <Route path="contacto" element={<Contacto />} />
             </Route>
             <Route path="/ingresar" element={<Ingresar />} />
+            <Route path="/auth-popup" element={<AuthPopup />} />
             <Route path="/olvide-password" element={<OlvidePassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/pedir" element={<Pedir />} />
