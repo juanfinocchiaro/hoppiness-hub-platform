@@ -9,37 +9,9 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Link } from 'react-router-dom';
-import { MapPin, Clock, ExternalLink, CalendarClock, ShoppingBag } from 'lucide-react';
+import { MapPin, Clock, CalendarClock, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
-import localMan from '@/assets/local-man.jpg';
-import localNvc from '@/assets/local-nvc.jpg';
-import localGp from '@/assets/local-gp.jpg';
-import localVa from '@/assets/local-va.jpg';
-import localVcp from '@/assets/local-vcp.jpg';
-
-// Map branch names/slugs to photos
-const BRANCH_PHOTOS: Record<string, string> = {
-  'manantiales': localMan,
-  'mnt': localMan,
-  'nueva córdoba': localNvc,
-  'nueva cordoba': localNvc,
-  'nvc': localNvc,
-  'general paz': localGp,
-  'gpa': localGp,
-  'villa allende': localVa,
-  'val': localVa,
-  'villa carlos paz': localVcp,
-  'vcp': localVcp,
-};
-
-function getBranchPhoto(name: string): string | null {
-  const key = name.toLowerCase();
-  for (const [k, v] of Object.entries(BRANCH_PHOTOS)) {
-    if (key.includes(k)) return v;
-  }
-  return null;
-}
+import { StaticBranchMap } from '@/components/webapp/StaticBranchMap';
 
 type PublicStatus = 'active' | 'coming_soon';
 
@@ -122,6 +94,13 @@ function HoursPopover({ branch }: { branch: BranchPublic }) {
   );
 }
 
+function getGoogleMapsUrl(branch: BranchPublic) {
+  if (branch.latitude != null && branch.longitude != null) {
+    return `https://maps.google.com/?q=${branch.latitude},${branch.longitude}`;
+  }
+  return `https://maps.google.com/?q=Hoppiness+${encodeURIComponent(branch.name)}+${encodeURIComponent(branch.city)}`;
+}
+
 export function LocationsSection() {
   const { data: branches, isLoading } = useQuery({
     queryKey: ['public-branches-landing'],
@@ -139,13 +118,6 @@ export function LocationsSection() {
 
   const activeBranches = branches?.filter(b => b.public_status === 'active') || [];
   const comingSoonBranches = branches?.filter(b => b.public_status === 'coming_soon') || [];
-
-  const getGoogleMapsUrl = (branch: BranchPublic) => {
-    if (branch.latitude != null && branch.longitude != null) {
-      return `https://maps.google.com/?q=${branch.latitude},${branch.longitude}`;
-    }
-    return `https://maps.google.com/?q=Hoppiness+${encodeURIComponent(branch.name)}+${encodeURIComponent(branch.city)}`;
-  };
 
   const totalCount = (activeBranches?.length || 0) + (comingSoonBranches?.length || 0);
 
@@ -179,58 +151,52 @@ export function LocationsSection() {
             </div>
           ) : (
             <>
-              {activeBranches.map((branch) => {
-                const photo = getBranchPhoto(branch.name);
-                return (
-                  <Card key={branch.id} className="overflow-hidden hover:border-primary/50 transition-colors group">
-                    {photo && (
-                      <div className="h-48 overflow-hidden">
-                        <img
-                          src={photo}
-                          alt={`Hoppiness ${branch.name}`}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          loading="lazy"
-                        />
-                      </div>
-                    )}
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between mb-3">
-                        <h3 className="font-bold text-lg group-hover:text-primary transition-colors">
-                          {branch.name}
-                        </h3>
-                        <HoursPopover branch={branch} />
-                      </div>
-                      <p className="text-sm text-muted-foreground flex items-center gap-1 mb-4">
-                        <MapPin className="w-4 h-4 shrink-0" />
-                        {branch.address}
-                      </p>
-                      <div className="flex items-center gap-3">
-                        <a 
-                          href={getGoogleMapsUrl(branch)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+              {activeBranches.map((branch) => (
+                <Card key={branch.id} className="overflow-hidden hover:border-primary/50 transition-colors group">
+                  {branch.latitude != null && branch.longitude != null && (
+                    <StaticBranchMap
+                      latitude={branch.latitude}
+                      longitude={branch.longitude}
+                      mapsUrl={getGoogleMapsUrl(branch)}
+                      height={192}
+                    />
+                  )}
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="font-bold text-lg group-hover:text-primary transition-colors">
+                        {branch.name}
+                      </h3>
+                      <HoursPopover branch={branch} />
+                    </div>
+                    <p className="text-sm text-muted-foreground flex items-center gap-1 mb-4">
+                      <MapPin className="w-4 h-4 shrink-0" />
+                      {branch.address}
+                    </p>
+                    <div className="flex items-center justify-end">
+                      <Link to="/pedir">
+                        <Button
+                          size="sm"
+                          className="bg-accent hover:bg-accent/90 text-accent-foreground"
                         >
-                          Ver en Maps
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                        <Link to="/pedir" className="ml-auto">
-                          <Button
-                            size="sm"
-                            className="bg-accent hover:bg-accent/90 text-accent-foreground"
-                          >
-                            <ShoppingBag className="w-3 h-3 mr-1" />
-                            Pedir
-                          </Button>
-                        </Link>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                          <ShoppingBag className="w-3 h-3 mr-1" />
+                          Pedir
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
 
               {comingSoonBranches.map((branch) => (
                 <Card key={branch.id} className="border-dashed border-accent/50 bg-accent/5 relative overflow-hidden">
+                  {branch.latitude != null && branch.longitude != null && (
+                    <StaticBranchMap
+                      latitude={branch.latitude}
+                      longitude={branch.longitude}
+                      mapsUrl={getGoogleMapsUrl(branch)}
+                      height={192}
+                    />
+                  )}
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-3">
                       <h3 className="font-bold text-lg">
