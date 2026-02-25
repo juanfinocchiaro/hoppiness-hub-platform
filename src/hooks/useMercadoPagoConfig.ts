@@ -65,6 +65,7 @@ export function usePointDevices(branchId: string | undefined) {
         body: { branch_id: branchId },
       });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       return (data?.devices ?? []) as Array<{
         id: string;
         pos_id: number | null;
@@ -120,6 +121,8 @@ export function useMercadoPagoConfigMutations(branchId: string | undefined) {
         body: { branch_id: branchId },
       });
       if (error) throw error;
+      // Some Supabase client versions put HTTP error bodies in `data` instead of `error`
+      if (data?.error) throw new Error(data.error);
       return data;
     },
     onSuccess: (data) => {
@@ -127,7 +130,8 @@ export function useMercadoPagoConfigMutations(branchId: string | undefined) {
       toast.success('Conexión exitosa', { description: `Collector ID: ${data?.collector_id ?? 'N/A'}` });
     },
     onError: (err: Error) => {
-      toast.error('Error de conexión', { description: err.message });
+      const msg = err.message || 'Token inválido o sin permisos';
+      toast.error('Error de conexión', { description: msg });
     },
   });
 
