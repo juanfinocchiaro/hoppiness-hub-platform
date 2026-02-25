@@ -219,8 +219,8 @@ export function ConfigForm({
       .then(({ data }) => {
         setProfileSuggestion(data ?? null);
       })
-      .catch(() => setProfileSuggestion(null))
-      .finally(() => setLookingUpPhone(false));
+      .then(() => {}, () => setProfileSuggestion(null))
+      .then(() => setLookingUpPhone(false));
   }, [debouncedPhone]);
 
   const parsed = parseRefParts(config.referenciaApp);

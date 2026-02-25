@@ -62,7 +62,7 @@ export default function PedirPage() {
           promo_etiqueta: 'PROMO',
         } satisfies WebappMenuItem;
       })
-      .filter((item): item is WebappMenuItem => !!item);
+      .filter(Boolean) as WebappMenuItem[];
 
     return [...promoArticles, ...rawMenuItems];
   }, [rawMenuItems, promoItems]);
