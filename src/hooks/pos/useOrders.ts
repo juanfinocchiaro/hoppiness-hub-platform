@@ -4,6 +4,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { normalizePhone } from '@/lib/normalizePhone';
 import type { OrderConfig } from '@/types/pos';
 
 export interface PedidoItemInput {
@@ -16,6 +17,7 @@ export interface PedidoItemInput {
   estacion?: string;
   precio_referencia?: number;
   categoria_carta_id?: string | null;
+  promo_descuento?: number;
 }
 
 /** Una línea de pago (pago dividido) */
@@ -79,9 +81,13 @@ export function useCreatePedido(branchId: string) {
       const numeroPedido = (numero as number) ?? 1;
 
       const subtotal = params.items.reduce((s, i) => s + i.subtotal, 0);
+      const promoDesc = params.items.reduce((s, i) => s + (i.promo_descuento ?? 0) * i.cantidad, 0);
       const descuentoPlat = params.orderConfig?.descuentoPlataforma ?? 0;
-      const descuentoRest = params.orderConfig?.descuentoRestaurante ?? 0;
-      const descuento = params.descuento ?? (descuentoPlat + descuentoRest);
+      const descuentoRestRaw = params.orderConfig?.descuentoRestaurante ?? 0;
+      const descuentoRest = params.orderConfig?.descuentoModo === 'porcentaje'
+        ? Math.round(subtotal * descuentoRestRaw / 100)
+        : descuentoRestRaw;
+      const descuento = params.descuento ?? (descuentoPlat + descuentoRest + promoDesc);
       const costoDelivery = params.orderConfig?.costoDelivery ?? 0;
       const totalOrder = subtotal - descuento + costoDelivery;
       const propina = params.propina ?? 0;
@@ -105,14 +111,19 @@ export function useCreatePedido(branchId: string) {
       if (costoDelivery > 0) insertPayload.costo_delivery = costoDelivery;
 
       const descuentoPlataforma = cfg?.descuentoPlataforma ?? 0;
-      const descuentoRestaurante = cfg?.descuentoRestaurante ?? 0;
+      const descuentoRestaurante = cfg?.descuentoModo === 'porcentaje'
+        ? Math.round(subtotal * (cfg?.descuentoRestaurante ?? 0) / 100)
+        : (cfg?.descuentoRestaurante ?? 0);
       if (descuentoPlataforma > 0) insertPayload.descuento_plataforma = descuentoPlataforma;
       if (descuentoRestaurante > 0) insertPayload.descuento_restaurante = descuentoRestaurante;
 
       if (cfg) {
         if (cfg.numeroLlamador) insertPayload.numero_llamador = parseInt(cfg.numeroLlamador, 10);
         if (cfg.clienteNombre) insertPayload.cliente_nombre = cfg.clienteNombre;
-        if (cfg.clienteTelefono) insertPayload.cliente_telefono = cfg.clienteTelefono;
+        if (cfg.clienteTelefono) {
+          const normalized = normalizePhone(cfg.clienteTelefono);
+          insertPayload.cliente_telefono = normalized || cfg.clienteTelefono;
+        }
         if (cfg.clienteDireccion) insertPayload.cliente_direccion = cfg.clienteDireccion;
         insertPayload.canal_venta = cfg.canalVenta;
         insertPayload.tipo_servicio = cfg.tipoServicio;
@@ -228,8 +239,12 @@ export function useCreatePedido(branchId: string) {
 
       return pedido;
     },
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ['kitchen-pedidos', branchId] });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['pos-orders', branchId] });
+      qc.invalidateQueries({ queryKey: ['kitchen-pedidos', branchId] });
     },
   });
 }

@@ -6,6 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { MapPin, Plus, Trash2, GripVertical, Clock, DollarSign, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -266,14 +270,31 @@ export function DeliveryZonesManager({ branchId }: Props) {
                       <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => startEdit(zone)}>
                         Editar
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={() => { if (confirm('¿Eliminar esta zona?')) deleteZone.mutate(zone.id); }}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>¿Eliminar esta zona?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Se eliminará la zona de delivery permanentemente.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => deleteZone.mutate(zone.id)}>
+                              Eliminar
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 )}

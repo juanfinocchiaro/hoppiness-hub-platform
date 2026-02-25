@@ -7,7 +7,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   emailConfirmed: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string, captchaToken?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
@@ -38,10 +38,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, captchaToken?: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
+      options: {
+        captchaToken,
+      },
     });
     return { error: error as Error | null };
   };

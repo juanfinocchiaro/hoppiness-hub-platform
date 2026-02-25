@@ -11,7 +11,8 @@ export function CartBar({ totalItems, totalPrecio, onOpen }: Props) {
     <div className="fixed bottom-0 left-0 right-0 z-40 p-4 pb-safe">
       <button
         onClick={onOpen}
-        className="w-full flex items-center justify-between bg-accent text-accent-foreground rounded-2xl px-5 py-4 shadow-xl hover:bg-accent/90 active:scale-[0.98] transition-all"
+        className="w-full flex items-center justify-between bg-accent text-accent-foreground rounded-2xl px-5 py-4 shadow-elevated hover:bg-accent/90 active:scale-[0.98] transition-all"
+        aria-label="Ver carrito"
       >
         <div className="flex items-center gap-3">
           <div className="relative">

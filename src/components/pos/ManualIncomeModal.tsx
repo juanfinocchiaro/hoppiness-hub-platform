@@ -14,7 +14,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, PlusCircle } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
+import { DotsLoader } from '@/components/ui/loaders';
 import { useAuth } from '@/hooks/useAuth';
 import { useAddMovement } from '@/hooks/useCashRegister';
 import { toast } from 'sonner';
@@ -195,7 +196,7 @@ export function ManualIncomeModal({
             Cancelar
           </Button>
           <Button onClick={handleSubmit} disabled={!amount || addMovement.isPending}>
-            {addMovement.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {addMovement.isPending && <DotsLoader />}
             Registrar Ingreso
           </Button>
         </div>

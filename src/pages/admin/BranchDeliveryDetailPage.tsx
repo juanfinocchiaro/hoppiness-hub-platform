@@ -35,6 +35,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { RequireBrandPermission } from '@/components/guards';
+import { SpinnerLoader } from '@/components/ui/loaders';
 
 /* ─── Block Popover ─────────────────────────────────────── */
 
@@ -335,7 +336,7 @@ function BranchDeliveryDetailContent() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <SpinnerLoader size="lg" />
       </div>
     );
   }

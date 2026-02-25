@@ -36,6 +36,7 @@ import {
 import { format, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
+import { SpinnerLoader } from '@/components/ui/loaders';
 
 type Step = 'pin' | 'regulation-warning' | 'regulation-blocked' | 'camera' | 'success' | 'error';
 
@@ -260,7 +261,7 @@ export default function FichajeEmpleado() {
   if (loadingBranch) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <SpinnerLoader size="lg" />
       </div>
     );
   }

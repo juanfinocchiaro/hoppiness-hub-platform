@@ -13,11 +13,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 interface OrderItemInput {
   item_carta_id: string;
+  articulo_id?: string;
+  articulo_tipo?: "base" | "promo";
+  promocion_id?: string | null;
+  promocion_item_id?: string | null;
   nombre: string;
   cantidad: number;
   precio_unitario: number;
   notas?: string | null;
-  extras?: Array<{ nombre: string; precio: number }>;
+  extras?: Array<{ nombre: string; precio: number; cantidad?: number }>;
+  incluidos?: Array<{ nombre: string; cantidad?: number }>;
   removidos?: string[];
 }
 
@@ -147,10 +152,11 @@ Deno.serve(async (req) => {
     // Fetch active promo prices for these items
     const { data: promoItems } = await supabase
       .from("promocion_items")
-      .select("item_carta_id, precio_promo, promocion_id, promociones!inner(activa, canales, fecha_inicio, fecha_fin)")
+      .select("id, item_carta_id, precio_promo, promocion_id, promociones!inner(activa, canales, fecha_inicio, fecha_fin)")
       .in("item_carta_id", itemIds);
 
     const promoMap = new Map<string, number>();
+    const promoItemMap = new Map<string, { id: string; item_carta_id: string; precio_promo: number; promocion_id: string }>();
     for (const pi of promoItems ?? []) {
       const promo = (pi as any).promociones;
       if (!promo?.activa) continue;
@@ -159,6 +165,12 @@ Deno.serve(async (req) => {
       const now = new Date().toISOString().slice(0, 10);
       if (promo.fecha_inicio && now < promo.fecha_inicio) continue;
       if (promo.fecha_fin && now > promo.fecha_fin) continue;
+      promoItemMap.set(pi.id, {
+        id: pi.id,
+        item_carta_id: pi.item_carta_id,
+        precio_promo: Number(pi.precio_promo),
+        promocion_id: pi.promocion_id,
+      });
       const existing = promoMap.get(pi.item_carta_id);
       if (existing == null || pi.precio_promo < existing) {
         promoMap.set(pi.item_carta_id, pi.precio_promo);
@@ -178,8 +190,20 @@ Deno.serve(async (req) => {
     let subtotal = 0;
     for (const item of body.items) {
       const ci = cartaMap.get(item.item_carta_id)!;
-      const serverPrice = promoMap.get(item.item_carta_id) ?? ci.precio_base;
-      const extrasTotal = (item.extras ?? []).reduce((s, e) => s + e.precio, 0);
+      let serverPrice = ci.precio_base;
+      if (item.promocion_item_id) {
+        const promoItem = promoItemMap.get(item.promocion_item_id);
+        if (!promoItem || promoItem.item_carta_id !== item.item_carta_id) {
+          return json(400, { error: `Promoción inválida para "${item.nombre}"` });
+        }
+        serverPrice = promoItem.precio_promo;
+      } else if (item.articulo_tipo === "promo") {
+        return json(400, { error: `Falta referencia de promoción para "${item.nombre}"` });
+      } else {
+        // Legacy compatibility: old clients without promo metadata still get best active promo.
+        serverPrice = promoMap.get(item.item_carta_id) ?? ci.precio_base;
+      }
+      const extrasTotal = (item.extras ?? []).reduce((s, e) => s + e.precio * (e.cantidad ?? 1), 0);
       subtotal += (serverPrice + extrasTotal) * item.cantidad;
     }
 
@@ -330,11 +354,16 @@ Deno.serve(async (req) => {
     // ── Insert pedido_items ─────────────────────────────────────
     for (const item of body.items) {
       const ci = cartaMap.get(item.item_carta_id)!;
-      const serverPrice = promoMap.get(item.item_carta_id) ?? ci.precio_base;
+      let serverPrice = ci.precio_base;
+      if (item.promocion_item_id) {
+        serverPrice = promoItemMap.get(item.promocion_item_id)?.precio_promo ?? ci.precio_base;
+      } else if (item.articulo_tipo !== "promo") {
+        serverPrice = promoMap.get(item.item_carta_id) ?? ci.precio_base;
+      }
       const stationName =
         (ci.kitchen_stations as any)?.name ?? "armado";
       const extrasTotal = (item.extras ?? []).reduce(
-        (s: number, e: { precio: number }) => s + e.precio,
+        (s: number, e: { precio: number; cantidad?: number }) => s + e.precio * (e.cantidad ?? 1),
         0,
       );
       const lineSubtotal = (serverPrice + extrasTotal) * item.cantidad;
@@ -351,6 +380,10 @@ Deno.serve(async (req) => {
           estacion: stationName,
           notas: item.notas ?? null,
           categoria_carta_id: ci.categoria_carta_id ?? null,
+          articulo_id: item.articulo_id ?? item.item_carta_id,
+          articulo_tipo: item.articulo_tipo ?? (item.promocion_item_id ? "promo" : "base"),
+          promocion_id: item.promocion_id ?? null,
+          promocion_item_id: item.promocion_item_id ?? null,
         } as any)
         .select("id")
         .single();
@@ -370,11 +403,23 @@ Deno.serve(async (req) => {
       }> = [];
 
       for (const extra of item.extras ?? []) {
+        const qty = Math.max(1, extra.cantidad ?? 1);
+        for (let ei = 0; ei < qty; ei++) {
+          modifiers.push({
+            pedido_item_id: insertedItem!.id,
+            tipo: "extra",
+            descripcion: extra.nombre,
+            precio_extra: extra.precio,
+          });
+        }
+      }
+      for (const inc of item.incluidos ?? []) {
+        const qty = Math.max(1, Number(inc.cantidad ?? 1));
         modifiers.push({
           pedido_item_id: insertedItem!.id,
-          tipo: "extra",
-          descripcion: extra.nombre,
-          precio_extra: extra.precio,
+          tipo: "incluido",
+          descripcion: qty > 1 ? `${qty}x ${inc.nombre}` : inc.nombre,
+          precio_extra: null,
         });
       }
       for (const rem of item.removidos ?? []) {

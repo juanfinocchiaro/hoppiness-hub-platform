@@ -1,24 +1,42 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
 import { AuthModalProvider } from "@/contexts/AuthModalContext";
 import { AccountSheetsProvider } from "@/contexts/AccountSheetsContext";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { AdminRoute, LocalRoute, RequireQRAccess, RequireAuth } from "@/components/guards";
 import { FloatingOrderChat } from "@/components/webapp/FloatingOrderChat";
-import { Loader2 } from "lucide-react";
+import { SpinnerLoader, TopBarLoader } from "@/components/ui/loaders";
 
 function PageLoader() {
   return (
     <div className="flex items-center justify-center min-h-[50vh]">
-      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      <SpinnerLoader size="md" text="Cargando..." />
     </div>
   );
+}
+
+function RouteChangeIndicator() {
+  const location = useLocation();
+  const [show, setShow] = useState(false);
+  const prevPath = useRef(location.pathname);
+
+  useEffect(() => {
+    if (location.pathname !== prevPath.current) {
+      prevPath.current = location.pathname;
+      setShow(true);
+      const timer = setTimeout(() => setShow(false), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [location.pathname]);
+
+  return show ? <TopBarLoader /> : null;
 }
 
 // Páginas públicas — eagerly loaded (landing / auth)
@@ -156,7 +174,9 @@ const App = () => (
           <AuthModalProvider>
           <Sonner />
           <BrowserRouter>
+            <ErrorBoundary>
             <AccountSheetsProvider>
+            <RouteChangeIndicator />
             <FloatingOrderChat />
             <AuthModal />
             <Suspense fallback={<PageLoader />}>
@@ -334,6 +354,7 @@ const App = () => (
             </Routes>
             </Suspense>
             </AccountSheetsProvider>
+            </ErrorBoundary>
           </BrowserRouter>
         </AuthModalProvider>
         </ImpersonationProvider>

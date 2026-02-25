@@ -20,6 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { cashRegisterKeys } from '@/hooks/useCashRegister';
+import { useDebounce } from '@/hooks/useDebounce';
 import * as XLSX from 'xlsx';
 
 interface ExpenseMovement {
@@ -43,6 +44,7 @@ interface CajaExpensesListProps {
 
 export function CajaExpensesList({ shiftId, branchId, registerLabel, canApprove }: CajaExpensesListProps) {
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [expenses, setExpenses] = useState<ExpenseMovement[]>([]);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -79,14 +81,14 @@ export function CajaExpensesList({ shiftId, branchId, registerLabel, canApprove 
     CATEGORIA_GASTO_OPTIONS.find((c) => c.value === key)?.label || key;
 
   const filtered = useMemo(() => {
-    if (!search) return expenses;
-    const s = search.toLowerCase();
+    if (!debouncedSearch) return expenses;
+    const s = debouncedSearch.toLowerCase();
     return expenses.filter(
       (e) =>
         e.concept.toLowerCase().includes(s) ||
         (e.categoria_gasto && getCategoriaLabel(e.categoria_gasto).toLowerCase().includes(s))
     );
-  }, [expenses, search]);
+  }, [expenses, debouncedSearch]);
 
   const pendingCount = expenses.filter((e) => e.estado_aprobacion === 'pendiente_aprobacion').length;
 
@@ -174,7 +176,9 @@ export function CajaExpensesList({ shiftId, branchId, registerLabel, canApprove 
           </CardHeader>
           <CardContent>
             {loading ? (
-              <p className="text-sm text-muted-foreground">Cargando...</p>
+              <div className="space-y-2">
+                {[1, 2, 3].map(i => <div key={i} className="h-10 rounded bg-muted animate-pulse" />)}
+              </div>
             ) : filtered.length === 0 ? (
               <p className="text-sm text-muted-foreground">Sin egresos registrados</p>
             ) : (

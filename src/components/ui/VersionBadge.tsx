@@ -7,7 +7,7 @@ export default function VersionBadge() {
   }
 
   return (
-    <div className="rounded-md bg-background/60 px-2 py-1 text-[11px] leading-none text-muted-foreground/80 shadow-sm backdrop-blur-sm print:hidden">
+    <div className="rounded-md bg-background/60 px-2 py-1 text-[11px] leading-none text-muted-foreground/80 shadow-soft backdrop-blur-sm print:hidden">
       <span>Version: {appVersion}</span>
       {buildDate ? <span className="ml-1">- {buildDate}</span> : null}
     </div>

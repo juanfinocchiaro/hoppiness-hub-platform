@@ -39,6 +39,14 @@ export interface OrderConfig {
   descuentoPlataforma?: number;
   /** Descuento aplicado por el restaurante (promos propias) */
   descuentoRestaurante?: number;
+  /** Modo del descuento restaurante: monto fijo o porcentaje sobre subtotal */
+  descuentoModo?: 'pesos' | 'porcentaje';
+  /** ID del código de descuento (voucher) aplicado */
+  voucherCodigoId?: string;
+  /** Texto del código de voucher (ej: "PROMO20") */
+  voucherCodigo?: string;
+  /** Monto descontado por el voucher */
+  voucherDescuento?: number;
 }
 
 export const DEFAULT_ORDER_CONFIG: OrderConfig = {

@@ -7,6 +7,7 @@ import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { TeamTable, TeamCardList, useTeamData } from '@/components/local/team';
 import { InviteStaffDialog } from '@/components/hr/InviteStaffDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useDebounce } from '@/hooks/useDebounce';
 import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import { PageHelp } from '@/components/ui/PageHelp';
 import { PageHeader } from '@/components/ui/page-header';
@@ -23,12 +24,13 @@ export default function TeamPage() {
   const isMobile = useIsMobile();
   
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
 
-  const filteredTeam = search
+  const filteredTeam = debouncedSearch
     ? team.filter(m => 
-        m.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-        m.email?.toLowerCase().includes(search.toLowerCase())
+        m.full_name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        m.email?.toLowerCase().includes(debouncedSearch.toLowerCase())
       )
     : team;
 

@@ -56,7 +56,9 @@ export function ProveedorDocumentos({ proveedorId }: { proveedorId: string }) {
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Cargando...</p>
+        <div className="space-y-2">
+          {[1, 2].map(i => <div key={i} className="h-12 rounded-lg bg-muted animate-pulse" />)}
+        </div>
       ) : !docs?.length ? (
         <p className="text-sm text-muted-foreground">Sin documentos adjuntos</p>
       ) : (

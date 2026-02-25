@@ -275,7 +275,7 @@ function StoreCenter({ isTransparent, title, subtitle, showBack, onBack }: Store
       </Link>
 
       <div className="min-w-0">
-        <h1 className={`text-sm font-bold truncate leading-tight ${isTransparent ? 'text-white' : 'text-foreground'}`}>
+        <h1 className={`font-brand text-sm font-bold truncate leading-tight ${isTransparent ? 'text-white' : 'text-foreground'}`}>
           {title}
         </h1>
         {subtitle && (

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ChevronDown, ChevronRight, AlertTriangle, CheckCircle, XCircle, CircleDot } from 'lucide-react';
+import { ChevronDown, ChevronRight, AlertTriangle, CheckCircle, XCircle, CircleDot, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { StockAjustePopover } from './StockAjustePopover';
 import { StockUmbralesPopover } from './StockUmbralesPopover';
 import { StockHistorial } from './StockHistorial';
+import { EmptyState } from '@/components/ui/states/empty-state';
 import type { StockItem, StockEstado } from '@/hooks/pos/useStock';
 
 const ESTADO_CONFIG: Record<StockEstado, { label: string; icon: typeof AlertTriangle; variant: 'destructive' | 'secondary' | 'outline' | 'default' }> = {
@@ -47,7 +48,7 @@ export function StockTable({ items, branchId, searchQuery, filtroEstado, filtroC
   }, [items, searchQuery, filtroEstado, filtroCategoria]);
 
   if (filtered.length === 0) {
-    return <p className="text-sm text-muted-foreground text-center py-8">No se encontraron insumos</p>;
+    return <EmptyState icon={Package} title="Sin insumos" description="No hay insumos cargados o el filtro no tiene resultados." />;
   }
 
   return (

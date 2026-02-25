@@ -1,7 +1,8 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, CheckCircle2, Clock, Flame, Package, Truck, PartyPopper, XCircle, MessageCircle, Send, Utensils } from 'lucide-react';
+import { CheckCircle2, Clock, Flame, Package, Truck, PartyPopper, XCircle, MessageCircle, Send, Utensils } from 'lucide-react';
+import { SpinnerLoader } from '@/components/ui/loaders';
 import { Button } from '@/components/ui/button';
 import { SEO } from '@/components/SEO';
 import { OrderChat } from '@/components/webapp/OrderChat';
@@ -75,7 +76,7 @@ function getEstadoConfig(estado: string, tipoServicio: string | null): { label: 
     },
     en_camino: { label: 'En camino', icon: <Truck className="w-5 h-5" />, color: 'text-purple-500' },
     entregado: { label: 'Entregado', icon: <PartyPopper className="w-5 h-5" />, color: 'text-green-600' },
-    cancelado: { label: 'Cancelado', icon: <XCircle className="w-5 h-5" />, color: 'text-red-500' },
+    cancelado: { label: 'Cancelado', icon: <XCircle className="w-5 h-5" />, color: 'text-destructive' },
   };
 
   return map[estado] ?? map.pendiente;
@@ -178,7 +179,7 @@ export default function TrackingPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <SpinnerLoader size="lg" text="Cargando pedido..." />
       </div>
     );
   }

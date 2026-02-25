@@ -17,7 +17,7 @@ function formatPrice(n: number) {
 
 function PromoBadge({ label }: { label: string }) {
   return (
-    <span className="absolute top-2 left-2 z-10 bg-accent text-accent-foreground text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm uppercase tracking-wide">
+    <span className="absolute top-2 left-2 z-10 bg-accent text-accent-foreground text-[10px] font-black px-2 py-0.5 rounded-full shadow-soft uppercase tracking-wide">
       {label}
     </span>
   );
@@ -51,6 +51,7 @@ function QtyControls({ qty, onQuickAdd, onIncrement, onDecrement, size = 'sm' }:
       <button
         onClick={onQuickAdd}
         className={`${plusSize} rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-transform`}
+        aria-label="Agregar al carrito"
       >
         <Plus className={iconSize} />
       </button>
@@ -62,6 +63,7 @@ function QtyControls({ qty, onQuickAdd, onIncrement, onDecrement, size = 'sm' }:
       <button
         onClick={onDecrement}
         className={`${btnSize} rounded-full bg-muted text-foreground flex items-center justify-center active:scale-95`}
+        aria-label="Quitar del carrito"
       >
         <Minus className="w-3 h-3" />
       </button>
@@ -69,6 +71,7 @@ function QtyControls({ qty, onQuickAdd, onIncrement, onDecrement, size = 'sm' }:
       <button
         onClick={onIncrement}
         className={`${btnSize} rounded-full bg-primary text-primary-foreground flex items-center justify-center active:scale-95`}
+        aria-label="Agregar al carrito"
       >
         <Plus className="w-3 h-3" />
       </button>
@@ -83,7 +86,7 @@ export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecre
   if (layout === 'desktop') {
     return (
       <div
-        className="flex items-start gap-3 p-4 rounded-xl bg-card border border-border hover:border-primary/20 hover:shadow-sm transition-all cursor-pointer active:scale-[0.99] relative"
+        className="flex items-start gap-3 p-4 rounded-xl bg-card border border-border hover:border-primary/20 hover:shadow-soft transition-all cursor-pointer active:scale-[0.99] relative"
         onClick={onTap}
       >
         <div className="flex-1 min-w-0 flex flex-col justify-between self-stretch">
@@ -93,7 +96,7 @@ export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecre
                 {item.promo_etiqueta}
               </span>
             )}
-            <h3 className="font-bold text-sm text-foreground leading-tight line-clamp-2">
+            <h3 className="font-brand font-bold text-sm text-foreground leading-tight line-clamp-2">
               {item.nombre_corto || item.nombre}
             </h3>
             {item.descripcion && (
@@ -125,7 +128,7 @@ export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecre
   if (layout === 'grid') {
     return (
       <div
-        className="flex flex-col rounded-2xl bg-card border border-border overflow-hidden hover:shadow-md transition-shadow cursor-pointer active:scale-[0.98] relative"
+        className="flex flex-col rounded-xl bg-card border border-border overflow-hidden hover:shadow-card transition-shadow cursor-pointer active:scale-[0.99] relative"
         onClick={onTap}
       >
         {item.promo_etiqueta && <PromoBadge label={item.promo_etiqueta} />}
@@ -140,7 +143,7 @@ export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecre
         )}
 
         <div className="p-3 flex-1 flex flex-col">
-          <h3 className="font-bold text-sm text-foreground leading-tight line-clamp-2">
+          <h3 className="font-brand font-bold text-sm text-foreground leading-tight line-clamp-2">
             {item.nombre_corto || item.nombre}
           </h3>
           {item.descripcion && (
@@ -160,12 +163,12 @@ export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecre
   // List layout
   return (
     <div
-      className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/20 transition-colors cursor-pointer active:scale-[0.98] relative"
+      className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/20 transition-colors cursor-pointer active:scale-[0.99] relative"
       onClick={onTap}
     >
       <div className="relative shrink-0">
         {item.promo_etiqueta && (
-          <span className="absolute -top-1 -left-1 z-10 bg-accent text-accent-foreground text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
+          <span className="absolute -top-1 -left-1 z-10 bg-accent text-accent-foreground text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-soft uppercase">
             {item.promo_etiqueta}
           </span>
         )}
@@ -181,7 +184,7 @@ export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecre
       </div>
 
       <div className="flex-1 min-w-0">
-        <h3 className="font-bold text-sm text-foreground leading-tight line-clamp-2">
+        <h3 className="font-brand font-bold text-sm text-foreground leading-tight line-clamp-2">
           {item.nombre_corto || item.nombre}
         </h3>
         {item.descripcion && (

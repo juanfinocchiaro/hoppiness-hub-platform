@@ -44,11 +44,7 @@ export function WorkShell({
 }: WorkShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const panelLabel =
-    mode === 'brand' ? 'Mi Marca' :
-    mode === 'local' ? 'Mi Local' :
-    'Mi Cuenta';
-  const breadcrumb = useWorkBreadcrumb(panelLabel);
+  const breadcrumb = useWorkBreadcrumb(title);
 
   const sidebarBody = (
     <>

@@ -266,6 +266,8 @@ export interface TicketClienteData {
     total?: number;
     descuento?: number;
     descuento_porcentaje?: number;
+    voucher_codigo?: string;
+    voucher_descuento?: number;
   };
   branchName: string;
   metodo_pago?: string;
@@ -581,12 +583,21 @@ export function generateTicketCliente(
   b.separator('=', cols);
 
   if (order.descuento && order.descuento > 0) {
-    const subtotal = (order.total || 0) + order.descuento;
+    const subtotal = (order.total || 0) + order.descuento + (order.voucher_descuento || 0);
     b.columns('Subtotal', `$${formatMoney(subtotal)}`, cols);
     const descLabel = order.descuento_porcentaje
       ? `Desc. ${order.descuento_porcentaje}%`
       : 'Descuento';
     b.columns(descLabel, `-$${formatMoney(order.descuento)}`, cols);
+  }
+
+  if (order.voucher_descuento && order.voucher_descuento > 0) {
+    if (!order.descuento || order.descuento <= 0) {
+      const subtotal = (order.total || 0) + order.voucher_descuento;
+      b.columns('Subtotal', `$${formatMoney(subtotal)}`, cols);
+    }
+    const vLabel = order.voucher_codigo ? `Voucher ${order.voucher_codigo}` : 'Voucher';
+    b.columns(vLabel, `-$${formatMoney(order.voucher_descuento)}`, cols);
   }
 
   if (order.total != null) {
@@ -710,12 +721,22 @@ function generateTicketFiscal(
 
   // 7. Descuento (si aplica)
   if (order.descuento && order.descuento > 0) {
-    const subtotal = (order.total || 0) + order.descuento;
+    const subtotal = (order.total || 0) + order.descuento + (order.voucher_descuento || 0);
     b.columns('Subtotal', `$${formatMoney(subtotal)}`, cols);
     const descLabel = order.descuento_porcentaje
       ? `Desc. ${order.descuento_porcentaje}%`
       : 'Descuento';
     b.columns(descLabel, `-$${formatMoney(order.descuento)}`, cols);
+  }
+  if (order.voucher_descuento && order.voucher_descuento > 0) {
+    if (!order.descuento || order.descuento <= 0) {
+      const subtotal = (order.total || 0) + order.voucher_descuento;
+      b.columns('Subtotal', `$${formatMoney(subtotal)}`, cols);
+    }
+    const vLabel = order.voucher_codigo ? `Voucher ${order.voucher_codigo}` : 'Voucher';
+    b.columns(vLabel, `-$${formatMoney(order.voucher_descuento)}`, cols);
+  }
+  if ((order.descuento && order.descuento > 0) || (order.voucher_descuento && order.voucher_descuento > 0)) {
     b.separator('-', cols);
   }
 

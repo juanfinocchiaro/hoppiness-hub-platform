@@ -5,7 +5,8 @@
  */
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Loader2, CreditCard, Banknote } from 'lucide-react';
+import { ArrowLeft, CreditCard, Banknote } from 'lucide-react';
+import { DotsLoader } from '@/components/ui/loaders';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +23,8 @@ import { DeliveryCostDisplay, DeliveryCostLoading } from './DeliveryCostDisplay'
 import { DeliveryUnavailable } from './DeliveryUnavailable';
 import { PromoCodeInput } from './PromoCodeInput';
 import { useCalculateDelivery } from '@/hooks/useDeliveryConfig';
+import { useActivePromos, useActivePromoItems } from '@/hooks/usePromociones';
+import { normalizePhone } from '@/lib/normalizePhone';
 
 function formatPrice(n: number) {
   return `$${n.toLocaleString('es-AR')}`;
@@ -33,6 +36,7 @@ function FieldError({ error }: { error: string | null }) {
 }
 
 type MetodoPago = 'mercadopago' | 'efectivo';
+type ServiceKey = 'retiro' | 'delivery';
 
 interface Props {
   cart: ReturnType<typeof useWebappCart>;
@@ -50,6 +54,83 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
   const { user } = useAuth();
   const isDelivery = cart.tipoServicio === 'delivery';
   const servicioLabel = cart.tipoServicio === 'retiro' ? 'Retiro en local' : cart.tipoServicio === 'delivery' ? 'Delivery' : 'Comer acá';
+  const serviceKey: ServiceKey = isDelivery ? 'delivery' : 'retiro';
+
+  const { data: webappConfig } = useQuery({
+    queryKey: ['webapp-config-payments', branchId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('webapp_config' as any)
+        .select('service_schedules')
+        .eq('branch_id', branchId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as any;
+    },
+    enabled: !!branchId,
+  });
+
+  const servicePayments = useMemo(() => {
+    const defaults = serviceKey === 'delivery'
+      ? { efectivo: false, mercadopago: true }
+      : { efectivo: true, mercadopago: true };
+    const pm = (webappConfig?.service_schedules as any)?.[serviceKey]?.payment_methods;
+    return {
+      efectivo: pm?.efectivo ?? defaults.efectivo,
+      mercadopago: pm?.mercadopago ?? defaults.mercadopago,
+    };
+  }, [webappConfig, serviceKey]);
+
+  const { data: activePromos = [] } = useActivePromos(branchId, 'webapp');
+  const { data: activePromoItems = [] } = useActivePromoItems(branchId, 'webapp');
+
+  const promoPayment = useMemo(() => {
+    const promoItemByItemId = new Map(activePromoItems.map(pi => [pi.item_carta_id, pi] as const));
+    const promoById = new Map(activePromos.map(p => [p.id, p] as const));
+
+    let hasCashOnly = false;
+    let hasDigitalOnly = false;
+    for (const ci of cart.items) {
+      const pi = promoItemByItemId.get(ci.itemId);
+      if (!pi) continue;
+      const promo = promoById.get(pi.promocion_id);
+      const r = promo?.restriccion_pago ?? pi.restriccion_pago ?? 'cualquiera';
+      if (r === 'solo_efectivo') hasCashOnly = true;
+      if (r === 'solo_digital') hasDigitalOnly = true;
+    }
+
+    const cashAllowed = !!servicePayments.efectivo;
+    const mpAllowed = !!servicePayments.mercadopago && mpEnabled;
+
+    // Apply promo requirements as an intersection over allowed methods
+    let allowCash = cashAllowed;
+    let allowMp = mpAllowed;
+    if (hasCashOnly) allowMp = false;
+    if (hasDigitalOnly) allowCash = false;
+
+    const conflict = (hasCashOnly && hasDigitalOnly) || (!allowCash && !allowMp);
+
+    const forced: MetodoPago | null =
+      conflict ? null
+        : allowCash !== allowMp
+          ? (allowCash ? 'efectivo' : 'mercadopago')
+          : null;
+
+    const svcLabel = serviceKey === 'delivery' ? 'delivery' : 'retiro';
+    const reason =
+      conflict
+        ? (hasCashOnly && !cashAllowed) ? `Este local no acepta efectivo para ${svcLabel}.`
+          : (hasDigitalOnly && !mpAllowed) ? `Este local no acepta MercadoPago para ${svcLabel}.`
+            : (!cashAllowed && !mpAllowed) ? `Este local no tiene medios de pago habilitados para ${svcLabel}.`
+              : (hasCashOnly && hasDigitalOnly) ? 'Tu carrito tiene promociones con restricciones incompatibles (solo efectivo y solo digital).'
+                : 'No hay un método de pago disponible para este carrito.'
+        : (hasCashOnly) ? 'Esta promo requiere pago en efectivo.'
+          : (hasDigitalOnly) ? 'Esta promo requiere pago digital (MercadoPago).'
+            : (!cashAllowed) ? `Efectivo no está habilitado para ${svcLabel}.`
+              : null;
+
+    return { conflict, forced, cashAllowed, mpAllowed, hasCashOnly, hasDigitalOnly, reason };
+  }, [activePromoItems, activePromos, cart.items, servicePayments, mpEnabled, serviceKey]);
 
   // Profile prefill
   const { data: userProfile } = useQuery({
@@ -114,6 +195,18 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
   const [metodoPago, setMetodoPago] = useState<MetodoPago>(mpEnabled ? 'mercadopago' : 'efectivo');
   const [pagaCon, setPagaCon] = useState<string>('');
   const [promoCode, setPromoCode] = useState<{ codigoId: string; codigoText: string; descuento: number } | null>(null);
+
+  // Enforce payment restrictions (delivery + promos)
+  useEffect(() => {
+    if (promoPayment.conflict) return;
+    if (promoPayment.forced && metodoPago !== promoPayment.forced) {
+      setMetodoPago(promoPayment.forced);
+      return;
+    }
+    if (!promoPayment.cashAllowed && metodoPago === 'efectivo') {
+      setMetodoPago('mercadopago');
+    }
+  }, [promoPayment.conflict, promoPayment.forced, promoPayment.cashAllowed, metodoPago]);
 
   // Sync pre-validated delivery address when props change
   useEffect(() => {
@@ -185,6 +278,15 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
 
   const hasErrors = Object.values(errors).some(e => e !== null);
   const canSubmit = !hasErrors && deliveryAvailable && (!isDelivery || !!deliveryAddress) && (metodoPago === 'efectivo' || mpEnabled);
+  const paymentAllowed = useMemo(() => {
+    if (promoPayment.conflict) return false;
+    if (!promoPayment.cashAllowed && metodoPago === 'efectivo') return false;
+    if (promoPayment.hasCashOnly && metodoPago !== 'efectivo') return false;
+    if (promoPayment.hasDigitalOnly && metodoPago !== 'mercadopago') return false;
+    if (metodoPago === 'mercadopago' && !promoPayment.mpAllowed) return false;
+    return true;
+  }, [promoPayment, metodoPago]);
+  const canSubmitWithRestrictions = canSubmit && paymentAllowed;
 
   const handleBlur = (field: string) => setTouched(prev => ({ ...prev, [field]: true }));
 
@@ -199,7 +301,7 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
 
   const handleConfirm = async () => {
     setTouched({ nombre: true, telefono: true, email: true, direccion: true });
-    if (!canSubmit) return;
+    if (!canSubmitWithRestrictions) return;
 
     if (metodoPago === 'mercadopago' && !showMpConfirm) {
       setShowMpConfirm(true);
@@ -216,12 +318,17 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
     setSubmitting(true);
     try {
       const orderItems = cart.items.map(item => ({
-        item_carta_id: item.itemId,
+        item_carta_id: item.sourceItemId ?? item.itemId,
         nombre: item.nombre,
         cantidad: item.cantidad,
         precio_unitario: item.precioUnitario,
-        extras: item.extras.map(e => ({ nombre: e.nombre, precio: e.precio })),
+        extras: item.extras.map(e => ({ nombre: e.nombre, precio: e.precio, cantidad: e.cantidad ?? 1 })),
+        incluidos: (item.includedModifiers || []).map(m => ({ nombre: m.nombre, cantidad: m.cantidad })),
         removidos: item.removidos,
+        promocion_id: item.promocionId ?? null,
+        promocion_item_id: item.promocionItemId ?? null,
+        articulo_tipo: item.isPromoArticle ? 'promo' : 'base',
+        articulo_id: item.itemId,
         notas: item.notas || null,
       }));
 
@@ -230,7 +337,7 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
           branch_id: branchId,
           tipo_servicio: cart.tipoServicio,
           cliente_nombre: nombre.trim(),
-          cliente_telefono: telefono.trim(),
+          cliente_telefono: normalizePhone(telefono) || telefono.trim(),
           cliente_email: email.trim() || null,
           cliente_direccion: isDelivery ? direccion.trim() : null,
           cliente_piso: isDelivery ? piso.trim() || null : null,
@@ -272,7 +379,7 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
         const checkoutItems = cart.items.map(item => ({
           title: item.nombre,
           quantity: item.cantidad,
-          unit_price: item.precioUnitario + item.extras.reduce((s, e) => s + e.precio, 0),
+          unit_price: item.precioUnitario + item.extras.reduce((s, e) => s + e.precio * (e.cantidad ?? 1), 0),
         }));
         if (costoEnvio > 0) {
           checkoutItems.push({ title: 'Envío', quantity: 1, unit_price: costoEnvio });
@@ -335,8 +442,12 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
           <div>
             <Label className="text-xs">Teléfono *</Label>
             <Input type="tel" value={telefono} onChange={e => setTelefono(e.target.value)} onBlur={() => handleBlur('telefono')}
-              placeholder="351 456-7890" className={`mt-1 h-8 text-sm ${touched.telefono && errors.telefono ? 'border-destructive' : ''}`} />
+              placeholder="3511234567" inputMode="tel"
+              className={`mt-1 h-8 text-sm ${touched.telefono && errors.telefono ? 'border-destructive' : ''}`} />
             {touched.telefono && <FieldError error={errors.telefono} />}
+            {!touched.telefono || !errors.telefono ? (
+              <p className="text-[10px] text-muted-foreground mt-0.5">Sin 0 ni +54 — ej: 3511234567</p>
+            ) : null}
           </div>
           <div>
             <Label className="text-xs">Email (opcional)</Label>
@@ -352,7 +463,7 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
             <h3 className="text-xs font-bold text-foreground">Dirección de entrega</h3>
 
             {deliveryAddress && deliveryCalc?.available ? (
-              <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900 p-2.5 space-y-1.5">
+              <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900 p-3 space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium truncate">{deliveryAddress.formatted_address}</span>
                   <button
@@ -444,12 +555,15 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
         {/* Payment method */}
         <div className="space-y-2">
           <h3 className="text-xs font-bold text-foreground">Método de pago</h3>
+          {promoPayment.reason && (
+            <p className="text-[11px] text-muted-foreground">{promoPayment.reason}</p>
+          )}
           <RadioGroup value={metodoPago} onValueChange={v => setMetodoPago(v as MetodoPago)} className="space-y-1.5">
             {mpEnabled && (
-              <label className={`flex items-center gap-2 rounded-lg border p-2.5 cursor-pointer transition-colors ${
+              <label className={`flex items-center gap-2 rounded-lg border p-3 transition-colors ${
                 metodoPago === 'mercadopago' ? 'border-primary bg-primary/5' : ''
-              }`}>
-                <RadioGroupItem value="mercadopago" />
+              } ${(!promoPayment.mpAllowed || promoPayment.hasCashOnly) ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}>
+                <RadioGroupItem value="mercadopago" disabled={!promoPayment.mpAllowed || promoPayment.hasCashOnly} />
                 <CreditCard className="w-4 h-4 text-blue-500" />
                 <div>
                   <p className="text-xs font-semibold">MercadoPago</p>
@@ -457,10 +571,10 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
                 </div>
               </label>
             )}
-            <label className={`flex items-center gap-2 rounded-lg border p-2.5 cursor-pointer transition-colors ${
+            <label className={`flex items-center gap-2 rounded-lg border p-3 transition-colors ${
               metodoPago === 'efectivo' ? 'border-primary bg-primary/5' : ''
-            }`}>
-              <RadioGroupItem value="efectivo" />
+            } ${(!promoPayment.cashAllowed || promoPayment.hasDigitalOnly) ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}>
+              <RadioGroupItem value="efectivo" disabled={!promoPayment.cashAllowed || promoPayment.hasDigitalOnly} />
               <Banknote className="w-4 h-4 text-green-600" />
               <div>
                 <p className="text-xs font-semibold">Efectivo</p>
@@ -469,7 +583,7 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
             </label>
           </RadioGroup>
 
-          {metodoPago === 'efectivo' && (
+          {metodoPago === 'efectivo' && promoPayment.cashAllowed && (
             <div className="space-y-1.5 pl-1">
               <Label className="text-xs">¿Con cuánto pagás?</Label>
               <div className="flex gap-1.5 flex-wrap">
@@ -503,7 +617,7 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
         <div className="rounded-lg border p-3 bg-muted/30 space-y-1.5">
           <h3 className="text-xs font-bold">Resumen</h3>
           {cart.items.map(item => {
-            const ext = item.extras.reduce((s, e) => s + e.precio, 0);
+            const ext = item.extras.reduce((s, e) => s + e.precio * (e.cantidad ?? 1), 0);
             return (
               <div key={item.cartId} className="flex justify-between text-[11px]">
                 <span className="text-muted-foreground truncate">{item.cantidad}x {item.nombre}</span>
@@ -523,7 +637,7 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
               </div>
             )}
             {promoDescuento > 0 && (
-              <div className="flex justify-between text-[11px] text-green-600">
+              <div className="flex justify-between text-[11px] text-success">
                 <span>Descuento ({promoCode?.codigoText})</span>
                 <span>-{formatPrice(promoDescuento)}</span>
               </div>
@@ -539,7 +653,7 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
       {/* Footer */}
       <div className="border-t px-4 py-3 bg-background space-y-2">
         {showMpConfirm && metodoPago === 'mercadopago' && (
-          <div className="rounded-lg bg-blue-50 border border-blue-200 p-2 space-y-1">
+          <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 space-y-1">
             <p className="text-xs font-semibold text-blue-900">Te vamos a llevar a MercadoPago</p>
             <p className="text-[10px] text-blue-700">Vas a completar el pago de forma segura.</p>
           </div>
@@ -547,10 +661,10 @@ export function CheckoutInlineView({ cart, branchId, branchName, mpEnabled, cost
         <Button
           size="default"
           className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-sm"
-          disabled={!canSubmit || submitting}
+          disabled={!canSubmitWithRestrictions || submitting}
           onClick={handleConfirm}
         >
-          {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+          {submitting && <DotsLoader />}
           {metodoPago === 'mercadopago'
             ? (showMpConfirm ? `Ir a MercadoPago · ${formatPrice(totalConEnvio)}` : `Pagar ${formatPrice(totalConEnvio)}`)
             : `Confirmar ${formatPrice(totalConEnvio)}`}

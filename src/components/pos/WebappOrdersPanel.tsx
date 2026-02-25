@@ -23,6 +23,7 @@ import { useBranchPrinters } from '@/hooks/useBranchPrinters';
 import { useAfipConfig } from '@/hooks/useAfipConfig';
 import { printReadyTicketByPedidoId, printDeliveryTicketByPedidoId, extractErrorMessage } from '@/lib/ready-ticket';
 import { cn } from '@/lib/utils';
+import { WEBAPP_PENDING_COUNT_QUERY_KEY } from '@/hooks/useWebappPendingCount';
 
 const SERVICIO_ICONS: Record<string, typeof ShoppingBag> = {
   retiro: ShoppingBag,
@@ -178,6 +179,7 @@ export function WebappOrdersPanel({ branchId }: { branchId: string }) {
         queryClient.invalidateQueries({ queryKey: ['webapp-pending-orders', branchId] });
         queryClient.invalidateQueries({ queryKey: ['webapp-active-orders', branchId] });
         queryClient.invalidateQueries({ queryKey: ['webapp-recent-orders', branchId] });
+        queryClient.invalidateQueries({ queryKey: [...WEBAPP_PENDING_COUNT_QUERY_KEY, branchId] });
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -189,6 +191,7 @@ export function WebappOrdersPanel({ branchId }: { branchId: string }) {
     queryClient.invalidateQueries({ queryKey: ['webapp-active-orders', branchId] });
     queryClient.invalidateQueries({ queryKey: ['webapp-recent-orders', branchId] });
     queryClient.invalidateQueries({ queryKey: ['pos-kitchen', branchId] });
+    queryClient.invalidateQueries({ queryKey: [...WEBAPP_PENDING_COUNT_QUERY_KEY, branchId] });
   };
 
   const acceptOrder = useMutation({
@@ -287,7 +290,7 @@ export function WebappOrdersPanel({ branchId }: { branchId: string }) {
     const minutesAgo = Math.round((Date.now() - new Date(order.created_at).getTime()) / 60000);
 
     return (
-      <div key={order.id} className="border rounded-lg p-3 space-y-2">
+      <div key={order.id} className="border rounded-lg p-3 space-y-2 active:scale-[0.99]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="font-mono">#{order.numero_pedido}</Badge>

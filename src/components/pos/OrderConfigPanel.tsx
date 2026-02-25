@@ -3,13 +3,19 @@
  * Fase 1: canal mostrador/apps, tipo servicio (takeaway, comer acá, delivery), llamadores
  */
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Store, Utensils, Bike, ShoppingCart, Hash, ChevronRight, Pencil, FileText, ChevronDown } from 'lucide-react';
+import { Store, Utensils, Bike, ShoppingCart, Hash, ChevronRight, Pencil, FileText, ChevronDown, Loader2, CheckCircle2, XCircle, User } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { AddressAutocomplete, type AddressResult } from '@/components/webapp/AddressAutocomplete';
+import { useCalculateDelivery } from '@/hooks/useDeliveryConfig';
+import { useDebounce } from '@/hooks/useDebounce';
+import { phoneVariants } from '@/lib/normalizePhone';
 import type { CanalVenta, TipoServicio, CanalApp, TipoFactura, OrderConfig } from '@/types/pos';
 
 const CANAL_OPTS: { value: CanalVenta; label: string; icon: React.ElementType }[] = [
@@ -51,6 +57,7 @@ interface OrderConfigPanelProps {
   onChange: (config: OrderConfig) => void;
   compact?: boolean;
   onConfirm?: () => void;
+  branchId?: string;
   /** Si true, el botón Delivery se deshabilita y muestra tooltip con motivo */
   deliveryDisabled?: boolean;
   deliveryDisabledReason?: string;
@@ -73,12 +80,6 @@ function ConfigSummaryLine({ config }: { config: OrderConfig }) {
   if (config.referenciaApp && config.canalVenta === 'apps') details.push(config.referenciaApp);
   if ((config.costoDelivery ?? 0) > 0) {
     details.push(`Envío $${(config.costoDelivery ?? 0).toLocaleString('es-AR')}`);
-  }
-  if ((config.descuentoPlataforma ?? 0) > 0) {
-    details.push(`Desc.plat -$${(config.descuentoPlataforma ?? 0).toLocaleString('es-AR')}`);
-  }
-  if ((config.descuentoRestaurante ?? 0) > 0) {
-    details.push(`Desc.rest -$${(config.descuentoRestaurante ?? 0).toLocaleString('es-AR')}`);
   }
   if (config.clienteNombre && !config.clienteNombre.startsWith('Llamador #')) {
     details.push(config.clienteNombre);
@@ -124,16 +125,103 @@ export function ConfigForm({
   config,
   onChange,
   onConfirm,
+  branchId,
   deliveryDisabled = false,
   deliveryDisabledReason = 'Configurá delivery en Caja para habilitar este canal.',
 }: {
   config: OrderConfig;
   onChange: (config: OrderConfig) => void;
   onConfirm?: () => void;
+  branchId?: string;
   deliveryDisabled?: boolean;
   deliveryDisabledReason?: string;
 }) {
   const [receptorOpen, setReceptorOpen] = useState(false);
+
+  // ── Delivery address autocomplete & zone validation ────────────────────────
+  const [deliveryAddress, setDeliveryAddress] = useState<AddressResult | null>(null);
+  const [calcLoading, setCalcLoading] = useState(false);
+  const [deliveryCalc, setDeliveryCalc] = useState<{
+    available: boolean;
+    cost: number | null;
+    estimated_delivery_min: number | null;
+    reason?: string;
+  } | null>(null);
+  const calculateDelivery = useCalculateDelivery();
+
+  const { data: googleApiKey } = useQuery({
+    queryKey: ['google-maps-api-key-pos'],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('google-maps-key');
+      if (error) return null;
+      return data?.apiKey as string | null;
+    },
+    staleTime: 60 * 60 * 1000,
+    enabled: config.tipoServicio === 'delivery' && config.canalVenta === 'mostrador',
+  });
+
+  const handleAddressSelect = (result: AddressResult | null) => {
+    setDeliveryAddress(result);
+    setDeliveryCalc(null);
+    if (result) {
+      onChange({ ...config, clienteDireccion: result.formatted_address });
+    } else {
+      onChange({ ...config, clienteDireccion: '', costoDelivery: 0 });
+    }
+  };
+
+  useEffect(() => {
+    if (!deliveryAddress || !branchId) return;
+    setCalcLoading(true);
+    calculateDelivery.mutateAsync({
+      branch_id: branchId,
+      customer_lat: deliveryAddress.lat,
+      customer_lng: deliveryAddress.lng,
+      neighborhood_name: deliveryAddress.neighborhood_name,
+    }).then((result) => {
+      setDeliveryCalc(result);
+      onChange({ ...config, costoDelivery: result.available && result.cost != null ? result.cost : 0 });
+    }).catch(() => {
+      setDeliveryCalc(null);
+    }).finally(() => {
+      setCalcLoading(false);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deliveryAddress, branchId]);
+
+  // Reset delivery state when switching away from delivery
+  useEffect(() => {
+    if (config.tipoServicio !== 'delivery') {
+      setDeliveryAddress(null);
+      setDeliveryCalc(null);
+    }
+  }, [config.tipoServicio]);
+
+  // ── Phone-based customer lookup ────────────────────────────────────────────
+  const debouncedPhone = useDebounce(config.clienteTelefono, 600);
+  const [profileSuggestion, setProfileSuggestion] = useState<{ id: string; full_name: string; phone: string } | null>(null);
+  const [lookingUpPhone, setLookingUpPhone] = useState(false);
+
+  useEffect(() => {
+    const phone = debouncedPhone?.trim();
+    if (!phone || phone.length < 8) {
+      setProfileSuggestion(null);
+      return;
+    }
+    const variants = phoneVariants(phone);
+    setLookingUpPhone(true);
+    supabase
+      .from('profiles')
+      .select('id, full_name, phone')
+      .in('phone', variants)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        setProfileSuggestion(data ?? null);
+      })
+      .catch(() => setProfileSuggestion(null))
+      .finally(() => setLookingUpPhone(false));
+  }, [debouncedPhone]);
 
   const parsed = parseRefParts(config.referenciaApp);
   const [refDigits, setRefDigits] = useState(parsed.digits);
@@ -261,35 +349,101 @@ export function ConfigForm({
           )}
 
           {config.tipoServicio === 'delivery' && (
-            <div className="space-y-2">
-              <div>
-                <Label className="text-xs">Nombre *</Label>
-                <Input placeholder="Cliente" value={config.clienteNombre} onChange={(e) => set({ clienteNombre: e.target.value })} className="h-9 mt-1" />
-              </div>
+            <div className="space-y-3">
+              {/* Teléfono — con lookup de cliente */}
               <div>
                 <Label className="text-xs">Teléfono *</Label>
-                <Input placeholder="Teléfono" value={config.clienteTelefono} onChange={(e) => set({ clienteTelefono: e.target.value })} className="h-9 mt-1" />
+                <div className="relative mt-1">
+                  <Input
+                    placeholder="Ej: 3511234567"
+                    value={config.clienteTelefono}
+                    onChange={(e) => {
+                      set({ clienteTelefono: e.target.value });
+                      setProfileSuggestion(null);
+                    }}
+                    className="h-9 pr-8"
+                    inputMode="tel"
+                  />
+                  {lookingUpPhone && (
+                    <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                  )}
+                </div>
+                {profileSuggestion && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      set({ clienteNombre: profileSuggestion.full_name });
+                      setProfileSuggestion(null);
+                    }}
+                    className="mt-1 flex items-center gap-1.5 text-xs text-primary hover:underline"
+                  >
+                    <User className="h-3 w-3" />
+                    ¿Es <strong>{profileSuggestion.full_name}</strong>? Clic para completar nombre
+                  </button>
+                )}
               </div>
+
+              {/* Nombre */}
               <div>
-                <Label className="text-xs">Dirección *</Label>
-                <Input placeholder="Dirección de entrega" value={config.clienteDireccion} onChange={(e) => set({ clienteDireccion: e.target.value })} className="h-9 mt-1" />
+                <Label className="text-xs">Nombre *</Label>
+                <Input
+                  placeholder="Cliente"
+                  value={config.clienteNombre}
+                  onChange={(e) => set({ clienteNombre: e.target.value })}
+                  className="h-9 mt-1"
+                />
               </div>
+
+              {/* Dirección — con Google Places autocomplete */}
+              <div>
+                {googleApiKey !== undefined ? (
+                  <AddressAutocomplete
+                    apiKey={googleApiKey}
+                    onSelect={handleAddressSelect}
+                    selectedAddress={deliveryAddress}
+                  />
+                ) : (
+                  <>
+                    <Label className="text-xs">Dirección *</Label>
+                    <Input
+                      placeholder="Dirección de entrega"
+                      value={config.clienteDireccion}
+                      onChange={(e) => set({ clienteDireccion: e.target.value })}
+                      className="h-9 mt-1"
+                    />
+                  </>
+                )}
+              </div>
+
+              {/* Estado de zona de entrega */}
+              {calcLoading && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Verificando zona de entrega...
+                </div>
+              )}
+              {!calcLoading && deliveryCalc && deliveryCalc.available && (
+                <div className="flex items-center gap-1.5 text-xs text-emerald-600">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  En zona · Envío ${(deliveryCalc.cost ?? 0).toLocaleString('es-AR')}
+                  {deliveryCalc.estimated_delivery_min ? ` · ~${deliveryCalc.estimated_delivery_min} min` : ''}
+                </div>
+              )}
+              {!calcLoading && deliveryCalc && !deliveryCalc.available && (
+                <div className="flex items-center gap-1.5 text-xs text-destructive">
+                  <XCircle className="h-3.5 w-3.5" />
+                  {deliveryCalc.reason === 'out_of_radius' && 'Fuera del radio de entrega'}
+                  {deliveryCalc.reason === 'blocked_zone' && 'Zona bloqueada por seguridad'}
+                  {deliveryCalc.reason === 'delivery_disabled' && 'Delivery no disponible ahora'}
+                  {deliveryCalc.reason === 'outside_hours' && 'Fuera del horario de delivery'}
+                  {deliveryCalc.reason === 'assigned_other_branch' && 'Zona asignada a otra sucursal'}
+                  {!deliveryCalc.reason && 'No se puede hacer delivery a esta dirección'}
+                </div>
+              )}
             </div>
           )}
 
-          {/* Descuento restaurante — siempre disponible para promos propias */}
-          <div className="space-y-2">
-            <Label className="text-xs">Descuento del restaurante ($)</Label>
-            <Input
-              type="number"
-              min={0}
-              step={100}
-              placeholder="0"
-              value={config.descuentoRestaurante ?? 0}
-              onChange={(e) => set({ descuentoRestaurante: Math.max(0, Number(e.target.value) || 0) })}
-              className="h-9"
-            />
-          </div>
+
         </>
       )}
 
@@ -347,30 +501,8 @@ export function ConfigForm({
               className="h-9"
             />
           </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Descuento de plataforma ($)</Label>
-            <Input
-              type="number"
-              min={0}
-              step={100}
-              placeholder="0"
-              value={config.descuentoPlataforma ?? 0}
-              onChange={(e) => set({ descuentoPlataforma: Math.max(0, Number(e.target.value) || 0) })}
-              className="h-9"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Descuento del restaurante ($)</Label>
-            <Input
-              type="number"
-              min={0}
-              step={100}
-              placeholder="0"
-              value={config.descuentoRestaurante ?? 0}
-              onChange={(e) => set({ descuentoRestaurante: Math.max(0, Number(e.target.value) || 0) })}
-              className="h-9"
-            />
-          </div>
+
+
         </>
       )}
 
@@ -490,6 +622,7 @@ export function OrderConfigPanel({
   onChange,
   compact,
   onConfirm,
+  branchId,
   deliveryDisabled = false,
   deliveryDisabledReason = 'Configurá delivery en Caja para habilitar este canal.',
 }: OrderConfigPanelProps) {
@@ -517,6 +650,7 @@ export function OrderConfigPanel({
                   config={config}
                   onChange={onChange}
                   onConfirm={() => setExpanded(false)}
+                  branchId={branchId}
                   deliveryDisabled={deliveryDisabled}
                   deliveryDisabledReason={deliveryDisabledReason}
                 />
@@ -536,6 +670,7 @@ export function OrderConfigPanel({
           config={config}
           onChange={onChange}
           onConfirm={onConfirm}
+          branchId={branchId}
           deliveryDisabled={deliveryDisabled}
           deliveryDisabledReason={deliveryDisabledReason}
         />

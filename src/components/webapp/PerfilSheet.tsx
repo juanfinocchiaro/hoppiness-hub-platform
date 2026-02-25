@@ -14,7 +14,8 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Save, Loader2, User, Mail, Lock, Eye, EyeOff, Calendar as CalendarIcon } from 'lucide-react';
+import { Save, User, Mail, Lock, Eye, EyeOff, Calendar as CalendarIcon } from 'lucide-react';
+import { SpinnerLoader, DotsLoader } from '@/components/ui/loaders';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -79,6 +80,10 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile-sheet'] });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
+      // Retroactively link guest orders that share this phone number
+      if (phone) {
+        supabase.functions.invoke('link-guest-orders', {}).catch(() => {});
+      }
       toast.success('Perfil actualizado');
       onOpenChange(false);
     },
@@ -124,7 +129,7 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
 
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            <SpinnerLoader size="sm" />
           </div>
         ) : (
           <div className="space-y-6 mt-6">
@@ -217,7 +222,7 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
               disabled={updateProfile.isPending}
             >
               {updateProfile.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <span className="mr-2 inline-flex"><DotsLoader /></span>
               ) : (
                 <Save className="w-4 h-4 mr-2" />
               )}
@@ -297,7 +302,7 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
                       disabled={changePassword.isPending || !newPassword || !confirmPassword}
                     >
                       {changePassword.isPending ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        <span className="mr-2 inline-flex"><DotsLoader /></span>
                       ) : (
                         <Lock className="w-4 h-4 mr-2" />
                       )}

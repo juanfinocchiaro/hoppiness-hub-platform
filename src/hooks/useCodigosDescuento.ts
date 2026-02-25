@@ -35,7 +35,7 @@ export function useCodigosDescuento() {
   });
 }
 
-export function useValidateCode(branchId: string | undefined) {
+export function useValidateCode(branchId: string | undefined, context: 'webapp' | 'pos' = 'webapp') {
   const { user } = useAuth();
 
   return useMutation({
@@ -56,15 +56,16 @@ export function useValidateCode(branchId: string | undefined) {
       if (code.fecha_inicio && today < code.fecha_inicio) throw new Error('Este código aún no está activo');
       if (code.fecha_fin && today > code.fecha_fin) throw new Error('Este código ya expiró');
       if (code.usos_maximos && code.usos_actuales >= code.usos_maximos) throw new Error('Este código ya alcanzó el máximo de usos');
-      if (code.branch_ids.length > 0) {
+      const bids = code.branch_ids ?? [];
+      if (bids.length > 0) {
         if (!branchId) throw new Error('No se puede validar el código sin un local seleccionado');
-        if (!code.branch_ids.includes(branchId)) throw new Error('Este código no aplica en este local');
+        if (!bids.includes(branchId)) throw new Error('Este código no aplica en este local');
       }
       if (code.monto_minimo_pedido && subtotal < code.monto_minimo_pedido) {
         throw new Error(`Pedido mínimo: $${code.monto_minimo_pedido.toLocaleString('es-AR')}`);
       }
 
-      if (code.uso_unico_por_usuario) {
+      if (context === 'webapp' && code.uso_unico_por_usuario) {
         if (!user) throw new Error('Iniciá sesión para usar este código');
         const { count } = await fromUntyped('codigos_descuento_usos')
           .select('id', { count: 'exact', head: true })
@@ -83,6 +84,35 @@ export function useValidateCode(branchId: string | undefined) {
       return { code, descuento };
     },
   });
+}
+
+/** Register usage of a discount code (call after order is confirmed) */
+export async function registerCodeUsage({ codigoId, userId, pedidoId, montoDescontado }: {
+  codigoId: string;
+  userId?: string;
+  pedidoId?: string;
+  montoDescontado: number;
+}) {
+  await supabase
+    .from('codigos_descuento_usos')
+    .insert({
+      codigo_id: codigoId,
+      user_id: userId || null,
+      pedido_id: pedidoId || null,
+      monto_descontado: montoDescontado,
+    } as any);
+
+  const { data } = await supabase
+    .from('codigos_descuento')
+    .select('usos_actuales')
+    .eq('id', codigoId)
+    .single();
+  if (data) {
+    await supabase
+      .from('codigos_descuento')
+      .update({ usos_actuales: (data as any).usos_actuales + 1 } as any)
+      .eq('id', codigoId);
+  }
 }
 
 export function useCodigoDescuentoMutations() {

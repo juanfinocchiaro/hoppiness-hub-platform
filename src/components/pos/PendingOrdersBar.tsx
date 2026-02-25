@@ -310,7 +310,7 @@ export function PendingOrdersBar({ pedidos, branchId, shiftOpenedAt }: Props) {
                               'flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-all whitespace-nowrap',
                               config.chipBg,
                               isUrgent && 'ring-2 ring-destructive/60 animate-pulse',
-                              isSelected && 'ring-2 ring-primary shadow-sm',
+                              isSelected && 'ring-2 ring-primary shadow-soft',
                             )}
                             onClick={(e) => { e.stopPropagation(); setSelectedId(isSelected ? null : pedido.id); }}
                           >

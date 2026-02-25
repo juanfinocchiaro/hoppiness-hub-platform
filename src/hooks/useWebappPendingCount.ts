@@ -1,77 +1,74 @@
 /**
  * useWebappPendingCount — Hook con Realtime para contar pedidos webapp pendientes.
  *
- * Usa Supabase Realtime (INSERT/UPDATE en `pedidos`) para detectar
- * cambios al instante y reproduce un beep cuando el conteo sube.
+ * Usa React Query + Supabase Realtime para estar sincronizado con WebappOrdersPanel.
+ * Cuando se acepta/rechaza un pedido, invalidateAll() actualiza el conteo al instante.
+ * Reproduce un beep cuando el conteo sube (nuevo pedido).
  */
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+
+export const WEBAPP_PENDING_COUNT_QUERY_KEY = ['webapp-pending-count'] as const;
 
 interface UseWebappPendingCountOptions {
   branchId: string | undefined;
   enabled?: boolean;
 }
 
+async function fetchPendingCount(branchId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('pedidos')
+    .select('*', { count: 'exact', head: true })
+    .eq('branch_id', branchId)
+    .eq('origen', 'webapp')
+    .eq('estado', 'pendiente');
+
+  if (error) throw error;
+  return count ?? 0;
+}
+
+let audioCtx: AudioContext | null = null;
+function playBeep() {
+  try {
+    if (!audioCtx) audioCtx = new AudioContext();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.frequency.value = 880;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + 0.4);
+  } catch {
+    // Audio not available — silently ignore
+  }
+}
+
 export function useWebappPendingCount({ branchId, enabled = true }: UseWebappPendingCountOptions) {
-  const [count, setCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const prevCountRef = useRef(0);
-  const audioCtxRef = useRef<AudioContext | null>(null);
 
-  // Beep using Web Audio API (no external file needed)
-  const playBeep = useCallback(() => {
-    try {
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new AudioContext();
-      }
-      const ctx = audioCtxRef.current;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = 880;
-      osc.type = 'sine';
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.4);
-    } catch {
-      // Audio not available — silently ignore
-    }
-  }, []);
+  const { data: count = 0, isLoading } = useQuery({
+    queryKey: [...WEBAPP_PENDING_COUNT_QUERY_KEY, branchId],
+    queryFn: () => fetchPendingCount(branchId!),
+    enabled: !!branchId && enabled,
+  });
 
-  const fetchCount = useCallback(async () => {
-    if (!branchId) return;
-    const { count: c, error } = await supabase
-      .from('pedidos')
-      .select('*', { count: 'exact', head: true })
-      .eq('branch_id', branchId)
-      .eq('origen', 'webapp')
-      .eq('estado', 'pendiente');
-
-    if (!error && c !== null) {
-      setCount(prev => {
-        if (c > prevCountRef.current) {
-          playBeep();
-        }
-        prevCountRef.current = c;
-        return c;
-      });
-    }
-    setIsLoading(false);
-  }, [branchId, playBeep]);
-
+  // Beep cuando el conteo sube (nuevo pedido entrante)
   useEffect(() => {
-    if (!branchId || !enabled) {
-      setCount(0);
-      setIsLoading(false);
-      return;
+    if (!enabled || count === undefined) return;
+    if (count > prevCountRef.current) {
+      playBeep();
     }
+    prevCountRef.current = count;
+  }, [count, enabled]);
 
-    // Initial fetch
-    fetchCount();
-
-    // Realtime subscription
+  // Realtime: invalidar en cambios de pedidos (INSERT/UPDATE) para mantener sincronía
+  useEffect(() => {
+    if (!branchId || !enabled) return;
     const channel = supabase
       .channel(`webapp-pending-${branchId}`)
       .on(
@@ -83,8 +80,7 @@ export function useWebappPendingCount({ branchId, enabled = true }: UseWebappPen
           filter: `branch_id=eq.${branchId}`,
         },
         () => {
-          // Re-fetch count on any change to pedidos for this branch
-          fetchCount();
+          queryClient.invalidateQueries({ queryKey: [...WEBAPP_PENDING_COUNT_QUERY_KEY, branchId] });
         }
       )
       .subscribe();
@@ -92,7 +88,10 @@ export function useWebappPendingCount({ branchId, enabled = true }: UseWebappPen
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [branchId, enabled, fetchCount]);
+  }, [branchId, enabled, queryClient]);
 
-  return { count, isLoading };
+  // Cuando no hay branchId o no está enabled, devolver 0
+  const displayCount = branchId && enabled ? count : 0;
+
+  return { count: displayCount, isLoading };
 }

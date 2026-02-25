@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Banknote, CreditCard, QrCode, ArrowRightLeft, Plus, Trash2, Loader2, Smartphone } from 'lucide-react';
+import { Banknote, CreditCard, QrCode, ArrowRightLeft, Plus, Trash2, Smartphone } from 'lucide-react';
+import { DotsLoader } from '@/components/ui/loaders';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -284,7 +285,7 @@ export function PaymentEditModal({ open, onOpenChange, pedidoId, pedidoTotal, br
             Cancelar
           </Button>
           <Button onClick={handleSave} disabled={!canSave || saving}>
-            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {saving && <DotsLoader />}
             Guardar cambios
           </Button>
         </DialogFooter>

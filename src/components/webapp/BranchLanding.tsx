@@ -248,7 +248,7 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
       {/* Service selection */}
       <div className="flex-1 flex flex-col items-center px-6 py-8 max-w-lg mx-auto w-full">
         {isOpen ? (
-          <div className="w-full bg-card rounded-2xl shadow-sm border p-5 space-y-4">
+          <div className="w-full bg-card rounded-xl shadow-sm border p-5 space-y-4">
             <div className="text-center space-y-1">
               <h3 className="text-base font-bold text-foreground">Servicios disponibles</h3>
               <p className="text-sm text-muted-foreground">¿Cómo querés tu pedido?</p>
@@ -376,7 +376,7 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
             )}
           </div>
         ) : (
-          <div className="w-full bg-card rounded-2xl shadow-sm border p-6 text-center space-y-4">
+          <div className="w-full bg-card rounded-xl shadow-sm border p-6 text-center space-y-4">
             {isPaused && config.mensaje_pausa && (
               <p className="text-sm text-muted-foreground">{config.mensaje_pausa}</p>
             )}

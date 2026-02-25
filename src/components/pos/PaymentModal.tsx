@@ -14,7 +14,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
-import { Loader2, Split, Banknote, CreditCard, QrCode, ArrowRightLeft, ChevronDown, AlertTriangle } from 'lucide-react';
+import { Split, Banknote, CreditCard, QrCode, ArrowRightLeft, ChevronDown, AlertTriangle } from 'lucide-react';
+import { DotsLoader } from '@/components/ui/loaders';
 import type { MetodoPago } from '@/types/pos';
 import type { CartItem } from '@/components/pos/ProductGrid';
 import { SplitPayment, type PaymentLine } from '@/components/pos/SplitPayment';
@@ -242,7 +243,7 @@ export function PaymentModal({
               Cancelar
             </Button>
             <Button onClick={handleConfirmSingle} disabled={!canConfirmSingle || loading}>
-              {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              {loading && <DotsLoader />}
               Confirmar cobro · $ {totalToPay.toLocaleString('es-AR')}
             </Button>
           </DialogFooter>

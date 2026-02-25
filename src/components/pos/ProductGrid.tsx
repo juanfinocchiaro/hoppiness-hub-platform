@@ -3,16 +3,16 @@
  */
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { useItemsCarta } from '@/hooks/useItemsCarta';
-import { useFrequentItems } from '@/hooks/pos/useFrequentItems';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Search, X, Star, Tag } from 'lucide-react';
+import { Search, X, Tag, ZoomIn, ZoomOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { useActivePromoItems, type PromocionItem } from '@/hooks/usePromociones';
+import { useDebounce } from '@/hooks/useDebounce';
 
 export interface CartItemExtra {
   id: string;
@@ -46,6 +46,14 @@ export interface CartItem {
   precio_referencia?: number;
   categoria_carta_id?: string | null;
   createdAt?: number;
+  /** Promo aplicada (si corresponde) */
+  promo_id?: string;
+  /** Restricción de pago de la promo aplicada */
+  promo_restriccion_pago?: 'cualquiera' | 'solo_efectivo' | 'solo_digital';
+  /** Descuento unitario automático por promoción */
+  promo_descuento?: number;
+  /** Nombre de la promoción aplicada */
+  promo_nombre?: string;
 }
 
 interface ProductGridProps {
@@ -56,6 +64,17 @@ interface ProductGridProps {
   disabled?: boolean;
   promoChannel?: string;
 }
+
+type GridDensity = 'compact' | 'default' | 'large';
+
+const GRID_DENSITY_KEY = 'pos-grid-density';
+const DENSITY_ORDER: GridDensity[] = ['large', 'default', 'compact'];
+
+const GRID_CLASSES: Record<GridDensity, string> = {
+  compact: 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6',
+  default: 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4',
+  large:   'grid-cols-1 sm:grid-cols-2 md:grid-cols-3',
+};
 
 function getInitials(name: string) {
   return name
@@ -68,19 +87,34 @@ function getInitials(name: string) {
 
 export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disabled, promoChannel }: ProductGridProps) {
   const { data: items, isLoading } = useItemsCarta();
-  const { data: frequentIds } = useFrequentItems(branchId);
   const { data: promoItems = [] } = useActivePromoItems(branchId, promoChannel);
 
-  const promoMap = useMemo(() => {
-    const m = new Map<string, PromocionItem>();
-    promoItems.forEach(pi => m.set(pi.item_carta_id, pi));
-    return m;
-  }, [promoItems]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 300);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const scrollViewportRef = useRef<HTMLDivElement | null>(null);
   const isManualScroll = useRef(false);
+
+  const [gridDensity, setGridDensity] = useState<GridDensity>(() => {
+    try {
+      const saved = localStorage.getItem(GRID_DENSITY_KEY);
+      if (saved && DENSITY_ORDER.includes(saved as GridDensity)) return saved as GridDensity;
+    } catch { /* noop */ }
+    return 'default';
+  });
+
+  const gridClass = GRID_CLASSES[gridDensity];
+
+  const handleZoom = useCallback((direction: 'in' | 'out') => {
+    setGridDensity((prev) => {
+      const idx = DENSITY_ORDER.indexOf(prev);
+      const next = direction === 'in' ? Math.min(idx + 1, DENSITY_ORDER.length - 1) : Math.max(idx - 1, 0);
+      const val = DENSITY_ORDER[next];
+      try { localStorage.setItem(GRID_DENSITY_KEY, val); } catch { /* noop */ }
+      return val;
+    });
+  }, []);
 
   // Cart quantity map for badges
   const cartQtyMap = useMemo(() => {
@@ -96,43 +130,63 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
     [items]
   );
 
-  // Search filter
-  const filteredItems = useMemo(() => {
-    if (!searchTerm.trim()) return allItems;
-    const term = searchTerm.toLowerCase();
-    return allItems.filter((item: any) => {
+  const promoArticles = useMemo(() => {
+    if (!allItems.length || !promoItems.length) return [];
+    const baseById = new Map(allItems.map((item: any) => [item.id, item]));
+    return promoItems
+      .map(pi => {
+        const base = baseById.get(pi.item_carta_id);
+        if (!base || pi.precio_promo >= Number(base.precio_base ?? 0)) return null;
+        const extras = pi.preconfigExtras || [];
+        const extrasTotal = extras.reduce((sum, ex) => sum + (ex.precio ?? 0) * ex.cantidad, 0);
+        const precioSinPromo = Number(base.precio_base ?? 0) + extrasTotal;
+        const included = extras
+          .filter((ex: any) => ex.nombre)
+          .map((ex: any) => ex.cantidad > 1 ? `${ex.cantidad}x ${ex.nombre}` : ex.nombre);
+        return {
+          ...base,
+          id: `promo:${pi.id}`,
+          _isPromoArticle: true,
+          _sourceItemId: base.id,
+          _promoData: pi,
+          _precioSinPromo: precioSinPromo,
+          _includedLabel: included.length > 0 ? `Incluye: ${included.join(', ')}` : null,
+          nombre: pi.promocion_nombre || `${base.nombre_corto || base.nombre} (PROMO)`,
+          nombre_corto: pi.promocion_nombre || `${base.nombre_corto || base.nombre} (PROMO)`,
+          precio_base: precioSinPromo,
+        };
+      })
+      .filter(Boolean) as any[];
+  }, [allItems, promoItems]);
+
+  const searchResults = useMemo(() => {
+    if (!debouncedSearch.trim()) return [];
+    const term = debouncedSearch.toLowerCase();
+    const match = (item: any) => {
       const nombre = (item.nombre ?? '').toLowerCase();
       const nombreCorto = (item.nombre_corto ?? '').toLowerCase();
       return nombre.includes(term) || nombreCorto.includes(term);
-    });
-  }, [allItems, searchTerm]);
+    };
+    return [...promoArticles.filter(match), ...allItems.filter(match)];
+  }, [allItems, promoArticles, debouncedSearch]);
 
   const byCategory = useMemo(() => {
-    const source = searchTerm.trim() ? filteredItems : allItems;
-    return source.reduce<Record<string, { items: typeof items; orden: number }>>((acc, item) => {
+    const acc = allItems.reduce<Record<string, { items: any[]; orden: number }>>((acc, item) => {
       const cat = (item as any).menu_categorias?.nombre ?? 'Sin categoría';
       const orden = (item as any).menu_categorias?.orden ?? 999;
       if (!acc[cat]) acc[cat] = { items: [], orden };
       acc[cat].items.push(item);
       return acc;
     }, {});
-  }, [allItems, filteredItems, searchTerm]);
-
-  // Frequent items
-  const frequentItems = useMemo(() => {
-    if (!frequentIds || frequentIds.length === 0) return [];
-    return frequentIds
-      .map((id) => allItems.find((item: any) => item.id === id))
-      .filter(Boolean);
-  }, [frequentIds, allItems]);
-
-  const FRECUENTES_KEY = '⭐ Frecuentes';
-  const hasFrequents = frequentItems.length >= 3;
+    if (promoArticles.length > 0) {
+      acc['Promociones'] = { items: promoArticles, orden: -1 };
+    }
+    return acc;
+  }, [allItems, promoArticles]);
 
   const cats = useMemo(() => {
-    const sorted = Object.keys(byCategory).sort((a, b) => byCategory[a].orden - byCategory[b].orden);
-    return hasFrequents ? [FRECUENTES_KEY, ...sorted] : sorted;
-  }, [byCategory, hasFrequents]);
+    return Object.keys(byCategory).sort((a, b) => byCategory[a].orden - byCategory[b].orden);
+  }, [byCategory]);
 
   // Scroll spy with IntersectionObserver
   useEffect(() => {
@@ -227,35 +281,31 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
     });
   }, [queryClient, disabled]);
 
-  const [promoConfirmItem, setPromoConfirmItem] = useState<any>(null);
-
   const handleProductClick = (item: any) => {
     if (disabled) {
       toast('Iniciá la venta primero', { description: 'Configurá el canal y servicio antes de agregar productos' });
       return;
     }
 
-    const promo = promoMap.get(item.id);
-    if (promo && promo.precio_promo < Number(item.precio_base ?? 0)) {
-      setPromoConfirmItem(item);
+    if (item._isPromoArticle) {
+      addPromoItemToCart(item);
       return;
     }
 
     addItemToCart(item);
   };
 
-  const addItemToCart = (item: any, usePromoPrice = false) => {
-    const promoMatch = promoMap.get(item.id);
-    const precio = usePromoPrice && promoMatch ? promoMatch.precio_promo : (item.precio_base ?? 0);
+  const addItemToCart = (item: any) => {
+    const precio = item.precio_base ?? 0;
     const nombre = item.nombre_corto ?? item.nombre;
     const precioRef = item.precio_referencia ? Number(item.precio_referencia) : undefined;
 
     if (onSelectItem) {
-      onSelectItem(usePromoPrice && promoMatch ? { ...item, precio_base: promoMatch.precio_promo } : item);
+      onSelectItem(item);
     } else {
       onAddItem({
         item_carta_id: item.id,
-        nombre: usePromoPrice ? `${nombre} (PROMO)` : nombre,
+        nombre,
         cantidad: 1,
         precio_unitario: precio,
         subtotal: precio,
@@ -265,9 +315,44 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
     }
   };
 
+  const addPromoItemToCart = (promoArticle: any) => {
+    const pi = promoArticle._promoData as PromocionItem;
+    const baseItem = allItems.find((i: any) => i.id === promoArticle._sourceItemId);
+    if (!baseItem) return;
+    const precioSinPromo = promoArticle._precioSinPromo ?? Number(baseItem.precio_base ?? 0);
+
+    if (onSelectItem) {
+      onSelectItem({
+        ...baseItem,
+        precio_base: pi.precio_promo,
+        _promoPrice: pi.precio_promo,
+        _originalPrecioBase: precioSinPromo,
+        _preconfigExtras: pi.preconfigExtras,
+        _promoId: pi.promocion_id,
+        _promoRestriccionPago: pi.restriccion_pago,
+        _promoNombre: pi.promocion_nombre,
+      });
+    } else {
+      const nombre = pi.promocion_nombre || (baseItem.nombre_corto ?? baseItem.nombre);
+      const discount = precioSinPromo - pi.precio_promo;
+      onAddItem({
+        item_carta_id: baseItem.id,
+        nombre: `${nombre} (PROMO)`,
+        cantidad: 1,
+        precio_unitario: precioSinPromo,
+        subtotal: precioSinPromo,
+        categoria_carta_id: baseItem.categoria_carta_id ?? null,
+        promo_id: pi.promocion_id,
+        promo_restriccion_pago: pi.restriccion_pago ?? 'cualquiera',
+        promo_descuento: discount > 0 ? discount : undefined,
+        promo_nombre: pi.promocion_nombre || 'Promoción',
+      });
+    }
+  };
+
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && filteredItems.length === 1) {
-      handleProductClick(filteredItems[0]);
+    if (e.key === 'Enter' && searchResults.length === 1) {
+      handleProductClick(searchResults[0]);
       setSearchTerm('');
     }
   };
@@ -281,7 +366,7 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
             <Skeleton key={i} className="h-9 w-24 rounded-full" />
           ))}
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <div className={cn('grid gap-3', GRID_CLASSES['default'])}>
           {Array.from({ length: 8 }).map((_, i) => (
             <Skeleton key={i} className="h-32 rounded-lg" />
           ))}
@@ -292,35 +377,53 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
 
   return (
     <div className="flex flex-col h-full gap-3">
-      {/* Search input */}
-      <div className="relative shrink-0">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          type="text"
-          placeholder="Buscar producto..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          onKeyDown={handleSearchKeyDown}
-          className="pl-9 pr-9"
-        />
-        {searchTerm && (
-          <button
-            type="button"
-            onClick={() => setSearchTerm('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
+      {/* Search input + zoom */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Buscar producto..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+            className="pl-9 pr-9"
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => handleZoom('out')}
+          disabled={gridDensity === 'large'}
+          className="h-9 w-9 flex items-center justify-center rounded-md border bg-card text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+          title="Más grande"
+        >
+          <ZoomIn className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => handleZoom('in')}
+          disabled={gridDensity === 'compact'}
+          className="h-9 w-9 flex items-center justify-center rounded-md border bg-card text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+          title="Más chico"
+        >
+          <ZoomOut className="h-4 w-4" />
+        </button>
       </div>
 
       {/* Category tabs */}
       {!searchTerm.trim() && (
         <div className="flex flex-wrap gap-1.5 shrink-0">
           {cats.map((cat) => {
-            // Check if this category has items in cart
-            const isFrecuentes = cat === FRECUENTES_KEY;
-            const catItems = isFrecuentes ? frequentItems : (byCategory[cat]?.items ?? []);
+            const catItems = byCategory[cat]?.items ?? [];
             const hasCartItems = catItems.some((item: any) => cartQtyMap.has(item.id));
             return (
               <button
@@ -350,50 +453,56 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
       <ScrollArea className="flex-1 min-h-0 pr-2" ref={scrollViewportRef}>
         <div className="space-y-6 pb-4">
           {searchTerm.trim() ? (
-            // Flat search results
             <div>
               <h3 className="py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                {filteredItems.length} resultado{filteredItems.length !== 1 ? 's' : ''}
+                {searchResults.length} resultado{searchResults.length !== 1 ? 's' : ''}
               </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {filteredItems.map((item: any) => (
-                  <ProductCard
-                    key={item.id}
-                    item={item}
-                    qty={cartQtyMap.get(item.id) || 0}
-                    onClick={handleProductClick}
-                    onHover={handlePrefetch}
-                    promoPrice={promoMap.get(item.id)?.precio_promo}
-                  />
-                ))}
+              <div className={cn('grid gap-3', gridClass)}>
+                {searchResults.map((item: any) => {
+                  const isPromo = !!item._isPromoArticle;
+                  return (
+                    <ProductCard
+                      key={item.id}
+                      item={item}
+                      qty={isPromo ? 0 : (cartQtyMap.get(item.id) || 0)}
+                      onClick={handleProductClick}
+                      onHover={(id) => handlePrefetch(isPromo ? item._sourceItemId : id)}
+                      promoPrice={isPromo ? item._promoData.precio_promo : undefined}
+                      promoLabel={isPromo ? (item._promoData.promocion_nombre || 'PROMO') : undefined}
+                      subtitle={isPromo ? item._includedLabel : undefined}
+                    />
+                  );
+                })}
               </div>
             </div>
           ) : (
-            // Grouped by category (with Frecuentes)
             cats.map((cat) => {
-              const isFrecuentes = cat === FRECUENTES_KEY;
-              const catItems = isFrecuentes ? frequentItems : (byCategory[cat]?.items ?? []);
+              const catItems = byCategory[cat]?.items ?? [];
               return (
                 <div
                   key={cat}
                   ref={(el) => { sectionRefs.current[cat] = el; }}
                   data-category={cat}
                 >
-                  <h3 className="sticky top-0 z-10 bg-slate-50 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    {isFrecuentes && <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />}
-                    {isFrecuentes ? 'Frecuentes' : cat}
+                  <h3 className="sticky top-0 z-10 bg-slate-50 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                    {cat}
                   </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {catItems.map((item: any) => (
-                    <ProductCard
-                    key={item.id}
-                    item={item}
-                    qty={cartQtyMap.get(item.id) || 0}
-                    onClick={handleProductClick}
-                    onHover={handlePrefetch}
-                    promoPrice={promoMap.get(item.id)?.precio_promo}
-                  />
-                    ))}
+                  <div className={cn('grid gap-3', gridClass)}>
+                    {catItems.map((item: any) => {
+                      const isPromo = !!item._isPromoArticle;
+                      return (
+                        <ProductCard
+                          key={item.id}
+                          item={item}
+                          qty={isPromo ? 0 : (cartQtyMap.get(item.id) || 0)}
+                          onClick={handleProductClick}
+                          onHover={(id) => handlePrefetch(isPromo ? item._sourceItemId : id)}
+                          promoPrice={isPromo ? item._promoData.precio_promo : undefined}
+                          promoLabel={isPromo ? (item._promoData.promocion_nombre || 'PROMO') : undefined}
+                          subtitle={isPromo ? item._includedLabel : undefined}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -401,42 +510,19 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
           )}
         </div>
       </ScrollArea>
-
-      {/* Promo apply confirmation */}
-      {promoConfirmItem && (() => {
-        const pi = promoMap.get(promoConfirmItem.id)!;
-        const nombre = promoConfirmItem.nombre_corto ?? promoConfirmItem.nombre;
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setPromoConfirmItem(null)}>
-            <div className="bg-card rounded-xl shadow-xl p-5 max-w-xs w-full space-y-3" onClick={e => e.stopPropagation()}>
-              <h4 className="font-semibold text-sm">Aplicar promoción?</h4>
-              <p className="text-sm text-muted-foreground">
-                <strong>{nombre}</strong>: ${Number(promoConfirmItem.precio_base).toLocaleString('es-AR')} → <span className="text-green-600 font-bold">${pi.precio_promo.toLocaleString('es-AR')}</span>
-              </p>
-              <div className="flex gap-2">
-                <button
-                  className="flex-1 py-2 text-sm rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition-colors"
-                  onClick={() => { addItemToCart(promoConfirmItem, true); setPromoConfirmItem(null); }}
-                >
-                  Sí, con promo
-                </button>
-                <button
-                  className="flex-1 py-2 text-sm rounded-lg bg-muted text-foreground font-medium hover:bg-muted/80 transition-colors"
-                  onClick={() => { addItemToCart(promoConfirmItem, false); setPromoConfirmItem(null); }}
-                >
-                  Precio normal
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 }
 
-/* Extracted product card with badge + promo support */
-function ProductCard({ item, qty, onClick, onHover, promoPrice }: { item: any; qty: number; onClick: (item: any) => void; onHover?: (id: string) => void; promoPrice?: number }) {
+function ProductCard({ item, qty, onClick, onHover, promoPrice, promoLabel, subtitle }: {
+  item: any;
+  qty: number;
+  onClick: (item: any) => void;
+  onHover?: (id: string) => void;
+  promoPrice?: number;
+  promoLabel?: string;
+  subtitle?: string | null;
+}) {
   const precio = item.precio_base ?? 0;
   const precioRef = item.precio_referencia ? Number(item.precio_referencia) : null;
   const hasDiscount = precioRef != null && precioRef > precio;
@@ -451,7 +537,7 @@ function ProductCard({ item, qty, onClick, onHover, promoPrice }: { item: any; q
       onClick={() => onClick(item)}
       onMouseEnter={() => onHover?.(item.id)}
       className={cn(
-        'group relative flex flex-col rounded-lg border bg-card overflow-hidden text-left transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30',
+        'group relative flex flex-col rounded-lg border bg-card overflow-hidden text-left transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 active:scale-[0.99]',
         inCart
           ? 'border-primary hover:border-primary'
           : hasPromo
@@ -467,8 +553,8 @@ function ProductCard({ item, qty, onClick, onHover, promoPrice }: { item: any; q
       )}
       {/* Promo badge */}
       {hasPromo && !inCart && (
-        <span className="absolute top-1.5 left-1.5 z-20 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-green-600 text-white text-[10px] font-bold shadow-sm">
-          <Tag className="w-2.5 h-2.5" /> PROMO
+        <span className="absolute top-1.5 left-1.5 z-20 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-success text-white text-[10px] font-bold shadow-sm" title={promoLabel || 'Promoción'}>
+          <Tag className="w-2.5 h-2.5" /> {promoLabel ? 'PROMO ACTIVA' : 'PROMO'}
         </span>
       )}
       {/* Discount badge */}
@@ -494,7 +580,10 @@ function ProductCard({ item, qty, onClick, onHover, promoPrice }: { item: any; q
       </div>
       {/* Info */}
       <div className="p-2.5 flex flex-col gap-0.5">
-        <span className="text-sm font-medium line-clamp-2 leading-tight">{nombre}</span>
+        <span className="font-brand text-sm font-medium line-clamp-2 leading-tight">{nombre}</span>
+        {subtitle && (
+          <span className="text-[10px] text-muted-foreground line-clamp-1">{subtitle}</span>
+        )}
         {hasPromo ? (
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] text-muted-foreground line-through">

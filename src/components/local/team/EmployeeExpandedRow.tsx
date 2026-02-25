@@ -5,6 +5,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { 
   Phone, MapPin, CreditCard, Calendar, AlertTriangle, 
   ClipboardList, Clock, DollarSign, Plus, Pencil, UserX, Copy, KeyRound
@@ -321,19 +325,32 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
             <Pencil className="h-4 w-4 mr-2" />
             Editar datos
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-full justify-start text-destructive"
-            onClick={() => {
-              if (confirm('¿Desactivar a este empleado?')) {
-                deactivateMutation.mutate();
-              }
-            }}
-          >
-            <UserX className="h-4 w-4 mr-2" />
-            Desactivar empleado
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start text-destructive"
+              >
+                <UserX className="h-4 w-4 mr-2" />
+                Desactivar empleado
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Desactivar a este empleado?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  El empleado perderá acceso al sistema. Podés reactivarlo en cualquier momento.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={() => deactivateMutation.mutate()}>
+                  Desactivar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
 

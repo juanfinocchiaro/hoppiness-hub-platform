@@ -28,6 +28,11 @@ export interface WebappConfig {
 
 export interface WebappMenuItem {
   id: string;
+  source_item_id?: string;
+  is_promo_article?: boolean;
+  promocion_id?: string | null;
+  promocion_item_id?: string | null;
+  promo_included_modifiers?: Array<{ nombre: string; cantidad: number }>;
   nombre: string;
   nombre_corto: string | null;
   descripcion: string | null;
@@ -49,11 +54,17 @@ export interface CartItemModifier {
   nombre: string;
   precio: number;
   tipo: 'extra' | 'sin';
+  cantidad?: number;
 }
 
 export interface CartItem {
   cartId: string; // unique per cart entry
   itemId: string;
+  sourceItemId?: string;
+  isPromoArticle?: boolean;
+  promocionId?: string | null;
+  promocionItemId?: string | null;
+  includedModifiers?: Array<{ nombre: string; cantidad: number }>;
   nombre: string;
   imagen_url: string | null;
   precioUnitario: number;

@@ -31,7 +31,13 @@ export function UserMenuDropdown() {
   const firstBranchId = accessibleBranches[0]?.id;
   const showMiTrabajo = canAccessLocal || canAccessBrand;
 
-  const isInStore = location.pathname.startsWith('/pedir');
+  const path = location.pathname;
+  const activeSection =
+    path.startsWith('/pedir') ? 'store' :
+    path.startsWith('/cuenta') ? 'trabajo' :
+    path.startsWith('/milocal') ? 'local' :
+    path.startsWith('/mimarca') ? 'marca' :
+    null;
 
   const initials = user?.user_metadata?.full_name
     ? user.user_metadata.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
@@ -83,30 +89,44 @@ export function UserMenuDropdown() {
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
-        {!isInStore && (
-          <DropdownMenuItem onClick={() => navigate('/pedir')}>
-            <ShoppingBag className="w-4 h-4 mr-2" />
-            La Tienda
-          </DropdownMenuItem>
-        )}
+        <DropdownMenuItem
+          onClick={() => navigate('/pedir')}
+          className={activeSection === 'store' ? 'bg-accent/10 text-accent font-semibold' : ''}
+        >
+          <ShoppingBag className="w-4 h-4 mr-2" />
+          La Tienda
+          {activeSection === 'store' && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />}
+        </DropdownMenuItem>
 
         {(showMiTrabajo || canAccessLocal || canAccessBrand) && <DropdownMenuSeparator />}
         {showMiTrabajo && (
-          <DropdownMenuItem onClick={() => navigate('/cuenta')}>
+          <DropdownMenuItem
+            onClick={() => navigate('/cuenta')}
+            className={activeSection === 'trabajo' ? 'bg-accent/10 text-accent font-semibold' : ''}
+          >
             <Briefcase className="w-4 h-4 mr-2" />
             Mi Trabajo
+            {activeSection === 'trabajo' && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />}
           </DropdownMenuItem>
         )}
         {canAccessLocal && (
-          <DropdownMenuItem onClick={() => navigate(firstBranchId ? `/milocal/${firstBranchId}` : '/milocal')}>
+          <DropdownMenuItem
+            onClick={() => navigate(firstBranchId ? `/milocal/${firstBranchId}` : '/milocal')}
+            className={activeSection === 'local' ? 'bg-accent/10 text-accent font-semibold' : ''}
+          >
             <Store className="w-4 h-4 mr-2" />
             Mi Local
+            {activeSection === 'local' && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />}
           </DropdownMenuItem>
         )}
         {canAccessBrand && (
-          <DropdownMenuItem onClick={() => navigate('/mimarca')}>
+          <DropdownMenuItem
+            onClick={() => navigate('/mimarca')}
+            className={activeSection === 'marca' ? 'bg-accent/10 text-accent font-semibold' : ''}
+          >
             <Building2 className="w-4 h-4 mr-2" />
             Mi Marca
+            {activeSection === 'marca' && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />}
           </DropdownMenuItem>
         )}
 

@@ -91,7 +91,7 @@ export default function CodigosDescuentoPage() {
     <div className="space-y-6">
       <PageHeader
         title="Códigos de Descuento"
-        subtitle="Cupones para la webapp"
+        subtitle="Cupones de descuento"
         actions={
           <Button onClick={openCreate}>
             <Plus className="w-4 h-4 mr-2" /> Nuevo Código

@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Loader2, MapPin, CheckCircle2, Ban, Info, Truck, Search } from 'lucide-react';
+import { MapPin, CheckCircle2, Ban, Info, Truck, Search } from 'lucide-react';
+import { SpinnerLoader } from '@/components/ui/loaders';
 import { useState, useMemo } from 'react';
 import {
   useDeliveryPricingConfig,
@@ -46,7 +47,7 @@ export default function LocalDeliveryZonesPage() {
   if (!branchId || pricingLoading || configLoading || neighLoading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <SpinnerLoader size="lg" />
       </div>
     );
   }

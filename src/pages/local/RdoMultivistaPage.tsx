@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Download, Loader2 } from 'lucide-react';
+import { Download } from 'lucide-react';
+import { SpinnerLoader } from '@/components/ui/loaders';
 import { useRdoMultivista, type FiltrosRdo } from '@/hooks/useRdoMultivista';
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -210,7 +211,7 @@ export default function RdoMultivistaPage() {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <SpinnerLoader size="md" />
       </div>
     );
   }
@@ -407,7 +408,7 @@ export default function RdoMultivistaPage() {
                 <TableBody>
                   {(!data?.por_canal || data.por_canal.length === 0) ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">No hay datos para mostrar</TableCell>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Aún no hay ventas registradas en este período</TableCell>
                     </TableRow>
                   ) : data.por_canal.map((row) => (
                     <TableRow key={row.canal}>
@@ -454,7 +455,7 @@ export default function RdoMultivistaPage() {
                 <TableBody>
                   {(!data?.por_medio_pago || data.por_medio_pago.length === 0) ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">No hay datos para mostrar</TableCell>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Aún no hay ventas registradas en este período</TableCell>
                     </TableRow>
                   ) : data.por_medio_pago.map((row) => (
                     <TableRow key={row.medio_pago}>
@@ -495,7 +496,7 @@ export default function RdoMultivistaPage() {
                 <TableBody>
                   {(!data?.por_categoria || data.por_categoria.length === 0) ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">No hay datos para mostrar</TableCell>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Sin datos para este período. Probá con otro rango de fechas.</TableCell>
                     </TableRow>
                   ) : data.por_categoria.map((row, idx) => (
                     <TableRow key={row.categoria_id || `cat-${idx}`}>
@@ -537,7 +538,7 @@ export default function RdoMultivistaPage() {
                 <TableBody>
                   {productoRowsTabla.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">No hay datos para mostrar</TableCell>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Sin datos para este período. Probá con otro rango de fechas.</TableCell>
                     </TableRow>
                   ) : productoRowsTabla.map((row, idx) => (
                     <TableRow key={row.producto_id || `prod-${idx}`}>

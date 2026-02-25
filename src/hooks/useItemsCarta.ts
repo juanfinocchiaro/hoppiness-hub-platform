@@ -8,35 +8,36 @@ export function useItemsCarta(branchId?: string) {
     refetchOnMount: 'always',
     staleTime: 0,
     queryFn: async () => {
-      // If branchId provided, filter by branch_item_availability
+      // If branchId provided, apply branch-level salon availability overrides
       if (branchId) {
-        const { data: availability } = await supabase
+        const { data: availability, error: avErr } = await supabase
           .from('branch_item_availability' as any)
-          .select('item_carta_id')
-          .eq('branch_id', branchId)
-          .eq('available', true)
-          .eq('available_salon', true)
-          .eq('out_of_stock', false);
+          .select('item_carta_id, available, available_salon, out_of_stock')
+          .eq('branch_id', branchId);
+        if (avErr) throw avErr;
 
-        const hasRows = availability && availability.length > 0;
+        const { data, error } = await supabase
+          .from('items_carta')
+          .select(`
+            *,
+            menu_categorias:categoria_carta_id(id, nombre, orden),
+            rdo_categories:rdo_category_code(code, name)
+          `)
+          .eq('activo', true)
+          .is('deleted_at', null)
+          .order('orden');
+        if (error) throw error;
 
-        if (hasRows) {
-          const ids = (availability as any[]).map((a: any) => a.item_carta_id);
-          const { data, error } = await supabase
-            .from('items_carta')
-            .select(`
-              *,
-              menu_categorias:categoria_carta_id(id, nombre, orden),
-              rdo_categories:rdo_category_code(code, name)
-            `)
-            .eq('activo', true)
-            .is('deleted_at', null)
-            .in('id', ids)
-            .order('orden');
-          if (error) throw error;
-          return data;
-        }
-        // Fallback: no availability rows → show all
+        const availabilityMap = new Map(
+          (availability || []).map((row: any) => [row.item_carta_id, row]),
+        );
+
+        return (data || []).filter((item: any) => {
+          const row = availabilityMap.get(item.id);
+          // Missing row means no local override yet -> keep available by default
+          if (!row) return true;
+          return !!row.available && !!row.available_salon && !row.out_of_stock;
+        });
       }
 
       const { data, error } = await supabase

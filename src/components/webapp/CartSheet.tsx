@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Minus, Plus, Trash2, ShoppingBag, Loader2, ArrowLeft, CreditCard, Banknote, MapPin } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, CreditCard, Banknote, MapPin } from 'lucide-react';
+import { DotsLoader } from '@/components/ui/loaders';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,6 +20,8 @@ import { DeliveryCostDisplay, DeliveryCostLoading } from './DeliveryCostDisplay'
 import { DeliveryUnavailable } from './DeliveryUnavailable';
 import { PromoCodeInput } from './PromoCodeInput';
 import { useCalculateDelivery } from '@/hooks/useDeliveryConfig';
+import { useActivePromos, useActivePromoItems } from '@/hooks/usePromociones';
+import { normalizePhone } from '@/lib/normalizePhone';
 
 function useGoogleMapsApiKey() {
   return useQuery({
@@ -48,6 +51,7 @@ interface Props {
 
 type Step = 'cart' | 'checkout' | 'tracking';
 type MetodoPago = 'mercadopago' | 'efectivo';
+type ServiceKey = 'retiro' | 'delivery';
 
 function formatPrice(n: number) {
   return `$${n.toLocaleString('es-AR')}`;
@@ -78,6 +82,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   });
 
   const isDelivery = cart.tipoServicio === 'delivery';
+  const serviceKey: ServiceKey = isDelivery ? 'delivery' : 'retiro';
   const { data: googleApiKey } = useGoogleMapsApiKey();
   const calculateDelivery = useCalculateDelivery();
 
@@ -191,6 +196,92 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   const [showMpConfirm, setShowMpConfirm] = useState(false);
   const [promoCode, setPromoCode] = useState<{ codigoId: string; codigoText: string; descuento: number } | null>(null);
 
+  const mpEnabledBool = !!mpEnabled;
+  const { data: webappConfig } = useQuery({
+    queryKey: ['webapp-config-payments', branchId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('webapp_config' as any)
+        .select('service_schedules')
+        .eq('branch_id', branchId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as any;
+    },
+    enabled: !!branchId,
+  });
+
+  const servicePayments = useMemo(() => {
+    const defaults = serviceKey === 'delivery'
+      ? { efectivo: false, mercadopago: true }
+      : { efectivo: true, mercadopago: true };
+    const pm = (webappConfig?.service_schedules as any)?.[serviceKey]?.payment_methods;
+    return {
+      efectivo: pm?.efectivo ?? defaults.efectivo,
+      mercadopago: pm?.mercadopago ?? defaults.mercadopago,
+    };
+  }, [webappConfig, serviceKey]);
+  const { data: activePromos = [] } = useActivePromos(branchId, 'webapp');
+  const { data: activePromoItems = [] } = useActivePromoItems(branchId, 'webapp');
+
+  const promoPayment = useMemo(() => {
+    const promoItemByItemId = new Map(activePromoItems.map(pi => [pi.item_carta_id, pi] as const));
+    const promoById = new Map(activePromos.map(p => [p.id, p] as const));
+
+    let hasCashOnly = false;
+    let hasDigitalOnly = false;
+    for (const ci of cart.items) {
+      const pi = promoItemByItemId.get(ci.sourceItemId ?? ci.itemId);
+      if (!pi) continue;
+      const promo = promoById.get(pi.promocion_id);
+      const r = promo?.restriccion_pago ?? pi.restriccion_pago ?? 'cualquiera';
+      if (r === 'solo_efectivo') hasCashOnly = true;
+      if (r === 'solo_digital') hasDigitalOnly = true;
+    }
+
+    const cashAllowed = !!servicePayments.efectivo;
+    const mpAllowed = !!servicePayments.mercadopago && mpEnabledBool;
+
+    let allowCash = cashAllowed;
+    let allowMp = mpAllowed;
+    if (hasCashOnly) allowMp = false;
+    if (hasDigitalOnly) allowCash = false;
+
+    const conflict = (hasCashOnly && hasDigitalOnly) || (!allowCash && !allowMp);
+
+    const forced: MetodoPago | null =
+      conflict ? null
+        : allowCash !== allowMp
+          ? (allowCash ? 'efectivo' : 'mercadopago')
+          : null;
+
+    const svcLabel = serviceKey === 'delivery' ? 'delivery' : 'retiro';
+    const reason =
+      conflict
+        ? (hasCashOnly && !cashAllowed) ? `Este local no acepta efectivo para ${svcLabel}.`
+          : (hasDigitalOnly && !mpAllowed) ? `Este local no acepta MercadoPago para ${svcLabel}.`
+            : (!cashAllowed && !mpAllowed) ? `Este local no tiene medios de pago habilitados para ${svcLabel}.`
+              : (hasCashOnly && hasDigitalOnly) ? 'Tu carrito tiene promociones con restricciones incompatibles (solo efectivo y solo digital).'
+                : 'No hay un método de pago disponible para este carrito.'
+        : (hasCashOnly) ? 'Esta promo requiere pago en efectivo.'
+          : (hasDigitalOnly) ? 'Esta promo requiere pago digital (MercadoPago).'
+            : (!cashAllowed) ? `Efectivo no está habilitado para ${svcLabel}.`
+              : null;
+
+    return { conflict, forced, cashAllowed, mpAllowed, hasCashOnly, hasDigitalOnly, reason };
+  }, [activePromoItems, activePromos, cart.items, servicePayments, mpEnabledBool, serviceKey]);
+
+  useEffect(() => {
+    if (promoPayment.conflict) return;
+    if (promoPayment.forced && metodoPago !== promoPayment.forced) {
+      setMetodoPago(promoPayment.forced);
+      return;
+    }
+    if (!promoPayment.cashAllowed && metodoPago === 'efectivo') {
+      setMetodoPago('mercadopago');
+    }
+  }, [promoPayment.conflict, promoPayment.forced, promoPayment.cashAllowed, metodoPago]);
+
   const costoEnvio = isDelivery && deliveryCalc?.available && deliveryCalc.cost != null
     ? deliveryCalc.cost
     : 0;
@@ -211,12 +302,21 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   }, [nombre, telefono, email, direccion, isDelivery]);
 
   const hasErrors = Object.values(errors).some(e => e !== null);
+  const paymentAllowed = useMemo(() => {
+    if (promoPayment.conflict) return false;
+    if (!promoPayment.cashAllowed && metodoPago === 'efectivo') return false;
+    if (promoPayment.hasCashOnly && metodoPago !== 'efectivo') return false;
+    if (promoPayment.hasDigitalOnly && metodoPago !== 'mercadopago') return false;
+    if (metodoPago === 'mercadopago' && !promoPayment.mpAllowed) return false;
+    return true;
+  }, [promoPayment, metodoPago]);
 
   const canSubmit =
     !hasErrors &&
     deliveryAvailable &&
     (!isDelivery || !!deliveryAddress) &&
     (metodoPago === 'efectivo' || mpEnabled);
+  const canSubmitWithRestrictions = canSubmit && paymentAllowed;
 
   const handleBlur = (field: string) => setTouched(prev => ({ ...prev, [field]: true }));
 
@@ -227,7 +327,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   const handleConfirm = async () => {
     // Mark all fields as touched to show errors
     setTouched({ nombre: true, telefono: true, email: true, direccion: true });
-    if (!branchId || !canSubmit) return;
+    if (!branchId || !canSubmitWithRestrictions) return;
 
     // Show MP confirmation dialog before proceeding
     if (metodoPago === 'mercadopago' && !showMpConfirm) {
@@ -246,12 +346,17 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
     setSubmitting(true);
     try {
       const orderItems = cart.items.map(item => ({
-        item_carta_id: item.itemId,
+        item_carta_id: item.sourceItemId ?? item.itemId,
         nombre: item.nombre,
         cantidad: item.cantidad,
         precio_unitario: item.precioUnitario,
         extras: item.extras.map(e => ({ nombre: e.nombre, precio: e.precio })),
+        incluidos: (item.includedModifiers || []).map(m => ({ nombre: m.nombre, cantidad: m.cantidad })),
         removidos: item.removidos,
+        promocion_id: item.promocionId ?? null,
+        promocion_item_id: item.promocionItemId ?? null,
+        articulo_tipo: item.isPromoArticle ? 'promo' : 'base',
+        articulo_id: item.itemId,
         notas: item.notas || null,
       }));
 
@@ -260,7 +365,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
           branch_id: branchId,
           tipo_servicio: cart.tipoServicio,
           cliente_nombre: nombre.trim(),
-          cliente_telefono: telefono.trim(),
+          cliente_telefono: normalizePhone(telefono) || telefono.trim(),
           cliente_email: email.trim() || null,
           cliente_direccion: isDelivery ? direccion.trim() : null,
           cliente_piso: isDelivery ? piso.trim() || null : null,
@@ -422,7 +527,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
             <div>
               <span className="text-5xl mb-4 block">🛒</span>
               <p className="text-muted-foreground">Tu carrito está vacío</p>
-              <p className="text-xs text-muted-foreground mt-1">Agregá productos del menú</p>
+              <p className="text-xs text-muted-foreground mt-1">Explorá el menú y armá tu pedido perfecto.</p>
             </div>
           </div>
         ) : step === 'cart' ? (
@@ -434,7 +539,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                 const lineTotal = (item.precioUnitario + extrasTotal) * item.cantidad;
 
                 return (
-                  <div key={item.cartId} className="flex items-start gap-3 bg-card rounded-xl p-3 border">
+                  <div key={item.cartId} className="flex items-start gap-3 bg-card rounded-lg p-3 border">
                     {item.imagen_url ? (
                       <img src={item.imagen_url} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" />
                     ) : (
@@ -463,6 +568,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                               else cart.updateQuantity(item.cartId, item.cantidad - 1);
                             }}
                             className="w-7 h-7 rounded-full bg-muted flex items-center justify-center active:scale-95"
+                            aria-label="Quitar uno"
                           >
                             {item.cantidad === 1 ? <Trash2 className="w-3 h-3 text-destructive" /> : <Minus className="w-3 h-3" />}
                           </button>
@@ -470,6 +576,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                           <button
                             onClick={() => cart.updateQuantity(item.cartId, item.cantidad + 1)}
                             className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center active:scale-95"
+                            aria-label="Agregar uno"
                           >
                             <Plus className="w-3 h-3" />
                           </button>
@@ -531,13 +638,17 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                     <Input
                       id="checkout-telefono"
                       type="tel"
+                      inputMode="tel"
                       value={telefono}
                       onChange={e => setTelefono(e.target.value)}
                       onBlur={() => handleBlur('telefono')}
-                      placeholder="351 456-7890"
+                      placeholder="3511234567"
                       className={`mt-1 ${touched.telefono && errors.telefono ? 'border-destructive' : ''}`}
                     />
                     {touched.telefono && <FieldError error={errors.telefono} />}
+                    {(!touched.telefono || !errors.telefono) && (
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Sin 0 ni +54 — ej: 3511234567</p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="checkout-email" className="text-xs">Email (opcional)</Label>
@@ -695,6 +806,9 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
               {/* Payment method */}
               <div className="space-y-3">
                 <h3 className="text-sm font-bold text-foreground">Método de pago</h3>
+                {promoPayment.reason && (
+                  <p className="text-[11px] text-muted-foreground">{promoPayment.reason}</p>
+                )}
                 <RadioGroup
                   value={metodoPago}
                   onValueChange={v => setMetodoPago(v as MetodoPago)}
@@ -703,11 +817,11 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                   {mpEnabled && (
                     <label
                       htmlFor="pago-mp"
-                      className={`flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition-colors ${
+                      className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
                         metodoPago === 'mercadopago' ? 'border-primary bg-primary/5' : ''
-                      }`}
+                      } ${(!promoPayment.mpAllowed || promoPayment.hasCashOnly) ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}
                     >
-                      <RadioGroupItem value="mercadopago" id="pago-mp" />
+                      <RadioGroupItem value="mercadopago" id="pago-mp" disabled={!promoPayment.mpAllowed || promoPayment.hasCashOnly} />
                       <CreditCard className="w-5 h-5 text-blue-500" />
                       <div>
                         <p className="text-sm font-semibold">MercadoPago</p>
@@ -717,11 +831,11 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                   )}
                   <label
                     htmlFor="pago-efectivo"
-                    className={`flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition-colors ${
-                      metodoPago === 'efectivo' ? 'border-primary bg-primary/5' : ''
-                    }`}
+className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
+                    metodoPago === 'efectivo' ? 'border-primary bg-primary/5' : ''
+                  } ${(!promoPayment.cashAllowed || promoPayment.hasDigitalOnly) ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}
                   >
-                    <RadioGroupItem value="efectivo" id="pago-efectivo" />
+                    <RadioGroupItem value="efectivo" id="pago-efectivo" disabled={!promoPayment.cashAllowed || promoPayment.hasDigitalOnly} />
                     <Banknote className="w-5 h-5 text-green-600" />
                     <div>
                       <p className="text-sm font-semibold">Efectivo</p>
@@ -733,7 +847,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                 </RadioGroup>
 
                 {/* "¿Con cuánto pagás?" for cash */}
-                {metodoPago === 'efectivo' && (
+                {metodoPago === 'efectivo' && promoPayment.cashAllowed && (
                   <div className="space-y-2 pl-1">
                     <Label className="text-xs">¿Con cuánto pagás?</Label>
                     <div className="flex gap-2 flex-wrap">
@@ -802,7 +916,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                     </div>
                   )}
                   {promoDescuento > 0 && (
-                    <div className="flex justify-between text-xs text-green-600">
+                    <div className="flex justify-between text-xs text-success">
                       <span>Descuento ({promoCode?.codigoText})</span>
                       <span>-{formatPrice(promoDescuento)}</span>
                     </div>
@@ -829,10 +943,10 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
               <Button
                 size="lg"
                 className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-base"
-                disabled={!canSubmit || submitting}
+                disabled={!canSubmitWithRestrictions || submitting}
                 onClick={handleConfirm}
               >
-                {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {submitting && <DotsLoader />}
                 {metodoPago === 'mercadopago'
                   ? (showMpConfirm ? `Ir a MercadoPago · ${formatPrice(totalConEnvio)}` : `Pagar ${formatPrice(totalConEnvio)}`)
                   : `Confirmar pedido ${formatPrice(totalConEnvio)}`}

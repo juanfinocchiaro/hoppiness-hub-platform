@@ -21,6 +21,7 @@ import {
   Shield,
   AlertCircle,
 } from 'lucide-react';
+import { SpinnerLoader } from '@/components/ui/loaders';
 
 interface InvitationData {
   id: string;
@@ -300,7 +301,7 @@ export default function RegistroStaff() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/30">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <SpinnerLoader size="lg" />
       </div>
     );
   }

@@ -182,7 +182,7 @@ export function FloatingOrderChat() {
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
       {open && (
-        <div className="w-80 h-96 bg-background border rounded-xl shadow-xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4">
+        <div className="w-80 h-96 bg-background border rounded-xl shadow-elevated flex flex-col overflow-hidden animate-in slide-in-from-bottom-4">
           {/* Header */}
           <div className="px-3 py-2 border-b bg-primary text-primary-foreground flex items-center justify-between">
             <div className="min-w-0">
@@ -237,7 +237,8 @@ export function FloatingOrderChat() {
       {/* Bubble */}
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:scale-105 transition-transform relative"
+        className="w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-elevated flex items-center justify-center hover:scale-105 transition-transform relative"
+        aria-label="Chat del pedido"
       >
         <MessageCircle className="w-5 h-5" />
         {unreadCount > 0 && !open && (

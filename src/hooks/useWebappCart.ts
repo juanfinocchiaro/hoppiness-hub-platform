@@ -95,7 +95,19 @@ export function useWebappCart() {
   }, []);
 
   /** Quick add: if item has no extras/removidos, merge quantities */
-  const quickAdd = useCallback((itemId: string, nombre: string, precio: number, imagenUrl: string | null) => {
+  const quickAdd = useCallback((
+    itemId: string,
+    nombre: string,
+    precio: number,
+    imagenUrl: string | null,
+    meta?: {
+      sourceItemId?: string;
+      isPromoArticle?: boolean;
+      promocionId?: string | null;
+      promocionItemId?: string | null;
+      includedModifiers?: Array<{ nombre: string; cantidad: number }>;
+    },
+  ) => {
     setItems(prev => {
       const existing = prev.find(i => i.itemId === itemId && i.extras.length === 0 && i.removidos.length === 0 && !i.notas);
       if (existing) {
@@ -104,6 +116,11 @@ export function useWebappCart() {
       return [...prev, {
         cartId: crypto.randomUUID(),
         itemId,
+        sourceItemId: meta?.sourceItemId,
+        isPromoArticle: meta?.isPromoArticle,
+        promocionId: meta?.promocionId ?? null,
+        promocionItemId: meta?.promocionItemId ?? null,
+        includedModifiers: meta?.includedModifiers,
         nombre,
         imagen_url: imagenUrl,
         precioUnitario: precio,
@@ -124,7 +141,7 @@ export function useWebappCart() {
 
   const totalPrecio = useMemo(() =>
     items.reduce((s, i) => {
-      const extrasTotal = i.extras.reduce((e, x) => e + x.precio, 0);
+      const extrasTotal = i.extras.reduce((e, x) => e + x.precio * (x.cantidad ?? 1), 0);
       return s + (i.precioUnitario + extrasTotal) * i.cantidad;
     }, 0),
     [items]

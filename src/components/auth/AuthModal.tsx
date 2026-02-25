@@ -1,19 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useGooglePopupAuth } from '@/hooks/useGooglePopupAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Loader2, LogIn, Mail, UserPlus } from 'lucide-react';
+import { LogIn, Mail, UserPlus } from 'lucide-react';
+import { DotsLoader } from '@/components/ui/loaders';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 import { z } from 'zod';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { TurnstileWidget } from './TurnstileWidget';
+import { clearFailedLoginAttempts, getFailedLoginAttempts, LOGIN_CAPTCHA_THRESHOLD, registerFailedLoginAttempt } from '@/lib/loginAttemptTracker';
 
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'Mínimo 6 caracteres');
@@ -22,9 +25,11 @@ export function AuthModal() {
   const { isOpen, closeAuthModal, onSuccess } = useAuthModal();
   const { user, signIn, signUp } = useAuth();
 
-  // Close modal when user becomes authenticated (handles Google OAuth redirect too)
+  // Close modal when user becomes authenticated (handles Google OAuth redirect too).
+  // Also trigger link-guest-orders to retroactively link orders made as guest.
   useEffect(() => {
     if (user && isOpen) {
+      supabase.functions.invoke('link-guest-orders', {}).catch(() => {});
       resetForm();
       closeAuthModal();
       onSuccess?.();
@@ -41,20 +46,30 @@ export function AuthModal() {
     onSuccess?.();
   };
   const { signInWithGooglePopup, loading: googleLoading } = useGooglePopupAuth(handleGoogleSuccess);
-  const [captchaToken, setCaptchaToken] = useState('');
+  const [signupCaptchaToken, setSignupCaptchaToken] = useState('');
+  const [loginCaptchaToken, setLoginCaptchaToken] = useState('');
+  const [failedLoginAttempts, setFailedLoginAttempts] = useState(0);
   const [signupSuccess, setSignupSuccess] = useState(false);
 
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || '';
+  const requiresLoginCaptcha = !!turnstileSiteKey && failedLoginAttempts >= LOGIN_CAPTCHA_THRESHOLD;
 
   const resetForm = () => {
     setEmail('');
     setPassword('');
     setFullName('');
-    setCaptchaToken('');
+    setSignupCaptchaToken('');
+    setLoginCaptchaToken('');
+    setFailedLoginAttempts(0);
     setSignupSuccess(false);
     setIsSubmitting(false);
     // googleLoading is managed by useGooglePopupAuth hook
   };
+
+  useEffect(() => {
+    setFailedLoginAttempts(getFailedLoginAttempts(email));
+    setLoginCaptchaToken('');
+  }, [email]);
 
   const handleSuccess = () => {
     resetForm();
@@ -74,17 +89,28 @@ export function AuthModal() {
       }
     }
 
+    if (requiresLoginCaptcha && !loginCaptchaToken) {
+      toast.error('Completá la verificación de seguridad');
+      return;
+    }
+
     setIsSubmitting(true);
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(email, password, loginCaptchaToken || undefined);
     setIsSubmitting(false);
 
     if (error) {
       if (error.message.includes('Invalid login credentials')) {
+        const nextAttempts = registerFailedLoginAttempt(email);
+        setFailedLoginAttempts(nextAttempts);
+        setLoginCaptchaToken('');
         toast.error('Email o contraseña incorrectos');
       } else {
         toast.error(error.message);
       }
     } else {
+      clearFailedLoginAttempts(email);
+      setFailedLoginAttempts(0);
+      setLoginCaptchaToken('');
       handleSuccess();
     }
   };
@@ -104,17 +130,17 @@ export function AuthModal() {
       return;
     }
 
-    if (turnstileSiteKey && !captchaToken) {
+    if (turnstileSiteKey && !signupCaptchaToken) {
       toast.error('Completá la verificación de seguridad');
       return;
     }
 
     setIsSubmitting(true);
-    const { error } = await signUp(email, password, fullName, captchaToken || undefined);
+    const { error } = await signUp(email, password, fullName, signupCaptchaToken || undefined);
     setIsSubmitting(false);
 
     if (error) {
-      setCaptchaToken('');
+      setSignupCaptchaToken('');
       if (error.message.includes('already registered')) {
         toast.error('Este email ya está registrado');
       } else {
@@ -129,9 +155,9 @@ export function AuthModal() {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { resetForm(); closeAuthModal(); } }}>
       <DialogContent className="sm:max-w-md p-0 gap-0 border-none bg-transparent shadow-none [&>button]:hidden">
-        <div className="bg-background rounded-2xl shadow-2xl overflow-hidden border">
+        <div className="bg-background rounded-2xl shadow-elevated overflow-hidden border">
           <div className="p-6 pb-2 text-center">
-            <img src={logoHoppiness} alt="Hoppiness Club" className="w-16 h-16 mx-auto rounded-full shadow-lg mb-3" />
+            <img src={logoHoppiness} alt="Hoppiness Club" className="w-16 h-16 mx-auto rounded-full shadow-elevated mb-3" />
             <h2 className="text-xl font-bold text-foreground">Bienvenido</h2>
             <p className="text-muted-foreground text-sm mt-1">Accedé a Hoppiness</p>
           </div>
@@ -145,7 +171,7 @@ export function AuthModal() {
               disabled={googleLoading}
             >
               {googleLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <DotsLoader />
               ) : (
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
@@ -208,12 +234,19 @@ export function AuthModal() {
                       ¿Olvidaste tu contraseña?
                     </Link>
                   </div>
+                  {requiresLoginCaptcha && (
+                    <TurnstileWidget
+                      siteKey={turnstileSiteKey}
+                      onVerify={setLoginCaptchaToken}
+                      onExpire={() => setLoginCaptchaToken('')}
+                    />
+                  )}
                   <Button
                     type="submit"
                     className="w-full h-10 rounded-xl font-semibold"
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <LogIn className="w-4 h-4 mr-2" />}
+                    {isSubmitting ? <DotsLoader /> : <LogIn className="w-4 h-4 mr-2" />}
                     Ingresar
                   </Button>
                 </form>
@@ -278,8 +311,8 @@ export function AuthModal() {
                     {turnstileSiteKey && (
                       <TurnstileWidget
                         siteKey={turnstileSiteKey}
-                        onVerify={setCaptchaToken}
-                        onExpire={() => setCaptchaToken('')}
+                        onVerify={setSignupCaptchaToken}
+                        onExpire={() => setSignupCaptchaToken('')}
                       />
                     )}
                     <Button
@@ -287,7 +320,7 @@ export function AuthModal() {
                       className="w-full h-10 rounded-xl font-semibold"
                       disabled={isSubmitting}
                     >
-                      {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <UserPlus className="w-4 h-4 mr-2" />}
+                      {isSubmitting ? <DotsLoader /> : <UserPlus className="w-4 h-4 mr-2" />}
                       Crear cuenta
                     </Button>
                   </form>

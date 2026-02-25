@@ -3,7 +3,8 @@
  * Fetches order status via edge function, shows timeline, items, and chat.
  */
 import { useState, useEffect, useCallback } from 'react';
-import { CheckCircle2, Clock, Flame, Package, Truck, PartyPopper, Send, XCircle, Loader2, ShoppingBag } from 'lucide-react';
+import { CheckCircle2, Clock, Flame, Package, Truck, PartyPopper, Send, XCircle, ShoppingBag } from 'lucide-react';
+import { SpinnerLoader } from '@/components/ui/loaders';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { OrderChat } from './OrderChat';
@@ -46,7 +47,7 @@ function getEstadoConfig(estado: string, tipo: string | null) {
     listo: { label: isDelivery ? 'Listo para enviar' : 'Listo para retirar', color: 'text-green-500' },
     en_camino: { label: 'En camino', color: 'text-purple-500' },
     entregado: { label: 'Entregado', color: 'text-green-600' },
-    cancelado: { label: 'Cancelado', color: 'text-red-500' },
+    cancelado: { label: 'Cancelado', color: 'text-destructive' },
   };
   return map[estado] ?? map.pendiente;
 }
@@ -108,7 +109,7 @@ export function TrackingInlineView({ trackingCode, onNewOrder }: Props) {
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        <SpinnerLoader size="md" text="Cargando pedido..." />
       </div>
     );
   }

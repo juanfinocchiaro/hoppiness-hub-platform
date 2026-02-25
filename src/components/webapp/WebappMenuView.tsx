@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, X, LayoutGrid, List, Star } from 'lucide-react';
+import { Search, X, LayoutGrid, List, Tag } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ProductCard } from './ProductCard';
-import { Loader2 } from 'lucide-react';
+import { SpinnerLoader } from '@/components/ui/loaders';
 import { ActiveOrderBanner } from './ActiveOrderBanner';
 import { ActivePromosBanner } from './ActivePromosBanner';
 import { EmailConfirmBanner } from '@/components/auth/EmailConfirmBanner';
 import { WebappHeader } from './WebappHeader';
 import { useScrollDirection } from '@/hooks/useScrollDirection';
+import { useDebounce } from '@/hooks/useDebounce';
 import { useDynamicPrepTime } from '@/hooks/useDeliveryConfig';
 import type { WebappMenuItem, TipoServicioWebapp } from '@/types/webapp';
 import type { useWebappCart } from '@/hooks/useWebappCart';
@@ -29,6 +30,7 @@ interface Props {
 
 export function WebappMenuView({ branch, config, items, loading, tipoServicio, cart, onProductClick, onBack, onServiceChange, onShowTracking, onOpenCart, hasCartItems }: Props) {
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchExpanded, setSearchExpanded] = useState(false);
@@ -36,24 +38,29 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
   const tabsRef = useRef<HTMLDivElement>(null);
   const scrollDir = useScrollDirection(15);
 
-  // Popular items — first 4 items as "Destacados" (fallback until real order data exists)
-  const popularItems = useMemo(() => {
-    if (items.length <= 6) return []; // Don't show if menu is tiny
-    return items.slice(0, 4);
-  }, [items]);
+  const [headerH, setHeaderH] = useState(120);
+  useEffect(() => {
+    const header = document.querySelector('header');
+    if (!header) return;
+    const update = () => setHeaderH(header.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(header);
+    return () => ro.disconnect();
+  }, []);
 
-  // Promo items — items with promo_etiqueta or precio_promo
   const promoItems = useMemo(() => {
     return items.filter(i => i.promo_etiqueta || (i.precio_promo != null && i.precio_promo < i.precio_base));
   }, [items]);
 
   const categories = useMemo(() => {
-    const filtered = search.trim()
+    const nonPromoItems = debouncedSearch.trim() ? items : items.filter(i => !i.is_promo_article);
+    const filtered = debouncedSearch.trim()
       ? items.filter(i =>
-          i.nombre.toLowerCase().includes(search.toLowerCase()) ||
-          i.descripcion?.toLowerCase().includes(search.toLowerCase())
+          i.nombre.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          i.descripcion?.toLowerCase().includes(debouncedSearch.toLowerCase())
         )
-      : items;
+      : nonPromoItems;
 
     const grouped: Record<string, { nombre: string; orden: number; items: WebappMenuItem[] }> = {};
     filtered.forEach(item => {
@@ -64,7 +71,7 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
     });
 
     return Object.values(grouped).sort((a, b) => a.orden - b.orden);
-  }, [items, search]);
+  }, [items, debouncedSearch]);
 
   useEffect(() => {
     if (categories.length > 0 && !activeCategory) {
@@ -81,7 +88,7 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
           }
         }
       },
-      { rootMargin: '-80px 0px -60% 0px', threshold: 0 }
+      { rootMargin: `-${headerH}px 0px -60% 0px`, threshold: 0 }
     );
 
     Object.values(categoryRefs.current).forEach(el => {
@@ -89,7 +96,7 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
     });
 
     return () => observer.disconnect();
-  }, [categories]);
+  }, [categories, headerH]);
 
   const scrollToCategory = (catName: string) => {
     setActiveCategory(catName);
@@ -128,8 +135,20 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
         qty={cart.getItemQty(item.id)}
         layout={layout}
         onTap={() => onProductClick(item)}
-        onQuickAdd={() => cart.quickAdd(item.id, item.nombre, price, item.imagen_url)}
-        onIncrement={() => cart.quickAdd(item.id, item.nombre, price, item.imagen_url)}
+        onQuickAdd={() => cart.quickAdd(item.id, item.nombre, price, item.imagen_url, {
+          sourceItemId: item.source_item_id ?? item.id,
+          isPromoArticle: item.is_promo_article,
+          promocionId: item.promocion_id,
+          promocionItemId: item.promocion_item_id,
+          includedModifiers: item.promo_included_modifiers,
+        })}
+        onIncrement={() => cart.quickAdd(item.id, item.nombre, price, item.imagen_url, {
+          sourceItemId: item.source_item_id ?? item.id,
+          isPromoArticle: item.is_promo_article,
+          promocionId: item.promocion_id,
+          promocionItemId: item.promocion_item_id,
+          includedModifiers: item.promo_included_modifiers,
+        })}
         onDecrement={() => {
           const entry = cart.items.find(i => i.itemId === item.id);
           if (entry) cart.updateQuantity(entry.cartId, entry.cantidad - 1);
@@ -209,7 +228,7 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
           <ActivePromosBanner branchId={branch.id} />
 
           {/* Category tabs - mobile only */}
-          {!search && categories.length > 1 && (
+          {!debouncedSearch && categories.length > 1 && (
             <div
               ref={tabsRef}
               className="flex gap-1 overflow-x-auto px-4 pb-2 scrollbar-none xl:hidden"
@@ -238,22 +257,25 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
       <main className={`flex-1 ${hasCartItems ? 'pb-24' : 'pb-24 lg:pb-8'}`}>
         <div className="max-w-6xl mx-auto flex">
           {/* Desktop sidebar categories */}
-          {!search && categories.length > 1 && (
-            <aside className="hidden xl:block w-[200px] shrink-0 sticky top-[120px] self-start max-h-[calc(100vh-140px)] overflow-y-auto border-r">
+          {!debouncedSearch && categories.length > 1 && (
+            <aside
+              className="hidden xl:block w-[200px] shrink-0 sticky self-start overflow-y-auto border-r"
+              style={{ top: headerH, maxHeight: `calc(100vh - ${headerH + 20}px)` }}
+            >
               <nav className="py-4 pr-2">
-                {popularItems.length > 0 && (
+                {promoItems.length > 0 && (
                   <button
-                    onClick={() => scrollToCategory('__popular')}
+                    onClick={() => scrollToCategory('__promos')}
                     className={`
                       w-full text-left px-4 py-2.5 text-sm rounded-lg transition-colors mb-0.5 flex items-center gap-1.5
-                      ${activeCategory === '__popular'
+                      ${activeCategory === '__promos'
                         ? 'bg-accent/10 text-accent font-bold'
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                       }
                     `}
                   >
-                    <Star className="w-3.5 h-3.5" />
-                    Destacados
+                    <Tag className="w-3.5 h-3.5" />
+                    Promociones
                   </button>
                 )}
                 {categories.map(cat => (
@@ -278,7 +300,7 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
       {/* Products area */}
           <div className="flex-1 min-w-0">
             {/* Promo banner bar */}
-            {!loading && !search && promoItems.length > 0 && (
+            {!loading && !debouncedSearch && promoItems.length > 0 && (
               <div className="bg-accent/10 border-b border-accent/20">
                 <div className="flex gap-3 overflow-x-auto px-4 py-3 scrollbar-none">
                   {promoItems.map(item => (
@@ -306,31 +328,34 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
             )}
             {loading ? (
               <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <SpinnerLoader size="md" />
               </div>
-            ) : categories.length === 0 && !popularItems.length ? (
+            ) : categories.length === 0 && !promoItems.length ? (
               <div className="text-center py-20 text-muted-foreground">
-                {search ? 'No se encontraron productos' : 'No hay productos disponibles'}
+                {debouncedSearch ? 'No encontramos productos con ese nombre. Probá con otra búsqueda.' : 'El menú se está preparando. Volvé en un ratito.'}
               </div>
             ) : (
               <>
                 {/* Popular / Featured section */}
-                {!search && popularItems.length > 0 && (
+                {!debouncedSearch && promoItems.length > 0 && (
                   <div
-                    ref={el => { categoryRefs.current['__popular'] = el; }}
-                    data-category="__popular"
-                    className="scroll-mt-36"
+                    ref={el => { categoryRefs.current['__promos'] = el; }}
+                    data-category="__promos"
+                    style={{ scrollMarginTop: headerH }}
                   >
-                    <div className="sticky top-[120px] lg:top-[120px] z-10 bg-background/95 backdrop-blur-sm px-4 py-2.5 border-b">
-                      <h2 className="text-sm font-black text-accent uppercase tracking-wide flex items-center gap-1.5">
-                        <Star className="w-3.5 h-3.5 fill-accent" />
-                        Destacados
+                    <div
+                      className="sticky z-10 bg-background/95 backdrop-blur-sm px-4 py-2.5 border-b"
+                      style={{ top: headerH }}
+                    >
+                      <h2 className="font-brand text-sm font-black text-accent uppercase tracking-wide flex items-center gap-1.5">
+                        <Tag className="w-3.5 h-3.5 fill-accent" />
+                        Promociones
                       </h2>
                     </div>
                     {/* Horizontal scroll on mobile, grid on desktop */}
                     <div className="lg:hidden">
                       <div className="flex gap-3 overflow-x-auto px-4 py-3 scrollbar-none">
-                        {popularItems.map(item => (
+                        {promoItems.map(item => (
                           <div key={item.id} className="shrink-0 w-[160px]">
                             {renderProductCard(item, 'grid')}
                           </div>
@@ -339,7 +364,7 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
                     </div>
                     <div className="hidden lg:block px-4 py-3">
                       <div className="grid gap-3 grid-cols-2 xl:grid-cols-3">
-                        {popularItems.map(item => renderProductCard(item, 'desktop'))}
+                        {promoItems.map(item => renderProductCard(item, 'desktop'))}
                       </div>
                     </div>
                   </div>
@@ -351,10 +376,13 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
                     key={cat.nombre}
                     ref={el => { categoryRefs.current[cat.nombre] = el; }}
                     data-category={cat.nombre}
-                    className="scroll-mt-36"
+                    style={{ scrollMarginTop: headerH }}
                   >
-                    <div className="sticky top-[120px] lg:top-[120px] z-10 bg-background/95 backdrop-blur-sm px-4 py-2.5 border-b">
-                      <h2 className="text-sm font-black text-primary uppercase tracking-wide">
+                    <div
+                      className="sticky z-10 bg-background/95 backdrop-blur-sm px-4 py-2.5 border-b"
+                      style={{ top: headerH }}
+                    >
+                      <h2 className="font-brand text-sm font-black text-primary uppercase tracking-wide">
                         {cat.nombre}
                         <span className="text-xs font-normal text-muted-foreground ml-2 lowercase tracking-normal">
                           {cat.items.length} {cat.items.length === 1 ? 'producto' : 'productos'}

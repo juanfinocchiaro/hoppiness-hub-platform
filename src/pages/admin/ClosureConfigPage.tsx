@@ -19,7 +19,8 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { Plus, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
+import { SpinnerLoader } from '@/components/ui/loaders';
 import type { ClosureConfigItem, ConfigTipo } from '@/types/shiftClosure';
 
 interface ConfigGroup {
@@ -147,7 +148,7 @@ function ClosureConfigPageContent() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <SpinnerLoader size="md" />
       </div>
     );
   }

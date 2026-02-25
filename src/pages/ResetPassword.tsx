@@ -8,6 +8,7 @@ import { Lock, Loader2, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { AuthLayout } from '@/components/layout/AuthLayout';
+import { SpinnerLoader } from '@/components/ui/loaders';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -147,8 +148,7 @@ export default function ResetPassword() {
     return (
       <AuthLayout>
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Verificando link...</p>
+          <SpinnerLoader size="md" text="Verificando link..." />
         </div>
       </AuthLayout>
     );

@@ -9,7 +9,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Eye, RotateCcw, Loader2, ShoppingBag, Package } from 'lucide-react';
+import { Eye, RotateCcw, ShoppingBag, Package } from 'lucide-react';
+import { SpinnerLoader } from '@/components/ui/loaders';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
@@ -110,7 +111,7 @@ export function MisPedidosSheet({ open, onOpenChange, onShowTracking, currentBra
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl px-0 flex flex-col">
+      <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl px-0 flex flex-col">
         <SheetHeader className="px-5 pb-3 border-b shrink-0">
           <SheetTitle className="flex items-center gap-2 text-left">
             <Package className="w-5 h-5 text-primary" />
@@ -121,7 +122,7 @@ export function MisPedidosSheet({ open, onOpenChange, onShowTracking, currentBra
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              <SpinnerLoader size="sm" text="Cargando pedidos..." />
             </div>
           ) : (!orders || orders.length === 0) ? (
             <div className="text-center py-16">

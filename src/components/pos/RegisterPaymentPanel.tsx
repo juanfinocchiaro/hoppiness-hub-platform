@@ -46,9 +46,12 @@ interface Props {
   onRegister: (payment: LocalPayment) => void;
   /** Triggers Point Smart payment flow instead of manual registration */
   onPointSmartPayment?: (amount: number) => void;
+  /** If promos require minimum cash/digital, remaining amounts are enforced here */
+  minCashRemaining?: number;
+  minDigitalRemaining?: number;
 }
 
-export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onRegister, onPointSmartPayment }: Props) {
+export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onRegister, onPointSmartPayment, minCashRemaining = 0, minDigitalRemaining = 0 }: Props) {
   const { branchId } = useParams<{ branchId: string }>();
   const { data: mpConfig } = useMercadoPagoConfig(branchId);
   const hasPointSmart = !!mpConfig?.device_id && mpConfig.estado_conexion === 'conectado';
@@ -62,22 +65,36 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
   const recibidoNum = parseFloat(montoRecibido) || 0;
   const vuelto = esEfectivo ? Math.max(0, recibidoNum - montoNum) : 0;
 
-  const canConfirm = montoNum > 0 && montoNum <= saldoPendiente && (!esEfectivo || recibidoNum >= montoNum);
+  const maxCash = Math.max(0, saldoPendiente - minDigitalRemaining);
+  const maxNonCash = Math.max(0, saldoPendiente - minCashRemaining);
+  const maxForMetodo = esEfectivo ? maxCash : maxNonCash;
+
+  const canConfirm = montoNum > 0
+    && montoNum <= saldoPendiente
+    && montoNum <= maxForMetodo
+    && (!esEfectivo || recibidoNum >= montoNum);
 
   // Sync state when dialog opens or saldoPendiente changes
   useEffect(() => {
     if (open) {
-      setMetodo('efectivo');
-      setMonto(String(saldoPendiente));
-      setMontoRecibido(String(saldoPendiente));
+      const preferCash = maxNonCash <= 0 && maxCash > 0;
+      const preferNonCash = maxCash <= 0 && maxNonCash > 0;
+      const defaultMetodo: MetodoPago = preferNonCash ? 'tarjeta_debito' : (preferCash ? 'efectivo' : 'efectivo');
+      const defaultMax = defaultMetodo === 'efectivo' ? maxCash : maxNonCash;
+      setMetodo(defaultMetodo);
+      setMonto(String(defaultMax));
+      setMontoRecibido(defaultMetodo === 'efectivo' ? String(defaultMax) : '');
     }
-  }, [open, saldoPendiente]);
+  }, [open, saldoPendiente, maxCash, maxNonCash]);
 
   // When switching payment method, auto-fill or clear received amount
   const handleMetodoChange = (m: MetodoPago) => {
+    const nextIsCash = m === 'efectivo';
+    const nextMax = nextIsCash ? maxCash : maxNonCash;
     setMetodo(m);
+    setMonto(String(nextMax));
     if (m === 'efectivo') {
-      setMontoRecibido(monto || String(saldoPendiente));
+      setMontoRecibido(String(nextMax));
     } else {
       setMontoRecibido('');
     }
@@ -111,6 +128,17 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
             <p className="text-sm text-muted-foreground">Saldo pendiente</p>
             <p className="text-2xl font-bold text-primary">$ {saldoPendiente.toLocaleString('es-AR')}</p>
           </div>
+          {(minCashRemaining > 0 || minDigitalRemaining > 0) && (
+            <div className="rounded-lg border bg-muted/10 p-3 text-xs text-muted-foreground space-y-1">
+              <p className="font-semibold text-foreground">Restricciones por promociones</p>
+              {minCashRemaining > 0 && (
+                <p>Debe quedar mínimo <span className="font-bold text-green-700">$ {minCashRemaining.toLocaleString('es-AR')}</span> para pagar en <span className="font-medium">efectivo</span>.</p>
+              )}
+              {minDigitalRemaining > 0 && (
+                <p>Debe quedar mínimo <span className="font-bold text-blue-700">$ {minDigitalRemaining.toLocaleString('es-AR')}</span> para pagar en <span className="font-medium">digital</span>.</p>
+              )}
+            </div>
+          )}
 
           {/* Método */}
           <div>
@@ -119,14 +147,19 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
               {METODOS.map((m) => {
                 const Icon = m.icon;
                 const isSelected = metodo === m.value;
+                const isCash = m.value === 'efectivo';
+                const allowed = (isCash ? maxCash : maxNonCash) > 0;
                 return (
                   <button
                     key={m.value}
                     type="button"
+                    disabled={!allowed}
                     onClick={() => handleMetodoChange(m.value)}
                     className={cn(
                       'flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg border text-sm font-medium transition-colors min-h-[72px]',
-                      isSelected
+                      !allowed
+                        ? 'opacity-40 cursor-not-allowed'
+                        : isSelected
                         ? m.selectedStyle
                         : 'border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground'
                     )}
@@ -154,6 +187,11 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
             </div>
             {montoNum > saldoPendiente && (
               <p className="text-xs text-destructive mt-1">No puede superar el saldo pendiente</p>
+            )}
+            {montoNum > maxForMetodo && (
+              <p className="text-xs text-destructive mt-1">
+                Con promociones, el máximo para este método es $ {maxForMetodo.toLocaleString('es-AR')}
+              </p>
             )}
           </div>
 
@@ -202,11 +240,16 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
         {hasPointSmart && onPointSmartPayment && (
           <button
             type="button"
+            disabled={maxNonCash <= 0}
             onClick={() => {
+              if (maxNonCash <= 0) return;
               onOpenChange(false);
-              onPointSmartPayment(saldoPendiente);
+              onPointSmartPayment(Math.min(saldoPendiente, maxNonCash));
             }}
-            className="w-full flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-blue-300 bg-blue-50 hover:bg-blue-100 hover:border-blue-400 transition-colors text-left"
+            className={cn(
+              "w-full flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-blue-300 bg-blue-50 transition-colors text-left",
+              maxNonCash <= 0 ? "opacity-40 cursor-not-allowed" : "hover:bg-blue-100 hover:border-blue-400"
+            )}
           >
             <Smartphone className="h-8 w-8 text-blue-600 shrink-0" />
             <div>

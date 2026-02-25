@@ -43,6 +43,14 @@ const MAX_EXTRA_QTY = 10;
 
 export function ModifiersModal({ open, onOpenChange, item, onConfirm }: ModifiersModalProps) {
   const itemId = item?.id;
+  const promoPrice: number | undefined = item?._promoPrice;
+  const preconfigExtras: Array<{ extra_item_carta_id: string; cantidad: number; nombre?: string }> | undefined = item?._preconfigExtras;
+  const hasPreconfig = !!(preconfigExtras && preconfigExtras.length > 0);
+  const promoId: string | undefined = item?._promoId;
+  const promoRestriccionPago: 'cualquiera' | 'solo_efectivo' | 'solo_digital' | undefined = item?._promoRestriccionPago;
+  const promoNombre: string | undefined = item?._promoNombre;
+  const originalPrecioBase: number | undefined = item?._originalPrecioBase;
+
   const { data: extras, isLoading: loadingExtras } = useItemExtras(itemId);
   const { data: removibles, isLoading: loadingRemovibles } = useItemRemovibles(itemId);
   const { data: gruposOpcionales, isLoading: loadingGrupos } = useGruposOpcionales(itemId);
@@ -51,6 +59,7 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
   const [selectedRemovibles, setSelectedRemovibles] = useState<Record<string, boolean>>({});
   const [groupSelections, setGroupSelections] = useState<Record<string, GroupOption[]>>({});
   const autoAddedRef = useRef<string | null>(null);
+  const preconfigAppliedRef = useRef<string | null>(null);
 
   // Reset state when item changes
   useEffect(() => {
@@ -59,8 +68,28 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
       setSelectedRemovibles({});
       setGroupSelections({});
       autoAddedRef.current = null;
+      preconfigAppliedRef.current = null;
     }
   }, [itemId]);
+
+  // Pre-select extras from promo preconfig once extras list is loaded
+  useEffect(() => {
+    if (!hasPreconfig || !extras || preconfigAppliedRef.current === itemId) return;
+    preconfigAppliedRef.current = itemId;
+    const preselected: Record<string, number> = {};
+    for (const pc of preconfigExtras!) {
+      const match = extras.find(e => {
+        const source = e.preparaciones || e.insumos;
+        return source && (e.id === pc.extra_item_carta_id || e.item_carta_id === pc.extra_item_carta_id);
+      });
+      if (match) {
+        preselected[match.id] = pc.cantidad;
+      }
+    }
+    if (Object.keys(preselected).length > 0) {
+      setSelectedExtras(preselected);
+    }
+  }, [hasPreconfig, preconfigExtras, extras, itemId]);
 
   const extrasList = useMemo(() => {
     if (!extras) return [];
@@ -103,24 +132,61 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
   const nombre = item?.nombre_corto ?? item?.nombre ?? '';
 
   const isLoading = loadingExtras || loadingRemovibles || loadingGrupos;
-  const hasContent = extrasList.length > 0 || removiblesList.length > 0 || parsedGroups.length > 0;
+  const hasRegularContent = extrasList.length > 0 || removiblesList.length > 0 || parsedGroups.length > 0;
+  const hasContent = hasRegularContent || hasPreconfig;
 
-  // Auto-add if no modifiers at all
+  // Auto-add: no modifiers and no preconfig → instant add
+  // Also auto-add: has preconfig but no interactive modifiers → add with promo notes
   useEffect(() => {
-    if (open && !isLoading && !hasContent && item && autoAddedRef.current !== itemId) {
-      autoAddedRef.current = itemId;
-      onConfirm({
-        item_carta_id: item.id,
-        nombre,
-        cantidad: 1,
-        precio_unitario: precioBase,
-        subtotal: precioBase,
-        precio_referencia: hasDiscount ? precioRef : undefined,
-        categoria_carta_id: item.categoria_carta_id ?? null,
-      });
-      onOpenChange(false);
+    if (open && !isLoading && item && autoAddedRef.current !== itemId) {
+      if (!hasContent) {
+        autoAddedRef.current = itemId;
+        onConfirm({
+          item_carta_id: item.id,
+          nombre,
+          cantidad: 1,
+          precio_unitario: precioBase,
+          subtotal: precioBase,
+          precio_referencia: hasDiscount ? precioRef : undefined,
+          categoria_carta_id: item.categoria_carta_id ?? null,
+          promo_id: undefined,
+          promo_restriccion_pago: undefined,
+        });
+        onOpenChange(false);
+      } else if (hasPreconfig && !hasRegularContent) {
+        autoAddedRef.current = itemId;
+        const origPrice = item._originalPrecioBase ?? precioBase;
+        const discount = origPrice - (promoPrice ?? precioBase);
+        const notes = preconfigExtras!.map(e => `+${e.cantidad} ${e.nombre || 'extra'} (incl.)`).join(', ');
+        onConfirm({
+          item_carta_id: item.id,
+          nombre: `${nombre} (PROMO)`,
+          cantidad: 1,
+          precio_unitario: origPrice,
+          subtotal: origPrice,
+          notas: notes || undefined,
+          categoria_carta_id: item.categoria_carta_id ?? null,
+          promo_id: promoId,
+          promo_restriccion_pago: promoRestriccionPago,
+          promo_descuento: discount > 0 ? discount : undefined,
+          promo_nombre: promoNombre || 'Promoción',
+        });
+        onOpenChange(false);
+      }
     }
-  }, [open, isLoading, hasContent, item, itemId, nombre, precioBase, hasDiscount, precioRef, onConfirm, onOpenChange]);
+  }, [open, isLoading, hasContent, hasRegularContent, hasPreconfig, item, itemId, nombre, precioBase, promoPrice, preconfigExtras, hasDiscount, precioRef, onConfirm, onOpenChange]);
+
+  const preconfigExtraIds = useMemo(() => {
+    if (!preconfigExtras) return new Set<string>();
+    return new Set(preconfigExtras.map(pe => pe.extra_item_carta_id));
+  }, [preconfigExtras]);
+
+  const preconfigQtyMap = useMemo(() => {
+    if (!preconfigExtras) return new Map<string, number>();
+    const m = new Map<string, number>();
+    for (const pe of preconfigExtras) m.set(pe.extra_item_carta_id, pe.cantidad);
+    return m;
+  }, [preconfigExtras]);
 
   const extrasTotal = useMemo(() => {
     return extrasList.reduce((sum, ex) => {
@@ -129,7 +195,20 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
     }, 0);
   }, [extrasList, selectedExtras]);
 
-  const totalPrice = precioBase + extrasTotal;
+  const additionalExtrasTotal = useMemo(() => {
+    return extrasList.reduce((sum, ex) => {
+      const qty = selectedExtras[ex.id] || 0;
+      const freeQty = preconfigQtyMap.get(ex.id) ?? 0;
+      const chargeableQty = Math.max(0, qty - freeQty);
+      return sum + ex.precio * chargeableQty;
+    }, 0);
+  }, [extrasList, selectedExtras, preconfigQtyMap]);
+
+  const isPromo = promoPrice != null;
+  const origBase = originalPrecioBase ?? precioBase;
+  const fullPrice = isPromo ? origBase + additionalExtrasTotal : precioBase + extrasTotal;
+  const promoDescuento = isPromo ? origBase - promoPrice : 0;
+  const effectivePrice = fullPrice - promoDescuento;
 
   // Validation: mandatory groups must have selections
   const missingRequired = parsedGroups.filter(
@@ -210,24 +289,42 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
     }
 
     if (cartExtras.length > 0) {
-      notasParts.push(cartExtras.map((e) => `+${e.cantidad} ${e.nombre}`).join(', '));
+      const parts: string[] = [];
+      for (const e of cartExtras) {
+        const freeQty = preconfigQtyMap.get(e.id) ?? 0;
+        if (freeQty > 0) {
+          const inclQty = Math.min(e.cantidad, freeQty);
+          parts.push(`+${inclQty} ${e.nombre} (incl.)`);
+          const extraQty = e.cantidad - inclQty;
+          if (extraQty > 0) parts.push(`+${extraQty} ${e.nombre}`);
+        } else {
+          parts.push(`+${e.cantidad} ${e.nombre}`);
+        }
+      }
+      notasParts.push(parts.join(', '));
     }
     if (cartRemovibles.length > 0) {
       notasParts.push(cartRemovibles.map((r) => r.nombre).join(', '));
     }
 
+    const displayName = isPromo ? `${nombre} (PROMO)` : nombre;
+
     onConfirm({
       item_carta_id: item.id,
-      nombre,
+      nombre: displayName,
       cantidad: 1,
-      precio_unitario: totalPrice,
-      subtotal: totalPrice,
+      precio_unitario: fullPrice,
+      subtotal: fullPrice,
       notas: notasParts.length > 0 ? notasParts.join(' | ') : undefined,
       extras: cartExtras.length > 0 ? cartExtras : undefined,
       removibles: cartRemovibles.length > 0 ? cartRemovibles : undefined,
       opcionales: cartOpcionales.length > 0 ? cartOpcionales : undefined,
-      precio_referencia: hasDiscount ? precioRef : undefined,
+      precio_referencia: !isPromo && hasDiscount ? precioRef : undefined,
       categoria_carta_id: item.categoria_carta_id ?? null,
+      promo_id: isPromo ? promoId : undefined,
+      promo_restriccion_pago: isPromo ? promoRestriccionPago : undefined,
+      promo_descuento: promoDescuento > 0 ? promoDescuento : undefined,
+      promo_nombre: isPromo ? (promoNombre || 'Promoción') : undefined,
     });
 
     onOpenChange(false);
@@ -241,10 +338,20 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span className="truncate">{nombre}</span>
-            <span className="text-primary font-semibold text-base ml-2 shrink-0">
-              $ {precioBase.toLocaleString('es-AR')}
-            </span>
+            {promoPrice != null ? (
+              <span className="flex items-center gap-1.5 ml-2 shrink-0">
+                <span className="text-muted-foreground text-sm line-through">$ {(item._originalPrecioBase ?? precioBase).toLocaleString('es-AR')}</span>
+                <span className="text-green-600 font-semibold text-base">$ {promoPrice.toLocaleString('es-AR')}</span>
+              </span>
+            ) : (
+              <span className="text-primary font-semibold text-base ml-2 shrink-0">
+                $ {precioBase.toLocaleString('es-AR')}
+              </span>
+            )}
           </DialogTitle>
+          {hasPreconfig && (
+            <p className="text-xs text-green-600 font-medium">Promo con extras incluidos</p>
+          )}
         </DialogHeader>
 
         {isLoading ? (
@@ -314,16 +421,31 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
                 <div className="space-y-2">
                   {extrasList.map((ex) => {
                     const qty = selectedExtras[ex.id] || 0;
+                    const isIncluded = preconfigExtraIds.has(ex.id);
+                    const freeQty = preconfigQtyMap.get(ex.id) ?? 0;
+                    const chargeableQty = Math.max(0, qty - freeQty);
                     return (
                       <div
                         key={ex.id}
-                        className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-muted/50"
+                        className={`flex items-center justify-between gap-2 p-2.5 rounded-lg ${isIncluded ? 'bg-green-50 border border-green-200' : 'bg-muted/50'}`}
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{ex.nombre}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-medium truncate">{ex.nombre}</p>
+                            {isIncluded && (
+                              <span className="text-[10px] bg-success/10 text-success px-1.5 py-0.5 rounded-full font-medium shrink-0">
+                                {freeQty} gratis
+                              </span>
+                            )}
+                          </div>
                           {ex.precio > 0 && (
                             <p className="text-xs text-primary font-semibold">
-                              +$ {ex.precio.toLocaleString('es-AR')}
+                              +$ {ex.precio.toLocaleString('es-AR')} c/u
+                              {isIncluded && chargeableQty > 0 && (
+                                <span className="text-muted-foreground font-normal ml-1">
+                                  ({chargeableQty} extra{chargeableQty > 1 ? 's' : ''} a cobrar)
+                                </span>
+                              )}
                             </p>
                           )}
                         </div>
@@ -368,12 +490,20 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
               <span>Seleccioná: {missingRequired.map((g) => g.nombre).join(', ')}</span>
             </div>
           )}
+          {isPromo && promoDescuento > 0 && (
+            <div className="text-xs text-muted-foreground w-full text-right space-y-0.5">
+              {additionalExtrasTotal > 0 && (
+                <div>Extras adicionales: +$ {additionalExtrasTotal.toLocaleString('es-AR')}</div>
+              )}
+              <div className="text-green-600">Desc. promo: -$ {promoDescuento.toLocaleString('es-AR')}</div>
+            </div>
+          )}
           <div className="flex gap-2 w-full">
             <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
               Cancelar
             </Button>
             <Button onClick={handleConfirm} disabled={isLoading || !canConfirm} className="flex-1">
-              Agregar — $ {totalPrice.toLocaleString('es-AR')}
+              Agregar — $ {effectivePrice.toLocaleString('es-AR')}
             </Button>
           </div>
         </DialogFooter>

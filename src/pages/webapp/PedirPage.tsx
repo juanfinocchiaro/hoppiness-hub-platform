@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import { CartSheet } from '@/components/webapp/CartSheet';
 import { MisPedidosSheet } from '@/components/webapp/MisPedidosSheet';
 import { ProductCustomizeSheet } from '@/components/webapp/ProductCustomizeSheet';
 import { SEO } from '@/components/SEO';
-import { Loader2 } from 'lucide-react';
+import { SpinnerLoader } from '@/components/ui/loaders';
 import type { TipoServicioWebapp, WebappMenuItem, DeliveryCalcResult } from '@/types/webapp';
 import type { AddressResult } from '@/components/webapp/AddressAutocomplete';
 
@@ -27,18 +27,45 @@ export default function PedirPage() {
   const { data: mpStatus } = useMercadoPagoStatus(data?.branch?.id);
   const { data: promoItems = [] } = useActivePromoItems(data?.branch?.id, 'webapp');
 
-  // Overlay active promo prices onto menu items
-  const menuItems = rawMenuItems?.map(item => {
-    const promoMatch = promoItems.find(pi => pi.item_carta_id === item.id);
-    if (promoMatch && promoMatch.precio_promo < Number(item.precio_base)) {
-      return {
-        ...item,
-        precio_promo: promoMatch.precio_promo,
-        promo_etiqueta: item.promo_etiqueta || 'PROMO',
-      };
-    }
-    return item;
-  });
+  // Build sellable menu: promo articles are distinct entries and base items are not mutated.
+  const menuItems = useMemo(() => {
+    if (!rawMenuItems) return [];
+    const baseById = new Map(rawMenuItems.map((item) => [item.id, item]));
+
+    const promoArticles: WebappMenuItem[] = promoItems
+      .map((pi) => {
+        const base = baseById.get(pi.item_carta_id);
+        if (!base || pi.precio_base == null || pi.precio_promo >= Number(base.precio_base)) return null;
+        const extras = pi.preconfigExtras || [];
+        const extrasTotal = extras.reduce((sum, ex) => sum + (ex.precio ?? 0) * ex.cantidad, 0);
+        const precioSinPromo = Number(base.precio_base) + extrasTotal;
+        const included = extras
+          .filter((ex) => ex.nombre)
+          .map((ex) => ({ nombre: ex.nombre!, cantidad: ex.cantidad }));
+        const includedLabel = included.length
+          ? `Incluye: ${included.map((ex) => `${ex.cantidad > 1 ? `${ex.cantidad}x ` : ''}${ex.nombre}`).join(', ')}`
+          : null;
+
+        return {
+          ...base,
+          id: `promo:${pi.id}`,
+          source_item_id: base.id,
+          is_promo_article: true,
+          promocion_id: pi.promocion_id,
+          promocion_item_id: pi.id,
+          promo_included_modifiers: included,
+          nombre: pi.promocion_nombre || `${base.nombre} (PROMO)`,
+          nombre_corto: base.nombre_corto || base.nombre,
+          descripcion: includedLabel || base.descripcion,
+          precio_base: precioSinPromo,
+          precio_promo: Number(pi.precio_promo),
+          promo_etiqueta: 'PROMO',
+        } satisfies WebappMenuItem;
+      })
+      .filter((item): item is WebappMenuItem => !!item);
+
+    return [...promoArticles, ...rawMenuItems];
+  }, [rawMenuItems, promoItems]);
   const cart = useWebappCart();
   const navigate = useNavigate();
   const mpEnabled = mpStatus?.estado_conexion === 'conectado';
@@ -139,7 +166,7 @@ export default function PedirPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <SpinnerLoader size="lg" text="Cargando menú..." />
       </div>
     );
   }

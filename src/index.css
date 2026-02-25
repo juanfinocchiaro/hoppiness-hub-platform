@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -25,8 +27,6 @@ html, body {
    HOPPINESS CLUB - Design System
    Brand Manual Colors: #00139b (azul), #ff521d (naranja), #ffd41f (amarillo)
    ============================================= */
-
-@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
 
 @font-face {
   font-family: 'HamburgHand';
@@ -199,6 +199,16 @@ html, body {
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Micro typography scale for badges, labels, and compact UI */
+  .text-micro {
+    font-size: 0.625rem; /* 10px */
+    line-height: 1rem;
+  }
+  .text-mini {
+    font-size: 0.6875rem; /* 11px */
+    line-height: 1rem;
   }
 
   /* Hide scrollbar but allow scrolling */

@@ -68,7 +68,10 @@ export function WhatsAppTemplatesDialog() {
         </p>
 
         {isLoading ? (
-          <p className="text-muted-foreground">Cargando...</p>
+          <div className="space-y-3">
+            <div className="h-9 w-full rounded bg-muted animate-pulse" />
+            <div className="h-32 w-full rounded bg-muted animate-pulse" />
+          </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="flex flex-wrap h-auto">

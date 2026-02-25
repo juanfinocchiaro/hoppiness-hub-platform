@@ -12,10 +12,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { POSAlertDialogContent } from './POSDialog';
 import { usePOSPortal } from './POSPortalContext';
-import { Minus, Plus, Trash2, ShoppingBag, MessageSquare, X, Banknote, CreditCard, QrCode, ArrowRightLeft, ChefHat, PlusCircle, Pencil, ChevronRight, Store, Bike, Loader2, Check, CircleDot } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, MessageSquare, X, Banknote, CreditCard, QrCode, ArrowRightLeft, ChefHat, PlusCircle, Pencil, ChevronRight, Store, Bike, Loader2, Check, CircleDot, Tag } from 'lucide-react';
+import { DotsLoader } from '@/components/ui/loaders';
 import type { CartItem } from './ProductGrid';
 import type { LocalPayment, MetodoPago, OrderConfig } from '@/types/pos';
 import { cn } from '@/lib/utils';
+import { useValidateCode } from '@/hooks/useCodigosDescuento';
 
 const METODO_ICONS: Record<MetodoPago, React.ComponentType<{ className?: string }>> = {
   efectivo: Banknote,
@@ -78,6 +80,7 @@ interface AccountPanelProps {
   orderConfig?: OrderConfig;
   onEditConfig?: () => void;
   onUpdateOrderConfig?: (partial: Partial<OrderConfig>) => void;
+  branchId?: string;
 }
 
 /* ── Config Summary Header ─────────────────────────── */
@@ -144,20 +147,28 @@ export function AccountPanel({
   orderConfig,
   onEditConfig,
   onUpdateOrderConfig,
+  branchId,
 }: AccountPanelProps) {
   const subtotalItems = items.reduce((s, i) => s + i.subtotal, 0);
+  const promoDescTotal = items.reduce((s, i) => s + (i.promo_descuento ?? 0) * i.cantidad, 0);
   const isApps = orderConfig?.canalVenta === 'apps';
   const isDelivery = orderConfig?.tipoServicio === 'delivery';
   const costoEnvio = (isApps || isDelivery) ? (orderConfig?.costoDelivery ?? 0) : 0;
   const descPlataforma = orderConfig?.descuentoPlataforma ?? 0;
-  const descRestaurante = orderConfig?.descuentoRestaurante ?? 0;
-  const totalDescuentos = descPlataforma + descRestaurante;
+  const descRestauranteRaw = orderConfig?.descuentoRestaurante ?? 0;
+  const descRestaurante = orderConfig?.descuentoModo === 'porcentaje'
+    ? Math.round(subtotalItems * descRestauranteRaw / 100)
+    : descRestauranteRaw;
+  const voucherDesc = orderConfig?.voucherDescuento ?? 0;
+  const totalDescuentos = descPlataforma + descRestaurante + voucherDesc + promoDescTotal;
   const totalItems = subtotalItems + costoEnvio - totalDescuentos;
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
   const saldo = isApps ? 0 : totalItems - totalPaid;
   const canSend = isApps ? items.length > 0 : (Math.abs(totalItems - totalPaid) < 0.01 && items.length > 0);
 
   const [editingNoteIdx, setEditingNoteIdx] = useState<number | null>(null);
+  const [voucherInput, setVoucherInput] = useState('');
+  const validateCode = useValidateCode(branchId, 'pos');
 
   // Send dialog state
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
@@ -226,7 +237,7 @@ export function AccountPanel({
       {orderConfig && <ConfigHeader config={orderConfig} onEdit={onEditConfig} />}
 
       {/* Header */}
-      <div className="px-3 py-2.5 border-b font-medium flex items-center justify-between">
+      <div className="px-3 py-2 border-b font-medium flex items-center justify-between">
         <span className="text-sm">Cuenta</span>
         {onCancelOrder && (
           <AlertDialog>
@@ -269,7 +280,7 @@ export function AccountPanel({
             <p className="text-xs text-muted-foreground mt-1">Elegí items del menú y sumalos al pedido</p>
           </div>
         ) : (
-          <div className="p-2 space-y-1.5">
+          <div className="p-3 space-y-1.5">
             {timeline.map((entry, i) => {
               if (entry.type === 'item') {
                 return (
@@ -303,9 +314,19 @@ export function AccountPanel({
           <>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">{(costoEnvio > 0 || totalDescuentos > 0 || isApps) ? 'Subtotal' : 'Total pedido'}</span>
+                <span className="text-muted-foreground">{(costoEnvio > 0 || totalDescuentos > 0 || isApps || onUpdateOrderConfig) ? 'Subtotal' : 'Total pedido'}</span>
                 <span className="font-medium tabular-nums">$ {subtotalItems.toLocaleString('es-AR')}</span>
               </div>
+
+              {promoDescTotal > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-success text-xs flex items-center gap-1">
+                    <Tag className="w-3 h-3" />
+                    Desc. promoción
+                  </span>
+                  <span className="text-success font-medium tabular-nums text-xs">- $ {promoDescTotal.toLocaleString('es-AR')}</span>
+                </div>
+              )}
 
               {/* Editable delivery amounts for apps */}
               {isApps && onUpdateOrderConfig && (
@@ -346,27 +367,137 @@ export function AccountPanel({
                 </>
               )}
 
-              {/* Static delivery amounts for non-apps */}
+              {/* Static delivery cost for non-apps */}
               {!isApps && costoEnvio > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Envío</span>
                   <span className="font-medium tabular-nums">$ {costoEnvio.toLocaleString('es-AR')}</span>
                 </div>
               )}
-              {!isApps && descPlataforma > 0 && (
-                <div className="flex justify-between text-orange-600">
-                  <span>Desc. plataforma</span>
-                  <span className="font-medium tabular-nums">- $ {descPlataforma.toLocaleString('es-AR')}</span>
-                </div>
-              )}
-              {!isApps && descRestaurante > 0 && (
-                <div className="flex justify-between text-orange-600">
-                  <span>Desc. restaurante</span>
-                  <span className="font-medium tabular-nums">- $ {descRestaurante.toLocaleString('es-AR')}</span>
+              {/* Editable discount for non-apps with $ / % toggle */}
+              {!isApps && onUpdateOrderConfig && (
+                <div className="space-y-0.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-orange-600 text-xs shrink-0">Desc. restaurante</span>
+                    <div className="flex items-center gap-1">
+                      <div className="flex rounded-md border overflow-hidden h-7">
+                        <button
+                          type="button"
+                          className={cn(
+                            'px-2 text-xs font-medium transition-colors',
+                            (orderConfig?.descuentoModo ?? 'pesos') === 'pesos'
+                              ? 'bg-orange-600 text-white'
+                              : 'bg-transparent text-muted-foreground hover:bg-muted',
+                          )}
+                          onClick={() => onUpdateOrderConfig({ descuentoModo: 'pesos' })}
+                        >$</button>
+                        <button
+                          type="button"
+                          className={cn(
+                            'px-2 text-xs font-medium transition-colors',
+                            orderConfig?.descuentoModo === 'porcentaje'
+                              ? 'bg-orange-600 text-white'
+                              : 'bg-transparent text-muted-foreground hover:bg-muted',
+                          )}
+                          onClick={() => onUpdateOrderConfig({ descuentoModo: 'porcentaje' })}
+                        >%</button>
+                      </div>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={orderConfig?.descuentoModo === 'porcentaje' ? 100 : undefined}
+                        step={orderConfig?.descuentoModo === 'porcentaje' ? 5 : 100}
+                        value={orderConfig?.descuentoRestaurante ?? 0}
+                        onChange={(e) => onUpdateOrderConfig({ descuentoRestaurante: Math.max(0, Number(e.target.value) || 0) })}
+                        className="h-7 w-20 text-xs text-right tabular-nums"
+                      />
+                    </div>
+                  </div>
+                  {orderConfig?.descuentoModo === 'porcentaje' && descRestaurante > 0 && (
+                    <div className="flex justify-end">
+                      <span className="text-orange-600 text-xs tabular-nums">- $ {descRestaurante.toLocaleString('es-AR')}</span>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {(costoEnvio > 0 || totalDescuentos > 0 || isApps) && (
+              {/* Voucher input */}
+              {!isApps && onUpdateOrderConfig && (
+                orderConfig?.voucherCodigo ? (
+                  <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-2.5 py-1.5">
+                    <Tag className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-semibold text-green-800">
+                        {orderConfig.voucherCodigo} — ${voucherDesc.toLocaleString('es-AR')} off
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-green-600 hover:text-red-600"
+                      onClick={() => onUpdateOrderConfig({ voucherCodigoId: undefined, voucherCodigo: undefined, voucherDescuento: undefined })}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <div className="flex gap-1.5">
+                      <Input
+                        value={voucherInput}
+                        onChange={e => setVoucherInput(e.target.value.toUpperCase())}
+                        placeholder="Voucher"
+                        className="h-7 text-xs font-mono flex-1"
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && voucherInput.trim()) {
+                            validateCode.mutate(
+                              { codigo: voucherInput.trim(), subtotal: subtotalItems },
+                              {
+                                onSuccess: (result) => {
+                                  onUpdateOrderConfig({
+                                    voucherCodigoId: result.code.id,
+                                    voucherCodigo: result.code.codigo,
+                                    voucherDescuento: result.descuento,
+                                  });
+                                  setVoucherInput('');
+                                },
+                              }
+                            );
+                          }
+                        }}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs px-2"
+                        disabled={validateCode.isPending || !voucherInput.trim()}
+                        onClick={() => {
+                          validateCode.mutate(
+                            { codigo: voucherInput.trim(), subtotal: subtotalItems },
+                            {
+                              onSuccess: (result) => {
+                                onUpdateOrderConfig({
+                                  voucherCodigoId: result.code.id,
+                                  voucherCodigo: result.code.codigo,
+                                  voucherDescuento: result.descuento,
+                                });
+                                setVoucherInput('');
+                              },
+                            }
+                          );
+                        }}
+                      >
+                        {validateCode.isPending ? <DotsLoader /> : <Tag className="w-3 h-3" />}
+                      </Button>
+                    </div>
+                    {validateCode.isError && (
+                      <p className="text-[11px] text-destructive">{(validateCode.error as Error).message}</p>
+                    )}
+                  </div>
+                )
+              )}
+
+              {(costoEnvio > 0 || totalDescuentos > 0 || isApps || onUpdateOrderConfig) && (
                 <div className="flex justify-between pt-0.5 border-t">
                   <span className="text-muted-foreground font-medium">Total pedido</span>
                   <span className="font-semibold tabular-nums">$ {totalItems.toLocaleString('es-AR')}</span>
@@ -383,7 +514,7 @@ export function AccountPanel({
 
               {/* For non-apps: show paid amount and saldo */}
               {!isApps && payments.length > 0 && (
-                <div className="flex justify-between text-emerald-600">
+                <div className="flex justify-between text-success">
                   <span>Pagado</span>
                   <span className="font-medium tabular-nums">- $ {totalPaid.toLocaleString('es-AR')}</span>
                 </div>
@@ -423,7 +554,7 @@ export function AccountPanel({
               className={cn(
                 'w-full hidden lg:flex h-14 text-base',
                 canSend
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  ? 'bg-success hover:bg-success/90 text-white'
                   : ''
               )}
               size="lg"
@@ -496,7 +627,7 @@ function SendDialogContent({
     <DialogPrimitive.Portal container={containerRef?.current ?? undefined}>
       <DialogPrimitive.Overlay className="absolute inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
       <DialogPrimitive.Content
-        className="absolute left-[50%] top-[50%] z-50 grid w-full max-w-sm translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg"
+        className="absolute left-[50%] top-[50%] z-50 grid w-full max-w-sm translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-elevated duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg"
         onPointerDownOutside={(e) => { if (phase === 'progress') e.preventDefault(); }}
         onEscapeKeyDown={(e) => { if (phase === 'progress') e.preventDefault(); }}
         onInteractOutside={(e) => { if (phase === 'progress') e.preventDefault(); }}
@@ -513,7 +644,7 @@ function SendDialogContent({
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={onCancel}>Volver</Button>
-              <Button onClick={onConfirm} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button onClick={onConfirm} className="bg-success hover:bg-success/90 text-white">
                 Sí, enviar a cocina
               </Button>
             </div>

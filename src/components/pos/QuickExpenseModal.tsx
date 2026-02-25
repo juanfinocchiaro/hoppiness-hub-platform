@@ -21,7 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Receipt, Banknote, CreditCard } from 'lucide-react';
+import { Receipt, Banknote, CreditCard } from 'lucide-react';
+import { DotsLoader } from '@/components/ui/loaders';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAddExpenseMovement } from '@/hooks/useCashRegister';
@@ -268,7 +269,7 @@ export function QuickExpenseModal({
               Cancelar
             </Button>
             <Button onClick={handleSubmit} disabled={!concept || !amount || addExpense.isPending}>
-              {addExpense.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {addExpense.isPending && <DotsLoader />}
               {needsPin ? 'Solicitar Autorización' : 'Registrar Gasto'}
             </Button>
           </div>

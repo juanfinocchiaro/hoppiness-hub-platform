@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Loader2, MapPin, Navigation, CheckCircle2, AlertCircle, Bike } from 'lucide-react';
+import { MapPin, Navigation, CheckCircle2, AlertCircle, Bike } from 'lucide-react';
+import { SpinnerLoader } from '@/components/ui/loaders';
 import { Button } from '@/components/ui/button';
 import { SEO } from '@/components/SEO';
 
@@ -173,7 +174,7 @@ export default function CadeteTrackingPage() {
   if (pageState === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <SpinnerLoader size="lg" text="Cargando rastreo..." />
       </div>
     );
   }
@@ -270,7 +271,7 @@ export default function CadeteTrackingPage() {
             )}
             <Button
               onClick={handleComplete}
-              className="w-full h-14 text-lg font-bold bg-green-600 hover:bg-green-700"
+              className="w-full h-14 text-lg font-bold bg-success hover:bg-success/90"
               size="lg"
             >
               <CheckCircle2 className="w-5 h-5 mr-2" />
@@ -282,7 +283,7 @@ export default function CadeteTrackingPage() {
         {pageState === 'completed' && (
           <div className="bg-green-50 dark:bg-green-950/30 rounded-xl p-6 text-center space-y-3">
             <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto" />
-            <h2 className="text-lg font-bold text-green-700 dark:text-green-400">
+            <h2 className="text-lg font-bold text-success dark:text-green-400">
               Entrega completada
             </h2>
             <p className="text-sm text-muted-foreground">

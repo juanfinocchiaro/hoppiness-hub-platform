@@ -10,7 +10,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { Clock, Loader2, AlertCircle, QrCode } from 'lucide-react';
+import { Clock, AlertCircle, QrCode } from 'lucide-react';
+import { SpinnerLoader } from '@/components/ui/loaders';
 import { useState, useEffect } from 'react';
 import logoHoppiness from '@/assets/logo-hoppiness-white.png';
 import { getClockInUrl } from '@/lib/constants';
@@ -71,7 +72,7 @@ export default function FichajeQRDisplay() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-primary">
-        <Loader2 className="w-12 h-12 animate-spin text-primary-foreground" />
+        <SpinnerLoader size="lg" />
       </div>
     );
   }
@@ -106,7 +107,7 @@ export default function FichajeQRDisplay() {
       </div>
 
       {/* Main Card with QR */}
-      <Card className="w-full max-w-md shadow-2xl">
+      <Card className="w-full max-w-md shadow-elevated">
         <CardContent className="p-8">
           {/* Clock */}
           <div className="text-center mb-6">

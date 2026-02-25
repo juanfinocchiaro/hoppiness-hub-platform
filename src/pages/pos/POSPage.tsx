@@ -13,6 +13,7 @@ import { RegisterPaymentPanel } from '@/components/pos/RegisterPaymentPanel';
 import { ModifiersModal } from '@/components/pos/ModifiersModal';
 import { POSPortalProvider } from '@/components/pos/POSPortalContext';
 import { useCreatePedido } from '@/hooks/pos/useOrders';
+import { registerCodeUsage } from '@/hooks/useCodigosDescuento';
 import { useKitchen } from '@/hooks/pos/useKitchen';
 import { usePOSSessionState } from '@/hooks/pos/usePOSSessionState';
 import { useShiftStatus } from '@/hooks/useShiftStatus';
@@ -34,6 +35,7 @@ import { Banknote, ChefHat, PlusCircle, ShoppingBag } from 'lucide-react';
 import { PendingOrdersBar } from '@/components/pos/PendingOrdersBar';
 import { WebappOrdersPanel } from '@/components/pos/WebappOrdersPanel';
 import { PointPaymentModal } from '@/components/pos/PointPaymentModal';
+import { POSOnboarding } from '@/components/pos/POSOnboarding';
 import { useMercadoPagoConfig } from '@/hooks/useMercadoPagoConfig';
 
 /* Inline cash open form - shown when no register is open */
@@ -388,6 +390,7 @@ function POSPageContent({ branchId }: { branchId: string }) {
       estacion: 'armado' as const,
       precio_referencia: c.precio_referencia,
       categoria_carta_id: c.categoria_carta_id,
+      promo_descuento: c.promo_descuento,
     }));
 
     const pedido = await createPedido.mutateAsync({
@@ -399,6 +402,15 @@ function POSPageContent({ branchId }: { branchId: string }) {
       })),
       orderConfig,
     });
+
+    if (orderConfig.voucherCodigoId && orderConfig.voucherDescuento) {
+      registerCodeUsage({
+        codigoId: orderConfig.voucherCodigoId,
+        userId: user?.id,
+        pedidoId: pedido?.id,
+        montoDescontado: orderConfig.voucherDescuento,
+      }).catch(() => {});
+    }
 
     let facturaData: FacturaPrintData | null = null;
     if (afipConfig?.estado_conexion === 'conectado') {
@@ -501,6 +513,8 @@ function POSPageContent({ branchId }: { branchId: string }) {
         })),
         total: totalToPay,
         descuento: descuentos,
+        voucher_codigo: orderConfig.voucherCodigo,
+        voucher_descuento: orderConfig.voucherDescuento,
         costo_delivery: costoEnvio > 0 ? costoEnvio : undefined,
         cliente_telefono: orderConfig.clienteTelefono ?? null,
         cliente_direccion: orderConfig.clienteDireccion ?? null,
@@ -543,11 +557,32 @@ function POSPageContent({ branchId }: { branchId: string }) {
   const isAppsChannel = orderConfig.canalVenta === 'apps';
   const subtotal = cart.reduce((s, i) => s + i.subtotal, 0);
   const costoEnvio = (orderConfig.tipoServicio === 'delivery' || isAppsChannel) ? (orderConfig.costoDelivery ?? 0) : 0;
-  const descuentos = (orderConfig.descuentoPlataforma ?? 0) + (orderConfig.descuentoRestaurante ?? 0);
-  const totalToPay = subtotal + costoEnvio - descuentos;
+  const descRestauranteRaw = orderConfig.descuentoRestaurante ?? 0;
+  const descRestauranteCalc = orderConfig.descuentoModo === 'porcentaje'
+    ? Math.round(subtotal * descRestauranteRaw / 100)
+    : descRestauranteRaw;
+  const voucherDesc = orderConfig.voucherDescuento ?? 0;
+  const promoDescTotal = cart.reduce((s, i) => s + (i.promo_descuento ?? 0) * i.cantidad, 0);
+  const descuentos = (orderConfig.descuentoPlataforma ?? 0) + descRestauranteCalc + promoDescTotal;
+  const totalToPay = subtotal + costoEnvio - descuentos - voucherDesc;
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+  const paidCash = payments.filter(p => p.method === 'efectivo').reduce((s, p) => s + p.amount, 0);
+  const paidDigital = totalPaid - paidCash;
+
+  const minCashRequired = cart
+    .filter(i => i.promo_restriccion_pago === 'solo_efectivo')
+    .reduce((s, i) => s + i.subtotal, 0);
+  const minDigitalRequired = cart
+    .filter(i => i.promo_restriccion_pago === 'solo_digital')
+    .reduce((s, i) => s + i.subtotal, 0);
+  const minCashRemaining = Math.max(0, minCashRequired - paidCash);
+  const minDigitalRemaining = Math.max(0, minDigitalRequired - paidDigital);
+
   const saldo = isAppsChannel ? 0 : totalToPay - totalPaid;
-  const canSend = isAppsChannel ? cart.length > 0 : (Math.abs(totalToPay - totalPaid) < 0.01 && cart.length > 0);
+  const meetsPromoPaymentRestrictions = (paidCash + 0.0001) >= minCashRequired && (paidDigital + 0.0001) >= minDigitalRequired;
+  const canSend = isAppsChannel
+    ? cart.length > 0
+    : (Math.abs(totalToPay - totalPaid) < 0.01 && cart.length > 0 && meetsPromoPaymentRestrictions);
 
   // Show full-page "Abrir Caja" when cash register is closed
   if (!shiftStatus.loading && !shiftStatus.hasCashOpen) {
@@ -612,6 +647,7 @@ function POSPageContent({ branchId }: { branchId: string }) {
               <ConfigForm
                 config={orderConfig}
                 onChange={setOrderConfig}
+                branchId={branchId}
                 onConfirm={() => {
                   const err = validateOrderConfig();
                   if (err) {
@@ -642,6 +678,7 @@ function POSPageContent({ branchId }: { branchId: string }) {
                 orderConfig={orderConfig}
                 onEditConfig={handleEditConfig}
                 onUpdateOrderConfig={(partial) => setOrderConfig((prev) => ({ ...prev, ...partial }))}
+                branchId={branchId}
               />
             </>
           )}
@@ -650,12 +687,12 @@ function POSPageContent({ branchId }: { branchId: string }) {
 
       {/* Mobile sticky footer */}
       {configConfirmed && cart.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden border-t bg-background px-4 py-3 flex items-center justify-between gap-3 shadow-lg">
+        <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden border-t bg-background px-4 py-3 flex items-center justify-between gap-3 shadow-elevated">
           <div className="text-sm">
             <span className="text-muted-foreground">{cart.reduce((s, i) => s + i.cantidad, 0)} items</span>
             <span className="ml-2 font-semibold text-foreground">$ {totalToPay.toLocaleString('es-AR')}</span>
             {!isAppsChannel && totalPaid > 0 && (
-              <span className="ml-2 text-xs text-green-600">pagado $ {totalPaid.toLocaleString('es-AR')}</span>
+              <span className="ml-2 text-xs text-success">pagado $ {totalPaid.toLocaleString('es-AR')}</span>
             )}
           </div>
           {canSend ? (
@@ -663,7 +700,7 @@ function POSPageContent({ branchId }: { branchId: string }) {
               size="lg"
               onClick={() => handleSendToKitchen().then(resetAll).catch((e: any) => toast.error(e?.message ?? 'Error al registrar pedido'))}
               disabled={createPedido.isPending}
-              className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="shrink-0 bg-success hover:bg-success/90 text-white"
             >
               <ChefHat className="h-4 w-4 mr-2" />
               Enviar
@@ -689,6 +726,8 @@ function POSPageContent({ branchId }: { branchId: string }) {
         saldoPendiente={saldo}
         onRegister={registerPayment}
         onPointSmartPayment={hasPointSmart ? handlePointSmartPayment : undefined}
+        minCashRemaining={minCashRemaining}
+        minDigitalRemaining={minDigitalRemaining}
       />
 
       {/* Point Smart payment modal */}
@@ -710,6 +749,8 @@ function POSPageContent({ branchId }: { branchId: string }) {
         item={modifiersItem}
         onConfirm={handleModifierConfirm}
       />
+
+      <POSOnboarding />
     </div>
     </POSPortalProvider>
   );

@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Truck, MapPin, Save, ExternalLink, AlertTriangle, DollarSign, Settings2 } from 'lucide-react';
+import { Truck, MapPin, Save, ExternalLink, AlertTriangle, DollarSign, Settings2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
   useDeliveryPricingConfig,
@@ -16,6 +16,7 @@ import {
   useAllBranchDeliveryConfigs,
 } from '@/hooks/useDeliveryConfig';
 import { RequireBrandPermission } from '@/components/guards';
+import { SpinnerLoader, DotsLoader } from '@/components/ui/loaders';
 
 /* ─── Error Boundary ────────────────────────────────────── */
 
@@ -77,7 +78,7 @@ function DeliveryPricingForm() {
   };
 
   if (isLoading) {
-    return <Card><CardContent className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></CardContent></Card>;
+    return <Card><CardContent className="flex items-center justify-center py-12"><SpinnerLoader size="md" /></CardContent></Card>;
   }
   if (isError) {
     return <Card><CardContent className="py-12 text-center text-muted-foreground">No se pudo cargar la configuración de pricing.</CardContent></Card>;
@@ -155,7 +156,7 @@ function DeliveryPricingForm() {
 
         <div className="flex justify-end">
           <Button onClick={handleSave} disabled={updateConfig.isPending} size="sm">
-            {updateConfig.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {updateConfig.isPending && <span className="mr-2 inline-flex"><DotsLoader /></span>}
             <Save className="mr-2 h-4 w-4" />
             Guardar
           </Button>
@@ -171,7 +172,7 @@ function BranchDeliveryOverviewList() {
   const { data: configs, isLoading, isError } = useAllBranchDeliveryConfigs();
 
   if (isLoading) {
-    return <Card><CardContent className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></CardContent></Card>;
+    return <Card><CardContent className="flex items-center justify-center py-12"><SpinnerLoader size="md" /></CardContent></Card>;
   }
   if (isError || !configs || configs.length === 0) {
     return (

@@ -365,7 +365,7 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
             <div className="space-y-2">
               <Label>Empleado</Label>
               <div className="p-2 bg-muted rounded text-sm">
-                {employeeProfile?.fullName || 'Cargando...'}
+                {employeeProfile?.fullName || <span className="inline-block h-4 w-32 rounded bg-muted animate-pulse align-middle" />}
               </div>
             </div>
 

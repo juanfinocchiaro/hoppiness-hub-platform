@@ -66,7 +66,13 @@ export function CondicionesLocalModal({ open, onOpenChange, proveedorId, proveed
         </DialogHeader>
 
         {isLoading ? (
-          <div className="py-8 text-center text-muted-foreground text-sm">Cargando...</div>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2"><div className="h-4 w-24 rounded bg-muted animate-pulse" /><div className="h-9 rounded bg-muted animate-pulse" /></div>
+              <div className="space-y-2"><div className="h-4 w-24 rounded bg-muted animate-pulse" /><div className="h-9 rounded bg-muted animate-pulse" /></div>
+            </div>
+            <div className="space-y-2"><div className="h-4 w-32 rounded bg-muted animate-pulse" /><div className="h-20 rounded bg-muted animate-pulse" /></div>
+          </div>
         ) : (
           <div className="space-y-4">
             <FormLayout columns={2}>

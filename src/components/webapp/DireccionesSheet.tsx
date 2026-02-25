@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin, Plus, Pencil, Trash2, Star, Loader2, ArrowLeft } from 'lucide-react';
+import { MapPin, Plus, Pencil, Trash2, Star, ArrowLeft } from 'lucide-react';
+import { SpinnerLoader, DotsLoader } from '@/components/ui/loaders';
 import { toast } from 'sonner';
 
 interface Direccion {
@@ -137,7 +138,7 @@ export function DireccionesSheet({ open, onOpenChange }: Props) {
 
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            <SpinnerLoader size="sm" text="Cargando direcciones..." />
           </div>
         ) : showForm ? (
           /* Form view */
@@ -176,7 +177,7 @@ export function DireccionesSheet({ open, onOpenChange }: Props) {
                 onClick={() => saveMutation.mutate()}
                 disabled={!direccion.trim() || saveMutation.isPending}
               >
-                {saveMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                {saveMutation.isPending && <span className="mr-2 inline-flex"><DotsLoader /></span>}
                 {editId ? 'Guardar' : 'Agregar'}
               </Button>
             </div>

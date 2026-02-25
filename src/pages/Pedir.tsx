@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Loader2, MapPin, Pause } from 'lucide-react';
+import { MapPin, Pause, RefreshCw } from 'lucide-react';
+import { SpinnerLoader } from '@/components/ui/loaders';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -75,6 +76,7 @@ function isBranchOpenBySchedule(branch: Pick<BranchWithWebapp, 'opening_time' | 
 function useBranchesForPedir() {
   return useQuery({
     queryKey: ['branches-pedir'],
+    retry: 2,
     queryFn: async () => {
       const { data: branches, error: bErr } = await supabase
         .from('branches_public')
@@ -132,7 +134,7 @@ function formatPrice(n: number) {
 }
 
 export default function Pedir() {
-  const { data: branches, isLoading } = useBranchesForPedir();
+  const { data: branches, isLoading, error, refetch } = useBranchesForPedir();
   const navigate = useNavigate();
 
   return (
@@ -154,7 +156,23 @@ export default function Pedir() {
         <div className="max-w-5xl mx-auto px-4 py-6 pb-12">
           {isLoading ? (
             <div className="flex justify-center py-16">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <SpinnerLoader size="lg" text="Cargando locales..." />
+            </div>
+          ) : error ? (
+            <div className="text-center py-16 space-y-3">
+              <p className="text-destructive font-medium">Error al cargar los locales</p>
+              <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                Hubo un problema de conexión. Intentá de nuevo.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetch()}
+                className="gap-1.5"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Reintentar
+              </Button>
             </div>
           ) : !branches?.length ? (
             <div className="text-center py-16 text-muted-foreground">
@@ -199,7 +217,7 @@ function BranchCard({ branch }: { branch: BranchWithWebapp }) {
       : `https://maps.google.com/?q=${encodeURIComponent(branch.address + ', ' + branch.city)}`;
 
   return (
-    <div className="rounded-2xl bg-card border shadow-sm overflow-hidden transition-shadow hover:shadow-md">
+    <div className="rounded-xl bg-card border shadow-soft overflow-hidden transition-shadow hover:shadow-card active:scale-[0.99]">
       {hasCoords && (
         <div className="px-4 pt-2">
           <StaticBranchMap

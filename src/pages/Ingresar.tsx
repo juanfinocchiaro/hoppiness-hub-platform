@@ -3,15 +3,19 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
 import { useGooglePopupAuth } from '@/hooks/useGooglePopupAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Loader2, LogIn, UserPlus } from 'lucide-react';
+import { ArrowLeft, LogIn, UserPlus } from 'lucide-react';
+import { DotsLoader } from '@/components/ui/loaders';
 import { toast } from 'sonner';
 import logoHoppiness from '@/assets/logo-hoppiness-blue.png';
 import { z } from 'zod';
+import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
+import { clearFailedLoginAttempts, getFailedLoginAttempts, LOGIN_CAPTCHA_THRESHOLD, registerFailedLoginAttempt } from '@/lib/loginAttemptTracker';
 
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'Mínimo 6 caracteres');
@@ -27,21 +31,31 @@ export default function Ingresar() {
   const [fullName, setFullName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { signInWithGooglePopup, loading: googleLoading } = useGooglePopupAuth();
+  const [loginCaptchaToken, setLoginCaptchaToken] = useState('');
+  const [failedLoginAttempts, setFailedLoginAttempts] = useState(0);
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || '';
+  const requiresLoginCaptcha = !!turnstileSiteKey && failedLoginAttempts >= LOGIN_CAPTCHA_THRESHOLD;
 
-  // Redirigir usuarios autenticados a su landing ideal según su rol
+  // Redirigir usuarios autenticados a su landing ideal según su rol.
+  // También vincula pedidos históricos hechos como invitado con el teléfono/email del usuario.
   useEffect(() => {
     if (!loading && !roleLoading && user) {
-      // Si venían de alguna página específica, respetar ese destino
+      supabase.functions.invoke('link-guest-orders', {}).catch(() => {});
+
       const from = (location.state as { from?: { pathname: string } })?.from?.pathname;
       if (from && from !== '/ingresar') {
         navigate(from, { replace: true });
         return;
       }
-      
-      // Ir a la landing ideal según el avatar/rol
+
       navigate(avatarInfo.landingPath, { replace: true });
     }
   }, [user, loading, roleLoading, avatarInfo.landingPath, navigate, location.state]);
+
+  useEffect(() => {
+    setFailedLoginAttempts(getFailedLoginAttempts(email));
+    setLoginCaptchaToken('');
+  }, [email]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,16 +70,28 @@ export default function Ingresar() {
       }
     }
 
+    if (requiresLoginCaptcha && !loginCaptchaToken) {
+      toast.error('Completá la verificación de seguridad');
+      return;
+    }
+
     setIsSubmitting(true);
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(email, password, loginCaptchaToken || undefined);
     setIsSubmitting(false);
 
     if (error) {
       if (error.message.includes('Invalid login credentials')) {
+        const nextAttempts = registerFailedLoginAttempt(email);
+        setFailedLoginAttempts(nextAttempts);
+        setLoginCaptchaToken('');
         toast.error('Email o contraseña incorrectos');
       } else {
         toast.error(error.message);
       }
+    } else {
+      clearFailedLoginAttempts(email);
+      setFailedLoginAttempts(0);
+      setLoginCaptchaToken('');
     }
   };
 
@@ -134,11 +160,11 @@ export default function Ingresar() {
         <div className="w-full max-w-md">
           {/* Logo Section */}
           <div className="text-center mb-8">
-            <img src={logoHoppiness} alt="Hoppiness Club" className="w-24 h-24 mx-auto rounded-full shadow-2xl" />
+            <img src={logoHoppiness} alt="Hoppiness Club" className="w-24 h-24 mx-auto rounded-full shadow-elevated" />
           </div>
 
           {/* Card */}
-          <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/50">
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-elevated overflow-hidden border border-white/50">
             <div className="p-8">
               <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-foreground">Bienvenido</h2>
@@ -153,7 +179,7 @@ export default function Ingresar() {
                 disabled={googleLoading}
               >
                 {googleLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <DotsLoader />
                 ) : (
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
@@ -215,13 +241,20 @@ export default function Ingresar() {
                         ¿Olvidaste tu contraseña?
                       </Link>
                     </div>
+                    {requiresLoginCaptcha && (
+                      <TurnstileWidget
+                        siteKey={turnstileSiteKey}
+                        onVerify={setLoginCaptchaToken}
+                        onExpire={() => setLoginCaptchaToken('')}
+                      />
+                    )}
                     <Button 
                       type="submit" 
-                      className="w-full h-12 rounded-xl text-base font-semibold bg-primary hover:bg-primary/90 transition-all shadow-lg shadow-primary/25" 
+                      className="w-full h-12 rounded-xl text-base font-semibold bg-primary hover:bg-primary/90 transition-all shadow-elevated" 
                       disabled={isSubmitting}
                     >
                       {isSubmitting ? (
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        <DotsLoader />
                       ) : (
                         <LogIn className="w-5 h-5 mr-2" />
                       )}
@@ -270,11 +303,11 @@ export default function Ingresar() {
                     </div>
                     <Button 
                       type="submit" 
-                      className="w-full h-12 rounded-xl text-base font-semibold bg-primary hover:bg-primary/90 transition-all shadow-lg shadow-primary/25" 
+                      className="w-full h-12 rounded-xl text-base font-semibold bg-primary hover:bg-primary/90 transition-all shadow-elevated" 
                       disabled={isSubmitting}
                     >
                       {isSubmitting ? (
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        <DotsLoader />
                       ) : (
                         <UserPlus className="w-5 h-5 mr-2" />
                       )}

@@ -32,23 +32,7 @@ export function useWebappMenuItems(branchId: string | undefined) {
   return useQuery({
     queryKey: ['webapp-menu-items', branchId],
     queryFn: async () => {
-      // 1. Check if branch_item_availability has rows for this branch
-      const { data: availability, error: avErr } = await supabase
-        .from('branch_item_availability' as any)
-        .select('item_carta_id')
-        .eq('branch_id', branchId!)
-        .eq('available', true)
-        .eq('available_webapp', true)
-        .eq('out_of_stock', false);
-
-      if (avErr) throw avErr;
-
-      const hasAvailabilityRows = availability && availability.length > 0;
-      const availableIds = hasAvailabilityRows
-        ? (availability as any[]).map((a: any) => a.item_carta_id)
-        : null;
-
-      // 2. Get hidden category IDs (visible_en_carta = false)
+      // 1. Get hidden category IDs (visible_en_carta = false)
       const { data: hiddenCats } = await supabase
         .from('menu_categorias' as any)
         .select('id')
@@ -56,7 +40,7 @@ export function useWebappMenuItems(branchId: string | undefined) {
 
       const hiddenCatIds = (hiddenCats || []).map((c: any) => c.id);
 
-      // 3. Query items_carta, filtered by availability if rows exist
+      // 2. Query active webapp items (brand-level visibility)
       let query = supabase
         .from('items_carta')
         .select(`
@@ -71,10 +55,6 @@ export function useWebappMenuItems(branchId: string | undefined) {
         .eq('disponible_webapp', true)
         .order('orden');
 
-      if (availableIds) {
-        query = query.in('id', availableIds);
-      }
-
       // Exclude items from hidden categories
       if (hiddenCatIds.length > 0) {
         query = query.not('categoria_carta_id', 'in', `(${hiddenCatIds.join(',')})`);
@@ -83,7 +63,25 @@ export function useWebappMenuItems(branchId: string | undefined) {
       const { data, error } = await query;
       if (error) throw error;
 
-      return (data || []).map((item: any) => ({
+      // 3. Get branch-level availability overrides for online
+      const { data: availability, error: avErr } = await supabase
+        .from('branch_item_availability' as any)
+        .select('item_carta_id, available, available_webapp, out_of_stock')
+        .eq('branch_id', branchId!);
+      if (avErr) throw avErr;
+
+      const availabilityMap = new Map(
+        (availability || []).map((row: any) => [row.item_carta_id, row]),
+      );
+
+      const visibleItems = (data || []).filter((item: any) => {
+        const row = availabilityMap.get(item.id);
+        // Missing row means "no local override yet" -> keep visible by default
+        if (!row) return true;
+        return !!row.available && !!row.available_webapp && !row.out_of_stock;
+      });
+
+      return visibleItems.map((item: any) => ({
         ...item,
         categoria_nombre: item.menu_categorias?.nombre ?? null,
         categoria_orden: item.menu_categorias?.orden ?? 999,

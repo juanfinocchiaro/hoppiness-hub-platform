@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import { DotsLoader } from '@/components/ui/loaders';
 import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
@@ -67,7 +68,7 @@ export function CancelOrderDialog({ open, onOpenChange, order, onConfirm }: Prop
         <AlertDialogFooter>
           <AlertDialogCancel disabled={loading}>Cancelar</AlertDialogCancel>
           <Button variant="destructive" onClick={handleConfirm} disabled={loading}>
-            {loading && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+            {loading && <DotsLoader />}
             {hasInvoice ? 'Anular y emitir NC' : 'Anular pedido'}
           </Button>
         </AlertDialogFooter>

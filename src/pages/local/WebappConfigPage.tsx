@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,8 +12,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { PageHeader } from '@/components/ui/page-header';
-import { Globe, ExternalLink, Loader2, Truck, ShoppingBag, Clock, MapPin, DollarSign, ChevronDown } from 'lucide-react';
+import { Globe, ExternalLink, Truck, ShoppingBag, Clock, MapPin, DollarSign, ChevronDown, Search, Banknote, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
+import { DotsLoader } from '@/components/ui/loaders';
 
 
 const DAYS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'] as const;
@@ -23,10 +24,12 @@ const DAY_LABELS: Record<string, string> = {
 };
 
 type DaySchedule = { enabled: boolean; from: string; to: string };
+type WebappPaymentMethods = { efectivo: boolean; mercadopago: boolean };
 type ServiceScheduleV2 = {
   enabled: boolean;
   prep_time: number;
   days: Record<string, DaySchedule>;
+  payment_methods?: WebappPaymentMethods;
   // delivery-only
   radio_km?: number;
   costo?: number;
@@ -36,10 +39,16 @@ type ServiceScheduleV2 = {
 const defaultDays = (): Record<string, DaySchedule> =>
   Object.fromEntries(DAYS.map(d => [d, { enabled: true, from: '11:00', to: '23:00' }]));
 
-const defaultService = (prepTime: number): ServiceScheduleV2 => ({
+const defaultPaymentMethods = (serviceKey: string): WebappPaymentMethods => {
+  if (serviceKey === 'delivery') return { efectivo: false, mercadopago: true };
+  return { efectivo: true, mercadopago: true };
+};
+
+const defaultService = (serviceKey: string, prepTime: number): ServiceScheduleV2 => ({
   enabled: false,
   prep_time: prepTime,
   days: defaultDays(),
+  payment_methods: defaultPaymentMethods(serviceKey),
 });
 
 /** Migrate old flat format to new v2 format */
@@ -49,21 +58,26 @@ function migrateSchedules(
   config: any,
 ): Record<string, ServiceScheduleV2> {
   const result: Record<string, ServiceScheduleV2> = {
-    retiro: defaultService(config?.prep_time_retiro ?? 15),
+    retiro: defaultService('retiro', config?.prep_time_retiro ?? 15),
     delivery: {
-      ...defaultService(config?.prep_time_delivery ?? 40),
+      ...defaultService('delivery', config?.prep_time_delivery ?? 40),
       radio_km: config?.delivery_radio_km ?? 5,
       costo: config?.delivery_costo ?? 0,
       pedido_minimo: config?.delivery_pedido_minimo ?? 0,
     },
-    comer_aca: defaultService(config?.prep_time_comer_aca ?? 15),
+    comer_aca: defaultService('comer_aca', config?.prep_time_comer_aca ?? 15),
   };
 
   // If already v2 format (has .days object)
   if (raw?.retiro?.days || raw?.delivery?.days || raw?.comer_aca?.days) {
     for (const key of ['retiro', 'delivery', 'comer_aca']) {
       if (raw[key]) {
-        result[key] = { ...result[key], ...raw[key], days: { ...result[key].days, ...(raw[key].days || {}) } };
+        result[key] = {
+          ...result[key],
+          ...raw[key],
+          payment_methods: { ...defaultPaymentMethods(key), ...(raw[key].payment_methods || {}) },
+          days: { ...result[key].days, ...(raw[key].days || {}) },
+        };
       }
     }
   } else if (raw) {
@@ -121,6 +135,110 @@ function useBranchSlug(branchId: string | undefined) {
   });
 }
 
+type BranchWebappAvailabilityRow = {
+  itemId: string;
+  nombre: string;
+  categoriaNombre: string;
+  categoriaOrden: number;
+  productoOrden: number;
+  marcaDisponibleWebapp: boolean;
+  localDisponibleWebapp: boolean;
+  outOfStock: boolean;
+};
+
+function useBranchWebappAvailability(branchId: string | undefined) {
+  return useQuery({
+    queryKey: ['branch-webapp-availability', branchId],
+    queryFn: async () => {
+      const { data: items, error: itemsErr } = await supabase
+        .from('items_carta')
+        .select('id, nombre, tipo, orden, disponible_webapp, menu_categorias:categoria_carta_id(nombre, orden)')
+        .eq('activo', true)
+        .is('deleted_at', null)
+        .order('orden');
+      if (itemsErr) throw itemsErr;
+
+      const { data: availability, error: avErr } = await supabase
+        .from('branch_item_availability' as any)
+        .select('item_carta_id, available_webapp, out_of_stock')
+        .eq('branch_id', branchId!);
+      if (avErr) throw avErr;
+
+      const availabilityMap = new Map(
+        (availability || []).map((a: any) => [a.item_carta_id, a]),
+      );
+
+      const rows = (items || [])
+        .filter((item: any) => item.tipo !== 'extra')
+        .map((item: any) => {
+          const av = availabilityMap.get(item.id);
+          return {
+            itemId: item.id,
+            nombre: item.nombre,
+            categoriaNombre: item.menu_categorias?.nombre ?? 'Sin categoría',
+            categoriaOrden: item.menu_categorias?.orden ?? 999,
+            productoOrden: item.orden ?? 999,
+            marcaDisponibleWebapp: item.disponible_webapp !== false,
+            localDisponibleWebapp: av?.available_webapp ?? true,
+            outOfStock: av?.out_of_stock ?? false,
+          } satisfies BranchWebappAvailabilityRow;
+        })
+        .sort((a, b) => {
+          if (a.categoriaOrden !== b.categoriaOrden) return a.categoriaOrden - b.categoriaOrden;
+          if (a.productoOrden !== b.productoOrden) return a.productoOrden - b.productoOrden;
+          return a.nombre.localeCompare(b.nombre);
+        });
+
+      return rows;
+    },
+    enabled: !!branchId,
+  });
+}
+
+function useUpdateBranchWebappAvailability(branchId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      itemId: string;
+      localDisponibleWebapp?: boolean;
+      outOfStock?: boolean;
+    }) => {
+      const patch: Record<string, any> = {};
+      if (params.localDisponibleWebapp !== undefined) patch.available_webapp = params.localDisponibleWebapp;
+      if (params.outOfStock !== undefined) patch.out_of_stock = params.outOfStock;
+      patch.updated_at = new Date().toISOString();
+
+      const { data: updated, error: updateErr } = await supabase
+        .from('branch_item_availability' as any)
+        .update(patch)
+        .eq('branch_id', branchId!)
+        .eq('item_carta_id', params.itemId)
+        .select('id');
+      if (updateErr) throw updateErr;
+
+      if (!updated || updated.length === 0) {
+        const { error: upsertErr } = await supabase
+          .from('branch_item_availability' as any)
+          .upsert({
+            branch_id: branchId!,
+            item_carta_id: params.itemId,
+            available_webapp: params.localDisponibleWebapp ?? true,
+            out_of_stock: params.outOfStock ?? false,
+          }, { onConflict: 'branch_id,item_carta_id' });
+        if (upsertErr) throw upsertErr;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['branch-webapp-availability', branchId] });
+      qc.invalidateQueries({ queryKey: ['webapp-menu-items', branchId] });
+      qc.invalidateQueries({ queryKey: ['items-carta', branchId] });
+    },
+    onError: (err: Error) => {
+      toast.error('No se pudo actualizar la disponibilidad', { description: err.message });
+    },
+  });
+}
+
 // ─── Service Config Section ─────────────────────────────────
 
 function ServiceSection({
@@ -139,6 +257,18 @@ function ServiceSection({
   isDelivery?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const pm: WebappPaymentMethods = schedule.payment_methods
+    ? { ...defaultPaymentMethods(serviceKey), ...schedule.payment_methods }
+    : defaultPaymentMethods(serviceKey);
+
+  const setPaymentMethod = (key: keyof WebappPaymentMethods, enabled: boolean) => {
+    const next = { ...pm, [key]: enabled };
+    if (!next.efectivo && !next.mercadopago) {
+      toast.error('Seleccioná al menos un medio de pago');
+      return;
+    }
+    onChange({ ...schedule, payment_methods: next });
+  };
 
   const updateDay = (day: string, patch: Partial<DaySchedule>) => {
     onChange({
@@ -182,7 +312,11 @@ function ServiceSection({
         <div className="flex items-center gap-2">
           <Switch
             checked={schedule.enabled}
-            onCheckedChange={(v) => onChange({ ...schedule, enabled: v })}
+            onCheckedChange={(v) => onChange({
+              ...schedule,
+              enabled: v,
+              payment_methods: schedule.payment_methods ?? defaultPaymentMethods(serviceKey),
+            })}
           />
           {schedule.enabled && (
             <Collapsible open={open} onOpenChange={setOpen}>
@@ -249,6 +383,41 @@ function ServiceSection({
                   </div>
                 </div>
               )}
+
+              {/* Payment methods */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <DollarSign className="w-3.5 h-3.5" />
+                  Medios de pago (WebApp)
+                </Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="flex items-center gap-2">
+                      <Banknote className="w-4 h-4 text-green-700" />
+                      <div>
+                        <p className="text-sm font-medium">Efectivo</p>
+                        <p className="text-xs text-muted-foreground">Pagás al recibir / retirar</p>
+                      </div>
+                    </div>
+                    <Switch checked={pm.efectivo} onCheckedChange={(v) => setPaymentMethod('efectivo', v)} />
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-blue-700" />
+                      <div>
+                        <p className="text-sm font-medium">MercadoPago</p>
+                        <p className="text-xs text-muted-foreground">Tarjeta, débito o billetera</p>
+                      </div>
+                    </div>
+                    <Switch checked={pm.mercadopago} onCheckedChange={(v) => setPaymentMethod('mercadopago', v)} />
+                  </div>
+                </div>
+                {isDelivery && pm.efectivo && (
+                  <p className="text-xs text-amber-700">
+                    Si habilitás efectivo en delivery, el pedido puede ingresar sin pago previo.
+                  </p>
+                )}
+              </div>
 
               <Separator />
 
@@ -326,6 +495,8 @@ export default function WebappConfigPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const { data: config, isLoading } = useWebappConfigAdmin(branchId);
   const { data: branchData } = useBranchSlug(branchId);
+  const { data: availabilityRows, isLoading: loadingAvailability } = useBranchWebappAvailability(branchId);
+  const updateAvailability = useUpdateBranchWebappAvailability(branchId);
   const qc = useQueryClient();
 
   const [form, setForm] = useState({
@@ -338,10 +509,11 @@ export default function WebappConfigPage() {
   });
 
   const [services, setServices] = useState<Record<string, ServiceScheduleV2>>({
-    retiro: defaultService(15),
-    delivery: { ...defaultService(40), radio_km: 5, costo: 0, pedido_minimo: 0 },
-    comer_aca: defaultService(15),
+    retiro: defaultService('retiro', 15),
+    delivery: { ...defaultService('delivery', 40), radio_km: 5, costo: 0, pedido_minimo: 0 },
+    comer_aca: defaultService('comer_aca', 15),
   });
+  const [itemSearch, setItemSearch] = useState('');
 
   useEffect(() => {
     if (config) {
@@ -416,6 +588,16 @@ export default function WebappConfigPage() {
   const updateService = (key: string, s: ServiceScheduleV2) => {
     setServices(prev => ({ ...prev, [key]: s }));
   };
+
+  const filteredAvailabilityRows = useMemo(() => {
+    const rows = availabilityRows || [];
+    const q = itemSearch.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) =>
+      r.nombre.toLowerCase().includes(q) ||
+      r.categoriaNombre.toLowerCase().includes(q),
+    );
+  }, [availabilityRows, itemSearch]);
 
   return (
     <div className="space-y-6">
@@ -538,6 +720,87 @@ export default function WebappConfigPage() {
             </CardContent>
           </Card>
 
+          {/* Product visibility for WebApp (branch-level override) */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Disponibilidad de productos (Online)</CardTitle>
+              <CardDescription>
+                Elegí qué productos se ven en la tienda online de este local. No afecta el POS.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={itemSearch}
+                  onChange={(e) => setItemSearch(e.target.value)}
+                  className="pl-9"
+                  placeholder="Buscar producto o categoría..."
+                />
+              </div>
+
+              {loadingAvailability ? (
+                <Skeleton className="h-48 w-full" />
+              ) : (
+                <div className="border rounded-lg max-h-[380px] overflow-y-auto divide-y">
+                  {filteredAvailabilityRows.map((row) => {
+                    const webVisible = row.marcaDisponibleWebapp && row.localDisponibleWebapp && !row.outOfStock;
+                    const isPendingThisRow =
+                      updateAvailability.isPending &&
+                      updateAvailability.variables?.itemId === row.itemId;
+
+                    return (
+                      <div key={row.itemId} className="px-3 py-2.5 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium truncate">{row.nombre}</div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {row.categoriaNombre}
+                            {!row.marcaDisponibleWebapp && ' · Oculto por marca'}
+                            {row.outOfStock && ' · Sin stock'}
+                            {webVisible && ' · Visible online'}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs text-muted-foreground">Online</Label>
+                            <Switch
+                              checked={row.marcaDisponibleWebapp && row.localDisponibleWebapp}
+                              disabled={!row.marcaDisponibleWebapp || isPendingThisRow}
+                              onCheckedChange={(checked) => {
+                                updateAvailability.mutate({
+                                  itemId: row.itemId,
+                                  localDisponibleWebapp: checked,
+                                });
+                              }}
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs text-muted-foreground">Sin stock</Label>
+                            <Switch
+                              checked={row.outOfStock}
+                              disabled={isPendingThisRow}
+                              onCheckedChange={(checked) => {
+                                updateAvailability.mutate({
+                                  itemId: row.itemId,
+                                  outOfStock: checked,
+                                });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {filteredAvailabilityRows.length === 0 && (
+                    <div className="px-3 py-6 text-sm text-muted-foreground text-center">
+                      No hay productos para mostrar con ese filtro.
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Reception mode */}
           <Card>
             <CardHeader>
@@ -588,7 +851,7 @@ export default function WebappConfigPage() {
           {/* Save button */}
           <div className="flex justify-end">
             <Button onClick={() => save.mutate()} disabled={save.isPending} size="lg">
-              {save.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {save.isPending && <span className="mr-2 inline-flex"><DotsLoader /></span>}
               Guardar configuración
             </Button>
           </div>

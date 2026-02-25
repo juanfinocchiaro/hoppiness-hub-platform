@@ -32,6 +32,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useDebounce } from '@/hooks/useDebounce';
 import { exportToExcel } from '@/lib/exportExcel';
 import { toast } from 'sonner';
 
@@ -91,6 +92,7 @@ export default function GastosPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingGasto, setEditingGasto] = useState<Gasto | null>(null);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [filterCategoria, setFilterCategoria] = useState<string>('all');
   const [periodo, setPeriodo] = useState(() => format(new Date(), 'yyyy-MM'));
 
@@ -120,15 +122,15 @@ export default function GastosPage() {
     if (filterCategoria !== 'all') {
       filtered = filtered.filter(g => g.categoria_principal === filterCategoria);
     }
-    if (search) {
-      const q = search.toLowerCase();
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
       filtered = filtered.filter(g =>
         g.concepto.toLowerCase().includes(q) ||
         g.categoria_principal.toLowerCase().includes(q)
       );
     }
     return filtered;
-  }, [gastos, filterCategoria, search]);
+  }, [gastos, filterCategoria, debouncedSearch]);
 
   const totals = useMemo(() => {
     if (!filteredGastos.length) return { total: 0, efectivo: 0, transferencia: 0 };

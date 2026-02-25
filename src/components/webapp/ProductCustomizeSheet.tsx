@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -32,34 +32,68 @@ function useIsDesktop() {
 
 function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; onAdd: Props['onAdd']; onClose: () => void }) {
   const [cantidad, setCantidad] = useState(1);
-  const [extras, setExtras] = useState<CartItemModifier[]>([]);
+  const [extraQty, setExtraQty] = useState<Record<string, number>>({});
   const [removidos, setRemovidos] = useState<string[]>([]);
   const [notas, setNotas] = useState('');
   const [groupSelections, setGroupSelections] = useState<Record<string, CartItemModifier[]>>({});
 
-  const { data: extrasList } = useWebappItemExtras(item.id);
-  const { data: removables } = useWebappItemRemovables(item.id);
-  const { data: optionalGroups } = useWebappItemOptionalGroups(item.id);
+  const sourceItemId = item.source_item_id ?? item.id;
+  const { data: extrasList } = useWebappItemExtras(sourceItemId);
+  const { data: removables } = useWebappItemRemovables(sourceItemId);
+  const { data: optionalGroups } = useWebappItemOptionalGroups(sourceItemId);
 
-  // Extras total includes both direct extras and group selections
+  const freeQtyMap = useMemo(() => {
+    const map = new Map<string, number>();
+    if (item.is_promo_article && item.promo_included_modifiers && extrasList) {
+      for (const inc of item.promo_included_modifiers) {
+        const match = (extrasList as any[]).find((e: any) => e.nombre === inc.nombre);
+        if (match) map.set(match.id, inc.cantidad);
+      }
+    }
+    return map;
+  }, [item.is_promo_article, item.promo_included_modifiers, extrasList]);
+
+  useEffect(() => {
+    if (freeQtyMap.size > 0) {
+      setExtraQty(prev => {
+        const next = { ...prev };
+        for (const [id, qty] of freeQtyMap) {
+          if (!(id in next)) next[id] = qty;
+        }
+        return next;
+      });
+    }
+  }, [freeQtyMap]);
+
   const groupExtras = Object.values(groupSelections).flat();
-  const allExtras = [...extras, ...groupExtras];
-  const extrasTotal = allExtras.reduce((s, e) => s + e.precio, 0);
+
+  const extrasTotal = useMemo(() => {
+    let total = 0;
+    for (const [id, qty] of Object.entries(extraQty)) {
+      if (qty <= 0) continue;
+      const extra = (extrasList as any[] | undefined)?.find((e: any) => e.id === id);
+      if (!extra) continue;
+      const free = freeQtyMap.get(id) ?? 0;
+      total += extra.precio * Math.max(0, qty - free);
+    }
+    return total + groupExtras.reduce((s, e) => s + e.precio, 0);
+  }, [extraQty, extrasList, freeQtyMap, groupExtras]);
+
   const effectivePrice = (item.precio_promo != null && item.precio_promo < item.precio_base) ? item.precio_promo : item.precio_base;
   const total = (effectivePrice + extrasTotal) * cantidad;
 
-  // Validation: check mandatory groups
   const missingRequired = (optionalGroups || [])
     .filter(g => g.es_obligatorio && !(groupSelections[g.id]?.length > 0));
   const canAdd = missingRequired.length === 0;
 
-  const toggleExtra = (extra: CartItemModifier) => {
-    setExtras(prev => {
-      const exists = prev.find(e => e.id === extra.id);
-      if (exists) return prev.filter(e => e.id !== extra.id);
-      return [...prev, extra];
-    });
-  };
+  const incrExtra = (id: string) => setExtraQty(prev => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
+  const decrExtra = (id: string) => setExtraQty(prev => {
+    const cur = prev[id] ?? 0;
+    if (cur <= 0) return prev;
+    const next = { ...prev, [id]: cur - 1 };
+    if (next[id] === 0) delete next[id];
+    return next;
+  });
 
   const toggleRemovido = (nombre: string) => {
     setRemovidos(prev =>
@@ -73,16 +107,13 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
       const exists = current.find(e => e.id === option.id);
 
       if (exists) {
-        // Deselect
         return { ...prev, [groupId]: current.filter(e => e.id !== option.id) };
       }
 
       if (maxSelections === 1) {
-        // Radio: replace
         return { ...prev, [groupId]: [option] };
       }
 
-      // Checkbox: add up to max
       if (maxSelections && current.length >= maxSelections) return prev;
       return { ...prev, [groupId]: [...current, option] };
     });
@@ -90,8 +121,26 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
 
   const handleAdd = () => {
     if (!canAdd) return;
+    const chargedExtras: CartItemModifier[] = [];
+    for (const [id, qty] of Object.entries(extraQty)) {
+      if (qty <= 0) continue;
+      const extra = (extrasList as any[] | undefined)?.find((e: any) => e.id === id);
+      if (!extra) continue;
+      const free = freeQtyMap.get(id) ?? 0;
+      const chargeableQty = Math.max(0, qty - free);
+      if (chargeableQty > 0) {
+        chargedExtras.push({ id, nombre: extra.nombre, precio: extra.precio, tipo: 'extra', cantidad: chargeableQty });
+      }
+    }
+    const allExtras = [...chargedExtras, ...groupExtras];
+
     onAdd({
       itemId: item.id,
+      sourceItemId,
+      isPromoArticle: item.is_promo_article,
+      promocionId: item.promocion_id ?? null,
+      promocionItemId: item.promocion_item_id ?? null,
+      includedModifiers: item.promo_included_modifiers,
       nombre: item.nombre,
       imagen_url: item.imagen_url,
       precioUnitario: effectivePrice,
@@ -101,7 +150,7 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
       notas,
     });
     setCantidad(1);
-    setExtras([]);
+    setExtraQty({});
     setRemovidos([]);
     setGroupSelections({});
     setNotas('');
@@ -123,9 +172,14 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
         <div>
-          <h2 className="text-xl font-black text-foreground">{item.nombre}</h2>
+          <h2 className="font-brand text-xl font-black text-foreground">{item.nombre}</h2>
           {item.descripcion && (
             <p className="text-sm text-muted-foreground mt-1">{item.descripcion}</p>
+          )}
+          {(item.promo_included_modifiers?.length ?? 0) > 0 && (
+            <p className="text-xs text-accent font-semibold mt-1">
+              Incluye: {item.promo_included_modifiers!.map((m) => `${m.cantidad > 1 ? `${m.cantidad}x ` : ''}${m.nombre}`).join(', ')}
+            </p>
           )}
           <div className="mt-2">
             {item.precio_promo != null && item.precio_promo < item.precio_base ? (
@@ -202,28 +256,47 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
           <div>
             <h3 className="text-sm font-bold text-foreground mb-2">Extras</h3>
             <div className="space-y-1.5">
-              {extrasList.map((extra: any) => {
-                const isSelected = extras.some(e => e.id === extra.id);
+              {(extrasList as any[]).map((extra: any) => {
+                const qty = extraQty[extra.id] ?? 0;
+                const freeQty = freeQtyMap.get(extra.id) ?? 0;
+                const chargeableQty = Math.max(0, qty - freeQty);
                 return (
-                  <button
+                  <div
                     key={extra.id}
-                    onClick={() => toggleExtra({ id: extra.id, nombre: extra.nombre, precio: extra.precio, tipo: 'extra' })}
-                    className={`
-                      w-full flex items-center justify-between p-3 rounded-lg border text-left transition-colors
-                      ${isSelected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}
-                    `}
+                    className={`flex items-center justify-between p-3 rounded-lg border transition-colors
+                      ${qty > 0 ? 'border-primary bg-primary/5' : 'border-border'}`}
                   >
-                    <div className="flex items-center gap-2">
-                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors
-                        ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground/30'}`}>
-                        {isSelected && <span className="text-primary-foreground text-xs">✓</span>}
-                      </div>
+                    <div className="min-w-0">
                       <span className="text-sm">{extra.nombre}</span>
+                      {extra.precio > 0 && (
+                        <span className="text-xs text-muted-foreground ml-1">+{formatPrice(extra.precio)}</span>
+                      )}
+                      {freeQty > 0 && qty > 0 && (
+                        <div className="text-[11px] text-green-600 mt-0.5">
+                          {Math.min(freeQty, qty)} gratis{chargeableQty > 0 ? ` · ${chargeableQty} extra` : ''}
+                        </div>
+                      )}
                     </div>
-                    {extra.precio > 0 && (
-                      <span className="text-xs text-muted-foreground">+{formatPrice(extra.precio)}</span>
-                    )}
-                  </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {qty > 0 && (
+                        <button
+                          onClick={() => decrExtra(extra.id)}
+                          className="w-7 h-7 rounded-full bg-muted flex items-center justify-center active:scale-95"
+                          aria-label="Quitar uno"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {qty > 0 && <span className="w-6 text-center text-sm font-bold">{qty}</span>}
+                      <button
+                        onClick={() => incrExtra(extra.id)}
+                        className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center active:scale-95"
+                        aria-label="Agregar uno"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -280,7 +353,20 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
               <span>Base</span>
               <span>{formatPrice(effectivePrice)}</span>
             </div>
-            {allExtras.map(e => (
+            {Object.entries(extraQty).filter(([, q]) => q > 0).map(([id, qty]) => {
+              const extra = (extrasList as any[] | undefined)?.find((e: any) => e.id === id);
+              if (!extra) return null;
+              const free = freeQtyMap.get(id) ?? 0;
+              const chargeable = Math.max(0, qty - free);
+              if (chargeable === 0) return null;
+              return (
+                <div key={id} className="flex justify-between">
+                  <span>+ {chargeable > 1 ? `${chargeable}× ` : ''}{extra.nombre}</span>
+                  <span>{formatPrice(extra.precio * chargeable)}</span>
+                </div>
+              );
+            })}
+            {groupExtras.map(e => (
               <div key={e.id} className="flex justify-between">
                 <span>+ {e.nombre}</span>
                 <span>{formatPrice(e.precio)}</span>
@@ -299,6 +385,7 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
             <button
               onClick={() => setCantidad(q => Math.max(1, q - 1))}
               className="w-9 h-9 rounded-full bg-muted flex items-center justify-center active:scale-95"
+              aria-label="Quitar uno"
             >
               <Minus className="w-4 h-4" />
             </button>
@@ -306,6 +393,7 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
             <button
               onClick={() => setCantidad(q => q + 1)}
               className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center active:scale-95"
+              aria-label="Agregar uno"
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -344,7 +432,7 @@ export function ProductCustomizeSheet({ item, onClose, onAdd }: Props) {
     return (
       <Dialog open={!!item} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-lg p-0 overflow-hidden max-h-[90vh] h-[90vh] flex flex-col">
-          <ProductDetailContent item={item} onAdd={onAdd} onClose={onClose} />
+          <ProductDetailContent key={item.id} item={item} onAdd={onAdd} onClose={onClose} />
         </DialogContent>
       </Dialog>
     );
@@ -352,8 +440,8 @@ export function ProductCustomizeSheet({ item, onClose, onAdd }: Props) {
 
   return (
     <Sheet open={!!item} onOpenChange={handleOpenChange}>
-      <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl px-0 flex flex-col">
-        <ProductDetailContent item={item} onAdd={onAdd} onClose={onClose} />
+      <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl px-0 flex flex-col">
+        <ProductDetailContent key={item.id} item={item} onAdd={onAdd} onClose={onClose} />
       </SheetContent>
     </Sheet>
   );

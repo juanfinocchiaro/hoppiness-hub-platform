@@ -18,7 +18,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { History, Search, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { History, Search, ChevronLeft, ChevronRight, Eye, Shield } from 'lucide-react';
+import { useDebounce } from '@/hooks/useDebounce';
+import { EmptyState } from '@/components/ui/states/empty-state';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -38,12 +40,13 @@ const actionVariants: Record<string, 'default' | 'secondary' | 'destructive'> = 
 
 export default function AuditLogPage() {
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [tableFilter, setTableFilter] = useState('');
   const [page, setPage] = useState(0);
   const [selectedLog, setSelectedLog] = useState<any>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['audit-logs', page, search, tableFilter],
+    queryKey: ['audit-logs', page, debouncedSearch, tableFilter],
     queryFn: async () => {
       let q = supabase
         .from('audit_logs')
@@ -52,7 +55,7 @@ export default function AuditLogPage() {
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (tableFilter) q = q.eq('table_name', tableFilter);
-      if (search) q = q.or(`table_name.ilike.%${search}%,action.ilike.%${search}%`);
+      if (debouncedSearch) q = q.or(`table_name.ilike.%${debouncedSearch}%,action.ilike.%${debouncedSearch}%`);
 
       const { data: logs, error, count } = await q;
       if (error) throw error;
@@ -112,8 +115,8 @@ export default function AuditLogPage() {
         </div>
       ) : logs.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            No se encontraron registros de auditoría.
+          <CardContent className="p-0">
+            <EmptyState icon={Shield} title="Sin registros" description="No se encontraron registros de auditoría para los filtros seleccionados." />
           </CardContent>
         </Card>
       ) : (
