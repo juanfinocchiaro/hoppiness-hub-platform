@@ -136,6 +136,7 @@ export default function POSPage() {
 }
 
 function POSPageContent({ branchId }: { branchId: string }) {
+  const { user } = useAuth();
   const {
     cart, setCart,
     payments, setPayments,
