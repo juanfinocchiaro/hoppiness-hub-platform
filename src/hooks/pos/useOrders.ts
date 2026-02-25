@@ -159,8 +159,7 @@ export function useCreatePedido(branchId: string) {
             ciudad: 'Córdoba',
             es_principal: false,
           } as any)
-          .then(() => {})
-          .catch(() => {});
+          .then(() => {}, () => {});
       }
 
       const itemRows = params.items.map(it => ({
