@@ -125,6 +125,8 @@ export function useCreatePedido(branchId: string) {
           insertPayload.cliente_telefono = normalized || cfg.clienteTelefono;
         }
         if (cfg.clienteDireccion) insertPayload.cliente_direccion = cfg.clienteDireccion;
+        // Vincular pedido al usuario identificado por teléfono
+        if (cfg.clienteUserId) insertPayload.cliente_user_id = cfg.clienteUserId;
         insertPayload.canal_venta = cfg.canalVenta;
         insertPayload.tipo_servicio = cfg.tipoServicio;
         if (cfg.canalVenta === 'apps') {
@@ -141,6 +143,25 @@ export function useCreatePedido(branchId: string) {
 
       if (errPedido) throw errPedido;
       if (!pedido) throw new Error('No se creó el pedido');
+
+      // Si el pedido es delivery con cliente identificado, guardar la dirección en su perfil
+      if (
+        cfg?.tipoServicio === 'delivery' &&
+        cfg.clienteUserId &&
+        cfg.clienteDireccion?.trim()
+      ) {
+        supabase
+          .from('cliente_direcciones')
+          .insert({
+            user_id: cfg.clienteUserId,
+            etiqueta: 'Otro',
+            direccion: cfg.clienteDireccion.trim(),
+            ciudad: 'Córdoba',
+            es_principal: false,
+          } as any)
+          .then(() => {})
+          .catch(() => {});
+      }
 
       const itemRows = params.items.map(it => ({
         pedido_id: pedido.id,

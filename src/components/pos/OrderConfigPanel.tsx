@@ -358,7 +358,7 @@ export function ConfigForm({
                     placeholder="Ej: 3511234567"
                     value={config.clienteTelefono}
                     onChange={(e) => {
-                      set({ clienteTelefono: e.target.value });
+                      set({ clienteTelefono: e.target.value, clienteUserId: undefined });
                       setProfileSuggestion(null);
                     }}
                     className="h-9 pr-8"
@@ -372,7 +372,7 @@ export function ConfigForm({
                   <button
                     type="button"
                     onClick={() => {
-                      set({ clienteNombre: profileSuggestion.full_name });
+                      set({ clienteNombre: profileSuggestion.full_name, clienteUserId: profileSuggestion.id });
                       setProfileSuggestion(null);
                     }}
                     className="mt-1 flex items-center gap-1.5 text-xs text-primary hover:underline"

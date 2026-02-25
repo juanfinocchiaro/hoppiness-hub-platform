@@ -47,6 +47,8 @@ export interface OrderConfig {
   voucherCodigo?: string;
   /** Monto descontado por el voucher */
   voucherDescuento?: number;
+  /** user_id del cliente identificado por teléfono (para vincular pedido y guardar dirección) */
+  clienteUserId?: string;
 }
 
 export const DEFAULT_ORDER_CONFIG: OrderConfig = {
