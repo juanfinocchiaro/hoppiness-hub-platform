@@ -1567,6 +1567,101 @@ export type Database = {
           },
         ]
       }
+      codigos_descuento: {
+        Row: {
+          activo: boolean
+          branch_ids: string[] | null
+          brand_id: string | null
+          codigo: string
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          fecha_fin: string
+          fecha_inicio: string
+          id: string
+          monto_minimo_pedido: number | null
+          tipo: string
+          updated_at: string | null
+          uso_unico_por_usuario: boolean
+          usos_actuales: number
+          usos_maximos: number | null
+          valor: number
+        }
+        Insert: {
+          activo?: boolean
+          branch_ids?: string[] | null
+          brand_id?: string | null
+          codigo: string
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          fecha_fin?: string
+          fecha_inicio?: string
+          id?: string
+          monto_minimo_pedido?: number | null
+          tipo: string
+          updated_at?: string | null
+          uso_unico_por_usuario?: boolean
+          usos_actuales?: number
+          usos_maximos?: number | null
+          valor?: number
+        }
+        Update: {
+          activo?: boolean
+          branch_ids?: string[] | null
+          brand_id?: string | null
+          codigo?: string
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          fecha_fin?: string
+          fecha_inicio?: string
+          id?: string
+          monto_minimo_pedido?: number | null
+          tipo?: string
+          updated_at?: string | null
+          uso_unico_por_usuario?: boolean
+          usos_actuales?: number
+          usos_maximos?: number | null
+          valor?: number
+        }
+        Relationships: []
+      }
+      codigos_descuento_usos: {
+        Row: {
+          codigo_id: string
+          created_at: string | null
+          id: string
+          monto_descontado: number
+          pedido_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          codigo_id: string
+          created_at?: string | null
+          id?: string
+          monto_descontado?: number
+          pedido_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          codigo_id?: string
+          created_at?: string | null
+          id?: string
+          monto_descontado?: number
+          pedido_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "codigos_descuento_usos_codigo_id_fkey"
+            columns: ["codigo_id"]
+            isOneToOne: false
+            referencedRelation: "codigos_descuento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       communication_reads: {
         Row: {
           communication_id: string
@@ -5458,6 +5553,8 @@ export type Database = {
       }
       pedido_items: {
         Row: {
+          articulo_id: string | null
+          articulo_tipo: string | null
           cantidad: number
           categoria_carta_id: string | null
           created_at: string | null
@@ -5470,9 +5567,13 @@ export type Database = {
           pedido_id: string
           precio_referencia: number | null
           precio_unitario: number
+          promocion_id: string | null
+          promocion_item_id: string | null
           subtotal: number
         }
         Insert: {
+          articulo_id?: string | null
+          articulo_tipo?: string | null
           cantidad?: number
           categoria_carta_id?: string | null
           created_at?: string | null
@@ -5485,9 +5586,13 @@ export type Database = {
           pedido_id: string
           precio_referencia?: number | null
           precio_unitario: number
+          promocion_id?: string | null
+          promocion_item_id?: string | null
           subtotal: number
         }
         Update: {
+          articulo_id?: string | null
+          articulo_tipo?: string | null
           cantidad?: number
           categoria_carta_id?: string | null
           created_at?: string | null
@@ -5500,6 +5605,8 @@ export type Database = {
           pedido_id?: string
           precio_referencia?: number | null
           precio_unitario?: number
+          promocion_id?: string | null
+          promocion_item_id?: string | null
           subtotal?: number
         }
         Relationships: [
@@ -5537,6 +5644,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "rdo_multivista_ventas_base"
             referencedColumns: ["pedido_id"]
+          },
+          {
+            foreignKeyName: "pedido_items_promocion_id_fkey"
+            columns: ["promocion_id"]
+            isOneToOne: false
+            referencedRelation: "promociones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedido_items_promocion_item_id_fkey"
+            columns: ["promocion_item_id"]
+            isOneToOne: false
+            referencedRelation: "promocion_items"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -6239,7 +6360,10 @@ export type Database = {
           id: string
           is_active: boolean
           is_default: boolean
+          mirror_channel: string | null
           name: string
+          pricing_mode: string
+          pricing_value: number
           updated_at: string
         }
         Insert: {
@@ -6248,7 +6372,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_default?: boolean
+          mirror_channel?: string | null
           name: string
+          pricing_mode?: string
+          pricing_value?: number
           updated_at?: string
         }
         Update: {
@@ -6257,7 +6384,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_default?: boolean
+          mirror_channel?: string | null
           name?: string
+          pricing_mode?: string
+          pricing_value?: number
           updated_at?: string
         }
         Relationships: []
@@ -6566,6 +6696,176 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      promocion_item_extras: {
+        Row: {
+          cantidad: number
+          created_at: string | null
+          extra_item_carta_id: string
+          id: string
+          promocion_item_id: string
+        }
+        Insert: {
+          cantidad?: number
+          created_at?: string | null
+          extra_item_carta_id: string
+          id?: string
+          promocion_item_id: string
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string | null
+          extra_item_carta_id?: string
+          id?: string
+          promocion_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promocion_item_extras_extra_item_carta_id_fkey"
+            columns: ["extra_item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "items_carta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promocion_item_extras_extra_item_carta_id_fkey"
+            columns: ["extra_item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "webapp_menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promocion_item_extras_promocion_item_id_fkey"
+            columns: ["promocion_item_id"]
+            isOneToOne: false
+            referencedRelation: "promocion_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promocion_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          item_carta_id: string
+          precio_promo: number
+          promocion_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          item_carta_id: string
+          precio_promo: number
+          promocion_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          item_carta_id?: string
+          precio_promo?: number
+          promocion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promocion_items_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "items_carta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promocion_items_item_carta_id_fkey"
+            columns: ["item_carta_id"]
+            isOneToOne: false
+            referencedRelation: "webapp_menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promocion_items_promocion_id_fkey"
+            columns: ["promocion_id"]
+            isOneToOne: false
+            referencedRelation: "promociones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promociones: {
+        Row: {
+          activa: boolean
+          aplica_a: string
+          branch_ids: string[] | null
+          brand_id: string | null
+          canales: string[] | null
+          categoria_ids: string[] | null
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          descripcion: string | null
+          dias_semana: number[] | null
+          fecha_fin: string | null
+          fecha_inicio: string | null
+          hora_fin: string | null
+          hora_inicio: string | null
+          id: string
+          nombre: string
+          producto_ids: string[] | null
+          restriccion_pago: string
+          tipo: string
+          tipo_usuario: string
+          updated_at: string | null
+          valor: number
+        }
+        Insert: {
+          activa?: boolean
+          aplica_a?: string
+          branch_ids?: string[] | null
+          brand_id?: string | null
+          canales?: string[] | null
+          categoria_ids?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          descripcion?: string | null
+          dias_semana?: number[] | null
+          fecha_fin?: string | null
+          fecha_inicio?: string | null
+          hora_fin?: string | null
+          hora_inicio?: string | null
+          id?: string
+          nombre: string
+          producto_ids?: string[] | null
+          restriccion_pago?: string
+          tipo: string
+          tipo_usuario?: string
+          updated_at?: string | null
+          valor?: number
+        }
+        Update: {
+          activa?: boolean
+          aplica_a?: string
+          branch_ids?: string[] | null
+          brand_id?: string | null
+          canales?: string[] | null
+          categoria_ids?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          descripcion?: string | null
+          dias_semana?: number[] | null
+          fecha_fin?: string | null
+          fecha_inicio?: string | null
+          hora_fin?: string | null
+          hora_inicio?: string | null
+          id?: string
+          nombre?: string
+          producto_ids?: string[] | null
+          restriccion_pago?: string
+          tipo?: string
+          tipo_usuario?: string
+          updated_at?: string | null
+          valor?: number
+        }
+        Relationships: []
       }
       proveedor_condiciones_local: {
         Row: {
@@ -8400,6 +8700,7 @@ export type Database = {
           city: string | null
           closing_time: string | null
           cover_image_url: string | null
+          google_place_id: string | null
           id: string | null
           is_active: boolean | null
           is_open: boolean | null
@@ -8417,6 +8718,7 @@ export type Database = {
           city?: string | null
           closing_time?: string | null
           cover_image_url?: string | null
+          google_place_id?: string | null
           id?: string | null
           is_active?: boolean | null
           is_open?: boolean | null
@@ -8434,6 +8736,7 @@ export type Database = {
           city?: string | null
           closing_time?: string | null
           cover_image_url?: string | null
+          google_place_id?: string | null
           id?: string | null
           is_active?: boolean | null
           is_open?: boolean | null
@@ -8947,6 +9250,7 @@ export type Database = {
       is_staff_member: { Args: { _user_id: string }; Returns: boolean }
       is_superadmin: { Args: { _user_id: string }; Returns: boolean }
       liberar_llamador: { Args: { p_pedido_id: string }; Returns: undefined }
+      normalize_phone: { Args: { phone: string }; Returns: string }
       normalize_rdo_channel: {
         Args: { _canal_app: string; _canal_venta: string; _tipo: string }
         Returns: string
