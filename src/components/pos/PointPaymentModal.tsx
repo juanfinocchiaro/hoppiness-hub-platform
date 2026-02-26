@@ -77,7 +77,19 @@ export function PointPaymentModal({
         },
       });
 
-      if (error) throw new Error(error.message || 'Error al enviar cobro');
+      if (error) {
+        // Try to extract the real error message from the edge function response body
+        let msg = error.message || 'Error al enviar cobro';
+        try {
+          if ((error as any).context) {
+            const body = await (error as any).context.json();
+            if (body?.error) msg = body.error;
+          }
+        } catch { /* ignore */ }
+        setErrorMsg(msg);
+        setStage('error');
+        return;
+      }
 
       if (data?.error) {
         setErrorMsg(data.error);
