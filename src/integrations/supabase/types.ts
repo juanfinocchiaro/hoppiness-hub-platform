@@ -5101,6 +5101,7 @@ export type Database = {
           created_at: string
           device_id: string | null
           device_name: string | null
+          device_operating_mode: string | null
           estado_conexion: string
           id: string
           public_key: string
@@ -5116,6 +5117,7 @@ export type Database = {
           created_at?: string
           device_id?: string | null
           device_name?: string | null
+          device_operating_mode?: string | null
           estado_conexion?: string
           id?: string
           public_key?: string
@@ -5131,6 +5133,7 @@ export type Database = {
           created_at?: string
           device_id?: string | null
           device_name?: string | null
+          device_operating_mode?: string | null
           estado_conexion?: string
           id?: string
           public_key?: string
