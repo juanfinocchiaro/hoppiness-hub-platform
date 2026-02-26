@@ -11,7 +11,7 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { DollarSign, CheckCircle, XCircle, Loader2, Unplug, Eye, EyeOff, ExternalLink, Smartphone, Link2, Unlink } from 'lucide-react';
+import { DollarSign, CheckCircle, XCircle, Loader2, Unplug, Eye, EyeOff, ExternalLink, Smartphone, Link2, Unlink, Wifi, WifiOff } from 'lucide-react';
 import { PageHeader } from '@/components/ui/page-header';
 import { useMercadoPagoConfig, useMercadoPagoConfigMutations, usePointDevices } from '@/hooks/useMercadoPagoConfig';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,7 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function MercadoPagoConfigPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const { data: config, isLoading } = useMercadoPagoConfig(branchId);
-  const { upsert, testConnection, disconnect, saveDevice, removeDevice } = useMercadoPagoConfigMutations(branchId);
+  const { upsert, testConnection, disconnect, saveDevice, removeDevice, changeDeviceMode } = useMercadoPagoConfigMutations(branchId);
 
   const [accessToken, setAccessToken] = useState('');
   const [publicKey, setPublicKey] = useState('');
@@ -198,7 +198,7 @@ export default function MercadoPagoConfigPage() {
 
           {/* Point Smart Device */}
           {isConnected && (
-            <PointSmartSection branchId={branchId!} config={config!} saveDevice={saveDevice} removeDevice={removeDevice} />
+            <PointSmartSection branchId={branchId!} config={config!} saveDevice={saveDevice} removeDevice={removeDevice} changeDeviceMode={changeDeviceMode} />
           )}
 
           {/* Usage Info */}
@@ -234,11 +234,13 @@ function PointSmartSection({
   config,
   saveDevice,
   removeDevice,
+  changeDeviceMode,
 }: {
   branchId: string;
-  config: { device_id: string | null; device_name: string | null };
+  config: { device_id: string | null; device_name: string | null; device_operating_mode?: string | null };
   saveDevice: { mutate: (v: { device_id: string; device_name: string }) => void; isPending: boolean };
   removeDevice: { mutate: () => void; isPending: boolean };
+  changeDeviceMode: { mutate: (mode: 'PDV' | 'STANDALONE') => void; isPending: boolean };
 }) {
   const { data: devices, isLoading, refetch } = usePointDevices(branchId);
 
@@ -257,24 +259,68 @@ function PointSmartSection({
       </CardHeader>
       <CardContent className="space-y-4">
         {hasDevice ? (
-          <div className="flex items-center justify-between p-3 rounded-lg border bg-emerald-50 border-emerald-200">
-            <div className="flex items-center gap-3">
-              <Smartphone className="h-8 w-8 text-emerald-600" />
-              <div>
-                <p className="font-medium text-sm">{config.device_name || 'Point Smart'}</p>
-                <p className="text-xs text-muted-foreground font-mono">{config.device_id}</p>
+          <div className="space-y-3">
+            {/* Device info */}
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-emerald-50 border-emerald-200">
+              <div className="flex items-center gap-3">
+                <Smartphone className="h-8 w-8 text-emerald-600" />
+                <div>
+                  <p className="font-medium text-sm">{config.device_name || 'Point Smart'}</p>
+                  <p className="text-xs text-muted-foreground font-mono">{config.device_id}</p>
+                </div>
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={() => removeDevice.mutate()}
+                disabled={removeDevice.isPending}
+              >
+                <Unlink className="h-4 w-4 mr-1" />
+                Desvincular
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-destructive hover:text-destructive"
-              onClick={() => removeDevice.mutate()}
-              disabled={removeDevice.isPending}
-            >
-              <Unlink className="h-4 w-4 mr-1" />
-              Desvincular
-            </Button>
+
+            {/* Operating mode */}
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+              <div className="flex items-center gap-2">
+                {config.device_operating_mode === 'PDV' ? (
+                  <Wifi className="h-4 w-4 text-emerald-600" />
+                ) : (
+                  <WifiOff className="h-4 w-4 text-amber-500" />
+                )}
+                <div>
+                  <p className="text-sm font-medium">
+                    Modo de operación:{' '}
+                    <span className={config.device_operating_mode === 'PDV' ? 'text-emerald-700' : 'text-amber-600'}>
+                      {config.device_operating_mode === 'PDV' ? 'PDV (integrado)' : 'Standalone (independiente)'}
+                    </span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {config.device_operating_mode === 'PDV'
+                      ? 'El dispositivo recibe cobros desde el POS.'
+                      : 'El dispositivo opera de forma independiente, no está integrado.'}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => changeDeviceMode.mutate(
+                  config.device_operating_mode === 'PDV' ? 'STANDALONE' : 'PDV'
+                )}
+                disabled={changeDeviceMode.isPending}
+                className="shrink-0"
+              >
+                {changeDeviceMode.isPending
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                  : config.device_operating_mode === 'PDV'
+                    ? <WifiOff className="h-3.5 w-3.5 mr-1" />
+                    : <Wifi className="h-3.5 w-3.5 mr-1" />
+                }
+                {config.device_operating_mode === 'PDV' ? 'Pasar a Standalone' : 'Activar modo PDV'}
+              </Button>
+            </div>
           </div>
         ) : (
           <>

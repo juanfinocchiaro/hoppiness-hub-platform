@@ -15,6 +15,7 @@ export interface MercadoPagoConfig {
   ultimo_test_ok: boolean | null;
   device_id: string | null;
   device_name: string | null;
+  device_operating_mode: 'PDV' | 'STANDALONE' | null;
 }
 
 /**
@@ -158,21 +159,69 @@ export function useMercadoPagoConfigMutations(branchId: string | undefined) {
   const saveDevice = useMutation({
     mutationFn: async (values: { device_id: string; device_name: string }) => {
       if (!branchId) throw new Error('branch_id requerido');
+
+      // Save device to DB
       const { error } = await (supabase.from as any)('mercadopago_config')
         .update({
           device_id: values.device_id,
           device_name: values.device_name,
+          device_operating_mode: null,
           updated_at: new Date().toISOString(),
         })
         .eq('branch_id', branchId);
       if (error) throw error;
+
+      // Auto-activate PDV mode after linking
+      const { data, error: modeErr } = await supabase.functions.invoke('mp-point-setup', {
+        body: { branch_id: branchId, terminal_id: values.device_id, operating_mode: 'PDV' },
+      });
+      if (modeErr) throw modeErr;
+      if (data?.error) throw new Error(data.error);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['mp-config', branchId] });
-      toast.success('Dispositivo Point Smart vinculado');
+      toast.success('Dispositivo vinculado en modo PDV', {
+        description: 'Listo para recibir cobros desde el POS.',
+      });
     },
     onError: (err: Error) => {
-      toast.error('Error al vincular dispositivo', { description: err.message });
+      qc.invalidateQueries({ queryKey: ['mp-config', branchId] });
+      // Device was saved, only mode change failed — show actionable message
+      toast.warning('Dispositivo guardado, pero no se pudo activar modo PDV', {
+        description: err.message || 'Activalo manualmente: Más opciones → Ajustes → Modo de vinculación.',
+      });
+    },
+  });
+
+  const changeDeviceMode = useMutation({
+    mutationFn: async (operating_mode: 'PDV' | 'STANDALONE') => {
+      if (!branchId) throw new Error('branch_id requerido');
+      const { data: cfg } = await (supabase.from as any)('mercadopago_config')
+        .select('device_id')
+        .eq('branch_id', branchId)
+        .single();
+      if (!cfg?.device_id) throw new Error('No hay dispositivo vinculado');
+
+      const { data, error } = await supabase.functions.invoke('mp-point-setup', {
+        body: { branch_id: branchId, terminal_id: cfg.device_id, operating_mode },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return operating_mode;
+    },
+    onSuccess: (mode) => {
+      qc.invalidateQueries({ queryKey: ['mp-config', branchId] });
+      toast.success(
+        mode === 'PDV' ? 'Modo PDV activado' : 'Modo Standalone activado',
+        {
+          description: mode === 'PDV'
+            ? 'El dispositivo está listo para integrarse con el POS.'
+            : 'El dispositivo volvió al modo independiente.',
+        },
+      );
+    },
+    onError: (err: Error) => {
+      toast.error('Error al cambiar modo', { description: err.message });
     },
   });
 
@@ -194,5 +243,5 @@ export function useMercadoPagoConfigMutations(branchId: string | undefined) {
     },
   });
 
-  return { upsert, testConnection, disconnect, saveDevice, removeDevice };
+  return { upsert, testConnection, disconnect, saveDevice, removeDevice, changeDeviceMode };
 }
