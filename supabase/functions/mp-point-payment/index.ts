@@ -56,12 +56,21 @@ Deno.serve(async (req) => {
     const body: PointPaymentRequest = await req.json();
     const { branch_id, pedido_id, amount, ticket_number } = body;
 
-    // Verify user has access to this branch
-    const { data: hasAccess } = await supabase.rpc("has_branch_access_v2", {
-      p_user_id: user.id,
-      p_branch_id: branch_id,
-    });
-    if (!hasAccess) {
+    // Verify user has access to this branch.
+    // Check both: user_roles_v2 (old, includes superadmin) and user_branch_roles (new source of truth).
+    const [{ data: hasAccessV2 }, { data: localRole }] = await Promise.all([
+      supabase.rpc("has_branch_access_v2", { p_user_id: user.id, p_branch_id: branch_id }),
+      supabase
+        .from("user_branch_roles")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("branch_id", branch_id)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    if (!hasAccessV2 && !localRole) {
       return new Response(
         JSON.stringify({ error: "No tenés acceso a este local" }),
         {
